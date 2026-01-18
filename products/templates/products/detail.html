@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.title }} - Eduitit{% endblock %}
+
+{% block extra_css %}
+.detail-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 4rem;
+align-items: start;
+}
+
+.hero-image {
+width: 100%;
+border-radius: 32px;
+border: 1px solid var(--glass-border);
+overflow: hidden;
+background: var(--glass);
+aspect-ratio: 16/10;
+}
+
+.hero-image img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+
+.badge {
+display: inline-block;
+padding: 0.25rem 0.75rem;
+background: rgba(99, 102, 241, 0.2);
+color: var(--primary);
+border-radius: 99px;
+font-size: 0.875rem;
+font-weight: 600;
+margin-bottom: 1.5rem;
+}
+
+.description {
+font-size: 1.125rem;
+line-height: 1.8;
+color: #cbd5e1;
+margin: 2rem 0;
+}
+
+@media (max-width: 900px) {
+.detail-grid {
+grid-template-columns: 1fr;
+gap: 2rem;
+}
+}
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+    <div class="hero-image">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.title }}">
+        {% else %}
+        <div
+            style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
+            <span style="font-weight: 600;">Preview Coming Soon</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="badge">Professional Tool</div>
+        <h1 style="font-size: 3.5rem; margin: 0; font-weight: 800; line-height: 1.1;">{{ product.title }}</h1>
+
+        <div class="description">
+            {{ product.description|linebreaks }}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 2rem; margin-top: 3rem;">
+            <div style="font-size: 2.5rem; font-weight: 800;">₩{{ product.price|floatformat:0 }}</div>
+            {% if is_owned %}
+            <a href="#" class="btn btn-primary"
+                style="padding: 1.25rem 3rem; font-size: 1.25rem; border-radius: 16px; background: #10b981;">Launch
+                Tool</a>
+            {% else %}
+            <a href="#" class="btn btn-primary"
+                style="padding: 1.25rem 3rem; font-size: 1.25rem; border-radius: 16px;">Buy Now</a>
+            {% endif %}
+        </div>
+
+        <div
+            style="margin-top: 4rem; padding: 2.5rem; border-radius: 24px; background: var(--glass); border: 1px solid var(--glass-border);">
+            <h3 style="margin-top: 0; font-size: 1.5rem;">Key Advantages</h3>
+            <ul style="color: #94a3b8; line-height: 2.2; font-size: 1.1rem; padding-left: 1.2rem;">
+                <li><strong>Performance:</strong> Enterprise-grade processing speed</li>
+                <li><strong>Security:</strong> SOC2 compliant data encryption</li>
+                <li><strong>Reliability:</strong> 99.9% Up-time guarantee</li>
+                <li><strong>Support:</strong> Dedicated success manager</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

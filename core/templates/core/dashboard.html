@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Eduitit{% endblock %}
+
+{% block extra_css %}
+.dashboard-header {
+margin-bottom: 3rem;
+}
+
+.grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+gap: 2.5rem;
+}
+
+.card {
+background: var(--glass);
+border: 1px solid var(--glass-border);
+border-radius: 28px;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+}
+
+.card-image {
+width: 100%;
+aspect-ratio: 16/10;
+background: #1e293b;
+}
+
+.card-image img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+
+.card-content {
+padding: 1.5rem;
+}
+
+.card h3 {
+margin: 0 0 0.5rem;
+font-size: 1.25rem;
+font-weight: 700;
+}
+
+.empty-state {
+text-align: center;
+padding: 6rem 2rem;
+background: var(--glass);
+border-radius: 32px;
+border: 1px dashed var(--glass-border);
+}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">Member Center</h1>
+    <p style="color: #94a3b8;">Welcome back, {{ user.username }}. Here are your active services.</p>
+</div>
+
+<div class="grid">
+    {% for item in owned_items %}
+    <div class="card">
+        <div class="card-image">
+            {% if item.product.image %}
+            <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}">
+            {% else %}
+            <div
+                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
+                <span>No Preview</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-content">
+            <h3>{{ item.product.title }}</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Purchased on {{
+                item.purchased_at|date:"Y-m-d" }}</p>
+            <a href="{% url 'product_detail' item.product.pk %}" class="btn btn-primary"
+                style="width: 100%; text-align: center;">Launch Tool</a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="grid-column: 1/-1;">
+        <h2 style="font-weight: 700;">No services yet</h2>
+        <p style="color: #94a3b8; margin-bottom: 2rem;">You haven't acquired any tools yet. Explore our marketplace to
+            get started.</p>
+        <a href="/products/" class="btn btn-primary">Browse Services</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

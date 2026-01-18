@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Our Services - Eduitit{% endblock %}
+
+{% block extra_css %}
+.grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+gap: 2.5rem;
+}
+
+.card {
+background: var(--glass);
+border: 1px solid var(--glass-border);
+border-radius: 28px;
+overflow: hidden;
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+.card:hover {
+transform: translateY(-8px);
+border-color: var(--primary);
+box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.4);
+}
+
+.card-image {
+width: 100%;
+aspect-ratio: 16/10;
+overflow: hidden;
+background: #1e293b;
+position: relative;
+}
+
+.card-image img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+transition: transform 0.5s ease;
+}
+
+.card:hover .card-image img {
+transform: scale(1.05);
+}
+
+.card-content {
+padding: 1.5rem;
+display: flex;
+flex-direction: column;
+flex-grow: 1;
+}
+
+.card h3 {
+margin: 0 0 0.75rem;
+font-size: 1.5rem;
+font-weight: 700;
+color: white;
+}
+
+.card p {
+color: #94a3b8;
+line-height: 1.6;
+margin: 0 0 1.5rem;
+font-size: 0.95rem;
+flex-grow: 1;
+}
+
+.card-footer {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-top: auto;
+}
+
+.price {
+font-size: 1.25rem;
+font-weight: 800;
+color: white;
+}
+{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 4rem;">
+    <h1 style="font-size: 3.5rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.02em;">Digital Solutions
+    </h1>
+    <p style="color: #94a3b8; font-size: 1.25rem;">Hand-crafted tools and high-performance services for your workflow.
+    </p>
+</div>
+
+<div class="grid">
+    {% for product in products %}
+    <div class="card">
+        <div class="card-image">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.title }}">
+            {% else %}
+            <div
+                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #1e293b, #0f172a); color: #475569;">
+                <span style="font-weight: 600;">No Preview Available</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-content">
+            <h3>{{ product.title }}</h3>
+            <p>{{ product.description|truncatewords:15 }}</p>
+            <div class="card-footer">
+                <div class="price">₩{{ product.price|floatformat:0 }}</div>
+                <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary">Details</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1/-1; text-align: center; padding: 4rem; background: var(--glass); border-radius: 24px;">
+        <p style="color: #94a3b8;">No services are currently available. Check back soon!</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
