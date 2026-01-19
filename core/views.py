@@ -13,3 +13,6 @@ def dashboard(request):
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')
+
+def tool_guide(request):
+    return render(request, 'core/tool_guide.html')
