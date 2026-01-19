@@ -25,11 +25,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # Allowed hosts from environment variable (comma-separated)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,localhost,127.0.0.1').split(',')
 
 # CSRF trusted origins for Render
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
+    'https://*.railway.app',
 ]
 
 # =============================================================================
