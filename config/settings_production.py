@@ -87,13 +87,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
+        }
+    except ValueError:
+        raise ValueError("DATABASE_URL 환경변수가 올바르지 않습니다. 'postgres://' 로 시작하는지 확인해주세요.")
 else:
     # Fallback for local development
     DATABASES = {
