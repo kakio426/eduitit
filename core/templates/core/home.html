@@ -67,10 +67,10 @@
 <section id="services" class="py-20 px-6">
     <div class="max-w-6xl mx-auto">
         <h2 class="text-5xl font-bold text-center mb-4 text-gray-700">무엇이 필요하신가요?</h2>
-        <p class="text-center font-hand text-2xl text-gray-400 mb-16">선생님의 칼퇴를 돕는 3대장</p>
+        <p class="text-center font-hand text-2xl text-gray-400 mb-16">선생님의 칼퇴를 돕는 4대장</p>
 
-        <!-- Featured Grid: Prompt Lab, Tool Guide, Yut Noli -->
-        <div class="grid md:grid-cols-3 gap-8 mb-20">
+        <!-- Featured Grid: Prompt Lab, Tool Guide, Yut Noli, PlayAura -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
             {% url 'prompt_lab' as prompt_lab_url %}
             <!-- Card 1: AI Prompt Lab -->
             <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
@@ -131,6 +131,26 @@
                         우리 반 대항전 필수템!
                     </p>
                     <span class="text-green-600 font-bold group-hover:underline">게임하기 &rarr;</span>
+                </div>
+            </div>
+
+            <!-- Card 4: PlayAura -->
+            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+                onclick="window.open('https://playaura.vercel.app', '_blank');">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
+                </div>
+                <div class="relative z-10">
+                    <div
+                        class="w-16 h-16 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-red-500 bg-white">
+                        <i class="fa-brands fa-youtube"></i>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-3 text-gray-700">PlayAura</h3>
+                    <p class="font-hand text-xl text-gray-500 mb-4">
+                        내 알고리즘 탈출!<br>
+                        전세계 인기 영상 탐험
+                    </p>
+                    <span class="text-red-600 font-bold group-hover:underline">탐험하기 &rarr;</span>
                 </div>
             </div>
         </div>
