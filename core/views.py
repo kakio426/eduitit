@@ -10,3 +10,6 @@ def home(request):
 def dashboard(request):
     owned_items = request.user.owned_products.all()
     return render(request, 'core/dashboard.html', {'owned_items': owned_items})
+
+def prompt_lab(request):
+    return render(request, 'core/prompt_lab.html')
