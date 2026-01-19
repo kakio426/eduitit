@@ -1,0 +1,1469 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}디지털 윷놀이 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    #yut-game-wrapper {
+        font-family: 'Malgun Gothic', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        height: calc(100vh - 80px);
+        /* Adjust for navbar */
+        overflow: hidden;
+        position: relative;
+        margin-top: 80px;
+    }
+
+    #game-container {
+        display: grid;
+        grid-template-columns: 320px 1fr 320px;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    #game-header {
+        grid-column: 1 / -1;
+        background: white;
+        border-radius: 15px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    #game-header h1 {
+        color: #333;
+        font-size: 2em;
+        margin: 0;
+        font-family: 'Malgun Gothic', sans-serif;
+    }
+
+    #left-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    #canvas-wrapper {
+        background: white;
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 0;
+    }
+
+    #right-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    canvas {
+        border: 3px solid #333;
+        border-radius: 10px;
+        cursor: pointer;
+        background: #fef9e7;
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .info-box {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .info-label {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .finished-pieces {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .finished-piece {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    #yut-display {
+        background: linear-gradient(135deg, #fff5e1 0%, #ffe4b5 100%);
+        padding: 15px;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: 3px solid #daa520;
+    }
+
+    #yut-sticks {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+
+    .yut-stick {
+        width: 40px;
+        height: 110px;
+        background: linear-gradient(135deg, #d2691e 0%, #a0522d 50%, #8b4513 100%);
+        border-radius: 25px;
+        position: relative;
+        transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+        border: 3px solid #654321;
+    }
+
+    .yut-stick.flat {
+        background: linear-gradient(135deg, #f4a460 0%, #d2691e 50%, #cd853f 100%);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .yut-stick.backdo {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    }
+
+    .yut-stick::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 28px;
+        height: 80px;
+        border-radius: 14px;
+        background: linear-gradient(90deg, transparent 0%, rgba(139, 69, 19, 0.3) 50%, transparent 100%);
+    }
+
+    .yut-stick.flat::before {
+        background: none;
+    }
+
+    .yut-stick.backdo::before {
+        content: '●';
+        background: none;
+        color: #fff;
+        font-size: 40px;
+        line-height: 80px;
+        text-align: center;
+    }
+
+    .yut-stick.flat::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 35px;
+        height: 90px;
+        background: linear-gradient(to bottom,
+                rgba(255, 255, 255, 0.4) 0%,
+                rgba(255, 228, 181, 0.6) 50%,
+                rgba(255, 255, 255, 0.4) 100%);
+        border-radius: 17px;
+    }
+
+    .yut-stick.throwing {
+        animation: throwStick 0.6s ease-in-out;
+    }
+
+    @keyframes throwStick {
+        0% {
+            transform: translateY(0) rotateX(0deg) rotateZ(0deg);
+        }
+
+        25% {
+            transform: translateY(-30px) rotateX(90deg) rotateZ(180deg);
+        }
+
+        50% {
+            transform: translateY(-40px) rotateX(180deg) rotateZ(360deg);
+        }
+
+        75% {
+            transform: translateY(-30px) rotateX(270deg) rotateZ(540deg);
+        }
+
+        100% {
+            transform: translateY(0) rotateX(360deg) rotateZ(720deg);
+        }
+    }
+
+    #yut-result {
+        font-size: 1.4em;
+        font-weight: bold;
+        color: #8b4513;
+        text-align: center;
+        margin-top: 10px;
+        word-wrap: break-word;
+        max-width: 100%;
+    }
+
+    #yut-animal {
+        font-size: 2.5em;
+        font-weight: bold;
+        animation: bounceIn 0.5s ease-out;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        color: #d2691e;
+    }
+
+    @keyframes bounceIn {
+        0% {
+            transform: scale(0) rotate(-180deg);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scale(1.3) rotate(10deg);
+        }
+
+        100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    #yut-game-wrapper button {
+        padding: 15px 25px;
+        font-size: 1.1em;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: white;
+        width: 100%;
+        font-family: 'Malgun Gothic', sans-serif;
+    }
+
+    #yut-game-wrapper button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #yut-game-wrapper button:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    #yut-game-wrapper button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    #throw-btn {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        font-size: 1.3em;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    #reset-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    #instruction {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 1.1em;
+        color: #1565c0;
+        font-weight: bold;
+        border: 2px solid #42a5f5;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.02);
+        }
+    }
+
+    #log {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 10px;
+        flex: 1;
+        overflow-y: auto;
+        font-size: 0.9em;
+        color: #333;
+    }
+
+    .log-entry {
+        padding: 5px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .section-title {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #667eea;
+    }
+
+    #button-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: auto;
+    }
+
+    /* 팝업 효과 CSS */
+    #popup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(2px);
+    }
+
+    #popup-overlay.active {
+        opacity: 1;
+    }
+
+    #popup-text {
+        font-family: 'Malgun Gothic', sans-serif;
+        font-size: 6rem;
+        font-weight: 900;
+        color: #fff;
+        text-shadow:
+            0 0 30px rgba(255, 215, 0, 0.8),
+            3px 3px 0px #cf6d17,
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000;
+        transform: scale(0.5);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        padding: 30px 60px;
+        border-radius: 30px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+        white-space: nowrap;
+    }
+
+    #popup-overlay.active #popup-text {
+        transform: scale(1) rotate(-5deg);
+    }
+
+    @media (max-width: 1200px) {
+        #game-container {
+            grid-template-columns: 280px 1fr 280px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        #game-container {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto 1fr auto;
+            overflow-y: auto;
+        }
+
+        #left-panel,
+        #right-panel {
+            max-height: none;
+        }
+
+        #game-header h1 {
+            font-size: 1.5em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="yut-game-wrapper">
+    <div id="game-container">
+        <div id="game-header">
+            <h1>🐎 세시풍속 온라인 윷놀이 🐎</h1>
+        </div>
+
+        <div id="left-panel">
+            <div class="section-title">게임 정보</div>
+
+            <div class="info-box" id="turn-info-box" style="transition: all 0.3s; border: 2px solid transparent;">
+                <div class="info-label" id="turn-label" style="color: inherit; opacity: 0.9;">현재 턴</div>
+                <div class="info-value" id="current-team"
+                    style="color: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">팀 1</div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">팀 1 나온 말</div>
+                <div class="info-value" id="team0-finished">0 / 4</div>
+                <div class="finished-pieces" id="team0-pieces"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">팀 2 나온 말</div>
+                <div class="info-value" id="team1-finished">0 / 4</div>
+                <div class="finished-pieces" id="team1-pieces"></div>
+            </div>
+
+            <div id="yut-display">
+                <div id="yut-sticks">
+                    <div class="yut-stick"></div>
+                    <div class="yut-stick"></div>
+                    <div class="yut-stick"></div>
+                    <div class="yut-stick"></div>
+                </div>
+                <div id="yut-result">윷을 던지세요!</div>
+                <div id="yut-animal"></div>
+            </div>
+            <button id="reset-btn" style="margin-top: auto;">🔄 게임 초기화</button>
+        </div>
+
+        <div id="canvas-wrapper">
+            <canvas id="game-canvas" width="800" height="800"></canvas>
+        </div>
+
+        <div id="right-panel">
+            <div class="section-title">게임 안내</div>
+            <div id="instruction">
+                윷을 던지세요!
+            </div>
+
+            <div class="section-title">게임 로그</div>
+            <div id="log"></div>
+
+            <div id="button-container">
+                <button id="throw-btn">🚀 윷 던지기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 팝업 오버레이 -->
+    <div id="popup-overlay">
+        <div id="popup-text">한번 더!</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ===== 🔊 효과음 시스템 =====
+    let audioInitialized = false;
+    const soundFiles = {
+        roll: "{% static 'products/yut/roll.mp3' %}",
+        tada: "{% static 'products/yut/tada.mp3' %}",
+        bonus: "{% static 'products/yut/bonus.mp3' %}",
+        goal: "{% static 'products/yut/goal.mp3' %}",
+        victory: "{% static 'products/yut/victory.mp3' %}"
+    };
+
+    const sounds = {};
+    Object.entries(soundFiles).forEach(([name, path]) => {
+        const audio = new Audio(path);
+        audio.preload = 'auto';
+        audio.volume = 0.6;
+        sounds[name] = audio;
+    });
+
+    function initializeAudio() {
+        if (!audioInitialized) {
+            Object.values(sounds).forEach(audio => {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }).catch(() => { });
+            });
+            audioInitialized = true;
+        }
+    }
+
+    function playSound(soundName) {
+        const sound = sounds[soundName];
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log('소리:', e));
+        }
+    }
+
+    function showPopup(text, duration = 1200) {
+        const overlay = document.getElementById('popup-overlay');
+        const textBox = document.getElementById('popup-text');
+
+        textBox.textContent = text;
+        overlay.classList.add('active');
+
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, duration);
+    }
+</script>
+<!-- Game logic script follows (concatenated and updated paths) -->
+<script>
+    const CANVAS_SIZE = 800;
+    const MARGIN = 120;
+    const BOARD_SIZE = CANVAS_SIZE - 2 * MARGIN;
+    const SPACING = BOARD_SIZE / 5;
+    const PIECE_RADIUS = 18;
+    const NODE_RADIUS = 22;
+
+    const COLORS = {
+        team0: '#FF6B6B',
+        team1: '#4ECDC4',
+        node: '#FFE66D',
+        nodeBorder: '#333',
+        path: '#999',
+        shortcut: '#9b59b6',
+        clickable: '#4CAF50',
+        startEnd: '#4169E1'
+    };
+
+    const YUT_INFO = {
+        1: { name: '도', korean: '🐷 도', desc: '1칸 이동' },
+        2: { name: '개', korean: '🐶 개', desc: '2칸 이동' },
+        3: { name: '걸', korean: '🐑 걸', desc: '3칸 이동' },
+        4: { name: '윷', korean: '🐮 윷', desc: '4칸 이동 (한번 더!)' },
+        5: { name: '모', korean: '🐴 모', desc: '5칸 이동 (한번 더!)' },
+        '-1': { name: '빽도', korean: '⬅️ 빽도', desc: '뒤로 1칸' }
+    };
+
+    class Board {
+        constructor() {
+            this.nodes = this.initializeNodes();
+            this.routes = this.initializeRoutes();
+        }
+
+        initializeNodes() {
+            const nodes = [];
+            const positions = [];
+
+            for (let i = 0; i <= 5; i++) {
+                positions.push({ x: MARGIN + i * SPACING, y: CANVAS_SIZE - MARGIN });
+            }
+            for (let i = 1; i <= 5; i++) {
+                positions.push({ x: MARGIN + 5 * SPACING, y: CANVAS_SIZE - MARGIN - i * SPACING });
+            }
+            for (let i = 1; i <= 5; i++) {
+                positions.push({ x: MARGIN + 5 * SPACING - i * SPACING, y: MARGIN });
+            }
+            for (let i = 1; i <= 4; i++) {
+                positions.push({ x: MARGIN, y: MARGIN + i * SPACING });
+            }
+
+            for (let i = 0; i < 20; i++) {
+                nodes.push({
+                    id: i,
+                    x: positions[i].x,
+                    y: positions[i].y,
+                    type: i === 0 ? 'start' : 'outer'
+                });
+            }
+
+            const centerX = MARGIN + 2.5 * SPACING;
+            const centerY = MARGIN + 2.5 * SPACING;
+            nodes.push({
+                id: 20,
+                x: centerX,
+                y: centerY,
+                type: 'center'
+            });
+
+            for (let i = 0; i < 2; i++) {
+                const t = (i + 1) / 3;
+                nodes.push({
+                    id: 27 + i,
+                    x: nodes[5].x + (nodes[20].x - nodes[5].x) * t,
+                    y: nodes[5].y + (nodes[20].y - nodes[5].y) * t,
+                    type: 'shortcut'
+                });
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const t = (i + 1) / 3;
+                nodes.push({
+                    id: 29 + i,
+                    x: nodes[20].x + (nodes[0].x - nodes[20].x) * t,
+                    y: nodes[20].y + (nodes[0].y - nodes[20].y) * t,
+                    type: 'exit'
+                });
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const t = (i + 1) / 3;
+                nodes.push({
+                    id: 23 + i,
+                    x: nodes[10].x + (nodes[20].x - nodes[10].x) * t,
+                    y: nodes[10].y + (nodes[20].y - nodes[10].y) * t,
+                    type: 'shortcut'
+                });
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const t = (i + 1) / 3;
+                nodes.push({
+                    id: 26 - i,
+                    x: nodes[20].x + (nodes[15].x - nodes[20].x) * t,
+                    y: nodes[20].y + (nodes[15].y - nodes[20].y) * t,
+                    type: 'return'
+                });
+            }
+
+            return nodes;
+        }
+
+        initializeRoutes() {
+            return {
+                outer: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                path5: [5, 27, 28, 20, 29, 30],
+                path10: [10, 23, 24, 20, 29, 30],
+                return_path: [26, 25, 15]
+            };
+        }
+
+        getNode(id) {
+            return this.nodes.find(n => n.id === id);
+        }
+    }
+
+    class GameState {
+        constructor() {
+            this.board = new Board();
+            this.teams = [
+                { id: 0, color: COLORS.team0, pieces: this.initPieces(0) },
+                { id: 1, color: COLORS.team1, pieces: this.initPieces(1) }
+            ];
+            this.currentTeamId = 0;
+            this.pendingThrows = [];
+            this.log = [];
+            this.remainingThrows = 1;
+        }
+
+        initPieces(teamId) {
+            return [
+                { id: 0, teamId, nodeId: null, route: 'outer', finished: false, stackSize: 1 },
+                { id: 1, teamId, nodeId: null, route: 'outer', finished: false, stackSize: 1 },
+                { id: 2, teamId, nodeId: null, route: 'outer', finished: false, stackSize: 1 },
+                { id: 3, teamId, nodeId: null, route: 'outer', finished: false, stackSize: 1 }
+            ];
+        }
+
+        getCurrentTeam() {
+            return this.teams[this.currentTeamId];
+        }
+
+        getOpponentTeam() {
+            return this.teams[1 - this.currentTeamId];
+        }
+
+        addLog(message) {
+            this.log.unshift(message);
+            if (this.log.length > 30) this.log.pop();
+        }
+
+        throwYut() {
+            this.remainingThrows--;
+            const sticks = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 0);
+            const sum = sticks.reduce((a, b) => a + b, 0);
+
+            let result;
+            switch (sum) {
+                case 0: result = { steps: 5, extra: true, name: '모', sticks }; break;
+                case 1:
+                    if (Math.random() < 0.05) {
+                        result = { steps: -1, extra: false, name: '빽도', sticks: [0, 0, 0, 2] };
+                    } else {
+                        result = { steps: 1, extra: false, name: '도', sticks };
+                    }
+                    break;
+                case 2: result = { steps: 2, extra: false, name: '개', sticks }; break;
+                case 3: result = { steps: 3, extra: false, name: '걸', sticks }; break;
+                case 4: result = { steps: 4, extra: true, name: '윷', sticks }; break;
+            }
+
+            this.pendingThrows.push(result);
+            if (result.extra) this.remainingThrows++;
+
+            const info = YUT_INFO[result.steps];
+            this.addLog(`팀 ${this.currentTeamId + 1}: ${info.korean} ${result.extra ? '★한번 더!★' : ''}`);
+
+            return result;
+        }
+
+        getMovablePieces() {
+            if (this.pendingThrows.length === 0) return [];
+
+            const team = this.getCurrentTeam();
+            const throwResult = this.pendingThrows[0];
+            const movablePieces = [];
+
+            if (throwResult.steps === -1) {
+                const boardPieces = team.pieces.filter(p => !p.finished && p.nodeId !== null && p.nodeId !== -999);
+                if (boardPieces.length === 0) {
+                    const waitingPieces = team.pieces.filter(p => p.nodeId === null && !p.finished);
+                    return waitingPieces.slice(0, 1);
+                }
+                return boardPieces;
+            }
+
+            for (const piece of team.pieces) {
+                if (!piece.finished && piece.nodeId !== -999) {
+                    movablePieces.push(piece);
+                }
+            }
+
+            return movablePieces;
+        }
+
+        movePiece(piece) {
+            if (this.pendingThrows.length === 0) return false;
+
+            const throwResult = this.pendingThrows[0];
+            const steps = throwResult.steps;
+
+            if (steps === -1) {
+                if (piece.nodeId === null) {
+                    piece.nodeId = 0;
+                    piece.route = 'outer';
+                    this.applyMove(piece, throwResult);
+                    return true;
+                } else if (piece.nodeId === 0) {
+                    piece.nodeId = 19;
+                    piece.route = 'outer';
+                    this.applyMove(piece, throwResult);
+                    return true;
+                } else {
+                    const result = this.simulateMove(piece.nodeId, -1, piece.route);
+                    if (result) {
+                        piece.nodeId = result.id;
+                        piece.route = result.route;
+                        this.applyMove(piece, throwResult);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            if (piece.nodeId === 0 && steps > 0) {
+                const stackSize = piece.stackSize;
+                piece.finished = true;
+                playSound('goal');
+                piece.nodeId = null;
+                piece.route = null;
+
+                if (stackSize > 1) {
+                    const team = this.getCurrentTeam();
+                    let restoredCount = 0;
+                    for (const restorePiece of team.pieces) {
+                        if (restorePiece.nodeId === -999 && restorePiece.teamId === piece.teamId) {
+                            restorePiece.finished = true;
+                            restorePiece.nodeId = null;
+                            restorePiece.route = null;
+                            restoredCount++;
+                            if (restoredCount >= stackSize - 1) break;
+                        }
+                    }
+                }
+
+                this.applyMove(piece, throwResult);
+                return true;
+            }
+
+            if (piece.nodeId === null) {
+                if (steps > 0) {
+                    const result = this.simulateMove(0, steps, 'outer');
+                    if (result) {
+                        if (result === 'finish') {
+                            piece.finished = true;
+                        } else {
+                            piece.nodeId = result.id;
+                            piece.route = result.route;
+                        }
+                        this.applyMove(piece, throwResult);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            const result = this.simulateMove(piece.nodeId, steps, piece.route);
+            if (result) {
+                if (result === 'finish') {
+                    const stackSize = piece.stackSize;
+                    piece.finished = true;
+                    piece.nodeId = null;
+                    piece.route = null;
+
+                    if (stackSize > 1) {
+                        const team = this.getCurrentTeam();
+                        let restoredCount = 0;
+                        for (const restorePiece of team.pieces) {
+                            if (restorePiece.nodeId === -999 && restorePiece.teamId === piece.teamId) {
+                                restorePiece.finished = true;
+                                restorePiece.nodeId = null;
+                                restorePiece.route = null;
+                                restoredCount++;
+                                if (restoredCount >= stackSize - 1) break;
+                            }
+                        }
+                    }
+                } else {
+                    piece.nodeId = result.id;
+                    piece.route = result.route;
+                }
+                this.applyMove(piece, throwResult);
+                return true;
+            }
+
+            return false;
+        }
+
+        simulateMove(startId, steps, startRoute) {
+            const routes = this.board.routes;
+            let currentRoute = startRoute;
+            let currentId = startId;
+            let remainingSteps = Math.abs(steps);
+            const direction = steps > 0 ? 1 : -1;
+
+            if (direction < 0) {
+                if (currentId === 26) {
+                    return { id: 20, route: 'return_path' };
+                }
+
+                const routeArray = routes[currentRoute];
+                const currentIndex = routeArray.indexOf(currentId);
+                if (currentIndex > 0) {
+                    return { id: routeArray[currentIndex - 1], route: currentRoute };
+                }
+                return null;
+            }
+
+            if (remainingSteps === steps) {
+                if (currentId === 5 && currentRoute === 'outer') {
+                    currentRoute = 'path5';
+                } else if (currentId === 10 && currentRoute === 'outer') {
+                    currentRoute = 'path10';
+                }
+            }
+
+            let passedThrough20 = false;
+
+            while (remainingSteps > 0) {
+                const routeArray = routes[currentRoute];
+                const currentIndex = routeArray.indexOf(currentId);
+
+                if (currentIndex === -1) {
+                    console.error('Invalid position:', currentId, 'in route:', currentRoute);
+                    return null;
+                }
+
+                const nextIndex = currentIndex + 1;
+
+                if (nextIndex < routeArray.length) {
+                    currentId = routeArray[nextIndex];
+
+                    if (currentRoute === 'path5' && currentId === 20) {
+                        passedThrough20 = true;
+                    } else if (currentRoute === 'path5' && passedThrough20 && currentId === 29) {
+                        currentRoute = 'return_path';
+                        currentId = 26;
+                    }
+                } else {
+                    if (currentRoute === 'outer') {
+                        currentId = 0;
+                    } else if (currentRoute === 'path5' || currentRoute === 'path10') {
+                        remainingSteps--;
+                        if (remainingSteps === 0) {
+                            return { id: 0, route: 'outer' };
+                        } else {
+                            return 'finish';
+                        }
+                    } else if (currentRoute === 'return_path') {
+                        currentRoute = 'outer';
+                        currentId = 16;
+                    }
+                }
+
+                remainingSteps--;
+
+                if (currentId === 0 && startId !== 0 && currentRoute === 'outer') {
+                    if (remainingSteps === 0) {
+                        return { id: 0, route: 'outer' };
+                    } else {
+                        return 'finish';
+                    }
+                }
+            }
+
+            return { id: currentId, route: currentRoute };
+        }
+
+        applyMove(piece, throwResult) {
+            if (piece.finished) {
+                const stackSize = piece.stackSize;
+                if (stackSize > 1) {
+                    this.addLog(`🎉 팀 ${this.currentTeamId + 1} 말 ${stackSize}개 완주!`);
+                    showPopup(`🎉 ${stackSize}개 골인! 🎉`);
+                } else {
+                    this.addLog(`🎉 팀 ${this.currentTeamId + 1} 말 ${piece.id + 1} 완주!`);
+                    showPopup('🎉 골인! 🎉');
+                }
+            } else {
+                const captured = this.checkCapture(piece);
+                if (captured) {
+                    playSound('bonus');
+                    this.addLog(`⚡ 팀 ${this.currentTeamId + 1} 잡기 성공! 한번 더!`);
+                    this.remainingThrows++;
+                } else {
+                    playSound('tada');
+                }
+
+                this.checkMerge(piece);
+            }
+
+            this.pendingThrows.shift();
+        }
+
+        checkCapture(piece) {
+            const opponent = this.getOpponentTeam();
+            let captured = false;
+
+            for (const oppPiece of opponent.pieces) {
+                if (oppPiece.nodeId === piece.nodeId && !oppPiece.finished && oppPiece.nodeId !== null) {
+                    oppPiece.nodeId = null;
+                    oppPiece.route = 'outer';
+
+                    if (oppPiece.stackSize > 1) {
+                        const team = this.getOpponentTeam();
+                        let restoredCount = 0;
+                        for (const restorePiece of team.pieces) {
+                            if (restorePiece.nodeId === -999 && restorePiece.teamId === oppPiece.teamId) {
+                                restorePiece.nodeId = null;
+                                restorePiece.route = 'outer';
+                                restoredCount++;
+                                if (restoredCount >= oppPiece.stackSize - 1) break;
+                            }
+                        }
+                        oppPiece.stackSize = 1;
+                    }
+
+                    captured = true;
+                }
+            }
+
+            return captured;
+        }
+
+        checkMerge(piece) {
+            const team = this.getCurrentTeam();
+
+            for (const otherPiece of team.pieces) {
+                if (otherPiece.id !== piece.id &&
+                    otherPiece.nodeId === piece.nodeId &&
+                    !otherPiece.finished &&
+                    piece.nodeId !== null) {
+                    piece.stackSize += otherPiece.stackSize;
+                    otherPiece.nodeId = -999;
+                    this.addLog(`👥 팀 ${this.currentTeamId + 1} 말 겹침!`);
+                }
+            }
+        }
+
+        nextTurn() {
+            if (this.pendingThrows.length === 0 && this.remainingThrows === 0) {
+                this.currentTeamId = 1 - this.currentTeamId;
+                this.remainingThrows = 1;
+                this.addLog(`━━━━━ 팀 ${this.currentTeamId + 1} 차례 ━━━━━`);
+            }
+        }
+
+        checkWin() {
+            for (const team of this.teams) {
+                const finishedCount = team.pieces.filter(p => p.finished).length;
+                if (finishedCount === 4) {
+                    playSound('victory');
+                    return team.id;
+                }
+            }
+            return null;
+        }
+
+        getFinishedCount(teamId) {
+            return this.teams[teamId].pieces.filter(p => p.finished).length;
+        }
+    }
+
+    class Renderer {
+        constructor(canvas, gameState) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.gameState = gameState;
+        }
+
+        render() {
+            this.ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            this.drawBoard();
+            this.drawPieces();
+        }
+
+        drawBoard() {
+            const ctx = this.ctx;
+            const board = this.gameState.board;
+
+            ctx.strokeStyle = COLORS.path;
+            ctx.lineWidth = 4;
+            for (let i = 0; i < 20; i++) {
+                const node = board.getNode(i);
+                const nextNode = board.getNode((i + 1) % 20);
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(nextNode.x, nextNode.y);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = COLORS.shortcut;
+            ctx.lineWidth = 3;
+            const diagonals = [
+                [5, 27, 28, 20, 29, 30, 0],
+                [10, 23, 24, 20],
+                [20, 26, 25, 15]
+            ];
+
+            for (const path of diagonals) {
+                for (let i = 0; i < path.length - 1; i++) {
+                    const node = board.getNode(path[i]);
+                    const nextNode = board.getNode(path[i + 1]);
+                    if (node && nextNode) {
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y);
+                        ctx.lineTo(nextNode.x, nextNode.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            for (const node of board.nodes) {
+                const isStart = node.type === 'start';
+                ctx.fillStyle = isStart ? COLORS.startEnd : COLORS.node;
+                ctx.strokeStyle = COLORS.nodeBorder;
+                ctx.lineWidth = isStart ? 4 : 2;
+
+                const radius = isStart ? NODE_RADIUS * 1.5 : NODE_RADIUS;
+
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = isStart ? '#fff' : '#333';
+                ctx.font = `bold ${isStart ? 16 : 12}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.id, node.x, node.y);
+            }
+
+            const node0 = board.getNode(0);
+            ctx.font = 'bold 14px Malgun Gothic';
+            ctx.fillStyle = '#4CAF50';
+            ctx.textAlign = 'center';
+            ctx.fillText('시작', node0.x, node0.y - 45);
+            ctx.fillStyle = '#FF5722';
+            ctx.fillText('통과→완주', node0.x, node0.y + 45);
+        }
+
+        drawPieces() {
+            const ctx = this.ctx;
+            const movablePieces = this.gameState.getMovablePieces();
+
+            for (const team of this.gameState.teams) {
+                for (const piece of team.pieces) {
+                    if (piece.finished || piece.nodeId === -999) continue;
+
+                    const isClickable = movablePieces.includes(piece);
+
+                    if (piece.nodeId === null) {
+                        const t = team.id;
+                        const waitingPieces = team.pieces.filter(p => p.nodeId === null && !p.finished);
+                        const index = waitingPieces.indexOf(piece);
+
+                        const x = t === 0 ? 50 : CANVAS_SIZE - 50;
+                        const y = 50 + index * 35;
+
+                        if (isClickable) {
+                            ctx.fillStyle = COLORS.clickable;
+                            ctx.beginPath();
+                            ctx.arc(x, y, PIECE_RADIUS + 10, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 3;
+                            ctx.setLineDash([5, 5]);
+                            ctx.beginPath();
+                            ctx.arc(x, y, PIECE_RADIUS + 10, 0, Math.PI * 2);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+
+                        ctx.fillStyle = team.color;
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 4;
+
+                        ctx.beginPath();
+                        ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    } else {
+                        const node = this.gameState.board.getNode(piece.nodeId);
+                        if (!node) continue;
+
+                        const offset = piece.id * 7;
+
+                        if (isClickable) {
+                            ctx.fillStyle = COLORS.clickable;
+                            ctx.beginPath();
+                            ctx.arc(node.x + offset, node.y + offset, PIECE_RADIUS + 10, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 3;
+                            ctx.setLineDash([5, 5]);
+                            ctx.beginPath();
+                            ctx.arc(node.x + offset, node.y + offset, PIECE_RADIUS + 10, 0, Math.PI * 2);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+
+                        ctx.fillStyle = team.color;
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 4;
+
+                        ctx.beginPath();
+                        ctx.arc(node.x + offset, node.y + offset, PIECE_RADIUS, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        if (piece.stackSize > 1) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(piece.stackSize, node.x + offset, node.y + offset);
+                        }
+                    }
+                }
+            }
+        }
+
+        getPieceAtPosition(x, y) {
+            const movablePieces = this.gameState.getMovablePieces();
+
+            for (const piece of movablePieces) {
+                let px, py;
+
+                if (piece.nodeId === null) {
+                    const team = this.gameState.teams[piece.teamId];
+                    const waitingPieces = team.pieces.filter(p => p.nodeId === null && !p.finished);
+                    const index = waitingPieces.indexOf(piece);
+
+                    px = piece.teamId === 0 ? 50 : CANVAS_SIZE - 50;
+                    py = 50 + index * 35;
+                } else {
+                    const node = this.gameState.board.getNode(piece.nodeId);
+                    if (!node) continue;
+
+                    const offset = piece.id * 7;
+                    px = node.x + offset;
+                    py = node.y + offset;
+                }
+
+                const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+                if (distance <= PIECE_RADIUS + 10) {
+                    return piece;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    class GameController {
+        constructor() {
+            this.state = new GameState();
+            this.canvas = document.getElementById('game-canvas');
+            this.renderer = new Renderer(this.canvas, this.state);
+
+            this.initEventListeners();
+            this.updateUI();
+            this.renderer.render();
+        }
+
+        initEventListeners() {
+            document.getElementById('throw-btn').addEventListener('click', () => this.handleThrow());
+            document.getElementById('reset-btn').addEventListener('click', () => this.handleReset());
+
+            this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+        }
+
+        handleCanvasClick(e) {
+            if (this.state.pendingThrows.length === 0) {
+                return;
+            }
+
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            const piece = this.renderer.getPieceAtPosition(x, y);
+
+            if (piece) {
+                const wasExtra = this.state.pendingThrows[0]?.extra || false;
+
+                const success = this.state.movePiece(piece);
+
+                if (success) {
+                    const winner = this.state.checkWin();
+                    if (winner !== null) {
+                        setTimeout(() => {
+                            alert(`🎉🎉🎉 팀 ${winner + 1} 승리! 🎉🎉🎉`);
+                            this.handleReset();
+                        }, 500);
+                        return;
+                    }
+
+                    this.updateUI();
+                    this.renderer.render();
+
+                    if (this.state.pendingThrows.length === 0) {
+                        if (this.state.remainingThrows > 1) {
+                            showPopup('보너스! 2번 더!');
+                        } else if (this.state.remainingThrows === 1 && !wasExtra) {
+                            showPopup('잡았다! 한번 더!');
+                        }
+
+                        if (this.state.remainingThrows === 0) {
+                            this.state.nextTurn();
+                            this.updateUI();
+                        }
+                    }
+                }
+            }
+        }
+
+        async handleThrow() {
+            if (this.state.pendingThrows.length > 0) {
+                alert('먼저 말을 이동하세요!');
+                return;
+            }
+
+            if (!audioInitialized) {
+                initializeAudio();
+                setTimeout(() => playSound('roll'), 150);
+            } else {
+                playSound('roll');
+            }
+
+            const btn = document.getElementById('throw-btn');
+            btn.disabled = true;
+
+            await this.animateYutThrow();
+
+            const result = this.state.throwYut();
+            this.displayYutResult(result);
+
+            this.updateUI();
+            this.renderer.render();
+
+            btn.disabled = false;
+        }
+
+        async animateYutThrow() {
+            const sticks = document.querySelectorAll('.yut-stick');
+
+            sticks.forEach(stick => {
+                stick.classList.add('throwing');
+                stick.classList.remove('flat', 'backdo');
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            sticks.forEach(stick => {
+                stick.classList.remove('throwing');
+            });
+        }
+
+        displayYutResult(result) {
+            const sticks = document.querySelectorAll('.yut-stick');
+            const info = YUT_INFO[result.steps];
+
+            if (result.sticks) {
+                result.sticks.forEach((state, index) => {
+                    if (state === 2) {
+                        sticks[index].classList.add('backdo');
+                    } else if (state === 1) {
+                        sticks[index].classList.add('flat');
+                    } else {
+                        sticks[index].classList.remove('flat', 'backdo');
+                    }
+                });
+            }
+
+            document.getElementById('yut-result').textContent = info.desc;
+
+            const animalDiv = document.getElementById('yut-animal');
+            animalDiv.textContent = info.korean;
+            animalDiv.style.animation = 'none';
+            setTimeout(() => {
+                animalDiv.style.animation = 'bounceIn 0.5s ease-out';
+            }, 10);
+
+            if (result.extra) {
+                setTimeout(() => showPopup(result.name + '! 한번 더!'), 200);
+            }
+        }
+
+        handleReset() {
+            this.state = new GameState();
+            this.renderer.gameState = this.state;
+            this.renderer.render();
+            this.updateUI();
+
+            document.getElementById('yut-result').textContent = '윷을 던지세요!';
+            document.getElementById('yut-animal').textContent = '';
+
+            const sticks = document.querySelectorAll('.yut-stick');
+            sticks.forEach(stick => stick.classList.remove('flat', 'backdo'));
+        }
+
+        updateUI() {
+            const turnBox = document.getElementById('turn-info-box');
+            const currentTeamColor = this.state.getCurrentTeam().color;
+
+            turnBox.style.backgroundColor = currentTeamColor;
+            turnBox.style.color = 'white';
+            turnBox.style.boxShadow = `0 4px 15px ${currentTeamColor}66`;
+
+            document.getElementById('current-team').textContent = `팀 ${this.state.currentTeamId + 1}`;
+
+            for (let i = 0; i < 2; i++) {
+                const finishedCount = this.state.getFinishedCount(i);
+                const teamColor = i === 0 ? '#FF6B6B' : '#4ECDC4';
+                let piecesHTML = '';
+
+                const pieceSize = '35px';
+                const margin = '4px';
+
+                for (let j = 0; j < finishedCount; j++) {
+                    piecesHTML += `<span style="display:inline-block; width:${pieceSize}; height:${pieceSize}; border-radius:50%; background:${teamColor}; border:3px solid white; margin:${margin}; box-shadow: 0 3px 6px rgba(0,0,0,0.3);"></span>`;
+                }
+
+                for (let j = finishedCount; j < 4; j++) {
+                    piecesHTML += `<span style="display:inline-block; width:${pieceSize}; height:${pieceSize}; border-radius:50%; background:#e0e0e0; border:3px solid white; margin:${margin}; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);"></span>`;
+                }
+
+                document.getElementById(`team${i}-finished`).innerHTML = piecesHTML;
+            }
+
+            const instruction = document.getElementById('instruction');
+            if (this.state.pendingThrows.length === 0) {
+                const bonusText = this.state.remainingThrows > 1 ? ` (보너스 ${this.state.remainingThrows}번!)` : '';
+                instruction.textContent = '윷을 던지세요!' + bonusText;
+                instruction.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+                instruction.style.color = '#1565c0';
+                instruction.style.borderColor = '#42a5f5';
+            } else {
+                const info = YUT_INFO[this.state.pendingThrows[0].steps];
+                instruction.textContent = `${info.korean}! 말을 클릭하세요!`;
+                instruction.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)';
+                instruction.style.color = '#e65100';
+                instruction.style.borderColor = '#ff9800';
+            }
+
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = this.state.log.slice(0, 20).map(msg =>
+                `<div class="log-entry">${msg}</div>`
+            ).join('');
+
+            this.renderer.render();
+        }
+    }
+
+    let game;
+    window.addEventListener('DOMContentLoaded', () => {
+        game = new GameController();
+    });
+
+    function resizeGame() {
+        const container = document.getElementById('game-container');
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+        const TARGET_WIDTH = 1600;
+        const TARGET_HEIGHT = 900;
+
+        if (winW > 900) {
+            const scale = Math.min(winW / TARGET_WIDTH, (winH - 80) / TARGET_HEIGHT);
+
+            container.style.width = `${TARGET_WIDTH}px`;
+            container.style.height = `${TARGET_HEIGHT}px`;
+            container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            container.style.transformOrigin = 'center center';
+            container.style.position = 'absolute';
+            container.style.top = 'calc(50% + 40px)';
+            container.style.left = '50%';
+        } else {
+            container.style.width = '100%';
+            container.style.height = 'calc(100vh - 80px)';
+            container.style.transform = '';
+            container.style.position = '';
+            container.style.top = '';
+            container.style.left = '';
+        }
+    }
+
+    window.addEventListener('resize', resizeGame);
+    window.addEventListener('DOMContentLoaded', resizeGame);
+</script>
+{% endblock %}
