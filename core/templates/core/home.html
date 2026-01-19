@@ -70,95 +70,55 @@
         <p class="text-center font-hand text-2xl text-gray-400 mb-16">설치/로그인 없이 바로 사용하세요!</p>
 
         <div class="grid md:grid-cols-3 gap-10">
-            <!-- Card 1 -->
-            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer">
-                <div
-                    class="w-16 h-16 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-blue-400 group-hover:scale-110 transition">
-                    <i class="fa-solid fa-feather"></i>
+            {% for product in products %}
+            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer"
+                onclick="location.href='{% if '윷놀이' in product.title %}{% url 'yut_game' %}{% else %}{% url 'product_detail' product.pk %}{% endif %}'">
+                <div class="w-16 h-16 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-3xl group-hover:scale-110 transition
+                    {% if '윷놀이' in product.title %}text-indigo-500
+                    {% elif '나이스' in product.title %}text-blue-400
+                    {% elif '자리' in product.title %}text-green-400
+                    {% elif '학급비' in product.title %}text-pink-400
+                    {% elif '문서' in product.title %}text-orange-400
+                    {% elif '수업' in product.title %}text-purple-400
+                    {% else %}text-gray-400{% endif %}">
+
+                    {% if '윷놀이' in product.title %}<i class="fa-solid fa-horse"></i>
+                    {% elif '나이스' in product.title %}<i class="fa-solid fa-feather"></i>
+                    {% elif '자리' in product.title %}<i class="fa-solid fa-users"></i>
+                    {% elif '학급비' in product.title %}<i class="fa-solid fa-piggy-bank"></i>
+                    {% elif '문서' in product.title %}<i class="fa-solid fa-file-pdf"></i>
+                    {% elif '수업' in product.title %}<i class="fa-solid fa-chalkboard-user"></i>
+                    {% else %}<i class="fa-solid fa-cube"></i>{% endif %}
                 </div>
-                <h3 class="text-4xl font-bold mb-3 text-gray-700">나이스 AI 비서</h3>
+                <h3 class="text-4xl font-bold mb-3 text-gray-700">{{ product.title }}</h3>
                 <p class="font-hand text-2xl text-gray-500 mb-6">
-                    "생기부 쓰느라 손목 아프시죠?"<br>
-                    키워드 몇 개만 톡톡 넣으면<br>
-                    문장이 스르륵 완성돼요.
+                    {{ product.description|linebreaksbr }}
                 </p>
                 <div class="flex gap-2 flex-wrap">
+                    {% if '윷놀이' in product.title %}
+                    <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Game</span>
+                    <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Web</span>
+                    {% elif '나이스' in product.title %}
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Python</span>
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#AI</span>
-                </div>
-            </div>
-
-            <!-- Card 2 -->
-            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer">
-                <div
-                    class="w-16 h-16 rounded-full shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-green-400 group-hover:scale-110 transition">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <h3 class="text-4xl font-bold mb-3 text-gray-700">자리배치 뚝딱</h3>
-                <p class="font-hand text-2xl text-gray-500 mb-6">
-                    시력 나쁜 철수, 키 큰 영희...<br>
-                    조건만 입력하세요.<br>
-                    1초 만에 자리 배치 끝!
-                </p>
-                <div class="flex gap-2 flex-wrap">
+                    {% elif '자리' in product.title %}
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Web</span>
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Tool</span>
-                </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer">
-                <div
-                    class="w-16 h-16 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-pink-400 group-hover:scale-110 transition">
-                    <i class="fa-solid fa-piggy-bank"></i>
-                </div>
-                <h3 class="text-4xl font-bold mb-3 text-gray-700">학급비 장부</h3>
-                <p class="font-hand text-2xl text-gray-500 mb-6">
-                    영수증 잃어버릴 걱정 끝!<br>
-                    사진 찍으면 엑셀로 쏘옥.<br>
-                    총무 선생님의 필수템.
-                </p>
-                <div class="flex gap-2 flex-wrap">
+                    {% elif '학급비' in product.title %}
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#OCR</span>
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Excel</span>
-                </div>
-            </div>
-
-            <!-- Card 4 -->
-            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer">
-                <div
-                    class="w-16 h-16 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-orange-400 group-hover:scale-110 transition">
-                    <i class="fa-solid fa-file-pdf"></i>
-                </div>
-                <h3 class="text-4xl font-bold mb-3 text-gray-700">문서 변환기</h3>
-                <p class="font-hand text-2xl text-gray-500 mb-6">
-                    HWP, HWPX, ODT, DOC...<br>
-                    뭐든 PDF로 변환해요.<br>
-                    공문 제출도 걱정 끝!
-                </p>
-                <div class="flex gap-2 flex-wrap">
+                    {% elif '문서' in product.title %}
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#HWP</span>
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#PDF</span>
-                </div>
-            </div>
-
-            <!-- Card 5 -->
-            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer">
-                <div
-                    class="w-16 h-16 rounded-full shadow-clay-inner mb-6 flex items-center justify-center text-3xl text-purple-400 group-hover:scale-110 transition">
-                    <i class="fa-solid fa-chalkboard-user"></i>
-                </div>
-                <h3 class="text-4xl font-bold mb-3 text-gray-700">수업 도우미</h3>
-                <p class="font-hand text-2xl text-gray-500 mb-6">
-                    유튜브 링크만 넣으면<br>
-                    AI가 수업 단계를 자동 생성!<br>
-                    미술 수업도 뚝딱.
-                </p>
-                <div class="flex gap-2 flex-wrap">
+                    {% elif '수업' in product.title %}
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#AI</span>
                     <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#수업</span>
+                    {% else %}
+                    <span class="px-3 py-1 shadow-clay rounded-full text-xl text-gray-400">#Tool</span>
+                    {% endif %}
                 </div>
             </div>
+            {% endfor %}
 
             <!-- Card 6 - Coming Soon -->
             <div
