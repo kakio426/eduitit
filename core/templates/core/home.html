@@ -428,15 +428,15 @@
         const featuresHtml = service.features.map(f => `<li class="text-left py-1">${f}</li>`).join('');
 
         document.getElementById('modalContent').innerHTML = `
-            <div class="w-20 h-20 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-4xl ${service.iconColor} ${service.bgColor} mx-auto">
+            <div class="w-32 h-32 rounded-3xl shadow-clay-inner mb-8 flex items-center justify-center text-6xl ${service.iconColor} ${service.bgColor} mx-auto">
                 <i class="${service.icon}"></i>
             </div>
-            <h3 class="text-3xl font-bold mb-4 text-gray-700">${service.title}</h3>
-            <ul class="font-hand text-lg text-gray-600 mb-6 space-y-1">
+            <h3 class="text-6xl font-bold mb-6 text-gray-700">${service.title}</h3>
+            <ul class="font-hand text-4xl text-gray-600 mb-10 space-y-3">
                 ${featuresHtml}
             </ul>
             <button onclick="goToService('${serviceKey}')" 
-                class="clay-btn shadow-clay px-8 py-3 rounded-clay ${service.buttonColor} font-bold text-xl hover:shadow-clay-hover inline-block">
+                class="clay-btn shadow-clay px-12 py-4 rounded-clay ${service.buttonColor} font-bold text-5xl hover:shadow-clay-hover inline-block">
                 ${service.buttonText} <i class="fa-solid fa-arrow-right ml-2"></i>
             </button>
         `;
