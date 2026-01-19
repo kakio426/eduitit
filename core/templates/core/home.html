@@ -43,95 +43,100 @@
 <!-- Services Section -->
 <section id="services" class="py-16 px-6">
     <div class="max-w-6xl mx-auto">
-        <h2 class="text-6xl font-bold text-center mb-4 text-gray-700">서비스 한눈에 보기</h2>
-        <p class="text-center text-3xl text-gray-400 mb-12">필요한 도구를 바로 선택하세요</p>
+        <h2 class="text-8xl font-bold text-center mb-6 text-gray-700">서비스 한눈에 보기</h2>
+        <p class="text-center text-5xl text-gray-400 mb-16">필요한 도구를 바로 선택하세요</p>
 
         <!-- Bento Grid: Main Services (3 columns) -->
         {% url 'yut_game' as yut_url %}
-        <div class="grid md:grid-cols-3 gap-6 mb-6">
+        <div class="grid md:grid-cols-3 gap-8 mb-10">
             <!-- Card 1: Online Yut Noli -->
-            <div class="clay-card shadow-clay p-6 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+            <div class="clay-card shadow-clay p-10 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
                 onclick="showServiceModal('yut');">
                 <div
-                    class="absolute top-0 right-0 w-24 h-24 bg-green-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110">
+                    class="absolute top-0 right-0 w-32 h-32 bg-green-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
                 <div class="relative z-10">
-                    <div class="text-5xl mb-4">🎲</div>
-                    <h3 class="text-3xl font-bold mb-2 text-gray-700">온라인 윷놀이</h3>
-                    <p class="text-xl text-gray-500 mb-3">설치 없이 바로 플레이</p>
-                    <span class="text-green-600 font-bold group-hover:underline">게임하기 &rarr;</span>
+                    <div class="text-7xl mb-6">🎲</div>
+                    <h3 class="text-5xl font-bold mb-4 text-gray-700">온라인 윷놀이</h3>
+                    <p class="text-3xl text-gray-500 mb-6">설치 없이 바로 플레이</p>
+                    <span class="text-4xl text-green-600 font-bold group-hover:underline">게임하기 &rarr;</span>
                 </div>
             </div>
 
             <!-- Card 2: PlayAura -->
-            <div class="clay-card shadow-clay p-6 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+            <div class="clay-card shadow-clay p-10 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
                 onclick="showServiceModal('playaura');">
                 <div
-                    class="absolute top-0 right-0 w-24 h-24 bg-red-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110">
+                    class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
                 <div class="relative z-10">
-                    <div class="text-5xl mb-4">🌍</div>
-                    <h3 class="text-3xl font-bold mb-2 text-gray-700">PlayAura</h3>
-                    <p class="text-xl text-gray-500 mb-3">전세계 인기 영상 탐험</p>
-                    <span class="text-red-600 font-bold group-hover:underline">탐험하기 &rarr;</span>
+                    <div class="text-7xl mb-6">🌍</div>
+                    <h3 class="text-5xl font-bold mb-4 text-gray-700">PlayAura</h3>
+                    <p class="text-3xl text-gray-500 mb-6">전세계 인기 영상 탐험</p>
+                    <span class="text-4xl text-red-600 font-bold group-hover:underline">탐험하기 &rarr;</span>
                 </div>
             </div>
 
             <!-- Card 3: Schoolit -->
-            <div class="clay-card shadow-clay p-6 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+            <div class="clay-card shadow-clay p-10 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
                 onclick="showServiceModal('schoolit');">
                 <div
-                    class="absolute top-0 right-0 w-24 h-24 bg-orange-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110">
+                    class="absolute top-0 right-0 w-32 h-32 bg-orange-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
                 <div class="relative z-10">
-                    <div class="text-5xl mb-4">🏫</div>
-                    <h3 class="text-3xl font-bold mb-2 text-gray-700">스쿨잇</h3>
-                    <p class="text-xl text-gray-500 mb-3">교육 공동체 연결 플랫폼</p>
-                    <span class="text-orange-600 font-bold group-hover:underline">방문하기 &rarr;</span>
+                    <div class="text-7xl mb-6">🏫</div>
+                    <h3 class="text-5xl font-bold mb-4 text-gray-700">스쿨잇</h3>
+                    <p class="text-3xl text-gray-500 mb-6">교육 공동체 연결 플랫폼</p>
+                    <span class="text-4xl text-orange-600 font-bold group-hover:underline">방문하기 &rarr;</span>
                 </div>
             </div>
         </div>
 
         <!-- AI Tools Row (2 columns) -->
-        <p class="text-center text-2xl text-gray-400 mb-4 mt-10">📚 AI 활용 가이드</p>
+        <div class="flex items-center justify-center gap-6 mb-10 mt-24">
+            <div class="h-px bg-gray-300 flex-grow max-w-[150px]"></div>
+            <p class="text-5xl font-bold text-gray-400">📚 AI 활용 가이드</p>
+            <div class="h-px bg-gray-300 flex-grow max-w-[150px]"></div>
+        </div>
+
         {% url 'prompt_lab' as prompt_lab_url %}
         {% url 'tool_guide' as tool_guide_url %}
-        <div class="grid md:grid-cols-2 gap-6 mb-12">
+        <div class="grid md:grid-cols-2 gap-8 mb-16">
             <!-- Card 4: AI Prompt Lab -->
-            <div class="clay-card shadow-clay p-6 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
                 onclick="location.href='{{ prompt_lab_url }}';">
                 <div
-                    class="absolute top-0 right-0 w-24 h-24 bg-purple-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110">
+                    class="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
-                <div class="relative z-10 flex items-center gap-6">
+                <div class="relative z-10 flex items-center gap-8">
                     <div
-                        class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl text-purple-500 bg-white flex-shrink-0">
+                        class="w-24 h-24 rounded-3xl shadow-clay-inner flex items-center justify-center text-5xl text-purple-500 bg-white flex-shrink-0">
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-700">AI 프롬프트 레시피</h3>
-                        <p class="text-lg text-gray-500">복사해서 바로 쓰는 AI 주문서</p>
+                        <h3 class="text-4xl font-bold text-gray-700 mb-2">AI 프롬프트 레시피</h3>
+                        <p class="text-2xl text-gray-500">복사해서 바로 쓰는 AI 주문서</p>
                     </div>
-                    <span class="text-purple-600 font-bold ml-auto">보러가기 &rarr;</span>
+                    <span class="text-3xl text-purple-600 font-bold ml-auto group-hover:underline">보러가기 &rarr;</span>
                 </div>
             </div>
 
             <!-- Card 5: AI Tool Guide -->
-            <div class="clay-card shadow-clay p-6 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
+            <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
                 onclick="location.href='{{ tool_guide_url }}';">
                 <div
-                    class="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110">
+                    class="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
-                <div class="relative z-10 flex items-center gap-6">
+                <div class="relative z-10 flex items-center gap-8">
                     <div
-                        class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl text-blue-500 bg-white flex-shrink-0">
+                        class="w-24 h-24 rounded-3xl shadow-clay-inner flex items-center justify-center text-5xl text-blue-500 bg-white flex-shrink-0">
                         <i class="fa-solid fa-toolbox"></i>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-700">AI 도구 가이드</h3>
-                        <p class="text-lg text-gray-500">상황별 AI 도구 완벽 정리</p>
+                        <h3 class="text-4xl font-bold text-gray-700 mb-2">AI 도구 가이드</h3>
+                        <p class="text-2xl text-gray-500">상황별 AI 도구 완벽 정리</p>
                     </div>
-                    <span class="text-blue-600 font-bold ml-auto">확인하기 &rarr;</span>
+                    <span class="text-blue-600 font-bold ml-auto group-hover:underline">확인하기 &rarr;</span>
                 </div>
             </div>
         </div>
