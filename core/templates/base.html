@@ -4,106 +4,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Eduitit{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>{% block title %}Eduitit - 선생님을 위한 디지털 도구{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&family=Gaegu:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-soft': '#E0E5EC',
+                        'clay-text': '#4A5568',
+                        'clay-accent': '#9D50BB',
+                        'clay-green': '#48c6ef',
+                    },
+                    fontFamily: {
+                        'round': ['Dongle', 'sans-serif'],
+                        'hand': ['Gaegu', 'cursive'],
+                    },
+                    boxShadow: {
+                        'clay': '9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5)',
+                        'clay-inner': 'inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8)',
+                        'clay-hover': '12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6)',
+                        'clay-pressed': 'inset 4px 4px 8px 0 rgba(163,177,198, 0.7), inset -4px -4px 8px 0 rgba(255,255,255, 0.8)',
+                    },
+                    borderRadius: {
+                        'clay': '30px',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #ec4899;
-            --bg: #0f172a;
-            --font-main: 'Outfit', sans-serif;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
         body {
-            margin: 0;
-            font-family: var(--font-main);
-            background-color: var(--bg);
-            color: white;
-            min-height: 100vh;
+            background-color: #E0E5EC;
+            color: #4A5568;
         }
 
-        .nav {
-            position: sticky;
-            top: 0;
-            width: 100%;
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            z-index: 100;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--glass-border);
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
+        .floating {
+            animation: float 6s ease-in-out infinite;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
         }
 
-        .btn {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 12px;
-            text-decoration: none;
+        .clay-card {
+            background-color: #E0E5EC;
             transition: all 0.3s ease;
-            display: inline-block;
         }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
+        .clay-btn {
+            background-color: #E0E5EC;
+            transition: all 0.2s ease;
         }
 
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
+        .clay-btn:active {
+            box-shadow: inset 4px 4px 8px 0 rgba(163, 177, 198, 0.7), inset -4px -4px 8px 0 rgba(255, 255, 255, 0.8);
+            transform: scale(0.98);
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 
-<body>
-    <nav class="nav">
-        <a href="/" class="logo">EDUITIT</a>
-        <div style="display: flex; gap: 2rem; align-items: center;">
-            <a href="/products/" style="color: #94a3b8; text-decoration: none; font-weight: 600;">Services</a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}"
-                style="color: #94a3b8; text-decoration: none; font-weight: 600;">Dashboard</a>
-            <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit"
-                    style="background: none; border: none; font-family: inherit; color: #94a3b8; text-decoration: none; font-weight: 600; cursor: pointer;">Logout</button>
-            </form>
-            {% else %}
-            <a href="{% url 'login' %}" style="color: #94a3b8; text-decoration: none; font-weight: 600;">Login</a>
-            {% endif %}
-            <a href="/admin" style="color: #94a3b8; text-decoration: none; font-weight: 600;">Admin</a>
+<body class="font-round text-2xl tracking-wide selection:bg-purple-200">
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 px-6 py-4">
+        <div class="max-w-6xl mx-auto clay-card shadow-clay rounded-full px-8 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500">
+                    <i class="fa-solid fa-cloud"></i>
+                </div>
+                <a href="/" class="font-bold text-3xl text-gray-700 mt-1 hover:text-purple-600 transition">EDUITIT</a>
+            </div>
+            <div class="hidden md:flex gap-6 mt-1">
+                <a href="#services" class="hover:text-purple-600 transition">서비스</a>
+                <a href="#pricing" class="hover:text-purple-600 transition">가격</a>
+                <a href="#use-cases" class="hover:text-purple-600 transition">사용사례</a>
+            </div>
+            <button id="mobile-menu-btn" class="md:hidden text-2xl text-purple-500">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 max-w-6xl mx-auto clay-card shadow-clay rounded-clay p-6">
+            <div class="flex flex-col gap-4 text-center">
+                <a href="#services" class="hover:text-purple-600 transition py-2">서비스</a>
+                <a href="#pricing" class="hover:text-purple-600 transition py-2">가격</a>
+                <a href="#use-cases" class="hover:text-purple-600 transition py-2">사용사례</a>
+            </div>
         </div>
     </nav>
 
-    <div class="container">
-        {% block content %}{% endblock %}
-    </div>
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="py-12 text-center">
+        <div class="inline-block shadow-clay rounded-full p-4 mb-4">
+            <i class="fa-regular fa-paper-plane text-2xl text-purple-400"></i>
+        </div>
+        <p class="text-2xl font-hand text-gray-500">선생님의 칼퇴를 응원합니다.</p>
+        <p class="text-xl text-gray-400 mt-2">© 2026 Eduitit. 설치/로그인 없이 바로 사용하는 디지털 도구 모음.</p>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 
 </html>

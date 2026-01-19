@@ -4,6 +4,7 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
+staticfiles/
 __pycache__/
 *.pyc
 
@@ -12,6 +13,7 @@ __pycache__/
 env/
 venv/
 ENV/
+.env
 
 # OS
 .DS_Store

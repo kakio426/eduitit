@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from products.models import Product
 
 def home(request):
-    featured_products = Product.objects.filter(is_active=True)[:3]
-    return render(request, 'core/home.html', {'products': featured_products})
+    products = Product.objects.filter(is_active=True)
+    return render(request, 'core/home.html', {'products': products})
 
 @login_required
 def dashboard(request):

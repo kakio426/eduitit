@@ -1,0 +1,18 @@
+# Django 6.0
+Django>=6.0,<7.0
+
+# Production Server
+gunicorn==23.0.0
+
+# Database
+dj-database-url==2.3.0
+psycopg2-binary==2.9.10
+
+# Static Files
+whitenoise==6.8.2
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# Development (optional, remove in production if needed)
+# pytest-django==4.7.0
