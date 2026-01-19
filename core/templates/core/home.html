@@ -116,7 +116,7 @@
             <!-- Card 3: Online Yut Noli -->
             {% url 'yut_game' as yut_url %}
             <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
-                onclick="location.href='{{ yut_url }}';">
+                onclick="showServiceModal('yut');">
                 <div
                     class="absolute top-0 right-0 w-32 h-32 bg-green-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
@@ -136,7 +136,7 @@
 
             <!-- Card 4: PlayAura -->
             <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
-                onclick="window.open('https://motube-woad.vercel.app/', '_blank');">
+                onclick="showServiceModal('playaura');">
                 <div
                     class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
@@ -156,7 +156,7 @@
 
             <!-- Card 5: Schoolit -->
             <div class="clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer relative overflow-hidden transition-all duration-300"
-                onclick="window.open('https://schoolit.shop/', '_blank');">
+                onclick="showServiceModal('schoolit');">
                 <div
                     class="absolute top-0 right-0 w-32 h-32 bg-orange-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110">
                 </div>
@@ -367,4 +367,133 @@
         </div>
     </div>
 </section>
+
+<!-- Service Modal -->
+<div id="serviceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
+    onclick="if(event.target === this) closeServiceModal();">
+    <div class="clay-card shadow-clay p-8 rounded-clay max-w-lg w-full mx-auto relative animate-bounce-in">
+        <button onclick="closeServiceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="modalContent" class="text-center">
+            <!-- Content will be injected by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes bounceIn {
+        0% {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scale(1.02);
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .animate-bounce-in {
+        animation: bounceIn 0.3s ease-out;
+    }
+</style>
+
+<script>
+    const serviceData = {
+        yut: {
+            icon: 'fa-solid fa-gamepad',
+            iconColor: 'text-green-500',
+            bgColor: 'bg-green-100',
+            title: '온라인 윤놀이',
+            features: [
+                '🎲 설치 없이 브라우저에서 바로 플레이!',
+                '👥 2~4팀 대항전 가능',
+                '🎯 실시간 윤 던지기 애니메이션',
+                '🎉 학급 레크레이션에 딱!'
+            ],
+            buttonText: '게임하기',
+            buttonColor: 'text-green-600 hover:text-green-700',
+            url: '{{ yut_url }}',
+            isExternal: false
+        },
+        playaura: {
+            icon: 'fa-brands fa-youtube',
+            iconColor: 'text-red-500',
+            bgColor: 'bg-red-100',
+            title: 'PlayAura',
+            features: [
+                '🌍 내 알고리즘에서 벗어나 전세계 인기 영상 발견!',
+                '🗺️ 국가별 트렌딩 영상 탐색',
+                '🔍 새로운 콘텐츠 발굴',
+                '🚀 YouTube 알고리즘 탈출!'
+            ],
+            buttonText: '탐험하기',
+            buttonColor: 'text-red-600 hover:text-red-700',
+            url: 'https://motube-woad.vercel.app/',
+            isExternal: true
+        },
+        schoolit: {
+            icon: 'fa-solid fa-school',
+            iconColor: 'text-orange-500',
+            bgColor: 'bg-orange-100',
+            title: '스쿨잊',
+            features: [
+                '🏢 교사·학교·교육행사업체 연결 플랫폼',
+                '💼 강사 채용, 행사업체 채용 정보',
+                '🤖 궁금한 점은 AI에게 바로 물어보세요!',
+                '💬 선생님 전용 커뮤니티'
+            ],
+            buttonText: '방문하기',
+            buttonColor: 'text-orange-600 hover:text-orange-700',
+            url: 'https://schoolit.shop/',
+            isExternal: true
+        }
+    };
+
+    function showServiceModal(serviceKey) {
+        const service = serviceData[serviceKey];
+        if (!service) return;
+
+        const featuresHtml = service.features.map(f => `<li class="text-left py-1">${f}</li>`).join('');
+
+        document.getElementById('modalContent').innerHTML = `
+            <div class="w-20 h-20 rounded-2xl shadow-clay-inner mb-6 flex items-center justify-center text-4xl ${service.iconColor} ${service.bgColor} mx-auto">
+                <i class="${service.icon}"></i>
+            </div>
+            <h3 class="text-3xl font-bold mb-4 text-gray-700">${service.title}</h3>
+            <ul class="font-hand text-lg text-gray-600 mb-6 space-y-1">
+                ${featuresHtml}
+            </ul>
+            <button onclick="goToService('${serviceKey}')" 
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay ${service.buttonColor} font-bold text-xl hover:shadow-clay-hover inline-block">
+                ${service.buttonText} <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        `;
+
+        const modal = document.getElementById('serviceModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeServiceModal() {
+        const modal = document.getElementById('serviceModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function goToService(serviceKey) {
+        const service = serviceData[serviceKey];
+        if (service.isExternal) {
+            window.open(service.url, '_blank');
+        } else {
+            location.href = service.url;
+        }
+        closeServiceModal();
+    }
+</script>
 {% endblock %}
