@@ -3,175 +3,285 @@
 {% block title %}AI 도구 가이드 - Eduitit{% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-6 min-h-screen">
-    <div class="max-w-7xl mx-auto">
-        <!-- Hero Section -->
-        <div class="text-center mb-12">
-            <span class="inline-block px-4 py-1 rounded-full shadow-clay text-purple-500 font-bold text-xl mb-4">
-                👋 2026 Edu-Tech & Vibe Coding
-            </span>
-            <h1 class="text-5xl md:text-6xl font-bold text-gray-700 text-shadow mb-6">
-                "선생님, 이럴 땐 <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">이
-                    도구</span>를 쓰세요!"
-            </h1>
-            <p class="text-2xl text-gray-500 font-hand leading-relaxed max-w-3xl mx-auto">
-                매일 쏟아지는 AI 툴, 이름만 들어서는 어디에 쓰는 건지 모르시겠죠?<br>
-                <strong>"어떤 상황"</strong>에 필요한지 딱 정해드립니다.
+<style>
+    /* Custom Animations */
+    @keyframes glitch-jump {
+        0% {
+            transform: translate(0, 0);
+            opacity: 1;
+            filter: hue-rotate(0deg);
+        }
+
+        10% {
+            transform: translate(-5px, -5px);
+            opacity: 0.8;
+        }
+
+        20% {
+            transform: translate(5px, 5px);
+            opacity: 1;
+        }
+
+        30% {
+            transform: translate(-5px, 5px);
+            opacity: 0.4;
+            filter: hue-rotate(90deg);
+        }
+
+        40% {
+            transform: translate(5px, -5px);
+            opacity: 0.8;
+        }
+
+        50% {
+            transform: translate(50px, 50px) skew(20deg);
+            opacity: 0.2;
+            filter: invert(1);
+        }
+
+        60% {
+            transform: translate(-5px, 0);
+            opacity: 1;
+            filter: invert(0);
+        }
+
+        70% {
+            transform: translate(5px, 0);
+            opacity: 0.8;
+        }
+
+        80% {
+            transform: translate(0, 5px);
+            opacity: 1;
+        }
+
+        90% {
+            transform: translate(0, -5px);
+            opacity: 0.8;
+        }
+
+        100% {
+            transform: translate(0, 0);
+            opacity: 1;
+        }
+    }
+
+    .hover-glitch:hover {
+        animation: glitch-jump 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+        z-index: 50;
+    }
+
+    /* Bento Grid Utils */
+    .bento-card {
+        @apply bg-white/60 backdrop-blur-sm rounded-[2rem] p-8 transition-all duration-300 shadow-clay hover:shadow-clay-hover border border-white/20;
+    }
+</style>
+
+<section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
+
+    <!-- Header -->
+    <div class="text-center mb-16" data-aos="fade-down">
+        <span
+            class="inline-block px-5 py-2 rounded-full bg-purple-100 text-purple-600 font-bold text-xl mb-6 shadow-sm">
+            👋 2026 Edu-Tech Guide
+        </span>
+        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 text-shadow mb-6 leading-tight">
+            "선생님, 이럴 땐<br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">이 도구</span>를 쓰세요!"
+        </h1>
+        <p class="text-3xl text-gray-400 font-hand leading-relaxed max-w-3xl mx-auto">
+            복잡한 AI 도구, 상황별로 딱 골라드립니다.<br>
+            수업 준비부터 행정 업무까지 한 번에 끝내세요.
+        </p>
+    </div>
+
+    <!-- Bento Grid (Use Cases) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-24 auto-rows-[minmax(200px,auto)]">
+
+        <!-- 1. Logic (Large) -->
+        <div class="col-span-4 md:col-span-2 row-span-2 bento-card bg-purple-50/50 flex flex-col justify-between group"
+            data-aos="fade-up" data-aos-delay="100">
+            <div>
+                <span
+                    class="inline-block px-3 py-1 bg-purple-200 text-purple-700 rounded-lg text-sm font-bold mb-4">Core
+                    Logic</span>
+                <div class="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300 origin-left">🧠</div>
+                <h3 class="text-4xl font-bold text-gray-700 mb-2">논리적 사고 강화</h3>
+                <p class="text-gray-500 text-xl leading-relaxed mb-6">
+                    단순한 답변이 아닌, AI가 '생각'하게 만듭니다.<br>
+                    학폭 사안 분석, 복잡한 민원 대응 시뮬레이션을<br>
+                    체계적으로 수행해보세요.
+                </p>
+            </div>
+            <div class="bg-white/50 rounded-2xl p-6 shadow-clay-inner">
+                <ul class="space-y-2 text-gray-600 font-mono text-lg">
+                    <li>• ToT (Tree of Thoughts)</li>
+                    <li>• 3-Persona Debate Simulation</li>
+                    <li>• Self-Consistency Check</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 2. Pedagogy (Wide) -->
+        <div class="col-span-4 md:col-span-2 bento-card bg-green-50/50 relative overflow-hidden group"
+            data-aos="fade-up" data-aos-delay="200">
+            <div class="relative z-10">
+                <span class="inline-block px-3 py-1 bg-green-200 text-green-700 rounded-lg text-sm font-bold mb-4">For
+                    Teachers</span>
+                <h3 class="text-4xl font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    🏫 교육학 이론 적용
+                </h3>
+                <p class="text-gray-500 text-xl leading-relaxed mt-4">
+                    Gagne, UbD, 5E 모형 등<br>
+                    교육학 이론을 수업 지도안에<br>
+                    강제로 적용하여 퀄리티 UP!
+                </p>
+            </div>
+            <div
+                class="absolute bottom-[-20px] right-[-20px] text-[10rem] text-green-200/50 group-hover:rotate-12 transition-transform">
+                <i class="fa-solid fa-school"></i>
+            </div>
+        </div>
+
+        <!-- 3. Admin (Small) -->
+        <div class="col-span-2 md:col-span-1 bento-card bg-orange-50/50 group hover:bg-orange-100/50" data-aos="fade-up"
+            data-aos-delay="300">
+            <span
+                class="inline-block px-3 py-1 bg-orange-200 text-orange-700 rounded-lg text-sm font-bold mb-4">Admin</span>
+            <div class="text-right text-5xl text-orange-400 mb-4 group-hover:-translate-y-2 transition-transform"><i
+                    class="fa-solid fa-pen-nib"></i></div>
+            <h3 class="text-3xl font-bold text-gray-700 mb-2">행정 / 글쓰기</h3>
+            <p class="text-gray-500 text-lg">가정통신문, 기안문,<br>"정중하게" 톤앤매너 조절.</p>
+        </div>
+
+        <!-- 4. Advanced (Small - GLITCH TARGET potential, but sticking to design) -->
+        <div class="col-span-2 md:col-span-1 bento-card bg-gray-700 text-white group hover:bg-gray-800"
+            data-aos="fade-up" data-aos-delay="400">
+            <div class="flex justify-between items-start mb-4">
+                <span
+                    class="inline-block px-3 py-1 bg-gray-600 text-gray-200 rounded-lg text-sm font-bold">Advanced</span>
+                <i
+                    class="fa-solid fa-screwdriver-wrench text-4xl text-gray-400 group-hover:rotate-45 transition-transform"></i>
+            </div>
+            <h3 class="text-3xl font-bold mb-2">🔧 메타 프롬프트</h3>
+            <p class="text-gray-400 text-lg">AI가 직접 프롬프트를 짜게 시키기.<br>(Prompt Engineering)</p>
+        </div>
+
+        <!-- 5. Assessment (Wide) -->
+        <div class="col-span-4 md:col-span-2 bento-card bg-yellow-50/50 group" data-aos="fade-up" data-aos-delay="500">
+            <span
+                class="inline-block px-3 py-1 bg-yellow-200 text-yellow-700 rounded-lg text-sm font-bold mb-4">Assessment</span>
+            <h3 class="text-4xl font-bold text-gray-700 mb-2 flex items-center gap-3">
+                📊 평가 & 루브릭 생성
+            </h3>
+            <p class="text-gray-500 text-xl leading-relaxed mt-4">
+                서술형 채점 기준표(Rubric) 생성부터,<br>
+                학생 답안에 대한 AI 피드백 자동 생성까지.
             </p>
         </div>
 
-        <!-- Filter Tabs -->
-        <div class="flex flex-wrap justify-center gap-4 mb-12">
-            <button onclick="filterTools('all')"
-                class="filter-btn active clay-btn shadow-clay px-6 py-3 rounded-clay text-gray-700 font-bold hover:shadow-clay-hover hover:text-purple-600 transition-all">전체
-                보기</button>
-            <button onclick="filterTools('ai')"
-                class="filter-btn clay-btn shadow-clay px-6 py-3 rounded-clay text-gray-500 font-bold hover:shadow-clay-hover hover:text-purple-600 transition-all">🤖
-                AI 비서</button>
-            <button onclick="filterTools('dev')"
-                class="filter-btn clay-btn shadow-clay px-6 py-3 rounded-clay text-gray-500 font-bold hover:shadow-clay-hover hover:text-purple-600 transition-all">💻
-                코딩/개발</button>
-            <button onclick="filterTools('art')"
-                class="filter-btn clay-btn shadow-clay px-6 py-3 rounded-clay text-gray-500 font-bold hover:shadow-clay-hover hover:text-purple-600 transition-all">🎨
-                창작/예술</button>
-            <button onclick="filterTools('work')"
-                class="filter-btn clay-btn shadow-clay px-6 py-3 rounded-clay text-gray-500 font-bold hover:shadow-clay-hover hover:text-purple-600 transition-all">⚡
-                생산성</button>
-        </div>
-
-        <!-- Tools Grid -->
-        <div id="tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Cards Injected via JS -->
-        </div>
-
-        <!-- My Projects Link -->
-        <div class="mt-20 pt-10 border-t border-gray-300">
-            <h2 class="text-4xl font-bold text-gray-700 mb-8 text-center">이 도구들로 만든 제 작품들이에요</h2>
-            <div class="flex flex-col md:flex-row gap-8">
-                <a href="#"
-                    class="flex-1 clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer transition-all duration-300">
-                    <div class="flex justify-between mb-4">
-                        <h3 class="text-2xl font-bold text-gray-700 group-hover:text-purple-500 transition">🎓 NEIS 생기부
-                            AI</h3>
-                        <i
-                            class="fa-solid fa-arrow-right text-gray-400 group-hover:text-purple-500 transition transform group-hover:translate-x-2"></i>
-                    </div>
-                    <p class="text-gray-500 font-hand text-xl">ChatGPT API + Python으로 제작</p>
-                </a>
-                <a href="#"
-                    class="flex-1 clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer transition-all duration-300">
-                    <div class="flex justify-between mb-4">
-                        <h3 class="text-2xl font-bold text-gray-700 group-hover:text-purple-500 transition">🪑 황금손 자리배치
-                        </h3>
-                        <i
-                            class="fa-solid fa-arrow-right text-gray-400 group-hover:text-purple-500 transition transform group-hover:translate-x-2"></i>
-                    </div>
-                    <p class="text-gray-500 font-hand text-xl">Cursor + V0.dev로 1시간 만에 완성</p>
-                </a>
-                <a href="#"
-                    class="flex-1 clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer transition-all duration-300">
-                    <div class="flex justify-between mb-4">
-                        <h3 class="text-2xl font-bold text-gray-700 group-hover:text-purple-500 transition">🎵 교실 BGM
-                            생성기</h3>
-                        <i
-                            class="fa-solid fa-arrow-right text-gray-400 group-hover:text-purple-500 transition transform group-hover:translate-x-2"></i>
-                    </div>
-                    <p class="text-gray-500 font-hand text-xl">Suno AI API 연동 웹앱</p>
-                </a>
+        <!-- 6. Classroom (Wide) -->
+        <div class="col-span-4 md:col-span-2 bento-card bg-blue-50/50 group" data-aos="fade-up" data-aos-delay="600">
+            <span
+                class="inline-block px-3 py-1 bg-blue-200 text-blue-700 rounded-lg text-sm font-bold mb-4">Classroom</span>
+            <h3 class="text-4xl font-bold text-gray-700 mb-2 flex items-center gap-3">
+                🎲 수업 도구 & 게임
+            </h3>
+            <p class="text-gray-500 text-xl leading-relaxed mt-4">
+                스무고개 게임 봇, 역사 인물 롤플레잉,<br>
+                소크라테스식 문답법 튜터 만들기.
+            </p>
+            <div class="absolute bottom-4 right-4 text-4xl text-blue-400 group-hover:scale-125 transition-transform">
+                <i class="fa-solid fa-gamepad"></i>
             </div>
         </div>
     </div>
+
+    <!-- Filter Tabs (as per design 2) -->
+    <div class="flex flex-wrap justify-center gap-4 mb-12">
+        <button onclick="filterTools('all')"
+            class="filter-btn active clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-700 hover:text-purple-600">전체
+            보기</button>
+        <button onclick="filterTools('ai')"
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🤖
+            AI 비서</button>
+        <button onclick="filterTools('dev')"
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">💻
+            코딩/개발</button>
+        <button onclick="filterTools('art')"
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🎨
+            창작/예술</button>
+        <button onclick="filterTools('work')"
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">⚡
+            생산성</button>
+    </div>
+
+    <!-- Tools Grid (as per design 2) -->
+    <div id="tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Injected via JS -->
+    </div>
+
 </section>
 
-<!-- Modal Overlay -->
+<!-- Modal Overlay (as per design 3) -->
 <div id="modal-overlay"
-    class="fixed inset-0 bg-gray-900/40 z-50 hidden backdrop-blur-sm transition-opacity duration-300 opacity-0"
+    class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50 hidden transition-opacity duration-300 opacity-0"
     onclick="closeModal()"></div>
 
 <!-- Modal Content -->
 <div id="modal-content"
-    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-2xl max-h-[85vh] clay-card p-0 shadow-clay rounded-clay z-50 hidden transition-all duration-300 scale-95 opacity-0 flex flex-col bg-[#E0E5EC]">
+    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-50 hidden transition-all duration-300 scale-95 opacity-0 overflow-hidden">
 
-    <!-- Header -->
-    <div class="p-6 border-b border-gray-300 flex justify-between items-center shrink-0 bg-[#E0E5EC] rounded-t-[30px]">
-        <div class="flex items-center gap-4">
+    <!-- Modal Header -->
+    <div class="p-8 pb-0 flex justify-between items-start">
+        <div class="flex items-center gap-6">
             <div id="modal-icon"
-                class="w-14 h-14 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl"></div>
+                class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-5xl">
+            </div>
             <div>
-                <h2 id="modal-title" class="text-3xl font-bold text-gray-700"></h2>
-                <span id="modal-badge"
-                    class="inline-block mt-1 px-3 py-0.5 rounded-full text-sm font-bold shadow-clay-inner"></span>
+                <h2 id="modal-title" class="text-5xl font-bold text-gray-800 mb-3"></h2>
+                <div id="modal-badge-container"></div>
             </div>
         </div>
         <button onclick="closeModal()"
-            class="w-10 h-10 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors">
-            <i class="fa-solid fa-xmark text-xl"></i>
+            class="w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-2xl">
+            <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
-    <!-- Scrollable Body -->
-    <div class="p-8 overflow-y-auto flex-1 bg-[#E0E5EC] custom-scrollbar">
-        <!-- Explain Section -->
-        <div class="mb-8">
-            <h3 class="text-xl font-bold text-gray-700 mb-3 flex items-center gap-2"><i
-                    class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?</h3>
-            <p id="modal-desc"
-                class="text-gray-600 text-lg leading-relaxed shadow-clay-inner p-6 rounded-2xl bg-gray-100/50"></p>
-        </div>
-
-        <!-- Update Section -->
-        <div class="mb-8">
-            <h3 class="text-xl font-bold text-gray-700 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-blue-500"></i> 최신 업데이트 (2026.01)
+    <!-- Modal Body -->
+    <div class="p-8 space-y-8">
+        <!-- Description -->
+        <div>
+            <h3 class="text-2xl font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
             </h3>
-            <div class="clay-card shadow-clay p-6 rounded-clay bg-blue-50/50 border border-blue-100">
-                <p id="modal-summary" class="text-blue-800 font-bold text-lg mb-4"></p>
-                <ul id="modal-details" class="space-y-3 text-blue-700"></ul>
+            <div class="p-6 rounded-3xl shadow-clay-inner bg-gray-50/50">
+                <p id="modal-desc" class="text-xl text-gray-600 leading-relaxed font-hand"></p>
             </div>
         </div>
 
-        <div class="text-center pt-2">
+        <!-- Latest Update -->
+        <div class="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 shadow-sm">
+            <h3 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-bolt"></i> 최신 업데이트 (2026.01)
+            </h3>
+            <p id="modal-summary" class="text-blue-800 font-bold text-lg mb-3"></p>
+            <ul id="modal-details" class="space-y-2 text-blue-700/80 text-lg"></ul>
+        </div>
+
+        <!-- CTA -->
+        <div class="text-center pt-4">
             <a href="#"
-                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-gray-700 font-bold hover:shadow-clay-hover hover:text-purple-600 transition inline-flex items-center gap-2">
+                class="clay-btn shadow-clay px-10 py-4 rounded-2xl text-2xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-3">
                 공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
         </div>
     </div>
 </div>
 
-<style>
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #cbd5e0;
-        border-radius: 4px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: #a0aec0;
-    }
-
-    .filter-btn.active {
-        color: #9333ea;
-        /* purple-600 */
-        box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
-        /* shadow-clay-inner */
-    }
-</style>
-
-{% endblock %}
-
-{% block extra_js %}
 <script>
-    /* 2026 Vibe Coding Tool List */
     const toolsData = [
-        // --- 1. AI Assistant (Chat/LLM) ---
         {
             id: 'chatgpt',
             name: 'ChatGPT',
@@ -179,7 +289,9 @@
             icon: '<i class="fa-solid fa-robot text-green-500"></i>',
             desc: '만능 해결사. 가정통신문 초안, 수업 아이디어, 고민 상담 등 텍스트로 하는 모든 일의 기본입니다.',
             summary: 'Canvas 기능이 무료로 풀렸어요! 글쓰기나 코딩할 때 별도 창에서 수정이 가능해져서 훨씬 편합니다.',
-            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가']
+            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가'],
+            // Special Animation Trigger
+            isGlitch: true
         },
         {
             id: 'claude',
@@ -187,8 +299,8 @@
             category: 'ai',
             icon: '<i class="fa-solid fa-brain text-orange-500"></i>',
             desc: '글쓰기와 코딩의 신. ChatGPT보다 한국어 문장이 훨씬 자연스럽고, 긴 문서를 분석할 때 탁월합니다.',
-            summary: '코딩 실력이 비약적으로 상승한 3.7 버전이 나왔습니다. "Artifacts" 기능으로 결과물을 바로 미리볼 수 있어요.',
-            details: ['Claude 3.7 Sonnet 모델 출시', '모바일 앱 속도 개선', '프로젝트(Project) 기능 문서 용량 확대']
+            summary: '코딩 실력이 비약적으로 상승한 3.7 버전이 나왔습니다.',
+            details: ['Claude 3.7 Sonnet 모델 출시', 'Artifacts 기능으로 결과물 미리보기']
         },
         {
             id: 'gemini',
@@ -196,8 +308,8 @@
             category: 'ai',
             icon: '<i class="fa-solid fa-star text-blue-500"></i>',
             desc: '구글 찐친. 구글 문서, 스프레드시트, 유튜브 내용을 분석하거나 요약해야 할 때 가장 강력합니다.',
-            summary: '구글 워크스페이스 연동성이 강화되었습니다. 이제 드라이브에 있는 PDF 파일 10개를 한 번에 요약할 수 있어요.',
-            details: ['Gemini 2.5 Flash 업데이트', 'Google Sheets 자동 시각화 기능', 'Youtube 영상 챕터 자동 생성']
+            summary: '구글 워크스페이스 연동성이 강화되었습니다.',
+            details: ['Gemini 2.5 Flash 업데이트', 'Google Sheets 자동 시각화 기능']
         },
         {
             id: 'perplexity',
@@ -205,19 +317,17 @@
             category: 'ai',
             icon: '<i class="fa-solid fa-magnifying-glass text-teal-500"></i>',
             desc: '거짓말 안 하는 검색 AI. 논문, 뉴스 기사 등 "출처"가 중요한 자료를 찾을 때 네이버/구글 대신 쓰세요.',
-            summary: 'Deep Research 모드가 추가되었습니다. 질문 하나만 던지면 AI가 30분 동안 웹을 뒤져서 심층 보고서를 써줍니다.',
-            details: ['Deep Research 기능 베타', 'Pro Search 속도 개선', '학술 논문 검색 필터 추가']
+            summary: 'Deep Research 모드가 추가되었습니다.',
+            details: ['Deep Research 기능 베타', 'Pro Search 속도 개선']
         },
-
-        // --- 2. Coding & Dev (Vibe Coding Essential) ---
         {
             id: 'cursor',
             name: 'Cursor',
             category: 'dev',
             icon: '<i class="fa-solid fa-terminal text-gray-700"></i>',
             desc: 'AI가 탑재된 코딩 편집기. "이거 만들어줘"라고 치면 코드를 다 짜줍니다. 바이브 코딩의 핵심 툴!',
-            summary: 'Composer 기능이 더 강력해졌습니다. 이제 파일 하나가 아니라 프로젝트 전체 구조를 이해하고 코드를 수정해줍니다.',
-            details: ['Composer 다중 파일 편집 기능', '자연어 터미널 명령 지원', 'Python 가상환경 자동 설정']
+            summary: 'Composer 기능이 더 강력해졌습니다.',
+            details: ['Composer 다중 파일 편집 기능', '자연어 터미널 명령 지원']
         },
         {
             id: 'replit',
@@ -225,8 +335,8 @@
             category: 'dev',
             icon: '<i class="fa-solid fa-code text-blue-600"></i>',
             desc: '설치 없는 코딩. 복잡한 세팅 없이 인터넷 창에서 바로 코딩하고 결과물을 공유할 수 있습니다.',
-            summary: 'Replit Agent가 정식 출시되었습니다. "벽돌깨기 게임 만들어줘"라고 말만 하면 앱 배포까지 알아서 다 해줍니다.',
-            details: ['Replit Agent 정식 런칭', 'Teams 협업 기능 강화', '모바일 앱 코딩 지원']
+            summary: 'Replit Agent가 정식 출시되었습니다.',
+            details: ['Replit Agent 정식 런칭', '모바일 앱 코딩 지원']
         },
         {
             id: 'bolt',
@@ -234,176 +344,64 @@
             category: 'dev',
             icon: '<i class="fa-solid fa-bolt text-yellow-500"></i>',
             desc: '웹사이트 자판기. "학교 소개 페이지 만들어줘" 하면 디자인부터 기능까지 완성된 사이트를 뚝딱 만들어줍니다.',
-            summary: '이미지 업로드 기능이 생겼습니다. 손으로 그린 그림을 올리면 그걸 그대로 웹사이트로 코딩해줍니다.',
-            details: ['Image-to-Code 기능 추가', 'Netlify 배포 연동', 'React 최신 버전 지원']
+            summary: '이미지 업로드 기능이 생겼습니다.',
+            details: ['Image-to-Code 기능 추가', 'Netlify 배포 연동']
         },
         {
             id: 'v0',
             name: 'v0.dev',
             category: 'dev',
             icon: '<i class="fa-solid fa-shapes text-gray-700"></i>',
-            desc: '디자인 복사기. 마음에 드는 사이트 캡처해서 올리면 똑같은 모양의 코드를 만들어줍니다. (Vercel 만듦)',
-            summary: '피그마(Figma) 디자인을 코드로 변환하는 정확도가 99%까지 올라갔습니다.',
-            details: ['Figma to React 변환 개선', 'Tailwind CSS 최적화', '다크 모드 자동 생성']
-        },
-        {
-            id: 'vercel',
-            name: 'Vercel',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-triangle-exclamation text-black"></i>',
-            desc: '무료 배포 도구. 내가 만든 웹사이트를 전 세계 사람들이 접속할 수 있게 주소(URL)를 만들어줍니다.',
-            summary: '무료 요금제 대역폭이 늘어났습니다. 학생들이 많이 접속해도 사이트가 안 터져요.',
-            details: ['Next.js 16 최적화', '무료 플랜 대역폭 상향', 'AI SDK 통합']
-        },
-
-        // --- 3. Creative (Art/Video/Audio) ---
-        {
-            id: 'midjourney',
-            name: 'Midjourney',
-            category: 'art',
-            icon: '<i class="fa-solid fa-palette text-purple-600"></i>',
-            desc: '그림 그려주는 화가. PPT 배경, 학습지 삽화, 행사 포스터에 들어갈 고퀄리티 이미지가 필요할 때.',
-            summary: '드디어 웹사이트에서 이미지 생성이 가능합니다! (디스코드 안 써도 됨)',
-            details: ['웹 생성 기능 전면 오픈', '이미지 수정(Inpainting) 툴 개선', 'v7 모델 테스트 시작']
-        },
-        {
-            id: 'sora',
-            name: 'Sora',
-            category: 'art',
-            icon: '<i class="fa-solid fa-video text-red-500"></i>',
-            desc: '영상 제작 PD. "우주를 여행하는 고양이"라고 치면 진짜 영화 같은 영상을 만들어줍니다. (OpenAI)',
-            summary: '최대 1분 길이의 영상을 끊김 없이 생성할 수 있게 되었습니다. 수업 도입부 영상으로 딱이에요.',
-            details: ['영상 길이 1분으로 확장', '사운드 효과 자동 생성', '영상 편집 기능 추가']
-        },
-        {
-            id: 'suno',
-            name: 'Suno',
-            category: 'art',
-            icon: '<i class="fa-solid fa-music text-pink-500"></i>',
-            desc: '작곡가 AI. "졸업식 노래 만들어줘" 하면 가사, 멜로디, 보컬까지 포함된 노래를 1분 만에 만듭니다.',
-            summary: 'v4 모델이 나왔습니다. 이제 한국어 발음이 사람이 부르는 것처럼 아주 자연스러워졌어요.',
-            details: ['v4 모델 출시', '가사 수정 기능(Remix) 강화', '악기 트랙 분리 다운로드']
-        },
-        {
-            id: 'elevenlabs',
-            name: 'ElevenLabs',
-            category: 'art',
-            icon: '<i class="fa-solid fa-microphone-lines text-gray-600"></i>',
-            desc: '성우 AI. 듣기 평가 파일이나 안내 방송이 필요할 때, 텍스트를 입력하면 사람 목소리로 읽어줍니다.',
-            summary: '감정 표현 기능이 생겼습니다. "화난 목소리", "속삭이는 목소리" 등 연출이 가능합니다.',
-            details: ['Speech-to-Speech(목소리 변조) 강화', '한국어 감정 표현 추가', '효과음 생성 기능']
-        },
-
-        // --- 4. Productivity (Work) ---
-        {
-            id: 'gamma',
-            name: 'Gamma',
-            category: 'work',
-            icon: '<i class="fa-solid fa-layer-group text-yellow-500"></i>',
-            desc: 'PPT 공장. 주제만 입력하면 디자인, 내용, 이미지가 다 들어간 프레젠테이션 자료를 만들어줍니다.',
-            summary: '한글 폰트 지원이 대폭 늘어났고, 만든 자료를 파워포인트(PPT) 파일로 변환하는 기능이 완벽해졌습니다.',
-            details: ['PPT 변환 레이아웃 깨짐 해결', '웹사이트 모드 지원', '한글 폰트 20종 추가']
-        },
-        {
-            id: 'notion',
-            name: 'Notion',
-            category: 'work',
-            icon: '<i class="fa-solid fa-n text-black"></i>',
-            desc: '만능 다이어리. 학급 일지, 업무 정리, 홈페이지 제작까지. 예쁘게 정리하는 걸 좋아한다면 필수.',
-            summary: '노션 캘린더와 데이터베이스가 완전히 하나로 합쳐졌습니다. 일정 관리가 정말 편해졌어요.',
-            details: ['Notion Calendar 양방향 동기화', '차트(Chart) 보기 기능 추가', 'AI 자동 채우기 속도 개선']
-        },
-        {
-            id: 'canva',
-            name: 'Canva',
-            category: 'work',
-            icon: '<i class="fa-solid fa-pen-fancy text-blue-400"></i>',
-            desc: '디자인 치트키. 안내장, 포스터, 카드뉴스... 디자이너가 만든 것 같은 템플릿이 수만 개 있습니다.',
-            summary: '매직 스튜디오(AI)가 더 똑똑해졌습니다. "이 포스터를 가을 느낌으로 바꿔줘" 하면 색감을 싹 바꿔줍니다.',
-            details: ['Magic Switch(디자인 변환) 강화', '텍스트-비디오 변환', '교육용 템플릿 500종 추가']
-        },
-        {
-            id: 'zapier',
-            name: 'Zapier',
-            category: 'work',
-            icon: '<i class="fa-solid fa-bolt text-orange-500"></i>',
-            desc: '자동화 연결고리. "설문지 들어오면 엑셀에 적고 나한테 문자 보내줘" 같은 반복 업무를 자동화합니다.',
-            summary: 'AI가 만드는 자동화(Zap) 기능이 생겼습니다. 말로 설명하면 복잡한 자동화 로직을 짜줍니다.',
-            details: ['Natural Language Actions', 'Canvas 인터페이스 도입', '무료 플랜 단계 수 증가']
-        },
-        {
-            id: 'framer',
-            name: 'Framer',
-            category: 'work',
-            icon: '<i class="fa-solid fa-f text-black"></i>',
-            desc: '웹 디자인 툴. PPT 만들듯이 마우스로 그리면 진짜 작동하는 웹사이트가 됩니다. (디자인 중심)',
-            summary: 'AI 번역 기능이 추가되어, 사이트를 만들면 자동으로 다국어 버전 페이지가 생성됩니다.',
-            details: ['AI Localization 기능', '3D 효과 컴포넌트 추가', '폼(Form) 기능 강화']
-        },
-        {
-            id: 'lilac',
-            name: 'Lilac',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-database text-purple-700"></i>',
-            desc: '데이터 청소부. 비구조화된 텍스트 데이터를 분석해서 깔끔하게 정리해주는 툴입니다. (개발자용)',
-            summary: 'RAG 파이프라인 구축이 쉬워졌습니다. 선생님만의 챗봇 만들 때 데이터 정리가 편해요.',
-            details: ['Cluster 분석 시각화', 'PII(개인정보) 자동 마스킹', 'HuggingFace 연동']
+            desc: '디자인 복사기. 마음에 드는 사이트 캡처해서 올리면 똑같은 모양의 코드를 만들어줍니다.',
+            summary: '피그마(Figma) 디자인 변환 정확도 향상.',
+            details: ['Figma to React 변환 개선', 'Tailwind CSS 최적화']
         }
     ];
 
-    // --- Render Logic ---
     const grid = document.getElementById('tools-grid');
     const filterBtns = document.querySelectorAll('.filter-btn');
 
     function renderTools(filter = 'all') {
         grid.style.opacity = '0';
-
         setTimeout(() => {
             grid.innerHTML = '';
-
-            const filtered = filter === 'all'
-                ? toolsData
-                : toolsData.filter(t => t.category === filter);
+            const filtered = filter === 'all' ? toolsData : toolsData.filter(t => t.category === filter);
 
             filtered.forEach(tool => {
                 const card = document.createElement('div');
-                card.className = `clay-card shadow-clay p-8 rounded-clay group hover:shadow-clay-hover cursor-pointer transition-all duration-300 flex flex-col h-full`;
+                // Check if this card should have the glitch effect
+                const glitchClass = tool.isGlitch ? 'hover-glitch' : '';
+
+                card.className = `clay-card shadow-clay p-8 rounded-[2rem] group hover:shadow-clay-hover cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC] ${glitchClass}`;
                 card.onclick = () => openModal(tool);
 
-                // Category Badge Text & Color
-                let catText = '', catColor = '';
-                if (tool.category === 'ai') { catText = 'AI 비서'; catColor = 'text-blue-500'; }
-                else if (tool.category === 'dev') { catText = '개발/코딩'; catColor = 'text-purple-500'; }
-                else if (tool.category === 'art') { catText = '창작/예술'; catColor = 'text-orange-500'; }
-                else { catText = '생산성'; catColor = 'text-green-500'; }
+                // Colors
+                let catText = '', catBg = '', catColor = '';
+                if (tool.category === 'ai') { catText = 'AI 비서'; catBg = 'bg-blue-100'; catColor = 'text-blue-600'; }
+                else if (tool.category === 'dev') { catText = '개발/코딩'; catBg = 'bg-purple-100'; catColor = 'text-purple-600'; }
+                else if (tool.category === 'art') { catText = '창작/예술'; catBg = 'bg-orange-100'; catColor = 'text-orange-600'; }
+                else { catText = '생산성'; catBg = 'bg-green-100'; catColor = 'text-green-600'; }
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl shrink-0">
-                                ${tool.icon}
-                            </div>
-                            <div>
-                                <h3 class="text-2xl font-bold text-gray-700 leading-none mb-2">${tool.name}</h3>
-                                <span class="text-sm font-bold ${catColor}">${catText}</span>
-                            </div>
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 bg-white/50">
+                            ${tool.icon}
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-bold text-gray-700 leading-none mb-2">${tool.name}</h3>
+                            <span class="inline-block px-3 py-1 rounded-lg text-sm font-bold ${catBg} ${catColor}">${catText}</span>
                         </div>
                     </div>
-                    
-                    <div class="mb-4 flex-1">
-                        <p class="text-gray-500 font-hand text-xl leading-relaxed">
-                            ${tool.desc}
-                        </p>
-                    </div>
-
-                    <div class="pt-4 border-t border-gray-200 flex justify-between items-center mt-auto">
-                        <span class="text-sm text-gray-400 font-mono"><i class="fa-regular fa-clock"></i> 1d ago</span>
-                        <span class="text-base font-bold text-purple-500 group-hover:underline">업데이트 확인 &rarr;</span>
+                    <p class="text-gray-500 font-hand text-2xl leading-relaxed mb-6 flex-1">
+                        ${tool.desc}
+                    </p>
+                    <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
+                        <span class="text-lg text-gray-400 font-mono"><i class="fa-regular fa-clock"></i> 1d ago</span>
+                        <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">업데이트 확인 <i class="fa-solid fa-arrow-right"></i></span>
                     </div>
                 `;
                 grid.appendChild(card);
             });
-
             grid.style.opacity = '1';
         }, 200);
     }
@@ -412,18 +410,16 @@
         renderTools(cat);
         filterBtns.forEach(btn => {
             if (btn.getAttribute('onclick').includes(cat)) {
-                btn.classList.add('active');
+                btn.classList.add('active', 'text-gray-700');
                 btn.classList.remove('text-gray-500');
-                btn.classList.add('text-gray-700');
             } else {
-                btn.classList.remove('active');
+                btn.classList.remove('active', 'text-gray-700');
                 btn.classList.add('text-gray-500');
-                btn.classList.remove('text-gray-700');
             }
         });
     }
 
-    // --- Modal Logic ---
+    // Modal
     const overlay = document.getElementById('modal-overlay');
     const modal = document.getElementById('modal-content');
 
@@ -431,29 +427,28 @@
         document.getElementById('modal-icon').innerHTML = tool.icon;
         document.getElementById('modal-title').innerText = tool.name;
 
-        // Set Badge text
-        const badge = document.getElementById('modal-badge');
-        if (tool.category === 'ai') { badge.innerText = 'AI Assistant'; badge.classList.remove('text-purple-500', 'text-orange-500', 'text-green-500'); badge.classList.add('text-blue-500'); }
-        else if (tool.category === 'dev') { badge.innerText = 'Development'; badge.classList.remove('text-blue-500', 'text-orange-500', 'text-green-500'); badge.classList.add('text-purple-500'); }
-        else if (tool.category === 'art') { badge.innerText = 'Creative'; badge.classList.remove('text-blue-500', 'text-purple-500', 'text-green-500'); badge.classList.add('text-orange-500'); }
-        else { badge.innerText = 'Productivity'; badge.classList.remove('text-blue-500', 'text-purple-500', 'text-orange-500'); badge.classList.add('text-green-500'); }
+        // Badge
+        let badgeClass = '';
+        if (tool.category === 'ai') badgeClass = 'bg-blue-100 text-blue-600';
+        else if (tool.category === 'dev') badgeClass = 'bg-purple-100 text-purple-600';
+        else if (tool.category === 'art') badgeClass = 'bg-orange-100 text-orange-600';
+        else badgeClass = 'bg-green-100 text-green-600';
+
+        document.getElementById('modal-badge-container').innerHTML =
+            `<span class="px-4 py-1.5 rounded-full text-lg font-bold ${badgeClass}">AI Assistant</span>`;
 
         document.getElementById('modal-desc').innerHTML = tool.desc;
         document.getElementById('modal-summary').innerText = tool.summary;
-
-        const detailHtml = tool.details.map(d => `<li class="flex items-start gap-2"><i class="fa-solid fa-check mt-1"></i><span>${d}</span></li>`).join('');
-        document.getElementById('modal-details').innerHTML = detailHtml;
+        document.getElementById('modal-details').innerHTML = tool.details.map(d => `<li class="flex items-start gap-3"><i class="fa-solid fa-check mt-1 text-blue-500"></i><span>${d}</span></li>`).join('');
 
         overlay.classList.remove('hidden');
         modal.classList.remove('hidden');
 
-        // Animation
         setTimeout(() => {
             overlay.classList.remove('opacity-0');
             modal.classList.remove('opacity-0', 'scale-95');
             modal.classList.add('scale-100');
         }, 10);
-
         document.body.style.overflow = 'hidden';
     }
 
@@ -461,7 +456,6 @@
         overlay.classList.add('opacity-0');
         modal.classList.remove('scale-100');
         modal.classList.add('opacity-0', 'scale-95');
-
         setTimeout(() => {
             overlay.classList.add('hidden');
             modal.classList.add('hidden');
