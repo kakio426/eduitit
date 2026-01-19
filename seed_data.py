@@ -1,3 +1,9 @@
+import os
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_production')
+django.setup()
+
 from products.models import Product
 
 def run():
