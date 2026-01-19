@@ -87,6 +87,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    # Debug: Log the received URL (masking password for security)
+    import re
+    safe_db_url = re.sub(r':([^:@]+)@', ':****@', DATABASE_URL)
+    print(f"DEBUG: Received DATABASE_URL: {safe_db_url}")
+
+    # Fix: Ensure scheme is valid for dj-database-url if it starts with postgres:// 
+    # (newer versions favor postgresql:// but handle postgres://, older might be strict)
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
     try:
         DATABASES = {
             'default': dj_database_url.parse(
@@ -95,8 +105,9 @@ if DATABASE_URL:
                 conn_health_checks=True,
             )
         }
-    except ValueError:
-        raise ValueError("DATABASE_URL 환경변수가 올바르지 않습니다. 'postgres://' 로 시작하는지 확인해주세요.")
+    except ValueError as e:
+        print(f"DEBUG: Parsing failed. Original error: {e}")
+        raise ValueError(f"DATABASE_URL 형식이 올바르지 않습니다. 값: {safe_db_url}")
 else:
     # Fallback for local development
     DATABASES = {
