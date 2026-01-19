@@ -92,6 +92,17 @@ if DATABASE_URL:
     safe_db_url = re.sub(r':([^:@]+)@', ':****@', DATABASE_URL)
     print(f"DEBUG: Received DATABASE_URL: {safe_db_url}")
 
+    # Clean up DATABASE_URL if it contains 'psql' command or extra quotes
+    # Example issue: psql 'postgresql://...'
+    DATABASE_URL = DATABASE_URL.strip()
+    if DATABASE_URL.startswith("psql"):
+        DATABASE_URL = DATABASE_URL.replace("psql", "", 1).strip()
+    
+    # Remove surrounding quotes if present
+    if (DATABASE_URL.startswith("'") and DATABASE_URL.endswith("'")) or \
+       (DATABASE_URL.startswith('"') and DATABASE_URL.endswith('"')):
+        DATABASE_URL = DATABASE_URL[1:-1]
+
     # Fix: Ensure scheme is valid for dj-database-url if it starts with postgres:// 
     # (newer versions favor postgresql:// but handle postgres://, older might be strict)
     if DATABASE_URL.startswith("postgres://"):
