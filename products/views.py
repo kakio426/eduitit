@@ -13,6 +13,5 @@ def product_detail(request, pk):
         is_owned = request.user.owned_products.filter(product=product).exists() or product.price == 0
     return render(request, 'products/detail.html', {'product': product, 'is_owned': is_owned})
 
-@login_required
 def yut_game(request):
     return render(request, 'products/yut_game.html')
