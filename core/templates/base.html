@@ -4,10 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Eduitit - 선생님을 위한 디지털 도구{% endblock %}</title>
+    <title>{% block title %}Eduitit - 선생님의 스마트한 하루{% endblock %}</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
@@ -15,8 +20,6 @@
                     colors: {
                         'bg-soft': '#E0E5EC',
                         'clay-text': '#4A5568',
-                        'clay-accent': '#9D50BB',
-                        'clay-green': '#48c6ef',
                     },
                     fontFamily: {
                         'round': ['Dongle', 'sans-serif'],
@@ -26,7 +29,6 @@
                         'clay': '9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5)',
                         'clay-inner': 'inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8)',
                         'clay-hover': '12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6)',
-                        'clay-pressed': 'inset 4px 4px 8px 0 rgba(163,177,198, 0.7), inset -4px -4px 8px 0 rgba(255,255,255, 0.8)',
                     },
                     borderRadius: {
                         'clay': '30px',
@@ -35,78 +37,109 @@
             }
         }
     </script>
+
     <style>
         body {
             background-color: #E0E5EC;
             color: #4A5568;
+            font-family: 'Dongle', sans-serif;
+            font-size: 1.5rem;
+            /* Base font size increase for Dongle font */
         }
 
-        .text-shadow {
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        /* Bento Grid Layout */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: minmax(200px, auto);
+            gap: 1.5rem;
         }
 
-        .floating {
-            animation: float 6s ease-in-out infinite;
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .bento-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .bento-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Spans */
+        .col-span-2 {
+            grid-column: span 2;
+        }
+
+        .col-span-4 {
+            grid-column: span 4;
+        }
+
+        .row-span-2 {
+            grid-row: span 2;
+        }
+
+        /* Card Styles */
+        .clay-card {
+            background-color: #E0E5EC;
+            border-radius: 30px;
+            box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .clay-card:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 12px 12px 24px rgba(163, 177, 198, 0.8), -12px -12px 24px rgba(255, 255, 255, 0.7);
+            z-index: 10;
+        }
+
+        .shadow-clay-inner {
+            box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        /* Animations */
+        .float-icon {
+            animation: float 4s ease-in-out infinite;
         }
 
         @keyframes float {
-            0% {
-                transform: translateY(0px);
+
+            0%,
+            100% {
+                transform: translateY(0);
             }
 
             50% {
                 transform: translateY(-10px);
             }
-
-            100% {
-                transform: translateY(0px);
-            }
         }
 
-        .clay-card {
-            background-color: #E0E5EC;
-            transition: all 0.3s ease;
-        }
-
-        .clay-btn {
-            background-color: #E0E5EC;
-            transition: all 0.2s ease;
-        }
-
-        .clay-btn:active {
-            box-shadow: inset 4px 4px 8px 0 rgba(163, 177, 198, 0.7), inset -4px -4px 8px 0 rgba(255, 255, 255, 0.8);
-            transform: scale(0.98);
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="font-round text-4xl tracking-wide selection:bg-purple-200">
+<body class="selection:bg-purple-200">
 
     <!-- Navbar -->
-    <nav class="fixed w-full z-50 top-0 left-0 clay-card shadow-clay px-6 py-3">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="w-10 h-10 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500">
+    <nav class="fixed w-full z-50 top-0 left-0 px-6 py-4">
+        <div
+            class="max-w-7xl mx-auto clay-card px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 backdrop-blur-sm">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-2xl">
                     <i class="fa-solid fa-cloud"></i>
                 </div>
-                <a href="/" class="font-bold text-3xl text-gray-700 mt-1 hover:text-purple-600 transition">EDUITIT</a>
+                <a href="/" class="font-bold text-4xl text-gray-700 mt-2 hover:text-purple-600 transition">EDUITIT</a>
             </div>
-            <div class="hidden md:flex gap-6 mt-1">
+            <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500">
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
-                <a href="/#pricing" class="hover:text-purple-600 transition">가격</a>
-                <a href="/#use-cases" class="hover:text-purple-600 transition">사용사례</a>
-            </div>
-            <button id="mobile-menu-btn" class="md:hidden text-2xl text-purple-500">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-        </div>
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden mt-4 max-w-6xl mx-auto clay-card shadow-clay rounded-clay p-6">
-            <div class="flex flex-col gap-4 text-center">
-                <a href="/#services" class="hover:text-purple-600 transition py-2">서비스</a>
-                <a href="/#pricing" class="hover:text-purple-600 transition py-2">가격</a>
-                <a href="/#use-cases" class="hover:text-purple-600 transition py-2">사용사례</a>
+                <a href="/#pricing" class="hover:text-purple-600 transition">가이드</a>
+                <a href="/login" class="hover:text-purple-600 transition">로그인</a>
             </div>
         </div>
     </nav>
@@ -114,25 +147,18 @@
     {% block content %}{% endblock %}
 
     <!-- Footer -->
-    <footer class="py-12 text-center">
-        <div class="inline-block shadow-clay rounded-full p-4 mb-4">
-            <i class="fa-regular fa-paper-plane text-2xl text-purple-400"></i>
-        </div>
-        <p class="text-3xl font-hand text-gray-500">선생님의 칼퇴를 응원합니다.</p>
-        <p class="text-xl text-gray-400 mt-2">© 2026 Eduitit. contact: <a href="mailto:kakio@naver.com"
-                class="hover:text-purple-500 transition">kakio@naver.com</a></p>
+    <footer class="py-12 text-center text-gray-400">
+        <p class="text-2xl font-hand">선생님의 칼퇴를 응원합니다. © 2026 Eduitit</p>
     </footer>
 
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-
-        if (mobileMenuBtn && mobileMenu) {
-            mobileMenuBtn.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-            });
-        }
+        // Initialize Animate On Scroll
+        AOS.init({
+            once: true,
+            offset: 50,
+            duration: 800,
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
