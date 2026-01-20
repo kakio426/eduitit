@@ -121,7 +121,7 @@ def run():
         icon="fa-solid fa-wand-magic-sparkles",
         color_theme="purple",
         service_type="tool",
-        card_size="small",
+        card_size="wide",
         display_order=8,
         external_url="/prompts/",
         image="https://placehold.co/600x400/purple/white?text=Prompt+Lab"
