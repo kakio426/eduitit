@@ -31,13 +31,11 @@
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            data-url="{% if featured_product.external_url %}{{ featured_product.external_url }}{% else %}{% url 'product_detail' featured_product.id %}{% endif %}"
-            onclick="location.href=this.dataset.url" data-aos="fade-up" data-aos-delay="100">
+            onclick="openQuickView('{{ featured_product.id }}')" data-aos="fade-up" data-aos-delay="100">
 
-            <!-- Quick View Button (Stop Propagation) -->
-            <button onclick="event.stopPropagation(); openQuickView('{{ featured_product.id }}')"
-                class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110"
-                title="미리보기">
+            <!-- Quick View Visual Cue -->
+            <button
+                class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 group-hover:text-purple-600 group-hover:bg-white shadow-sm flex items-center justify-center transition-all group-hover:scale-110 pointer-events-none">
                 <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
             </button>
 
@@ -86,14 +84,12 @@
             {% if product.card_size == "wide" %}
             <!-- Wide Card (2 columns) -->
             <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
-                <!-- Quick View Button -->
-                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
-                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
-                    title="미리보기">
+                <!-- Quick View Visual Cue -->
+                <button
+                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 group-hover:text-purple-600 group-hover:bg-white shadow-sm flex items-center justify-center transition-all group-hover:scale-110 opacity-0 group-hover:opacity-100 pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass-plus"></i>
                 </button>
 
@@ -123,14 +119,12 @@
             {% elif product.card_size == "tall" %}
             <!-- Tall Card (1 column, 2 rows) -->
             <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
-                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
-                <!-- Quick View Button -->
-                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
-                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full {% if product.color_theme == 'dark' %}bg-gray-700 text-gray-300 hover:bg-gray-600{% else %}bg-white/50 text-gray-500 hover:bg-white{% endif %} backdrop-blur-sm shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
-                    title="미리보기">
+                <!-- Quick View Visual Cue -->
+                <button
+                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full {% if product.color_theme == 'dark' %}bg-gray-700 text-gray-300 group-hover:bg-gray-600{% else %}bg-white/50 text-gray-500 group-hover:bg-white{% endif %} backdrop-blur-sm shadow-sm flex items-center justify-center transition-all group-hover:scale-110 opacity-0 group-hover:opacity-100 pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass-plus"></i>
                 </button>
 
@@ -158,14 +152,12 @@
             {% else %}
             <!-- Small Card (default) -->
             <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative"
-                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
-                <!-- Quick View Button -->
-                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
-                    class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm text-gray-400 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
-                    title="미리보기">
+                <!-- Quick View Visual Cue -->
+                <button
+                    class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm text-gray-400 group-hover:text-purple-600 group-hover:bg-white shadow-sm flex items-center justify-center transition-all group-hover:scale-110 opacity-0 group-hover:opacity-100 pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
                 </button>
 
