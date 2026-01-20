@@ -38,6 +38,29 @@
     .bento-card {
         @apply bg-white/60 backdrop-blur-sm rounded-[2rem] p-8 transition-all duration-300 shadow-clay hover:shadow-clay-hover border border-white/20;
     }
+
+    /* Fix Modal Jumping & Increase Modal Font Sizes */
+    #modal-content.clay-card:hover {
+        transform: translate(-50%, -50%) scale(1) !important;
+        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5) !important;
+    }
+
+    /* Modal Text Enhancements for Dongle Font */
+    #modal-desc {
+        font-size: 2.25rem;
+        /* ~36px */
+        line-height: 1.2;
+    }
+
+    #modal-summary {
+        font-size: 1.875rem;
+        /* ~30px */
+    }
+
+    #modal-details {
+        font-size: 1.5rem;
+        /* ~24px */
+    }
 </style>
 
 <section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
@@ -97,15 +120,15 @@
     <div class="p-8 pb-0 flex justify-between items-start">
         <div class="flex items-center gap-6">
             <div id="modal-icon"
-                class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-5xl">
+                class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-6xl">
             </div>
             <div>
-                <h2 id="modal-title" class="text-5xl font-bold text-gray-800 mb-3"></h2>
+                <h2 id="modal-title" class="text-6xl font-bold text-gray-800 mb-2"></h2>
                 <div id="modal-badge-container"></div>
             </div>
         </div>
         <button onclick="closeModal()"
-            class="w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-2xl">
+            class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
@@ -114,27 +137,27 @@
     <div class="p-8 space-y-8">
         <!-- Description -->
         <div>
-            <h3 class="text-2xl font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
                 <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
             </h3>
-            <div class="p-6 rounded-3xl shadow-clay-inner bg-gray-50/50">
-                <p id="modal-desc" class="text-xl text-gray-600 leading-relaxed font-hand"></p>
+            <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
+                <p id="modal-desc" class="text-gray-600 font-hand"></p>
             </div>
         </div>
 
         <!-- Latest Update -->
-        <div class="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 shadow-sm">
-            <h3 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+        <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
+            <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
                 <i class="fa-solid fa-bolt"></i> 최신 업데이트 (2026.01)
             </h3>
-            <p id="modal-summary" class="text-blue-800 font-bold text-lg mb-3"></p>
-            <ul id="modal-details" class="space-y-2 text-blue-700/80 text-lg"></ul>
+            <p id="modal-summary" class="text-blue-800 font-bold mb-4"></p>
+            <ul id="modal-details" class="space-y-3 text-blue-700/90"></ul>
         </div>
 
         <!-- CTA -->
-        <div class="text-center pt-4">
-            <a href="#"
-                class="clay-btn shadow-clay px-10 py-4 rounded-2xl text-2xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-3">
+        <div class="text-center pt-8 pb-4">
+            <a id="modal-link" href="#"
+                class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
                 공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
         </div>
@@ -296,11 +319,12 @@
         else badgeClass = 'bg-green-100 text-green-600';
 
         document.getElementById('modal-badge-container').innerHTML =
-            `<span class="px-4 py-1.5 rounded-full text-lg font-bold ${badgeClass}">AI Assistant</span>`;
+            `<span class="px-5 py-2 rounded-full text-2xl font-bold ${badgeClass}">AI Assistant</span>`;
 
         document.getElementById('modal-desc').innerHTML = tool.desc;
         document.getElementById('modal-summary').innerText = tool.summary;
-        document.getElementById('modal-details').innerHTML = tool.details.map(d => `<li class="flex items-start gap-3"><i class="fa-solid fa-check mt-1 text-blue-500"></i><span>${d}</span></li>`).join('');
+        document.getElementById('modal-details').innerHTML = tool.details.map(d => `<li class="flex items-start gap-4"><i class="fa-solid fa-check mt-2 text-blue-500"></i><span class="font-medium">${d}</span></li>`).join('');
+        document.getElementById('modal-link').href = "#"; // You can add real URLs if available
 
         overlay.classList.remove('hidden');
         modal.classList.remove('hidden');
@@ -308,7 +332,7 @@
         setTimeout(() => {
             overlay.classList.remove('opacity-0');
             modal.classList.remove('opacity-0', 'scale-95');
-            modal.classList.add('scale-100');
+            modal.style.transform = 'translate(-50%, -50%) scale(1)';
         }, 10);
         document.body.style.overflow = 'hidden';
     }
