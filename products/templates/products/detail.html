@@ -1,106 +1,276 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block title %}{{ product.title }} - Eduitit{% endblock %}
 
 {% block extra_css %}
-.detail-grid {
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: 4rem;
-align-items: start;
-}
+<style>
+    .product-detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 8rem 2rem 4rem;
+    }
 
-.hero-image {
-width: 100%;
-border-radius: 32px;
-border: 1px solid var(--glass-border);
-overflow: hidden;
-background: var(--glass);
-aspect-ratio: 16/10;
-}
+    .product-header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
 
-.hero-image img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-}
+    .service-badge {
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-weight: bold;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
 
-.badge {
-display: inline-block;
-padding: 0.25rem 0.75rem;
-background: rgba(99, 102, 241, 0.2);
-color: var(--primary);
-border-radius: 99px;
-font-size: 0.875rem;
-font-weight: 600;
-margin-bottom: 1.5rem;
-}
+    .service-badge.game {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
 
-.description {
-font-size: 1.125rem;
-line-height: 1.8;
-color: #cbd5e1;
-margin: 2rem 0;
-}
+    .service-badge.tool {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+    }
 
-@media (max-width: 900px) {
-.detail-grid {
-grid-template-columns: 1fr;
-gap: 2rem;
-}
-}
+    .service-badge.platform {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .product-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+    }
+
+    .product-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        font-family: 'Dongle', sans-serif;
+    }
+
+    .product-description {
+        font-size: 1.5rem;
+        color: #64748b;
+        max-width: 800px;
+        margin: 0 auto 3rem;
+        line-height: 1.8;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .btn-launch {
+        padding: 1.25rem 3rem;
+        font-size: 1.25rem;
+        border-radius: 50px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-launch:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-back {
+        padding: 1.25rem 3rem;
+        font-size: 1.25rem;
+        border-radius: 50px;
+        background: #E0E5EC;
+        color: #64748b;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s;
+        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-back:hover {
+        transform: translateY(-2px);
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-top: 4rem;
+    }
+
+    .feature-card {
+        background: #E0E5EC;
+        border-radius: 30px;
+        padding: 2rem;
+        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+        transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 12px 12px 20px rgb(163, 177, 198, 0.7), -12px -12px 20px rgba(255, 255, 255, 0.6);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-description {
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .price-tag {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 2rem 0;
+    }
+
+    .price-tag.free {
+        color: #10b981;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="detail-grid">
-    <div class="hero-image">
-        {% if product.image %}
-        <img src="{{ product.image.url }}" alt="{{ product.title }}">
-        {% else %}
-        <div
-            style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
-            <span style="font-weight: 600;">Preview Coming Soon</span>
+<div class="product-detail-container">
+    <!-- Header Section -->
+    <div class="product-header">
+        <span class="service-badge {{ product.service_type }}">{{ product.service_type }}</span>
+
+        <div class="product-icon">
+            {% if "fa-" in product.icon %}
+            <i class="{{ product.icon }}"></i>
+            {% else %}
+            {{ product.icon }}
+            {% endif %}
         </div>
+
+        <h1 class="product-title">{{ product.title }}</h1>
+
+        <p class="product-description">{{ product.description }}</p>
+
+        {% if product.price == 0 %}
+        <div class="price-tag free">무료</div>
+        {% else %}
+        <div class="price-tag">₩{{ product.price|floatformat:0 }}</div>
         {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            {% if is_owned or product.price == 0 %}
+            {% if product.external_url %}
+            <a href="{{ product.external_url }}" target="_blank" class="btn-launch">
+                <i class="fa-solid fa-rocket"></i> 서비스 시작하기
+            </a>
+            {% elif product.service_type == "game" %}
+            <a href="{% url 'yut_game' %}" class="btn-launch">
+                <i class="fa-solid fa-gamepad"></i> 게임 시작하기
+            </a>
+            {% else %}
+            <a href="#" class="btn-launch">
+                <i class="fa-solid fa-play"></i> 도구 실행하기
+            </a>
+            {% endif %}
+            {% else %}
+            <a href="#" class="btn-launch">
+                <i class="fa-solid fa-shopping-cart"></i> 구매하기
+            </a>
+            {% endif %}
+
+            <a href="/" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i> 홈으로
+            </a>
+        </div>
     </div>
 
-    <div>
-        <div class="badge">Professional Tool</div>
-        <h1 style="font-size: 3.5rem; margin: 0; font-weight: 800; line-height: 1.1;">{{ product.title }}</h1>
-
-        <div class="description">
-            {{ product.description|linebreaks }}
+    <!-- Features Section -->
+    <div class="features-grid">
+        {% if product.service_type == "game" %}
+        <div class="feature-card">
+            <div class="feature-icon">🎮</div>
+            <div class="feature-title">즉시 플레이</div>
+            <div class="feature-description">설치 없이 브라우저에서 바로 즐기세요</div>
         </div>
-
-        <div style="display: flex; align-items: center; gap: 2rem; margin-top: 3rem;">
-            <div style="font-size: 2.5rem; font-weight: 800;">₩{{ product.price|floatformat:0 }}</div>
-            {% if is_owned %}
-            {% if product.title == "🐎 온라인 윷놀이" %}
-            <a href="{% url 'yut_game' %}" class="btn btn-primary"
-                style="padding: 1.25rem 3rem; font-size: 1.25rem; border-radius: 16px; background: #10b981; text-decoration: none; display: inline-block;">Launch
-                Tool</a>
-            {% else %}
-            <button class="btn btn-primary"
-                style="padding: 1.25rem 3rem; font-size: 1.25rem; border-radius: 16px; background: #10b981;">Launch
-                Tool</button>
-            {% endif %}
-            {% else %}
-            <a href="#" class="btn btn-primary"
-                style="padding: 1.25rem 3rem; font-size: 1.25rem; border-radius: 16px;">Buy Now</a>
-            {% endif %}
+        <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <div class="feature-title">멀티플레이어</div>
+            <div class="feature-description">친구들과 함께 즐기는 재미</div>
         </div>
-
-
-        <div
-            style="margin-top: 4rem; padding: 2.5rem; border-radius: 24px; background: var(--glass); border: 1px solid var(--glass-border);">
-            <h3 style="margin-top: 0; font-size: 1.5rem;">Key Advantages</h3>
-            <ul style="color: #94a3b8; line-height: 2.2; font-size: 1.1rem; padding-left: 1.2rem;">
-                <li><strong>Performance:</strong> Enterprise-grade processing speed</li>
-                <li><strong>Security:</strong> SOC2 compliant data encryption</li>
-                <li><strong>Reliability:</strong> 99.9% Up-time guarantee</li>
-                <li><strong>Support:</strong> Dedicated success manager</li>
-            </ul>
+        <div class="feature-card">
+            <div class="feature-icon">🏆</div>
+            <div class="feature-title">학급 대항전</div>
+            <div class="feature-description">교육 현장에 최적화된 게임</div>
         </div>
+        {% elif product.service_type == "tool" %}
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">빠른 처리</div>
+            <div class="feature-description">Enterprise급 처리 속도</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">안전한 보안</div>
+            <div class="feature-description">SOC2 인증 데이터 암호화</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">99.9% 가동률</div>
+            <div class="feature-description">안정적인 서비스 제공</div>
+        </div>
+        {% elif product.service_type == "platform" %}
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <div class="feature-title">클라우드 기반</div>
+            <div class="feature-description">언제 어디서나 접속 가능</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👨‍🏫</div>
+            <div class="feature-title">교육 특화</div>
+            <div class="feature-description">선생님과 학생을 위한 플랫폼</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <div class="feature-title">실시간 소통</div>
+            <div class="feature-description">교육 공동체 네트워킹</div>
+        </div>
+        {% else %}
+        <div class="feature-card">
+            <div class="feature-icon">✨</div>
+            <div class="feature-title">간편한 사용</div>
+            <div class="feature-description">직관적인 인터페이스</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">높은 효율</div>
+            <div class="feature-description">업무 시간 단축</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💡</div>
+            <div class="feature-title">스마트 기능</div>
+            <div class="feature-description">AI 기반 자동화</div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
