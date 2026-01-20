@@ -102,6 +102,20 @@
             </div>
         </div>
 
+        <!-- Insight Library Square -->
+        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
+            data-url="{% url 'insight_list' %}" onclick="location.href=this.dataset.url;" data-aos="fade-up"
+            data-aos-delay="450">
+            <div
+                class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
+                <i class="fa-solid fa-gem"></i>
+            </div>
+            <div>
+                <h3 class="text-3xl font-bold text-gray-700 mb-1">인사이트</h3>
+                <p class="text-xl text-gray-500 leading-tight">영감 보석함</p>
+            </div>
+        </div>
+
         <!-- 5. [Tall Card] AI Tools Guide -->
         <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 bg-gray-800 text-white group cursor-pointer relative overflow-hidden"
             onclick="location.href='{{ tool_guide_url }}'" data-aos="fade-up" data-aos-delay="500">
