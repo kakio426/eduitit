@@ -19,7 +19,7 @@
     </div>
 
     <!-- Description -->
-    <div class="prose prose-xl max-w-none text-gray-600 font-hand text-5xl leading-relaxed mb-10">
+    <div class="prose prose-xl max-w-none text-gray-600 font-hand text-5xl leading-relaxed mb-10 break-keep">
         {{ product.description|linebreaks }}
     </div>
 
@@ -41,8 +41,8 @@
                 </div>
                 <div>
                     <span class="font-bold text-gray-800 block text-4xl mb-2">{{ feature.title }}</span>
-                    <span class="text-3xl text-gray-500 font-hand leading-relaxed block">{{ feature.description
-                        }}</span>
+                    <span class="text-3xl text-gray-500 font-hand leading-relaxed block break-keep">{{
+                        feature.description }}</span>
                 </div>
             </li>
             {% endfor %}
