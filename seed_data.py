@@ -9,6 +9,12 @@ from products.models import Product
 def run():
     from products.models import Product
     from insights.models import Insight
+    from django.contrib.auth.models import User
+
+    # Create superuser if it doesn't exist
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('admin', 'admin@example.com', 'admin1234')
+        print("Superuser 'admin' created successfully!")
 
     # Clear existing data
     Product.objects.all().delete()
