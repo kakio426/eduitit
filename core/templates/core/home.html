@@ -29,28 +29,33 @@
     <!-- BENTO GRID -->
     <div class="bento-grid">
 
-        <!-- 1. [Hero Card] Online Yut Noli -->
+        <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="showServiceModal('yut')" data-aos="fade-up" data-aos-delay="100">
+            onclick="location.href='/products/{{ featured_product.id }}/'" data-aos="fade-up" data-aos-delay="100">
             <!-- Background decoration -->
             <div
-                class="absolute top-0 right-0 w-80 h-80 bg-green-100 rounded-bl-full -mr-20 -mt-20 transition-transform duration-500 group-hover:scale-125 z-0">
+                class="absolute top-0 right-0 w-80 h-80 bg-purple-100 rounded-bl-full -mr-20 -mt-20 transition-transform duration-500 group-hover:scale-125 z-0">
             </div>
 
             <div class="relative z-10 h-full flex flex-col justify-between">
                 <div>
                     <span
-                        class="px-4 py-1 bg-green-200 text-green-700 rounded-full text-xl font-bold shadow-sm mb-6 inline-block">BEST
+                        class="px-4 py-1 bg-purple-200 text-purple-700 rounded-full text-xl font-bold shadow-sm mb-6 inline-block">BEST
                         Popular</span>
-                    <h2 class="text-6xl font-bold text-gray-700 mb-2 group-hover:text-green-600 transition-colors">온라인
-                        윷놀이</h2>
-                    <p class="text-3xl text-gray-500 font-hand leading-tight">설치 없이 바로 즐기는<br>학급 대항전 필수템!</p>
+                    <h2 class="text-6xl font-bold text-gray-700 mb-2 group-hover:text-purple-600 transition-colors">
+                        {{ featured_product.title }}
+                    </h2>
+                    <p class="text-3xl text-gray-500 font-hand leading-tight">
+                        {{ featured_product.description|truncatechars:60 }}
+                    </p>
                 </div>
 
                 <div class="flex justify-between items-end mt-8">
-                    <div class="text-8xl float-icon">🎲</div>
+                    <div class="text-8xl float-icon">
+                        {% if "윷놀이" in featured_product.title %}🎲{% else %}🛠️{% endif %}
+                    </div>
                     <button
-                        class="w-16 h-16 rounded-full bg-green-500 text-white shadow-lg flex items-center justify-center text-3xl group-hover:rotate-45 transition-transform duration-300">
+                        class="w-16 h-16 rounded-full bg-purple-500 text-white shadow-lg flex items-center justify-center text-3xl group-hover:rotate-45 transition-transform duration-300">
                         <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
