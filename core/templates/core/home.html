@@ -33,6 +33,14 @@
         <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
             data-url="{% if featured_product.external_url %}{{ featured_product.external_url }}{% else %}{% url 'product_detail' featured_product.id %}{% endif %}"
             onclick="location.href=this.dataset.url" data-aos="fade-up" data-aos-delay="100">
+
+            <!-- Quick View Button (Stop Propagation) -->
+            <button onclick="event.stopPropagation(); openQuickView('{{ featured_product.id }}')"
+                class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110"
+                title="미리보기">
+                <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
+            </button>
+
             <!-- Background decoration -->
             <div
                 class="absolute top-0 right-0 w-80 h-80 bg-purple-100 rounded-bl-full -mr-20 -mt-20 transition-transform duration-500 group-hover:scale-125 z-0">
@@ -59,10 +67,10 @@
                         {{ featured_product.icon }}
                         {% endif %}
                     </div>
-                    <button
+                    <div
                         class="w-16 h-16 rounded-full bg-purple-500 text-white shadow-lg flex items-center justify-center text-3xl group-hover:rotate-45 transition-transform duration-300">
                         <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -72,90 +80,119 @@
         {% for product in products %}
         {% if product.id != featured_product.id %}
 
-        {% if product.card_size == "wide" %}
-        <!-- Wide Card (2 columns) -->
-        <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-            onclick="location.href=this.dataset.url" data-aos="fade-up"
-            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div class="flex items-center justify-between h-full relative z-10">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        {% if "fa-" in product.icon %}
-                        <i class="{{ product.icon }} text-purple-500 text-3xl"></i>
-                        {% else %}
-                        <span class="text-3xl">{{ product.icon }}</span>
-                        {% endif %}
-                        <h3 class="text-4xl font-bold text-gray-700 mt-1">{{ product.title }}</h3>
+        <div class="relative group-container">
+            <!-- Added wrapper for positioning context if needed, but card works too -->
+
+            {% if product.card_size == "wide" %}
+            <!-- Wide Card (2 columns) -->
+            <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
+                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+
+                <!-- Quick View Button -->
+                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
+                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm text-gray-500 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
+                    title="미리보기">
+                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                </button>
+
+                <div class="flex items-center justify-between h-full relative z-10">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            {% if "fa-" in product.icon %}
+                            <i class="{{ product.icon }} text-purple-500 text-3xl"></i>
+                            {% else %}
+                            <span class="text-3xl">{{ product.icon }}</span>
+                            {% endif %}
+                            <h3 class="text-4xl font-bold text-gray-700 mt-1">{{ product.title }}</h3>
+                        </div>
+                        <p class="text-2xl text-gray-500 font-hand leading-tight">{{ product.description }}</p>
                     </div>
-                    <p class="text-2xl text-gray-500 font-hand leading-tight">{{ product.description }}</p>
+                    <div
+                        class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
+                        {% if "fa-" in product.icon %}
+                        <i class="{{ product.icon }}"></i>
+                        {% else %}
+                        <span>{{ product.icon }}</span>
+                        {% endif %}
+                    </div>
                 </div>
+            </div>
+
+            {% elif product.card_size == "tall" %}
+            <!-- Tall Card (1 column, 2 rows) -->
+            <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
+                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+
+                <!-- Quick View Button -->
+                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
+                    class="absolute top-6 right-6 z-20 w-10 h-10 rounded-full {% if product.color_theme == 'dark' %}bg-gray-700 text-gray-300 hover:bg-gray-600{% else %}bg-white/50 text-gray-500 hover:bg-white{% endif %} backdrop-blur-sm shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
+                    title="미리보기">
+                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                </button>
+
                 <div
-                    class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
+                    class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:rotate-12 transition-transform duration-500">
                     {% if "fa-" in product.icon %}
                     <i class="{{ product.icon }}"></i>
                     {% else %}
                     <span>{{ product.icon }}</span>
                     {% endif %}
                 </div>
+                <div class="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                        <span
+                            class="{% if product.color_theme == 'dark' %}text-blue-300{% else %}text-purple-600{% endif %} font-bold text-lg tracking-wider uppercase mb-2 block">
+                            {{ product.service_type|title }}
+                        </span>
+                        <h3 class="text-5xl font-bold mb-4 leading-tight mt-2">{{ product.title }}</h3>
+                        <p
+                            class="{% if product.color_theme == 'dark' %}text-gray-400{% else %}text-gray-600{% endif %} text-2xl leading-tight">
+                            {{ product.description }}
+                        </p>
+                    </div>
+                    <div class="mt-4">
+                        <span
+                            class="inline-block border {% if product.color_theme == 'dark' %}border-gray-600 hover:bg-gray-700{% else %}border-gray-300 hover:bg-gray-100{% endif %} rounded-full px-5 py-2 text-lg transition-colors">
+                            보러가기 &rarr;
+                        </span>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        {% elif product.card_size == "tall" %}
-        <!-- Tall Card (1 column, 2 rows) -->
-        <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
-            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-            onclick="location.href=this.dataset.url" data-aos="fade-up"
-            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div
-                class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:rotate-12 transition-transform duration-500">
-                {% if "fa-" in product.icon %}
-                <i class="{{ product.icon }}"></i>
-                {% else %}
-                <span>{{ product.icon }}</span>
-                {% endif %}
-            </div>
-            <div class="relative z-10 flex flex-col h-full justify-between">
+            {% else %}
+            <!-- Small Card (default) -->
+            <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative"
+                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+                onclick="location.href=this.dataset.url" data-aos="fade-up"
+                data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+
+                <!-- Quick View Button -->
+                <button onclick="event.stopPropagation(); openQuickView('{{ product.id }}')"
+                    class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm text-gray-400 hover:text-purple-600 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100"
+                    title="미리보기">
+                    <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+                </button>
+
+                <div
+                    class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
+                    {% if "fa-" in product.icon %}
+                    <i class="{{ product.icon }}"></i>
+                    {% else %}
+                    {{ product.icon }}
+                    {% endif %}
+                </div>
                 <div>
-                    <span
-                        class="{% if product.color_theme == 'dark' %}text-blue-300{% else %}text-purple-600{% endif %} font-bold text-lg tracking-wider uppercase mb-2 block">
-                        {{ product.service_type|title }}
-                    </span>
-                    <h3 class="text-5xl font-bold mb-4 leading-tight mt-2">{{ product.title }}</h3>
-                    <p
-                        class="{% if product.color_theme == 'dark' %}text-gray-400{% else %}text-gray-600{% endif %} text-2xl leading-tight">
-                        {{ product.description }}
-                    </p>
-                </div>
-                <div class="mt-4">
-                    <span
-                        class="inline-block border {% if product.color_theme == 'dark' %}border-gray-600 hover:bg-gray-700{% else %}border-gray-300 hover:bg-gray-100{% endif %} rounded-full px-5 py-2 text-lg transition-colors">
-                        보러가기 &rarr;
-                    </span>
+                    <h3 class="text-3xl font-bold text-gray-700 mb-1">{{ product.title }}</h3>
+                    <p class="text-xl text-gray-500 leading-tight">{{ product.description|truncatechars:100 }}</p>
                 </div>
             </div>
-        </div>
+            {% endif %}
 
-        {% else %}
-        <!-- Small Card (default) -->
-        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
-            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
-            onclick="location.href=this.dataset.url" data-aos="fade-up"
-            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div
-                class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
-                {% if "fa-" in product.icon %}
-                <i class="{{ product.icon }}"></i>
-                {% else %}
-                {{ product.icon }}
-                {% endif %}
-            </div>
-            <div>
-                <h3 class="text-3xl font-bold text-gray-700 mb-1">{{ product.title }}</h3>
-                <p class="text-xl text-gray-500 leading-tight">{{ product.description|truncatechars:100 }}</p>
-            </div>
-        </div>
-        {% endif %}
+        </div> <!-- End wrapper -->
 
         {% endif %}
         {% endfor %}
@@ -200,99 +237,35 @@
     </div> <!-- End Bento Grid -->
 </main>
 
-<!-- Service Modal -->
-<div id="serviceModal"
+<!-- Quick View Modal Container -->
+<div id="quickViewModal"
     class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4 backdrop-blur-sm transition-all duration-300 opacity-0"
-    onclick="if(event.target === this) closeServiceModal();">
-    <div class="clay-card p-10 max-w-lg w-full mx-auto relative transform scale-95 transition-all duration-300 bg-[#E0E5EC]"
+    onclick="if(event.target === this) closeQuickView();">
+    <div class="clay-card p-0 max-w-lg w-full mx-auto relative transform scale-95 transition-all duration-300 bg-[#E0E5EC] overflow-hidden min-h-[400px]"
         id="modalPanel">
-        <button onclick="closeServiceModal()"
-            class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-3xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-200 transition shadow-clay-inner">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div id="modalContent" class="text-center">
-            <!-- Content Injected via JS -->
+        <!-- Loading Spinner -->
+        <div id="modalLoading" class="absolute inset-0 flex items-center justify-center bg-white/50 z-20 hidden">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-purple-500"></i>
+        </div>
+
+        <!-- Content Injected via AJAX -->
+        <div id="modalContent" class="p-10 relative">
+            <!-- Content Loads Here -->
         </div>
     </div>
 </div>
 
 <script>
-    const serviceData = {
-        yut: {
-            icon: 'fa-solid fa-gamepad',
-            iconColor: 'text-green-500',
-            bgColor: 'bg-green-100',
-            title: '온라인 윷놀이',
-            features: [
-                '🎲 설치 없이 브라우저에서 바로 플레이!',
-                '👥 2~4팀 대항전 가능',
-                '🎯 실시간 윷 던지기 애니메이션',
-                '🎉 학급 레크레이션에 딱!'
-            ],
-            buttonText: '게임하기',
-            buttonColor: 'bg-green-500 text-white shadow-lg hover:bg-green-600',
-            url: '{{ yut_url }}',
-            isExternal: false
-        },
-        playaura: {
-            icon: 'fa-brands fa-youtube',
-            iconColor: 'text-red-500',
-            bgColor: 'bg-red-100',
-            title: 'PlayAura',
-            features: [
-                '🌍 내 알고리즘에서 벗어나 전세계 인기 영상 발견!',
-                '🗺️ 국가별 트렌딩 영상 탐색',
-                '🔍 새로운 콘텐츠 발굴',
-                '🚀 YouTube 알고리즘 탈출!'
-            ],
-            buttonText: '탐험하기',
-            buttonColor: 'bg-red-500 text-white shadow-lg hover:bg-red-600',
-            url: 'https://motube-woad.vercel.app/',
-            isExternal: true
-        },
-        schoolit: {
-            icon: 'fa-solid fa-school',
-            iconColor: 'text-orange-500',
-            bgColor: 'bg-orange-100',
-            title: '스쿨잇',
-            features: [
-                '🏢 교사·학교·교육행사업체 연결 플랫폼',
-                '💼 강사·기간제·교사·학교·업체 모두를 위한 공간',
-                '🤖 채용 및 행사 관련 궁금증은 AI에게 질문!',
-                '💬 교육 공동체 구성원들의 정보 공유 커뮤니티'
-            ],
-            buttonText: '방문하기',
-            buttonColor: 'bg-orange-500 text-white shadow-lg hover:bg-orange-600',
-            url: 'https://schoolit.shop/',
-            isExternal: true
-        }
-    };
-
-    function showServiceModal(serviceKey) {
-        const service = serviceData[serviceKey];
-        if (!service) return;
-
-        const featuresHtml = service.features.map(f => `<li class="text-left py-2 px-6 bg-gray-100/50 rounded-2xl text-xl text-gray-600 mb-2 shadow-clay-inner">${f}</li>`).join('');
-
-        document.getElementById('modalContent').innerHTML = `
-                <div class="w-28 h-28 rounded-3xl shadow-clay-inner mb-8 flex items-center justify-center text-6xl ${service.iconColor} ${service.bgColor} mx-auto">
-                    <i class="${service.icon}"></i>
-                </div>
-                <h3 class="text-5xl font-bold mb-6 text-gray-700">${service.title}</h3>
-                <ul class="font-hand text-2xl mb-10">
-                    ${featuresHtml}
-                </ul>
-                <button onclick="goToService('${serviceKey}')" 
-                    class="w-full py-5 rounded-2xl font-bold text-3xl transition-all transform hover:scale-105 ${service.buttonColor}">
-                    ${service.buttonText} <i class="fa-solid fa-arrow-right ml-2"></i>
-                </button>
-            `;
-
-        const modal = document.getElementById('serviceModal');
+    function openQuickView(productId) {
+        const modal = document.getElementById('quickViewModal');
         const panel = document.getElementById('modalPanel');
+        const loading = document.getElementById('modalLoading');
+        const content = document.getElementById('modalContent');
 
+        // Show Modal Wrapper
         modal.classList.remove('hidden');
-        // Small delay to allow display:flex to apply before opacity transition
+        loading.classList.remove('hidden'); // Show spinner
+
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.classList.add('flex');
@@ -301,10 +274,26 @@
         }, 10);
 
         document.body.style.overflow = 'hidden';
+
+        // Fetch Data via AJAX
+        fetch(`/products/preview/${productId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(html => {
+                content.innerHTML = html;
+                loading.classList.add('hidden'); // Hide spinner
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                content.innerHTML = `<div class="text-center py-10"><p class="text-gray-500">정보를 불러오는데 실패했습니다.</p></div>`;
+                loading.classList.add('hidden');
+            });
     }
 
-    function closeServiceModal() {
-        const modal = document.getElementById('serviceModal');
+    function closeQuickView() {
+        const modal = document.getElementById('quickViewModal');
         const panel = document.getElementById('modalPanel');
 
         modal.classList.add('opacity-0');
@@ -315,17 +304,8 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.body.style.overflow = 'auto';
+            document.getElementById('modalContent').innerHTML = ''; // Clear content
         }, 300);
-    }
-
-    function goToService(serviceKey) {
-        const service = serviceData[serviceKey];
-        if (service.isExternal) {
-            window.open(service.url, '_blank');
-        } else {
-            location.href = service.url;
-        }
-        closeServiceModal();
     }
 </script>
 {% endblock %}

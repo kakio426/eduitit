@@ -1,0 +1,70 @@
+<div class="space-y-6 animate-in fade-in zoom-in duration-300">
+    <!-- Header -->
+    <div
+        class="flex items-center gap-4 mb-6 sticky top-0 bg-white/50 backdrop-blur-md p-4 -mx-4 -mt-4 rounded-t-[2rem] z-10">
+        <div class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 
+                    {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-white{% endif %}">
+            {% if "fa-" in product.icon %}
+            <i class="{{ product.icon }} {% if product.color_theme != 'dark' %}text-purple-500{% endif %}"></i>
+            {% else %}
+            {{ product.icon }}
+            {% endif %}
+        </div>
+        <div>
+            <h3 class="text-3xl font-bold text-gray-700 leading-none mb-1">{{ product.title }}</h3>
+            <span class="inline-block px-3 py-1 bg-purple-100 text-purple-600 rounded-lg text-sm font-bold">
+                {{ product.get_service_type_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Description -->
+    <div class="prose prose-lg text-gray-600 font-hand text-xl leading-relaxed">
+        {{ product.description|linebreaks }}
+    </div>
+
+    <!-- Key Features List -->
+    {% if features %}
+    <div class="bg-gray-50 rounded-xl p-5 shadow-clay-inner">
+        <h4 class="text-lg font-bold text-gray-500 mb-3 uppercase tracking-wider">Key Features</h4>
+        <ul class="space-y-3">
+            {% for feature in features %}
+            <li class="flex items-start gap-3">
+                <div
+                    class="mt-1 w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs shadow-sm shrink-0">
+                    {% if "fa-" in feature.icon %}
+                    <i class="{{ feature.icon }}"></i>
+                    {% else %}
+                    {{ feature.icon }}
+                    {% endif %}
+                </div>
+                <div>
+                    <span class="font-bold text-gray-700 block">{{ feature.title }}</span>
+                    <span class="text-sm text-gray-500">{{ feature.description }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3 mt-8 pt-4 border-t border-gray-200">
+        {% if product.external_url %}
+        <a href="{{ product.external_url }}"
+            class="flex-1 clay-btn bg-purple-500 text-white py-3 rounded-xl font-bold text-xl text-center hover:bg-purple-600 transition shadow-clay hover:shadow-clay-hover">
+            바로가기 <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+        {% else %}
+        <a href="{% url 'product_detail' product.id %}"
+            class="flex-1 clay-btn bg-purple-500 text-white py-3 rounded-xl font-bold text-xl text-center hover:bg-purple-600 transition shadow-clay hover:shadow-clay-hover">
+            상세보기 <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+        {% endif %}
+
+        <button onclick="closeQuickView()"
+            class="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition">
+            닫기
+        </button>
+    </div>
+</div>

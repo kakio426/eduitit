@@ -47,6 +47,15 @@ class Product(models.Model):
     def __str__(self):
         return self.title
 
+class ProductFeature(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='features')
+    icon = models.CharField(max_length=50, help_text="Emoji or FontAwesome class")
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    
+    def __str__(self):
+        return f"{self.product.title} - {self.title}"
+
 class UserOwnedProduct(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_products')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

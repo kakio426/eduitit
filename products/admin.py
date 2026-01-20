@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Product, UserOwnedProduct
+from .models import Product, UserOwnedProduct, ProductFeature
+
+class ProductFeatureInline(admin.TabularInline):
+    model = ProductFeature
+    extra = 3
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -7,6 +11,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'is_featured', 'service_type', 'color_theme')
     search_fields = ('title', 'description')
     list_editable = ('display_order', 'is_active', 'is_featured')
+    inlines = [ProductFeatureInline]
     
     fieldsets = (
         ('Basic Information', {
