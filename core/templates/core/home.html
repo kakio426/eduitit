@@ -70,9 +70,74 @@
         <!-- 2. [Dynamic Product Cards] All Active Products -->
         {% for product in products %}
         {% if product.id != featured_product.id %}
+
+        {% if product.card_size == "wide" %}
+        <!-- Wide Card (2 columns) -->
+        <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
+            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
+            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            <div class="flex items-center justify-between h-full relative z-10">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        {% if "fa-" in product.icon %}
+                        <i class="{{ product.icon }} text-purple-500 text-3xl"></i>
+                        {% else %}
+                        <span class="text-3xl">{{ product.icon }}</span>
+                        {% endif %}
+                        <h3 class="text-4xl font-bold text-gray-700 mt-1">{{ product.title }}</h3>
+                    </div>
+                    <p class="text-2xl text-gray-500 font-hand leading-tight">{{ product.description }}</p>
+                </div>
+                <div
+                    class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
+                    {% if "fa-" in product.icon %}
+                    <i class="{{ product.icon }}"></i>
+                    {% else %}
+                    <span>{{ product.icon }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% elif product.card_size == "tall" %}
+        <!-- Tall Card (1 column, 2 rows) -->
+        <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
+            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
+            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            <div
+                class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:rotate-12 transition-transform duration-500">
+                {% if "fa-" in product.icon %}
+                <i class="{{ product.icon }}"></i>
+                {% else %}
+                <span>{{ product.icon }}</span>
+                {% endif %}
+            </div>
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                    <span
+                        class="{% if product.color_theme == 'dark' %}text-blue-300{% else %}text-purple-600{% endif %} font-bold text-lg tracking-wider uppercase mb-2 block">
+                        {{ product.service_type|title }}
+                    </span>
+                    <h3 class="text-5xl font-bold mb-4 leading-tight mt-2">{{ product.title }}</h3>
+                    <p
+                        class="{% if product.color_theme == 'dark' %}text-gray-400{% else %}text-gray-600{% endif %} text-2xl leading-tight">
+                        {{ product.description }}
+                    </p>
+                </div>
+                <div class="mt-4">
+                    <span
+                        class="inline-block border {% if product.color_theme == 'dark' %}border-gray-600 hover:bg-gray-700{% else %}border-gray-300 hover:bg-gray-100{% endif %} rounded-full px-5 py-2 text-lg transition-colors">
+                        보러가기 &rarr;
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Small Card (default) -->
         <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
-            onclick="location.href='/products/{{ product.id }}/'" data-aos="fade-up"
-            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
+            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div
                 class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
                 {% if "fa-" in product.icon %}
@@ -87,63 +152,9 @@
             </div>
         </div>
         {% endif %}
+
+        {% endif %}
         {% endfor %}
-
-        <!-- Insight Library Square -->
-        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
-            data-url="{% url 'insight_list' %}" onclick="location.href=this.dataset.url;" data-aos="fade-up"
-            data-aos-delay="450">
-            <div
-                class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
-                <i class="fa-solid fa-gem"></i>
-            </div>
-            <div>
-                <h3 class="text-3xl font-bold text-gray-700 mb-1">인사이트</h3>
-                <p class="text-xl text-gray-500 leading-tight">영감 보석함</p>
-            </div>
-        </div>
-
-        <!-- AI Tools Guide -->
-        <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 bg-gray-800 text-white group cursor-pointer relative overflow-hidden"
-            onclick="location.href='{{ tool_guide_url }}'" data-aos="fade-up" data-aos-delay="500">
-            <div
-                class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:rotate-12 transition-transform duration-500">
-                <i class="fa-solid fa-robot"></i>
-            </div>
-            <div class="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                    <span class="text-blue-300 font-bold text-lg tracking-wider uppercase mb-2 block">Edu-Tech
-                        Guide</span>
-                    <h3 class="text-5xl font-bold mb-4 leading-tight mt-2">AI 도구<br>가이드</h3>
-                    <p class="text-gray-400 text-2xl leading-tight">상황별로 딱 맞는<br>AI 도구를<br>추천해드려요.</p>
-                </div>
-                <div class="mt-4">
-                    <span
-                        class="inline-block border border-gray-600 rounded-full px-5 py-2 text-lg hover:bg-gray-700 transition-colors">
-                        보러가기 &rarr;
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Prompt Lab -->
-        <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="location.href='{{ prompt_lab_url }}'" data-aos="fade-up" data-aos-delay="200">
-            <div class="flex items-center justify-between h-full relative z-10">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-3xl"></i>
-                        <h3 class="text-4xl font-bold text-gray-700 mt-1">AI 프롬프트 레시피</h3>
-                    </div>
-                    <p class="text-2xl text-gray-500 font-hand leading-tight">생기부, 가정통신문, 수업지도안...<br>복사해서 바로 쓰는 검증된
-                        주문서.</p>
-                </div>
-                <div
-                    class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
-                    <i class="fa-solid fa-scroll"></i>
-                </div>
-            </div>
-        </div>
 
         <!-- 7. [Info Card] Why Eduitit? -->
         <div class="col-span-4 md:col-span-2 clay-card p-8 bg-gradient-to-br from-blue-50 to-purple-50"

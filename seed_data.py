@@ -101,6 +101,49 @@ def run():
         external_url="https://schoolit.kr",  # 실제 URL로 변경 필요
         image="https://placehold.co/600x400/orange/white?text=Schoolit"
     )
+
+    # Core Services (previously hardcoded)
+    Product.objects.create(
+        title="인사이트",
+        description="영감 보석함",
+        price=0,
+        is_active=True,
+        icon="fa-solid fa-gem",
+        color_theme="purple",
+        service_type="library",
+        card_size="small",
+        display_order=6,
+        external_url="/insights/",
+        image="https://placehold.co/600x400/purple/white?text=Insights"
+    )
+
+    Product.objects.create(
+        title="AI 도구 가이드",
+        description="상황별로 딱 맞는 AI 도구를 추천해드려요.",
+        price=0,
+        is_active=True,
+        icon="fa-solid fa-robot",
+        color_theme="dark",
+        service_type="guide",
+        card_size="tall",
+        display_order=7,
+        external_url="/tool-guide/",
+        image="https://placehold.co/600x400/gray/white?text=AI+Tools"
+    )
+
+    Product.objects.create(
+        title="AI 프롬프트 레시피",
+        description="생기부, 가정통신문, 수업지도안... 복사해서 바로 쓰는 검증된 주문서.",
+        price=0,
+        is_active=True,
+        icon="fa-solid fa-wand-magic-sparkles",
+        color_theme="purple",
+        service_type="tool",
+        card_size="wide",
+        display_order=8,
+        external_url="/prompt-lab/",
+        image="https://placehold.co/600x400/purple/white?text=Prompt+Lab"
+    )
     
     print("All service data, Insights, and Admin account successfully seeded!")
 
