@@ -4,8 +4,6 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_production')
 django.setup()
 
-from products.models import Product
-
 def run():
     from products.models import Product
     from insights.models import Insight
@@ -16,28 +14,11 @@ def run():
         User.objects.create_superuser('admin', 'admin@example.com', 'admin1234')
         print("Superuser 'admin' created successfully!")
 
-    # Clear existing data
+    # Clear existing data to avoid duplicates during seeding
     Product.objects.all().delete()
     Insight.objects.all().delete()
     
-    # Seed Products
-    Product.objects.create(
-        title="HWP to PDF Converter",
-        description="Convert your HWP (Hancom Word) files to high-quality PDF instantly.",
-        price=15000,
-        is_active=True,
-        image="https://placehold.co/600x400/purple/white?text=HWP+to+PDF"
-    )
-    
-    Product.objects.create(
-        title="Automated Article Creator",
-        description="Generate professional news articles and blog posts using AI.",
-        price=25000,
-        is_active=True,
-        image="https://placehold.co/600x400/blue/white?text=AI+Article"
-    )
-    
-    # Seed Insights
+    # 1. Seed Insights
     Insight.objects.create(
         title="AI 시대, 교사의 역할은 어떻게 변할까?",
         video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -56,6 +37,7 @@ def run():
         is_featured=True
     )
     
+    # 2. Seed All Products/Services
     Product.objects.create(
         title="Online Yut Noli",
         description="설치 없이 바로 즐기는 학급 대항전 필수템!",
@@ -64,8 +46,40 @@ def run():
         is_featured=True,
         image="https://placehold.co/600x400/green/white?text=Yut+Noli"
     )
+
+    Product.objects.create(
+        title="PlayAura",
+        description="전세계 인기 영상 탐험 및 AI 분석 도구",
+        price=0,
+        is_active=True,
+        image="https://placehold.co/600x400/red/white?text=PlayAura"
+    )
+
+    Product.objects.create(
+        title="스쿨잇 (Schoolit)",
+        description="선생님과 학생을 위한 스마트 교육 공동체 플랫폼",
+        price=0,
+        is_active=True,
+        image="https://placehold.co/600x400/orange/white?text=Schoolit"
+    )
+
+    Product.objects.create(
+        title="HWP to PDF Converter",
+        description="HWP 파일을 즉시 PDF로 변환하는 도구입니다.",
+        price=15000,
+        is_active=True,
+        image="https://placehold.co/600x400/purple/white?text=HWP+to+PDF"
+    )
     
-    print("Dummy data and Insights seeded successfully!")
+    Product.objects.create(
+        title="Automated Article Creator",
+        description="AI를 활용해 전문적인 기사와 블로그 포스트를 생성합니다.",
+        price=25000,
+        is_active=True,
+        image="https://placehold.co/600x400/blue/white?text=AI+Article"
+    )
+    
+    print("All service data, Insights, and Admin account successfully seeded!")
 
 if __name__ == '__main__':
     run()
