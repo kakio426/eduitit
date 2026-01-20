@@ -56,6 +56,15 @@ def run():
         is_featured=True
     )
     
+    Product.objects.create(
+        title="Online Yut Noli",
+        description="설치 없이 바로 즐기는 학급 대항전 필수템!",
+        price=0,
+        is_active=True,
+        is_featured=True,
+        image="https://placehold.co/600x400/green/white?text=Yut+Noli"
+    )
+    
     print("Dummy data and Insights seeded successfully!")
 
 if __name__ == '__main__':

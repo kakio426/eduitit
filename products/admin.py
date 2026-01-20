@@ -3,8 +3,8 @@ from .models import Product, UserOwnedProduct
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('title', 'price', 'is_active', 'created_at')
-    list_filter = ('is_active',)
+    list_display = ('title', 'price', 'is_active', 'is_featured', 'created_at')
+    list_filter = ('is_active', 'is_featured')
     search_fields = ('title', 'description')
 
 @admin.register(UserOwnedProduct)
