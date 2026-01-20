@@ -4,34 +4,12 @@
 
 {% block content %}
 <style>
-    /* Custom Animations - Subtle Bounce Effect */
-    @keyframes gentle-bounce {
-        0% {
-            transform: translateY(0) scale(1);
-        }
-
-        25% {
-            transform: translateY(-8px) scale(1.02);
-        }
-
-        50% {
-            transform: translateY(0) scale(1);
-        }
-
-        75% {
-            transform: translateY(-4px) scale(1.01);
-        }
-
-        100% {
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .hover-glitch:hover {
-        animation: gentle-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    /* Fixed Hover Effects - No more flickering */
+    .tool-card:hover {
+        transform: translateY(-8px) scale(1.02);
         box-shadow:
-            0 15px 35px rgba(0, 0, 0, 0.1),
-            0 5px 15px rgba(124, 58, 237, 0.1);
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 10px 20px rgba(124, 58, 237, 0.1);
     }
 
     /* Bento Grid Utils */
@@ -40,26 +18,35 @@
     }
 
     /* Fix Modal Jumping & Increase Modal Font Sizes */
+    #modal-content {
+        transition: opacity 0.3s ease, transform 0.3s ease !important;
+        animation: none !important;
+        z-index: 60;
+        /* Higher than overlay */
+    }
+
     #modal-content.clay-card:hover {
         transform: translate(-50%, -50%) scale(1) !important;
         box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5) !important;
+        animation: none !important;
     }
 
     /* Modal Text Enhancements for Dongle Font */
     #modal-desc {
-        font-size: 2.25rem;
-        /* ~36px */
-        line-height: 1.2;
+        font-size: 2.75rem;
+        /* ~44px */
+        line-height: 1.1;
+        font-weight: 500;
     }
 
     #modal-summary {
-        font-size: 1.875rem;
-        /* ~30px */
+        font-size: 2.25rem;
+        /* ~36px */
     }
 
     #modal-details {
-        font-size: 1.5rem;
-        /* ~24px */
+        font-size: 1.875rem;
+        /* ~30px */
     }
 </style>
 
@@ -173,9 +160,7 @@
             icon: '<i class="fa-solid fa-robot text-green-500"></i>',
             desc: '만능 해결사. 가정통신문 초안, 수업 아이디어, 고민 상담 등 텍스트로 하는 모든 일의 기본입니다.',
             summary: 'Canvas 기능이 무료로 풀렸어요! 글쓰기나 코딩할 때 별도 창에서 수정이 가능해져서 훨씬 편합니다.',
-            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가'],
-            // Special Animation Trigger
-            isGlitch: true
+            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가']
         },
         {
             id: 'claude',
@@ -253,10 +238,7 @@
 
             filtered.forEach(tool => {
                 const card = document.createElement('div');
-                // Check if this card should have the glitch effect
-                const glitchClass = tool.isGlitch ? 'hover-glitch' : '';
-
-                card.className = `clay-card shadow-clay p-8 rounded-[2rem] group hover:shadow-clay-hover cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC] ${glitchClass}`;
+                card.className = `clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]`;
                 card.onclick = () => openModal(tool);
 
                 // Colors
