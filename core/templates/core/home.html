@@ -26,7 +26,8 @@
     <div class="bento-grid">
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
-        <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
+        <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
+            role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ featured_product.id }}')"
             onclick="openQuickView('{{ featured_product.id }}')" data-aos="fade-up" data-aos-delay="100">
 
             <!-- Background decoration -->
@@ -73,7 +74,8 @@
 
             {% if product.card_size == "wide" %}
             <!-- Wide Card (2 columns) -->
-            <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
+            <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
+                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
                 onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
@@ -102,7 +104,8 @@
 
             {% elif product.card_size == "tall" %}
             <!-- Tall Card (1 column, 2 rows) -->
-            <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
+            <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
+                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
                 onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
@@ -129,7 +132,8 @@
 
             {% else %}
             <!-- Small Card (default) -->
-            <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative"
+            <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
+                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
                 onclick="openQuickView('{{ product.id }}')" data-aos="fade-up"
                 data-aos-delay="{% widthratio forloop.counter 1 100 %}">
 
@@ -212,16 +216,35 @@
 </div>
 
 <script>
+    // 🚀 Performance Optimization: Cache loaded modal content
+    const modalCache = {};
+    let currentRequestId = null;
+
+    /**
+     * Handle keyboard accessibility for cards
+     */
+    function handleCardKeydown(event, productId) {
+        // Execute on Enter or Space
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault(); // Prevent scrolling on Space
+            openQuickView(productId);
+        }
+    }
+
+    /**
+     * Open the Quick View modal with caching and race condition protection
+     */
     function openQuickView(productId) {
         const modal = document.getElementById('quickViewModal');
         const panel = document.getElementById('modalPanel');
         const loading = document.getElementById('modalLoading');
         const content = document.getElementById('modalContent');
+        const body = document.body;
 
-        // Show Modal Wrapper
+        // UI Transition: Show Modal Wrapper
         modal.classList.remove('hidden');
-        loading.classList.remove('hidden'); // Show spinner
 
+        // Use setTimeout to allow browser to render 'block' before applying opacity transition
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.classList.add('flex');
@@ -229,22 +252,47 @@
             panel.classList.add('scale-100');
         }, 10);
 
-        document.body.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
 
-        // Fetch Data via AJAX
+        // 1. Check Cache
+        if (modalCache[productId]) {
+            content.innerHTML = modalCache[productId];
+            loading.classList.add('hidden');
+            return;
+        }
+
+        // 2. Fetch Data if not cached
+        loading.classList.remove('hidden'); // Show spinner
+        content.innerHTML = ''; // Clear previous content while loading
+
+        currentRequestId = productId; // Set current request ID for race condition check
+
         fetch(`/products/preview/${productId}/`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.text();
             })
             .then(html => {
-                content.innerHTML = html;
-                loading.classList.add('hidden'); // Hide spinner
+                // 🛡️ Race Condition Check: Only render if this is still the requested product
+                if (currentRequestId === productId) {
+                    modalCache[productId] = html; // Save to cache
+                    content.innerHTML = html;
+                    loading.classList.add('hidden');
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
-                content.innerHTML = `<div class="text-center py-10"><p class="text-gray-500">정보를 불러오는데 실패했습니다.</p></div>`;
-                loading.classList.add('hidden');
+                if (currentRequestId === productId) {
+                    content.innerHTML = `
+                        <div class="text-center py-10 flex flex-col items-center">
+                            <i class="fa-solid fa-triangle-exclamation text-gray-300 text-5xl mb-4"></i>
+                            <p class="text-gray-500 text-xl font-bold">정보를 불러오는데 실패했습니다.</p>
+                            <button onclick="openQuickView('${productId}')" class="mt-4 px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 font-bold transition">
+                                다시 시도
+                            </button>
+                        </div>`;
+                    loading.classList.add('hidden');
+                }
             });
     }
 
@@ -260,7 +308,10 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.body.style.overflow = 'auto';
-            document.getElementById('modalContent').innerHTML = ''; // Clear content
+            // We do NOT clear modalContent here anymore to preserve visual state during transition,
+            // or we clear it if we want to reset scroll. 
+            // Clearing it prevents "flashing" old content when opening a new slow-loading modal, 
+            // but our loading spinner logic handles that by clearing content ON OPEN.
         }, 300);
     }
 </script>
