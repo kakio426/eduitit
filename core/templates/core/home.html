@@ -31,7 +31,8 @@
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="location.href='/products/{{ featured_product.id }}/'" data-aos="fade-up" data-aos-delay="100">
+            onclick="{% if featured_product.external_url %}location.href='{{ featured_product.external_url }}'{% else %}location.href='/products/{{ featured_product.id }}/'{% endif %}"
+            data-aos="fade-up" data-aos-delay="100">
             <!-- Background decoration -->
             <div
                 class="absolute top-0 right-0 w-80 h-80 bg-purple-100 rounded-bl-full -mr-20 -mt-20 transition-transform duration-500 group-hover:scale-125 z-0">

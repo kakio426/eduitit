@@ -3,10 +3,11 @@ from django.contrib.auth.decorators import login_required
 from products.models import Product
 
 def home(request):
-    products = Product.objects.filter(is_active=True).order_by('-created_at')
-    # Get one featured product for the hero card
-    featured_product = Product.objects.filter(is_active=True, is_featured=True).first()
-    # Fallback to the latest product if no featured one is set
+    # Order by display_order first, then by creation date
+    products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    # Get the featured product with lowest display_order (highest priority)
+    featured_product = Product.objects.filter(is_active=True, is_featured=True).order_by('display_order').first()
+    # Fallback to the product with lowest display_order if no featured one is set
     if not featured_product:
         featured_product = products.first()
         
