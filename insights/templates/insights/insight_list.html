@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insight Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-soft': '#E0E5EC',
+                    },
+                    fontFamily: {
+                        'dongle': ['Dongle', 'sans-serif'],
+                        'body': ['Noto Sans KR', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'clay': '9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5)',
+                        'clay-inner': 'inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8)',
+                        'clay-hover': '12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6)',
+                    },
+                    borderRadius: {
+                        'clay': '30px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #E0E5EC;
+        }
+
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Toast Animation */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 50px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 17px;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+            font-family: 'Noto Sans KR', sans-serif;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen pb-20">
+
+    <!-- Navbar Area -->
+    <nav class="px-6 py-4 mb-8">
+        <div
+            class="max-w-7xl mx-auto clay-card px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 rounded-[30px] shadow-clay">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="location.href='/'">
+                <div
+                    class="w-10 h-10 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-xl">
+                    <i class="fa-solid fa-cloud"></i>
+                </div>
+                <span class="font-bold text-3xl text-gray-700 font-dongle mt-1">EDUITIT</span>
+            </div>
+            <div class="hidden md:flex gap-6 text-xl font-bold text-gray-500 font-dongle">
+                <a href="/" class="hover:text-purple-600 cursor-pointer transition">Products</a>
+                <span class="text-purple-600 border-b-2 border-purple-600">Insight Library</span>
+                <span class="hover:text-purple-600 cursor-pointer transition">About</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header Section -->
+    <header class="text-center mb-12 px-4">
+        <span
+            class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-600 font-bold text-2xl mb-4 shadow-sm font-dongle tracking-wide">
+            ✨ Teacher's Inspiration
+        </span>
+        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 font-dongle text-shadow mb-2 leading-none">
+            Insight Library
+        </h1>
+        <p class="text-2xl md:text-3xl text-gray-500 font-dongle max-w-2xl mx-auto leading-tight">
+            AI 시대를 이끄는 선생님의 시선.<br>
+            유튜브 영상과 함께 선생님만의 통찰을 기록하고 공유합니다.
+        </p>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="max-w-7xl mx-auto px-4 md:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+
+            {% for insight in insights %}
+            <article
+                class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-[#E0E5EC] shadow-clay relative group">
+
+                <!-- 1. Video Thumbnail -->
+                <div class="relative w-full aspect-video rounded-2xl overflow-hidden shadow-clay-inner mb-6 cursor-pointer border-4 border-[#E0E5EC]"
+                    onclick="window.open('{{ insight.video_url }}', '_blank')">
+                    <img src="{{ insight.thumbnail_url }}"
+                        class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                        alt="Thumbnail">
+                    <!-- Play Button Overlay -->
+                    <div
+                        class="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                        <div
+                            class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg text-red-500 text-2xl pl-1 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-play"></i>
+                        </div>
+                    </div>
+                    <!-- Tag -->
+                    {% if insight.tags %}
+                    <span
+                        class="absolute top-3 left-3 px-3 py-1 bg-indigo-500/90 text-white text-sm font-bold rounded-lg shadow-sm backdrop-blur-sm font-body">
+                        {{ insight.tags }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- 2. Content -->
+                <div class="flex flex-col flex-1">
+                    <!-- Title -->
+                    <h3 class="text-4xl font-bold text-gray-700 font-dongle leading-none mb-4">
+                        {{ insight.title }}
+                    </h3>
+
+                    <!-- Quote Box (Pressed Effect) -->
+                    <div class="bg-[#E0E5EC] rounded-2xl p-5 shadow-clay-inner mb-6 relative">
+                        <i class="fa-solid fa-quote-left text-3xl text-gray-300 absolute -top-3 -left-2"></i>
+                        <p class="text-gray-600 font-body text-sm leading-relaxed italic relative z-10 pl-2">
+                            "{{ insight.content }}"
+                        </p>
+                    </div>
+
+                    <!-- Creator's Note (Pop-out Effect) -->
+                    {% if insight.kakio_note %}
+                    <div class="mt-auto pt-4 border-t border-gray-200/50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div
+                                class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs shadow-sm">
+                                <i class="fa-solid fa-pen"></i>
+                            </div>
+                            <span class="text-purple-600 font-bold font-dongle text-2xl pt-1">Kakio's Note</span>
+                        </div>
+                        <p class="text-gray-500 font-body text-sm leading-relaxed">
+                            {{ insight.kakio_note }}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+
+            <!-- [Admin Add Button Placeholder] - Only show if user is staff (optional, or just keep as placeholder) -->
+            <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-purple-400 hover:text-purple-500 cursor-pointer transition-all min-h-[400px] bg-[#E0E5EC]/50 hover:bg-white/40 group"
+                onclick="showToast('🚀 관리자 페이지: 새 영감 기록하기 기능 연결 예정')">
+                <div
+                    class="w-24 h-24 rounded-full shadow-clay flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform bg-[#E0E5EC]">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <span class="font-dongle text-4xl font-bold mb-2">기록하기</span>
+                <p class="font-body text-sm text-center px-4">
+                    유튜브 링크만 있으면<br>나만의 인사이트 카드가 완성됩니다.
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast">메시지</div>
+
+    <script>
+        function showToast(message) {
+            var x = document.getElementById("toast");
+            x.textContent = message;
+            x.className = "show";
+            setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+        }
+    </script>
+</body>
+
+</html>

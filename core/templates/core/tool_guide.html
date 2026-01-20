@@ -3,7 +3,7 @@
 {% block title %}AI 도구 가이드 - Eduitit{% endblock %}
 
 {% block content %}
-<style>
+<style type="text/tailwindcss">
     /* Fixed Hover Effects - No more flickering */
     .tool-card:hover {
         transform: translateY(-8px) scale(1.02);
@@ -13,9 +13,7 @@
     }
 
     /* Bento Grid Utils */
-    .bento-card {
-        @apply bg-white/60 backdrop-blur-sm rounded-[2rem] p-8 transition-all duration-300 shadow-clay hover:shadow-clay-hover border border-white/20;
-    }
+
 
     /* Fix Modal Jumping & Increase Modal Font Sizes */
     #modal-content {

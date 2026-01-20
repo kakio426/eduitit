@@ -1,92 +1,133 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ko">
 
-{% block title %}Dashboard - Eduitit{% endblock %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduitit Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-soft': '#E0E5EC',
+                    },
+                    fontFamily: {
+                        'dongle': ['Dongle', 'sans-serif'],
+                        'body': ['Noto Sans KR', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'clay': '9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5)',
+                        'clay-hover': '12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6)',
+                        'clay-pressed': 'inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8)',
+                    },
+                    borderRadius: {
+                        'clay': '30px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #E0E5EC;
+        }
 
-{% block extra_css %}
-.dashboard-header {
-margin-bottom: 3rem;
-}
+        /* Floating Animation */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
 
-.grid {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-gap: 2.5rem;
-}
+            50% {
+                transform: translateY(-10px);
+            }
 
-.card {
-background: var(--glass);
-border: 1px solid var(--glass-border);
-border-radius: 28px;
-overflow: hidden;
-display: flex;
-flex-direction: column;
-}
+            100% {
+                transform: translateY(0px);
+            }
+        }
 
-.card-image {
-width: 100%;
-aspect-ratio: 16/10;
-background: #1e293b;
-}
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
 
-.card-image img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-}
+<body class="min-h-screen flex items-center justify-center p-4">
 
-.card-content {
-padding: 1.5rem;
-}
+    <div class="max-w-4xl w-full">
+        <!-- Dashboard Header -->
+        <div class="mb-10 text-center">
+            <h2 class="text-4xl font-bold text-gray-700 font-dongle mb-2">오늘도 환영합니다, 선생님! 👋</h2>
+            <p class="text-gray-500 font-body">어떤 수업 준비를 도와드릴까요?</p>
+        </div>
 
-.card h3 {
-margin: 0 0 0.5rem;
-font-size: 1.25rem;
-font-weight: 700;
-}
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-.empty-state {
-text-align: center;
-padding: 6rem 2rem;
-background: var(--glass);
-border-radius: 32px;
-border: 1px dashed var(--glass-border);
-}
-{% endblock %}
+            <!-- 1. [Featured] Insight Library Entry Card -->
+            <a href="{% url 'insight_list' %}" class="group relative md:col-span-2 lg:col-span-1">
+                <div
+                    class="h-full bg-[#E0E5EC] rounded-[30px] p-8 shadow-clay transition-all duration-300 group-hover:shadow-clay-hover group-hover:-translate-y-2 border-2 border-transparent group-hover:border-purple-200 cursor-pointer flex flex-col items-center text-center justify-center relative overflow-hidden">
 
-{% block content %}
-<div class="dashboard-header">
-    <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">Member Center</h1>
-    <p style="color: #94a3b8;">Welcome back, {{ user.username }}. Here are your active services.</p>
-</div>
+                    <!-- Decorative Background Circle -->
+                    <div
+                        class="absolute top-[-20%] right-[-20%] w-32 h-32 bg-purple-200 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity">
+                    </div>
 
-<div class="grid">
-    {% for item in owned_items %}
-    <div class="card">
-        <div class="card-image">
-            {% if item.product.image %}
-            <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}">
-            {% else %}
-            <div
-                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
-                <span>No Preview</span>
+                    <!-- Animated Icon -->
+                    <div
+                        class="w-24 h-24 mb-6 rounded-full bg-[#E0E5EC] shadow-clay-pressed flex items-center justify-center text-5xl text-purple-500 animate-float">
+                        <i class="fa-solid fa-gem"></i>
+                    </div>
+
+                    <!-- Text Content -->
+                    <h3
+                        class="text-4xl font-bold text-gray-700 font-dongle mb-2 group-hover:text-purple-600 transition-colors">
+                        Insight Library
+                    </h3>
+                    <p class="text-sm text-gray-500 font-body leading-relaxed mb-4">
+                        AI의 방향을 잡는<br>영감 보석함
+                    </p>
+
+                    <!-- 'Open' Badge -->
+                    <span
+                        class="px-4 py-1.5 rounded-full bg-purple-100 text-purple-600 text-xs font-bold font-body group-hover:bg-purple-500 group-hover:text-white transition-all shadow-sm">
+                        열어보기 <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </span>
+                </div>
+            </a>
+
+
+            <!-- (Comparison) Standard Tool Card 1 -->
+            <div class="bg-[#E0E5EC] rounded-[30px] p-6 shadow-clay flex flex-col items-center justify-center text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+                data-url="{% url 'prompt_lab' %}" onclick="location.href=this.dataset.url;">
+                <div
+                    class="w-16 h-16 mb-4 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-500">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-600 font-dongle">AI 프롬프트 랩</h3>
             </div>
-            {% endif %}
-        </div>
-        <div class="card-content">
-            <h3>{{ item.product.title }}</h3>
-            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Purchased on {{
-                item.purchased_at|date:"Y-m-d" }}</p>
-            <a href="{% url 'product_detail' item.product.pk %}" class="btn btn-primary"
-                style="width: 100%; text-align: center;">Launch Tool</a>
+
+            <!-- (Comparison) Standard Tool Card 2 -->
+            <div class="bg-[#E0E5EC] rounded-[30px] p-6 shadow-clay flex flex-col items-center justify-center text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+                onclick="location.href='/'">
+                <div
+                    class="w-16 h-16 mb-4 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-500">
+                    <i class="fa-solid fa-dice"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-600 font-dongle">윷놀이 게임</h3>
+            </div>
+
         </div>
     </div>
-    {% empty %}
-    <div class="empty-state" style="grid-column: 1/-1;">
-        <h2 style="font-weight: 700;">No services yet</h2>
-        <p style="color: #94a3b8; margin-bottom: 2rem;">You haven't acquired any tools yet. Explore our marketplace to
-            get started.</p>
-        <a href="/products/" class="btn btn-primary">Browse Services</a>
-    </div>
-    {% endfor %}
-</div>
-{% endblock %}
+
+</body>
+
+</html>
