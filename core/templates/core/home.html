@@ -62,50 +62,36 @@
             </div>
         </div>
 
-        <!-- 2. [Wide Card] Prompt Lab -->
-        <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="location.href='{{ prompt_lab_url }}'" data-aos="fade-up" data-aos-delay="200">
-            <div class="flex items-center justify-between h-full relative z-10">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-3xl"></i>
-                        <h3 class="text-4xl font-bold text-gray-700 mt-1">AI 프롬프트 레시피</h3>
-                    </div>
-                    <p class="text-2xl text-gray-500 font-hand leading-tight">생기부, 가정통신문, 수업지도안...<br>복사해서 바로 쓰는 검증된
-                        주문서.</p>
-                </div>
-                <div
-                    class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
-                    <i class="fa-solid fa-scroll"></i>
-                </div>
-            </div>
-        </div>
 
-        <!-- 3. [Square] PlayAura -->
-        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-red-50 transition-colors"
-            onclick="showServiceModal('playaura')" data-aos="fade-up" data-aos-delay="300">
+        <!-- 2. [Dynamic Product Cards] All Active Products -->
+        {% for product in products %}
+        {% if product.id != featured_product.id %}
+        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
+            onclick="location.href='/products/{{ product.id }}/'" data-aos="fade-up"
+            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div
-                class="w-16 h-16 rounded-3xl bg-red-100 flex items-center justify-center text-red-500 text-3xl mb-4 shadow-sm">
-                <i class="fa-brands fa-youtube"></i>
+                class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
+                {% if "윷놀이" in product.title or "Yut" in product.title %}
+                🎲
+                {% elif "PlayAura" in product.title %}
+                <i class="fa-brands fa-youtube text-red-500"></i>
+                {% elif "스쿨잇" in product.title or "Schoolit" in product.title %}
+                <i class="fa-solid fa-school text-orange-500"></i>
+                {% elif "HWP" in product.title or "PDF" in product.title %}
+                <i class="fa-solid fa-file-pdf text-blue-500"></i>
+                {% elif "Article" in product.title %}
+                <i class="fa-solid fa-newspaper text-green-500"></i>
+                {% else %}
+                <i class="fa-solid fa-cube"></i>
+                {% endif %}
             </div>
             <div>
-                <h3 class="text-3xl font-bold text-gray-700 mb-1">PlayAura</h3>
-                <p class="text-xl text-gray-500 leading-tight">전세계 인기 영상 탐험</p>
+                <h3 class="text-3xl font-bold text-gray-700 mb-1">{{ product.title }}</h3>
+                <p class="text-xl text-gray-500 leading-tight">{{ product.description|truncatechars:40 }}</p>
             </div>
         </div>
-
-        <!-- 4. [Square] Schoolit -->
-        <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-orange-50 transition-colors"
-            onclick="showServiceModal('schoolit')" data-aos="fade-up" data-aos-delay="400">
-            <div
-                class="w-16 h-16 rounded-3xl bg-orange-100 flex items-center justify-center text-orange-500 text-3xl mb-4 shadow-sm">
-                <i class="fa-solid fa-school"></i>
-            </div>
-            <div>
-                <h3 class="text-3xl font-bold text-gray-700 mb-1">스쿨잇</h3>
-                <p class="text-xl text-gray-500 leading-tight">교육 공동체 플랫폼</p>
-            </div>
-        </div>
+        {% endif %}
+        {% endfor %}
 
         <!-- Insight Library Square -->
         <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
@@ -121,7 +107,7 @@
             </div>
         </div>
 
-        <!-- 5. [Tall Card] AI Tools Guide -->
+        <!-- AI Tools Guide -->
         <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 bg-gray-800 text-white group cursor-pointer relative overflow-hidden"
             onclick="location.href='{{ tool_guide_url }}'" data-aos="fade-up" data-aos-delay="500">
             <div
@@ -144,52 +130,21 @@
             </div>
         </div>
 
-        <!-- 6. [List Card] Other Tools (Dynamic Loop) -->
-        <div class="col-span-4 md:col-span-3 clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="600">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-3xl font-bold text-gray-700"><i class="fa-solid fa-layer-group mr-2 text-blue-500"></i>
-                    유용한 도구들</h3>
-                <span class="text-xl text-gray-400">Total {{ products|length }} Tools</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {% for product in products %}
-                {% if "윷놀이" not in product.title %}
-                {% url "product_detail" product.pk as target_url %}
-                <div class="flex items-center gap-4 p-4 rounded-3xl bg-white/40 hover:bg-white/80 transition-all shadow-sm hover:shadow-md cursor-pointer group"
-                    onclick="location.href='{{ target_url }}'">
-                    <div class="w-12 h-12 rounded-full bg-white shadow-clay-inner flex items-center justify-center text-xl shrink-0 
-                                {% if '나이스' in product.title %}text-blue-400
-                                {% elif '자리' in product.title %}text-green-400
-                                {% elif '학급비' in product.title %}text-pink-400
-                                {% elif '문서' in product.title %}text-orange-400
-                                {% elif '수업' in product.title %}text-purple-400
-                                {% else %}text-gray-400{% endif %}">
-
-                        {% if '나이스' in product.title %}<i class="fa-solid fa-feather"></i>
-                        {% elif '자리' in product.title %}<i class="fa-solid fa-users"></i>
-                        {% elif '학급비' in product.title %}<i class="fa-solid fa-piggy-bank"></i>
-                        {% elif '문서' in product.title %}<i class="fa-solid fa-file-pdf"></i>
-                        {% elif '수업' in product.title %}<i class="fa-solid fa-chalkboard-user"></i>
-                        {% else %}<i class="fa-solid fa-cube"></i>{% endif %}
+        <!-- AI Prompt Lab -->
+        <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
+            onclick="location.href='{{ prompt_lab_url }}'" data-aos="fade-up" data-aos-delay="200">
+            <div class="flex items-center justify-between h-full relative z-10">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-3xl"></i>
+                        <h3 class="text-4xl font-bold text-gray-700 mt-1">AI 프롬프트 레시피</h3>
                     </div>
-                    <div class="overflow-hidden">
-                        <h4 class="font-bold text-2xl text-gray-700 truncate -mb-1 mt-1 group-hover:text-purple-600">{{
-                            product.title }}</h4>
-                        <p class="text-lg text-gray-500 truncate">{{ product.description|truncatechars:18 }}</p>
-                    </div>
+                    <p class="text-2xl text-gray-500 font-hand leading-tight">생기부, 가정통신문, 수업지도안...<br>복사해서 바로 쓰는 검증된
+                        주문서.</p>
                 </div>
-                {% endif %}
-                {% endfor %}
-
-                <!-- Coming Soon Placeholder -->
                 <div
-                    class="flex items-center gap-4 p-4 rounded-3xl border-2 border-dashed border-gray-300 text-gray-400">
-                    <div
-                        class="w-12 h-12 rounded-full bg-transparent border-2 border-gray-300 flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-plus"></i>
-                    </div>
-                    <span class="text-xl font-bold mt-1">New Tool Coming Soon</span>
+                    class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
+                    <i class="fa-solid fa-scroll"></i>
                 </div>
             </div>
         </div>
