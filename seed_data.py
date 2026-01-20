@@ -85,6 +85,7 @@ def run():
         color_theme="red",
         service_type="platform",
         display_order=4,
+        external_url="https://playaura.com",  # 실제 URL로 변경 필요
         image="https://placehold.co/600x400/red/white?text=PlayAura"
     )
 
@@ -97,6 +98,7 @@ def run():
         color_theme="orange",
         service_type="platform",
         display_order=5,
+        external_url="https://schoolit.kr",  # 실제 URL로 변경 필요
         image="https://placehold.co/600x400/orange/white?text=Schoolit"
     )
     
