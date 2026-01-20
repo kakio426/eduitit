@@ -1,133 +1,64 @@
-<!DOCTYPE html>
-<html lang="ko">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eduitit Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
-        rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'bg-soft': '#E0E5EC',
-                    },
-                    fontFamily: {
-                        'dongle': ['Dongle', 'sans-serif'],
-                        'body': ['Noto Sans KR', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'clay': '9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5)',
-                        'clay-hover': '12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6)',
-                        'clay-pressed': 'inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8)',
-                    },
-                    borderRadius: {
-                        'clay': '30px',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #E0E5EC;
-        }
+{% block title %}대시보드 - Eduitit{% endblock %}
 
-        /* Floating Animation */
-        @keyframes float {
-            0% {
-                transform: translateY(0px);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-
-            100% {
-                transform: translateY(0px);
-            }
-        }
-
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-    </style>
-</head>
-
-<body class="min-h-screen flex items-center justify-center p-4">
-
-    <div class="max-w-4xl w-full">
-        <!-- Dashboard Header -->
-        <div class="mb-10 text-center">
-            <h2 class="text-4xl font-bold text-gray-700 font-dongle mb-2">오늘도 환영합니다, 선생님! 👋</h2>
-            <p class="text-gray-500 font-body">어떤 수업 준비를 도와드릴까요?</p>
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-16 space-y-4">
+            <h1 class="text-5xl md:text-6xl font-bold text-gray-700">
+                오늘도 환영합니다, {{ user.username }} 선생님! 👋
+            </h1>
+            <p class="text-2xl text-gray-400 font-hand">
+                사용 가능한 서비스들을 확인해보세요.
+            </p>
         </div>
 
         <!-- Dashboard Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-            <!-- 1. [Featured] Insight Library Entry Card -->
-            <a href="{% url 'insight_list' %}" class="group relative md:col-span-2 lg:col-span-1">
-                <div
-                    class="h-full bg-[#E0E5EC] rounded-[30px] p-8 shadow-clay transition-all duration-300 group-hover:shadow-clay-hover group-hover:-translate-y-2 border-2 border-transparent group-hover:border-purple-200 cursor-pointer flex flex-col items-center text-center justify-center relative overflow-hidden">
+            {% for product in products %}
+            <div class="clay-card p-8 group hover:shadow-clay-hover cursor-pointer transition-all duration-300"
+                onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='{% url 'product_detail' product.id %}'{% endif %}">
 
-                    <!-- Decorative Background Circle -->
-                    <div
-                        class="absolute top-[-20%] right-[-20%] w-32 h-32 bg-purple-200 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity">
-                    </div>
-
-                    <!-- Animated Icon -->
-                    <div
-                        class="w-24 h-24 mb-6 rounded-full bg-[#E0E5EC] shadow-clay-pressed flex items-center justify-center text-5xl text-purple-500 animate-float">
-                        <i class="fa-solid fa-gem"></i>
-                    </div>
-
-                    <!-- Text Content -->
-                    <h3
-                        class="text-4xl font-bold text-gray-700 font-dongle mb-2 group-hover:text-purple-600 transition-colors">
-                        Insight Library
-                    </h3>
-                    <p class="text-sm text-gray-500 font-body leading-relaxed mb-4">
-                        AI의 방향을 잡는<br>영감 보석함
-                    </p>
-
-                    <!-- 'Open' Badge -->
-                    <span
-                        class="px-4 py-1.5 rounded-full bg-purple-100 text-purple-600 text-xs font-bold font-body group-hover:bg-purple-500 group-hover:text-white transition-all shadow-sm">
-                        열어보기 <i class="fa-solid fa-arrow-right ml-1"></i>
-                    </span>
+                <div class="w-20 h-20 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 float-icon 
+                            {% if product.color_theme == 'purple' %}text-purple-500
+                            {% elif product.color_theme == 'green' %}text-green-500
+                            {% elif product.color_theme == 'red' %}text-red-500
+                            {% elif product.color_theme == 'blue' %}text-blue-500
+                            {% else %}text-gray-500{% endif %}">
+                    {% if "fa-" in product.icon %}
+                    <i class="{{ product.icon }}"></i>
+                    {% else %}
+                    {{ product.icon }}
+                    {% endif %}
                 </div>
-            </a>
 
+                <h3 class="text-3xl font-bold text-gray-700 mb-2 group-hover:text-purple-600 transition-colors">
+                    {{ product.title }}
+                </h3>
+                <p class="text-xl text-gray-500 font-hand mb-6">
+                    {{ product.description|truncatechars:60 }}
+                </p>
 
-            <!-- (Comparison) Standard Tool Card 1 -->
-            <div class="bg-[#E0E5EC] rounded-[30px] p-6 shadow-clay flex flex-col items-center justify-center text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                data-url="{% url 'prompt_lab' %}" onclick="location.href=this.dataset.url;">
-                <div
-                    class="w-16 h-16 mb-4 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-500">
-                    <i class="fa-solid fa-robot"></i>
+                <div class="flex items-center gap-2 text-purple-400 font-bold text-lg">
+                    바로가기 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </div>
-                <h3 class="text-3xl font-bold text-gray-600 font-dongle">AI 프롬프트 랩</h3>
             </div>
-
-            <!-- (Comparison) Standard Tool Card 2 -->
-            <div class="bg-[#E0E5EC] rounded-[30px] p-6 shadow-clay flex flex-col items-center justify-center text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                onclick="location.href='/'">
-                <div
-                    class="w-16 h-16 mb-4 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-500">
-                    <i class="fa-solid fa-dice"></i>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-600 font-dongle">윷놀이 게임</h3>
+            {% empty %}
+            <div class="col-span-full clay-card p-12 text-center">
+                <div class="text-6xl mb-6">🏜️</div>
+                <h3 class="text-3xl font-bold text-gray-500 mb-2">사용 가능한 서비스가 없습니다.</h3>
+                <p class="text-xl text-gray-400 font-hand mb-8">홈페이지에서 마음에 드는 서비스를 찾아보세요!</p>
+                <a href="/"
+                    class="px-8 py-3 bg-purple-500 text-white rounded-full text-xl font-bold hover:shadow-lg transition">
+                    서비스 보러가기
+                </a>
             </div>
+            {% endfor %}
 
         </div>
     </div>
-
-</body>
-
-</html>
+</section>
+{% endblock %}

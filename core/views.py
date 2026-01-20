@@ -18,8 +18,16 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    owned_items = request.user.owned_products.all()
-    return render(request, 'core/dashboard.html', {'owned_items': owned_items})
+    from django.db.models import Q
+    # Get IDs of products explicitly owned by the user
+    owned_ids = request.user.owned_products.values_list('product_id', flat=True)
+    # Filter products that are either owned or free
+    available_products = Product.objects.filter(
+        Q(id__in=owned_ids) | Q(price=0),
+        is_active=True
+    ).order_by('display_order', '-created_at').distinct()
+    
+    return render(request, 'core/dashboard.html', {'products': available_products})
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')
