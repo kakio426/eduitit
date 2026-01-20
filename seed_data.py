@@ -108,7 +108,7 @@ def run():
     # Core Services (previously hardcoded)
     Product.objects.create(
         title="인사이트",
-        description="영감 보석함",
+        description="영감 보석함 - AI 시대를 이끄는 선생님의 시선.",
         price=0,
         is_active=True,
         icon="fa-solid fa-gem",
@@ -122,7 +122,7 @@ def run():
 
     Product.objects.create(
         title="AI 도구 가이드",
-        description="상황별로 딱 맞는 AI 도구를 추천해드려요.",
+        description="상황별로 딱 맞는 AI 도구를 추천해드려요. 수업 준비부터 행정까지!",
         price=0,
         is_active=True,
         icon="fa-solid fa-robot",
@@ -136,7 +136,7 @@ def run():
 
     Product.objects.create(
         title="AI 프롬프트 레시피",
-        description="생기부, 가정통신문, 수업지도안... 복사해서 바로 쓰는 검증된 주문서.",
+        description="복사해서 바로 쓰는 검증된 주문서. AI를 200% 활용하세요.",
         price=0,
         is_active=True,
         icon="fa-solid fa-wand-magic-sparkles",

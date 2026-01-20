@@ -31,8 +31,8 @@
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="{% if featured_product.external_url %}location.href='{{ featured_product.external_url }}'{% else %}location.href='/products/{{ featured_product.id }}/'{% endif %}"
-            data-aos="fade-up" data-aos-delay="100">
+            data-url="{% if featured_product.external_url %}{{ featured_product.external_url }}{% else %}{% url 'product_detail' featured_product.id %}{% endif %}"
+            onclick="location.href=this.dataset.url" data-aos="fade-up" data-aos-delay="100">
             <!-- Background decoration -->
             <div
                 class="absolute top-0 right-0 w-80 h-80 bg-purple-100 rounded-bl-full -mr-20 -mt-20 transition-transform duration-500 group-hover:scale-125 z-0">
@@ -75,8 +75,9 @@
         {% if product.card_size == "wide" %}
         <!-- Wide Card (2 columns) -->
         <div class="col-span-4 md:col-span-2 clay-card p-10 relative overflow-hidden group cursor-pointer bg-[#E0E5EC]"
-            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
-            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+            onclick="location.href=this.dataset.url" data-aos="fade-up"
+            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="flex items-center justify-between h-full relative z-10">
                 <div>
                     <div class="flex items-center gap-3 mb-2">
@@ -103,8 +104,9 @@
         {% elif product.card_size == "tall" %}
         <!-- Tall Card (1 column, 2 rows) -->
         <div class="col-span-2 md:col-span-1 row-span-2 clay-card p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden"
-            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
-            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+            onclick="location.href=this.dataset.url" data-aos="fade-up"
+            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div
                 class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:rotate-12 transition-transform duration-500">
                 {% if "fa-" in product.icon %}
@@ -137,8 +139,9 @@
         {% else %}
         <!-- Small Card (default) -->
         <div class="col-span-2 md:col-span-1 clay-card p-8 flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors"
-            onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='/products/{{ product.id }}/'{% endif %}"
-            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 100 %}">
+            data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+            onclick="location.href=this.dataset.url" data-aos="fade-up"
+            data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div
                 class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
                 {% if "fa-" in product.icon %}

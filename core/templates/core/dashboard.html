@@ -20,7 +20,8 @@
 
             {% for product in products %}
             <div class="clay-card p-8 group hover:shadow-clay-hover cursor-pointer transition-all duration-300"
-                onclick="{% if product.external_url %}location.href='{{ product.external_url }}'{% else %}location.href='{% url 'product_detail' product.id %}'{% endif %}">
+                data-url="{% if product.external_url %}{{ product.external_url }}{% else %}{% url 'product_detail' product.id %}{% endif %}"
+                onclick="location.href=this.dataset.url">
 
                 <div class="w-20 h-20 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 float-icon 
                             {% if product.color_theme == 'purple' %}text-purple-500
