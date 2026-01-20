@@ -127,7 +127,7 @@ def run():
         service_type="guide",
         card_size="tall",
         display_order=7,
-        external_url="/tool-guide/",
+        external_url="/tools/",
         image="https://placehold.co/600x400/gray/white?text=AI+Tools"
     )
 
@@ -141,7 +141,7 @@ def run():
         service_type="tool",
         card_size="wide",
         display_order=8,
-        external_url="/prompt-lab/",
+        external_url="/prompts/",
         image="https://placehold.co/600x400/purple/white?text=Prompt+Lab"
     )
     
