@@ -14,9 +14,12 @@ def run():
         User.objects.create_superuser('admin', 'admin@example.com', 'admin1234')
         print("Superuser 'admin' created successfully!")
 
-    # Clear existing data to avoid duplicates during seeding
-    Product.objects.all().delete()
-    Insight.objects.all().delete()
+    # Only seed data if database is empty (first-time setup)
+    if Product.objects.exists():
+        print("Database already has products. Skipping seed data to preserve existing data.")
+        return
+    
+    print("Database is empty. Seeding initial data...")
     
     # 1. Seed Insights
     Insight.objects.create(
