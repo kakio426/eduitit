@@ -11,15 +11,15 @@
             {% endif %}
         </div>
         <div>
-            <h3 class="text-5xl font-bold text-gray-700 leading-none mb-2">{{ product.title }}</h3>
-            <span class="inline-block px-3 py-1 bg-purple-100 text-purple-600 rounded-lg text-xl font-bold">
+            <h3 class="text-4xl font-bold text-gray-700 leading-none mb-2">{{ product.title }}</h3>
+            <span class="inline-block px-3 py-1 bg-purple-100 text-purple-600 rounded-lg text-lg font-bold">
                 {{ product.get_service_type_display }}
             </span>
         </div>
     </div>
 
     <!-- Description -->
-    <div class="prose prose-lg max-w-none text-gray-600 font-hand text-3xl leading-relaxed mb-4 break-keep px-2">
+    <div class="prose prose-lg max-w-none text-gray-600 font-hand text-2xl leading-relaxed mb-4 break-keep px-2">
         {{ product.description|linebreaks }}
     </div>
 
@@ -40,8 +40,8 @@
                     {% endif %}
                 </div>
                 <div>
-                    <span class="font-bold text-gray-800 block text-3xl mb-1">{{ feature.title }}</span>
-                    <span class="text-2xl text-gray-500 font-hand leading-relaxed block break-keep">{{
+                    <span class="font-bold text-gray-800 block text-2xl mb-1">{{ feature.title }}</span>
+                    <span class="text-xl text-gray-500 font-hand leading-relaxed block break-keep">{{
                         feature.description }}</span>
                 </div>
             </li>
