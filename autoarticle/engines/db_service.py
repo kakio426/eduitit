@@ -3,7 +3,7 @@ import sqlite3
 import json
 import os
 import uuid
-from engines.constants import DB_PATH
+from .constants import DB_PATH
 
 class DatabaseService:
     def __init__(self, db_path=None):

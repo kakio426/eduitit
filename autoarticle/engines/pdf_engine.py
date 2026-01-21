@@ -4,7 +4,7 @@ from PIL import Image as PILImage
 import json
 import os
 
-from engines.constants import THEMES, FONT_PATH
+from .constants import THEMES, FONT_PATH
 
 class PDFEngine(FPDF):
     def __init__(self, theme_name, school_name):

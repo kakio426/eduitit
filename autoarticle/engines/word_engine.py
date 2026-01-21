@@ -10,7 +10,7 @@ import json
 import os
 import datetime
 
-from engines.constants import THEMES
+from .constants import THEMES
 
 class WordEngine:
     def __init__(self, theme_name, school_name):
