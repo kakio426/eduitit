@@ -2,82 +2,163 @@
 {% load static %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-[#F0F2F5] py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto space-y-8">
-        <!-- Success Header -->
-        <div class="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div
-                class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
-                <i class="fa-solid fa-check"></i>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">생성이 완료되었습니다!</h1>
-            <p class="text-gray-600">요청하신 주제에 대한 분석 결과입니다.</p>
-        </div>
 
-        <!-- Download Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- PPT Download -->
-            <div class="bg-white p-6 rounded-2xl shadow-clay-card border border-gray-100 flex items-center justify-between group hover:border-orange-200 transition-colors cursor-pointer"
-                onclick="window.location.href='{{ article.ppt_file.url }}'">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center text-2xl">
-                        <i class="fa-solid fa-file-powerpoint"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-gray-800">PPT 발표자료</h3>
-                        <p class="text-sm text-gray-500">슬라이드 형식 요약</p>
-                    </div>
-                </div>
-                <div
-                    class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
-                    <i class="fa-solid fa-download"></i>
-                </div>
-            </div>
-
-            <!-- PDF Download (if available) -->
-            {% if article.pdf_file %}
-            <div class="bg-white p-6 rounded-2xl shadow-clay-card border border-gray-100 flex items-center justify-between group hover:border-red-200 transition-colors cursor-pointer"
-                onclick="window.location.href='{{ article.pdf_file.url }}'">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-2xl">
-                        <i class="fa-solid fa-file-pdf"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-gray-800">PDF 보고서</h3>
-                        <p class="text-sm text-gray-500">상세 분석 리포트</p>
-                    </div>
-                </div>
-                <div
-                    class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-download"></i>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Content Preview -->
-        <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
-                <i class="fa-solid fa-robot mr-2 text-purple-600"></i>AI 분석 요약
-            </h2>
-
-            <div class="prose prose-lg max-w-none text-gray-600">
-                {{ article.full_text|linebreaks }}
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex justify-center gap-4 pt-8">
+        <!-- Header & Navigation -->
+        <div class="flex items-center justify-between" data-aos="fade-down">
             <a href="{% url 'autoarticle:create' %}"
-                class="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors">
-                <i class="fa-solid fa-arrow-rotate-left mr-2"></i>다시 만들기
+                class="flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-colors font-bold text-lg">
+                <i class="fa-solid fa-arrow-left"></i> 새 기사 작성하러 가기
             </a>
-            <a href="/"
-                class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                메인으로
-            </a>
+            <div class="flex gap-4">
+                <span
+                    class="px-4 py-2 bg-purple-100 text-purple-700 rounded-full font-bold text-sm shadow-inner uppercase tracking-widest">
+                    {{ article.tone }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Main Article Content Card -->
+        <div class="clay-card bg-white p-12 relative overflow-hidden" data-aos="fade-up">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-purple-50 rounded-bl-full -mr-20 -mt-20 z-0"></div>
+
+            <div class="relative z-10">
+                <!-- Metadata -->
+                <div class="flex flex-wrap gap-4 mb-8 text-gray-400 font-bold text-sm uppercase tracking-tighter">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-calendar"></i> {{ article.event_date }}
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot"></i> {{ article.location }}
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap"></i> {{ article.grade }}
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-school"></i> {{ article.school_name }}
+                    </span>
+                </div>
+
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-10 leading-tight">{{ article.title }}</h1>
+
+                <!-- Summary / Highlights -->
+                <div class="mb-12 p-8 bg-gray-50 rounded-3xl border-2 border-gray-100 border-dashed">
+                    <h3 class="text-sm font-bold text-purple-500 uppercase mb-4 tracking-widest">AI 핵심 요약 (PPT용)</h3>
+                    <ul class="space-y-3">
+                        {% for point in article.content_summary_list %}
+                        <li class="flex items-start gap-3 text-lg text-gray-600">
+                            <span
+                                class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs mt-1 shrink-0">
+                                <i class="fa-solid fa-check"></i>
+                            </span>
+                            {{ point }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Full Content -->
+                <div class="prose prose-2xl max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap font-serif">
+                    {{ article.full_text }}
+                </div>
+
+                <!-- Hashtags -->
+                <div class="mt-12 flex flex-wrap gap-3">
+                    {% for tag in article.hashtags %}
+                    <span
+                        class="px-4 py-2 bg-gray-100 text-gray-500 rounded-2xl font-bold text-lg hover:bg-purple-50 hover:text-purple-600 transition-all cursor-default">
+                        #{{ tag }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Download & Tools Card -->
+        <div class="clay-card bg-white p-8 border-2 border-purple-100" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">📂 자동 생성된 파일 다운로드</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if article.ppt_file %}
+                <a href="{{ article.ppt_file.url }}"
+                    class="p-6 rounded-3xl bg-orange-50 border-2 border-orange-100 flex items-center justify-between group hover:bg-orange-100 transition-all shadow-clay">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-file-powerpoint"></i>
+                        </div>
+                        <div>
+                            <span class="block font-bold text-gray-800 text-xl">뉴스레터 PPT</span>
+                            <span class="text-sm text-gray-500">발표용 & 편집용</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-orange-400 group-hover:translate-y-1 transition-transform"></i>
+                </a>
+                {% endif %}
+
+                {% if article.pdf_file %}
+                <a href="{{ article.pdf_file.url }}"
+                    class="p-6 rounded-3xl bg-blue-50 border-2 border-blue-100 flex items-center justify-between group hover:bg-blue-100 transition-all shadow-clay">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div>
+                            <span class="block font-bold text-gray-800 text-xl">기본 PDF 레포트</span>
+                            <span class="text-sm text-gray-500">배포용 기사 문서</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-blue-400 group-hover:translate-y-1 transition-transform"></i>
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="{% url 'autoarticle:cardnews' article.id %}"
+                    class="p-6 rounded-3xl bg-purple-50 border-2 border-purple-100 flex items-center justify-between group hover:bg-purple-100 transition-all shadow-clay">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-purple-500 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-image"></i>
+                        </div>
+                        <div>
+                            <span class="block font-bold text-gray-800 text-xl">요약 카드뉴스</span>
+                            <span class="text-sm text-gray-500">인스타그램 & SNS용</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-download text-purple-400 group-hover:translate-y-1 transition-transform"></i>
+                </a>
+
+                <div
+                    class="p-6 rounded-3xl bg-gray-50 border-2 border-gray-100 flex items-center justify-between opacity-50 cursor-not-allowed shadow-clay">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-gray-400 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-file-word"></i>
+                        </div>
+                        <div>
+                            <span class="block font-bold text-gray-800 text-xl">Word 공문 서식</span>
+                            <span class="text-sm text-gray-500">곧 지원 예정</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-gray-100 flex justify-end gap-4">
+                <button
+                    class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-400 font-bold hover:bg-red-50 hover:text-red-500 transition-all">
+                    <i class="fa-solid fa-trash"></i> 삭제하기
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    .clay-card {
+        border-radius: 3rem;
+        box-shadow: 15px 15px 30px #d1d9e6, -15px -15px 30px #ffffff;
+    }
+</style>
 {% endblock %}

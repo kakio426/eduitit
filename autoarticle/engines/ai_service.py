@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import re
 import time
 from collections import deque
@@ -8,9 +9,6 @@ from collections import deque
 FIXED_MODEL_NAME = "gemini-3-flash-preview"
 
 # Rate Limiter (5분에 2회 제한)
-# deque를 사용하여 타임스탬프를 저장 (최대 2개까지만 유지하면 충분하지만 넉넉히)
-# 사용자별 구분을 하고 싶지만, Streamlit 특성상 전역 변수는 리셋되므로
-# 단순하게 모듈 레벨 변수로 관리 (단일 인스턴스 기준)
 _usage_timestamps = deque()
 
 def check_rate_limit(limit_count=2, limit_seconds=300):
@@ -32,22 +30,14 @@ def check_rate_limit(limit_count=2, limit_seconds=300):
 
 def generate_article_gemini(api_key, topic_data, style_service=None):
     # 하이브리드 로직: 사용자가 직접 입력한 키가 아니고, 환경변수 키를 쓰는 경우에만 제한
-    is_using_master_key = not api_key # api_key 인자가 비어서 넘어오는 경우 (나중에 처리)
+    # is_using_master_key = not api_key # api_key 인자가 비어서 넘어오는 경우 (나중에 처리)
     
-    # [제한 체크]
-    # 실제로는 app.py에서 마스터 키를 주입해서 넘기겠지만, 
-    # 여기서는 Rate Limit 호출 시점만 잡습니다.
-    # 만약 '특정 조건'에서만 제한을 걸고 싶다면 인자를 더 받아야 합니다.
-    # 일단은 단순하게: 호출될 때마다 카운트
-    
-    # 모델명 절대 고정
     try:
-        model = genai.GenerativeModel(FIXED_MODEL_NAME)
+        client = genai.Client(api_key=api_key)
         
         # Style RAG Injection
         style_prompt = ""
         if style_service:
-            # Simple query based on tone and event name
             query = f"{topic_data['tone']} {topic_data['event_name']}"
             examples = style_service.retrieve_style_examples(query)
             if examples:
@@ -75,15 +65,21 @@ def generate_article_gemini(api_key, topic_data, style_service=None):
         6. 선정적이거나 부정적인 표현은 배제하고 긍정적인 교육적 가치를 강조하세요.
         """
         
-        # Safety Settings (과민 반응 차단 방지)
-        safety_settings = [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-        ]
+        # Safety Settings
+        config = types.GenerateContentConfig(
+            safety_settings=[
+                types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
+            ]
+        )
 
-        response = model.generate_content(prompt, safety_settings=safety_settings)
+        response = client.models.generate_content(
+            model=FIXED_MODEL_NAME,
+            contents=prompt,
+            config=config
+        )
         text = response.text
         
         # 파싱
@@ -95,7 +91,6 @@ def generate_article_gemini(api_key, topic_data, style_service=None):
         found_hashtags = re.findall(r"#(\w+)", text)
         if found_hashtags:
             hashtags = found_hashtags[:5]
-            # 텍스트에서 해시태그 부분 제거 (본문에는 깔끔하게만 남기기 위해)
             lines = text.split('\n')
             clean_lines = [l for l in lines if not all(word.startswith('#') for word in l.split())]
             content = '\n'.join(clean_lines).strip()
@@ -115,13 +110,10 @@ def summarize_article_for_ppt(content, api_key=None):
     """
     긴 기사 내용을 PPT용 3~5줄 개조식(bullet points)으로 요약합니다.
     """
-    if api_key:
-        try:
-            genai.configure(api_key=api_key)
-        except: pass
+    if not api_key:
+        return [content[:100] + "... (API 키가 설정되지 않아 요약할 수 없습니다.)"]
 
-    # 절대 변경 금지: 선생님 요청 모델명만 사용
-    models_to_try = [FIXED_MODEL_NAME]
+    client = genai.Client(api_key=api_key)
     
     prompt = f"""
     다음 학교 소식 기사를 파워포인트 슬라이드에 넣을 수 있도록 3~5개의 핵심 문장으로 요약해주세요.
@@ -136,36 +128,30 @@ def summarize_article_for_ppt(content, api_key=None):
     {content}
     """
     
-    last_error = ""
-
-    for model_name in models_to_try:
-        try:
-            # Rate Limit 체크 (요약도 횟수 차감에 포함할지? 보통 생성 위주라 일단 둠)
-            # 여기서는 PPT 생성이므로 횟수 차감은 선택사항인데, 엄격하게 하려면 check_rate_limit() 호출 필요
-            
-            # Safety Settings
-            safety_settings = [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    try:
+        config = types.GenerateContentConfig(
+            safety_settings=[
+                types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
+                types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
             ]
-            
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt, safety_settings=safety_settings)
-            lines = [line.strip().replace('* ', '').replace('- ', '') for line in response.text.split('\n') if line.strip()]
-            if lines:
-                return lines
-        except Exception as e:
-            last_error = str(e)
-            print(f"⚠️ [PPT AI 요약] 모델 {model_name} 실패: {last_error}")
-            continue 
-
-    print(f"❌ [PPT AI 요약] 모든 모델 시도 실패. Last Error: {last_error}")
-    
-    # Fallback with error hint if possible, or just truncation
-    # Return a single line that explains the error cleanly to the user if it's a quota issue
-    if "429" in last_error or "Quota" in last_error:
-        return [content[:50] + "...", "(⚠️ API 사용량 초과로 요약 불가)"]
+        )
         
+        response = client.models.generate_content(
+            model=FIXED_MODEL_NAME,
+            contents=prompt,
+            config=config
+        )
+        lines = [line.strip().replace('* ', '').replace('- ', '') for line in response.text.split('\n') if line.strip()]
+        if lines:
+            return lines
+    except Exception as e:
+        last_error = str(e)
+        print(f"⚠️ [PPT AI 요약] 실패: {last_error}")
+        
+        if "429" in last_error or "Quota" in last_error:
+            return [content[:50] + "...", "(⚠️ API 사용량 초과로 요약 불가)"]
+            
     return [content[:100] + "... (내용이 길어 요약에 실패했습니다. 원문을 확인해주세요.)"]
+

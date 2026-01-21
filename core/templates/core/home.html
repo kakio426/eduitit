@@ -28,8 +28,9 @@
         <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2" data-aos="fade-up" data-aos-delay="100">
             <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ featured_product.id }}')"
-                onclick="openQuickView('{{ featured_product.id }}')">
+                role="button" tabindex="0"
+                onkeydown="handleCardKeydown(event, '{{ featured_product.id }}', '{{ featured_product.external_url }}')"
+                onclick="{% if featured_product.external_url %}window.location.href='{{ featured_product.external_url }}'{% else %}openQuickView('{{ featured_product.id }}'){% endif %}">
 
                 <!-- Background decoration -->
                 <div
@@ -76,8 +77,9 @@
         <div class="col-span-4 md:col-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
-                onclick="openQuickView('{{ product.id }}')">
+                role="button" tabindex="0"
+                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
+                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
 
                 <div class="flex items-center justify-between h-full relative z-10">
                     <div>
@@ -108,8 +110,9 @@
         <div class="col-span-2 md:col-span-1 row-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card h-full p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
-                onclick="openQuickView('{{ product.id }}')">
+                role="button" tabindex="0"
+                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
+                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
 
                 <div class="relative z-10 flex flex-col h-full justify-between">
                     <div>
@@ -138,8 +141,9 @@
         <div class="col-span-2 md:col-span-1" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card p-8 h-full flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0" onkeydown="handleCardKeydown(event, '{{ product.id }}')"
-                onclick="openQuickView('{{ product.id }}')">
+                role="button" tabindex="0"
+                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
+                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
 
                 <div
                     class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
@@ -225,11 +229,15 @@
     /**
      * Handle keyboard accessibility for cards
      */
-    function handleCardKeydown(event, productId) {
+    function handleCardKeydown(event, productId, externalUrl) {
         // Execute on Enter or Space
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault(); // Prevent scrolling on Space
-            openQuickView(productId);
+            if (externalUrl && externalUrl !== 'None' && externalUrl !== '') {
+                window.location.href = externalUrl;
+            } else {
+                openQuickView(productId);
+            }
         }
     }
 
