@@ -147,6 +147,7 @@
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
                 <a href="{% url 'insights:list' %}" class="hover:text-purple-600 transition">인사이트</a>
                 <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
+                <a href="{% url 'autoarticle:create' %}" class="hover:text-purple-600 transition">자동기사생성</a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'dashboard' %}" class="hover:text-purple-600 transition flex items-center gap-2">
                     <i class="fa-solid fa-gauge-high text-xl"></i> 대시보드

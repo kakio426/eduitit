@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'products.apps.ProductsConfig',
     'insights.apps.InsightsConfig',
     'portfolio.apps.PortfolioConfig',
+    'autoarticle.apps.AutoarticleConfig',
 ]
 
 MIDDLEWARE = [

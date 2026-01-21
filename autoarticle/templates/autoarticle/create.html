@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4 font-display">✨ 자동 기사/PPT 생성기</h1>
+            <p class="text-xl text-gray-600 font-hand">주제만 입력하면 AI가 자료조사부터 뉴스레터, PPT까지 한 번에 제작합니다.</p>
+        </div>
+
+        <!-- Card -->
+        <div
+            class="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-clay-card border border-white/50 relative overflow-hidden">
+            <!-- Decorative Elements -->
+            <div
+                class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-100 opacity-50 blur-3xl pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-blue-100 opacity-50 blur-3xl pointer-events-none">
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="space-y-8 relative z-10" onsubmit="showLoader()">
+                {% csrf_token %}
+
+                <!-- Topic Input -->
+                <div class="space-y-2">
+                    <label class="block text-lg font-bold text-gray-700">주제 입력</label>
+                    <div class="relative">
+                        <input type="text" name="topic"
+                            class="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-lg shadow-inner bg-gray-50"
+                            placeholder="예: 2025년 AI 디지털 교과서 도입 계획">
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-4 bg-white text-gray-500 rounded-full border border-gray-200">또는 파일로 분석하기</span>
+                    </div>
+                </div>
+
+                <!-- File Input -->
+                <div class="space-y-2">
+                    <label class="block text-lg font-bold text-gray-700">참고 자료 (PDF)</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="dropzone-file"
+                            class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i
+                                    class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-3 group-hover:text-purple-500 transition-colors"></i>
+                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">클릭하여 업로드</span> 또는 드래그
+                                    앤 드롭</p>
+                                <p class="text-xs text-gray-500">PDF 파일 (최대 10MB)</p>
+                            </div>
+                            <input id="dropzone-file" name="file" type="file" accept=".pdf" class="hidden" />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                {% if error %}
+                <div class="p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-2 animate-pulse">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-6 rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all font-bold text-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group">
+                    <span>분석 및 생성 시작</span>
+                    <i class="fa-solid fa-rocket group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Help Text -->
+        <div class="mt-8 text-center text-gray-500 text-sm">
+            <p><i class="fa-solid fa-circle-info mr-1"></i> 생성에는 약 30초~1분 정도 소요될 수 있습니다.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay"
+    class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center">
+    <div class="text-center space-y-4">
+        <div class="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
+        <h3 class="text-2xl font-bold text-gray-800">AI가 열심히 분석 중입니다...</h3>
+        <p class="text-gray-600 animate-pulse">자료 조사 → 요약 → PPT 생성 진행 중</p>
+    </div>
+</div>
+
+<script>
+    function showLoader() {
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

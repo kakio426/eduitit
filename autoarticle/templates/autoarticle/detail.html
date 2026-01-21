@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <!-- Success Header -->
+        <div class="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div
+                class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">생성이 완료되었습니다!</h1>
+            <p class="text-gray-600">요청하신 주제에 대한 분석 결과입니다.</p>
+        </div>
+
+        <!-- Download Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- PPT Download -->
+            <div class="bg-white p-6 rounded-2xl shadow-clay-card border border-gray-100 flex items-center justify-between group hover:border-orange-200 transition-colors cursor-pointer"
+                onclick="window.location.href='{{ article.ppt_file.url }}'">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-file-powerpoint"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">PPT 발표자료</h3>
+                        <p class="text-sm text-gray-500">슬라이드 형식 요약</p>
+                    </div>
+                </div>
+                <div
+                    class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+            </div>
+
+            <!-- PDF Download (if available) -->
+            {% if article.pdf_file %}
+            <div class="bg-white p-6 rounded-2xl shadow-clay-card border border-gray-100 flex items-center justify-between group hover:border-red-200 transition-colors cursor-pointer"
+                onclick="window.location.href='{{ article.pdf_file.url }}'">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">PDF 보고서</h3>
+                        <p class="text-sm text-gray-500">상세 분석 리포트</p>
+                    </div>
+                </div>
+                <div
+                    class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Content Preview -->
+        <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
+                <i class="fa-solid fa-robot mr-2 text-purple-600"></i>AI 분석 요약
+            </h2>
+
+            <div class="prose prose-lg max-w-none text-gray-600">
+                {{ article.full_text|linebreaks }}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-center gap-4 pt-8">
+            <a href="{% url 'autoarticle:create' %}"
+                class="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-arrow-rotate-left mr-2"></i>다시 만들기
+            </a>
+            <a href="/"
+                class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+                메인으로
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

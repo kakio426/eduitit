@@ -17,3 +17,7 @@ Pillow>=10.0.0
 # Environment Variables
 python-dotenv==1.0.1
 requests==2.32.3
+google-generativeai
+python-pptx
+chromadb
+fpdf
