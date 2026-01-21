@@ -1,8 +1,15 @@
 from django.db import models
 
 class Insight(models.Model):
+    CATEGORY_CHOICES = [
+        ('youtube', 'YouTube Scrap'),
+        ('devlog', 'DevLog (Development Log)'),
+        ('column', 'Column/Essay'),
+    ]
+
     title = models.CharField(max_length=200)
-    video_url = models.URLField(help_text="YouTube video URL")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='youtube', verbose_name="카테고리")
+    video_url = models.URLField(help_text="YouTube video URL", blank=True, null=True)
     thumbnail_url = models.URLField(blank=True, help_text="Auto-generated or custom thumbnail URL")
     content = models.TextField(help_text="Main insight or quote")
     kakio_note = models.TextField(blank=True, help_text="Teacher's special note")

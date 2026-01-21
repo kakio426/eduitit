@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="px-3 py-1 rounded-full text-sm font-bold
+                    {% if insight.category == 'devlog' %}bg-green-100 text-green-700
+                    {% elif insight.category == 'column' %}bg-blue-100 text-blue-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ insight.get_category_display }}
+                </span>
+                <span class="text-neutral-500 text-sm">{{ insight.created_at|date:"Y.m.d" }}</span>
+            </div>
+            <h1 class="text-3xl font-bold text-neutral-800 mb-4">{{ insight.title }}</h1>
+            {% if insight.tags %}
+            <div class="flex flex-wrap gap-2">
+                {% for tag in insight.tags.split %}
+                <span class="text-sm text-neutral-500">#{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </header>
+
+        <!-- Video if exists -->
+        {% if insight.video_url %}
+        <div class="mb-8 aspect-w-16 aspect-h-9">
+            <iframe src="https://www.youtube.com/embed/{{ insight.get_video_id }}" frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen class="w-full h-96 rounded-xl shadow-lg"></iframe>
+        </div>
+        {% endif %}
+
+        <!-- Content -->
+        <article class="prose prose-lg max-w-none text-neutral-700">
+            {{ insight.content|linebreaks }}
+        </article>
+
+        <!-- Kakio's Note -->
+        {% if insight.kakio_note %}
+        <div class="mt-12 bg-yellow-50 p-6 rounded-xl border border-yellow-100">
+            <h3 class="text-lg font-bold text-yellow-800 mb-2">💡 Kakio's Note</h3>
+            <p class="text-yellow-700">{{ insight.kakio_note|linebreaks }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 text-center">
+            <a href="{% url 'insights:list' %}" class="inline-block text-indigo-600 font-semibold hover:underline">목록으로
+                돌아가기</a>
+        </div>
+    </div>
+</div>
+
+<!-- Prism.js for syntax highlighting -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-django.min.js"></script>
+{% endblock %}

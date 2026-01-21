@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8 text-neutral-800">Expert Portfolio</h1>
+
+    <!-- Achievements Section -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-indigo-600">Achievements</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for achievement in achievements %}
+            <div class="bg-white rounded-xl p-6 shadow-lg border border-neutral-100">
+                <div class="text-sm text-neutral-500 mb-2">{{ achievement.date_awarded }}</div>
+                <h3 class="text-xl font-bold text-neutral-800 mb-1">{{ achievement.title }}</h3>
+                <div class="text-indigo-500 font-medium mb-3">{{ achievement.issuer }}</div>
+                <p class="text-neutral-600">{{ achievement.description }}</p>
+            </div>
+            {% empty %}
+            <p class="text-neutral-500">등록된 수상 실적이 없습니다.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Lecture Programs Section -->
+    <section>
+        <h2 class="text-2xl font-semibold mb-6 text-purple-600">Lecture Programs</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for program in programs %}
+            <div class="bg-white rounded-xl p-6 shadow-lg border border-neutral-100">
+                <h3 class="text-xl font-bold text-neutral-800 mb-2">{{ program.title }}</h3>
+                <div class="flex gap-2 mb-4">
+                    <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">{{
+                        program.target_audience }}</span>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">{{
+                        program.duration }}</span>
+                </div>
+                <p class="text-neutral-600">{{ program.description }}</p>
+            </div>
+            {% empty %}
+            <p class="text-neutral-500">등록된 강의 프로그램이 없습니다.</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

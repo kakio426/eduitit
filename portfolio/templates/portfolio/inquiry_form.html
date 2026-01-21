@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-xl mx-auto bg-white rounded-xl shadow-lg border border-neutral-100 p-8">
+        <h1 class="text-3xl font-bold mb-6 text-neutral-800 text-center">강의 및 섭외 요청</h1>
+        <p class="text-neutral-600 mb-8 text-center">선생님의 학교/기관에 딱 맞는 맞춤형 AI/에듀테크 강의를 제안해 드립니다.</p>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-neutral-700 mb-1">{{
+                    field.label }}</label>
+                <div class="mt-1">
+                    {{ field }}
+                </div>
+                {% if field.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="pt-4">
+                <button type="submit"
+                    class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-300">
+                    요청 보내기
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Simple form styling for Django form fields */
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        outline: none;
+    }
+
+    input:focus,
+    textarea:focus {
+        border-color: #6366f1;
+        ring: 2px solid #6366f1;
+    }
+</style>
+{% endblock %}

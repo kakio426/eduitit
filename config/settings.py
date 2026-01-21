@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'core',
     'products',
     'insights',
+    'portfolio',
 ]
 
 MIDDLEWARE = [

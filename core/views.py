@@ -34,3 +34,12 @@ def prompt_lab(request):
 
 def tool_guide(request):
     return render(request, 'core/tool_guide.html')
+
+def about(request):
+    # Stats could be dynamic later
+    stats = {
+        'lecture_hours': 120, # Placeholder
+        'tools_built': Product.objects.count() + 5, # Approx
+        'students': 500, # Placeholder
+    }
+    return render(request, 'core/about.html', {'stats': stats})
