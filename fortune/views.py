@@ -1,23 +1,32 @@
 import os
-import google.generativeai as genai
+from google import genai
 from django.shortcuts import render
 from django.http import JsonResponse
 from .forms import SajuForm
 from .prompts import get_prompt
 
 
-def get_api_key(request):
-    """사용자 또는 환경변수에서 API 키 가져오기"""
+def get_gemini_client(request):
+    """Gemini 클라이언트 생성 (사용자 API 키 또는 환경변수 사용)"""
+    api_key = None
+
     # 로그인한 사용자의 개인 API 키 우선
     if request.user.is_authenticated:
         try:
             user_key = request.user.userprofile.gemini_api_key
             if user_key:
-                return user_key
+                api_key = user_key
         except Exception:
             pass
+
     # 환경변수 폴백
-    return os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        api_key = os.environ.get('GEMINI_API_KEY', '')
+
+    if not api_key:
+        return None
+
+    return genai.Client(api_key=api_key)
 
 
 def saju_view(request):
@@ -34,18 +43,18 @@ def saju_view(request):
             # 프롬프트 생성
             prompt = get_prompt(mode, data)
 
-            # API 키 가져오기
-            api_key = get_api_key(request)
+            # Gemini 클라이언트 가져오기
+            client = get_gemini_client(request)
 
-            if not api_key:
+            if not client:
                 error_message = "Gemini API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 등록해주세요."
             else:
                 try:
-                    # Gemini API 설정 및 호출
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.0-flash')
-
-                    response = model.generate_content(prompt)
+                    # Gemini API 호출 (새 google-genai SDK)
+                    response = client.models.generate_content(
+                        model='gemini-2.0-flash',
+                        contents=prompt
+                    )
 
                     # 결과를 그대로 전달 (템플릿에서 마크다운 렌더링)
                     result_html = response.text
@@ -75,14 +84,15 @@ def saju_api_view(request):
     mode = data['mode']
     prompt = get_prompt(mode, data)
 
-    api_key = get_api_key(request)
-    if not api_key:
+    client = get_gemini_client(request)
+    if not client:
         return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt
+        )
 
         return JsonResponse({
             'success': True,

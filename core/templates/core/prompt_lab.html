@@ -393,23 +393,23 @@
                 <div class="clay-card shadow-clay p-8 rounded-clay bg-[#E0E5EC]">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-2xl font-bold text-gray-700 flex items-center gap-3">
-                                <span class="w-8 h-8 rounded-full shadow-clay-inner flex items-center justify-center text-sm font-bold text-purple-500">${index + 1}</span>
+                            <h3 class="text-3xl font-bold text-gray-700 flex items-center gap-3">
+                                <span class="w-10 h-10 rounded-full shadow-clay-inner flex items-center justify-center text-lg font-bold text-purple-500">${index + 1}</span>
                                 ${item.title}
                             </h3>
-                            <div class="flex gap-2 mt-3 ml-11">
-                                ${item.tags.map(tag => `<span class="px-3 py-1 rounded-full shadow-clay text-sm text-gray-500 bg-[#E0E5EC]">#${tag}</span>`).join('')}
+                            <div class="flex flex-wrap gap-2 mt-3 ml-13">
+                                ${item.tags.map(tag => `<span class="px-4 py-2 rounded-full shadow-clay text-lg text-gray-500 bg-[#E0E5EC]">#${tag}</span>`).join('')}
                             </div>
                         </div>
-                        <button onclick="copyCode(this)" class="clay-btn shadow-clay px-6 py-2 rounded-clay text-purple-600 font-bold hover:shadow-clay-hover hover:text-purple-700 active:shadow-clay-pressed active:scale-95 transition-all text-sm flex items-center gap-2">
+                        <button onclick="copyCode(this)" class="clay-btn shadow-clay px-8 py-3 rounded-clay text-purple-600 font-bold hover:shadow-clay-hover hover:text-purple-700 active:shadow-clay-pressed active:scale-95 transition-all text-xl flex items-center gap-2">
                             <i class="fa-regular fa-copy"></i> 복사하기
                         </button>
                     </div>
-                    <p class="text-gray-600 mb-6 text-lg pl-11">
+                    <p class="text-gray-600 mb-6 text-2xl pl-13">
                         💡 ${item.desc}
                     </p>
-                    <div class="relative ml-0 md:ml-11">
-                        <pre class="shadow-clay-inner rounded-xl p-6 bg-gray-100 text-sm overflow-x-auto text-gray-700 font-mono leading-relaxed whitespace-pre-wrap border border-gray-200">${highlightCode(item.code)}</pre>
+                    <div class="relative ml-0 md:ml-13">
+                        <pre class="shadow-clay-inner rounded-xl p-6 bg-gray-100 text-lg overflow-x-auto text-gray-700 font-mono leading-relaxed whitespace-pre-wrap border border-gray-200">${highlightCode(item.code)}</pre>
                     </div>
                 </div>
             `;

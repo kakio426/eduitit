@@ -87,6 +87,12 @@
             <i
                 class="fa-solid fa-rocket group-hover:-translate-y-2 group-hover:translate-x-2 transition-transform duration-300"></i>
         </a>
+        {% elif product.service_type == 'game' %}
+        <a href="/yut-game/"
+            class="w-full sm:flex-[2] clay-btn bg-green-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-green-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
+            게임 시작하기
+            <i class="fa-solid fa-gamepad group-hover:scale-110 transition-transform duration-300"></i>
+        </a>
         {% endif %}
 
         <button onclick="closeModal()"
