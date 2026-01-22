@@ -27,10 +27,9 @@
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
         <div class="col-span-4 md:col-span-2 row-span-2" data-aos="fade-up" data-aos-delay="100">
-            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0"
-                onkeydown="handleCardKeydown(event, '{{ featured_product.id }}', '{{ featured_product.external_url }}')"
-                onclick="{% if featured_product.external_url %}window.location.href='{{ featured_product.external_url }}'{% else %}openQuickView('{{ featured_product.id }}'){% endif %}">
+            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
+                role="button" tabindex="0" data-product-id="{{ featured_product.id }}"
+                data-external-url="{{ featured_product.external_url|default:'' }}">
 
                 <!-- Background decoration -->
                 <div
@@ -76,10 +75,9 @@
         <!-- Wide Card (2 columns) -->
         <div class="col-span-4 md:col-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0"
-                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
-                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
+            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
+                role="button" tabindex="0" data-product-id="{{ product.id }}"
+                data-external-url="{{ product.external_url|default:'' }}">
 
                 <div class="flex items-center justify-between h-full relative z-10">
                     <div>
@@ -109,10 +107,9 @@
         <!-- Tall Card (1 column, 2 rows) -->
         <div class="col-span-2 md:col-span-1 row-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div class="clay-card h-full p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0"
-                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
-                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
+            <div class="clay-card h-full p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
+                role="button" tabindex="0" data-product-id="{{ product.id }}"
+                data-external-url="{{ product.external_url|default:'' }}">
 
                 <div class="relative z-10 flex flex-col h-full justify-between">
                     <div>
@@ -140,10 +137,9 @@
         <!-- Small Card (default) -->
         <div class="col-span-2 md:col-span-1" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
-            <div class="clay-card p-8 h-full flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl"
-                role="button" tabindex="0"
-                onkeydown="handleCardKeydown(event, '{{ product.id }}', '{{ product.external_url }}')"
-                onclick="{% if product.external_url %}window.location.href='{{ product.external_url }}'{% else %}openQuickView('{{ product.id }}'){% endif %}">
+            <div class="clay-card p-8 h-full flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
+                role="button" tabindex="0" data-product-id="{{ product.id }}"
+                data-external-url="{{ product.external_url|default:'' }}">
 
                 <div
                     class="w-16 h-16 rounded-3xl bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mb-4 shadow-sm">
@@ -205,44 +201,55 @@
 
 <!-- Quick View Modal Container -->
 <div id="quickViewModal"
-    class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4 backdrop-blur-sm transition-all duration-300 opacity-0"
+    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 md:p-8 backdrop-blur-md transition-all duration-300 opacity-0"
     onclick="if(event.target === this) closeQuickView();">
-    <div class="clay-card p-0 max-w-lg w-full mx-auto relative transform scale-95 transition-all duration-300 bg-[#E0E5EC] overflow-hidden min-h-[400px]"
+    <div class="clay-card p-0 max-w-2xl w-full mx-auto relative transform scale-95 transition-all duration-300 bg-[#E0E5EC] overflow-hidden flex flex-col max-h-[90vh]"
         id="modalPanel">
         <!-- Loading Spinner -->
         <div id="modalLoading" class="absolute inset-0 flex items-center justify-center bg-white/50 z-20 hidden">
-            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-purple-500"></i>
+            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
         </div>
 
         <!-- Content Injected via AJAX -->
-        <div id="modalContent" class="p-10 relative">
+        <div id="modalContent" class="p-8 md:p-12 overflow-y-auto custom-scrollbar relative">
             <!-- Content Loads Here -->
         </div>
     </div>
 </div>
 
 <script>
-    // 🚀 Performance Optimization: Cache loaded modal content
-    const modalCache = {};
     let currentRequestId = null;
 
     /**
-     * Handle keyboard accessibility for cards
+     * Handle Card Clicks & Accessibility
      */
-    function handleCardKeydown(event, productId, externalUrl) {
-        // Execute on Enter or Space
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault(); // Prevent scrolling on Space
-            if (externalUrl && externalUrl !== 'None' && externalUrl !== '') {
-                window.location.href = externalUrl;
-            } else {
-                openQuickView(productId);
-            }
-        }
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.product-card');
+        cards.forEach(card => {
+            const productId = card.getAttribute('data-product-id');
+            const externalUrl = card.getAttribute('data-external-url');
+
+            // Click listener
+            card.addEventListener('click', () => {
+                if (externalUrl && externalUrl !== 'None' && externalUrl !== '') {
+                    window.location.href = externalUrl;
+                } else {
+                    openQuickView(productId);
+                }
+            });
+
+            // Accessibility listener
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
+                }
+            });
+        });
+    });
 
     /**
-     * Open the Quick View modal with caching and race condition protection
+     * Open the Quick View modal
      */
     function openQuickView(productId) {
         const modal = document.getElementById('quickViewModal');
@@ -251,10 +258,7 @@
         const content = document.getElementById('modalContent');
         const body = document.body;
 
-        // UI Transition: Show Modal Wrapper
         modal.classList.remove('hidden');
-
-        // Use setTimeout to allow browser to render 'block' before applying opacity transition
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.classList.add('flex');
@@ -264,28 +268,19 @@
 
         body.style.overflow = 'hidden';
 
-        // 1. Check Cache
-        if (modalCache[productId]) {
-            content.innerHTML = modalCache[productId];
-            loading.classList.add('hidden');
-            return;
-        }
+        loading.classList.remove('hidden');
+        content.innerHTML = '';
 
-        // 2. Fetch Data if not cached
-        loading.classList.remove('hidden'); // Show spinner
-        content.innerHTML = ''; // Clear previous content while loading
+        currentRequestId = productId;
 
-        currentRequestId = productId; // Set current request ID for race condition check
-
-        fetch(`/products/preview/${productId}/`)
+        // 🛡️ Bypassing cache for fresh data
+        fetch(`/products/preview/${productId}/?t=${Date.now()}`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.text();
             })
             .then(html => {
-                // 🛡️ Race Condition Check: Only render if this is still the requested product
                 if (currentRequestId === productId) {
-                    modalCache[productId] = html; // Save to cache
                     content.innerHTML = html;
                     loading.classList.add('hidden');
                 }
@@ -294,10 +289,10 @@
                 console.error('Error:', error);
                 if (currentRequestId === productId) {
                     content.innerHTML = `
-                        <div class="text-center py-10 flex flex-col items-center">
-                            <i class="fa-solid fa-triangle-exclamation text-gray-300 text-5xl mb-4"></i>
-                            <p class="text-gray-500 text-xl font-bold">정보를 불러오는데 실패했습니다.</p>
-                            <button onclick="openQuickView('${productId}')" class="mt-4 px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 font-bold transition">
+                        <div class="text-center py-20 flex flex-col items-center">
+                            <i class="fa-solid fa-triangle-exclamation text-gray-300 text-6xl mb-6"></i>
+                            <p class="text-gray-500 text-3xl font-bold">정보를 불러오는데 실패했습니다.</p>
+                            <button onclick="openQuickView('${productId}')" class="mt-8 px-10 py-4 bg-purple-500 text-white rounded-full text-2xl font-bold shadow-clay hover:scale-105 transition-all">
                                 다시 시도
                             </button>
                         </div>`;

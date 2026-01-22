@@ -21,3 +21,4 @@ google-genai
 python-pptx
 chromadb
 fpdf
+pywin32

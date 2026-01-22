@@ -61,7 +61,7 @@ def run():
         color_theme="blue",
         service_type="tool",
         display_order=2,
-        external_url="http://localhost:8001",
+        external_url="/hwp-convert/",
         image="https://placehold.co/600x400/blue/white?text=HWP+to+PDF"
     )
     ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-bolt", title="빠른 변환", description="드래그 앤 드롭으로 즉시 변환.")
