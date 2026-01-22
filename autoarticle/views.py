@@ -42,6 +42,9 @@ class ArticleCreateView(View):
             'step_list': self.STEPS,
         }
 
+        if step == 2:
+            return render(request, 'autoarticle/wizard/step2_generating.html', context)
+        
         if step == 3:
             draft = request.session.get('article_draft')
             if not draft:
@@ -75,6 +78,17 @@ class ArticleCreateView(View):
                 messages.error(request, "행사명과 주요 내용을 입력해주세요.")
                 return redirect('autoarticle:create')
 
+            # Save input data to session and redirect to Step 2
+            request.session['article_input'] = input_data
+            return redirect('/autoarticle/?step=2')
+
+        elif step == '2':
+            # Step 2: AI Generation
+            input_data = request.session.get('article_input')
+            if not input_data:
+                messages.error(request, "입력 데이터가 없습니다. 다시 시작해주세요.")
+                return redirect('autoarticle:create')
+
             api_key = os.environ.get("GEMINI_API_KEY")
             rag = self.get_style_rag()
             
@@ -85,9 +99,12 @@ class ArticleCreateView(View):
                     'title': title,
                     'content': content,
                     'hashtags': hashtags,
-                    'original_generated_content': content # For RAG learning later
+                    'original_generated_content': content
                 }
                 request.session['article_draft'] = draft
+                # Clean up input data from session
+                if 'article_input' in request.session:
+                    del request.session['article_input']
                 return redirect('/autoarticle/?step=3')
             except Exception as e:
                 import traceback

@@ -66,20 +66,24 @@ class PDFEngine(FPDF):
         self.set_y(100)
         if os.path.exists(FONT_PATH):
             self.set_font("NanumGothic", "", 42)
-        else:
-            self.set_font("Arial", "", 42)
-        self.set_text_color(*self.theme["main"])
-        self.cell(190, 30, self.school_name, align='C', ln=True)
-        
-        self.set_y(130)
-        if os.path.exists(FONT_PATH):
+            self.set_text_color(*self.theme["main"])
+            self.cell(190, 30, self.school_name, align='C', ln=True)
+            
+            self.set_y(130)
             self.set_font("NanumGothic", "", 22)
+            self.set_text_color(70, 70, 70)
+            import datetime
+            now = datetime.datetime.now()
+            self.cell(190, 20, f"{now.year}학년도 {now.month}월 뉴스레터", align='C', ln=True)
         else:
-            self.set_font("Arial", "", 22)
-        self.set_text_color(70, 70, 70)
-        import datetime
-        now = datetime.datetime.now()
-        self.cell(190, 20, f"{now.year}학년도 {now.month}월 뉴스레터", align='C', ln=True)
+            # Fallback: Use English or skip Korean text when font is not available
+            self.set_font("Arial", "", 42)
+            self.set_text_color(*self.theme["main"])
+            # Only output school name if it's ASCII-safe
+            try:
+                self.cell(190, 30, self.school_name, align='C', ln=True)
+            except:
+                self.cell(190, 30, "Newsletter", align='C', ln=True)
         
         self.set_draw_color(*self.theme["accent"])
         self.set_line_width(1.5)

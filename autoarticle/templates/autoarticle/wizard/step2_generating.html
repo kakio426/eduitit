@@ -1,0 +1,79 @@
+{% extends 'autoarticle/wizard/base_wizard.html' %}
+{% load static %}
+
+{% block wizard_content %}
+<div class="clay-card p-12 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center min-h-[500px]"
+    data-aos="zoom-in">
+    <div class="relative w-64 h-64 mb-10">
+        <!-- Multi-layer Spinner -->
+        <div class="absolute inset-0 rounded-full border-[6px] border-purple-50 border-t-purple-600 animate-spin"></div>
+        <div class="absolute inset-6 rounded-full border-[6px] border-blue-50 border-t-blue-500 animate-spin-slow">
+        </div>
+        <div
+            class="absolute inset-12 rounded-full border-[6px] border-indigo-50 border-t-indigo-400 animate-spin-reverse">
+        </div>
+
+        <div class="absolute inset-0 flex items-center justify-center">
+            <i class="fa-solid fa-wand-magic-sparkles text-6xl text-purple-600 animate-pulse"></i>
+        </div>
+    </div>
+
+    <div class="text-center space-y-6 max-w-lg">
+        <h3 class="text-4xl font-bold text-gray-800 font-display">Gemini가 기사를 작성하고 있습니다...</h3>
+        <p class="text-xl text-gray-500 font-hand leading-relaxed">
+            행사 정보를 바탕으로 가장 어울리는 문장들을 고르고 있어요. <br>
+            평균 10~20초 정도 소요됩니다. 잠시만 기다려주세요!
+        </p>
+
+        <!-- Progress Indicator -->
+        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden shadow-inner">
+            <div id="progressBar"
+                class="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000 ease-linear"
+                style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple progress simulation for visual feedback
+    let progress = 0;
+    const bar = document.getElementById('progressBar');
+    const interval = setInterval(() => {
+        if (progress < 90) {
+            progress += Math.random() * 5;
+            bar.style.width = progress + '%';
+        }
+    }, 1000);
+
+    // Auto-submit form to trigger AI generation
+    window.onload = function () {
+        document.getElementById('aiGenerationForm').submit();
+    };
+</script>
+
+<!-- Hidden form to trigger AI generation -->
+<form id="aiGenerationForm" method="post" action="{% url 'autoarticle:create' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="2">
+</form>
+
+<style>
+    .animate-spin-slow {
+        animation: spin 3s linear infinite;
+    }
+
+    .animate-spin-reverse {
+        animation: spin-reverse 2s linear infinite;
+    }
+
+    @keyframes spin-reverse {
+        from {
+            transform: rotate(360deg);
+        }
+
+        to {
+            transform: rotate(0deg);
+        }
+    }
+</style>
+{% endblock %}
