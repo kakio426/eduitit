@@ -146,8 +146,6 @@
             <!-- Desktop Navigation -->
             <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500">
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
-                <a href="{% url 'insights:list' %}" class="hover:text-purple-600 transition">인사이트</a>
-                <a href="{% url 'fortune:saju' %}" class="hover:text-purple-600 transition">사주</a>
                 <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'dashboard' %}" class="hover:text-purple-600 transition flex items-center gap-2">
@@ -189,20 +187,17 @@
                 <a href="/#services" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-grid-2 mr-3 text-purple-400"></i> 서비스
                 </a>
-                <a href="{% url 'insights:list' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-lightbulb mr-3 text-yellow-400"></i> 인사이트
-                </a>
-                <a href="{% url 'fortune:saju' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-crystal-ball mr-3 text-purple-400"></i> 사주 운세
-                </a>
-                <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                <a href="{% url 'portfolio:list' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
                 </a>
                 {% if user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                <a href="{% url 'dashboard' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-gauge-high mr-3 text-green-400"></i> 대시보드
                 </a>
-                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                <a href="{% url 'settings' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 설정
                 </a>
                 <form action="{% url 'logout' %}" method="post" class="py-2">
@@ -212,7 +207,8 @@
                     </button>
                 </form>
                 {% else %}
-                <a href="{% url 'login' %}" class="py-3 mt-2 text-center rounded-full shadow-clay text-purple-600 hover:shadow-clay-hover transition">
+                <a href="{% url 'login' %}"
+                    class="py-3 mt-2 text-center rounded-full shadow-clay text-purple-600 hover:shadow-clay-hover transition">
                     <i class="fa-solid fa-user-lock mr-2"></i> 로그인
                 </a>
                 {% endif %}
@@ -296,7 +292,7 @@
         }
 
         // Close mobile menu when clicking outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             const menu = document.getElementById('mobileMenu');
             const btn = document.getElementById('mobileMenuBtn');
             if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
@@ -307,7 +303,7 @@
         });
 
         // Close mobile menu on resize to desktop
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             const menu = document.getElementById('mobileMenu');
             if (window.innerWidth >= 768 && menu && menu.classList.contains('translate-y-0')) {
                 toggleMobileMenu();

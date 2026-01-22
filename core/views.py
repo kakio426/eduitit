@@ -24,10 +24,12 @@ def dashboard(request):
     from django.db.models import Q
     # Get IDs of products explicitly owned by the user
     owned_ids = request.user.owned_products.values_list('product_id', flat=True)
-    # Filter products that are either owned or free
+    # Filter products that are either owned or free, and exclude specific ones
     available_products = Product.objects.filter(
         Q(id__in=owned_ids) | Q(price=0),
         is_active=True
+    ).exclude(
+        Q(title__icontains="인사이트") | Q(title__icontains="사주")
     ).order_by('display_order', '-created_at').distinct()
     
     return render(request, 'core/dashboard.html', {'products': available_products})
