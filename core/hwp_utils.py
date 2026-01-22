@@ -2,11 +2,32 @@ import os
 import tempfile
 from pathlib import Path
 
+import sys
+import os
+
+# Manual fix for pywin32 DLLs if post-install script wasn't run
 try:
-    import pythoncom
-    import win32com.client as win32
-    HAS_WIN32 = True
-except ImportError:
+    import site
+    possible_paths = [site.getusersitepackages()] + sys.path
+    for p in possible_paths:
+        system32_path = os.path.join(p, "pywin32_system32")
+        if os.path.exists(system32_path):
+            os.environ['PATH'] = system32_path + os.pathsep + os.environ['PATH']
+            print(f"DEBUG: Added {system32_path} to PATH", file=sys.stderr)
+            break
+except Exception:
+    pass
+
+try:
+    if sys.platform == "win32":
+        import pythoncom
+        import win32com.client as win32
+        HAS_WIN32 = True
+    else:
+        HAS_WIN32 = False
+except Exception as e:
+    import sys
+    print(f"DEBUG: pywin32 import failed: {e}", file=sys.stderr)
     HAS_WIN32 = False
 
 def convert_hwp_to_pdf_local(input_path, output_path):

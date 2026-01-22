@@ -1,70 +1,97 @@
-<div class="space-y-10 animate-in fade-in zoom-in duration-500">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-        <div class="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] shadow-clay-inner flex items-center justify-center text-8xl shrink-0 
-                    {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-white{% endif %}">
+<div class="space-y-12 animate-in fade-in zoom-in duration-500">
+    <!-- Header Area -->
+    <div class="flex flex-col md:flex-row items-center gap-10 text-center md:text-left">
+        <!-- Floating Icon Box -->
+        <div
+            class="w-32 h-32 md:w-44 md:h-44 rounded-[2.8rem] shadow-clay-inner flex items-center justify-center text-8xl shrink-0 
+                    {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-white{% endif %} float-icon">
             {% if "fa-" in product.icon %}
             <i class="{{ product.icon }}"></i>
             {% else %}
             {{ product.icon }}
             {% endif %}
         </div>
-        <div class="flex-1">
-            <h3 class="text-6xl md:text-8xl font-bold text-gray-800 leading-none mb-4 tracking-tight">{{ product.title
-                }}</h3>
-            <span
-                class="inline-block px-5 py-2 bg-purple-100 text-purple-600 rounded-2xl text-2xl md:text-3xl font-bold shadow-sm">
-                {{ product.get_service_type_display }}
-            </span>
+
+        <div class="flex-1 space-y-4">
+            <div class="flex flex-wrap justify-center md:justify-start gap-3">
+                <span
+                    class="px-4 py-1.5 bg-purple-100 text-purple-600 rounded-2xl text-xl font-bold uppercase tracking-wider shadow-sm">
+                    {{ product.get_service_type_display }}
+                </span>
+                {% if product.is_featured %}
+                <span
+                    class="px-4 py-1.5 bg-amber-100 text-amber-600 rounded-2xl text-xl font-bold uppercase tracking-wider shadow-sm">
+                    Featured
+                </span>
+                {% endif %}
+            </div>
+            <h3 class="text-6xl md:text-8xl font-black text-gray-800 leading-none tracking-tight">
+                {{ product.title }}
+            </h3>
         </div>
     </div>
 
-    <!-- Description -->
-    <div
-        class="prose prose-2xl max-w-none text-gray-600 font-hand text-4xl md:text-5xl leading-relaxed break-keep border-l-8 border-purple-200 pl-8 py-2">
-        {{ product.description|linebreaks }}
+    <!-- Description Card -->
+    <div class="relative">
+        <div class="absolute -left-4 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-400 to-blue-400 rounded-full">
+        </div>
+        <p class="text-4xl md:text-5xl text-gray-600 font-hand leading-relaxed break-keep pl-6 py-2">
+            {{ product.description|linebreaksbr }}
+        </p>
     </div>
 
-    <!-- Key Features List -->
+    <!-- Key Features Section -->
     {% if features %}
-    <div class="bg-white/40 rounded-[3rem] p-10 md:p-14 shadow-clay-inner border border-white/50">
-        <h4 class="text-3xl font-bold text-gray-400 mb-10 uppercase tracking-[0.2em] text-center md:text-left">Key
-            Features</h4>
-        <ul class="grid grid-cols-1 gap-12">
+    <div
+        class="bg-[#F8FAFC]/50 backdrop-blur-sm rounded-[3.5rem] p-10 md:p-14 shadow-clay-inner border border-white/60">
+        <h4 class="text-2xl font-black text-gray-400 mb-12 uppercase tracking-[0.3em] flex items-center gap-4">
+            <span class="w-12 h-1 bg-gray-200"></span>
+            Key Features
+        </h4>
+
+        <div class="grid grid-cols-1 gap-14">
             {% for feature in features %}
-            <li class="flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
-                <div
-                    class="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-green-100 to-emerald-100 text-green-600 flex items-center justify-center text-4xl shadow-clay-inner shrink-0 scale-110">
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-8 group">
+                <!-- Feature Icon -->
+                <div class="w-20 h-20 rounded-[1.8rem] bg-white flex items-center justify-center text-4xl shadow-clay-sm group-hover:shadow-clay transition-all duration-300 shrink-0 
+                            {% if product.color_theme == 'purple' %}text-purple-500
+                            {% elif product.color_theme == 'green' %}text-green-500
+                            {% elif product.color_theme == 'red' %}text-red-500
+                            {% elif product.color_theme == 'blue' %}text-blue-500
+                            {% elif product.color_theme == 'orange' %}text-orange-500
+                            {% else %}text-gray-500{% endif %}">
                     {% if "fa-" in feature.icon %}
                     <i class="{{ feature.icon }}"></i>
                     {% else %}
                     {{ feature.icon }}
                     {% endif %}
                 </div>
-                <div class="flex-1">
-                    <span class="font-bold text-gray-800 block text-4xl md:text-5xl mb-3 tracking-tight">{{
-                        feature.title }}</span>
-                    <span class="text-3xl md:text-4xl text-gray-500 font-hand leading-snug block break-keep">{{
-                        feature.description }}</span>
+
+                <div class="flex-1 text-center md:text-left space-y-2">
+                    <h5 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight">{{ feature.title }}</h5>
+                    <p class="text-2xl md:text-3xl text-gray-500 font-hand leading-snug break-keep">{{
+                        feature.description }}</p>
                 </div>
-            </li>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
     </div>
     {% endif %}
 
-    <!-- Action Buttons -->
-    <div class="flex flex-col sm:flex-row gap-6 pt-10 border-t-4 border-gray-100">
+    <!-- Footer Action -->
+    <div class="pt-8 flex flex-col sm:flex-row items-center gap-6">
         {% if product.external_url %}
         <a href="{{ product.external_url }}"
-            class="flex-[2] clay-btn bg-purple-600 text-white py-6 md:py-8 rounded-[2rem] font-bold text-4xl text-center hover:bg-purple-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4">
-            바로가기 <i class="fa-solid fa-arrow-right"></i>
+            class="w-full sm:flex-[2] clay-btn bg-purple-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-purple-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
+            서비스 시작하기
+            <i
+                class="fa-solid fa-rocket group-hover:-translate-y-2 group-hover:translate-x-2 transition-transform duration-300"></i>
         </a>
         {% endif %}
 
-        <button onclick="closeQuickView()"
-            class="flex-1 px-8 py-6 md:py-8 rounded-[2rem] font-bold text-3xl text-gray-400 hover:bg-gray-100 transition-colors">
-            닫기
+        <button onclick="closeModal()"
+            class="w-full sm:flex-1 py-8 rounded-[2.5rem] font-bold text-3xl text-gray-400 hover:bg-gray-100 transition-colors uppercase tracking-widest">
+            Close
         </button>
     </div>
 </div>

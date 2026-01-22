@@ -182,31 +182,33 @@
     <div id="unifiedModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-gray-500/10 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"
-            aria-hidden="true" onclick="closeModal()"></div>
+        <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300 opacity-0"
+            id="modalBackdrop" aria-hidden="true" onclick="closeModal()"></div>
 
         <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
             <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div class="relative transform overflow-hidden rounded-[2.5rem] bg-white/80 backdrop-blur-xl text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border-2 border-white/50 scale-95 opacity-0"
+                <div class="relative transform overflow-hidden rounded-[3rem] bg-white/90 backdrop-blur-2xl text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border-2 border-white/50 scale-95 opacity-0 duration-300"
                     id="modalPanel">
-                    <!-- Close Button -->
-                    <button onclick="closeModal()"
-                        class="absolute top-6 right-6 z-10 w-12 h-12 rounded-full bg-gray-200/80 hover:bg-gray-300 transition-colors flex items-center justify-center text-gray-600 hover:text-gray-800 shadow-lg"
-                        aria-label="Close modal">
-                        <i class="fa-solid fa-xmark text-2xl"></i>
-                    </button>
-                    <div id="modalContent" class="p-8">
-                        <!-- Content will be loaded here -->
-                        <div class="flex justify-center p-12">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+
+                    <!-- Loading Spinner Overlay -->
+                    <div id="modalLoading"
+                        class="absolute inset-0 z-20 flex items-center justify-center bg-white/50 hidden">
+                        <div class="flex flex-col items-center gap-4">
+                            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
+                            <p class="text-xl font-bold text-gray-500">정보를 가져오는 중...</p>
                         </div>
                     </div>
-                    <!-- Close Button at Bottom -->
-                    <div class="px-8 pb-6 flex justify-center">
-                        <button onclick="closeModal()"
-                            class="px-8 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full text-xl font-bold transition shadow-clay hover:shadow-clay-hover">
-                            닫기
-                        </button>
+
+                    <!-- Close Button (Top) -->
+                    <button onclick="closeModal()"
+                        class="absolute top-8 right-8 z-10 w-14 h-14 rounded-full bg-gray-100/80 hover:bg-white transition-all flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-clay-sm hover:shadow-clay group"
+                        aria-label="Close modal">
+                        <i
+                            class="fa-solid fa-xmark text-2xl group-hover:rotate-90 transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="modalContent" class="p-10 md:p-14 min-h-[400px]">
+                        <!-- Content will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -219,9 +221,15 @@
             const backdrop = document.getElementById('modalBackdrop');
             const panel = document.getElementById('modalPanel');
             const content = document.getElementById('modalContent');
+            const loading = document.getElementById('modalLoading');
+            const body = document.body;
 
-            // Show modal
+            // Show modal and prevent scroll
             modal.classList.remove('hidden');
+            body.style.overflow = 'hidden';
+
+            // Reset scale for animation
+            panel.classList.add('scale-95', 'opacity-0');
 
             // Animate in
             requestAnimationFrame(() => {
@@ -230,15 +238,31 @@
                 panel.classList.add('scale-100', 'opacity-100');
             });
 
+            // Show loading
+            loading.classList.remove('hidden');
+            content.innerHTML = '';
+
             // Load content
-            fetch(`/products/preview/${productId}/`)
-                .then(response => response.text())
+            fetch(`/products/preview/${productId}/?t=${Date.now()}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
                 .then(html => {
                     content.innerHTML = html;
+                    loading.classList.add('hidden');
                 })
                 .catch(error => {
                     console.error('Error loading modal content:', error);
-                    content.innerHTML = '<p class="text-center p-10 text-red-500">Failed to load content.</p>';
+                    content.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-20 text-center space-y-6">
+                            <i class="fa-solid fa-triangle-exclamation text-7xl text-gray-200"></i>
+                            <h3 class="text-3xl font-bold text-gray-700">정보를 불러오지 못했습니다</h3>
+                            <p class="text-xl text-gray-400 font-hand">잠시 후 다시 시도해 주세요.</p>
+                            <button onclick="openModal(${productId})" class="px-8 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:scale-105 transition">다시 시도</button>
+                        </div>
+                    `;
+                    loading.classList.add('hidden');
                 });
         }
 
@@ -246,6 +270,7 @@
             const modal = document.getElementById('unifiedModal');
             const backdrop = document.getElementById('modalBackdrop');
             const panel = document.getElementById('modalPanel');
+            const body = document.body;
 
             // Animate out
             backdrop.classList.add('opacity-0');
@@ -254,10 +279,7 @@
 
             setTimeout(() => {
                 modal.classList.add('hidden');
-                document.getElementById('modalContent').innerHTML = `
-                    <div class="flex justify-center p-12">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-                    </div>`;
+                body.style.overflow = 'auto';
             }, 300);
         }
 

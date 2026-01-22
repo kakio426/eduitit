@@ -73,8 +73,9 @@ def hwp_convert_view(request):
     from django.core.files.storage import FileSystemStorage
 
     if not HAS_WIN32:
-        messages.error(request, "HWP 변환 기능은 서버가 Windows 환경일 때만 작동합니다. 로컬 컴퓨터에서 서버를 실행해 주세요.")
-        return render(request, 'core/hwp_convert.html', {'disabled': True})
+        import sys
+        messages.error(request, f"HWP 변환 기능은 서버가 Windows 환경일 때만 작동합니다. (현재 플랫폼: {sys.platform}). 로컬 컴퓨터에서 서버를 실행해 주세요.")
+        return render(request, 'core/hwp_convert.html', {'disabled': True, 'platform': sys.platform})
 
     result_files = []
     if request.method == 'POST':

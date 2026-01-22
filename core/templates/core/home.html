@@ -199,27 +199,10 @@
     </div> <!-- End Bento Grid -->
 </main>
 
-<!-- Quick View Modal Container -->
-<div id="quickViewModal"
-    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 md:p-8 backdrop-blur-md transition-all duration-300 opacity-0"
-    onclick="if(event.target === this) closeQuickView();">
-    <div class="clay-card p-0 max-w-2xl w-full mx-auto relative transform scale-95 transition-all duration-300 bg-[#E0E5EC] overflow-hidden flex flex-col max-h-[90vh]"
-        id="modalPanel">
-        <!-- Loading Spinner -->
-        <div id="modalLoading" class="absolute inset-0 flex items-center justify-center bg-white/50 z-20 hidden">
-            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
-        </div>
-
-        <!-- Content Injected via AJAX -->
-        <div id="modalContent" class="p-8 md:p-12 overflow-y-auto custom-scrollbar relative">
-            <!-- Content Loads Here -->
-        </div>
-    </div>
-</div>
+</div> <!-- End Bento Grid -->
+</main>
 
 <script>
-    let currentRequestId = null;
-
     /**
      * Handle Card Clicks & Accessibility
      */
@@ -227,14 +210,13 @@
         const cards = document.querySelectorAll('.product-card');
         cards.forEach(card => {
             const productId = card.getAttribute('data-product-id');
-            const externalUrl = card.getAttribute('data-external-url');
 
-            // Click listener
+            // Click listener - Always open modal first
             card.addEventListener('click', () => {
-                if (externalUrl && externalUrl !== 'None' && externalUrl !== '') {
-                    window.location.href = externalUrl;
+                if (typeof openModal === 'function') {
+                    openModal(productId);
                 } else {
-                    openQuickView(productId);
+                    console.error('Core modal system (openModal) not found!');
                 }
             });
 
@@ -247,77 +229,5 @@
             });
         });
     });
-
-    /**
-     * Open the Quick View modal
-     */
-    function openQuickView(productId) {
-        const modal = document.getElementById('quickViewModal');
-        const panel = document.getElementById('modalPanel');
-        const loading = document.getElementById('modalLoading');
-        const content = document.getElementById('modalContent');
-        const body = document.body;
-
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.classList.add('flex');
-            panel.classList.remove('scale-95');
-            panel.classList.add('scale-100');
-        }, 10);
-
-        body.style.overflow = 'hidden';
-
-        loading.classList.remove('hidden');
-        content.innerHTML = '';
-
-        currentRequestId = productId;
-
-        // 🛡️ Bypassing cache for fresh data
-        fetch(`/products/preview/${productId}/?t=${Date.now()}`)
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.text();
-            })
-            .then(html => {
-                if (currentRequestId === productId) {
-                    content.innerHTML = html;
-                    loading.classList.add('hidden');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                if (currentRequestId === productId) {
-                    content.innerHTML = `
-                        <div class="text-center py-20 flex flex-col items-center">
-                            <i class="fa-solid fa-triangle-exclamation text-gray-300 text-6xl mb-6"></i>
-                            <p class="text-gray-500 text-3xl font-bold">정보를 불러오는데 실패했습니다.</p>
-                            <button onclick="openQuickView('${productId}')" class="mt-8 px-10 py-4 bg-purple-500 text-white rounded-full text-2xl font-bold shadow-clay hover:scale-105 transition-all">
-                                다시 시도
-                            </button>
-                        </div>`;
-                    loading.classList.add('hidden');
-                }
-            });
-    }
-
-    function closeQuickView() {
-        const modal = document.getElementById('quickViewModal');
-        const panel = document.getElementById('modalPanel');
-
-        modal.classList.add('opacity-0');
-        panel.classList.remove('scale-100');
-        panel.classList.add('scale-95');
-
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.style.overflow = 'auto';
-            // We do NOT clear modalContent here anymore to preserve visual state during transition,
-            // or we clear it if we want to reset scroll. 
-            // Clearing it prevents "flashing" old content when opening a new slow-loading modal, 
-            // but our loading spinner logic handles that by clearing content ON OPEN.
-        }, 300);
-    }
 </script>
 {% endblock %}
