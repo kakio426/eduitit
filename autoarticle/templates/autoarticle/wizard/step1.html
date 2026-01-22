@@ -1,83 +1,34 @@
 {% extends 'autoarticle/wizard/base_wizard.html' %}
 {% block wizard_content %}
-<div class="clay-card p-10 bg-white/90 backdrop-blur-xl relative overflow-hidden">
-    <div class="relative z-10">
-        <h3 class="text-3xl font-bold text-gray-800 mb-2">📝 행사 정보 입력</h3>
-        <p class="text-gray-500 mb-10 font-hand text-xl">행사의 핵심적인 내용들을 알려주시면 AI가 멋진 기사를 써 드립니다.</p>
-
-        <form method="post" action="{% url 'autoarticle:create' %}" id="creationForm" onsubmit="showLoader()">
-            {% csrf_token %}
-            <input type="hidden" name="step" value="1">
-            <input type="hidden" name="school_name" value="{{ school_name }}">
-            <input type="hidden" name="theme" value="{{ theme }}">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">📌 참여 학년</label>
-                        <select name="grade"
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-gray-700 shadow-inner bg-gray-50">
-                            <option>전교생</option>
-                            <option>1학년</option>
-                            <option>2학년</option>
-                            <option>3학년</option>
-                            <option>4학년</option>
-                            <option>5학년</option>
-                            <option>6학년</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">📍 행사명</label>
-                        <input type="text" name="event_name" placeholder="예: 찾아가는 목공 체험" required
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">🏫 장소</label>
-                        <input type="text" name="location" placeholder="예: 학교 강당"
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner">
-                    </div>
-                </div>
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">📅 일시</label>
-                        <input type="date" name="date" value="{{ today }}"
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">🌈 기사 톤 (분위기)</label>
-                        <select name="tone"
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-gray-700 shadow-inner bg-gray-50">
-                            <option>따뜻하고 감성적인</option>
-                            <option>활발하고 생동감 있는</option>
-                            <option>격조 있고 정중한</option>
-                            <option>간결하고 명확한</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">✍️ 주요 활동 내용 (키워드)</label>
-                        <textarea name="keywords" rows="4" required placeholder="내용을 입력하세요..."
-                            class="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner"></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-12">
-                <button type="submit"
-                    class="w-full py-5 rounded-3xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold text-2xl shadow-clay hover:shadow-clay-hover active:scale-95 transition-all flex items-center justify-center gap-3">
-                    <i class="fa-solid fa-sparkles"></i> AI로 초안 생성하기
-                </button>
-            </div>
-        </form>
-    </div>
+<div class='clay-card p-10 bg-white shadow-clay rounded-[2rem]'>
+<h3 class='text-3xl font-bold text-gray-800 mb-2'>📝 정보 입력</h3>
+<p class='text-gray-500 mb-10 font-hand text-xl'>교실 소식을 AI가 멋진 기사로 바꿔드려요.</p>
+<form method='post' action='{% url "autoarticle:create" %}' id='creationForm'>
+{% csrf_token %}
+<input type='hidden' name='step' value='1'>
+<div class='grid grid-cols-1 md:grid-cols-2 gap-8'>
+<div class='space-y-6'>
+<div>
+<label class='block text-sm font-bold text-gray-700 mb-2'>📌 대상 학년</label>
+<select name='grade' class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 bg-gray-50 shadow-inner'>
+<option>전교생</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option><option>5학년</option><option>6학년</option>
+</select>
 </div>
-
-<div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center">
-    <h3 class="text-3xl font-bold text-gray-800 mb-4">Gemini가 기사를 작성하고 있습니다...</h3>
+<div>
+<label class='block text-sm font-bold text-gray-700 mb-2'>📍 행사명</label>
+<input type='text' name='event_name' placeholder='예: 숲 체험 학습' required class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'>
 </div>
-
-<script>
-    function showLoader() {
-        document.getElementById('loader').classList.remove('hidden');
-        document.getElementById('loader').classList.add('flex');
-    }
-</script>
+</div>
+<div class='space-y-6'>
+<div>
+<label class='block text-sm font-bold text-gray-700 mb-2'>✍️ 주요 내용 (키워드)</label>
+<textarea name='keywords' rows='4' required placeholder='예: 도토리 줍기, 숲 해설사님 설명...' class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'></textarea>
+</div>
+<button type='submit' class='w-full py-5 rounded-3xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold text-2xl shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-95 transition-all'>
+AI로 초안 만들기
+</button>
+</div>
+</div>
+</form>
+</div>
 {% endblock %}

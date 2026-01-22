@@ -1,58 +1,41 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<div class="min-h-screen bg-[#F0F2F5] py-8 px-4">
-    <div class="max-w-7xl mx-auto flex gap-8">
-
-        <aside class="w-80">
-            <div class="clay-card p-6 bg-white">
-                <h2 class="text-2xl font-bold mb-6">환경 설정</h2>
-
-                <form method="post" action="{% url 'autoarticle:create' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="step" value="{{ step }}">
-
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold mb-2">학교명</label>
-                        <input type="text" name="school_name" value="{{ school_name }}"
-                            class="w-full px-4 py-3 rounded-2xl border-2" onchange="this.form.submit()">
-                    </div>
-
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold mb-2">디자인 테마</label>
-                        <div class="grid gap-3">
-                            {% if theme_list %}{% for t_name in theme_list %}
-                            <label class="cursor-pointer">
-                                <input type="radio" name="theme" value="{{ t_name }}" class="peer sr-only" {% if
-                                    theme==t_name %}checked{% endif %} onchange="this.form.submit()">
-                                <div class="p-3 rounded-2xl border-2 peer-checked:border-purple-500"><span>{{ t_name
-                                        }}</span></div>
-                            </label>
-                            {% endfor %}{% endif %}
-                        </div>
-                    </div>
-                </form>
-
-                <div class="pt-6 border-t flex flex-col gap-3">
-                    <a href="{% url 'autoarticle:archive' %}">전체 기사 보관함</a>
-                    <a href="{% url 'autoarticle:create' %}">초기화</a>
-                </div>
-            </div>
-        </aside>
-
-        <div class="flex-1">
-            <div class="min-h-[600px]">
-                {% block wizard_content %}{% endblock %}
-            </div>
-        </div>
-
-    </div>
+<div class='min-h-screen bg-[#F0F2F5] py-20 px-4'>
+<div class='max-w-7xl mx-auto flex flex-col lg:flex-row gap-8'>
+<aside class='lg:w-80'>
+<div class='clay-card p-6 bg-white shadow-clay rounded-[2rem]'>
+<h2 class='text-2xl font-bold mb-6 text-gray-800'>환경 설정</h2>
+<form method='post' action='{% url "autoarticle:create" %}'>
+{% csrf_token %}
+<input type='hidden' name='step' value='{{ step }}'>
+<div class='mb-6'>
+<label class='block text-sm font-bold mb-2 text-gray-700'>학교명</label>
+<input type='text' name='school_name' value='{{ school_name }}' class='w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner' onchange='this.form.submit()'>
 </div>
-
-<style>
-    .clay-card {
-        border-radius: 2rem;
-        box-shadow: 12px 12px 24px #d1d9e6, -12px -12px 24px #ffffff;
-    }
-</style>
+<div class='mb-6'>
+<label class='block text-sm font-bold mb-2 text-gray-700'>디자인 테마</label>
+<div class='grid gap-3'>
+{% for t_name in theme_list %}
+<label class='cursor-pointer'>
+<input type='radio' name='theme' value='{{ t_name }}' class='peer sr-only' {% if theme == t_name %}checked{% endif %} onchange='this.form.submit()'>
+<div class='p-3 rounded-2xl border-2 border-gray-100 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all'>
+<span class='font-medium text-gray-600 peer-checked:text-purple-700'>{{ t_name }}</span>
+</div>
+</label>
+{% endfor %}
+</div>
+</div>
+</form>
+<div class='pt-6 border-t border-gray-100 flex flex-col gap-3'>
+<a href='{% url "autoarticle:archive" %}' class='flex items-center justify-center p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold hover:bg-purple-200 transition-colors'>전체 기사 보관함</a>
+<a href='{% url "autoarticle:create" %}' class='text-center text-gray-400 hover:text-gray-600 transition-colors'>새로 시작하기</a>
+</div>
+</div>
+</aside>
+<div class='flex-1'>
+{% block wizard_content %}{% endblock %}
+</div>
+</div>
+</div>
 {% endblock %}
