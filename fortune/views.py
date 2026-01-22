@@ -5,6 +5,9 @@ from django.http import JsonResponse
 from .forms import SajuForm
 from .prompts import get_prompt
 
+# 선생님 요청 모델명
+FIXED_MODEL_NAME = "gemini-3-flash-preview"
+
 
 def get_gemini_client(request):
     """Gemini 클라이언트 생성 (사용자 API 키 또는 환경변수 사용)"""
@@ -52,7 +55,7 @@ def saju_view(request):
                 try:
                     # Gemini API 호출 (새 google-genai SDK)
                     response = client.models.generate_content(
-                        model='gemini-2.0-flash',
+                        model=FIXED_MODEL_NAME,
                         contents=prompt
                     )
 
@@ -90,7 +93,7 @@ def saju_api_view(request):
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model=FIXED_MODEL_NAME,
             contents=prompt
         )
 
