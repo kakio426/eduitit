@@ -15,16 +15,23 @@ CHROMA_PATH = os.path.join(BASE_DIR, "chroma_db_school")
 # 이미지 저장 경로도 안전한 곳으로
 IMAGE_DIR = os.path.join(BASE_DIR, "uploaded_images")
 
-# 폰트 경로 (Railway에서는 앱 디렉토리에 있음)
-FONT_PATH = "NanumGothic-Regular.ttf"
+# 폰트 경로 (프로젝트 루트 기준 절대 경로)
+# constants.py 위치: autoarticle/engines/constants.py -> ../../..
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FONT_PATH = os.path.join(PROJECT_ROOT, "NanumGothic-Regular.ttf")
 
-# 만약 해당 폴더들이 없으면 만듭니다.
-if BASE_DIR != "." and not os.path.exists(BASE_DIR):
-    os.makedirs(BASE_DIR, exist_ok=True)
-if not os.path.exists(IMAGE_DIR):
-    os.makedirs(IMAGE_DIR, exist_ok=True)
-if not os.path.exists(CHROMA_PATH):
-    os.makedirs(CHROMA_PATH, exist_ok=True)
+# 폴더 생성 (권한 에러 방지)
+try:
+    if BASE_DIR != "." and not os.path.exists(BASE_DIR):
+        os.makedirs(BASE_DIR, exist_ok=True)
+    if not os.path.exists(IMAGE_DIR):
+        os.makedirs(IMAGE_DIR, exist_ok=True)
+    if not os.path.exists(CHROMA_PATH):
+        os.makedirs(CHROMA_PATH, exist_ok=True)
+except Exception as e:
+    print(f"[WARNING] Failed to create directories at {BASE_DIR}: {e}")
+    # Fallback to local /tmp or similar if needed, but for now just log
+    pass
 
 THEMES = {
     "웜 & 플레이풀": {"main": (255, 140, 66), "sub": (255, 251, 240), "accent": (6, 214, 160), "hex": "#FF8C42"},
