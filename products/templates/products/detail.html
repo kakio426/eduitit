@@ -188,14 +188,14 @@
                 <i class="fa-solid fa-gamepad"></i> 게임 시작하기
             </a>
             {% else %}
-            <a href="#" class="btn-launch">
-                <i class="fa-solid fa-play"></i> 도구 실행하기
-            </a>
+            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
+                <i class="fa-solid fa-clock"></i> 준비 중
+            </button>
             {% endif %}
             {% else %}
-            <a href="#" class="btn-launch">
-                <i class="fa-solid fa-shopping-cart"></i> 구매하기
-            </a>
+            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
+                <i class="fa-solid fa-clock"></i> 준비 중
+            </button>
             {% endif %}
 
             <a href="/" class="btn-back">

@@ -26,7 +26,7 @@
     <div class="bento-grid">
 
         <!-- 1. [Hero Card] Dynamic Featured Product -->
-        <div class="col-span-4 md:col-span-2 row-span-2" data-aos="fade-up" data-aos-delay="100">
+        <div class="md:col-span-2 md:row-span-2" data-aos="fade-up" data-aos-delay="100">
             <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
                 role="button" tabindex="0" data-product-id="{{ featured_product.id }}"
                 data-external-url="{{ featured_product.external_url|default:'' }}">
@@ -73,7 +73,7 @@
 
         {% if product.card_size == "wide" %}
         <!-- Wide Card (2 columns) -->
-        <div class="col-span-4 md:col-span-2" data-aos="fade-up"
+        <div class="md:col-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer bg-[#E0E5EC] focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
                 role="button" tabindex="0" data-product-id="{{ product.id }}"
@@ -105,7 +105,7 @@
 
         {% elif product.card_size == "tall" %}
         <!-- Tall Card (1 column, 2 rows) -->
-        <div class="col-span-2 md:col-span-1 row-span-2" data-aos="fade-up"
+        <div class="md:row-span-2" data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card h-full p-8 {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-[#E0E5EC]{% endif %} group cursor-pointer relative overflow-hidden focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
                 role="button" tabindex="0" data-product-id="{{ product.id }}"
@@ -135,7 +135,7 @@
 
         {% else %}
         <!-- Small Card (default) -->
-        <div class="col-span-2 md:col-span-1" data-aos="fade-up"
+        <div data-aos="fade-up"
             data-aos-delay="{% widthratio forloop.counter 1 100 %}">
             <div class="clay-card p-8 h-full flex flex-col justify-between group cursor-pointer hover:bg-purple-50 transition-colors relative focus:ring-4 focus:ring-purple-300 focus:outline-none rounded-3xl product-card"
                 role="button" tabindex="0" data-product-id="{{ product.id }}"
@@ -160,7 +160,7 @@
         {% endfor %}
 
         <!-- 7. [Info Card] Why Eduitit? -->
-        <div class="col-span-4 md:col-span-2 clay-card p-8 h-full bg-gradient-to-br from-blue-50 to-purple-50"
+        <div class="md:col-span-2 clay-card p-8 h-full bg-gradient-to-br from-blue-50 to-purple-50"
             data-aos="fade-up" data-aos-delay="700">
             <h3 class="text-3xl font-bold text-gray-700 mb-6">왜 EDUITIT인가요?</h3>
             <div class="grid grid-cols-2 gap-4">
@@ -184,7 +184,7 @@
         </div>
 
         <!-- 8. [Contact Card] Feedback -->
-        <div class="col-span-4 md:col-span-2 clay-card p-8 h-full flex items-center justify-between group bg-[#E0E5EC]"
+        <div class="md:col-span-2 clay-card p-8 h-full flex flex-col sm:flex-row items-center justify-between gap-4 group bg-[#E0E5EC]"
             data-aos="fade-up" data-aos-delay="800">
             <div>
                 <h3 class="text-3xl font-bold text-gray-700 mb-1">아이디어 제안하기</h3>
@@ -197,9 +197,6 @@
         </div>
 
     </div> <!-- End Bento Grid -->
-</main>
-
-</div> <!-- End Bento Grid -->
 </main>
 
 <script>

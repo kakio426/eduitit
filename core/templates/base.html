@@ -143,6 +143,7 @@
                 </div>
                 <a href="/" class="font-bold text-4xl text-gray-700 mt-2 hover:text-purple-600 transition">EDUITIT</a>
             </div>
+            <!-- Desktop Navigation -->
             <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500">
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
                 <a href="{% url 'insights:list' %}" class="hover:text-purple-600 transition">인사이트</a>
@@ -168,8 +169,52 @@
                 </a>
                 {% endif %}
             </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
+                class="md:hidden w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-purple-600 transition"
+                aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobileMenu">
+                <i class="fa-solid fa-bars text-xl" id="menuIcon"></i>
+            </button>
         </div>
     </nav>
+
+    <!-- Mobile Menu Panel -->
+    <div id="mobileMenu"
+        class="fixed inset-x-0 top-[88px] z-40 md:hidden transform -translate-y-full opacity-0 transition-all duration-300 ease-in-out pointer-events-none"
+        aria-hidden="true">
+        <div class="mx-4 clay-card p-6 bg-[#E0E5EC]/95 backdrop-blur-sm">
+            <div class="flex flex-col gap-4 text-2xl font-bold text-gray-600">
+                <a href="/#services" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-grid-2 mr-3 text-purple-400"></i> 서비스
+                </a>
+                <a href="{% url 'insights:list' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-lightbulb mr-3 text-yellow-400"></i> 인사이트
+                </a>
+                <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
+                </a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-gauge-high mr-3 text-green-400"></i> 대시보드
+                </a>
+                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 설정
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="py-2">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-left text-red-500 hover:text-red-600 transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-3"></i> 로그아웃
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="py-3 mt-2 text-center rounded-full shadow-clay text-purple-600 hover:shadow-clay-hover transition">
+                    <i class="fa-solid fa-user-lock mr-2"></i> 로그인
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
     {% block content %}{% endblock %}
 
@@ -216,6 +261,55 @@
     </div>
 
     <script>
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const btn = document.getElementById('mobileMenuBtn');
+            const icon = document.getElementById('menuIcon');
+            const isOpen = menu.classList.contains('translate-y-0');
+
+            if (isOpen) {
+                // Close menu
+                menu.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                menu.classList.add('-translate-y-full', 'opacity-0', 'pointer-events-none');
+                menu.setAttribute('aria-hidden', 'true');
+                btn.setAttribute('aria-expanded', 'false');
+                btn.setAttribute('aria-label', '메뉴 열기');
+                icon.classList.remove('fa-xmark');
+                icon.classList.add('fa-bars');
+                document.body.style.overflow = 'auto';
+            } else {
+                // Open menu
+                menu.classList.remove('-translate-y-full', 'opacity-0', 'pointer-events-none');
+                menu.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                menu.setAttribute('aria-hidden', 'false');
+                btn.setAttribute('aria-expanded', 'true');
+                btn.setAttribute('aria-label', '메뉴 닫기');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-xmark');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('mobileMenu');
+            const btn = document.getElementById('mobileMenuBtn');
+            if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
+                if (menu.classList.contains('translate-y-0')) {
+                    toggleMobileMenu();
+                }
+            }
+        });
+
+        // Close mobile menu on resize to desktop
+        window.addEventListener('resize', function() {
+            const menu = document.getElementById('mobileMenu');
+            if (window.innerWidth >= 768 && menu && menu.classList.contains('translate-y-0')) {
+                toggleMobileMenu();
+            }
+        });
+
         function openModal(productId) {
             const modal = document.getElementById('unifiedModal');
             const backdrop = document.getElementById('modalBackdrop');
