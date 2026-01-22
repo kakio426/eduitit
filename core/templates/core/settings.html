@@ -47,11 +47,16 @@
                 </div>
                 {% endfor %}
 
-                <div class="pt-4">
+                <div class="pt-4 flex flex-col sm:flex-row gap-4">
                     <button type="submit"
-                        class="w-full bg-indigo-600 text-white py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg font-bold">
+                        class="flex-1 bg-indigo-600 text-white py-4 px-6 rounded-2xl hover:bg-indigo-700 transition-all shadow-clay font-bold text-xl hover:scale-[1.02] active:scale-95">
                         저장하기
                     </button>
+                    <a href="javascript:history.back()"
+                        class="flex-1 bg-white text-gray-500 py-4 px-6 rounded-2xl hover:bg-gray-50 transition-all shadow-clay-inner font-bold text-xl text-center hover:scale-[1.02] active:scale-95 border-2 border-gray-100 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        뒤로 가기
+                    </a>
                 </div>
             </form>
         </div>

@@ -27,6 +27,7 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('insights.urls', namespace='insights')),
     path('autoarticle/', include('autoarticle.urls', namespace='autoarticle')),
+    path('fortune/', include('fortune.urls', namespace='fortune')),
 ]
 
 if settings.DEBUG:

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'insights.apps.InsightsConfig',
     'portfolio.apps.PortfolioConfig',
     'autoarticle.apps.AutoarticleConfig',
+    'fortune.apps.FortuneConfig',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+
+{% block title %}사주 운세 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 마크다운 렌더링 스타일 */
+    .markdown-body {
+        font-size: 1.4rem;
+        line-height: 1.9;
+    }
+    .markdown-body h1 {
+        font-size: 2.2rem;
+        font-weight: bold;
+        color: #6366f1;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #e9d5ff;
+    }
+    .markdown-body h2 {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #4A5568;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .markdown-body h3 {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #6366f1;
+        margin-top: 1rem;
+    }
+    .markdown-body p {
+        margin-bottom: 1rem;
+    }
+    .markdown-body ul, .markdown-body ol {
+        margin-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .markdown-body li {
+        margin-bottom: 0.5rem;
+    }
+    .markdown-body strong {
+        color: #7c3aed;
+        background: #f3e8ff;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 1.2rem;
+    }
+    .markdown-body th, .markdown-body td {
+        border: 2px solid #e9d5ff;
+        padding: 12px;
+        text-align: center;
+    }
+    .markdown-body th {
+        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+        color: white;
+        font-weight: bold;
+    }
+    .markdown-body td {
+        background: #faf5ff;
+    }
+    .markdown-body hr {
+        border: none;
+        border-top: 2px dashed #d8b4fe;
+        margin: 2rem 0;
+    }
+
+    /* 폼 스타일링 */
+    .saju-input {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: #E0E5EC;
+        border: none;
+        border-radius: 15px;
+        box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7),
+                    inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
+        color: #4A5568;
+        font-family: inherit;
+        font-size: 1.4rem;
+        transition: all 0.3s;
+    }
+    .saju-input:focus {
+        outline: none;
+        box-shadow: inset 8px 8px 12px 0 rgba(163, 177, 198, 0.8),
+                    inset -8px -8px 12px 0 rgba(255, 255, 255, 0.9);
+    }
+    .saju-input::placeholder {
+        color: #a0aec0;
+    }
+
+    /* 라디오 버튼 스타일 */
+    .radio-group {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: #E0E5EC;
+        border-radius: 12px;
+        box-shadow: 5px 5px 10px rgba(163, 177, 198, 0.5),
+                    -5px -5px 10px rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 1.3rem;
+    }
+    .radio-group label:hover {
+        transform: translateY(-2px);
+    }
+    .radio-group input[type="radio"] {
+        width: 20px;
+        height: 20px;
+        accent-color: #7c3aed;
+    }
+    .radio-group input[type="radio"]:checked + span {
+        color: #7c3aed;
+        font-weight: bold;
+    }
+
+    /* 모드 토글 스타일 */
+    .mode-toggle {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .mode-btn {
+        flex: 1;
+        padding: 1.25rem;
+        background: #E0E5EC;
+        border: none;
+        border-radius: 20px;
+        box-shadow: 7px 7px 14px rgba(163, 177, 198, 0.6),
+                    -7px -7px 14px rgba(255, 255, 255, 0.5);
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #4A5568;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    .mode-btn.active {
+        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+        color: white;
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .mode-btn:not(.active):hover {
+        transform: translateY(-2px);
+        box-shadow: 9px 9px 18px rgba(163, 177, 198, 0.7),
+                    -9px -9px 18px rgba(255, 255, 255, 0.6);
+    }
+
+    /* 로딩 오버레이 */
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(224, 229, 236, 0.95);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .loading-overlay.show {
+        display: flex;
+    }
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid #e9d5ff;
+        border-top: 5px solid #7c3aed;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .loading-text {
+        font-size: 1.8rem;
+        color: #7c3aed;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-4xl mx-auto">
+
+    <!-- 헤더 -->
+    <div class="text-center mb-12" data-aos="fade-down">
+        <div class="w-24 h-24 mx-auto mb-6 rounded-full shadow-clay-inner flex items-center justify-center">
+            <span class="text-5xl">🔮</span>
+        </div>
+        <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-4">
+            사주 <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-500">운세</span>
+        </h1>
+        <p class="text-2xl text-gray-500 font-hand">
+            AI가 분석하는 나만의 사주팔자와 운세
+        </p>
+    </div>
+
+    {% if not result %}
+    <!-- 입력 폼 -->
+    <div class="clay-card p-8 md:p-12" data-aos="fade-up">
+
+        <form method="post" id="sajuForm">
+            {% csrf_token %}
+
+            <!-- 모드 선택 -->
+            <div class="mb-8">
+                <label class="block text-xl font-bold text-gray-600 mb-4">
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>상담 모드
+                </label>
+                <div class="mode-toggle">
+                    <button type="button" class="mode-btn active" data-mode="teacher" onclick="setMode('teacher')">
+                        <i class="fa-solid fa-chalkboard-user mr-2"></i>교사 모드
+                        <span class="block text-sm font-normal mt-1 opacity-80">학교생활, 학생 케미, 동료 관계</span>
+                    </button>
+                    <button type="button" class="mode-btn" data-mode="general" onclick="setMode('general')">
+                        <i class="fa-solid fa-star mr-2"></i>일반 모드
+                        <span class="block text-sm font-normal mt-1 opacity-80">재물, 연애, 건강, 직업운</span>
+                    </button>
+                </div>
+                <input type="hidden" name="mode" id="modeInput" value="teacher">
+            </div>
+
+            <!-- 이름 -->
+            <div class="mb-6">
+                <label for="id_name" class="block text-xl font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-user text-purple-500 mr-2"></i>이름
+                </label>
+                <input type="text" name="name" id="id_name" class="saju-input" placeholder="이름을 입력해주세요" required maxlength="20">
+            </div>
+
+            <!-- 성별 -->
+            <div class="mb-6">
+                <label class="block text-xl font-bold text-gray-600 mb-3">
+                    <i class="fa-solid fa-venus-mars text-purple-500 mr-2"></i>성별
+                </label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="gender" value="male" required>
+                        <span>남자</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="gender" value="female">
+                        <span>여자</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 생년월일 -->
+            <div class="mb-6">
+                <label class="block text-xl font-bold text-gray-600 mb-3">
+                    <i class="fa-solid fa-cake-candles text-purple-500 mr-2"></i>생년월일
+                </label>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <input type="number" name="birth_year" class="saju-input" placeholder="년도" required min="1940" max="2025">
+                    </div>
+                    <div>
+                        <input type="number" name="birth_month" class="saju-input" placeholder="월" required min="1" max="12">
+                    </div>
+                    <div>
+                        <input type="number" name="birth_day" class="saju-input" placeholder="일" required min="1" max="31">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 태어난 시간 -->
+            <div class="mb-6">
+                <label class="block text-xl font-bold text-gray-600 mb-3">
+                    <i class="fa-solid fa-clock text-purple-500 mr-2"></i>태어난 시간 <span class="text-gray-400 font-normal">(선택)</span>
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <input type="number" name="birth_hour" class="saju-input" placeholder="시 (0~23)" min="0" max="23">
+                    </div>
+                    <div>
+                        <input type="number" name="birth_minute" class="saju-input" placeholder="분 (0~59)" min="0" max="59">
+                    </div>
+                </div>
+                <p class="text-gray-400 text-lg mt-2 ml-1">모르시면 비워두세요</p>
+            </div>
+
+            <!-- 양력/음력 -->
+            <div class="mb-8">
+                <label class="block text-xl font-bold text-gray-600 mb-3">
+                    <i class="fa-solid fa-calendar text-purple-500 mr-2"></i>양력/음력
+                </label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="calendar_type" value="solar" checked>
+                        <span>양력</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="calendar_type" value="lunar">
+                        <span>음력</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 제출 버튼 -->
+            <button type="submit" class="w-full py-4 rounded-2xl text-white font-bold text-2xl transition-all
+                bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
+                shadow-lg hover:shadow-xl hover:-translate-y-1">
+                <i class="fa-solid fa-crystal-ball mr-2"></i>사주 분석하기
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- 결과 화면 -->
+    <div class="clay-card p-8 md:p-12" data-aos="fade-up">
+
+        {% if error %}
+        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-6 mb-8">
+            <div class="flex items-center gap-3 text-red-600">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <span class="text-xl font-bold">{{ error }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if result %}
+        <div class="markdown-body">
+            {{ result|linebreaks }}
+        </div>
+        {% endif %}
+
+        <div class="mt-10 text-center">
+            <a href="{% url 'fortune:saju' %}"
+                class="inline-block px-10 py-4 rounded-2xl text-white font-bold text-xl
+                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
+                    shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
+                <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</main>
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">
+        사주를 분석하고 있어요...<br>
+        <span class="text-lg opacity-70">잠시만 기다려주세요</span>
+    </div>
+</div>
+
+<script>
+    // 모드 토글
+    function setMode(mode) {
+        document.getElementById('modeInput').value = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    // 폼 제출 시 로딩 표시
+    document.getElementById('sajuForm')?.addEventListener('submit', function() {
+        document.getElementById('loadingOverlay').classList.add('show');
+    });
+</script>
+{% endblock %}
