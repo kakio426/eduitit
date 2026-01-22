@@ -8,5 +8,4 @@ urlpatterns = [
     path('tools/', views.tool_guide, name='tool_guide'),
     path('about/', views.about, name='about'),
     path('settings/', views.settings_view, name='settings'),
-    path('hwp-convert/', views.hwp_convert_view, name='hwp_convert'),
 ]

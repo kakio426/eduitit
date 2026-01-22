@@ -18,7 +18,7 @@ def run():
     if Product.objects.exists():
         print("Database already has products. Deleting existing key products to re-seed feature data...")
         # Only delete specific seeded products to avoid wiping real user data if any
-        Product.objects.filter(title__in=["🐎 온라인 윷놀이", "PlayAura", "스쿨잇 (Schoolit)", "인사이트", "AI 도구 가이드", "AI 프롬프트 레시피", "HWP → PDF 변환", "기사 자동 생성"]).delete()
+        Product.objects.filter(title__in=["🐎 온라인 윷놀이", "PlayAura", "스쿨잇 (Schoolit)", "인사이트", "AI 도구 가이드", "AI 프롬프트 레시피", "기사 자동 생성"]).delete()
     
     print("Seeding data...")
     
@@ -51,22 +51,6 @@ def run():
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-users", title="멀티플레이", description="최대 4개 팀까지 참여하여 긴장감 넘치는 학급 대항전을 즐기세요.")
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-dice", title="리얼 물리엔진", description="윷의 회전과 충돌을 정밀하게 계산하는 물리 엔진이 적용되었습니다.")
 
-    # HWP Converter
-    p_hwp = Product.objects.create(
-        title="HWP → PDF 변환",
-        description="선생님의 PC에 설치된 한글 프로그램을 직접 사용하여 폰트나 표 깨짐 없이 100% 완벽하게 PDF로 변환합니다.",
-        price=0,
-        is_active=True,
-        icon="fa-solid fa-file-pdf",
-        color_theme="blue",
-        service_type="tool",
-        display_order=2,
-        external_url="/hwp-convert/",
-        image="https://placehold.co/600x400/blue/white?text=HWP+to+PDF"
-    )
-    ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-shield-halved", title="강력한 보안", description="파일이 서버로 전송되지 않고 내 PC 내에서만 처리되어 안전합니다.")
-    ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-font", title="폰트 유지", description="한글 엔진을 그대로 사용하여 시스템 폰트와 표 레이아웃이 완벽하게 보존됩니다.")
-    ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-bolt", title="초고속 변환", description="로컬 실행 방식으로 대용량 파일도 눈 깜짝할 새 변환이 완료됩니다.")
 
     # AutoArticle
     p_auto = Product.objects.create(

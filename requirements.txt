@@ -21,4 +21,4 @@ google-genai
 python-pptx
 chromadb
 fpdf
-pywin32; sys_platform == "win32"
+
