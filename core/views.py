@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from products.models import Product
+from .forms import APIKeyForm
+from .models import UserProfile
+from django.contrib import messages
 
 def home(request):
     # Order by display_order first, then by creation date
@@ -43,3 +46,20 @@ def about(request):
         'students': 500, # Placeholder
     }
     return render(request, 'core/about.html', {'stats': stats})
+
+@login_required
+def settings_view(request):
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+
+    if request.method == 'POST':
+        form = APIKeyForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'API Key updated successfully.')
+    else:
+        form = APIKeyForm(instance=profile)
+    
+    return render(request, 'core/settings.html', {'form': form})

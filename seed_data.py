@@ -18,7 +18,7 @@ def run():
     if Product.objects.exists():
         print("Database already has products. Deleting existing key products to re-seed feature data...")
         # Only delete specific seeded products to avoid wiping real user data if any
-        Product.objects.filter(title__in=["🐎 온라인 윷놀이", "PlayAura", "스쿨잇 (Schoolit)", "인사이트", "AI 도구 가이드", "AI 프롬프트 레시피"]).delete()
+        Product.objects.filter(title__in=["🐎 온라인 윷놀이", "PlayAura", "스쿨잇 (Schoolit)", "인사이트", "AI 도구 가이드", "AI 프롬프트 레시피", "HWP → PDF 변환"]).delete()
     
     print("Seeding data...")
     
@@ -50,6 +50,22 @@ def run():
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-download", title="설치 불필요", description="브라우저에서 바로 실행하세요.")
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-users", title="팀 대항전", description="최대 4개 팀까지 참여 가능!")
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-dice", title="리얼한 애니메이션", description="윷 던지는 재미가 쏠쏠합니다.")
+
+    # HWP Converter
+    p_hwp = Product.objects.create(
+        title="HWP → PDF 변환",
+        description="HWP 파일을 PDF로 빠르고 정확하게 변환하세요.",
+        price=0,
+        is_active=True,
+        icon="fa-solid fa-file-pdf",
+        color_theme="blue",
+        service_type="tool",
+        display_order=2,
+        external_url="http://localhost:8001",
+        image="https://placehold.co/600x400/blue/white?text=HWP+to+PDF"
+    )
+    ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-bolt", title="빠른 변환", description="드래그 앤 드롭으로 즉시 변환.")
+    ProductFeature.objects.create(product=p_hwp, icon="fa-solid fa-shield-halved", title="보안 유지", description="파일은 서버에 저장되지 않습니다.")
 
     # PlayAura
     p_playaura = Product.objects.create(

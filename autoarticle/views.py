@@ -55,6 +55,15 @@ class ArticleCreateView(View):
         context['today'] = datetime.date.today().strftime('%Y-%m-%d')
         return render(request, 'autoarticle/wizard/step1.html', context)
 
+    def get_api_key(self, request):
+        user_key = None
+        if request.user.is_authenticated:
+            try:
+                user_key = request.user.userprofile.gemini_api_key
+            except Exception:
+                pass
+        return user_key or os.environ.get("GEMINI_API_KEY")
+
     def post(self, request):
         step = request.POST.get('step', '1')
         
@@ -78,8 +87,22 @@ class ArticleCreateView(View):
                 messages.error(request, "행사명과 주요 내용을 입력해주세요.")
                 return redirect('autoarticle:create')
 
-            # Save input data to session and redirect to Step 2
+            # Handle Image Uploads
+            uploaded_images = request.FILES.getlist('images')
+            image_paths = []
+            if uploaded_images:
+                from django.core.files.storage import FileSystemStorage
+                import uuid
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
+                for img in uploaded_images[:5]: # Limit to 5 images
+                    ext = os.path.splitext(img.name)[1]
+                    filename = f"{uuid.uuid4()}{ext}"
+                    name = fs.save(filename, img)
+                    image_paths.append(f"autoarticle/images/{name}")
+            
+            # Save input data and images to session
             request.session['article_input'] = input_data
+            request.session['article_images'] = image_paths
             return redirect('/autoarticle/?step=2')
 
         elif step == '2':
@@ -89,7 +112,7 @@ class ArticleCreateView(View):
                 messages.error(request, "입력 데이터가 없습니다. 다시 시작해주세요.")
                 return redirect('autoarticle:create')
 
-            api_key = os.environ.get("GEMINI_API_KEY")
+            api_key = self.get_api_key(request)
             rag = self.get_style_rag()
             
             try:
@@ -99,12 +122,15 @@ class ArticleCreateView(View):
                     'title': title,
                     'content': content,
                     'hashtags': hashtags,
+                    'images': request.session.get('article_images', []),
                     'original_generated_content': content
                 }
                 request.session['article_draft'] = draft
                 # Clean up input data from session
                 if 'article_input' in request.session:
                     del request.session['article_input']
+                if 'article_images' in request.session:
+                    del request.session['article_images']
                 return redirect('/autoarticle/?step=3')
             except Exception as e:
                 import traceback
@@ -113,61 +139,71 @@ class ArticleCreateView(View):
                 return redirect('autoarticle:create')
 
         elif step == '3':
-            draft = request.session.get('article_draft')
-            if not draft:
-                return redirect('autoarticle:create')
-            
-            final_title = request.POST.get('title', draft['title'])
-            final_content = request.POST.get('content', draft['content'])
-            final_tags = request.POST.get('hashtags', ' '.join(draft['hashtags'])).split()
-            
-            # Learn from style if edited
             try:
-                if draft.get('original_generated_content') and final_content != draft['original_generated_content']:
-                    rag = self.get_style_rag()
-                    if rag:
-                        rag.learn_style(
-                            original_text=draft['original_generated_content'],
-                            corrected_text=final_content,
-                            tags=draft['input_data']['tone']
-                        )
-            except Exception as e:
-                print(f"RAG Style Learning failed: {e}")
+                draft = request.session.get('article_draft')
+                if not draft:
+                    return redirect('autoarticle:create')
 
-            article = GeneratedArticle.objects.create(
-                user=request.user if request.user.is_authenticated else None,
-                school_name=draft['input_data']['school'],
-                grade=draft['input_data']['grade'],
-                event_name=draft['input_data']['event_name'],
-                location=draft['input_data']['location'],
-                event_date=draft['input_data']['date'],
-                tone=draft['input_data']['tone'],
-                keywords=draft['input_data']['keywords'],
-                title=final_title,
-                full_text=final_content,
-                hashtags=[t.strip('#') for t in final_tags],
-            )
-            
-            api_key = os.environ.get("GEMINI_API_KEY")
-            summary_points = summarize_article_for_ppt(final_content, api_key)
-            theme = request.session.get('autoarticle_theme', self.THEMES[0])
-            ppt_engine = PPTEngine(theme, article.school_name)
-            
-            article_data = {
-                'title': final_title,
-                'content': summary_points,
-                'date': article.event_date.strftime('%Y.%m.%d') if hasattr(article.event_date, 'strftime') else str(article.event_date),
-                'location': article.location,
-                'images': []
-            }
-            ppt_buffer = ppt_engine.create_presentation([article_data])
-            article.ppt_file.save(f"newsletter_{article.id}.pptx", ppt_buffer)
-            article.content_summary = '\n'.join(summary_points)
-            article.save()
-            
-            del request.session['article_draft']
-            messages.success(request, "기사가 성공적으로 저장되었습니다.")
-            return redirect('autoarticle:detail', pk=article.pk)
+                
+                final_title = request.POST.get('title', draft['title'])
+                final_content = request.POST.get('content', draft['content'])
+                final_tags = request.POST.get('hashtags', ' '.join(draft['hashtags'])).split()
+                
+                # Learn from style if edited
+                try:
+                    if draft.get('original_generated_content') and final_content != draft['original_generated_content']:
+                        rag = self.get_style_rag()
+                        if rag:
+                            rag.learn_style(
+                                original_text=draft['original_generated_content'],
+                                corrected_text=final_content,
+                                tags=draft['input_data']['tone']
+                            )
+                except Exception as e:
+                    print(f"RAG Style Learning failed: {e}")
+
+                article = GeneratedArticle.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    school_name=draft['input_data']['school'],
+                    grade=draft['input_data']['grade'],
+                    event_name=draft['input_data']['event_name'],
+                    location=draft['input_data']['location'],
+                    event_date=draft['input_data']['date'],
+                    tone=draft['input_data']['tone'],
+                    keywords=draft['input_data']['keywords'],
+                    title=final_title,
+                    full_text=final_content,
+                    hashtags=[t.strip('#') for t in final_tags],
+                    images=draft.get('images', [])
+                )
+                
+                api_key = self.get_api_key(request)
+                summary_points = summarize_article_for_ppt(final_content, api_key)
+                theme = request.session.get('autoarticle_theme', self.THEMES[0])
+                ppt_engine = PPTEngine(theme, article.school_name)
+                
+                article_data = {
+                    'title': final_title,
+                    'content': summary_points,
+                    'date': article.event_date.strftime('%Y.%m.%d') if hasattr(article.event_date, 'strftime') else str(article.event_date),
+                    'location': article.location,
+                    'images': []
+                }
+                from django.core.files.base import ContentFile
+                ppt_buffer = ppt_engine.create_presentation([article_data])
+                article.ppt_file.save(f"newsletter_{article.id}.pptx", ContentFile(ppt_buffer.getvalue()))
+                article.content_summary = '\n'.join(summary_points)
+
+                article.save()
+                
+                del request.session['article_draft']
+                messages.success(request, "기사가 성공적으로 저장되었습니다.")
+                return redirect('autoarticle:detail', pk=article.pk)
+            except Exception as e:
+                messages.error(request, f"저장 중 오류가 발생했습니다: {str(e)}")
+                return redirect('autoarticle:create')
+
+
 
         return redirect('autoarticle:create')
 

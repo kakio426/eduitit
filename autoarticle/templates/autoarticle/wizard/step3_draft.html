@@ -1,25 +1,43 @@
 {% extends 'autoarticle/wizard/base_wizard.html' %}
 {% block wizard_content %}
 <div class='clay-card p-10 bg-white shadow-clay rounded-[2rem]'>
-<h2 class='text-3xl font-bold text-gray-800 mb-6'>✍️ 기사 편집 및 저장</h2>
-<form method='post' action='{% url "autoarticle:create" %}'>
-{% csrf_token %}
-<input type='hidden' name='step' value='3'>
-<div class='space-y-6'>
-<div>
-<label class='block text-sm font-bold mb-2'>제목</label>
-<input type='text' name='title' value='{{ draft.title }}' class='w-full text-2xl font-bold p-5 border-2 rounded-2xl bg-gray-50'>
-</div>
-<div>
-<label class='block text-sm font-bold mb-2'>본문</label>
-<textarea name='content' class='w-full p-5 border-2 rounded-2xl bg-gray-50 text-xl' rows='15'>{{ draft.content }}</textarea>
-</div>
-<div>
-<label class='block text-sm font-bold mb-2'>해시태그</label>
-<input type='text' name='hashtags' value='{{ draft.hashtags|join:" " }}' class='w-full p-5 border-2 rounded-2xl bg-gray-50'>
-</div>
-<button type='submit' class='w-full py-5 bg-green-500 text-white font-bold text-2xl rounded-3xl shadow-clay hover:shadow-clay-hover transition-all'>기사 저장 완료!</button>
-</div>
-</form>
+    <h2 class='text-3xl font-bold text-gray-800 mb-6'>✍️ 기사 편집 및 저장</h2>
+    <form method='post' action='{% url "autoarticle:create" %}'>
+        {% csrf_token %}
+        <input type='hidden' name='step' value='3'>
+        <div class='space-y-6'>
+            <div>
+                <label class='block text-sm font-bold mb-2'>제목</label>
+                <input type='text' name='title' value='{{ draft.title }}'
+                    class='w-full text-2xl font-bold p-5 border-2 rounded-2xl bg-gray-50'>
+            </div>
+            <div>
+                <label class='block text-sm font-bold mb-2'>본문</label>
+                <textarea name='content' class='w-full p-5 border-2 rounded-2xl bg-gray-50 text-xl'
+                    rows='15'>{{ draft.content }}</textarea>
+            </div>
+            <div>
+                <label class='block text-sm font-bold mb-2'>해시태그</label>
+                <input type='text' name='hashtags' value='{{ draft.hashtags|join:" " }}'
+                    class='w-full p-5 border-2 rounded-2xl bg-gray-50'>
+            </div>
+
+            {% if draft.images %}
+            <div class="mt-8">
+                <label class='block text-sm font-bold mb-4'>📸 첨부된 사진</label>
+                <div class="flex flex-wrap gap-4">
+                    {% for img_path in draft.images %}
+                    <div class="relative w-32 h-32 rounded-2xl overflow-hidden shadow-clay">
+                        <img src="{{ MEDIA_URL }}{{ img_path }}" class="w-full h-full object-cover">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <button type='submit'
+                class='w-full py-5 bg-green-500 text-white font-bold text-2xl rounded-3xl shadow-clay hover:shadow-clay-hover transition-all'>기사
+                저장 완료!</button>
+        </div>
+    </form>
 </div>
 {% endblock %}
