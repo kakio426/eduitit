@@ -30,6 +30,7 @@
                     </div>
                 </div>
 
+                {% if not disabled %}
                 <form method="post" enctype="multipart/form-data" id="uploadForm" class="space-y-6">
                     {% csrf_token %}
 
@@ -57,6 +58,12 @@
                         🚀 변환 시작하기
                     </button>
                 </form>
+                {% else %}
+                <div class="text-center py-10 space-y-4">
+                    <i class="fa-solid fa-triangle-exclamation text-5xl text-amber-500"></i>
+                    <p class="text-xl text-gray-600">이 기능은 로컬 Windows 환경에서만 사용할 수 있습니다.</p>
+                </div>
+                {% endif %}
 
                 <!-- Processing UI (Hidden by default) -->
                 <div id="processingUI" class="hidden space-y-6 py-10">
@@ -152,11 +159,14 @@
     const uploadForm = document.getElementById('uploadForm');
     const processingUI = document.getElementById('processingUI');
 
-    fileInput.addEventListener('change', (e) => {
-        updateFileList(e.target.files);
-    });
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            updateFileList(e.target.files);
+        });
+    }
 
     function updateFileList(files) {
+        if (!selectedFilesUl || !fileList || !convertBtn) return;
         selectedFilesUl.innerHTML = '';
         if (files.length > 0) {
             fileList.classList.remove('hidden');
@@ -177,14 +187,18 @@
         }
     }
 
-    uploadForm.addEventListener('submit', () => {
-        uploadForm.classList.add('hidden');
-        processingUI.classList.remove('hidden');
-    });
+    if (uploadForm && processingUI) {
+        uploadForm.addEventListener('submit', () => {
+            uploadForm.classList.add('hidden');
+            processingUI.classList.remove('hidden');
+        });
+    }
 
-    ['dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
+    if (dropZone) {
+        ['dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+    }
 
     function preventDefaults(e) {
         e.preventDefault();

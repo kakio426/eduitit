@@ -1,13 +1,21 @@
 import os
-import pythoncom
-import win32com.client as win32
 import tempfile
 from pathlib import Path
+
+try:
+    import pythoncom
+    import win32com.client as win32
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 def convert_hwp_to_pdf_local(input_path, output_path):
     """
     Converts a HWP file to PDF using locally installed Hancom Office via OLE automation.
     """
+    if not HAS_WIN32:
+        raise ImportError("HWP conversion is only supported on Windows with pywin32 installed.")
+
     # Initialize COM for the current thread
     pythoncom.CoInitialize()
     hwp = None

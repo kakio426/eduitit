@@ -69,8 +69,12 @@ def hwp_convert_view(request):
     import os
     import tempfile
     from django.conf import settings
-    from .hwp_utils import convert_hwp_to_pdf_local
+    from .hwp_utils import convert_hwp_to_pdf_local, HAS_WIN32
     from django.core.files.storage import FileSystemStorage
+
+    if not HAS_WIN32:
+        messages.error(request, "HWP 변환 기능은 서버가 Windows 환경일 때만 작동합니다. 로컬 컴퓨터에서 서버를 실행해 주세요.")
+        return render(request, 'core/hwp_convert.html', {'disabled': True})
 
     result_files = []
     if request.method == 'POST':
