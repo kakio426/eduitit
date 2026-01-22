@@ -25,7 +25,7 @@ class AutoArticleUITest(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AutoArticle")
-        self.assertContains(response, "/autoarticle/")
+        self.assertContains(response, f"openQuickView({self.product.id})")
 
     def test_wizard_sidebar_navigation(self):
         """Verify that the wizard sidebar contains expected links."""
