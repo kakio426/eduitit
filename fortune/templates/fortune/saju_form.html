@@ -1,96 +1,299 @@
 {% extends 'base.html' %}
 
-{% block title %}사주 운세 - Eduitit{% endblock %}
-
 {% block extra_css %}
 <style>
-    /* 마크다운 렌더링 스타일 */
-    .markdown-body {
-        font-size: 1.4rem;
-        line-height: 1.9;
+    /* 결과 박스 애니메이션 */
+    [data-aos] {
+        pointer-events: none;
     }
-    .markdown-body h1 {
-        font-size: 2.2rem;
+
+    [data-aos].aos-animate {
+        pointer-events: auto;
+    }
+
+    /* 마크다운 스타일 커스텀 */
+    .markdown-body {
+        font-family: 'Dongle', sans-serif;
+        font-size: 1.8rem;
+        line-height: 1.6;
+        color: #4a5568;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3 {
+        color: #2d3748;
         font-weight: bold;
-        color: #6366f1;
         margin-top: 2rem;
         margin-bottom: 1rem;
+        border-bottom: 2px solid #edf2f7;
         padding-bottom: 0.5rem;
-        border-bottom: 3px solid #e9d5ff;
     }
+
+    .markdown-body h1 {
+        font-size: 3rem;
+    }
+
     .markdown-body h2 {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #4A5568;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
+        font-size: 2.5rem;
     }
+
     .markdown-body h3 {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #6366f1;
-        margin-top: 1rem;
+        font-size: 2.2rem;
     }
+
     .markdown-body p {
-        margin-bottom: 1rem;
+        margin-bottom: 1.2rem;
     }
-    .markdown-body ul, .markdown-body ol {
-        margin-left: 1.5rem;
-        margin-bottom: 1rem;
+
+    .markdown-body ul,
+    .markdown-body ol {
+        margin-bottom: 1.5rem;
+        padding-left: 2rem;
     }
+
     .markdown-body li {
         margin-bottom: 0.5rem;
     }
-    .markdown-body strong {
-        color: #7c3aed;
-        background: #f3e8ff;
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
-    .markdown-body table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1rem 0;
-        font-size: 1.2rem;
-    }
-    .markdown-body th, .markdown-body td {
-        border: 2px solid #e9d5ff;
-        padding: 12px;
-        text-align: center;
-    }
-    .markdown-body th {
-        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
-        color: white;
-        font-weight: bold;
-    }
-    .markdown-body td {
-        background: #faf5ff;
-    }
-    .markdown-body hr {
-        border: none;
-        border-top: 2px dashed #d8b4fe;
-        margin: 2rem 0;
+
+    .markdown-body blockquote {
+        border-left: 6px solid #a78bfa;
+        background: #f3f4f6;
+        padding: 1rem 1.5rem;
+        border-radius: 0 16px 16px 0;
+        margin: 1.5rem 0;
+        font-style: italic;
     }
 
-    /* 폼 스타일링 */
+    .markdown-body strong {
+        color: #7c3aed;
+        background: linear-gradient(120deg, rgba(167, 139, 250, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%);
+        background-repeat: no-repeat;
+        background-size: 100% 40%;
+        background-position: 0 80%;
+    }
+
+    /* 오행 뱃지 스타일 */
+    .element-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 18px;
+        border-radius: 100px;
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .element-badge.wood {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .element-badge.fire {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .element-badge.earth {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .element-badge.metal {
+        background: linear-gradient(135deg, #94a3b8, #64748b);
+    }
+
+    .element-badge.water {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .element-icon {
+        font-size: 2rem;
+    }
+
+    /* ========================================
+       공유 버튼 스타일
+       ======================================== */
+    .share-section {
+        margin-top: 2rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 24px;
+        border: 2px solid #e2e8f0;
+    }
+
+    .share-title {
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: #64748b;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .share-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .share-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 24px;
+        border-radius: 16px;
+        font-size: 1.4rem;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+
+    .share-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .share-btn.kakao {
+        background: #FEE500;
+        color: #3C1E1E;
+    }
+
+    .share-btn.link {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+    }
+
+    .share-btn.image {
+        background: linear-gradient(135deg, #06b6d4, #0891b2);
+        color: white;
+    }
+
+    /* ========================================
+       공유카드 스타일 (이미지 저장용)
+       ======================================== */
+    .share-card {
+        position: fixed;
+        left: -9999px;
+        width: 600px;
+        padding: 40px;
+        background: linear-gradient(145deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        border-radius: 32px;
+        color: white;
+        font-family: 'Dongle', sans-serif;
+    }
+
+    .share-card-inner {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 32px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .share-card-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .share-card-title {
+        font-size: 2.8rem;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+
+    .share-card-element {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 100px;
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 16px 0;
+    }
+
+    .share-card-element .icon {
+        font-size: 2.4rem;
+    }
+
+    .share-card-keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .share-card-keyword {
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 100px;
+        font-size: 1.6rem;
+    }
+
+    .share-card-fortune {
+        text-align: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        margin: 16px 0;
+    }
+
+    .share-card-fortune-label {
+        font-size: 1.4rem;
+        opacity: 0.9;
+        margin-bottom: 8px;
+    }
+
+    .share-card-fortune-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+
+    .share-card-footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 1.4rem;
+        opacity: 0.8;
+    }
+
+    .share-card-footer .logo {
+        font-size: 1.8rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* ========================================
+       폼 스타일링 (폰트 증가)
+       ======================================== */
     .saju-input {
         width: 100%;
-        padding: 1rem 1.25rem;
+        padding: 1.2rem 1.5rem;
         background: #E0E5EC;
         border: none;
-        border-radius: 15px;
+        border-radius: 18px;
         box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7),
-                    inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
+            inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
         color: #4A5568;
         font-family: inherit;
-        font-size: 1.4rem;
+        font-size: 1.6rem;
         transition: all 0.3s;
     }
+
     .saju-input:focus {
         outline: none;
         box-shadow: inset 8px 8px 12px 0 rgba(163, 177, 198, 0.8),
-                    inset -8px -8px 12px 0 rgba(255, 255, 255, 0.9);
+            inset -8px -8px 12px 0 rgba(255, 255, 255, 0.9);
     }
+
     .saju-input::placeholder {
         color: #a0aec0;
     }
@@ -101,28 +304,32 @@
         gap: 1rem;
         flex-wrap: wrap;
     }
+
     .radio-group label {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.25rem;
+        gap: 0.6rem;
+        padding: 0.9rem 1.5rem;
         background: #E0E5EC;
-        border-radius: 12px;
+        border-radius: 14px;
         box-shadow: 5px 5px 10px rgba(163, 177, 198, 0.5),
-                    -5px -5px 10px rgba(255, 255, 255, 0.5);
+            -5px -5px 10px rgba(255, 255, 255, 0.5);
         cursor: pointer;
         transition: all 0.3s;
-        font-size: 1.3rem;
+        font-size: 1.5rem;
     }
+
     .radio-group label:hover {
         transform: translateY(-2px);
     }
+
     .radio-group input[type="radio"] {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         accent-color: #7c3aed;
     }
-    .radio-group input[type="radio"]:checked + span {
+
+    .radio-group input[type="radio"]:checked+span {
         color: #7c3aed;
         font-weight: bold;
     }
@@ -133,30 +340,41 @@
         gap: 1rem;
         margin-bottom: 2rem;
     }
+
     .mode-btn {
         flex: 1;
-        padding: 1.25rem;
+        padding: 1.5rem;
         background: #E0E5EC;
         border: none;
-        border-radius: 20px;
+        border-radius: 22px;
         box-shadow: 7px 7px 14px rgba(163, 177, 198, 0.6),
-                    -7px -7px 14px rgba(255, 255, 255, 0.5);
-        font-size: 1.4rem;
+            -7px -7px 14px rgba(255, 255, 255, 0.5);
+        font-size: 1.6rem;
         font-weight: bold;
         color: #4A5568;
         cursor: pointer;
         transition: all 0.3s;
         text-align: center;
     }
+
     .mode-btn.active {
         background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
         color: white;
         box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.1);
     }
+
     .mode-btn:not(.active):hover {
         transform: translateY(-2px);
         box-shadow: 9px 9px 18px rgba(163, 177, 198, 0.7),
-                    -9px -9px 18px rgba(255, 255, 255, 0.6);
+            -9px -9px 18px rgba(255, 255, 255, 0.6);
+    }
+
+    .mode-btn span {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: normal;
+        margin-top: 6px;
+        opacity: 0.85;
     }
 
     /* 로딩 오버레이 */
@@ -171,25 +389,57 @@
         flex-direction: column;
         gap: 1.5rem;
     }
+
     .loading-overlay.show {
         display: flex;
     }
+
     .loading-spinner {
-        width: 60px;
-        height: 60px;
-        border: 5px solid #e9d5ff;
-        border-top: 5px solid #7c3aed;
+        width: 70px;
+        height: 70px;
+        border: 6px solid #e9d5ff;
+        border-top: 6px solid #7c3aed;
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
+
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
     }
+
     .loading-text {
-        font-size: 1.8rem;
+        font-size: 2rem;
         color: #7c3aed;
         text-align: center;
+    }
+
+    /* 복사 완료 토스트 */
+    .toast {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 16px 32px;
+        border-radius: 100px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transition: all 0.4s;
+        z-index: 9999;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
     }
 </style>
 {% endblock %}
@@ -199,8 +449,8 @@
 
     <!-- 헤더 -->
     <div class="text-center mb-12" data-aos="fade-down">
-        <div class="w-24 h-24 mx-auto mb-6 rounded-full shadow-clay-inner flex items-center justify-center">
-            <span class="text-5xl">🔮</span>
+        <div class="w-28 h-28 mx-auto mb-6 rounded-full shadow-clay-inner flex items-center justify-center">
+            <span class="text-6xl">🔮</span>
         </div>
         <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-4">
             사주 <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-500">운세</span>
@@ -219,17 +469,17 @@
 
             <!-- 모드 선택 -->
             <div class="mb-8">
-                <label class="block text-xl font-bold text-gray-600 mb-4">
+                <label class="block text-2xl font-bold text-gray-600 mb-4">
                     <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>상담 모드
                 </label>
                 <div class="mode-toggle">
                     <button type="button" class="mode-btn active" data-mode="teacher" onclick="setMode('teacher')">
                         <i class="fa-solid fa-chalkboard-user mr-2"></i>교사 모드
-                        <span class="block text-sm font-normal mt-1 opacity-80">학교생활, 학생 케미, 동료 관계</span>
+                        <span>학교생활, 학생 케미, 동료 관계</span>
                     </button>
                     <button type="button" class="mode-btn" data-mode="general" onclick="setMode('general')">
                         <i class="fa-solid fa-star mr-2"></i>일반 모드
-                        <span class="block text-sm font-normal mt-1 opacity-80">재물, 연애, 건강, 직업운</span>
+                        <span>재물, 연애, 건강, 직업운</span>
                     </button>
                 </div>
                 <input type="hidden" name="mode" id="modeInput" value="teacher">
@@ -237,15 +487,16 @@
 
             <!-- 이름 -->
             <div class="mb-6">
-                <label for="id_name" class="block text-xl font-bold text-gray-600 mb-2">
+                <label for="id_name" class="block text-2xl font-bold text-gray-600 mb-3">
                     <i class="fa-solid fa-user text-purple-500 mr-2"></i>이름
                 </label>
-                <input type="text" name="name" id="id_name" class="saju-input" placeholder="이름을 입력해주세요" required maxlength="20">
+                <input type="text" name="name" id="id_name" class="saju-input" placeholder="이름을 입력해주세요" required
+                    maxlength="20">
             </div>
 
             <!-- 성별 -->
             <div class="mb-6">
-                <label class="block text-xl font-bold text-gray-600 mb-3">
+                <label class="block text-2xl font-bold text-gray-600 mb-3">
                     <i class="fa-solid fa-venus-mars text-purple-500 mr-2"></i>성별
                 </label>
                 <div class="radio-group">
@@ -262,41 +513,47 @@
 
             <!-- 생년월일 -->
             <div class="mb-6">
-                <label class="block text-xl font-bold text-gray-600 mb-3">
+                <label class="block text-2xl font-bold text-gray-600 mb-3">
                     <i class="fa-solid fa-cake-candles text-purple-500 mr-2"></i>생년월일
                 </label>
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <input type="number" name="birth_year" class="saju-input" placeholder="년도" required min="1940" max="2025">
+                        <input type="number" name="birth_year" class="saju-input" placeholder="년도" required min="1940"
+                            max="2025">
                     </div>
                     <div>
-                        <input type="number" name="birth_month" class="saju-input" placeholder="월" required min="1" max="12">
+                        <input type="number" name="birth_month" class="saju-input" placeholder="월" required min="1"
+                            max="12">
                     </div>
                     <div>
-                        <input type="number" name="birth_day" class="saju-input" placeholder="일" required min="1" max="31">
+                        <input type="number" name="birth_day" class="saju-input" placeholder="일" required min="1"
+                            max="31">
                     </div>
                 </div>
             </div>
 
             <!-- 태어난 시간 -->
             <div class="mb-6">
-                <label class="block text-xl font-bold text-gray-600 mb-3">
-                    <i class="fa-solid fa-clock text-purple-500 mr-2"></i>태어난 시간 <span class="text-gray-400 font-normal">(선택)</span>
+                <label class="block text-2xl font-bold text-gray-600 mb-3">
+                    <i class="fa-solid fa-clock text-purple-500 mr-2"></i>태어난 시간 <span
+                        class="text-gray-400 font-normal text-xl">(선택)</span>
                 </label>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <input type="number" name="birth_hour" class="saju-input" placeholder="시 (0~23)" min="0" max="23">
+                        <input type="number" name="birth_hour" class="saju-input" placeholder="시 (0~23)" min="0"
+                            max="23">
                     </div>
                     <div>
-                        <input type="number" name="birth_minute" class="saju-input" placeholder="분 (0~59)" min="0" max="59">
+                        <input type="number" name="birth_minute" class="saju-input" placeholder="분 (0~59)" min="0"
+                            max="59">
                     </div>
                 </div>
-                <p class="text-gray-400 text-lg mt-2 ml-1">모르시면 비워두세요</p>
+                <p class="text-gray-400 text-xl mt-3 ml-1">모르시면 비워두세요</p>
             </div>
 
             <!-- 양력/음력 -->
             <div class="mb-8">
-                <label class="block text-xl font-bold text-gray-600 mb-3">
+                <label class="block text-2xl font-bold text-gray-600 mb-3">
                     <i class="fa-solid fa-calendar text-purple-500 mr-2"></i>양력/음력
                 </label>
                 <div class="radio-group">
@@ -312,7 +569,7 @@
             </div>
 
             <!-- 제출 버튼 -->
-            <button type="submit" class="w-full py-4 rounded-2xl text-white font-bold text-2xl transition-all
+            <button type="submit" class="w-full py-5 rounded-2xl text-white font-bold text-2xl transition-all
                 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                 shadow-lg hover:shadow-xl hover:-translate-y-1">
                 <i class="fa-solid fa-crystal-ball mr-2"></i>사주 분석하기
@@ -322,7 +579,7 @@
 
     {% else %}
     <!-- 결과 화면 -->
-    <div class="clay-card p-8 md:p-12" data-aos="fade-up">
+    <div class="clay-card p-8 md:p-12" data-aos="fade-up" id="resultCard">
 
         {% if error %}
         <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-6 mb-8">
@@ -334,34 +591,115 @@
         {% endif %}
 
         {% if result %}
-        <div class="markdown-body">
-            {{ result|linebreaks }}
+        <!-- 오행 배지 (JavaScript로 동적 생성) -->
+        <div id="elementBadge" class="text-center mb-6"></div>
+
+        <!-- 마크다운 결과 -->
+        <div class="markdown-body" id="markdownResult"></div>
+
+        <!-- 공유 섹션 -->
+        <div class="share-section">
+            <div class="share-title">
+                <i class="fa-solid fa-share-nodes"></i>
+                친구에게 공유하기
+            </div>
+            <div class="share-buttons">
+                <button class="share-btn kakao" onclick="shareToKakao()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 3C6.48 3 2 6.48 2 10.5c0 2.53 1.67 4.75 4.17 6.02-.18.65-.66 2.35-.75 2.72-.12.47.17.46.36.34.15-.1 2.38-1.61 3.35-2.27.62.09 1.24.14 1.87.14 5.52 0 10-3.48 10-7.95S17.52 3 12 3z" />
+                    </svg>
+                    카카오톡
+                </button>
+                <button class="share-btn link" onclick="copyLink()">
+                    <i class="fa-solid fa-link"></i>
+                    링크 복사
+                </button>
+                <button class="share-btn image" onclick="saveAsImage()">
+                    <i class="fa-solid fa-image"></i>
+                    이미지 저장
+                </button>
+            </div>
         </div>
         {% endif %}
 
         <div class="mt-10 text-center">
-            <a href="{% url 'fortune:saju' %}"
-                class="inline-block px-10 py-4 rounded-2xl text-white font-bold text-xl
+            <a href="{% url 'fortune:saju' %}" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
                     bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                     shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
                 <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
             </a>
         </div>
     </div>
+
+    <!-- 공유카드 (이미지 저장용, 화면에 보이지 않음) -->
+    <div id="shareCardContainer" class="share-card">
+        <div class="share-card-inner">
+            <div class="share-card-header">
+                <div class="share-card-title" id="shareCardTitle">🔮 사주 분석</div>
+                <div class="share-card-element" id="shareCardElement">
+                    <span class="icon">⚔️</span>
+                    <span id="shareCardElementText">경금(庚金)</span>
+                </div>
+            </div>
+            <div class="share-card-keywords" id="shareCardKeywords">
+                <span class="share-card-keyword">"새로운 시작"</span>
+                <span class="share-card-keyword">"도전"</span>
+                <span class="share-card-keyword">"성장"</span>
+            </div>
+            <div class="share-card-fortune">
+                <div class="share-card-fortune-label">🍀 행운의 색</div>
+                <div class="share-card-fortune-value" id="shareCardLuckyColor">파란색</div>
+            </div>
+            <div class="share-card-footer">
+                <div class="logo">🔮 Eduitit 사주 운세</div>
+                <div style="margin-top: 8px; font-size: 1.2rem;">eduitit.up.railway.app</div>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
 </main>
+
+<!-- 토스트 메시지 -->
+<div id="toast" class="toast">
+    <i class="fa-solid fa-check-circle mr-2"></i>
+    <span id="toastMessage">링크가 복사되었습니다!</span>
+</div>
 
 <!-- 로딩 오버레이 -->
 <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-spinner"></div>
     <div class="loading-text">
         사주를 분석하고 있어요...<br>
-        <span class="text-lg opacity-70">잠시만 기다려주세요</span>
+        <span class="text-xl opacity-70">잠시만 기다려주세요</span>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- 마크다운 파서 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- 이미지 저장용 라이브러리 -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<!-- 카카오 SDK -->
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script>
 
 <script>
+    // 오행별 이모티콘 매핑
+    const ELEMENT_MAP = {
+        '갑': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무' },
+        '을': { element: 'wood', icon: '🌿', name: '을목(乙木)', desc: '풀, 넝쿨' },
+        '병': { element: 'fire', icon: '☀️', name: '병화(丙火)', desc: '태양' },
+        '정': { element: 'fire', icon: '🕯️', name: '정화(丁火)', desc: '촛불' },
+        '무': { element: 'earth', icon: '⛰️', name: '무토(戊토)', desc: '큰 산' },
+        '기': { element: 'earth', icon: '🏔️', name: '기토(己土)', desc: '논밭' },
+        '경': { element: 'metal', icon: '⚔️', name: '경금(庚金)', desc: '칼, 바위' },
+        '신': { element: 'metal', icon: '💎', name: '신금(辛金)', desc: '보석' },
+        '임': { element: 'water', icon: '🌊', name: '임수(壬水)', desc: '바다' },
+        '계': { element: 'water', icon: '💧', name: '계수(癸水)', desc: '비, 이슬' }
+    };
+
     // 모드 토글
     function setMode(mode) {
         document.getElementById('modeInput').value = mode;
@@ -374,8 +712,207 @@
     }
 
     // 폼 제출 시 로딩 표시
-    document.getElementById('sajuForm')?.addEventListener('submit', function() {
+    document.getElementById('sajuForm')?.addEventListener('submit', function () {
         document.getElementById('loadingOverlay').classList.add('show');
     });
+
+    // 토스트 메시지
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMessage');
+        if (toast && toastMsg) {
+            toastMsg.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    }
 </script>
+
+{% if result %}
+{{ result|json_script:"saju-result-data" }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const resultDataElem = document.getElementById('saju-result-data');
+        if (resultDataElem) {
+            const rawMarkdown = JSON.parse(resultDataElem.textContent);
+
+            // marked 옵션 설정
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+
+            // 마크다운을 HTML로 변환
+            const htmlContent = marked.parse(rawMarkdown);
+            document.getElementById('markdownResult').innerHTML = htmlContent;
+
+            // 오행 배지 생성
+            detectAndShowElement(rawMarkdown);
+
+            // 공유카드 업데이트
+            updateShareCard(rawMarkdown);
+        }
+    });
+
+    // 일간 감지 및 오행 배지 표시
+    function detectAndShowElement(markdown) {
+        const badgeContainer = document.getElementById('elementBadge');
+        if (!badgeContainer) return;
+
+        // 일간(천간) 감지 패턴
+        const patterns = [
+            /일간[^가-힣]*[:\s]*[^\s]*\**(갑|을|병|정|무|기|경|신|임|계)/i,
+            /\**(갑|을|병|정|무|기|경|신|임|계)\s*\(/i,
+            /천간[^가-힣]*(갑|을|병|정|무|기|경|신|임|계)/i
+        ];
+
+        let detected = null;
+        for (const pattern of patterns) {
+            const match = markdown.match(pattern);
+            if (match) {
+                detected = match[1];
+                break;
+            }
+        }
+
+        if (detected && ELEMENT_MAP[detected]) {
+            const info = ELEMENT_MAP[detected];
+            badgeContainer.innerHTML = `
+                <div class="element-badge ${info.element}">
+                    <span class="element-icon">${info.icon}</span>
+                    <span>${info.name}</span>
+                    <span style="opacity: 0.8; font-weight: normal;">- ${info.desc}</span>
+                </div>
+            `;
+        }
+    }
+
+    // 공유카드 업데이트
+    function updateShareCard(markdown) {
+        // 제목에서 이름 추출
+        const nameMatch = markdown.match(/# 🔮\s*([^\s]+)\s*(선생님|님)/);
+        if (nameMatch) {
+            const titleElem = document.getElementById('shareCardTitle');
+            if (titleElem) titleElem.textContent = `🔮 ${nameMatch[1]} ${nameMatch[2]}의 사주`;
+        }
+
+        // 일간 정보 업데이트
+        for (const [char, info] of Object.entries(ELEMENT_MAP)) {
+            if (markdown.includes(char)) {
+                const iconElem = document.getElementById('shareCardElement')?.querySelector('.icon');
+                const textElem = document.getElementById('shareCardElementText');
+                if (iconElem) iconElem.textContent = info.icon;
+                if (textElem) textElem.textContent = info.name;
+                break;
+            }
+        }
+
+        // 키워드 추출 (올해의 키워드 섹션에서)
+        const keywordMatch = markdown.match(/키워드[^"]*"([^"]+)"[^"]*"([^"]+)"[^"]*"([^"]+)"/);
+        if (keywordMatch) {
+            const keywordsContainer = document.getElementById('shareCardKeywords');
+            if (keywordsContainer) {
+                keywordsContainer.innerHTML = `
+                    <span class="share-card-keyword">"${keywordMatch[1]}"</span>
+                    <span class="share-card-keyword">"${keywordMatch[2]}"</span>
+                    <span class="share-card-keyword">"${keywordMatch[3]}"</span>
+                `;
+            }
+        }
+
+        // 행운의 색 추출
+        const colorMatch = markdown.match(/행운[^:]*색[^:]*[:：]\s*([가-힣]+색?)/);
+        if (colorMatch) {
+            const colorElem = document.getElementById('shareCardLuckyColor');
+            if (colorElem) colorElem.textContent = colorMatch[1];
+        }
+    }
+
+    // 카카오톡 공유
+    function shareToKakao() {
+        try {
+            if (!Kakao.isInitialized()) {
+                showToast('카카오톡 앱키가 설정되지 않았습니다. 링크를 복사해주세요.');
+                return;
+            }
+
+            Kakao.Share.sendDefault({
+                objectType: 'feed',
+                content: {
+                    title: '🔮 AI 사주 분석 결과',
+                    description: 'Eduitit에서 무료로 사주를 봤어요! 나도 해보세요 🌟',
+                    imageUrl: 'https://placehold.co/600x400/7c3aed/white?text=🔮+사주+운세',
+                    link: {
+                        mobileWebUrl: window.location.href,
+                        webUrl: window.location.href,
+                    },
+                },
+                buttons: [
+                    {
+                        title: '나도 사주보기',
+                        link: {
+                            mobileWebUrl: window.location.origin + '/fortune/saju/',
+                            webUrl: window.location.origin + '/fortune/saju/',
+                        },
+                    },
+                ],
+            });
+        } catch (e) {
+            if (navigator.share) {
+                navigator.share({
+                    title: '🔮 AI 사주 분석',
+                    text: 'Eduitit에서 무료로 사주를 봤어요!',
+                    url: window.location.origin + '/fortune/saju/'
+                });
+            } else {
+                copyLink();
+            }
+        }
+    }
+
+    // 링크 복사
+    function copyLink() {
+        const url = window.location.origin + '/fortune/saju/';
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('링크가 복사되었습니다!');
+        }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('링크가 복사되었습니다!');
+        });
+    }
+
+    // 이미지 저장
+    function saveAsImage() {
+        const shareCard = document.getElementById('shareCardContainer');
+        if (!shareCard) return;
+
+        shareCard.style.left = '0';
+        shareCard.style.position = 'absolute';
+        shareCard.style.zIndex = '-1';
+
+        html2canvas(shareCard, {
+            backgroundColor: null,
+            scale: 2,
+            useCORS: true
+        }).then(canvas => {
+            shareCard.style.left = '-9999px';
+            const link = document.createElement('a');
+            link.download = 'saju-result.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('이미지가 저장되었습니다!');
+        }).catch(err => {
+            console.error(err);
+            showToast('이미지 저장에 실패했습니다.');
+        });
+    }
+</script>
+{% endif %}
 {% endblock %}
