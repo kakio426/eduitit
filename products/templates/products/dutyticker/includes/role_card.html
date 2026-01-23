@@ -3,13 +3,13 @@
 
     <!-- State 1: Broadcast Notice (Hidden by default) -->
     <div id="broadcastState"
-        class="hidden h-full flex flex-col justify-center items-center p-12 bg-red-500 text-white transition-all duration-500">
+        class="hidden h-full flex flex-col justify-center items-center p-8 md:p-12 bg-gradient-to-br from-red-500 to-red-600 text-white transition-all duration-500 rounded-[30px]">
         <div class="flex flex-col items-center text-center w-full">
             <span
-                class="inline-block bg-white text-red-500 px-10 py-3 rounded-full text-4xl font-black mb-12 animate-pulse shadow-lg">
+                class="inline-block bg-white text-red-500 px-8 md:px-10 py-2 md:py-3 rounded-full text-3xl md:text-4xl font-bold mb-8 md:mb-12 animate-pulse shadow-lg">
                 NOTICE
             </span>
-            <div id="broadcastMessageDisplay" class="font-black text-5xl break-keep leading-tight">
+            <div id="broadcastMessageDisplay" class="font-bold text-4xl md:text-5xl break-keep leading-tight font-hand">
                 메시지를 불러오는 중...
             </div>
         </div>
@@ -17,38 +17,38 @@
 
     <!-- State 2: Empty State (Hidden by default) -->
     <div id="emptyState"
-        class="hidden h-full flex items-center justify-center p-12 bg-[var(--bg-card)] transition-all duration-500">
-        <p class="text-3xl text-[var(--text-muted)] font-bold">현재 예정된 역할이 없습니다</p>
+        class="hidden h-full flex items-center justify-center p-8 md:p-12 bg-[#E0E5EC] transition-all duration-500 rounded-[30px]">
+        <p class="text-2xl md:text-3xl text-gray-400 font-bold font-hand">현재 예정된 역할이 없습니다</p>
     </div>
 
     <!-- State 3: Normal Role State (Visible by default) -->
     <div id="roleState"
-        class="h-full flex flex-col justify-between p-12 bg-[var(--bg-card)] cursor-pointer clay-card-hover transition-all duration-300">
+        class="h-full flex flex-col justify-between p-8 md:p-12 bg-[#E0E5EC] cursor-pointer hover:shadow-clay-hover transition-all duration-300 rounded-[30px]">
         <div class="flex flex-col">
-            <div class="flex justify-between items-start mb-10">
+            <div class="flex justify-between items-start mb-6 md:mb-10">
                 <span
-                    class="inline-block bg-[var(--accent)] text-white px-8 py-3 rounded-2xl text-2xl font-black shadow-lg animate-bounce-subtle">
+                    class="inline-block bg-purple-500 text-white px-6 md:px-8 py-2 md:py-3 rounded-2xl text-xl md:text-2xl font-bold shadow-lg animate-bounce-subtle">
                     NOW
                 </span>
-                <span id="roleTimeSlot" class="text-3xl font-bold text-[var(--text-muted)]">
+                <span id="roleTimeSlot" class="text-2xl md:text-3xl font-bold text-gray-400 font-hand">
                     쉬는시간
                 </span>
             </div>
 
             <div id="roleNameDisplay"
-                class="font-black text-6xl tracking-tighter text-[var(--text-main)] mb-6 leading-none">
+                class="font-bold text-5xl md:text-6xl tracking-tight text-gray-700 mb-4 md:mb-6 leading-none">
                 역할 이름
             </div>
         </div>
 
-        <div class="mt-12 pt-10 border-t-2 border-white/40">
-            <div class="flex items-end justify-between">
+        <div class="mt-8 md:mt-12 pt-6 md:pt-10 border-t-2 border-white/50">
+            <div class="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
                 <div class="flex flex-col gap-2">
-                    <p class="text-xl font-black text-[var(--accent)] uppercase tracking-widest opacity-80">Assignee</p>
-                    <p id="roleAssigneeName" class="text-6xl lg:text-7xl font-black text-[var(--text-main)]">담당학생</p>
+                    <p class="text-lg md:text-xl font-bold text-purple-500 uppercase tracking-widest opacity-80">Assignee</p>
+                    <p id="roleAssigneeName" class="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-700 font-hand">담당학생</p>
                 </div>
-                <div id="roleDescriptionContainer" class="hidden lg:block max-w-sm clay-inner bg-white/20 p-8">
-                    <p id="roleDescriptionText" class="text-2xl font-bold text-[var(--text-main)] leading-relaxed">
+                <div id="roleDescriptionContainer" class="hidden lg:block max-w-sm shadow-clay-inner bg-white/30 p-6 md:p-8 rounded-[20px]">
+                    <p id="roleDescriptionText" class="text-xl md:text-2xl font-bold text-gray-600 leading-relaxed font-hand">
                         상세 내용입니다.
                     </p>
                 </div>
@@ -58,7 +58,7 @@
 </div>
 
 <style>
-    /* Autofit text simulation for simple implementation */
+    /* Autofit text simulation */
     #roleNameDisplay,
     #broadcastMessageDisplay {
         display: -webkit-box;

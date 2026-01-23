@@ -1,41 +1,46 @@
-{% extends 'products/dutyticker/base_dutyticker.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
+{% block title %}DutyTicker - 교실 현황판{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'products/dutyticker/css/dutyticker.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="min-h-screen p-10 transition-colors duration-500">
+<div class="dutyticker-container min-h-screen p-6 md:p-10 pt-28 transition-colors duration-500">
     <!-- Header -->
-    <header class="flex justify-between items-end mb-12">
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
         <div class="space-y-2">
-            <h1 class="text-6xl font-black tracking-tighter text-[var(--text-main)]"
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight text-gray-700"
                 style="text-shadow: 4px 4px 8px rgba(163, 177, 198, 0.4);">DUTYTICKER</h1>
-            <p class="text-2xl text-[var(--text-muted)] font-black uppercase tracking-[0.2em] ml-1">Classroom Status
-                Board</p>
+            <p class="text-2xl md:text-3xl text-gray-400 font-hand uppercase tracking-[0.15em] ml-1">Classroom Status Board</p>
         </div>
-        <div id="digitalClock" class="text-right clay-card px-10 py-6">
-            <div class="text-5xl font-black tracking-tighter tabular-nums text-[var(--text-main)]" id="clockTime">
+        <div id="digitalClock" class="clay-card px-8 py-4 md:px-10 md:py-6">
+            <div class="text-4xl md:text-5xl font-bold tracking-tighter tabular-nums text-gray-700" id="clockTime">
                 00:00:00</div>
-            <div class="text-lg text-[var(--text-muted)] font-black uppercase tracking-widest mt-1" id="clockDate">0000.
-                0. 0. Day</div>
+            <div class="text-lg md:text-xl text-gray-400 font-hand uppercase tracking-widest mt-1" id="clockDate">
+                0000. 0. 0. Day</div>
         </div>
     </header>
 
     <!-- Main Grid -->
-    <main class="grid grid-cols-1 lg:grid-cols-12 gap-10 h-[calc(100vh-220px)]">
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 min-h-[60vh]">
         <!-- Left Column: Current Role & Timer (7/12) -->
         <div class="lg:col-span-7 flex flex-col gap-6">
-            <!-- Current Role Card Placeholder -->
-            <div id="currentRoleContainer" class="flex-grow">
+            <!-- Current Role Card -->
+            <div id="currentRoleContainer" class="flex-grow min-h-[300px]">
                 {% include 'products/dutyticker/includes/role_card.html' %}
             </div>
 
-            <!-- Timer Card Placeholder -->
-            <div class="h-64">
+            <!-- Timer Card -->
+            <div class="h-56 md:h-64">
                 {% include 'products/dutyticker/includes/timer_card.html' %}
             </div>
         </div>
 
         <!-- Right Column: Timeline/List (5/12) -->
-        <div class="lg:col-span-5 h-full overflow-hidden">
+        <div class="lg:col-span-5 min-h-[400px] lg:h-auto overflow-hidden">
             {% include 'products/dutyticker/includes/timeline.html' %}
         </div>
     </main>
@@ -47,22 +52,15 @@
     <div id="alertOverlayContainer"></div>
 
     <!-- Floating Action Button -->
-    <div class="fixed bottom-10 right-10 z-[100] flex flex-col gap-4 items-center">
-        <!-- Admin Link -->
-        <a href="{% url 'dashboard' %}"
-            class="p-4 bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-full shadow-lg border border-[var(--border)] transition-colors"
-            title="이전으로 돌아가기">
-            <i class="fa-solid fa-arrow-left text-xl"></i>
-        </a>
-
+    <div class="fixed bottom-6 md:bottom-10 right-6 md:right-10 z-[90] flex flex-col gap-4 items-center">
         <!-- Broadcast Button -->
         <button id="broadcastBtn"
-            class="p-6 rounded-full shadow-2xl transition-all relative overflow-hidden bg-[var(--accent)] text-white hover:scale-105 active:scale-95"
+            class="p-5 md:p-6 rounded-full shadow-clay transition-all relative overflow-hidden bg-purple-500 text-white hover:scale-105 hover:shadow-clay-hover active:scale-95"
             title="새 방송 알림">
             <div id="broadcastBtnSpin"
-                class="absolute inset-0 border-4 border-white/20 rounded-full border-t-white hidden"></div>
+                class="absolute inset-0 border-4 border-white/20 rounded-full border-t-white hidden animate-spin"></div>
             <div class="relative z-10">
-                <i id="broadcastIcon" class="fa-solid fa-bullhorn text-4xl"></i>
+                <i id="broadcastIcon" class="fa-solid fa-bullhorn text-3xl md:text-4xl"></i>
             </div>
         </button>
     </div>
@@ -86,10 +84,15 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Initialize Main App Logic (to be implemented in dutyticker.js)
+    // Initialize Main App Logic
     document.addEventListener('DOMContentLoaded', () => {
         window.dtApp = new DutyTickerManager();
         window.dtApp.init();
+
+        // AOS refresh for dynamic content
+        if (typeof AOS !== 'undefined') {
+            AOS.refresh();
+        }
     });
 </script>
 {% endblock %}
