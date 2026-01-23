@@ -161,10 +161,13 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # 키 누락 시 로그 출력
+import logging
+logger = logging.getLogger(__name__)
+
 if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['client_id']:
-    print("⚠️ WARNING: NAVER_CLIENT_ID is not set in environment variables!")
+    logger.warning("NAVER_CLIENT_ID is not set in environment variables!")
 if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['client_id']:
-    print("⚠️ WARNING: KAKAO_CLIENT_ID is not set in environment variables!")
+    logger.warning("KAKAO_CLIENT_ID is not set in environment variables!")
 
 
 # Internationalization
