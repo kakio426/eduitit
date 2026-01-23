@@ -1,28 +1,29 @@
 :root {
   --bg-page: #E0E5EC;
-  --bg-card: #FFFFFF;
-  --bg-accent: rgba(139, 92, 246, 0.05);
+  --bg-card: #E0E5EC;
+  /* Same as page but defined by shadow */
+  --bg-accent: rgba(139, 92, 246, 0.08);
   --accent: #8B5CF6;
-  --accent-hover: #A78BFA;
+  --accent-hover: #7C3AED;
   --accent-bright: #FACC15;
   --accent-bright-text: #1F2937;
-  --text-main: #374151;
-  --text-muted: #9CA3AF;
-  --border: rgba(163, 177, 198, 0.3);
+  --text-main: #4A5568;
+  --text-muted: #718096;
+  --border: rgba(255, 255, 255, 0.4);
 
-  /* Claymorphism shadows */
-  --shadow-clay: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
-  --shadow-clay-inner: inset 6px 6px 10px #a3b1c6, inset -6px -6px 10px #ffffff;
-  --shadow-clay-hover: 12px 12px 20px #a3b1c6, -12px -12px 20px #ffffff;
+  /* Premium Claymorphism shadows (More intense) */
+  --shadow-clay: 12px 12px 24px #bebebe, -12px -12px 24px #ffffff;
+  --shadow-clay-inner: inset 8px 8px 16px #bebebe, inset -8px -8px 16px #ffffff;
+  --shadow-clay-hover: 16px 16px 32px #bebebe, -16px -16px 32px #ffffff;
 
-  /* Typography scale */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 3rem;
+  /* Typography scale - Refined for readability */
+  --text-xs: 0.875rem;
+  --text-sm: 1rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.5rem;
+  --text-xl: 1.875rem;
+  --text-2xl: 2.5rem;
+  --text-3xl: 3.5rem;
 }
 
 [data-theme='nature'] {
@@ -139,4 +140,51 @@
 .fade-exit-active {
   opacity: 0;
   transition: opacity 300ms ease-out;
+}
+
+/* Premium Component Styles */
+.clay-card {
+  background: var(--bg-card);
+  border-radius: 2rem;
+  box-shadow: var(--shadow-clay);
+  border: 1px solid var(--border);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.clay-card-hover:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: var(--shadow-clay-hover);
+}
+
+.clay-inner {
+  box-shadow: var(--shadow-clay-inner);
+  border-radius: 1.5rem;
+}
+
+.clay-btn {
+  background: var(--accent);
+  color: white;
+  border-radius: 1.5rem;
+  box-shadow: 4px 4px 10px rgba(139, 92, 246, 0.3), -4px -4px 10px rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.clay-btn:active {
+  box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.1);
+  transform: scale(0.98);
+}
+
+/* Typography Overrides */
+h1,
+h2,
+h3,
+h4,
+h5,
+p {
+  letter-spacing: -0.02em;
+}
+
+.font-hand {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 500;
 }

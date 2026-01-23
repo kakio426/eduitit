@@ -1,15 +1,15 @@
-<!-- Role Card Component (Ported from CurrentRoleCard.tsx) -->
-<div id="roleCardRoot" class="h-full relative overflow-hidden rounded-[2.5rem]" style="box-shadow: var(--shadow-clay);">
+<!-- Role Card Component -->
+<div id="roleCardRoot" class="h-full relative overflow-hidden clay-card">
 
     <!-- State 1: Broadcast Notice (Hidden by default) -->
     <div id="broadcastState"
-        class="hidden h-full flex flex-col justify-center items-center p-10 bg-[var(--accent-bright)] text-[var(--accent-bright-text)] transition-all duration-500">
+        class="hidden h-full flex flex-col justify-center items-center p-12 bg-red-500 text-white transition-all duration-500">
         <div class="flex flex-col items-center text-center w-full">
             <span
-                class="inline-block bg-[var(--text-main)] text-[var(--bg-page)] px-8 py-3 rounded-full text-3xl font-black mb-12 animate-pulse">
+                class="inline-block bg-white text-red-500 px-10 py-3 rounded-full text-4xl font-black mb-12 animate-pulse shadow-lg">
                 NOTICE
             </span>
-            <div id="broadcastMessageDisplay" class="font-black text-6xl break-keep">
+            <div id="broadcastMessageDisplay" class="font-black text-5xl break-keep leading-tight">
                 메시지를 불러오는 중...
             </div>
         </div>
@@ -17,38 +17,38 @@
 
     <!-- State 2: Empty State (Hidden by default) -->
     <div id="emptyState"
-        class="hidden h-full flex items-center justify-center p-8 bg-[var(--bg-card)] border border-[var(--border)] transition-all duration-500">
-        <p class="text-3xl text-[var(--text-muted)]">현재 예정된 역할이 없습니다</p>
+        class="hidden h-full flex items-center justify-center p-12 bg-[var(--bg-card)] transition-all duration-500">
+        <p class="text-3xl text-[var(--text-muted)] font-bold">현재 예정된 역할이 없습니다</p>
     </div>
 
     <!-- State 3: Normal Role State (Visible by default) -->
     <div id="roleState"
-        class="h-full flex flex-col justify-between p-10 bg-[var(--accent-bright)] text-[var(--accent-bright-text)] cursor-pointer hover:scale-[1.01] transition-all duration-300 shadow-2xl border-none">
+        class="h-full flex flex-col justify-between p-12 bg-[var(--bg-card)] cursor-pointer clay-card-hover transition-all duration-300">
         <div class="flex flex-col">
-            <div class="flex justify-between items-start mb-6">
+            <div class="flex justify-between items-start mb-10">
                 <span
-                    class="inline-block bg-[var(--text-main)] text-[var(--bg-page)] px-6 py-2 rounded-full text-2xl font-bold animate-pulse">
+                    class="inline-block bg-[var(--accent)] text-white px-8 py-3 rounded-2xl text-2xl font-black shadow-lg animate-bounce-subtle">
                     NOW
                 </span>
-                <span id="roleTimeSlot" class="text-3xl font-bold opacity-80">
+                <span id="roleTimeSlot" class="text-3xl font-bold text-[var(--text-muted)]">
                     쉬는시간
                 </span>
             </div>
 
-            <div id="roleNameDisplay" class="font-black text-4xl tracking-tight break-keep mb-4">
+            <div id="roleNameDisplay"
+                class="font-black text-6xl tracking-tighter text-[var(--text-main)] mb-6 leading-none">
                 역할 이름
             </div>
         </div>
 
-        <div class="mt-8 pt-8 border-t-4 border-[var(--bg-page)]/10">
+        <div class="mt-12 pt-10 border-t-2 border-white/40">
             <div class="flex items-end justify-between">
-                <div>
-                    <p class="text-lg font-bold mb-2 opacity-60 uppercase tracking-widest">Assignee</p>
-                    <p id="roleAssigneeName" class="text-4xl lg:text-5xl font-black">담당학생</p>
+                <div class="flex flex-col gap-2">
+                    <p class="text-xl font-black text-[var(--accent)] uppercase tracking-widest opacity-80">Assignee</p>
+                    <p id="roleAssigneeName" class="text-6xl lg:text-7xl font-black text-[var(--text-main)]">담당학생</p>
                 </div>
-                <div id="roleDescriptionContainer"
-                    class="hidden lg:block max-w-sm bg-[var(--bg-page)]/10 p-5 rounded-3xl backdrop-blur-sm">
-                    <p id="roleDescriptionText" class="text-xl font-bold leading-relaxed">
+                <div id="roleDescriptionContainer" class="hidden lg:block max-w-sm clay-inner bg-white/20 p-8">
+                    <p id="roleDescriptionText" class="text-2xl font-bold text-[var(--text-main)] leading-relaxed">
                         상세 내용입니다.
                     </p>
                 </div>
