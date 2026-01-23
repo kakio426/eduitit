@@ -32,12 +32,22 @@
     </div>
 
     <!-- Description Card -->
-    <div class="relative">
-        <div class="absolute -left-4 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-400 to-blue-400 rounded-full">
+    <div class="space-y-8">
+        {% if product.lead_text %}
+        <div class="relative">
+            <div class="absolute -left-4 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-400 to-blue-400 rounded-full">
+            </div>
+            <p class="text-4xl md:text-5xl text-gray-700 font-bold leading-relaxed break-keep pl-6 py-2">
+                {{ product.lead_text|linebreaksbr }}
+            </p>
         </div>
-        <p class="text-4xl md:text-5xl text-gray-600 font-hand leading-relaxed break-keep pl-6 py-2">
-            {{ product.description|linebreaksbr }}
-        </p>
+        {% endif %}
+
+        <div class="bg-gray-50/50 rounded-3xl p-8 border border-gray-100 shadow-clay-inner">
+            <p class="text-3xl md:text-3xl text-gray-500 font-hand leading-relaxed break-keep">
+                {{ product.description|linebreaksbr }}
+            </p>
+        </div>
     </div>
 
     <!-- Key Features Section -->
@@ -83,19 +93,6 @@
         {% if product.external_url %}
         <a href="{{ product.external_url }}"
             class="w-full sm:flex-[2] clay-btn bg-purple-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-purple-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
-            서비스 시작하기
-            <i
-                class="fa-solid fa-rocket group-hover:-translate-y-2 group-hover:translate-x-2 transition-transform duration-300"></i>
-        </a>
-        {% elif product.service_type == 'game' %}
-        <a href="/products/yut/"
-            class="w-full sm:flex-[2] clay-btn bg-green-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-green-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
-            게임 시작하기
-            <i class="fa-solid fa-gamepad group-hover:scale-110 transition-transform duration-300"></i>
-        </a>
-        {% elif product.title == 'DutyTicker' %}
-        <a href="/products/dutyticker/"
-            class="w-full sm:flex-[2] clay-btn bg-indigo-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-indigo-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
             서비스 시작하기
             <i
                 class="fa-solid fa-rocket group-hover:-translate-y-2 group-hover:translate-x-2 transition-transform duration-300"></i>

@@ -22,3 +22,7 @@ python-pptx
 chromadb
 fpdf
 
+# PDF & HWP Processing (for school_violence RAG)
+PyPDF2>=3.0.0
+olefile>=0.46
+

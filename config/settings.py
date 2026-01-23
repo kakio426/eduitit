@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'autoarticle.apps.AutoarticleConfig',
     'fortune.apps.FortuneConfig',
     'signatures.apps.SignaturesConfig',
+    'school_violence.apps.SchoolViolenceConfig',
+    'artclass.apps.ArtclassConfig',
 ]
 
 MIDDLEWARE = [

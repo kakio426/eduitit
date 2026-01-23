@@ -11,6 +11,7 @@
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                padding: 0 !important;
             }
 
             .no-print {
@@ -20,11 +21,41 @@
             .page-break {
                 page-break-before: always;
             }
+
+            /* 인쇄 공간 확보를 위한 강제 스타일 조정 */
+            .mb-12,
+            .mb-8 {
+                margin-bottom: 0.5rem !important;
+            }
+
+            h1 {
+                font-size: 1.8rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+
+            .text-xl {
+                font-size: 1rem !important;
+                line-height: 1.3 !important;
+            }
+
+            /* 테이블 행 높이 축소 */
+            td,
+            th {
+                padding-top: 0px !important;
+                padding-bottom: 0px !important;
+                height: 28px !important;
+                /* 행 높이 고정 */
+            }
+
+            /* 서명 이미지 크기 조정 */
+            td img {
+                height: 20px !important;
+            }
         }
 
         @page {
             size: A4;
-            margin: 15mm;
+            margin: 5mm;
         }
     </style>
 </head>
@@ -45,7 +76,8 @@
     <!-- Header Section -->
     <div class="mb-12">
         <h1 class="text-4xl font-bold text-center mb-8"
-            style="font-family: 'Malgun Gothic', 'Dotum', sans-serif; letter-spacing: 0.2em;">
+            style="font-family: 'Malgun Gothic', 'Dotum', sans-serif; letter-spacing: 0.2em;" contenteditable="true"
+            spellcheck="false">
             {% now "Y" %} 연수등록부
         </h1>
 
@@ -65,7 +97,7 @@
                     <th class="border-b border-r border-black px-1 py-1 w-10 text-center font-bold">순번</th>
                     <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">직위/학년반</th>
                     <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">성명</th>
-                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명(정자)</th>
+                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명</th>
                 </tr>
             </thead>
             <tbody>
@@ -102,7 +134,7 @@
                     <th class="border-b border-r border-black px-1 py-1 w-10 text-center font-bold">순번</th>
                     <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">직위/학년반</th>
                     <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">성명</th>
-                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명(정자)</th>
+                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명</th>
                 </tr>
             </thead>
             <tbody>

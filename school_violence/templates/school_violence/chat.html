@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+
+{% block title %}학교폭력 AI 상담소 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 280px);
+        min-height: 400px;
+    }
+
+    .chat-messages {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(163, 177, 198, 0.5) transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(163, 177, 198, 0.5);
+        border-radius: 3px;
+    }
+
+    .message-bubble {
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .message-bubble.user {
+        background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+        color: white;
+        border-radius: 20px 20px 4px 20px;
+    }
+
+    .message-bubble.assistant {
+        background: white;
+        color: #374151;
+        border-radius: 20px 20px 20px 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .mode-chip {
+        transition: all 0.3s ease;
+    }
+
+    .mode-chip.active {
+        transform: scale(1.05);
+    }
+
+    .mode-chip:hover {
+        transform: translateY(-2px);
+    }
+
+    /* 타이핑 애니메이션 */
+    .typing-indicator span {
+        animation: typing 1.4s infinite;
+        display: inline-block;
+    }
+
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+        }
+        30% {
+            transform: translateY(-4px);
+        }
+    }
+
+    /* 마크다운 스타일 */
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3 {
+        font-weight: bold;
+        margin-top: 1em;
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content ul,
+    .markdown-content ol {
+        margin-left: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.25em;
+    }
+
+    .markdown-content p {
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content code {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .markdown-content pre {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 1em;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.5em 0;
+    }
+
+    .markdown-content strong {
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-24 pb-8 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-5xl font-bold text-gray-700 mb-2">
+                <i class="fa-solid fa-shield-heart text-purple-500 mr-2"></i>학교폭력 AI 상담소
+            </h1>
+            <p class="text-2xl text-gray-500">가이드북 기반 사안처리 절차 안내</p>
+        </div>
+
+        <!-- Mode Selection -->
+        <div class="flex flex-wrap justify-center gap-3 mb-6">
+            {% for mode in modes %}
+            <button onclick="setMode('{{ mode.mode_key }}')"
+                class="mode-chip clay-card px-5 py-3 flex items-center gap-2 text-xl font-bold transition
+                       {% if current_mode == mode.mode_key %}active ring-2 ring-{{ mode.color }}-400 text-{{ mode.color }}-600{% else %}text-gray-500 hover:text-{{ mode.color }}-500{% endif %}"
+                data-mode="{{ mode.mode_key }}">
+                <i class="{{ mode.icon }}"></i>
+                <span class="hidden sm:inline">{{ mode.display_name }}</span>
+            </button>
+            {% endfor %}
+
+            <!-- 관리자 버튼 -->
+            {% if user.is_staff %}
+            <a href="{% url 'school_violence:manage_docs' %}"
+                class="clay-card px-5 py-3 flex items-center gap-2 text-xl font-bold text-gray-500 hover:text-orange-500 transition">
+                <i class="fa-solid fa-folder-open"></i>
+                <span class="hidden sm:inline">자료 관리</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Chat Container -->
+        <div class="clay-card p-4 sm:p-6">
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="chat-container chat-messages overflow-y-auto mb-4 p-4 rounded-2xl shadow-clay-inner">
+                <!-- 환영 메시지 -->
+                <div id="welcomeMessage" class="text-center py-12 {% if chat_history %}hidden{% endif %}">
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full shadow-clay flex items-center justify-center">
+                        <i class="fa-solid fa-robot text-5xl text-purple-400"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-600 mb-2">안녕하세요!</h2>
+                    <p class="text-xl text-gray-500 mb-4">학교폭력 사안처리 관련 질문을 해주세요.</p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="sendQuickMessage('학교폭력 인지 후 첫 단계는 무엇인가요?')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
+                            <i class="fa-solid fa-lightbulb mr-1"></i> 인지 후 첫 단계
+                        </button>
+                        <button onclick="sendQuickMessage('피해학생 보호조치 종류를 알려주세요')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
+                            <i class="fa-solid fa-hand-holding-heart mr-1"></i> 피해학생 보호조치
+                        </button>
+                        <button onclick="sendQuickMessage('사안조사 시 유의사항은?')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> 사안조사 유의사항
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 기존 채팅 기록 -->
+                {% for msg in chat_history %}
+                <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %} mb-4">
+                    <div class="message-bubble {{ msg.role }} px-4 py-3 text-xl">
+                        {% if msg.role == 'assistant' %}
+                        <div class="markdown-content">{{ msg.content|linebreaks }}</div>
+                        {% else %}
+                        {{ msg.content }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Input Area -->
+            <form id="chatForm" class="flex gap-3">
+                {% csrf_token %}
+                <div class="flex-1 relative">
+                    <input type="text" id="messageInput" name="message"
+                        class="w-full px-5 py-4 rounded-2xl shadow-clay-inner bg-transparent text-xl focus:outline-none focus:ring-2 focus:ring-purple-300 pr-12"
+                        placeholder="질문을 입력하세요..." autocomplete="off">
+                    <button type="button" onclick="clearChat()"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center"
+                        title="대화 초기화">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+                <button type="submit" id="sendButton"
+                    class="clay-card px-6 py-4 text-xl font-bold text-purple-600 hover:text-purple-700 hover:shadow-clay-hover transition flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span class="hidden sm:inline">전송</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Privacy Notice -->
+        <p class="text-center text-lg text-gray-400 mt-4">
+            <i class="fa-solid fa-lock mr-1"></i>
+            상담 내용은 브라우저 세션에만 저장되며, 창을 닫으면 삭제됩니다.
+        </p>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+
+    // 스크롤을 맨 아래로
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 메시지 추가
+    function addMessage(content, role) {
+        welcomeMessage.classList.add('hidden');
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `message-bubble ${role} px-4 py-3 text-xl`;
+
+        if (role === 'assistant') {
+            bubble.innerHTML = `<div class="markdown-content">${marked.parse(content)}</div>`;
+        } else {
+            bubble.textContent = content;
+        }
+
+        messageDiv.appendChild(bubble);
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // 타이핑 인디케이터 추가
+    function addTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'typingIndicator';
+        typingDiv.className = 'flex justify-start mb-4';
+        typingDiv.innerHTML = `
+            <div class="message-bubble assistant px-4 py-3 text-xl">
+                <span class="typing-indicator">
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                </span>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    // 타이핑 인디케이터 제거
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    // 메시지 전송
+    async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        // UI 업데이트
+        addMessage(message, 'user');
+        messageInput.value = '';
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        addTypingIndicator();
+
+        try {
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch('{% url "school_violence:send_message" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            removeTypingIndicator();
+
+            if (data.success) {
+                addMessage(data.response, 'assistant');
+            } else {
+                addMessage(`오류: ${data.error}`, 'assistant');
+            }
+        } catch (error) {
+            removeTypingIndicator();
+            addMessage('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'assistant');
+        } finally {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+    }
+
+    // 빠른 메시지 전송
+    function sendQuickMessage(message) {
+        sendMessage(message);
+    }
+
+    // 폼 제출
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendMessage(messageInput.value);
+    });
+
+    // 모드 변경
+    async function setMode(mode) {
+        try {
+            const formData = new FormData();
+            formData.append('mode', mode);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch('{% url "school_violence:set_mode" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // UI 업데이트
+                document.querySelectorAll('.mode-chip').forEach(chip => {
+                    const chipMode = chip.dataset.mode;
+                    if (chipMode === mode) {
+                        chip.classList.add('active', 'ring-2');
+                    } else {
+                        chip.classList.remove('active', 'ring-2');
+                    }
+                });
+
+                // 채팅 초기화 (모드 변경 시)
+                chatMessages.innerHTML = '';
+                welcomeMessage.classList.remove('hidden');
+                chatMessages.appendChild(welcomeMessage);
+            }
+        } catch (error) {
+            console.error('모드 변경 실패:', error);
+        }
+    }
+
+    // 대화 초기화
+    async function clearChat() {
+        if (!confirm('대화 내용을 모두 삭제하시겠습니까?')) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            await fetch('{% url "school_violence:clear_chat" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            // UI 초기화
+            chatMessages.innerHTML = '';
+            welcomeMessage.classList.remove('hidden');
+            chatMessages.appendChild(welcomeMessage);
+        } catch (error) {
+            console.error('초기화 실패:', error);
+        }
+    }
+
+    // 페이지 로드 시 스크롤
+    scrollToBottom();
+</script>
+{% endblock %}
