@@ -7,7 +7,7 @@ from .forms import SajuForm
 from .prompts import get_prompt
 
 # 선생님 요청 모델명
-FIXED_MODEL_NAME = "gemini-2.0-flash-exp"
+FIXED_MODEL_NAME = "gemini-3-flash-preview"
 
 
 def get_gemini_client(request):
