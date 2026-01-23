@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load account socialaccount %}
+
+{% block title %}에듀이티잇 - 로그인{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-lg" data-aos="zoom-in">
+        <div class="clay-card p-10 md:p-12 bg-[#E0E5EC]">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div
+                    class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-purple-500 text-4xl mb-6">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">반가워요, 선생님!</h1>
+                <p class="text-2xl text-gray-400 font-hand">오늘도 선생님의 퇴근을 응원합니다.</p>
+            </div>
+
+            <!-- Login Form -->
+            <form class="login space-y-6" method="POST" action="{% url 'account_login' %}">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div
+                    class="p-4 mb-6 rounded-2xl bg-red-50 text-red-500 text-xl border border-red-100 shadow-clay-inner">
+                    {% for field, errors in form.errors.items %}
+                    {% for error in errors %}<p><i class="fa-solid fa-circle-exclamation mr-2"></i>{{ error }}</p>{%
+                    endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div>
+                    <label for="id_login" class="block text-2xl font-bold text-gray-600 mb-2 ml-4">아이디 (이메일)</label>
+                    <input type="text" name="login" placeholder="이메일 주소를 입력해 주세요" id="id_login"
+                        class="w-full px-6 py-4 rounded-full bg-[#E0E5EC] shadow-clay-inner border-none focus:ring-4 focus:ring-purple-200 outline-none text-2xl transition-all"
+                        required>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2 ml-4">
+                        <label for="id_password" class="block text-2xl font-bold text-gray-600">비밀번호</label>
+                        <a href="{% url 'account_reset_password' %}"
+                            class="text-xl text-purple-500 hover:text-purple-600 transition font-hand">비밀번호를 잊으셨나요?</a>
+                    </div>
+                    <input type="password" name="password" placeholder="비밀번호를 입력해 주세요" id="id_password"
+                        class="w-full px-6 py-4 rounded-full bg-[#E0E5EC] shadow-clay-inner border-none focus:ring-4 focus:ring-purple-200 outline-none text-2xl transition-all"
+                        required>
+                </div>
+
+                <div class="flex items-center ml-4">
+                    <input type="checkbox" name="remember" id="id_remember"
+                        class="w-5 h-5 rounded shadow-clay-inner accent-purple-500">
+                    <label for="id_remember" class="ml-3 text-xl text-gray-500 font-hand">로그인 상태 유지</label>
+                </div>
+
+                {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                {% endif %}
+
+                <button type="submit"
+                    class="w-full py-5 mt-4 bg-purple-500 text-white text-3xl font-bold rounded-full shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    로그인 하기
+                </button>
+            </form>
+
+            <div class="mt-8 pt-8 border-t border-gray-200/50">
+                <p class="text-center text-xl text-gray-400 font-hand mb-6">또는 소셜 계정으로 시작하기</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Kakao -->
+                    <a href="{% provider_login_url 'kakao' %}"
+                        class="flex items-center justify-center gap-3 py-4 rounded-full bg-[#FEE500] shadow-clay hover:shadow-clay-hover transition-all">
+                        <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
+                            class="w-6 h-6" alt="카카오">
+                        <span class="text-xl font-bold text-[#3C1E1E]">카카오</span>
+                    </a>
+
+                    <!-- Naver -->
+                    <a href="{% provider_login_url 'naver' %}"
+                        class="flex items-center justify-center gap-3 py-4 rounded-full bg-[#03C75A] shadow-clay hover:shadow-clay-hover transition-all">
+                        <img src="https://clova-static.itv.co.kr/public/0.0.1/images/naver-logo.png"
+                            class="w-5 h-5 filter brightness-0 invert" alt="네이버">
+                        <span class="text-xl font-bold text-white">네이버</span>
+                    </a>
+                </div>
+
+                <p class="text-center mt-8 text-xl text-gray-500 font-hand">
+                    아직 계정이 없으신가요?
+                    <a href="{% url 'account_signup' %}" class="text-purple-600 font-bold ml-1 hover:underline">회원가입</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
