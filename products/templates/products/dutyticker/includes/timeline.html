@@ -1,12 +1,13 @@
 <!-- Timeline View Component (Ported from TimelineView.tsx) -->
 <div id="timelineRoot"
-    class="bg-[var(--bg-accent)] backdrop-blur-xl rounded-[2.5rem] h-full border border-[var(--border)] shadow-3xl relative overflow-hidden group">
+    class="bg-[var(--bg-card)] backdrop-blur-xl rounded-[2.5rem] h-full border border-[var(--border)] relative overflow-hidden group"
+    style="box-shadow: var(--shadow-clay);">
 
     <!-- Header: Sticky -->
     <div
         class="absolute top-0 left-0 right-0 bg-[var(--bg-page)]/80 backdrop-blur-md px-8 py-6 z-20 border-b border-[var(--border)]">
         <div class="flex justify-between items-center">
-            <h3 class="text-3xl font-black tracking-tight text-[var(--text-main)]">Today's Schedule</h3>
+            <h3 class="text-2xl font-black tracking-tight text-[var(--text-main)]">Today's Schedule</h3>
             <div id="tickerIndicator" class="flex items-center gap-2">
                 <div class="status-dot w-2 h-2 rounded-full bg-green-500"></div>
                 <span

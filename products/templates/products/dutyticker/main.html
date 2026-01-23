@@ -4,13 +4,17 @@
 {% block content %}
 <div class="min-h-screen p-6 transition-colors duration-500">
     <!-- Header -->
-    <header class="flex justify-between items-center mb-6">
+    <header class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-3xl font-bold tracking-tight">DutyTicker</h1>
-            <p class="text-[var(--text-muted)] font-medium">오늘의 1인 1역 현황판</p>
+            <h1 class="text-4xl font-black tracking-tight text-[var(--text-main)]"
+                style="text-shadow: 2px 2px 4px rgba(163, 177, 198, 0.3);">DutyTicker</h1>
+            <p class="text-lg text-[var(--text-muted)] font-medium mt-1">오늘의 1인 1역 현황판</p>
         </div>
-        <div id="digitalClock" class="text-right">
-            <div class="text-4xl font-bold tracking-tighter tabular-nums" id="clockTime">00:00:00</div>
+        <div id="digitalClock"
+            class="text-right bg-[var(--bg-card)] px-6 py-4 rounded-2xl border border-[var(--border)]"
+            style="box-shadow: var(--shadow-clay-inner);">
+            <div class="text-3xl font-bold tracking-tighter tabular-nums text-[var(--text-main)]" id="clockTime">
+                00:00:00</div>
             <div class="text-sm text-[var(--text-muted)] font-medium" id="clockDate">0000년 0월 0일 요일</div>
         </div>
     </header>

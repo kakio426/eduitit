@@ -1,5 +1,5 @@
 <!-- Role Card Component (Ported from CurrentRoleCard.tsx) -->
-<div id="roleCardRoot" class="h-full relative overflow-hidden rounded-[2.5rem] shadow-3xl">
+<div id="roleCardRoot" class="h-full relative overflow-hidden rounded-[2.5rem]" style="box-shadow: var(--shadow-clay);">
 
     <!-- State 1: Broadcast Notice (Hidden by default) -->
     <div id="broadcastState"
@@ -35,7 +35,7 @@
                 </span>
             </div>
 
-            <div id="roleNameDisplay" class="font-black text-6xl tracking-tight break-keep">
+            <div id="roleNameDisplay" class="font-black text-4xl tracking-tight break-keep mb-4">
                 역할 이름
             </div>
         </div>
@@ -43,8 +43,8 @@
         <div class="mt-8 pt-8 border-t-4 border-[var(--bg-page)]/10">
             <div class="flex items-end justify-between">
                 <div>
-                    <p class="text-2xl font-bold mb-1 opacity-60 uppercase tracking-widest">Assignee</p>
-                    <p id="roleAssigneeName" class="text-5xl lg:text-7xl font-black">담당학생</p>
+                    <p class="text-lg font-bold mb-2 opacity-60 uppercase tracking-widest">Assignee</p>
+                    <p id="roleAssigneeName" class="text-4xl lg:text-5xl font-black">담당학생</p>
                 </div>
                 <div id="roleDescriptionContainer"
                     class="hidden lg:block max-w-sm bg-[var(--bg-page)]/10 p-5 rounded-3xl backdrop-blur-sm">

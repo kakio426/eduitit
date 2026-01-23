@@ -1,14 +1,28 @@
 :root {
-  --bg-page: #0f172a;
-  --bg-card: #1e293b;
-  --bg-accent: rgba(255, 255, 255, 0.05);
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-bright: #facc15;
-  --accent-bright-text: #000000;
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
-  --border: rgba(255, 255, 255, 0.1);
+  --bg-page: #E0E5EC;
+  --bg-card: #FFFFFF;
+  --bg-accent: rgba(139, 92, 246, 0.05);
+  --accent: #8B5CF6;
+  --accent-hover: #A78BFA;
+  --accent-bright: #FACC15;
+  --accent-bright-text: #1F2937;
+  --text-main: #374151;
+  --text-muted: #9CA3AF;
+  --border: rgba(163, 177, 198, 0.3);
+
+  /* Claymorphism shadows */
+  --shadow-clay: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+  --shadow-clay-inner: inset 6px 6px 10px #a3b1c6, inset -6px -6px 10px #ffffff;
+  --shadow-clay-hover: 12px 12px 20px #a3b1c6, -12px -12px 20px #ffffff;
+
+  /* Typography scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 3rem;
 }
 
 [data-theme='nature'] {
@@ -54,7 +68,7 @@
   color: var(--text-main);
   background: var(--bg-page);
   transition: background-color 0.5s ease, color 0.5s ease;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Noto Sans KR', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Custom Scrollbar */
@@ -77,10 +91,13 @@
 
 /* Animations */
 @keyframes bounce-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(-2%);
     animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
   }
+
   50% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
@@ -92,8 +109,13 @@
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin-slow {
@@ -102,16 +124,19 @@
 
 /* Modal and Overlay transitions */
 .fade-enter {
-    opacity: 0;
+  opacity: 0;
 }
+
 .fade-enter-active {
-    opacity: 1;
-    transition: opacity 300ms ease-in;
+  opacity: 1;
+  transition: opacity 300ms ease-in;
 }
+
 .fade-exit {
-    opacity: 1;
+  opacity: 1;
 }
+
 .fade-exit-active {
-    opacity: 0;
-    transition: opacity 300ms ease-out;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
 }
