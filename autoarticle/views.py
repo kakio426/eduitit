@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import View, DetailView, ListView
 from django.contrib import messages
+from django.urls import reverse
 from .models import GeneratedArticle
 import os
 import json
@@ -87,15 +88,24 @@ class ArticleCreateView(View):
                 messages.error(request, "행사명과 주요 내용을 입력해주세요.")
                 return redirect('autoarticle:create')
 
-            # Handle Image Uploads
+            # Handle Image Uploads (with validation)
+            ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+            MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
             uploaded_images = request.FILES.getlist('images')
             image_paths = []
             if uploaded_images:
                 from django.core.files.storage import FileSystemStorage
                 import uuid
                 fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
-                for img in uploaded_images[:5]: # Limit to 5 images
-                    ext = os.path.splitext(img.name)[1]
+                for img in uploaded_images[:5]:  # Limit to 5 images
+                    ext = os.path.splitext(img.name)[1].lower()
+                    # Validate extension
+                    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                        continue
+                    # Validate file size
+                    if img.size > MAX_IMAGE_SIZE:
+                        continue
                     filename = f"{uuid.uuid4()}{ext}"
                     name = fs.save(filename, img)
                     image_paths.append(f"autoarticle/images/{name}")
@@ -103,7 +113,7 @@ class ArticleCreateView(View):
             # Save input data and images to session
             request.session['article_input'] = input_data
             request.session['article_images'] = image_paths
-            return redirect('/autoarticle/?step=2')
+            return redirect(f"{reverse('autoarticle:create')}?step=2")
 
         elif step == '2':
             # Step 2: AI Generation
@@ -131,7 +141,7 @@ class ArticleCreateView(View):
                     del request.session['article_input']
                 if 'article_images' in request.session:
                     del request.session['article_images']
-                return redirect('/autoarticle/?step=3')
+                return redirect(f"{reverse('autoarticle:create')}?step=3")
             except Exception as e:
                 import traceback
                 traceback.print_exc()

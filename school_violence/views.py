@@ -222,8 +222,10 @@ def send_message(request):
         })
 
     except Exception as e:
+        import logging
+        logging.exception("AI 응답 생성 오류")
         return JsonResponse({
-            'error': f'AI 응답 생성 중 오류가 발생했습니다: {str(e)}'
+            'error': 'AI 응답 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
         }, status=500)
 
 
