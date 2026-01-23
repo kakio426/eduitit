@@ -26,8 +26,9 @@
                 <div
                     class="p-4 mb-6 rounded-2xl bg-red-50 text-red-500 text-xl border border-red-100 shadow-clay-inner">
                     {% for field, errors in form.errors.items %}
-                    {% for error in errors %}<p><i class="fa-solid fa-circle-exclamation mr-2"></i>{{ error }}</p>{%
-                    endfor %}
+                    {% for error in errors %}
+                    <p><i class="fa-solid fa-circle-exclamation mr-2"></i>{{ error }}</p>
+                    {% endfor %}
                     {% endfor %}
                 </div>
                 {% endif %}
