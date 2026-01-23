@@ -213,6 +213,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username*', 'password1*', 'password2*']
 ACCOUNT_SESSION_REMEMBER = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동
 
 # SSO Settings
 SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
@@ -235,6 +236,12 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+# 키 누락 시 로그 출력
+if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['client_id']:
+    print("⚠️ WARNING: NAVER_CLIENT_ID is not set in environment variables!")
+if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['client_id']:
+    print("⚠️ WARNING: KAKAO_CLIENT_ID is not set in environment variables!")
 
 # =============================================================================
 # DEFAULT PRIMARY KEY

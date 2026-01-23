@@ -135,12 +135,14 @@ ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username*', 'password1*', 'password2*']
 ACCOUNT_SESSION_REMEMBER = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동
 
 # SSO Settings
 SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
 SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'http://localhost:3000') # schoolit 주소
 
 # Allauth Provider Settings
+# Railway 환경 변수 이름을 확인해 주세요: NAVER_CLIENT_ID, NAVER_SECRET, KAKAO_CLIENT_ID, KAKAO_SECRET
 SOCIALACCOUNT_PROVIDERS = {
     'kakao': {
         'APP': {
@@ -157,6 +159,12 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+# 키 누락 시 로그 출력
+if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['client_id']:
+    print("⚠️ WARNING: NAVER_CLIENT_ID is not set in environment variables!")
+if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['client_id']:
+    print("⚠️ WARNING: KAKAO_CLIENT_ID is not set in environment variables!")
 
 
 # Internationalization
