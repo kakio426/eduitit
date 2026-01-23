@@ -210,14 +210,13 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Settings
 ACCOUNT_LOGOUT_ON_GET = True
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_SIGNUP_FIELDS = ['email', 'username*', 'password1*', 'password2*']
 ACCOUNT_SESSION_REMEMBER = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # SSO Settings
 SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
-SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'https://schoolit.kr') # 실주소로 변경 권장
+SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'https://schoolit.shop') # 실주소로 변경 권장
 
 # Allauth Provider Settings
 SOCIALACCOUNT_PROVIDERS = {
