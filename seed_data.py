@@ -15,14 +15,10 @@ def run():
         print("Superuser 'admin' created successfully!")
 
     # Force re-seeding for clean state
-    if Product.objects.exists():
-        print("Database already has products. Deleting existing key products to re-seed feature data...")
-        Product.objects.filter(title__in=[
-            "🐎 온라인 윷놀이", "다함께 윷놀이",
-            "PlayAura", "스쿨잇 (Schoolit)", "학교 통합 지원 스쿨잇", "인사이트", 
-            "AI 도구 가이드", "AI 프롬프트 레시피", "기사 자동 생성",
-            "우리반 역할판", "교직 생활 운세", "스마트 동의서"
-        ]).delete()
+    print("Cleaning database...")
+    Product.objects.all().delete()
+    ProductFeature.objects.all().delete()
+    print("Database cleaned.")
     
     print("Seeding data...")
     
