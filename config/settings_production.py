@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'portfolio.apps.PortfolioConfig',
     'autoarticle.apps.AutoarticleConfig',
     'fortune.apps.FortuneConfig',
+    'signatures.apps.SignaturesConfig',
 ]
 
 MIDDLEWARE = [
