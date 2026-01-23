@@ -24,7 +24,7 @@ urlpatterns = [
     path('', include('core.urls')),
     path('products/', include('products.urls')),
     path('portfolio/', include('portfolio.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('accounts/', include('allauth.urls')),
     path('', include('insights.urls', namespace='insights')),
     path('autoarticle/', include('autoarticle.urls', namespace='autoarticle')),
     path('fortune/', include('fortune.urls', namespace='fortune')),

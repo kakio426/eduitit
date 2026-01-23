@@ -51,7 +51,17 @@ INSTALLED_APPS = [
     'signatures.apps.SignaturesConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
+    
+    # Auth & Allauth
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.kakao',
+    'allauth.socialaccount.providers.naver',
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -61,6 +71,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Allauth middleware
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -111,6 +123,41 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth Settings
+ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_SESSION_REMEMBER = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# SSO Settings
+SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
+SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'http://localhost:3000') # schoolit 주소
+
+# Allauth Provider Settings
+SOCIALACCOUNT_PROVIDERS = {
+    'kakao': {
+        'APP': {
+            'client_id': os.environ.get('KAKAO_CLIENT_ID', ''),
+            'secret': os.environ.get('KAKAO_SECRET', ''),
+            'key': ''
+        }
+    },
+    'naver': {
+        'APP': {
+            'client_id': os.environ.get('NAVER_CLIENT_ID', ''),
+            'secret': os.environ.get('NAVER_SECRET', ''),
+            'key': ''
+        }
+    }
+}
 
 
 # Internationalization

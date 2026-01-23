@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.decorators import login_required
 from products.models import Product
 from .forms import APIKeyForm
@@ -65,3 +65,36 @@ def settings_view(request):
         form = APIKeyForm(instance=profile)
     
     return render(request, 'core/settings.html', {'form': form})
+
+@login_required
+def select_role(request):
+    """역할 선택 화면 (학교, 강사, 업체)"""
+    if request.method == 'POST':
+        role = request.POST.get('role')
+        if role in ['school', 'instructor', 'company']:
+            profile = request.user.userprofile
+            profile.role = role
+            profile.save()
+            # 역할 선택 후 원래 가려던 SSO 페이지로 이동하거나 대시보드로 이동
+            next_url = request.GET.get('next', 'home')
+            return redirect(next_url)
+    
+    return render(request, 'core/select_role.html')
+
+@login_required
+def sso_to_schoolit(request):
+    """스쿨잇으로 자동 로그인하여 이동하는 브릿지 뷰"""
+    from .utils import generate_sso_token, get_schoolit_url
+    
+    profile = request.user.userprofile
+    if not profile.role:
+        # 역할이 없으면 선택 페이지로 먼저 보냄
+        return redirect(f"{reverse('select_role')}?next={request.path}")
+    
+    token = generate_sso_token(request.user)
+    target_url = get_schoolit_url(profile.role)
+    
+    # 쿼리 스트링으로 토큰 전달 (schoolit에서 이 토큰을 받아 처리해야 함)
+    import urllib.parse
+    redirect_url = f"{target_url}?sso_token={token}"
+    return redirect(redirect_url)

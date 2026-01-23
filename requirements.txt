@@ -26,3 +26,6 @@ fpdf
 PyPDF2>=3.0.0
 olefile>=0.46
 
+# Auth & SSO
+django-allauth==65.14.0
+PyJWT==2.10.1

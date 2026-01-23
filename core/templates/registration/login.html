@@ -1,24 +1,25 @@
 {% extends "base.html" %}
+{% load socialaccount %}
 
 {% block title %}로그인 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
     .auth-container {
-        max-width: 450px;
+        max-width: 480px;
         margin: 8rem auto;
     }
 
     .form-input {
         width: 100%;
-        padding: 1rem 1.5rem;
+        padding: 1.2rem 1.5rem;
         background: #E0E5EC;
         border: none;
-        border-radius: 15px;
+        border-radius: 20px;
         box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
         color: #4A5568;
         font-family: inherit;
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         transition: all 0.3s;
     }
 
@@ -29,14 +30,14 @@
 
     .btn-auth {
         width: 100%;
-        padding: 1rem;
-        margin-top: 2rem;
+        padding: 1.2rem;
+        margin-top: 1rem;
         background: #E0E5EC;
-        border-radius: 15px;
+        border-radius: 20px;
         box-shadow: 7px 7px 12px rgb(163, 177, 198, 0.6), -7px -7px 12px rgba(255, 255, 255, 0.5);
         color: #6366f1;
         font-weight: bold;
-        font-size: 1.5rem;
+        font-size: 1.8rem;
         transition: all 0.3s;
     }
 
@@ -45,25 +46,66 @@
         box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.7), -9px -9px 16px rgba(255, 255, 255, 0.6);
     }
 
-    .btn-auth:active {
-        transform: translateY(0);
-        box-shadow: inset 4px 4px 8px 0 rgba(163, 177, 198, 0.7), inset -4px -4px 8px 0 rgba(255, 255, 255, 0.8);
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 1.5rem;
+        transition: all 0.3s;
+        margin-bottom: 1rem;
+    }
+
+    .btn-kakao {
+        background-color: #FEE500;
+        color: #000000;
+    }
+
+    .btn-naver {
+        background-color: #03C75A;
+        color: #FFFFFF;
+    }
+
+    .social-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(0.95);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="auth-container" data-aos="zoom-in">
-    <div class="clay-card p-10">
+    <div class="clay-card p-10 md:p-14">
         <div class="text-center mb-10">
             <div
-                class="w-20 h-20 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-4xl mx-auto mb-6 float-icon">
-                <i class="fa-solid fa-lock"></i>
+                class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-5xl mx-auto mb-8 float-icon">
+                <i class="fa-solid fa-user-shield"></i>
             </div>
-            <h1 class="text-5xl font-bold text-gray-700 mb-2">반가워요!</h1>
-            <p class="text-2xl text-gray-500 font-hand">Eduitit 계정으로 로그인하세요</p>
+            <h1 class="text-6xl font-bold text-gray-700 mb-2">시작하기</h1>
+            <p class="text-2xl text-gray-400 font-hand">선생님의 스마트한 비서, 에듀이티잇</p>
         </div>
 
+        <!-- Social Login Section -->
+        <div class="mb-10">
+            <a href="{% provider_login_url 'kakao' %}" class="social-btn btn-kakao shadow-sm">
+                <i class="fa-solid fa-comment text-2xl"></i> 카카오로 시작하기
+            </a>
+            <a href="{% provider_login_url 'naver' %}" class="social-btn btn-naver shadow-sm">
+                <i class="fa-solid fa-n text-2xl"></i> 네이버로 시작하기
+            </a>
+        </div>
+
+        <div class="flex items-center gap-4 mb-10">
+            <div class="flex-1 h-px bg-gray-200"></div>
+            <span class="text-gray-300 text-xl font-hand">또는</span>
+            <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+
+        <!-- Classic Login Form -->
         {% if form.errors %}
         <div
             class="p-4 mb-6 rounded-2xl bg-red-50 text-red-500 text-lg shadow-sm border border-red-100 flex items-center gap-3">
@@ -76,8 +118,7 @@
             {% csrf_token %}
             <div>
                 <label for="id_username" class="block text-xl font-bold text-gray-600 mb-2 ml-2">아이디</label>
-                <input type="text" name="username" id="id_username" class="form-input" placeholder="Username" required
-                    autofocus>
+                <input type="text" name="username" id="id_username" class="form-input" placeholder="Username" required>
             </div>
             <div>
                 <label for="id_password" class="block text-xl font-bold text-gray-600 mb-2 ml-2">비밀번호</label>
@@ -86,14 +127,15 @@
             </div>
 
             <button type="submit" class="btn-auth">
-                로그인하기
+                로그인
             </button>
         </form>
 
-        <div class="mt-10 text-center">
-            <p class="text-gray-400 text-xl font-hand">
+        <div class="mt-12 text-center">
+            <p class="text-gray-400 text-2xl font-hand">
                 아직 계정이 없으신가요? <br>
-                <a href="mailto:kakio@naver.com?subject=[Eduitit] 회원가입 문의" class="text-purple-500 font-bold hover:underline">회원가입 문의하기</a>
+                <a href="mailto:kakio@naver.com?subject=[Eduitit] 회원가입 문의"
+                    class="text-purple-500 font-bold hover:underline">회원가입 문의하기</a>
             </p>
         </div>
     </div>
