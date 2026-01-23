@@ -28,6 +28,7 @@ urlpatterns = [
     path('', include('insights.urls', namespace='insights')),
     path('autoarticle/', include('autoarticle.urls', namespace='autoarticle')),
     path('fortune/', include('fortune.urls', namespace='fortune')),
+    path('signatures/', include('signatures.urls', namespace='signatures')),
 ]
 
 if settings.DEBUG:

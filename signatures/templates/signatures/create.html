@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}새 연수 만들기 - Eduitit{% endblock %}
+
+{% block content %}
+<main class="pt-28 pb-16 px-4 min-h-screen">
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'signatures:list' %}" class="text-xl text-gray-500 hover:text-purple-600 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
+            </a>
+            <h1 class="text-5xl font-bold text-gray-700 mt-4">
+                <i class="fa-solid fa-plus-circle text-purple-500 mr-2"></i>새 연수 만들기
+            </h1>
+        </div>
+
+        <!-- Form -->
+        <form method="post" class="clay-card p-8 space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-2xl font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-heading mr-1"></i> 연수 제목
+                </label>
+                {{ form.title }}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-2">
+                        <i class="fa-solid fa-user-tie mr-1"></i> 강사명
+                    </label>
+                    {{ form.instructor }}
+                </div>
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-2">
+                        <i class="fa-solid fa-location-dot mr-1"></i> 장소
+                    </label>
+                    {{ form.location }}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-2xl font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-calendar mr-1"></i> 연수 일시
+                </label>
+                {{ form.datetime }}
+            </div>
+
+            <div>
+                <label class="block text-2xl font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-align-left mr-1"></i> 설명 (선택)
+                </label>
+                {{ form.description }}
+            </div>
+
+            <div class="flex items-center gap-3">
+                {{ form.is_active }}
+                <label class="text-2xl font-bold text-gray-600">
+                    생성 즉시 서명 받기 활성화
+                </label>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="submit"
+                    class="flex-1 clay-card py-4 text-2xl font-bold text-white bg-purple-500 hover:bg-purple-600 transition rounded-2xl">
+                    <i class="fa-solid fa-check mr-2"></i>연수 생성하기
+                </button>
+                <a href="{% url 'signatures:list' %}"
+                    class="px-8 py-4 text-2xl font-bold text-gray-500 hover:text-gray-700 transition">
+                    취소
+                </a>
+            </div>
+        </form>
+    </div>
+</main>
+{% endblock %}

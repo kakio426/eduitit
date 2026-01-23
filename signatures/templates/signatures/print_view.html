@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석부 - {{ session.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+    </style>
+</head>
+<body class="bg-white p-8">
+    <!-- Print Controls (Hidden when printing) -->
+    <div class="no-print mb-8 flex gap-4 justify-center">
+        <button onclick="window.print()"
+            class="px-8 py-3 bg-purple-500 text-white text-lg font-bold rounded-lg hover:bg-purple-600 transition">
+            <i class="fa-solid fa-print mr-2"></i>인쇄하기
+        </button>
+        <a href="{% url 'signatures:detail' uuid=session.uuid %}"
+            class="px-8 py-3 bg-gray-200 text-gray-700 text-lg font-bold rounded-lg hover:bg-gray-300 transition">
+            <i class="fa-solid fa-arrow-left mr-2"></i>돌아가기
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-4">교내 연수 출석부</h1>
+        <div class="text-lg space-y-1">
+            <p><strong>연수명:</strong> {{ session.title }}</p>
+            <p><strong>강사:</strong> {{ session.instructor }}</p>
+            <p><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H시 i분" }}</p>
+            <p><strong>장소:</strong> {{ session.location }}</p>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <table class="w-full border-collapse border border-gray-400 text-base">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="border border-gray-400 px-4 py-3 w-16 text-center">연번</th>
+                <th class="border border-gray-400 px-4 py-3 w-32 text-center">성명</th>
+                <th class="border border-gray-400 px-4 py-3 text-center">서명</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sig in signatures %}
+            <tr>
+                <td class="border border-gray-400 px-4 py-2 text-center">{{ forloop.counter }}</td>
+                <td class="border border-gray-400 px-4 py-2 text-center font-medium">{{ sig.participant_name }}</td>
+                <td class="border border-gray-400 px-4 py-2 text-center">
+                    <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[200px] mx-auto object-contain">
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="border border-gray-400 px-4 py-8 text-center text-gray-500">
+                    서명된 참석자가 없습니다.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="mt-8 text-center text-sm text-gray-500">
+        <p>총 {{ signatures.count }}명 참석</p>
+        <p class="mt-2">출력일: {% now "Y년 m월 d일 H:i" %}</p>
+    </div>
+
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</body>
+</html>
