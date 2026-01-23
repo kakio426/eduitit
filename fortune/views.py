@@ -1,6 +1,7 @@
 import os
 from google import genai
 from django.shortcuts import render
+from django.conf import settings
 from django.http import JsonResponse
 from .forms import SajuForm
 from .prompts import get_prompt
@@ -71,6 +72,7 @@ def saju_view(request):
         'form': form,
         'result': result_html,
         'error': error_message,
+        'kakao_js_key': settings.KAKAO_JS_KEY,
     })
 
 

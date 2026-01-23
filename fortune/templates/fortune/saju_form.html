@@ -686,6 +686,12 @@
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script>
 
 <script>
+    // 카카오 SDK 초기화
+    if ("{{ kakao_js_key }}") {
+        Kakao.init("{{ kakao_js_key }}");
+        console.log("Kakao SDK Initialized:", Kakao.isInitialized());
+    }
+
     // 오행별 이모티콘 매핑
     const ELEMENT_MAP = {
         '갑': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무' },
@@ -834,22 +840,33 @@
     function shareToKakao() {
         try {
             if (!Kakao.isInitialized()) {
-                showToast('카카오톡 앱키가 설정되지 않았습니다. 링크를 복사해주세요.');
+                showToast('카카오톡 연결 중입니다. 잠시 후 다시 시도해주세요.');
                 return;
             }
+
+            // 결과 내용에서 제목과 간단한 요약 추출 시도
+            const resultText = document.getElementById('markdownResult')?.innerText || '';
+            const summary = resultText.substring(0, 100).replace(/\n/g, ' ') + '...';
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: '🔮 AI 사주 분석 결과',
-                    description: 'Eduitit에서 무료로 사주를 봤어요! 나도 해보세요 🌟',
-                    imageUrl: 'https://placehold.co/600x400/7c3aed/white?text=🔮+사주+운세',
+                    title: '🔮 Eduitit AI 사주 분석 결과',
+                    description: summary || '나의 운세와 오행 분석 결과를 확인해보세요!',
+                    imageUrl: 'https://images.unsplash.com/photo-1534346953335-519bb5a67c4a?q=80&w=600&auto=format&fit=crop', // Mystical background
                     link: {
                         mobileWebUrl: window.location.href,
                         webUrl: window.location.href,
                     },
                 },
                 buttons: [
+                    {
+                        title: '결과 확인하기',
+                        link: {
+                            mobileWebUrl: window.location.href,
+                            webUrl: window.location.href,
+                        },
+                    },
                     {
                         title: '나도 사주보기',
                         link: {
@@ -860,11 +877,12 @@
                 ],
             });
         } catch (e) {
+            console.error('Kakao Share Error:', e);
             if (navigator.share) {
                 navigator.share({
-                    title: '🔮 AI 사주 분석',
-                    text: 'Eduitit에서 무료로 사주를 봤어요!',
-                    url: window.location.origin + '/fortune/saju/'
+                    title: '🔮 AI 사주 분석 결과',
+                    text: 'Eduitit에서 내 사주를 분석해봤어요!',
+                    url: window.location.href
                 });
             } else {
                 copyLink();

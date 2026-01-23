@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Kakao API Key
+import os
+KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY', 'default-dev-key')
+
 
 # Application definition
 

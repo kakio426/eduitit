@@ -27,6 +27,9 @@ DEBUG = False
 # Allowed hosts from environment variable (comma-separated)
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,localhost,127.0.0.1').split(',')
 
+# Kakao API Key
+KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY')
+
 # CSRF trusted origins for Render
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
