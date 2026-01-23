@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,19 +12,23 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+
             .no-print {
                 display: none !important;
             }
+
             .page-break {
                 page-break-before: always;
             }
         }
+
         @page {
             size: A4;
             margin: 15mm;
         }
     </style>
 </head>
+
 <body class="bg-white p-8">
     <!-- Print Controls (Hidden when printing) -->
     <div class="no-print mb-8 flex gap-4 justify-center">
@@ -37,52 +42,105 @@
         </a>
     </div>
 
-    <!-- Header -->
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-4">교내 연수 출석부</h1>
-        <div class="text-lg space-y-1">
-            <p><strong>연수명:</strong> {{ session.title }}</p>
-            <p><strong>강사:</strong> {{ session.instructor }}</p>
-            <p><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H시 i분" }}</p>
-            <p><strong>장소:</strong> {{ session.location }}</p>
+    <!-- Header Section -->
+    <div class="mb-12">
+        <h1 class="text-4xl font-bold text-center mb-8"
+            style="font-family: 'Malgun Gothic', 'Dotum', sans-serif; letter-spacing: 0.2em;">
+            {% now "Y" %} 연수등록부
+        </h1>
+
+        <div class="text-xl space-y-2 ml-4">
+            <p><strong>가. 일시 및 장소:</strong> {{ session.datetime|date:"m월 d일 H시 i분" }}, {{ session.location }}</p>
+            <p><strong>나. 강 사:</strong> {{ session.instructor }}</p>
+            <p><strong>다. 내 용:</strong> {{ session.title }}</p>
         </div>
     </div>
 
-    <!-- Attendance Table -->
-    <table class="w-full border-collapse border border-gray-400 text-base">
-        <thead>
-            <tr class="bg-gray-100">
-                <th class="border border-gray-400 px-4 py-3 w-16 text-center">연번</th>
-                <th class="border border-gray-400 px-4 py-3 w-32 text-center">성명</th>
-                <th class="border border-gray-400 px-4 py-3 text-center">서명</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for sig in signatures %}
-            <tr>
-                <td class="border border-gray-400 px-4 py-2 text-center">{{ forloop.counter }}</td>
-                <td class="border border-gray-400 px-4 py-2 text-center font-medium">{{ sig.participant_name }}</td>
-                <td class="border border-gray-400 px-4 py-2 text-center">
-                    <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[200px] mx-auto object-contain">
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="border border-gray-400 px-4 py-8 text-center text-gray-500">
-                    서명된 참석자가 없습니다.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Attendance Table Container (Side-by-side tables for compactness) -->
+    <div class="flex gap-0 border-t border-l border-black">
+        <!-- Left Table -->
+        <table class="w-1/2 border-collapse text-sm">
+            <thead>
+                <tr class="bg-gray-50">
+                    <th class="border-b border-r border-black px-1 py-1 w-10 text-center font-bold">순번</th>
+                    <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">직위/학년반</th>
+                    <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">성명</th>
+                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명(정자)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sig in left_sigs %}
+                <tr>
+                    <td class="border-b border-r border-black py-1 text-center">{{ forloop.counter }}</td>
+                    <td class="border-b border-r border-black py-1 text-center">{{ sig.participant_affiliation }}</td>
+                    <td class="border-b border-r border-black py-1 text-center font-medium">{{ sig.participant_name }}
+                    </td>
+                    <td class="border-b border-r border-black py-0 text-center">
+                        <img src="{{ sig.signature_data }}" alt="서명" class="h-6 max-w-[100px] mx-auto object-contain">
+                    </td>
+                </tr>
+                {% endfor %}
 
-    <!-- Footer -->
-    <div class="mt-8 text-center text-sm text-gray-500">
-        <p>총 {{ signatures.count }}명 참석</p>
-        <p class="mt-2">출력일: {% now "Y년 m월 d일 H:i" %}</p>
+                {# Fill remaining rows up to 30 #}
+                {% for i in left_rows %}
+                {% if forloop.counter > left_sigs|length %}
+                <tr>
+                    <td class="border-b border-r border-black py-1 text-center">{{ forloop.counter }}</td>
+                    <td class="border-b border-r border-black py-1 text-center">&nbsp;</td>
+                    <td class="border-b border-r border-black py-1 text-center font-medium">&nbsp;</td>
+                    <td class="border-b border-r border-black py-1 text-center">&nbsp;</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Right Table -->
+        <table class="w-1/2 border-collapse text-sm">
+            <thead>
+                <tr class="bg-gray-50">
+                    <th class="border-b border-r border-black px-1 py-1 w-10 text-center font-bold">순번</th>
+                    <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">직위/학년반</th>
+                    <th class="border-b border-r border-black px-1 py-1 w-24 text-center font-bold">성명</th>
+                    <th class="border-b border-r border-black px-1 py-1 text-center font-bold">확인서명(정자)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sig in right_sigs %}
+                <tr>
+                    <td class="border-b border-r border-black py-1 text-center">{{ forloop.counter|add:30 }}</td>
+                    <td class="border-b border-r border-black py-1 text-center">{{ sig.participant_affiliation }}</td>
+                    <td class="border-b border-r border-black py-1 text-center font-medium">{{ sig.participant_name }}
+                    </td>
+                    <td class="border-b border-r border-black py-0 text-center">
+                        <img src="{{ sig.signature_data }}" alt="서명" class="h-6 max-w-[100px] mx-auto object-contain">
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {# Fill remaining rows up to 60 #}
+                {% for i in right_rows %}
+                {% if forloop.counter > right_sigs|length %}
+                <tr>
+                    <td class="border-b border-r border-black py-1 text-center">{{ i }}</td>
+                    <td class="border-b border-r border-black py-1 text-center">&nbsp;</td>
+                    <td class="border-b border-r border-black py-1 text-center font-medium">&nbsp;</td>
+                    <td class="border-b border-r border-black py-1 text-center">&nbsp;</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Information -->
+    <div class="mt-4 flex justify-between text-xs text-gray-500 italic">
+        <p>총 {{ total_count }}명 참석</p>
+        <p>출력 일시: {% now "Y년 m월 d일 H:i" %}</p>
     </div>
 
     <!-- Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </body>
+
 </html>

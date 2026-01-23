@@ -48,6 +48,7 @@ class Signature(models.Model):
         related_name='signatures',
         verbose_name='연수'
     )
+    participant_affiliation = models.CharField('직위/학년반', max_length=100, blank=True)
     participant_name = models.CharField('참여자 이름', max_length=50)
 
     # Store signature as Base64 - efficient for small images

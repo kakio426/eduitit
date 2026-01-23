@@ -41,8 +41,13 @@ class SignatureForm(forms.ModelForm):
 
     class Meta:
         model = Signature
-        fields = ['participant_name', 'signature_data']
+        fields = ['participant_affiliation', 'participant_name', 'signature_data']
         widgets = {
+            'participant_affiliation': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-4 text-xl rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
+                'placeholder': '직위 또는 학년반 (예: 교사, 1-1)',
+                'autocomplete': 'off',
+            }),
             'participant_name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-4 text-xl rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
                 'placeholder': '이름을 입력하세요',

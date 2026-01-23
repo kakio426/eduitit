@@ -92,12 +92,25 @@ def sign(request, uuid):
 
 @login_required
 def print_view(request, uuid):
-    """출석부 인쇄 페이지"""
+    """출석부 인쇄 페이지 (2단 구성)"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
-    signatures = session.signatures.all()
+    signatures = list(session.signatures.all())
+    
+    # 2단 구성을 위해 리스트 분할 (최대 60명 기준, 넘어가면 페이지 분할은 나중에)
+    left_sigs = signatures[:30]
+    right_sigs = signatures[30:60]
+    
+    # 빈 줄 생성을 위한 숫자 리스트
+    left_rows = range(30)
+    right_rows = range(31, 61)
+    
     return render(request, 'signatures/print_view.html', {
         'session': session,
-        'signatures': signatures,
+        'left_sigs': left_sigs,
+        'right_sigs': right_sigs,
+        'left_rows': left_rows,
+        'right_rows': right_rows,
+        'total_count': len(signatures),
     })
 
 
