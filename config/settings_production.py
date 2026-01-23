@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # Allowed hosts from environment variable (comma-separated)
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,localhost,127.0.0.1').split(',')
@@ -258,3 +258,36 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+# =============================================================================
+# AUTO-FIX: Sync Site Domain with Production Host
+# =============================================================================
+
+def sync_site_domain():
+    """DB의 Site 도메인을 현재 접속 주소와 자동으로 동기화합니다."""
+    try:
+        from django.contrib.sites.models import Site
+        current_site = Site.objects.get_current()
+        production_domain = os.environ.get('ALLOWED_HOSTS', '').split(',')[0]
+        
+        if not production_domain or 'railway.app' not in production_domain:
+            # ALLOWED_HOSTS에서 railway 도메인 찾기
+            for host in os.environ.get('ALLOWED_HOSTS', '').split(','):
+                if 'railway.app' in host:
+                    production_domain = host
+                    break
+
+        if production_domain and current_site.domain != production_domain:
+            print(f"DEBUG: Updating site domain from {current_site.domain} to {production_domain}")
+            current_site.domain = production_domain
+            current_site.name = "Eduitit Production"
+            current_site.save()
+    except Exception as e:
+        # DB가 준비되지 않았을 때(migration 전) 발생할 수 있으므로 조용히 처리
+        pass
+
+# 서버 실행 시 자동 실행되도록 앱 설정 또는 여기에 직접 호출 (단, DB 연결 가능 시점이어야 함)
+# 여기서는 코드 마지막에 가벼운 가드로 시도합니다.
+import threading
+if os.environ.get('RUN_MAIN') != 'true': # 중복 실행 방지
+    threading.Timer(5.0, sync_site_domain).start()
