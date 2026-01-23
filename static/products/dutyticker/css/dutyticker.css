@@ -1,0 +1,117 @@
+:root {
+  --bg-page: #0f172a;
+  --bg-card: #1e293b;
+  --bg-accent: rgba(255, 255, 255, 0.05);
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-bright: #facc15;
+  --accent-bright-text: #000000;
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='nature'] {
+  --bg-page: #064e3b;
+  --bg-card: #065f46;
+  --bg-accent: rgba(255, 255, 255, 0.05);
+  --accent: #10b981;
+  --accent-hover: #34d399;
+  --accent-bright: #fb923c;
+  --accent-bright-text: #ffffff;
+  --text-main: #ecfdf5;
+  --text-muted: #a7f3d0;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='ocean'] {
+  --bg-page: #0c4a6e;
+  --bg-card: #075985;
+  --bg-accent: rgba(255, 255, 255, 0.05);
+  --accent: #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-bright: #fbbf24;
+  --accent-bright-text: #0c4a6e;
+  --text-main: #f0f9ff;
+  --text-muted: #bae6fd;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='pastel'] {
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-accent: rgba(0, 0, 0, 0.04);
+  --accent: #ec4899;
+  --accent-hover: #f472b6;
+  --accent-bright: #f472b6;
+  --accent-bright-text: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border: rgba(0, 0, 0, 0.1);
+}
+
+.dutyticker-body {
+  color: var(--text-main);
+  background: var(--bg-page);
+  transition: background-color 0.5s ease, color 0.5s ease;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Animations */
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(-2%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Modal and Overlay transitions */
+.fade-enter {
+    opacity: 0;
+}
+.fade-enter-active {
+    opacity: 1;
+    transition: opacity 300ms ease-in;
+}
+.fade-exit {
+    opacity: 1;
+}
+.fade-exit-active {
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+}

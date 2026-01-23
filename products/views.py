@@ -23,3 +23,6 @@ def product_preview(request, pk):
 
 def yut_game(request):
     return render(request, 'products/yut_game.html')
+
+def dutyticker_view(request):
+    return render(request, 'products/dutyticker/main.html')
