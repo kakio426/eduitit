@@ -24,8 +24,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-# Allowed hosts from environment variable (comma-separated)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,eduitit.site,www.eduitit.site,localhost,127.0.0.1').split(',')
+# Allowed hosts
+env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [h.strip() for h in env_hosts if h.strip()]
+ALLOWED_HOSTS.extend([
+    '.onrender.com', 
+    '.railway.app', 
+    'eduitit.site', 
+    'www.eduitit.site', 
+    'localhost', 
+    '127.0.0.1'
+])
 
 # Kakao API Key
 KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY')
@@ -309,6 +318,8 @@ CSP_STYLE_SRC = (
 )
 CSP_FONT_SRC = (
     "'self'",
+    "https:",
+    "data:",
     "https://fonts.gstatic.com",
     "https://cdnjs.cloudflare.com",
     "https://cdn.jsdelivr.net",
