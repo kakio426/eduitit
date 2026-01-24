@@ -158,6 +158,7 @@ class ArticleCreateView(View):
             # Save input data and images to session
             request.session['article_input'] = input_data
             request.session['article_images'] = image_paths
+            print(f"DEBUG: Saved {len(image_paths)} images to session: {image_paths}")
             return redirect(f"{reverse('autoarticle:create')}?step=2")
 
         elif step == '2':
@@ -172,14 +173,17 @@ class ArticleCreateView(View):
 
             try:
                 title, content, hashtags = generate_article_gemini(api_key, input_data, style_service=rag, is_master_key=is_master_key)
+                images_from_session = request.session.get('article_images', [])
+                print(f"DEBUG: Step 2 - Images from session: {images_from_session}")
                 draft = {
                     'input_data': input_data,
                     'title': title,
                     'content': content,
                     'hashtags': hashtags,
-                    'images': request.session.get('article_images', []),
+                    'images': images_from_session,
                     'original_generated_content': content
                 }
+                print(f"DEBUG: Step 2 - Draft images: {draft['images']}")
                 request.session['article_draft'] = draft
                 # Clean up input data from session
                 if 'article_input' in request.session:

@@ -24,14 +24,30 @@
 
             {% if draft.images %}
             <div class="mt-8">
-                <label class='block text-sm font-bold mb-4'>📸 첨부된 사진</label>
+                <label class='block text-sm font-bold mb-4'>📸 첨부된 사진 ({{ draft.images|length }}개)</label>
                 <div class="flex flex-wrap gap-4">
                     {% for img_path in draft.images %}
-                    <div class="relative w-32 h-32 rounded-2xl overflow-hidden shadow-clay">
-                        <img src="{{ img_path }}" class="w-full h-full object-cover" alt="첨부 이미지">
+                    <div class="relative w-32 h-32 rounded-2xl overflow-hidden shadow-clay bg-gray-200">
+                        {% if img_path %}
+                            <img src="{{ img_path }}" class="w-full h-full object-cover" alt="첨부 이미지"
+                                 onerror="console.error('Failed to load:', this.src)">
+                        {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-gray-400">이미지 없음</div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
+                <!-- 디버그 정보 -->
+                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                    <p class="text-gray-600">이미지 데이터: {{ draft.images|length }}개</p>
+                    {% for img_path in draft.images %}
+                    <p class="text-gray-500 break-all">{{ img_path }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-red-600">첨부된 이미지가 없습니다.</p>
             </div>
             {% endif %}
             <button type='submit'
