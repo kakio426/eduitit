@@ -105,9 +105,10 @@ class ArticleCreateView(View):
                 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
                 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
 
-                # 환경 확인
-                is_railway = os.environ.get('RAILWAY_ENVIRONMENT') is not None
-                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False) and is_railway
+                # Cloudinary 설정 확인 (설정이 있으면 사용)
+                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
+                print(f"DEBUG: USE_CLOUDINARY = {use_cloudinary}")
+                print(f"DEBUG: CLOUDINARY_STORAGE = {settings.CLOUDINARY_STORAGE}")
 
                 if use_cloudinary:
                     # Railway: Cloudinary 사용
