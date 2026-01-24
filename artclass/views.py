@@ -5,6 +5,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django_ratelimit.decorators import ratelimit
+from core.utils import ratelimit_key_for_master_only
 from google import genai
 from .models import ArtClass, ArtStep
 
@@ -121,6 +123,8 @@ def get_video_info(url):
     return title, transcript_text
 
 
+@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 def generate_steps_api(request):
     """AI Step Generation API"""
     if request.method != 'POST':
@@ -160,8 +164,9 @@ def generate_steps_api(request):
             6. 서론이나 맺음말 없이 본론만 출력하세요.
         """
 
+        # 유튜브 자막 요약 → 저렴한 Lite 모델
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-2.5-flash-lite",
             contents=prompt
         )
 

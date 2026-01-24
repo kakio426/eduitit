@@ -3,11 +3,15 @@ from google import genai
 from django.shortcuts import render
 from django.conf import settings
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django_ratelimit.decorators import ratelimit
+from core.utils import ratelimit_key_for_master_only
 from .forms import SajuForm
 from .prompts import get_prompt
 
 # 선생님 요청 모델명
-FIXED_MODEL_NAME = "gemini-3-flash-preview"
+# 재미용 콘텐츠 → 가장 저렴한 Lite 모델
+FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
 
 
 def get_gemini_client(request):
@@ -33,8 +37,10 @@ def get_gemini_client(request):
     return genai.Client(api_key=api_key)
 
 
+@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 def saju_view(request):
-    """사주 분석 메인 뷰"""
+    """사주 분석 메인 뷰 (마스터키: 10회/시간, 개인키: 무제한)"""
     result_html = None
     error_message = None
 
@@ -64,7 +70,9 @@ def saju_view(request):
                     result_html = response.text
 
                 except Exception as e:
-                    error_message = f"사주 분석 중 오류가 발생했습니다: {str(e)}"
+                    import logging
+                    logging.exception("사주 분석 오류")
+                    error_message = "사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
     else:
         form = SajuForm()
 
@@ -76,8 +84,10 @@ def saju_view(request):
     })
 
 
+@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 def saju_api_view(request):
-    """사주 분석 API (AJAX용)"""
+    """사주 분석 API (마스터키: 10회/시간, 개인키: 무제한)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
 
@@ -106,4 +116,6 @@ def saju_api_view(request):
             'mode': mode,
         })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        import logging
+        logging.exception("사주 API 오류")
+        return JsonResponse({'error': 'AI 응답 생성 중 오류가 발생했습니다.'}, status=500)

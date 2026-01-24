@@ -72,6 +72,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for static files
+    'csp.middleware.CSPMiddleware',  # Content Security Policy
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -266,14 +267,67 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    
+
     # Required for Railway to prevent infinite redirect loops
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    
+
     # Security settings for HTTPS
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = 31536000  # 1년
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# =============================================================================
+# CONTENT SECURITY POLICY (CSP)
+# =============================================================================
+
+# CSP 설정 (django-csp)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # 인라인 스크립트 허용 (템플릿 내 스크립트)
+    "'unsafe-eval'",    # marked.js 등 라이브러리용
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://unpkg.com",
+    "https://t1.kakaocdn.net",
+    "https://developers.kakao.com",
+)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://fonts.googleapis.com",
+)
+CSP_FONT_SRC = (
+    "'self'",
+    "https://fonts.gstatic.com",
+    "https://cdnjs.cloudflare.com",
+)
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",
+    "blob:",
+    "https:",  # 외부 이미지 허용
+)
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://api.padlet.com",
+    "https://generativelanguage.googleapis.com",
+)
+CSP_FRAME_SRC = (
+    "'self'",
+    "https://padlet.com",
+)
+CSP_MEDIA_SRC = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
 
 # =============================================================================
 # AUTO-FIX: Sync Site Domain with Production Host

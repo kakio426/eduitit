@@ -1,4 +1,5 @@
 import os
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -6,6 +7,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django_ratelimit.decorators import ratelimit
+from core.utils import ratelimit_key_for_master_only
 from google import genai
 
 from .models import PadletDocument, PadletBotSettings, LinkedPadletBoard
@@ -14,7 +17,8 @@ from .rag_utils import get_padlet_rag_service, chunk_text
 from .padlet_api import get_padlet_client, is_padlet_api_configured, PadletAPIClient
 
 # Gemini 모델 설정
-GEMINI_MODEL = "gemini-2.0-flash"
+# 게시판 요약/질의응답 → 저렴한 Lite 모델
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 # 기본 시스템 프롬프트
 DEFAULT_SYSTEM_PROMPT = """당신은 패들릿(Padlet)에 올라온 게시물을 기반으로 질문에 답변하는 AI 비서입니다.
@@ -74,10 +78,11 @@ def get_welcome_message() -> str:
     return "안녕하세요! 패들릿 내용에 대해 질문해 주세요."
 
 
+@login_required
 def chat_view(request):
-    """채팅 메인 뷰"""
-    # 세션에서 채팅 기록 가져오기
-    chat_history = request.session.get('padlet_chat_history', [])
+    """채팅 메인 뷰 (로그인 필요)"""
+    # 세션에서 채팅 기록 가져오기 (최대 50개 유지)
+    chat_history = request.session.get('padlet_chat_history', [])[-50:]
 
     # 업로드된 문서 수 확인
     doc_count = PadletDocument.objects.filter(is_processed=True).count()
@@ -103,17 +108,20 @@ def chat_view(request):
     })
 
 
+@login_required
 def clear_chat(request):
-    """채팅 기록 삭제 (AJAX)"""
+    """채팅 기록 삭제 (AJAX, 로그인 필요)"""
     if request.method == 'POST':
         request.session['padlet_chat_history'] = []
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
 
+@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 @require_POST
 def send_message(request):
-    """메시지 전송 및 AI 응답 (AJAX)"""
+    """메시지 전송 및 AI 응답 (AJAX, 로그인 필요)"""
     user_message = request.POST.get('message', '').strip()
 
     if not user_message:
@@ -189,7 +197,6 @@ def send_message(request):
         })
 
     except Exception as e:
-        import logging
         logging.exception("AI 응답 생성 오류")
         return JsonResponse({
             'error': 'AI 응답 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'

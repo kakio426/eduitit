@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('secret-admin-kakio/', admin.site.urls),
     path('', include('core.urls')),
     path('products/', include('products.urls')),
     path('portfolio/', include('portfolio.urls')),

@@ -17,8 +17,8 @@
             선생님의 <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">디지털 비서</span>
         </h1>
         <p class="text-3xl md:text-4xl text-gray-400 font-hand max-w-3xl mx-auto mt-4 leading-relaxed">
-            설치 없이, 로그인 없이. 수업 준비부터 행정 업무까지<br>
-            가장 스마트한 도구들을 만나보세요.
+            설치 없이, 더 똑똑하게. 수업 준비부터 행정 업무까지<br>
+            가장 스마트한 AI 도구들을 만나보세요.
         </p>
     </div>
 
@@ -44,7 +44,8 @@
                         <h2 class="text-6xl font-bold text-gray-700 mb-2 group-hover:text-purple-600 transition-colors">
                             {{ featured_product.title }}
                         </h2>
-                        <p class="text-3xl text-gray-500 font-hand leading-tight">{{ featured_product.lead_text|default:featured_product.description|truncatechars:80 }}</p>
+                        <p class="text-3xl text-gray-500 font-hand leading-tight">{{
+                            featured_product.lead_text|default:featured_product.description|truncatechars:80 }}</p>
                     </div>
 
                     <div class="flex justify-between items-end mt-8">
@@ -86,7 +87,8 @@
                             {% endif %}
                             <h3 class="text-4xl font-bold text-gray-700 mt-1">{{ product.title }}</h3>
                         </div>
-                        <p class="text-2xl text-gray-500 font-hand leading-tight">{{ product.lead_text|default:product.description }}</p>
+                        <p class="text-2xl text-gray-500 font-hand leading-tight">{{
+                            product.lead_text|default:product.description }}</p>
                     </div>
                     <div
                         class="text-7xl text-purple-200/50 group-hover:text-purple-300/50 transition-colors absolute right-0 bottom-0">
@@ -114,7 +116,9 @@
                             {{ product.service_type|title }}
                         </span>
                         <h3 class="text-5xl font-bold mb-4 leading-tight mt-2">{{ product.title }}</h3>
-                        <p class="{% if product.color_theme == 'dark' %}text-gray-400{% else %}text-gray-600{% endif %} text-2xl leading-tight">{{ product.lead_text|default:product.description }}</p>
+                        <p
+                            class="{% if product.color_theme == 'dark' %}text-gray-400{% else %}text-gray-600{% endif %} text-2xl leading-tight">
+                            {{ product.lead_text|default:product.description }}</p>
                     </div>
                     <div class="mt-4">
                         <span
@@ -143,7 +147,8 @@
                 </div>
                 <div>
                     <h3 class="text-3xl font-bold text-gray-700 mb-1">{{ product.title }}</h3>
-                    <p class="text-xl text-gray-500 leading-tight">{{ product.lead_text|default:product.description|truncatechars:100 }}</p>
+                    <p class="text-xl text-gray-500 leading-tight">{{
+                        product.lead_text|default:product.description|truncatechars:100 }}</p>
                 </div>
             </div>
         </div>
@@ -165,8 +170,8 @@
                     <span class="text-gray-600 font-bold text-2xl pt-1">설치 불필요</span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-user-shield text-purple-500 text-2xl"></i>
-                    <span class="text-gray-600 font-bold text-2xl pt-1">로그인 불필요</span>
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-2xl"></i>
+                    <span class="text-gray-600 font-bold text-2xl pt-1">스마트한 AI 비서</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-heart text-pink-500 text-2xl"></i>

@@ -680,6 +680,8 @@
 {% block extra_js %}
 <!-- 마크다운 파서 -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- XSS 방지용 sanitizer -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <!-- 이미지 저장용 라이브러리 -->
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <!-- 카카오 SDK -->
@@ -750,8 +752,8 @@
                 gfm: true
             });
 
-            // 마크다운을 HTML로 변환
-            const htmlContent = marked.parse(rawMarkdown);
+            // 마크다운을 HTML로 변환 (DOMPurify로 XSS 방지)
+            const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
             document.getElementById('markdownResult').innerHTML = htmlContent;
 
             // 오행 배지 생성

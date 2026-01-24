@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -7,6 +8,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django_ratelimit.decorators import ratelimit
+from core.utils import ratelimit_key_for_master_only
 from google import genai
 
 from .models import GuidelineDocument, ConsultationMode
@@ -14,7 +17,8 @@ from .forms import GuidelineDocumentForm
 from .rag_utils import get_rag_service
 
 # Gemini 모델 설정
-GEMINI_MODEL = "gemini-2.0-flash"
+# RAG 기반 문서 검색 → 중간급 2.5 Flash
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # 기본 시스템 프롬프트 (DB에 없을 경우 사용)
 DEFAULT_SYSTEM_PROMPTS = {
@@ -92,8 +96,9 @@ def get_system_prompt(mode_key: str) -> str:
         return DEFAULT_SYSTEM_PROMPTS.get(mode_key, DEFAULT_SYSTEM_PROMPTS['homeroom'])
 
 
+@login_required
 def chat_view(request):
-    """채팅 메인 뷰"""
+    """채팅 메인 뷰 (로그인 필요)"""
     # 세션에서 현재 모드 가져오기 (기본: 담임교사 모드)
     current_mode = request.session.get('sv_mode', 'homeroom')
 
@@ -113,8 +118,8 @@ def chat_view(request):
              'description': '관리자 의사결정 지원', 'icon': 'fa-solid fa-building-columns', 'color': 'green'},
         ]
 
-    # 세션에서 채팅 기록 가져오기 (브라우저 종료 시 삭제됨)
-    chat_history = request.session.get('sv_chat_history', [])
+    # 세션에서 채팅 기록 가져오기 (최대 50개 유지)
+    chat_history = request.session.get('sv_chat_history', [])[-50:]
 
     return render(request, 'school_violence/chat.html', {
         'modes': modes,
@@ -123,8 +128,9 @@ def chat_view(request):
     })
 
 
+@login_required
 def set_mode(request):
-    """모드 변경 (AJAX)"""
+    """모드 변경 (AJAX, 로그인 필요)"""
     if request.method == 'POST':
         mode = request.POST.get('mode', 'homeroom')
         if mode in ['homeroom', 'officer', 'admin']:
@@ -136,17 +142,20 @@ def set_mode(request):
     return JsonResponse({'success': False}, status=400)
 
 
+@login_required
 def clear_chat(request):
-    """채팅 기록 삭제 (AJAX)"""
+    """채팅 기록 삭제 (AJAX, 로그인 필요)"""
     if request.method == 'POST':
         request.session['sv_chat_history'] = []
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
 
+@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 @require_POST
 def send_message(request):
-    """메시지 전송 및 AI 응답 (AJAX)"""
+    """메시지 전송 및 AI 응답 (AJAX, 로그인 필요)"""
     user_message = request.POST.get('message', '').strip()
 
     if not user_message:
@@ -222,7 +231,6 @@ def send_message(request):
         })
 
     except Exception as e:
-        import logging
         logging.exception("AI 응답 생성 오류")
         return JsonResponse({
             'error': 'AI 응답 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'

@@ -6,8 +6,8 @@ import os
 from collections import deque
 
 # --- 설정 ---
-# 절대 변경 금지: 선생님 요청 모델명
-FIXED_MODEL_NAME = "gemini-3-flash-preview"
+# 문체 학습용 → 중간급 2.5 Flash
+FIXED_MODEL_NAME = "gemini-2.5-flash"
 
 # Rate Limiter (5분에 2회 제한)
 _usage_timestamps = deque()
