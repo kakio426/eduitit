@@ -143,6 +143,10 @@ ACCOUNT_SESSION_REMEMBER = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동
 
+# HTTPS 설정 (Railway 프록시 뒤에서 HTTPS 강제)
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # SSO Settings
 SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
 SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'http://localhost:3000') # schoolit 주소
