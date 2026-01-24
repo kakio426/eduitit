@@ -105,6 +105,8 @@ class ArticleCreateView(View):
             if uploaded_images:
                 import uuid
                 use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
+                print(f"DEBUG: USE_CLOUDINARY = {use_cloudinary}")
+                print(f"DEBUG: CLOUDINARY_STORAGE = {settings.CLOUDINARY_STORAGE}")
 
                 if use_cloudinary:
                     # Cloudinary 업로드
@@ -143,6 +145,7 @@ class ArticleCreateView(View):
                             continue
                 else:
                     # 로컬 파일 저장 (개발 환경)
+                    print(f"DEBUG: USE_CLOUDINARY is False, saving to local storage")
                     from django.core.files.storage import FileSystemStorage
                     fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
                     for img in uploaded_images[:5]:
