@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 import re
 import time
+import os
 from collections import deque
 
 # --- 설정 ---
@@ -17,21 +18,37 @@ def check_rate_limit(limit_count=2, limit_seconds=300):
     넘었으면 True(제한됨), 아니면 False(사용 가능) 반환.
     """
     now = time.time()
-    
+
     # 오래된 기록 제거
     while _usage_timestamps and _usage_timestamps[0] < now - limit_seconds:
         _usage_timestamps.popleft()
-        
+
     if len(_usage_timestamps) >= limit_count:
         return True
-    
+
     _usage_timestamps.append(now)
     return False
 
-def generate_article_gemini(api_key, topic_data, style_service=None):
-    # 하이브리드 로직: 사용자가 직접 입력한 키가 아니고, 환경변수 키를 쓰는 경우에만 제한
-    # is_using_master_key = not api_key # api_key 인자가 비어서 넘어오는 경우 (나중에 처리)
-    
+def get_remaining_wait_time(limit_seconds=300):
+    """Rate limit 해제까지 남은 시간(초) 반환"""
+    if not _usage_timestamps:
+        return 0
+    now = time.time()
+    oldest = _usage_timestamps[0]
+    remaining = limit_seconds - (now - oldest)
+    return max(0, int(remaining))
+
+def generate_article_gemini(api_key, topic_data, style_service=None, is_master_key=False):
+    """
+    AI 기사 생성 함수.
+    is_master_key=True인 경우 (환경변수 키 사용) Rate Limit 적용.
+    """
+    # 마스터 키 사용 시 Rate Limit 체크
+    if is_master_key:
+        if check_rate_limit(limit_count=2, limit_seconds=300):
+            wait_time = get_remaining_wait_time()
+            raise Exception(f"무료 사용량 초과입니다. {wait_time}초 후에 다시 시도해주세요. (5분당 2회 제한)")
+
     try:
         client = genai.Client(api_key=api_key)
         

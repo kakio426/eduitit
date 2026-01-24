@@ -130,26 +130,35 @@
                     <i class="fa-solid fa-download text-purple-400 group-hover:translate-y-1 transition-transform"></i>
                 </a>
 
-                <div
-                    class="p-6 rounded-3xl bg-gray-50 border-2 border-gray-100 flex items-center justify-between opacity-50 cursor-not-allowed shadow-clay">
+                <a href="{% url 'autoarticle:word' article.id %}"
+                    class="p-6 rounded-3xl bg-indigo-50 border-2 border-indigo-100 flex items-center justify-between group hover:bg-indigo-100 transition-all shadow-clay">
                     <div class="flex items-center gap-4">
                         <div
-                            class="w-14 h-14 rounded-2xl bg-gray-400 text-white flex items-center justify-center text-2xl">
+                            class="w-14 h-14 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-2xl">
                             <i class="fa-solid fa-file-word"></i>
                         </div>
                         <div>
                             <span class="block font-bold text-gray-800 text-xl">Word 공문 서식</span>
-                            <span class="text-sm text-gray-500">곧 지원 예정</span>
+                            <span class="text-sm text-gray-500">편집 가능한 문서</span>
                         </div>
                     </div>
-                </div>
+                    <i class="fa-solid fa-download text-indigo-400 group-hover:translate-y-1 transition-transform"></i>
+                </a>
             </div>
 
             <div class="mt-8 pt-8 border-t border-gray-100 flex justify-end gap-4">
-                <button
-                    class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-400 font-bold hover:bg-red-50 hover:text-red-500 transition-all">
-                    <i class="fa-solid fa-trash"></i> 삭제하기
-                </button>
+                <a href="{% url 'autoarticle:edit' article.id %}"
+                    class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-600 font-bold hover:bg-blue-50 hover:text-blue-600 transition-all">
+                    <i class="fa-solid fa-pen"></i> 수정하기
+                </a>
+                <form method="post" action="{% url 'autoarticle:delete' article.id %}" class="inline"
+                    onsubmit="return confirm('정말 이 기사를 삭제하시겠습니까?');">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-400 font-bold hover:bg-red-50 hover:text-red-500 transition-all">
+                        <i class="fa-solid fa-trash"></i> 삭제하기
+                    </button>
+                </form>
             </div>
         </div>
     </div>

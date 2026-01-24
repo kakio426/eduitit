@@ -1,72 +1,107 @@
 import os
 import json
 import requests
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from google import genai
+from .models import ArtClass, ArtStep
+
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
     YouTubeTranscriptApi = None
 
+
 def get_gemini_client():
     """Gemini Client (Server Credentials Priority)"""
-    # 1. Check settings first (Server credentials)
     api_key = getattr(settings, 'GEMINI_API_KEY', None)
-    
-    # 2. Env var fallback
     if not api_key:
         api_key = os.environ.get('GEMINI_API_KEY')
-    
     if not api_key:
         return None
-        
     return genai.Client(api_key=api_key)
 
+
 def setup_view(request):
-    """Setup Page"""
+    """Setup Page - 수업 준비 페이지"""
+    if request.method == 'POST':
+        # multipart/form-data 처리
+        video_url = request.POST.get('videoUrl', '')
+        interval = int(request.POST.get('stepInterval', 10))
+        title = request.POST.get('title', '')
+        
+        # ArtClass 생성
+        art_class = ArtClass.objects.create(
+            title=title,
+            youtube_url=video_url,
+            default_interval=interval,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+        
+        # Steps 처리 (동적으로 추가된 필드들)
+        step_count = int(request.POST.get('step_count', 0))
+        for i in range(step_count):
+            description = request.POST.get(f'step_text_{i}', '')
+            image = request.FILES.get(f'step_image_{i}')
+            
+            ArtStep.objects.create(
+                art_class=art_class,
+                step_number=i + 1,
+                description=description,
+                image=image
+            )
+        
+        return redirect('artclass:classroom', pk=art_class.pk)
+    
     return render(request, 'artclass/setup.html')
 
-def classroom_view(request):
-    """Classroom Page"""
-    if request.method == 'POST':
-        # Save data to session and redirect (PRG pattern)
-        steps = json.loads(request.POST.get('steps', '[]'))
-        video_url = request.POST.get('videoUrl')
-        interval = request.POST.get('stepInterval', 10)
-        
-        request.session['artclass_data'] = {
-            'steps': steps,
-            'videoUrl': video_url,
-            'stepInterval': interval
-        }
-        return redirect('artclass:classroom')
+
+def classroom_view(request, pk):
+    """Classroom Page - 수업 진행 페이지"""
+    art_class = get_object_or_404(ArtClass, pk=pk)
+    steps = art_class.steps.all()
     
-    # Get from session
-    data = request.session.get('artclass_data', {})
-    if not data:
-        return redirect('artclass:setup')
-        
+    # JSON 형태로 전달 (JS에서 사용)
+    steps_data = [
+        {
+            'id': step.pk,
+            'step_number': step.step_number,
+            'text': step.description,
+            'image_url': step.image.url if step.image else None
+        }
+        for step in steps
+    ]
+    
+    data = {
+        'videoUrl': art_class.youtube_url,
+        'stepInterval': art_class.default_interval,
+        'steps': steps_data
+    }
+    
     return render(request, 'artclass/classroom.html', {
+        'art_class': art_class,
+        'steps': steps,
         'data': data,
-        'data_json': json.dumps(data) # Passing for JS
+        'data_json': json.dumps(data, ensure_ascii=False)
     })
 
+
 def extract_video_id(url):
-    """Simple extractor (could be improved regex)"""
+    """Simple extractor"""
     if 'v=' in url:
         return url.split('v=')[1].split('&')[0]
     elif 'youtu.be/' in url:
         return url.split('youtu.be/')[1].split('?')[0]
     return None
 
+
 def get_video_info(url):
     """Get Title and Transcript"""
     title = ""
     transcript_text = ""
     
-    # 1. Get Title via NoEmbed
     try:
         resp = requests.get(f"https://noembed.com/embed?url={url}", timeout=5)
         if resp.status_code == 200:
@@ -74,7 +109,6 @@ def get_video_info(url):
     except Exception as e:
         print(f"Title fetch error: {e}")
         
-    # 2. Get Transcript
     video_id = extract_video_id(url)
     if video_id and YouTubeTranscriptApi:
         try:
@@ -86,8 +120,9 @@ def get_video_info(url):
             
     return title, transcript_text
 
+
 def generate_steps_api(request):
-    """AI Step Generation API (CSRF required - use fetch with credentials)"""
+    """AI Step Generation API"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 

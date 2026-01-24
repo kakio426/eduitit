@@ -13,10 +13,11 @@ from .engines.ai_service import generate_article_gemini, summarize_article_for_p
 from .engines.ppt_engine import PPTEngine
 from .engines.pdf_engine import PDFEngine
 from .engines.card_engine import CardNewsEngine
+from .engines.word_engine import WordEngine
 from .engines.rag_service import StyleRAGService
 
 class ArticleCreateView(View):
-    THEMES = ["웜 & 플레이풀", "쿨 & 모던", "클래식 & 정중한", "파스텔 & 소프트"]
+    THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
     STEPS = ["정보 입력", "AI 초안 생성", "편집 및 보존"]
     
     _style_rag = None
@@ -57,13 +58,20 @@ class ArticleCreateView(View):
         return render(request, 'autoarticle/wizard/step1.html', context)
 
     def get_api_key(self, request):
+        """
+        API 키와 마스터 키 사용 여부를 반환.
+        Returns: (api_key, is_master_key)
+        """
         user_key = None
         if request.user.is_authenticated:
             try:
                 user_key = request.user.userprofile.gemini_api_key
             except Exception:
                 pass
-        return user_key or os.environ.get("GEMINI_API_KEY")
+
+        if user_key:
+            return user_key, False  # 사용자 키 사용
+        return os.environ.get("GEMINI_API_KEY"), True  # 마스터 키 사용
 
     def post(self, request):
         step = request.POST.get('step', '1')
@@ -122,11 +130,11 @@ class ArticleCreateView(View):
                 messages.error(request, "입력 데이터가 없습니다. 다시 시작해주세요.")
                 return redirect('autoarticle:create')
 
-            api_key = self.get_api_key(request)
+            api_key, is_master_key = self.get_api_key(request)
             rag = self.get_style_rag()
-            
+
             try:
-                title, content, hashtags = generate_article_gemini(api_key, input_data, style_service=rag)
+                title, content, hashtags = generate_article_gemini(api_key, input_data, style_service=rag, is_master_key=is_master_key)
                 draft = {
                     'input_data': input_data,
                     'title': title,
@@ -187,7 +195,7 @@ class ArticleCreateView(View):
                     images=draft.get('images', [])
                 )
                 
-                api_key = self.get_api_key(request)
+                api_key, _ = self.get_api_key(request)
                 summary_points = summarize_article_for_ppt(final_content, api_key)
                 theme = request.session.get('autoarticle_theme', self.THEMES[0])
                 ppt_engine = PPTEngine(theme, article.school_name)
@@ -265,10 +273,28 @@ class ArticleArchiveView(ListView):
                     'location': art.location,
                     'images': []
                 })
-            
+
             ppt_buffer = ppt_engine.create_presentation(ppt_articles)
             response = HttpResponse(ppt_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
             response['Content-Disposition'] = 'attachment; filename="presentation.pptx"'
+            return response
+
+        elif action == 'generate_word':
+            word_engine = WordEngine(theme, school_name)
+            word_articles = []
+            for art in articles:
+                word_articles.append({
+                    'title': art.title,
+                    'content': art.full_text,
+                    'date': str(art.event_date),
+                    'location': art.location,
+                    'grade': art.grade,
+                    'images': []
+                })
+
+            word_buffer = word_engine.generate(word_articles)
+            response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            response['Content-Disposition'] = 'attachment; filename="newsletter.docx"'
             return response
 
         return redirect('autoarticle:archive')
@@ -282,7 +308,7 @@ class ArticleCardNewsView(View):
     def get(self, request, pk):
         article = get_object_or_404(GeneratedArticle, pk=pk)
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
-        
+
         engine = CardNewsEngine(theme)
         card = engine.create_card(
             title=article.title,
@@ -290,12 +316,79 @@ class ArticleCardNewsView(View):
             location=article.location,
             grade=article.grade,
             hashtags=article.hashtags,
-            images=article.images 
+            images=article.images
         )
-        
+
         buffer = io.BytesIO()
         card.save(buffer, format='PNG')
-        
+
         response = HttpResponse(buffer.getvalue(), content_type='image/png')
         response['Content-Disposition'] = f'attachment; filename="cardnews_{article.id}.png"'
         return response
+
+
+class ArticleWordView(View):
+    """개별 기사 Word 다운로드"""
+    def get(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+        theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
+
+        word_engine = WordEngine(theme, article.school_name)
+        article_data = {
+            'title': article.title,
+            'content': article.full_text,
+            'date': str(article.event_date),
+            'location': article.location,
+            'grade': article.grade,
+            'images': []
+        }
+
+        word_buffer = word_engine.generate([article_data])
+        response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename="article_{article.id}.docx"'
+        return response
+
+
+class ArticleDeleteView(View):
+    """기사 삭제"""
+    def post(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+
+        # 권한 체크: 로그인 사용자만 자신의 기사 삭제 가능
+        if request.user.is_authenticated and article.user and article.user != request.user:
+            messages.error(request, "삭제 권한이 없습니다.")
+            return redirect('autoarticle:detail', pk=pk)
+
+        article.delete()
+        messages.success(request, "기사가 삭제되었습니다.")
+        return redirect('autoarticle:archive')
+
+
+class ArticleEditView(View):
+    """기사 수정"""
+    def get(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+        context = {
+            'article': article,
+            'hashtags_str': ' '.join([f'#{tag}' for tag in article.hashtags]) if article.hashtags else ''
+        }
+        return render(request, 'autoarticle/edit.html', context)
+
+    def post(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+
+        # 권한 체크
+        if request.user.is_authenticated and article.user and article.user != request.user:
+            messages.error(request, "수정 권한이 없습니다.")
+            return redirect('autoarticle:detail', pk=pk)
+
+        article.title = request.POST.get('title', article.title)
+        article.full_text = request.POST.get('content', article.full_text)
+
+        hashtags_str = request.POST.get('hashtags', '')
+        if hashtags_str:
+            article.hashtags = [t.strip('#').strip() for t in hashtags_str.split() if t.strip()]
+
+        article.save()
+        messages.success(request, "기사가 수정되었습니다.")
+        return redirect('autoarticle:detail', pk=pk)

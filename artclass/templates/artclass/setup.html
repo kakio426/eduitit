@@ -5,8 +5,8 @@
 
 {% block content %}
 <main class="min-h-screen pt-32 pb-20 px-4">
-    <div class="max-w-4xl mx-auto clay-card p-8 md:p-12 bg-[#E0E5EC]">
-        
+    <div class="max-w-5xl mx-auto clay-card p-8 md:p-12 bg-[#E0E5EC]">
+
         <!-- Header -->
         <div class="text-center mb-12">
             <div class="inline-flex p-6 bg-[#E0E5EC] rounded-3xl shadow-clay-inner mb-6">
@@ -16,18 +16,17 @@
             <p class="text-3xl text-gray-500 font-hand">선생님을 위한 말랑말랑 수업 도우미 ✨</p>
         </div>
 
-        <form id="setupForm" method="POST" action="{% url 'artclass:classroom' %}">
+        <form id="setupForm" method="POST" action="{% url 'artclass:setup' %}" enctype="multipart/form-data">
             {% csrf_token %}
-            <!-- Hidden JSON input to store steps array -->
-            <input type="hidden" name="steps" id="stepsInput">
-            
+            <input type="hidden" name="step_count" id="stepCountInput" value="0">
+
             <!-- Settings Section -->
-            <div class="grid md:grid-cols-3 gap-8 mb-10">
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
                 <div class="md:col-span-2">
                     <label class="block text-2xl font-bold text-gray-600 mb-2">
                         <i class="fa-brands fa-youtube text-red-500 mr-2"></i> 유튜브 영상 주소
                     </label>
-                    <input type="text" name="videoUrl" id="videoUrl" 
+                    <input type="text" name="videoUrl" id="videoUrl"
                         class="w-full px-6 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl transition-all"
                         placeholder="https://www.youtube.com/watch?v=..." required>
                 </div>
@@ -40,10 +39,22 @@
                 </div>
             </div>
 
+            <!-- YouTube Preview -->
+            <div id="youtubePreviewContainer" class="mb-10 hidden">
+                <label class="block text-2xl font-bold text-gray-600 mb-4">
+                    <i class="fa-solid fa-eye text-purple-500 mr-2"></i> 영상 미리보기
+                </label>
+                <div class="rounded-2xl overflow-hidden shadow-clay bg-black aspect-video max-w-2xl mx-auto">
+                    <iframe id="youtubePreviewFrame" class="w-full h-full" frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                </div>
+            </div>
+
             <!-- AI Action Section -->
             <div class="mb-12 text-center">
-                <button type="button" id="btnAiGenerate" 
-                    class="w-full md:w-2/3 py-4 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 text-white text-3xl font-bold shadow-clay hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
+                <button type="button" id="btnAiGenerate"
+                    class="w-full md:w-2/3 py-4 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 text-white text-3xl font-bold shadow-clay hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 mx-auto">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI로 수업 단계 자동 생성
                 </button>
                 <p id="aiStatus" class="mt-3 text-xl font-hand text-gray-500 hidden"></p>
@@ -53,14 +64,13 @@
             <div class="mb-12">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-4xl font-bold text-gray-700">수업 단계</h2>
-                    <button type="button" id="btnAddStep" 
+                    <button type="button" id="btnAddStep"
                         class="px-6 py-2 rounded-xl bg-[#E0E5EC] text-gray-600 font-bold shadow-clay hover:text-purple-600 transition-all">
                         <i class="fa-solid fa-plus mr-2"></i>추가
                     </button>
                 </div>
 
                 <div id="stepsList" class="space-y-6">
-                    <!-- Steps will be injected here -->
                     <div class="text-center py-10 text-gray-400 font-hand text-2xl" id="emptyState">
                         <i class="fa-solid fa-layer-group text-4xl mb-3 block"></i>
                         단계를 추가하거나 AI로 생성해보세요.
@@ -84,13 +94,39 @@
 
     const stepsListEl = document.getElementById('stepsList');
     const emptyStateEl = document.getElementById('emptyState');
-    const stepsInputEl = document.getElementById('stepsInput');
+    const stepCountInput = document.getElementById('stepCountInput');
     const videoUrlEl = document.getElementById('videoUrl');
     const btnAiGenerate = document.getElementById('btnAiGenerate');
     const aiStatusEl = document.getElementById('aiStatus');
+    const youtubePreviewContainer = document.getElementById('youtubePreviewContainer');
+    const youtubePreviewFrame = document.getElementById('youtubePreviewFrame');
+
+    // Extract YouTube Video ID
+    function extractVideoId(url) {
+        const match = url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+        return match ? match[1] : null;
+    }
+
+    // Update YouTube Preview
+    function updateYoutubePreview() {
+        const url = videoUrlEl.value.trim();
+        const videoId = extractVideoId(url);
+        if (videoId) {
+            youtubePreviewFrame.src = `https://www.youtube.com/embed/${videoId}`;
+            youtubePreviewContainer.classList.remove('hidden');
+        } else {
+            youtubePreviewContainer.classList.add('hidden');
+            youtubePreviewFrame.src = '';
+        }
+    }
+
+    videoUrlEl.addEventListener('input', updateYoutubePreview);
+    videoUrlEl.addEventListener('paste', () => setTimeout(updateYoutubePreview, 100));
 
     // Render Steps
     function renderSteps() {
+        stepCountInput.value = steps.length;
+
         if (steps.length === 0) {
             stepsListEl.innerHTML = '';
             stepsListEl.appendChild(emptyStateEl);
@@ -98,27 +134,40 @@
         } else {
             emptyStateEl.style.display = 'none';
             stepsListEl.innerHTML = steps.map((step, index) => `
-                <div class="flex gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div class="w-10 h-10 rounded-full bg-[#E0E5EC] shadow-clay flex items-center justify-center font-bold text-gray-500 shrink-0 mt-1">
-                        ${index + 1}
+                <div class="clay-card p-6 bg-white/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-12 h-12 rounded-full bg-purple-100 shadow-clay-inner flex items-center justify-center font-bold text-purple-600 text-xl shrink-0">
+                            ${index + 1}
+                        </div>
+                        <div class="flex-1 space-y-4">
+                            <textarea name="step_text_${index}" 
+                                class="w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl resize-none transition-all"
+                                rows="2" placeholder="단계 내용을 입력하세요"
+                                oninput="updateStep(${index}, this.value)">${step.text}</textarea>
+                            
+                            <!-- Image Upload -->
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay cursor-pointer hover:shadow-clay-hover transition-all text-gray-600 hover:text-purple-600">
+                                    <i class="fa-solid fa-image text-xl"></i>
+                                    <span class="font-bold">참고 이미지 추가</span>
+                                    <input type="file" name="step_image_${index}" accept="image/*" class="hidden" onchange="previewImage(${index}, this)">
+                                </label>
+                                <div id="imagePreview_${index}" class="flex-1">
+                                    ${step.imagePreview ? `<img src="${step.imagePreview}" class="h-16 w-auto rounded-xl object-cover shadow-clay">` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removeStep(${index})" class="mt-2 text-red-400 hover:text-red-600 transition-colors p-2">
+                            <i class="fa-solid fa-trash text-xl"></i>
+                        </button>
                     </div>
-                    <div class="flex-1">
-                        <textarea class="w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl resize-none transition-all"
-                            rows="2" placeholder="단계 내용을 입력하세요"
-                            oninput="updateStep(${index}, this.value)">${step.text}</textarea>
-                    </div>
-                    <button type="button" onclick="removeStep(${index})" class="mt-2 text-red-400 hover:text-red-600 transition-colors">
-                        <i class="fa-solid fa-trash text-xl"></i>
-                    </button>
                 </div>
             `).join('');
         }
-        updateHiddenInput();
     }
 
     window.updateStep = (index, value) => {
         steps[index].text = value;
-        updateHiddenInput();
     };
 
     window.removeStep = (index) => {
@@ -126,12 +175,20 @@
         renderSteps();
     };
 
-    function updateHiddenInput() {
-        stepsInputEl.value = JSON.stringify(steps);
-    }
+    window.previewImage = (index, input) => {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                steps[index].imagePreview = e.target.result;
+                const previewDiv = document.getElementById(`imagePreview_${index}`);
+                previewDiv.innerHTML = `<img src="${e.target.result}" class="h-16 w-auto rounded-xl object-cover shadow-clay">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    };
 
     document.getElementById('btnAddStep').addEventListener('click', () => {
-        steps.push({ id: Date.now(), text: '' });
+        steps.push({ id: Date.now(), text: '', imagePreview: null });
         renderSteps();
     });
 
@@ -143,7 +200,6 @@
             return;
         }
 
-        // UI Loading
         const originHTML = btnAiGenerate.innerHTML;
         btnAiGenerate.disabled = true;
         btnAiGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 분석 중...';
@@ -169,8 +225,7 @@
                 throw new Error(data.error || '오류가 발생했습니다.');
             }
 
-            // Success
-            steps = data.steps;
+            steps = data.steps.map(s => ({ id: s.id, text: s.text, imagePreview: null }));
             renderSteps();
             aiStatusEl.textContent = '성공적으로 생성되었습니다!';
             aiStatusEl.className = 'mt-3 text-xl font-hand text-green-500 block';
@@ -195,6 +250,6 @@
     });
 
     // Init
-    updateHiddenInput();
+    renderSteps();
 </script>
 {% endblock %}
