@@ -109,6 +109,42 @@ def run():
     ProductFeature.objects.create(product=p_signatures, icon="fa-solid fa-file-pdf", title="PDF 자동 변환", description="취합된 서명은 깔끔한 PDF 문서로 저장되어 보관이 편리합니다.")
 
     # 其他 기존 서비스들 (유지)
+    # 패들릿 AI 봇
+    p_padlet = Product.objects.create(
+        title="패들릿 AI 봇",
+        lead_text="패들릿에 올린 자료로 학생들의 질문에 24시간 답변하는 나만의 AI 비서",
+        description="수업 자료를 패들릿에 올리셨나요? 이제 그 자료가 AI 챗봇이 됩니다. 학생들이 '선생님, 이거 어디 있어요?'라고 물으면 AI가 대신 찾아서 답변해줍니다. CSV, PDF, TXT 파일 업로드는 물론, 패들릿 URL만 연결하면 게시물 내용을 자동으로 학습합니다. 선생님은 자료만 올리고, 나머지는 AI에게 맡기세요.",
+        price=0,
+        is_active=True,
+        icon="📋",
+        color_theme="blue",
+        service_type="tool",
+        display_order=5,
+        external_url="/padlet/",
+        image="https://placehold.co/600x400/blue/white?text=Padlet+AI"
+    )
+    ProductFeature.objects.create(product=p_padlet, icon="fa-solid fa-robot", title="RAG 기반 AI 채팅", description="업로드한 문서 내용을 기반으로 정확한 답변을 생성합니다. 헛소리 없이 자료에 있는 내용만 답변합니다.")
+    ProductFeature.objects.create(product=p_padlet, icon="fa-solid fa-link", title="패들릿 자동 연동", description="패들릿 URL만 붙여넣으면 게시물 내용을 자동으로 가져와 학습합니다. API 키만 있으면 실시간 동기화도 가능합니다.")
+    ProductFeature.objects.create(product=p_padlet, icon="fa-solid fa-file-csv", title="다양한 파일 지원", description="CSV, PDF, TXT 등 다양한 형식의 문서를 업로드하여 AI 지식베이스를 구축할 수 있습니다.")
+
+    # AI 미술 수업
+    p_artclass = Product.objects.create(
+        title="AI 미술 수업",
+        lead_text="유튜브 미술 영상을 분석해서 단계별 수업 안내를 자동 생성하는 스마트 도우미",
+        description="'이 부분에서 잠깐 멈추고 따라 그려보세요'라고 일일이 설명하기 힘드셨죠? 이제 유튜브 미술 영상 URL만 넣으면 AI가 영상을 분석하여 학생들이 따라하기 좋은 단계별 안내를 자동으로 만들어줍니다. 교실 TV에 띄워놓고 학생들과 함께 차근차근 작품을 완성해보세요.",
+        price=0,
+        is_active=True,
+        icon="🎨",
+        color_theme="purple",
+        service_type="tool",
+        display_order=6,
+        external_url="/artclass/",
+        image="https://placehold.co/600x400/purple/white?text=AI+Art+Class"
+    )
+    ProductFeature.objects.create(product=p_artclass, icon="fa-solid fa-wand-magic-sparkles", title="AI 단계별 안내 생성", description="유튜브 영상의 자막과 내용을 분석하여 학생 눈높이에 맞는 단계별 수업 가이드를 자동 생성합니다.")
+    ProductFeature.objects.create(product=p_artclass, icon="fa-solid fa-tv", title="교실 수업 모드", description="생성된 단계를 교실 TV에 띄워놓고 버튼 하나로 다음 단계로 넘어가며 수업을 진행할 수 있습니다.")
+    ProductFeature.objects.create(product=p_artclass, icon="fa-solid fa-clock", title="타이머 연동", description="각 단계별 작업 시간을 설정하여 학생들이 충분히 따라할 시간을 확보할 수 있습니다.")
+
     # AutoArticle
     p_auto = Product.objects.create(
         title="기사 자동 생성",
@@ -119,7 +155,7 @@ def run():
         icon="fa-solid fa-robot",
         color_theme="purple",
         service_type="tool",
-        display_order=5,
+        display_order=7,
         external_url="/autoarticle/",
         image="https://placehold.co/600x400/purple/white?text=AI+Article"
     )
@@ -137,7 +173,7 @@ def run():
         icon="fa-brands fa-youtube",
         color_theme="red",
         service_type="platform",
-        display_order=6,
+        display_order=8,
         external_url="https://motube-woad.vercel.app/",
         image="https://placehold.co/600x400/red/white?text=PlayAura"
     )
@@ -154,7 +190,7 @@ def run():
         icon="fa-solid fa-school",
         color_theme="orange",
         service_type="platform",
-        display_order=7,
+        display_order=9,
         external_url="https://schoolit.shop/",
         image="https://placehold.co/600x400/orange/white?text=Schoolit"
     )
@@ -173,7 +209,7 @@ def run():
         color_theme="purple",
         service_type="library",
         card_size="small",
-        display_order=8,
+        display_order=10,
         external_url="/insights/",
         image="https://placehold.co/600x400/purple/white?text=Insights"
     )
@@ -188,7 +224,7 @@ def run():
         color_theme="dark",
         service_type="guide",
         card_size="small",
-        display_order=9,
+        display_order=11,
         external_url="/tools/",
         image="https://placehold.co/600x400/gray/white?text=AI+Tools"
     )
@@ -203,7 +239,7 @@ def run():
         color_theme="purple",
         service_type="tool",
         card_size="wide",
-        display_order=10,
+        display_order=12,
         external_url="/prompts/",
         image="https://placehold.co/600x400/purple/white?text=Prompt+Lab"
     )
