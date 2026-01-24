@@ -25,15 +25,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # Allowed hosts from environment variable (comma-separated)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.railway.app,eduitit.shop,www.eduitit.shop,localhost,127.0.0.1').split(',')
 
 # Kakao API Key
 KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY')
 
-# CSRF trusted origins for Render
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'https://*.railway.app',
+    'https://eduitit.shop',
+    'https://www.eduitit.shop',
 ]
 
 # =============================================================================
@@ -309,6 +311,8 @@ CSP_FONT_SRC = (
     "'self'",
     "https://fonts.gstatic.com",
     "https://cdnjs.cloudflare.com",
+    "https://cdn.jsdelivr.net",
+    "https://unpkg.com",
 )
 CSP_IMG_SRC = (
     "'self'",
