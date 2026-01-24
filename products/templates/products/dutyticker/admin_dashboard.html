@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">DutyTicker 설정</h1>
+        <a href="{% url 'dutyticker' %}"
+            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">
+            대시보드로 돌아가기
+        </a>
+    </div>
+
+    <!-- Rotation Control Panel -->
+    <div
+        class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl shadow-lg p-6 mb-8 text-white flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold mb-1"><i class="fa-solid fa-arrows-rotate mr-2"></i> 역할 순환</h2>
+            <p class="opacity-90">버튼을 누르면 모든 학생의 역할이 한 칸씩 밀립니다. (오늘의 역할 바꾸기)</p>
+        </div>
+        <button onclick="rotateRoles()"
+            class="bg-white text-purple-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold shadow-md transition transform active:scale-95">
+            <i class="fa-solid fa-play mr-2"></i>지금 순환하기
+        </button>
+    </div>
+
+    <script>
+        async function rotateRoles() {
+            if (!confirm('정말로 모든 역할을 한 칸씩 순환하시겠습니까?')) return;
+
+            try {
+                const res = await fetch("{% url 'dt_api_rotate' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('역할이 순환되었습니다!');
+                    window.location.reload();
+                } else {
+                    alert('오류 발생: ' + data.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('서버 통신 오류');
+            }
+        }
+    </script>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Student Management -->
+        <div class="bg-white rounded-2xl shadow-clay p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700 flex items-center">
+                <span class="mr-2">👨‍🎓</span> 학생 명단
+            </h2>
+
+            <form action="{% url 'dt_admin_add_student' %}" method="POST" class="mb-6">
+                {% csrf_token %}
+                <label class="block text-sm font-medium text-gray-600 mb-2">학생 추가 (쉼표로 구분하여 여러 명 추가 가능)</label>
+                <div class="flex gap-2">
+                    <input type="text" name="names"
+                        class="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="예: 김철수, 이영희, 박민수">
+                    <button type="submit"
+                        class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition">
+                        추가
+                    </button>
+                </div>
+            </form>
+
+            <div class="max-h-[400px] overflow-y-auto space-y-2">
+                {% for student in students %}
+                <div
+                    class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100 group hover:shadow-sm transition">
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="w-6 h-6 flex items-center justify-center bg-gray-200 text-gray-600 text-xs font-bold rounded-full">
+                            {{ student.number }}
+                        </span>
+                        <span class="font-medium text-gray-700">{{ student.name }}</span>
+                    </div>
+                    <a href="{% url 'dt_admin_delete_student' student.pk %}"
+                        class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition px-2">
+                        <i class="fa-solid fa-trash"></i>
+                    </a>
+                </div>
+                {% empty %}
+                <p class="text-gray-400 text-center py-4">등록된 학생이 없습니다.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Role Management -->
+        <div class="bg-white rounded-2xl shadow-clay p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700 flex items-center">
+                <span class="mr-2">📋</span> 역할 관리
+            </h2>
+
+            <form action="{% url 'dt_admin_add_role' %}" method="POST" class="mb-6 space-y-3">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">역할 이름</label>
+                    <input type="text" name="name"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="예: 칠판 지우기">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">수행 시간</label>
+                    <input type="text" name="time_slot"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="예: 쉬는시간, 점심시간">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">설명</label>
+                    <input type="text" name="description"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="역할에 대한 상세 설명">
+                </div>
+                <button type="submit"
+                    class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-bold shadow-sm transition">
+                    역할 생성
+                </button>
+            </form>
+
+            <div class="max-h-[400px] overflow-y-auto space-y-2">
+                {% for role in roles %}
+                <div
+                    class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100 group hover:shadow-sm transition">
+                    <div>
+                        <h3 class="font-bold text-gray-800">{{ role.name }}</h3>
+                        <p class="text-sm text-purple-500 font-medium">{{ role.time_slot }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ role.description }}</p>
+                    </div>
+                    <a href="{% url 'dt_admin_delete_role' role.pk %}"
+                        class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition px-2">
+                        <i class="fa-solid fa-trash"></i>
+                    </a>
+                </div>
+                {% empty %}
+                <p class="text-gray-400 text-center py-4">등록된 역할이 없습니다.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

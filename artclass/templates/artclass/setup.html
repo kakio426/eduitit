@@ -20,35 +20,14 @@
             {% csrf_token %}
             <input type="hidden" name="step_count" id="stepCountInput" value="0">
 
-            <!-- Settings Section -->
-            <div class="grid md:grid-cols-3 gap-8 mb-8">
-                <div class="md:col-span-2">
-                    <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-brands fa-youtube text-red-500 mr-2"></i> 유튜브 영상 주소
-                    </label>
-                    <input type="text" name="videoUrl" id="videoUrl"
-                        class="w-full px-6 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl transition-all"
-                        placeholder="https://www.youtube.com/watch?v=..." required>
-                </div>
-                <div>
-                    <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-solid fa-stopwatch text-blue-500 mr-2"></i> 간격 (초)
-                    </label>
-                    <input type="number" name="stepInterval" id="stepInterval" value="10" min="1"
-                        class="w-full px-6 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl transition-all text-center">
-                </div>
-            </div>
-
-            <!-- YouTube Preview -->
-            <div id="youtubePreviewContainer" class="mb-10 hidden">
-                <label class="block text-2xl font-bold text-gray-600 mb-4">
-                    <i class="fa-solid fa-eye text-purple-500 mr-2"></i> 영상 미리보기
+            <!-- URL Input Section -->
+            <div class="mb-10">
+                <label class="block text-2xl font-bold text-gray-600 mb-3">
+                    <i class="fa-brands fa-youtube text-red-500 mr-2"></i> 유튜브 영상 주소
                 </label>
-                <div class="rounded-2xl overflow-hidden shadow-clay bg-black aspect-video max-w-2xl mx-auto">
-                    <iframe id="youtubePreviewFrame" class="w-full h-full" frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen></iframe>
-                </div>
+                <input type="text" name="videoUrl" id="videoUrl"
+                    class="w-full px-8 py-4 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-2xl transition-all"
+                    placeholder="https://www.youtube.com/watch?v=..." required>
             </div>
 
             <!-- AI Action Section -->
@@ -60,31 +39,77 @@
                 <p id="aiStatus" class="mt-3 text-xl font-hand text-gray-500 hidden"></p>
             </div>
 
-            <!-- Steps Section -->
-            <div class="mb-12">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-4xl font-bold text-gray-700">수업 단계</h2>
-                    <button type="button" id="btnAddStep"
-                        class="px-6 py-2 rounded-xl bg-[#E0E5EC] text-gray-600 font-bold shadow-clay hover:text-purple-600 transition-all">
-                        <i class="fa-solid fa-plus mr-2"></i>추가
-                    </button>
+            <!-- Main Editor Area: Side by Side on Desktop -->
+            <div class="flex flex-col md:flex-row gap-10 items-start">
+
+                <!-- Left: Sticky YouTube Preview -->
+                <div id="youtubePreviewContainer" class="w-full md:w-[40%] md:sticky md:top-36 hidden z-10">
+                    <label class="block text-2xl font-bold text-gray-600 mb-4">
+                        <i class="fa-solid fa-video text-purple-500 mr-2"></i> 영상 참고하기
+                    </label>
+                    <div class="rounded-3xl overflow-hidden shadow-clay bg-black aspect-video">
+                        <iframe id="youtubePreviewFrame" class="w-full h-full" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                    </div>
+                    <div class="mt-4 p-5 bg-white/40 rounded-3xl text-gray-600 font-hand text-xl shadow-clay-inner">
+                        <p class="mb-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i> <b>꿀팁! 초스피드 이미지
+                                등록</b></p>
+                        <p class="text-lg opacity-80 leading-relaxed">
+                            1. 영상을 보다가 필요한 장면에서 <span
+                                class="px-2 py-0.5 bg-gray-700 text-white rounded text-sm">Win+Shift+S</span> 키로
+                            캡처하세요.<br>
+                            2. 아래 단계의 <span class="text-purple-600 font-bold">📋 붙여넣기</span> 버튼을 누르면 즉시 이미지가 들어갑니다!
+                        </p>
+                    </div>
                 </div>
 
-                <div id="stepsList" class="space-y-6">
-                    <div class="text-center py-10 text-gray-400 font-hand text-2xl" id="emptyState">
-                        <i class="fa-solid fa-layer-group text-4xl mb-3 block"></i>
-                        단계를 추가하거나 AI로 생성해보세요.
+                <!-- Right: Steps Section -->
+                <div class="flex-1 w-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-4xl font-bold text-gray-700">수업 단계 작성</h2>
+                        <button type="button" id="btnAddStep"
+                            class="px-6 py-3 rounded-2xl bg-white/50 text-purple-600 font-bold shadow-clay hover:shadow-clay-hover transition-all">
+                            <i class="fa-solid fa-plus mr-2"></i>단계 추가
+                        </button>
+                    </div>
+
+                    <div id="stepsList" class="space-y-8">
+                        <div class="text-center py-20 bg-white/20 rounded-3xl border-2 border-dashed border-gray-300 text-gray-400 font-hand text-2xl"
+                            id="emptyState">
+                            <i class="fa-solid fa-layer-group text-5xl mb-3 block opacity-30"></i>
+                            영상을 분석하거나 단계를 직접 추가해보세요.
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Submit -->
-            <div class="text-center">
-                <button type="submit" id="btnStart"
-                    class="px-12 py-5 rounded-full bg-green-500 text-white text-4xl font-bold shadow-clay hover:bg-green-600 hover:scale-105 active:scale-95 transition-all">
-                    수업 시작하기 <i class="fa-solid fa-play ml-2"></i>
-                </button>
+            <!-- Class Settings (Bottom Section) -->
+            <div class="mt-16 p-8 md:p-12 rounded-[2.5rem] bg-white/40 shadow-clay-inner">
+                <h3 class="text-3xl font-bold text-gray-600 mb-8 border-b border-gray-300 pb-4">
+                    <i class="fa-solid fa-sliders mr-2"></i> 수업 시작 전 설정
+                </h3>
+
+                <div class="max-w-md mx-auto">
+                    <label class="block text-2xl font-bold text-gray-600 mb-3 text-center">
+                        <i class="fa-solid fa-stopwatch text-blue-500 mr-2"></i> 단계별 보여지는 시간 (초)
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" name="stepInterval" id="stepInterval" value="10" min="1"
+                            class="flex-1 px-8 py-4 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-2xl text-center font-bold">
+                        <span class="text-2xl font-bold text-gray-500">초 간격</span>
+                    </div>
+                    <p class="mt-3 text-center text-gray-400 font-hand text-lg">교실에서 다음 단계로 자동으로 넘어가는 간격입니다.</p>
+                </div>
+
+                <div class="mt-12 text-center">
+                    <button type="submit" id="btnStart"
+                        class="w-full md:w-auto px-20 py-6 rounded-full bg-green-500 text-white text-4xl font-bold shadow-clay hover:bg-green-600 hover:scale-105 active:scale-95 transition-all">
+                        수업 시작하기 <i class="fa-solid fa-play ml-2"></i>
+                    </button>
+                </div>
             </div>
+
         </form>
     </div>
 </main>
@@ -143,17 +168,25 @@
                             <textarea name="step_text_${index}" 
                                 class="w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl resize-none transition-all"
                                 rows="2" placeholder="단계 내용을 입력하세요"
+                                onpaste="handleTextareaPaste(event, ${index})"
                                 oninput="updateStep(${index}, this.value)">${step.text}</textarea>
                             
-                            <!-- Image Upload -->
-                            <div class="flex items-center gap-4">
+                            <!-- Image Upload & Paste -->
+                            <div class="flex flex-wrap items-center gap-4">
                                 <label class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay cursor-pointer hover:shadow-clay-hover transition-all text-gray-600 hover:text-purple-600">
                                     <i class="fa-solid fa-image text-xl"></i>
-                                    <span class="font-bold">참고 이미지 추가</span>
+                                    <span class="font-bold">이미지 선택</span>
                                     <input type="file" name="step_image_${index}" accept="image/*" class="hidden" onchange="previewImage(${index}, this)">
                                 </label>
-                                <div id="imagePreview_${index}" class="flex-1">
-                                    ${step.imagePreview ? `<img src="${step.imagePreview}" class="h-16 w-auto rounded-xl object-cover shadow-clay">` : ''}
+                                
+                                <button type="button" onclick="handleClipboardPaste(${index})"
+                                    class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-purple-500 text-white shadow-clay hover:bg-purple-600 transition-all font-bold">
+                                    <i class="fa-solid fa-paste text-xl"></i>
+                                    <span>📋 붙여넣기</span>
+                                </button>
+
+                                <div id="imagePreview_${index}" class="flex-1 min-w-[100px]">
+                                    ${step.imagePreview ? `<img src="${step.imagePreview}" class="h-24 w-auto rounded-xl object-cover shadow-clay">` : '<span class="text-gray-400 text-sm font-hand">이미지 없음</span>'}
                                 </div>
                             </div>
                         </div>
@@ -175,15 +208,68 @@
         renderSteps();
     };
 
+    // Handle File Input Preview
     window.previewImage = (index, input) => {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 steps[index].imagePreview = e.target.result;
                 const previewDiv = document.getElementById(`imagePreview_${index}`);
-                previewDiv.innerHTML = `<img src="${e.target.result}" class="h-16 w-auto rounded-xl object-cover shadow-clay">`;
+                previewDiv.innerHTML = `<img src="${e.target.result}" class="h-24 w-auto rounded-xl object-cover shadow-clay">`;
             };
             reader.readAsDataURL(input.files[0]);
+        }
+    };
+
+    // Handle Clipboard Paste Button
+    window.handleClipboardPaste = async (index) => {
+        try {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                if (item.types.some(type => type.startsWith('image/'))) {
+                    const blob = await item.getType(item.types.find(type => type.startsWith('image/')));
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        steps[index].imagePreview = e.target.result;
+                        const previewDiv = document.getElementById(`imagePreview_${index}`);
+                        previewDiv.innerHTML = `<img src="${e.target.result}" class="h-24 w-auto rounded-xl object-cover shadow-clay">`;
+
+                        // Create a file to be sent with the form
+                        const file = new File([blob], "pasted_image.png", { type: blob.type });
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        document.querySelector(`input[name="step_image_${index}"]`).files = dataTransfer.files;
+                    };
+                    reader.readAsDataURL(blob);
+                    return;
+                }
+            }
+            alert("클립보드에 이미지가 없습니다. Win+Shift+S 등으로 캡처 후 눌러주세요!");
+        } catch (err) {
+            console.error("Clipboard access failed:", err);
+            alert("클립보드 접근 권한이 필요합니다. 브라우저 설정을 확인해주세요.");
+        }
+    };
+
+    // Handle Direct Textarea Paste
+    window.handleTextareaPaste = (event, index) => {
+        const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    steps[index].imagePreview = e.target.result;
+                    const previewDiv = document.getElementById(`imagePreview_${index}`);
+                    previewDiv.innerHTML = `<img src="${e.target.result}" class="h-24 w-auto rounded-xl object-cover shadow-clay">`;
+
+                    const file = new File([blob], "pasted_image.png", { type: blob.type });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    document.querySelector(`input[name="step_image_${index}"]`).files = dataTransfer.files;
+                };
+                reader.readAsDataURL(blob);
+            }
         }
     };
 

@@ -8,13 +8,19 @@
 {% endblock %}
 
 {% block content %}
-<div class="dutyticker-container min-h-screen p-6 md:p-10 pt-28 transition-colors duration-500">
+<div class="dutyticker-container min-h-screen p-6 md:p-10 pt-40 md:pt-48 transition-colors duration-500">
     <!-- Header -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
         <div class="space-y-2">
             <h1 class="text-5xl md:text-6xl font-bold tracking-tight text-gray-700"
                 style="text-shadow: 4px 4px 8px rgba(163, 177, 198, 0.4);">DUTYTICKER</h1>
-            <p class="text-2xl md:text-3xl text-gray-400 font-hand uppercase tracking-[0.15em] ml-1">Classroom Status Board</p>
+            <p class="text-2xl md:text-3xl text-gray-400 font-hand uppercase tracking-[0.15em] ml-1">Classroom Status
+                Board</p>
+            <a href="{% url 'dt_admin_dashboard' %}"
+                class="inline-block mt-2 text-sm text-purple-400 hover:text-purple-600 underline">
+                <i class="fa-solid fa-gear mr-1"></i>설정 및 관리
+            </a>
+
         </div>
         <div id="digitalClock" class="clay-card px-8 py-4 md:px-10 md:py-6">
             <div class="text-4xl md:text-5xl font-bold tracking-tighter tabular-nums text-gray-700" id="clockTime">
@@ -68,7 +74,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'products/dutyticker/js/data.js' %}"></script>
+
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
 <script>
     // Initialize Clock

@@ -33,65 +33,60 @@ class DutyTickerManager {
         this.renderAll();
     }
 
-    loadData() {
-        // Roles
-        const savedRoles = localStorage.getItem('dt-roles');
-        this.roles = savedRoles ? JSON.parse(savedRoles) : [...mockRoles];
+    async loadData() {
+        try {
+            const response = await fetch('/dutyticker/api/data/');
+            const data = await response.json();
 
-        // Students
-        this.students = [...mockStudents];
+            // Map Roles + Assignments to Frontend Structure
+            this.roles = data.roles.map(role => {
+                const assignment = data.assignments.find(a => a.role_id === role.id);
+                return {
+                    id: role.id,
+                    name: role.name,
+                    description: role.description,
+                    timeSlot: role.time_slot,
+                    assignee: assignment ? assignment.student_name : '미배정',
+                    assigneeId: assignment ? assignment.student_id : null,
+                    status: assignment && assignment.is_completed ? 'completed' : 'pending',
+                    assignmentId: assignment ? assignment.id : null,
+                    color: role.color
+                };
+            });
 
-        // Schedule
-        const todayIdx = new Date().getDay();
-        const displayDay = (todayIdx === 0 || todayIdx === 6) ? 1 : todayIdx;
-        this.todaySchedule = mockWeeklySchedule[displayDay] || [];
-    }
+            // Map Students
+            this.students = data.students.map(s => ({ id: s.id, name: s.name, number: s.number }));
 
-    saveRoles() {
-        localStorage.setItem('dt-roles', JSON.stringify(this.roles));
-    }
+            // Map Schedule
+            const todayIdx = new Date().getDay(); // 0=Sun, 1=Mon...
+            const displayDay = (todayIdx === 0 || todayIdx === 6) ? 1 : todayIdx; // Default to Mon on weekends
+            this.todaySchedule = data.schedule[displayDay] || [];
 
-    initUI() {
-        // Init Sound Switch UI
-        const soundBtn = document.getElementById('toggleSoundBtn');
-        if (soundBtn) {
-            this.updateSoundUI();
+            // Initial Render
+            this.renderAll();
+
+        } catch (error) {
+            console.error("Failed to load DutyTicker data:", error);
         }
     }
 
-    setupEventListeners() {
-        // Broadcast
-        document.getElementById('broadcastBtn').onclick = () => this.openBroadcastModal();
-        document.getElementById('sendBroadcastBtn').onclick = () => this.handleStartBroadcast();
-        document.getElementById('toggleSoundBtn').onclick = () => this.toggleBroadcastSound();
-
-        // Alert
-        document.getElementById('alertDismissBtn').onclick = () => this.dismissAlert();
-
-        // Timer
-        document.getElementById('timerToggle').onclick = () => this.toggleTimer();
-        document.getElementById('timerReset').onclick = () => this.resetTimer();
-
-        const timerModes = document.querySelectorAll('.timer-mode'); // Note: added class in main.html implicitly or here
-        // If I haven't added classes, I'll use index or text for now
-        const modeButtons = document.querySelectorAll('#timerCardRoot button'); // More specific selector needed
+    saveRoles() {
+        // No client-side save needed anymore
     }
 
-    startBackgroundProcesses() {
-        // Schedule Checker
-        setInterval(() => this.checkScheduleAlerts(), 1000);
-
-        // Clock is already handled in main.html script block
-    }
+    // ... initUI and setupEventListeners ...
 
     // --- Role Management ---
+    // --- Role Management ---
     renderCurrentRole() {
+        // Find first pending role or null
         const role = this.roles.find(r => r.status === 'pending') || null;
+
         const roleState = document.getElementById('roleState');
         const broadcastState = document.getElementById('broadcastState');
         const emptyState = document.getElementById('emptyState');
 
-        // Reset display
+        // Reset visibility
         [roleState, broadcastState, emptyState].forEach(el => el.classList.add('hidden'));
 
         if (this.isBroadcasting) {
@@ -128,9 +123,9 @@ class DutyTickerManager {
         // Duplicate roles for seamless scrolling if many
         const displayRoles = this.roles.length > 4 ? [...this.roles, ...this.roles] : this.roles;
 
-        ticker.innerHTML = displayRoles.map((role, idx) => `
+        ticker.innerHTML = displayRoles.map((role) => `
             <div class="p-6 rounded-[1.5rem] flex justify-between items-center transition-all border border-[var(--border)] cursor-pointer shadow-lg ${role.status === 'completed' ? 'opacity-40 grayscale-[0.5]' : 'bg-[var(--bg-card)]'}"
-                 onclick="window.dtApp.openStudentModal('${role.id}')">
+                 onclick="window.dtApp.openStudentModal(${role.id})">
                 <div class="flex-1">
                     <div class="flex items-center gap-3">
                         <span class="text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest ${role.status === 'completed' ? 'bg-[var(--bg-accent)] text-[var(--text-muted)]' : 'bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/20'}">
@@ -142,7 +137,7 @@ class DutyTickerManager {
                     </p>
                     <p class="text-[var(--accent)] font-bold text-lg mt-1">${role.assignee}</p>
                 </div>
-                <div class="ml-4" onclick="event.stopPropagation(); window.dtApp.toggleRoleStatus('${role.id}')">
+                <div class="ml-4" onclick="event.stopPropagation(); window.dtApp.toggleRoleStatus(${role.id})">
                     ${role.status === 'completed' ?
                 '<div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20"><span class="text-green-500 text-2xl font-bold">✓</span></div>' :
                 '<div class="w-10 h-10 rounded-full bg-[var(--bg-accent)] flex items-center justify-center border border-[var(--border)] group"><div class="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"></div></div>'
@@ -163,23 +158,47 @@ class DutyTickerManager {
         }
     }
 
-    renderAll() {
-        this.renderCurrentRole();
-        this.renderTimeline();
+    async toggleRoleStatus(roleId) {
+        const role = this.roles.find(r => r.id === roleId);
+        if (!role || !role.assignmentId) return;
+
+        // Optimistic UI Update
+        const originalStatus = role.status;
+        const newStatus = originalStatus === 'completed' ? 'pending' : 'completed';
+
+        role.status = newStatus;
+        this.renderAll();
+
+        try {
+            await fetch(`/dutyticker/api/assignment/${role.assignmentId}/toggle/`, {
+                method: 'POST',
+                body: JSON.stringify({ is_completed: newStatus === 'completed' })
+            });
+        } catch (e) {
+            console.error("Failed to toggle status:", e);
+            // Revert on error
+            role.status = originalStatus;
+            this.renderAll();
+        }
     }
 
-    toggleRoleStatus(roleId) {
-        this.roles = this.roles.map(r => r.id === roleId ?
-            { ...r, status: r.status === 'completed' ? 'pending' : 'completed' } : r
-        );
-        this.saveRoles();
-        this.renderAll();
-    }
+    async updateRoleAssignee(roleId, studentId) {
+        // Optimistic UI Update is harder here because we need assignmentId if it was null
+        // So we will wait for server response
+        try {
+            const response = await fetch('/dutyticker/api/assign/', {
+                method: 'POST',
+                body: JSON.stringify({ role_id: roleId, student_id: studentId })
+            });
+            const result = await response.json();
 
-    updateRoleAssignee(roleId, attendee) {
-        this.roles = this.roles.map(r => r.id === roleId ? { ...r, assignee: attendee } : r);
-        this.saveRoles();
-        this.renderAll();
+            if (result.success) {
+                // Reload data to ensure sync (or manually update local state if preferred)
+                await this.loadData();
+            }
+        } catch (e) {
+            console.error("Failed to assign role:", e);
+        }
     }
 
     // --- Modals ---
@@ -254,9 +273,9 @@ class DutyTickerManager {
 
         const grid = document.getElementById('studentListGrid');
         grid.innerHTML = this.students.map(s => `
-            <button onclick="window.dtApp.handleStudentSelect('${s}')" 
+            <button onclick="window.dtApp.handleStudentSelect(${s.id})" 
                     class="py-3 px-2 bg-[var(--bg-accent)] border border-[var(--border)] rounded-xl font-bold text-lg hover:bg-[var(--accent)] hover:text-white transition-all">
-                ${s}
+                ${s.name}
             </button>
         `).join('');
 
