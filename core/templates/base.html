@@ -147,6 +147,7 @@
             <!-- Desktop Navigation -->
             <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500 items-center">
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
+                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition">이용방법</a>
                 <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'sso_schoolit' %}"
@@ -219,6 +220,10 @@
             <div class="flex flex-col gap-4 text-2xl font-bold text-gray-600">
                 <a href="/#services" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-grid-2 mr-3 text-purple-400"></i> 서비스
+                </a>
+                <a href="{% url 'settings' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-circle-info mr-3 text-purple-400"></i> 이용방법
                 </a>
                 <a href="{% url 'portfolio:list' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
