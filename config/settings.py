@@ -207,15 +207,39 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Cloudinary 설정
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
-}
+# Cloudinary 설정 (CLOUDINARY_URL 형식 지원)
+from urllib.parse import urlparse
+
+cloudinary_url = os.environ.get('CLOUDINARY_URL', '')
+CLOUDINARY_STORAGE = {}
+
+if cloudinary_url:
+    # CLOUDINARY_URL 파싱
+    # 형식: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+    try:
+        parsed = urlparse(cloudinary_url)
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': parsed.hostname or '',
+            'API_KEY': parsed.username or '',
+            'API_SECRET': parsed.password or '',
+        }
+    except Exception as e:
+        print(f"Warning: Failed to parse CLOUDINARY_URL: {e}")
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+            'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+            'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+        }
+else:
+    # 폴백: 개별 환경변수 사용
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+        'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+    }
 
 # Cloudinary 활성화 여부 (환경변수가 설정되어 있으면 활성화)
-USE_CLOUDINARY = bool(CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY'])
+USE_CLOUDINARY = bool(CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'))
 
 if USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
