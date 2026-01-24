@@ -208,13 +208,26 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Cloudinary 설정 (CLOUDINARY_URL 형식 지원)
+# Cloudinary 설정
+print("=" * 80)
+print("🔍 CLOUDINARY 환경 변수 체크")
+print("=" * 80)
+
+# 환경 변수 확인 (민감 정보 마스킹)
 cloudinary_url = os.environ.get('CLOUDINARY_URL', '')
+cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+api_key = os.environ.get('CLOUDINARY_API_KEY', '')
+api_secret = os.environ.get('CLOUDINARY_API_SECRET', '')
+
+print(f"CLOUDINARY_URL: {'설정됨' if cloudinary_url else '❌ 없음'}")
+print(f"CLOUDINARY_CLOUD_NAME: {cloud_name if cloud_name else '❌ 없음'}")
+print(f"CLOUDINARY_API_KEY: {api_key[:4] + '...' if api_key else '❌ 없음'}")
+print(f"CLOUDINARY_API_SECRET: {'설정됨' if api_secret else '❌ 없음'}")
+
 CLOUDINARY_STORAGE = {}
 
 if cloudinary_url:
-    # CLOUDINARY_URL 파싱
-    # 형식: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+    print("📦 CLOUDINARY_URL 파싱 시도 중...")
     try:
         parsed = urlparse(cloudinary_url)
         CLOUDINARY_STORAGE = {
@@ -222,26 +235,47 @@ if cloudinary_url:
             'API_KEY': parsed.username or '',
             'API_SECRET': parsed.password or '',
         }
+        print(f"✅ 파싱 성공 - CLOUD_NAME: {parsed.hostname}")
     except Exception as e:
-        print(f"Warning: Failed to parse CLOUDINARY_URL: {e}")
+        print(f"❌ CLOUDINARY_URL 파싱 실패: {e}")
         CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
-            'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
-            'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+            'CLOUD_NAME': cloud_name,
+            'API_KEY': api_key,
+            'API_SECRET': api_secret,
         }
 else:
-    # 폴백: 개별 환경변수 사용
+    print("📦 개별 환경변수 사용")
     CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
-        'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
-        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+        'CLOUD_NAME': cloud_name,
+        'API_KEY': api_key,
+        'API_SECRET': api_secret,
     }
 
-# Cloudinary 활성화 여부 (환경변수가 설정되어 있으면 활성화)
+# Cloudinary 라이브러리 직접 초기화
+if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
+    try:
+        import cloudinary
+        cloudinary.config(
+            cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+            api_key=CLOUDINARY_STORAGE['API_KEY'],
+            api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+            secure=True
+        )
+        print(f"✅ Cloudinary 라이브러리 초기화 완료: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
+    except Exception as e:
+        print(f"❌ Cloudinary 라이브러리 초기화 실패: {e}")
+
+# Cloudinary 활성화 여부
 USE_CLOUDINARY = bool(CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'))
+print(f"🎯 USE_CLOUDINARY = {USE_CLOUDINARY}")
 
 if USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    print("✅ DEFAULT_FILE_STORAGE = cloudinary_storage.storage.MediaCloudinaryStorage")
+else:
+    print("❌ Cloudinary 비활성화 - 로컬 파일 시스템 사용")
+
+print("=" * 80)
 
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
