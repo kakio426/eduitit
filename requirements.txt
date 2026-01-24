@@ -30,3 +30,7 @@ olefile>=0.46
 # Auth & SSO
 django-allauth==65.14.0
 PyJWT==2.10.1
+
+# Cloud Storage (Cloudinary)
+cloudinary==1.40.0
+django-cloudinary-storage==0.3.0

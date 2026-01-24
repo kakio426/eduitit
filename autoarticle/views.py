@@ -103,20 +103,42 @@ class ArticleCreateView(View):
             uploaded_images = request.FILES.getlist('images')
             image_paths = []
             if uploaded_images:
-                from django.core.files.storage import FileSystemStorage
                 import uuid
-                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
-                for img in uploaded_images[:5]:  # Limit to 5 images
-                    ext = os.path.splitext(img.name)[1].lower()
-                    # Validate extension
-                    if ext not in ALLOWED_IMAGE_EXTENSIONS:
-                        continue
-                    # Validate file size
-                    if img.size > MAX_IMAGE_SIZE:
-                        continue
-                    filename = f"{uuid.uuid4()}{ext}"
-                    name = fs.save(filename, img)
-                    image_paths.append(f"autoarticle/images/{name}")
+                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
+
+                if use_cloudinary:
+                    # Cloudinary 업로드
+                    import cloudinary.uploader
+                    for img in uploaded_images[:5]:
+                        ext = os.path.splitext(img.name)[1].lower()
+                        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                            continue
+                        if img.size > MAX_IMAGE_SIZE:
+                            continue
+                        try:
+                            result = cloudinary.uploader.upload(
+                                img,
+                                folder='autoarticle/images',
+                                public_id=str(uuid.uuid4()),
+                                resource_type='image'
+                            )
+                            image_paths.append(result['secure_url'])
+                        except Exception as e:
+                            print(f"Cloudinary upload error: {e}")
+                            continue
+                else:
+                    # 로컬 파일 저장 (개발 환경)
+                    from django.core.files.storage import FileSystemStorage
+                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
+                    for img in uploaded_images[:5]:
+                        ext = os.path.splitext(img.name)[1].lower()
+                        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                            continue
+                        if img.size > MAX_IMAGE_SIZE:
+                            continue
+                        filename = f"{uuid.uuid4()}{ext}"
+                        name = fs.save(filename, img)
+                        image_paths.append(f"{settings.MEDIA_URL}autoarticle/images/{name}")
             
             # Save input data and images to session
             request.session['article_input'] = input_data

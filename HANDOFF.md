@@ -29,13 +29,14 @@
 
 ## 진행 중인 작업
 
-### 이미지 저장소 클라우드 전환 (논의 중)
-- **현재 상태**: 서버 디스크에 저장 (`media/autoarticle/images/`)
-- **문제점**:
-  - Render/Railway 재배포 시 이미지 삭제됨
-  - 사용자 증가 시 용량/비용 문제
-- **권장 해결책**: Cloudinary (무료 25GB)
-- **진행 상황**: 0% - 사용자 결정 대기 중
+### ~~이미지 저장소 클라우드 전환~~ ✅ 완료
+- **완료일**: 2025-01-24
+- **구현 내용**:
+  - Cloudinary 패키지 설치 (`cloudinary`, `django-cloudinary-storage`)
+  - `settings.py`에 Cloudinary 설정 추가
+  - `views.py` 이미지 업로드 로직 수정 (Cloudinary/로컬 자동 선택)
+- **환경변수 필요**: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+- **참고**: 환경변수 미설정 시 로컬 저장소 사용 (개발 환경 호환)
 
 ---
 
@@ -43,7 +44,7 @@
 
 ```
 autoarticle/
-├── views.py                    # Word/Delete/Edit 뷰 추가, Rate Limiter
+├── views.py                    # Word/Delete/Edit 뷰, Rate Limiter, Cloudinary 업로드
 ├── urls.py                     # 3개 URL 패턴 추가 (word, delete, edit)
 ├── engines/
 │   └── ai_service.py           # Rate Limiter 함수 활성화
@@ -52,6 +53,11 @@ autoarticle/
     ├── archive.html            # Word 다운로드 버튼 추가
     ├── detail.html             # Word 버튼 활성화, 수정/삭제 버튼 연결
     └── edit.html               # 신규 생성
+
+config/
+├── settings.py                 # Cloudinary 설정 추가
+
+requirements.txt                # cloudinary, django-cloudinary-storage 추가
 ```
 
 ### 새 URL 패턴
@@ -66,16 +72,17 @@ autoarticle/
 ## 다음에 해야 할 작업
 
 ### 우선순위 높음
-1. **Cloudinary 이미지 저장소 연동** (사용자 결정 시)
-   - `django-cloudinary-storage` 설치
-   - views.py 이미지 업로드 로직 수정
-
-2. **KAKAO_CLIENT_SECRET 추가** (이전 세션에서 미완료)
+1. ~~**Cloudinary 이미지 저장소 연동**~~ ✅ 완료
+2. **Railway 환경변수 설정** - Cloudinary 키 추가 필요
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+3. **KAKAO_CLIENT_SECRET 추가** (이전 세션에서 미완료)
    - `.env` 파일에 추가 필요
 
 ### 우선순위 중간
-3. 테스트 구조 수정 - `autoarticle/tests/` import 오류
-4. PDF 신문형 레이아웃 연동 (코드 있지만 미사용)
+4. 테스트 구조 수정 - `autoarticle/tests/` import 오류
+5. PDF 신문형 레이아웃 연동 (코드 있지만 미사용)
 
 ---
 
@@ -93,6 +100,9 @@ autoarticle/
   - `GEMINI_API_KEY` - AI 기사 생성
   - `DATABASE_URL` - Neon PostgreSQL
   - `KAKAO_CLIENT_SECRET` - 카카오 로그인 (미설정)
+  - `CLOUDINARY_CLOUD_NAME` - Cloudinary 클라우드 이름 (**신규**)
+  - `CLOUDINARY_API_KEY` - Cloudinary API 키 (**신규**)
+  - `CLOUDINARY_API_SECRET` - Cloudinary API 시크릿 (**신규**)
 
 ---
 
@@ -101,7 +111,7 @@ autoarticle/
 | 서비스 | 현재 | 무료 한도 | 걱정 수준 |
 |--------|------|----------|----------|
 | Neon (DB) | 사용 중 | 0.5GB | 낮음 (텍스트 위주) |
-| 이미지 | 서버 디스크 | - | **높음** (Cloudinary 전환 권장) |
+| 이미지 | Cloudinary | 25GB/월 | 낮음 ✅ |
 | Gemini API | 마스터 키 | 무료 | Rate Limit 적용됨 |
 
 ---
@@ -116,6 +126,7 @@ autoarticle/
 
 ## 이전 세션 작업
 
+- 2025-01-24: **Cloudinary 이미지 저장소 연동 완료**
 - 2025-01-24: AutoArticle 기능 완성 (Word, 삭제, 수정, Rate Limiter)
 - 2025-01-24: Padlet Bot 앱 생성, 소셜 로그인 수정
 - 2025-01-23: DutyTicker 디자인 통합, AutoArticle 오류 수정
