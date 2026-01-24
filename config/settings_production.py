@@ -221,6 +221,10 @@ SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 �
 SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
 SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'https://schoolit.shop') # 실주소로 변경 권장
 
+# Allauth Protocol
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'  # ✅ HTTPS 강제 (네이버/카카오 필수)
+SOCIALACCOUNT_QUERY_EMAIL = True  # 네이버에서 이메일 요청
+
 # Allauth Provider Settings
 SOCIALACCOUNT_PROVIDERS = {
     'kakao': {
@@ -285,17 +289,24 @@ def sync_site_domain():
         if not production_domain or 'railway.app' not in production_domain:
             # ALLOWED_HOSTS에서 railway 도메인 찾기
             for host in os.environ.get('ALLOWED_HOSTS', '').split(','):
+                host = host.strip()
                 if 'railway.app' in host:
                     production_domain = host
                     break
+        
+        # 도메인에서 프로토콜 제거 (실수로 포함된 경우 대비)
+        if production_domain:
+            production_domain = production_domain.replace('https://', '').replace('http://', '').split('/')[0]
 
         if production_domain and current_site.domain != production_domain:
-            print(f"DEBUG: Updating site domain from {current_site.domain} to {production_domain}")
+            print(f"DEBUG: SITE_ID {SITE_ID} 도메인을 {current_site.domain}에서 {production_domain}으로 업데이트합니다.")
             current_site.domain = production_domain
             current_site.name = "Eduitit Production"
             current_site.save()
+        else:
+            print(f"DEBUG: 현재 SITE_ID {SITE_ID} 도메인은 {current_site.domain}입니다.")
     except Exception as e:
-        # DB가 준비되지 않았을 때(migration 전) 발생할 수 있으므로 조용히 처리
+        print(f"DEBUG: 사이트 도메인 동기화 실패: {str(e)}")
         pass
 
 # 서버 실행 시 자동 실행되도록 앱 설정 또는 여기에 직접 호출 (단, DB 연결 가능 시점이어야 함)
