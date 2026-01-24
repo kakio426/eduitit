@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -208,8 +209,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Cloudinary 설정 (CLOUDINARY_URL 형식 지원)
-from urllib.parse import urlparse
-
 cloudinary_url = os.environ.get('CLOUDINARY_URL', '')
 CLOUDINARY_STORAGE = {}
 
