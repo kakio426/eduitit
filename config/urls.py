@@ -31,6 +31,7 @@ urlpatterns = [
     path('artclass/', include('artclass.urls', namespace='artclass')),
     path('signatures/', include('signatures.urls', namespace='signatures')),
     path('school-violence/', include('school_violence.urls', namespace='school_violence')),
+    path('padlet/', include('padlet_bot.urls', namespace='padlet_bot')),
 ]
 
 if settings.DEBUG:

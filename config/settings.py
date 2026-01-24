@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# .env 파일 로드
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -51,6 +55,7 @@ INSTALLED_APPS = [
     'signatures.apps.SignaturesConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
+    'padlet_bot.apps.PadletBotConfig',
     
     # Auth & Allauth
     'django.contrib.sites',
@@ -143,19 +148,19 @@ SSO_JWT_SECRET = os.environ.get('SSO_JWT_SECRET', SECRET_KEY)
 SCHOOLIT_URL = os.environ.get('SCHOOLIT_URL', 'http://localhost:3000') # schoolit 주소
 
 # Allauth Provider Settings
-# Railway 환경 변수 이름을 확인해 주세요: NAVER_CLIENT_ID, NAVER_SECRET, KAKAO_CLIENT_ID, KAKAO_SECRET
+# 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET
 SOCIALACCOUNT_PROVIDERS = {
     'kakao': {
         'APP': {
             'client_id': os.environ.get('KAKAO_CLIENT_ID', ''),
-            'secret': os.environ.get('KAKAO_SECRET', ''),
+            'secret': os.environ.get('KAKAO_CLIENT_SECRET', ''),  # KAKAO_SECRET → KAKAO_CLIENT_SECRET
             'key': ''
         }
     },
     'naver': {
         'APP': {
             'client_id': os.environ.get('NAVER_CLIENT_ID', ''),
-            'secret': os.environ.get('NAVER_SECRET', ''),
+            'secret': os.environ.get('NAVER_CLIENT_SECRET', ''),  # NAVER_SECRET → NAVER_CLIENT_SECRET
             'key': ''
         }
     }
@@ -167,8 +172,12 @@ logger = logging.getLogger(__name__)
 
 if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['client_id']:
     logger.warning("NAVER_CLIENT_ID is not set in environment variables!")
+if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['secret']:
+    logger.warning("NAVER_CLIENT_SECRET is not set in environment variables!")
 if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['client_id']:
     logger.warning("KAKAO_CLIENT_ID is not set in environment variables!")
+if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['secret']:
+    logger.warning("KAKAO_CLIENT_SECRET is not set in environment variables!")
 
 
 # Internationalization

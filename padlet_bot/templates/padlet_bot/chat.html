@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+
+{% block title %}패들릿 AI 챗봇 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 280px);
+        min-height: 400px;
+    }
+
+    .chat-messages {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(163, 177, 198, 0.5) transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(163, 177, 198, 0.5);
+        border-radius: 3px;
+    }
+
+    .message-bubble {
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .message-bubble.user {
+        background: linear-gradient(135deg, #EC4899, #DB2777);
+        color: white;
+        border-radius: 20px 20px 4px 20px;
+    }
+
+    .message-bubble.assistant {
+        background: white;
+        color: #374151;
+        border-radius: 20px 20px 20px 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 타이핑 애니메이션 */
+    .typing-indicator span {
+        animation: typing 1.4s infinite;
+        display: inline-block;
+    }
+
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+        }
+        30% {
+            transform: translateY(-4px);
+        }
+    }
+
+    /* 마크다운 스타일 */
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3 {
+        font-weight: bold;
+        margin-top: 1em;
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content ul,
+    .markdown-content ol {
+        margin-left: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.25em;
+    }
+
+    .markdown-content p {
+        margin-bottom: 0.5em;
+    }
+
+    .markdown-content code {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .markdown-content pre {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 1em;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.5em 0;
+    }
+
+    .markdown-content strong {
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-24 pb-8 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-5xl font-bold text-gray-700 mb-2">
+                <i class="fa-solid fa-comments text-pink-500 mr-2"></i>패들릿 AI 챗봇
+            </h1>
+            <p class="text-2xl text-gray-500">패들릿 게시물 기반 질문 답변</p>
+
+            <!-- 상태 표시 -->
+            <div class="flex flex-wrap justify-center gap-3 mt-4">
+                <span class="px-4 py-2 rounded-full bg-pink-100 text-pink-700 text-lg">
+                    <i class="fa-solid fa-file-lines mr-1"></i>
+                    문서 {{ doc_count }}개
+                </span>
+                <span class="px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-lg">
+                    <i class="fa-solid fa-plug mr-1"></i>
+                    연동 {{ linked_count }}개
+                </span>
+                <span class="px-4 py-2 rounded-full bg-purple-100 text-purple-700 text-lg">
+                    <i class="fa-solid fa-puzzle-piece mr-1"></i>
+                    청크 {{ chunk_count }}개
+                </span>
+                {% if user.is_staff %}
+                <a href="{% url 'padlet_bot:manage_docs' %}"
+                    class="px-4 py-2 rounded-full bg-orange-100 text-orange-700 text-lg hover:bg-orange-200 transition">
+                    <i class="fa-solid fa-folder-open mr-1"></i>
+                    파일
+                </a>
+                <a href="{% url 'padlet_bot:api_connect' %}"
+                    class="px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-lg hover:bg-blue-200 transition">
+                    <i class="fa-solid fa-plug mr-1"></i>
+                    API
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="clay-card p-4 sm:p-6">
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="chat-container chat-messages overflow-y-auto mb-4 p-4 rounded-2xl shadow-clay-inner">
+                <!-- 환영 메시지 -->
+                <div id="welcomeMessage" class="text-center py-12 {% if chat_history %}hidden{% endif %}">
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full shadow-clay flex items-center justify-center">
+                        <i class="fa-solid fa-robot text-5xl text-pink-400"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-600 mb-2">{{ welcome_message }}</h2>
+                    <p class="text-xl text-gray-500 mb-4">
+                        {% if doc_count > 0 %}
+                        {{ doc_count }}개의 패들릿 문서가 준비되어 있습니다.
+                        {% else %}
+                        아직 등록된 패들릿 데이터가 없습니다.
+                        {% endif %}
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="sendQuickMessage('패들릿에 어떤 내용이 있나요?')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-pink-600 transition">
+                            <i class="fa-solid fa-lightbulb mr-1"></i> 어떤 내용이 있나요?
+                        </button>
+                        <button onclick="sendQuickMessage('가장 많이 올라온 주제는?')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-pink-600 transition">
+                            <i class="fa-solid fa-fire mr-1"></i> 인기 주제
+                        </button>
+                        <button onclick="sendQuickMessage('최근 게시물 요약해줘')"
+                            class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-pink-600 transition">
+                            <i class="fa-solid fa-clock mr-1"></i> 최근 게시물
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 기존 채팅 기록 -->
+                {% for msg in chat_history %}
+                <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %} mb-4">
+                    <div class="message-bubble {{ msg.role }} px-4 py-3 text-xl">
+                        {% if msg.role == 'assistant' %}
+                        <div class="markdown-content">{{ msg.content|linebreaks }}</div>
+                        {% else %}
+                        {{ msg.content }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Input Area -->
+            <form id="chatForm" class="flex gap-3">
+                {% csrf_token %}
+                <div class="flex-1 relative">
+                    <input type="text" id="messageInput" name="message"
+                        class="w-full px-5 py-4 rounded-2xl shadow-clay-inner bg-transparent text-xl focus:outline-none focus:ring-2 focus:ring-pink-300 pr-12"
+                        placeholder="패들릿에 대해 질문하세요..." autocomplete="off">
+                    <button type="button" onclick="clearChat()"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center"
+                        title="대화 초기화">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+                <button type="submit" id="sendButton"
+                    class="clay-card px-6 py-4 text-xl font-bold text-pink-600 hover:text-pink-700 hover:shadow-clay-hover transition flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span class="hidden sm:inline">전송</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Privacy Notice -->
+        <p class="text-center text-lg text-gray-400 mt-4">
+            <i class="fa-solid fa-lock mr-1"></i>
+            대화 내용은 브라우저 세션에만 저장되며, 창을 닫으면 삭제됩니다.
+        </p>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+
+    // 스크롤을 맨 아래로
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 메시지 추가
+    function addMessage(content, role) {
+        welcomeMessage.classList.add('hidden');
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `message-bubble ${role} px-4 py-3 text-xl`;
+
+        if (role === 'assistant') {
+            bubble.innerHTML = `<div class="markdown-content">${marked.parse(content)}</div>`;
+        } else {
+            bubble.textContent = content;
+        }
+
+        messageDiv.appendChild(bubble);
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // 타이핑 인디케이터 추가
+    function addTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'typingIndicator';
+        typingDiv.className = 'flex justify-start mb-4';
+        typingDiv.innerHTML = `
+            <div class="message-bubble assistant px-4 py-3 text-xl">
+                <span class="typing-indicator">
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                    <span class="inline-block w-2 h-2 bg-gray-400 rounded-full mx-0.5"></span>
+                </span>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    // 타이핑 인디케이터 제거
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    // 메시지 전송
+    async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        // UI 업데이트
+        addMessage(message, 'user');
+        messageInput.value = '';
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        addTypingIndicator();
+
+        try {
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch('{% url "padlet_bot:send_message" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            removeTypingIndicator();
+
+            if (data.success) {
+                addMessage(data.response, 'assistant');
+            } else {
+                addMessage(`오류: ${data.error}`, 'assistant');
+            }
+        } catch (error) {
+            removeTypingIndicator();
+            addMessage('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'assistant');
+        } finally {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+    }
+
+    // 빠른 메시지 전송
+    function sendQuickMessage(message) {
+        sendMessage(message);
+    }
+
+    // 폼 제출
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendMessage(messageInput.value);
+    });
+
+    // 대화 초기화
+    async function clearChat() {
+        if (!confirm('대화 내용을 모두 삭제하시겠습니까?')) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            await fetch('{% url "padlet_bot:clear_chat" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            // UI 초기화
+            chatMessages.innerHTML = '';
+            welcomeMessage.classList.remove('hidden');
+            chatMessages.appendChild(welcomeMessage);
+        } catch (error) {
+            console.error('초기화 실패:', error);
+        }
+    }
+
+    // 페이지 로드 시 스크롤
+    scrollToBottom();
+</script>
+{% endblock %}

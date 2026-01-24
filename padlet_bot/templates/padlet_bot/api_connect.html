@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+
+{% block title %}패들릿 API 연동 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .board-card {
+        transition: all 0.3s ease;
+    }
+
+    .board-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+    }
+
+    .status-synced {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .status-pending {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-24 pb-8 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-gray-700 mb-2">
+                <i class="fa-solid fa-plug text-blue-500 mr-2"></i>패들릿 API 연동
+            </h1>
+            <p class="text-2xl text-gray-500">패들릿 URL을 입력하여 실시간 연동</p>
+            <div class="flex justify-center gap-4 mt-4">
+                <a href="{% url 'padlet_bot:chat' %}" class="px-6 py-3 rounded-full shadow-clay text-pink-600 hover:text-pink-700 transition">
+                    <i class="fa-solid fa-comments mr-2"></i>챗봇
+                </a>
+                <a href="{% url 'padlet_bot:manage_docs' %}" class="px-6 py-3 rounded-full shadow-clay text-orange-600 hover:text-orange-700 transition">
+                    <i class="fa-solid fa-folder-open mr-2"></i>파일 업로드
+                </a>
+            </div>
+        </div>
+
+        {% if not api_configured %}
+        <!-- API 키 미설정 경고 -->
+        <div class="clay-card p-6 mb-8 bg-yellow-50">
+            <div class="flex items-start gap-4">
+                <i class="fa-solid fa-triangle-exclamation text-4xl text-yellow-500"></i>
+                <div>
+                    <h2 class="text-2xl font-bold text-yellow-700 mb-2">PADLET_API_KEY가 설정되지 않았습니다</h2>
+                    <p class="text-xl text-yellow-600 mb-4">패들릿 API를 사용하려면 환경변수에 API 키를 설정해주세요.</p>
+                    <div class="bg-white p-4 rounded-xl text-lg font-mono">
+                        <p class="text-gray-600"># .env 파일에 추가</p>
+                        <p class="text-gray-800">PADLET_API_KEY=your_api_key_here</p>
+                    </div>
+                    <p class="text-lg text-yellow-600 mt-4">
+                        <i class="fa-solid fa-info-circle mr-1"></i>
+                        API 키는 <a href="https://padlet.com/settings/developer" target="_blank" class="underline">패들릿 개발자 설정</a>에서 발급받을 수 있습니다.
+                        (Pro/Team 계정 필요)
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 연동 폼 -->
+            <div class="lg:col-span-1">
+                <div class="clay-card p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">
+                        <i class="fa-solid fa-link text-blue-500 mr-2"></i>새 패들릿 연동
+                    </h2>
+
+                    <form id="linkForm" class="space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-lg text-gray-600 mb-2">패들릿 URL</label>
+                            <input type="url" id="padletUrl" name="padlet_url"
+                                class="w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-transparent text-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                placeholder="https://padlet.com/..."
+                                {% if not api_configured %}disabled{% endif %}>
+                        </div>
+
+                        <button type="submit" id="linkBtn"
+                            class="w-full py-4 rounded-2xl shadow-clay text-xl font-bold text-blue-600 hover:text-blue-700 hover:shadow-clay-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            {% if not api_configured %}disabled{% endif %}>
+                            <i class="fa-solid fa-plug mr-2"></i>연동하기
+                        </button>
+                    </form>
+
+                    <!-- 안내 -->
+                    <div class="mt-6 p-4 rounded-xl bg-blue-50 text-blue-700 text-lg">
+                        <p class="font-bold mb-2"><i class="fa-solid fa-lightbulb mr-1"></i> 사용 방법</p>
+                        <ol class="list-decimal list-inside space-y-1 text-base">
+                            <li>패들릿 URL을 복사</li>
+                            <li>위 입력창에 붙여넣기</li>
+                            <li>"연동하기" 클릭</li>
+                            <li>"동기화" 버튼으로 데이터 가져오기</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 연동된 패들릿 목록 -->
+            <div class="lg:col-span-2">
+                <div class="clay-card p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">
+                        <i class="fa-solid fa-list text-purple-500 mr-2"></i>연동된 패들릿
+                        <span class="text-lg text-gray-400 ml-2">({{ linked_boards.count }}개)</span>
+                    </h2>
+
+                    {% if linked_boards %}
+                    <div class="space-y-4">
+                        {% for board in linked_boards %}
+                        <div class="board-card p-4 rounded-2xl shadow-clay-inner flex flex-col sm:flex-row sm:items-center gap-4"
+                             id="board-{{ board.pk }}">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="status-badge {% if board.is_processed %}status-synced{% else %}status-pending{% endif %}">
+                                        {% if board.is_processed %}동기화됨{% else %}대기중{% endif %}
+                                    </span>
+                                    <h3 class="text-xl font-bold text-gray-700">{{ board.title }}</h3>
+                                </div>
+                                <p class="text-gray-500 text-base mb-1">
+                                    <i class="fa-solid fa-sticky-note mr-1"></i>{{ board.post_count }}개 게시물
+                                    {% if board.chunk_count > 0 %}
+                                    · <i class="fa-solid fa-puzzle-piece mr-1"></i>{{ board.chunk_count }}청크
+                                    {% endif %}
+                                </p>
+                                <p class="text-gray-400 text-sm">
+                                    {% if board.last_synced %}
+                                    마지막 동기화: {{ board.last_synced|date:"Y.m.d H:i" }}
+                                    {% else %}
+                                    아직 동기화되지 않음
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button onclick="syncPadlet({{ board.pk }})"
+                                    class="px-4 py-2 rounded-full shadow-clay text-blue-600 hover:text-blue-700 text-base font-bold transition sync-btn"
+                                    data-board-id="{{ board.pk }}"
+                                    {% if not api_configured %}disabled{% endif %}>
+                                    <i class="fa-solid fa-sync mr-1"></i>동기화
+                                </button>
+
+                                <button onclick="unlinkPadlet({{ board.pk }}, '{{ board.title|escapejs }}')"
+                                    class="px-4 py-2 rounded-full shadow-clay text-red-500 hover:text-red-600 text-base font-bold transition">
+                                    <i class="fa-solid fa-unlink"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fa-solid fa-plug text-6xl mb-4"></i>
+                        <p class="text-xl">아직 연동된 패들릿이 없습니다.</p>
+                        <p class="text-lg">왼쪽에서 패들릿 URL을 입력해주세요.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const linkForm = document.getElementById('linkForm');
+    const linkBtn = document.getElementById('linkBtn');
+    const padletUrlInput = document.getElementById('padletUrl');
+
+    // 패들릿 연동
+    linkForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const url = padletUrlInput.value.trim();
+        if (!url) {
+            alert('패들릿 URL을 입력해주세요.');
+            return;
+        }
+
+        linkBtn.disabled = true;
+        linkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>연동 중...';
+
+        try {
+            const formData = new FormData();
+            formData.append('padlet_url', url);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch('{% url "padlet_bot:link_padlet" %}', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('오류: ' + data.error);
+            }
+        } catch (error) {
+            alert('네트워크 오류가 발생했습니다.');
+        } finally {
+            linkBtn.disabled = false;
+            linkBtn.innerHTML = '<i class="fa-solid fa-plug mr-2"></i>연동하기';
+        }
+    });
+
+    // 동기화
+    async function syncPadlet(boardId) {
+        const btn = document.querySelector(`button[data-board-id="${boardId}"]`);
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>동기화 중...';
+
+        try {
+            const response = await fetch(`/padlet/api/${boardId}/sync/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('오류: ' + data.error);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            alert('네트워크 오류가 발생했습니다.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    // 연동 해제
+    async function unlinkPadlet(boardId, title) {
+        if (!confirm(`"${title}" 연동을 해제하시겠습니까?\n벡터DB의 데이터도 함께 삭제됩니다.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/padlet/api/${boardId}/unlink/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById(`board-${boardId}`).remove();
+                alert(data.message);
+
+                // 목록이 비면 새로고침
+                const boards = document.querySelectorAll('.board-card');
+                if (boards.length === 0) {
+                    location.reload();
+                }
+            } else {
+                alert('오류: ' + data.error);
+            }
+        } catch (error) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+</script>
+{% endblock %}
