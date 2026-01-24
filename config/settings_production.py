@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'signatures.apps.SignaturesConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
+    'padlet_bot.apps.PadletBotConfig',
     
     # Auth & Allauth
     'django.contrib.sites',
