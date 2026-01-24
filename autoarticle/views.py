@@ -96,67 +96,73 @@ class ArticleCreateView(View):
                 messages.error(request, "행사명과 주요 내용을 입력해주세요.")
                 return redirect('autoarticle:create')
 
-            # Handle Image Uploads (with validation)
-            ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-            MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-
+            # 이미지 처리 (환경별)
             uploaded_images = request.FILES.getlist('images')
             image_paths = []
+
             if uploaded_images:
                 import uuid
-                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
-                print(f"DEBUG: USE_CLOUDINARY = {use_cloudinary}")
-                print(f"DEBUG: CLOUDINARY_STORAGE = {settings.CLOUDINARY_STORAGE}")
+                ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+                MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
+                # 환경 확인
+                is_railway = os.environ.get('RAILWAY_ENVIRONMENT') is not None
+                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False) and is_railway
 
                 if use_cloudinary:
-                    # Cloudinary 업로드
-                    import cloudinary
-                    import cloudinary.uploader
+                    # Railway: Cloudinary 사용
+                    try:
+                        import cloudinary
+                        import cloudinary.uploader
 
-                    # Cloudinary 설정 (환경변수에서)
-                    cloudinary.config(
-                        cloud_name=settings.CLOUDINARY_STORAGE.get('CLOUD_NAME'),
-                        api_key=settings.CLOUDINARY_STORAGE.get('API_KEY'),
-                        api_secret=settings.CLOUDINARY_STORAGE.get('API_SECRET')
-                    )
+                        cloudinary.config(
+                            cloud_name=settings.CLOUDINARY_STORAGE.get('CLOUD_NAME'),
+                            api_key=settings.CLOUDINARY_STORAGE.get('API_KEY'),
+                            api_secret=settings.CLOUDINARY_STORAGE.get('API_SECRET')
+                        )
 
-                    for img in uploaded_images[:5]:
-                        ext = os.path.splitext(img.name)[1].lower()
-                        if ext not in ALLOWED_IMAGE_EXTENSIONS:
-                            continue
-                        if img.size > MAX_IMAGE_SIZE:
-                            continue
-                        try:
-                            result = cloudinary.uploader.upload(
-                                img,
-                                folder='autoarticle/images',
-                                public_id=str(uuid.uuid4()),
-                                resource_type='image'
-                            )
-                            if result and 'secure_url' in result:
-                                image_paths.append(result['secure_url'])
-                                print(f"Cloudinary upload success: {result['secure_url']}")
-                            else:
-                                print(f"Cloudinary upload failed - no secure_url in result: {result}")
-                        except Exception as e:
-                            import traceback
-                            print(f"Cloudinary upload error: {e}")
-                            traceback.print_exc()
-                            continue
+                        for img in uploaded_images[:5]:
+                            ext = os.path.splitext(img.name)[1].lower()
+                            if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                                continue
+                            if img.size > MAX_IMAGE_SIZE:
+                                continue
+                            try:
+                                result = cloudinary.uploader.upload(
+                                    img,
+                                    folder='autoarticle/images',
+                                    public_id=str(uuid.uuid4()),
+                                    resource_type='image'
+                                )
+                                if result and 'secure_url' in result:
+                                    image_paths.append(result['secure_url'])
+                                    print(f"Cloudinary upload success: {result['secure_url']}")
+                            except Exception as e:
+                                print(f"Cloudinary upload error: {e}")
+                                continue
+                    except Exception as e:
+                        print(f"Cloudinary init error: {e}")
+                        import traceback
+                        traceback.print_exc()
                 else:
-                    # 로컬 파일 저장 (개발 환경)
-                    print(f"DEBUG: USE_CLOUDINARY is False, saving to local storage")
-                    from django.core.files.storage import FileSystemStorage
-                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
-                    for img in uploaded_images[:5]:
-                        ext = os.path.splitext(img.name)[1].lower()
-                        if ext not in ALLOWED_IMAGE_EXTENSIONS:
-                            continue
-                        if img.size > MAX_IMAGE_SIZE:
-                            continue
-                        filename = f"{uuid.uuid4()}{ext}"
-                        name = fs.save(filename, img)
-                        image_paths.append(f"{settings.MEDIA_URL}autoarticle/images/{name}")
+                    # 로컬 또는 개발: 로컬 파일 저장
+                    try:
+                        from django.core.files.storage import FileSystemStorage
+                        fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
+                        for img in uploaded_images[:5]:
+                            ext = os.path.splitext(img.name)[1].lower()
+                            if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                                continue
+                            if img.size > MAX_IMAGE_SIZE:
+                                continue
+                            filename = f"{uuid.uuid4()}{ext}"
+                            name = fs.save(filename, img)
+                            image_paths.append(f"{settings.MEDIA_URL}autoarticle/images/{name}")
+                            print(f"Local image saved: {image_paths[-1]}")
+                    except Exception as e:
+                        print(f"Local image upload error: {e}")
+                        import traceback
+                        traceback.print_exc()
             
             # Save input data and images to session
             request.session['article_input'] = input_data
