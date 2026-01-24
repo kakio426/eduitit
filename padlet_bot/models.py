@@ -64,7 +64,7 @@ class PadletDocument(models.Model):
 class LinkedPadletBoard(models.Model):
     """API로 연동된 패들릿 보드"""
 
-    board_id = models.CharField('보드 ID', max_length=100, unique=True)
+    board_id = models.CharField('보드 ID', max_length=100)
     board_url = models.URLField('패들릿 URL', blank=True)
     title = models.CharField('보드 제목', max_length=200)
     description = models.TextField('보드 설명', blank=True)

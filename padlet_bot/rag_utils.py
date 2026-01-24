@@ -230,7 +230,7 @@ class PadletRAG:
             print(f"[ERROR] ChromaDB 초기화 실패: {e}")
             raise
 
-    def add_document(self, doc_id: int, file_path: str, title: str, file_type: str) -> int:
+    def add_document(self, doc_id: int, file_path: str, title: str, file_type: str, user_id: int) -> int:
         """문서를 벡터DB에 추가"""
         if not self.collection:
             raise RuntimeError("ChromaDB가 초기화되지 않았습니다.")
@@ -260,6 +260,7 @@ class PadletRAG:
             documents.append(chunk)
             metadatas.append({
                 "doc_id": str(doc_id),
+                "user_id": int(user_id),
                 "title": title,
                 "file_type": file_type,
                 "chunk_index": i,
@@ -290,7 +291,7 @@ class PadletRAG:
         """문서 삭제"""
         self._delete_document_chunks(doc_id)
 
-    def search(self, query: str, n_results: int = 5) -> List[dict]:
+    def search(self, query: str, user_id: int, n_results: int = 5) -> List[dict]:
         """관련 문서 검색"""
         if not self.collection:
             return []
@@ -298,7 +299,8 @@ class PadletRAG:
         try:
             results = self.collection.query(
                 query_texts=[query],
-                n_results=n_results
+                n_results=n_results,
+                where={"user_id": int(user_id)}
             )
 
             search_results = []
@@ -315,9 +317,9 @@ class PadletRAG:
             print(f"[ERROR] 검색 실패: {e}")
             return []
 
-    def get_context_for_query(self, query: str, n_results: int = 5) -> str:
+    def get_context_for_query(self, query: str, user_id: int, n_results: int = 5) -> str:
         """쿼리에 대한 컨텍스트 문자열 생성"""
-        results = self.search(query, n_results=n_results)
+        results = self.search(query, user_id=user_id, n_results=n_results)
 
         if not results:
             return ""

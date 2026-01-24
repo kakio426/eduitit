@@ -150,10 +150,10 @@ class PadletAPIClient:
         return "\n\n".join(texts)
 
 
-def get_padlet_client() -> Optional[PadletAPIClient]:
+def get_padlet_client(api_key: Optional[str] = None) -> Optional[PadletAPIClient]:
     """패들릿 API 클라이언트 인스턴스 반환"""
     try:
-        return PadletAPIClient()
+        return PadletAPIClient(api_key=api_key)
     except ValueError:
         return None
 

@@ -139,7 +139,7 @@ def send_message(request):
     try:
         rag = get_padlet_rag_service()
         if rag:
-            rag_context = rag.get_context_for_query(user_message, n_results=5)
+            rag_context = rag.get_context_for_query(user_message, user_id=request.user.id, n_results=5)
     except Exception as e:
         print(f"[WARNING] RAG 검색 실패: {e}")
 
@@ -205,10 +205,10 @@ def send_message(request):
 
 # === 관리자 기능 ===
 
-@staff_member_required
+@login_required
 def manage_docs(request):
-    """문서 관리 페이지 (관리자 전용)"""
-    documents = PadletDocument.objects.all()
+    """문서 관리 페이지 (로그인 필요)"""
+    documents = PadletDocument.objects.filter(uploaded_by=request.user)
 
     if request.method == 'POST':
         form = PadletDocumentForm(request.POST, request.FILES)
@@ -231,11 +231,11 @@ def manage_docs(request):
     })
 
 
-@staff_member_required
+@login_required
 @require_POST
 def process_document(request, pk):
     """문서 벡터DB 처리 (AJAX)"""
-    doc = get_object_or_404(PadletDocument, pk=pk)
+    doc = get_object_or_404(PadletDocument, pk=pk, uploaded_by=request.user)
 
     try:
         rag = get_padlet_rag_service()
@@ -250,7 +250,8 @@ def process_document(request, pk):
             doc_id=doc.pk,
             file_path=file_path,
             title=doc.title,
-            file_type=doc.file_type
+            file_type=doc.file_type,
+            user_id=request.user.id
         )
 
         if chunk_count > 0:
@@ -271,11 +272,11 @@ def process_document(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@staff_member_required
+@login_required
 @require_POST
 def delete_document(request, pk):
     """문서 삭제 (AJAX)"""
-    doc = get_object_or_404(PadletDocument, pk=pk)
+    doc = get_object_or_404(PadletDocument, pk=pk, uploaded_by=request.user)
 
     try:
         # 벡터DB에서 삭제
@@ -302,11 +303,19 @@ def delete_document(request, pk):
 
 # === 패들릿 API 연동 기능 ===
 
-@staff_member_required
+@login_required
 def api_connect(request):
     """패들릿 API 연동 페이지"""
-    linked_boards = LinkedPadletBoard.objects.all()
-    api_configured = is_padlet_api_configured()
+    linked_boards = LinkedPadletBoard.objects.filter(linked_by=request.user)
+    
+    # 유저의 API 키가 설정되어 있는지 확인
+    user_api_key = None
+    try:
+        user_api_key = request.user.userprofile.padlet_api_key
+    except Exception:
+        pass
+    
+    api_configured = bool(user_api_key) or is_padlet_api_configured()
 
     return render(request, 'padlet_bot/api_connect.html', {
         'linked_boards': linked_boards,
@@ -314,7 +323,7 @@ def api_connect(request):
     })
 
 
-@staff_member_required
+@login_required
 @require_POST
 def link_padlet(request):
     """패들릿 URL로 보드 연동 (AJAX)"""
@@ -323,22 +332,21 @@ def link_padlet(request):
     if not padlet_url:
         return JsonResponse({'error': '패들릿 URL을 입력해주세요.'}, status=400)
 
-    if not is_padlet_api_configured():
-        return JsonResponse({'error': 'PADLET_API_KEY가 설정되지 않았습니다.'}, status=400)
-
     try:
-        client = get_padlet_client()
+        # 유저 개인 API 키 시도, 없으면 서버 환경변수 사용
+        user_api_key = getattr(request.user.userprofile, 'padlet_api_key', None)
+        client = get_padlet_client(api_key=user_api_key)
+        
         if not client:
-            return JsonResponse({'error': '패들릿 API 클라이언트를 초기화할 수 없습니다.'}, status=500)
+            return JsonResponse({'error': '패들릿 API 키를 먼저 설정해주세요.'}, status=400)
 
         # 보드 ID 추출
         board_id = PadletAPIClient.extract_board_id_from_url(padlet_url)
         if not board_id:
             return JsonResponse({'error': '유효한 패들릿 URL이 아닙니다.'}, status=400)
 
-        # 이미 연동된 보드인지 확인
-        if LinkedPadletBoard.objects.filter(board_id=board_id).exists():
-            return JsonResponse({'error': '이미 연동된 패들릿입니다.'}, status=400)
+        if LinkedPadletBoard.objects.filter(board_id=board_id, linked_by=request.user).exists():
+            return JsonResponse({'error': '본인의 계정에 이미 연동된 패들릿입니다.'}, status=400)
 
         # 패들릿 데이터 가져오기
         board = client.fetch_board_with_posts(board_id)
@@ -368,19 +376,18 @@ def link_padlet(request):
         return JsonResponse({'error': f'연동 실패: {str(e)}'}, status=500)
 
 
-@staff_member_required
+@login_required
 @require_POST
 def sync_padlet(request, pk):
     """패들릿 동기화 및 벡터DB 처리 (AJAX)"""
-    board = get_object_or_404(LinkedPadletBoard, pk=pk)
-
-    if not is_padlet_api_configured():
-        return JsonResponse({'error': 'PADLET_API_KEY가 설정되지 않았습니다.'}, status=400)
+    board = get_object_or_404(LinkedPadletBoard, pk=pk, linked_by=request.user)
 
     try:
-        client = get_padlet_client()
+        user_api_key = getattr(request.user.userprofile, 'padlet_api_key', None)
+        client = get_padlet_client(api_key=user_api_key)
+        
         if not client:
-            return JsonResponse({'error': '패들릿 API 클라이언트를 초기화할 수 없습니다.'}, status=500)
+            return JsonResponse({'error': '패들릿 API 키를 설정해주세요.'}, status=400)
 
         # 패들릿 데이터 가져오기
         padlet_board = client.fetch_board_with_posts(board.board_id)
@@ -421,6 +428,7 @@ def sync_padlet(request, pk):
             documents.append(chunk)
             metadatas.append({
                 "doc_id": f"linked_{board.pk}",
+                "user_id": int(request.user.id),
                 "title": padlet_board.title,
                 "source": "api",
                 "chunk_index": i,
@@ -454,11 +462,11 @@ def sync_padlet(request, pk):
         return JsonResponse({'error': f'동기화 실패: {str(e)}'}, status=500)
 
 
-@staff_member_required
+@login_required
 @require_POST
 def unlink_padlet(request, pk):
     """패들릿 연동 해제 (AJAX)"""
-    board = get_object_or_404(LinkedPadletBoard, pk=pk)
+    board = get_object_or_404(LinkedPadletBoard, pk=pk, linked_by=request.user)
 
     try:
         # 벡터DB에서 삭제
