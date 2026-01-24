@@ -315,6 +315,7 @@ CSP_STYLE_SRC = (
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
     "https://fonts.googleapis.com",
+    "https://unpkg.com",
 )
 CSP_FONT_SRC = (
     "'self'",
@@ -329,7 +330,8 @@ CSP_IMG_SRC = (
     "'self'",
     "data:",
     "blob:",
-    "https:",  # 외부 이미지 허용
+    "https:",
+    "http:",
 )
 CSP_CONNECT_SRC = (
     "'self'",
