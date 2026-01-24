@@ -293,10 +293,6 @@ def sync_site_domain():
                 if 'railway.app' in host:
                     production_domain = host
                     break
-        
-        # 도메인에서 프로토콜 제거 (실수로 포함된 경우 대비)
-        if production_domain:
-            production_domain = production_domain.replace('https://', '').replace('http://', '').split('/')[0]
 
         if production_domain and current_site.domain != production_domain:
             print(f"DEBUG: SITE_ID {SITE_ID} 도메인을 {current_site.domain}에서 {production_domain}으로 업데이트합니다.")
@@ -305,12 +301,18 @@ def sync_site_domain():
             current_site.save()
         else:
             print(f"DEBUG: 현재 SITE_ID {SITE_ID} 도메인은 {current_site.domain}입니다.")
+
+        # 중복된 소셜 앱 설정 삭제 (MultipleObjectsReturned 방지)
+        from allauth.socialaccount.models import SocialApp
+        deleted_count = SocialApp.objects.all().delete()[0]
+        if deleted_count > 0:
+            print(f"DEBUG: {deleted_count}개의 중복 소셜 앱 설정을 삭제했습니다.")
+            
     except Exception as e:
-        print(f"DEBUG: 사이트 도메인 동기화 실패: {str(e)}")
+        print(f"DEBUG: 자동 동기화/정리 실패: {str(e)}")
         pass
 
-# 서버 실행 시 자동 실행되도록 앱 설정 또는 여기에 직접 호출 (단, DB 연결 가능 시점이어야 함)
-# 여기서는 코드 마지막에 가벼운 가드로 시도합니다.
+# 서버 실행 시 자동 실행
 import threading
-if os.environ.get('RUN_MAIN') != 'true': # 중복 실행 방지
+if os.environ.get('RUN_MAIN') != 'true':
     threading.Timer(5.0, sync_site_domain).start()

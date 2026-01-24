@@ -143,8 +143,9 @@
                 </div>
                 <a href="/" class="font-bold text-4xl text-gray-700 mt-2 hover:text-purple-600 transition">EDUITIT</a>
             </div>
+
             <!-- Desktop Navigation -->
-            <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500">
+            <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500 items-center">
                 <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
                 <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
                 {% if user.is_authenticated %}
@@ -152,16 +153,47 @@
                     class="hover:text-blue-600 transition flex items-center gap-2 px-4 py-1.5 rounded-full shadow-clay text-blue-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
                     <i class="fa-solid fa-graduation-cap text-xl"></i> 스쿨잇 이동
                 </a>
-                <a href="{% url 'dashboard' %}" class="hover:text-purple-600 transition flex items-center gap-2">
-                    <i class="fa-solid fa-gauge-high text-xl"></i> 대시보드
-                </a>
-                <form action="{% url 'account_logout' %}" method="post" class="inline">
-                    {% csrf_token %}
-                    <button type="submit"
-                        class="hover:text-red-500 transition px-4 py-1.5 rounded-full shadow-clay-inner text-xl font-bold bg-[#E0E5EC]/50 hover:bg-red-50">
-                        <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> 로그아웃
+
+                <!-- User Dropdown -->
+                <div class="relative group">
+                    <button id="userMenuBtn"
+                        class="flex items-center gap-3 px-5 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700">
+                        <div
+                            class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-sm shadow-sm">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <span class="text-xl">
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
+                            }}{% endif %}님
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
-                </form>
+                    <!-- Dropdown Menu -->
+                    <div
+                        class="absolute right-0 top-full mt-4 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-[60]">
+                        <div class="clay-card p-3 bg-white/90 backdrop-blur-xl border border-white/50">
+                            <a href="{% url 'dashboard' %}"
+                                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
+                                <i class="fa-solid fa-gauge-high"></i>
+                                <span>대시보드</span>
+                            </a>
+                            <a href="{% url 'settings' %}"
+                                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
+                                <i class="fa-solid fa-gear"></i>
+                                <span>내 설정</span>
+                            </a>
+                            <div class="h-px bg-gray-100 my-2"></div>
+                            <form action="{% url 'account_logout' %}" method="post" class="block">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-red-400 hover:text-red-500 transition-all text-left">
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                    <span>로그아웃</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 {% else %}
                 <a href="{% url 'account_login' %}"
                     class="hover:text-purple-600 transition px-5 py-1.5 rounded-full shadow-clay text-purple-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
@@ -193,6 +225,11 @@
                     <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
                 </a>
                 {% if user.is_authenticated %}
+                <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
+                    <i class="fa-solid fa-user-circle text-2xl"></i>
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
+                        }}{% endif %}님</span>
+                </div>
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-graduation-cap mr-3 text-blue-400"></i> 스쿨잇 이동 (SSO)
@@ -200,6 +237,10 @@
                 <a href="{% url 'dashboard' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-gauge-high mr-3 text-green-400"></i> 대시보드
+                </a>
+                <a href="{% url 'settings' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 내 설정
                 </a>
                 <form action="{% url 'account_logout' %}" method="post" class="py-2">
                     {% csrf_token %}

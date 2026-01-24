@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.decorators import login_required
 from products.models import Product
-from .forms import APIKeyForm
+from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile
 from django.contrib import messages
 
@@ -57,12 +57,13 @@ def settings_view(request):
         profile = UserProfile.objects.create(user=request.user)
 
     if request.method == 'POST':
-        form = APIKeyForm(request.POST, instance=profile)
+        form = UserProfileUpdateForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'API Key updated successfully.')
+            messages.success(request, '프로필 정보가 성공적으로 수정되었습니다.')
+            return redirect('settings')
     else:
-        form = APIKeyForm(instance=profile)
+        form = UserProfileUpdateForm(instance=profile)
     
     return render(request, 'core/settings.html', {'form': form})
 

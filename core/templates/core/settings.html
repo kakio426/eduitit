@@ -1,64 +1,127 @@
 {% extends 'base.html' %}
 
-{% block title %}설정 - Eduitit{% endblock %}
+{% block title %}내 프로필 및 설정 - Eduitit{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen">
-    <div class="max-w-2xl mx-auto">
-        <h1 class="text-4xl font-bold text-gray-700 mb-8 font-logo">설정</h1>
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-5xl font-bold text-gray-700 mb-2 font-round" data-aos="fade-right">내 프로필 설정</h1>
+        <p class="text-2xl text-gray-400 mb-10 font-hand" data-aos="fade-right" data-aos-delay="100">선생님만의 스마트한 작업 환경을
+            구성해보세요.</p>
 
         {% if messages %}
-        <div class="mb-6 space-y-2">
+        <div class="mb-8 space-y-3" data-aos="fade-up">
             {% for message in messages %}
             <div
-                class="p-4 rounded-xl {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-                {{ message }}
+                class="p-5 rounded-3xl flex items-center gap-4 {% if message.tags == 'success' %}bg-green-100 text-green-700 shadow-[4px_4px_10px_rgba(0,128,0,0.1)]{% else %}bg-blue-100 text-blue-700 shadow-[4px_4px_10px_rgba(0,0,255,0.1)]{% endif %}">
+                <i
+                    class="fa-solid {% if message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} text-2xl"></i>
+                <span class="text-xl font-bold">{{ message }}</span>
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <div
-            class="bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-[8px_8px_16px_0_rgba(163,177,198,0.6),-8px_-8px_16px_0_rgba(255,255,255,0.5)]">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">API Key 관리</h2>
-            <p class="mb-6 text-gray-600">
-                AI 기능을 사용하기 위해 Gemini API Key를 입력해주세요. 입력하지 않으면 시스템 기본 키가 사용됩니다 (제한이 있을 수 있습니다).
-            </p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Profile Info Form -->
+            <div class="lg:col-span-2 space-y-8" data-aos="fade-up" data-aos-delay="200">
+                <form method="post" class="clay-card p-10 space-y-8 bg-white/60">
+                    {% csrf_token %}
 
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-4 mb-2">
+                            <div
+                                class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-500">
+                                <i class="fa-solid fa-user-tag text-xl"></i>
+                            </div>
+                            <h2 class="text-3xl font-bold text-gray-700 font-round">기본 정보</h2>
+                        </div>
 
-                {% for field in form %}
-                <div class="space-y-2">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        {{ field.label }}
-                    </label>
-                    <div class="mt-1">
-                        {{ field }}
+                        {% for field in form %}
+                        <div class="space-y-3">
+                            <label for="{{ field.id_for_label }}" class="block text-2xl font-bold text-gray-600 px-2">
+                                {{ field.label }}
+                            </label>
+                            <div class="relative group">
+                                {{ field }}
+                                {% if field.name == 'role' %}
+                                <div
+                                    class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% if field.help_text %}
+                            <p class="text-lg text-gray-400 font-hand px-2">{{ field.help_text }}</p>
+                            {% endif %}
+                            {% if field.errors %}
+                            <div class="text-red-500 text-lg px-2 font-bold animate-pulse">
+                                {{ field.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% if field.help_text %}
-                    <p class="text-sm text-gray-500">{{ field.help_text }}</p>
-                    {% endif %}
-                    {% if field.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {{ field.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
 
-                <div class="pt-4 flex flex-col sm:flex-row gap-4">
-                    <button type="submit"
-                        class="flex-1 bg-indigo-600 text-white py-4 px-6 rounded-2xl hover:bg-indigo-700 transition-all shadow-clay font-bold text-xl hover:scale-[1.02] active:scale-95">
-                        저장하기
-                    </button>
-                    <a href="javascript:history.back()"
-                        class="flex-1 bg-white text-gray-500 py-4 px-6 rounded-2xl hover:bg-gray-50 transition-all shadow-clay-inner font-bold text-xl text-center hover:scale-[1.02] active:scale-95 border-2 border-gray-100 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        뒤로 가기
-                    </a>
+                    <div class="pt-6">
+                        <button type="submit"
+                            class="w-full bg-purple-500 text-white py-5 px-8 rounded-3xl hover:bg-purple-600 transition-all shadow-clay font-bold text-2xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-floppy-disk text-xl"></i>
+                            설정 저장하기
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- API Key Guide Sidebar -->
+            <div class="space-y-8" data-aos="fade-left" data-aos-delay="400">
+                <div class="clay-card p-8 bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-lg">
+                    <div class="flex items-center gap-3 mb-6">
+                        <i class="fa-solid fa-lightbulb text-3xl text-yellow-300"></i>
+                        <h3 class="text-2xl font-bold font-round">Gemini API Key가 무엇인가요?</h3>
+                    </div>
+                    <div class="space-y-4 text-xl font-hand leading-relaxed opacity-90">
+                        <p>Google의 강력한 AI인 Gemini를 사용하기 위한 개인 인증 키입니다.</p>
+                        <p>개인 키를 입력하면 시스템 전체 한도에 구애받지 않고 더욱 빠르고 안정적으로 AI 기능을 즐기실 수 있습니다.</p>
+                    </div>
                 </div>
-            </form>
+
+                <div class="clay-card p-8 bg-white/80">
+                    <h3 class="text-2xl font-bold text-gray-700 mb-6 font-round flex items-center gap-2">
+                        <i class="fa-solid fa-key text-purple-400"></i> 발급 방법 가이드
+                    </h3>
+                    <ul class="space-y-6">
+                        <li class="flex gap-4">
+                            <span
+                                class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-lg">1</span>
+                            <p class="text-xl text-gray-500 font-hand">
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                                    class="text-purple-600 font-bold underline decoration-purple-200">Google AI
+                                    Studio</a>에 접속하여 로그인합니다.
+                            </p>
+                        </li>
+                        <li class="flex gap-4">
+                            <span
+                                class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-lg">2</span>
+                            <p class="text-xl text-gray-500 font-hand">
+                                'Create API key' 버튼을 클릭합니다.
+                            </p>
+                        </li>
+                        <li class="flex gap-4">
+                            <span
+                                class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-lg">3</span>
+                            <p class="text-xl text-gray-500 font-hand">
+                                발급된 키를 복사하여 왼쪽 '개인 Gemini API Key' 칸에 붙여넣고 저장하세요!
+                            </p>
+                        </li>
+                    </ul>
+                    <div class="mt-8 p-4 bg-yellow-50 rounded-2xl border border-yellow-200">
+                        <p class="text-lg text-yellow-700 font-hand leading-tight text-center">
+                            <i class="fa-solid fa-shield-halved mr-1"></i> 입력하신 키는 암호화되어 안전하게 보관됩니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
