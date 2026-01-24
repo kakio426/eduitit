@@ -5,6 +5,7 @@ import json
 import os
 
 from .constants import THEMES, FONT_PATH
+from .utils import get_valid_image_paths, cleanup_temp_files
 
 class PDFEngine(FPDF):
     def __init__(self, theme_name, school_name):
@@ -202,48 +203,52 @@ class PDFEngine(FPDF):
             self.cell(190, 8, meta_info, border=1, fill=True, align='L')
             y_cursor += 15
             
-            # 3. 이미지 영역 (최대 100mm)
-            if imgs:
-                img_count = min(len(imgs), 2)  # 최대 2개만 사용
-                
+            # 3. 이미지 영역 (최대 100mm) - URL 및 로컬 파일 모두 지원
+            valid_img_paths = get_valid_image_paths(imgs, max_count=2)
+            temp_files = [p for p in valid_img_paths if p not in (imgs if isinstance(imgs, list) else [])]
+
+            if valid_img_paths:
+                img_count = len(valid_img_paths)
+
                 if img_count == 1:
                     # 사진 1개: 중앙 정렬, 큰 크기
-                    if os.path.exists(imgs[0]):
-                        try:
-                            from PIL import Image as PILImage
-                            with PILImage.open(imgs[0]) as pil_img:
-                                iw, ih = pil_img.size
-                                aspect = ih / iw
-                            
-                            img_w = 120
-                            img_h = img_w * aspect
-                            if img_h > 100:
-                                img_h = 100
-                                img_w = img_h / aspect
-                            
-                            img_x = (210 - img_w) / 2
-                            self.image(imgs[0], x=img_x, y=y_cursor, w=img_w, h=img_h)
-                            y_cursor += img_h + 10
-                        except:
-                            y_cursor += 10
+                    try:
+                        from PIL import Image as PILImage
+                        with PILImage.open(valid_img_paths[0]) as pil_img:
+                            iw, ih = pil_img.size
+                            aspect = ih / iw
+
+                        img_w = 120
+                        img_h = img_w * aspect
+                        if img_h > 100:
+                            img_h = 100
+                            img_w = img_h / aspect
+
+                        img_x = (210 - img_w) / 2
+                        self.image(valid_img_paths[0], x=img_x, y=y_cursor, w=img_w, h=img_h)
+                        y_cursor += img_h + 10
+                    except:
+                        y_cursor += 10
                 else:
                     # 사진 2개 이상: 좌우 나란히 고정 크기 (각 90mm 너비)
                     fixed_w = 90
                     fixed_h = 70  # 고정 높이
                     gap = 10
-                    
+
                     try:
                         # 왼쪽 사진
-                        if os.path.exists(imgs[0]):
-                            self.image(imgs[0], x=10, y=y_cursor, w=fixed_w, h=fixed_h)
-                        
+                        self.image(valid_img_paths[0], x=10, y=y_cursor, w=fixed_w, h=fixed_h)
+
                         # 오른쪽 사진
-                        if os.path.exists(imgs[1]):
-                            self.image(imgs[1], x=10 + fixed_w + gap, y=y_cursor, w=fixed_w, h=fixed_h)
-                        
+                        if len(valid_img_paths) > 1:
+                            self.image(valid_img_paths[1], x=10 + fixed_w + gap, y=y_cursor, w=fixed_w, h=fixed_h)
+
                         y_cursor += fixed_h + 10
                     except:
                         y_cursor += 10
+
+                # 임시 파일 정리
+                cleanup_temp_files(temp_files)
             
             # 4. 본문 영역 (y_cursor부터 페이지 하단 20mm까지)
             available_height = 297 - 20 - y_cursor  # 하단 여백 20mm
@@ -424,16 +429,20 @@ class PDFEngine(FPDF):
         self.ln(5)
         
         # Image & Content Layout (Simpler: Image Left, Text Right)
-        imgs_raw = main_art.get('images', '[]')
-        imgs = json.loads(imgs_raw) if isinstance(imgs_raw, str) else imgs_raw
-        
+        imgs_raw = main_art.get('images', [])
+        valid_img_paths = get_valid_image_paths(imgs_raw, max_count=1)
+        temp_files = []
+
         start_y = self.get_y()
         img_h = 0
-        if imgs and os.path.exists(imgs[0]):
-             try:
-                 self.image(imgs[0], x=10, y=start_y, w=90)
-                 img_h = 60 # Approx
-             except: pass
+        if valid_img_paths:
+            temp_files = [p for p in valid_img_paths if p not in (imgs_raw if isinstance(imgs_raw, list) else [])]
+            try:
+                self.image(valid_img_paths[0], x=10, y=start_y, w=90)
+                img_h = 60  # Approx
+            except:
+                pass
+            cleanup_temp_files(temp_files)
         
         # Content on Right
         self.set_xy(105, start_y)

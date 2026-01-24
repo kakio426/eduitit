@@ -10,6 +10,7 @@ import datetime
 from io import BytesIO
 
 from .constants import THEMES
+from .utils import get_valid_images
 
 class PPTEngine:
     def __init__(self, theme_name, school_name):
@@ -152,16 +153,15 @@ class PPTEngine:
             p.font.name = "Malgun Gothic"
             
         # --- Right Column: Image ---
-        imgs_raw = article.get('images', '[]')
-        imgs = json.loads(imgs_raw) if isinstance(imgs_raw, str) else imgs_raw
-        valid_imgs = [p for p in imgs if os.path.exists(p)]
-        
+        imgs_raw = article.get('images', [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=1)
+
         if valid_imgs:
             # Place first image
-            img_path = valid_imgs[0]
+            img_data = valid_imgs[0]
             try:
-                # Add picture
-                pic = slide.shapes.add_picture(img_path, Inches(7.2), Inches(1.5))
+                # Add picture from BytesIO
+                pic = slide.shapes.add_picture(img_data, Inches(7.2), Inches(1.5))
                 
                 # Resize logic (Fit within 5.5" W x 5.0" H)
                 max_w = 5.5

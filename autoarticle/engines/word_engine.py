@@ -11,6 +11,7 @@ import os
 import datetime
 
 from .constants import THEMES
+from .utils import get_valid_images
 
 class WordEngine:
     def __init__(self, theme_name, school_name):
@@ -163,26 +164,25 @@ class WordEngine:
         run.font.color.rgb = RGBColor(80, 80, 80)
         
         doc.add_paragraph()  # 간격
-        
-        # 이미지 처리
-        imgs_raw = article.get('images', '[]')
-        imgs = json.loads(imgs_raw) if isinstance(imgs_raw, str) else imgs_raw
-        valid_imgs = [p for p in imgs if os.path.exists(p)]
-        
+
+        # 이미지 처리 (URL 및 로컬 파일 모두 지원)
+        imgs_raw = article.get('images', [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=2)
+
         if valid_imgs:
-            img_count = min(len(valid_imgs), 2)
-            
+            img_count = len(valid_imgs)
+
             if img_count == 1:
                 # 단일 이미지: 중앙 정렬, 테두리 추가
                 img_table = doc.add_table(rows=1, cols=1)
                 img_table.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                
+
                 cell = img_table.cell(0, 0)
                 p = cell.paragraphs[0]
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 run = p.add_run()
                 run.add_picture(valid_imgs[0], width=Inches(5.0))
-                
+
                 # 테두리 스타일
                 tcPr = cell._element.get_or_add_tcPr()
                 tcBorders = OxmlElement('w:tcBorders')
@@ -193,20 +193,20 @@ class WordEngine:
                     border.set(qn('w:color'), 'CCCCCC')
                     tcBorders.append(border)
                 tcPr.append(tcBorders)
-                
+
             else:
                 # 2개 이미지: 좌우 배치
                 img_table = doc.add_table(rows=1, cols=2)
                 img_table.autofit = False
                 img_table.allow_autofit = False
-                
+
                 for i in range(2):
                     cell = img_table.cell(0, i)
                     p = cell.paragraphs[0]
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     run = p.add_run()
                     run.add_picture(valid_imgs[i], width=Inches(3.2))
-                    
+
                     # 셀 패딩
                     tcPr = cell._element.get_or_add_tcPr()
                     tcMar = OxmlElement('w:tcMar')

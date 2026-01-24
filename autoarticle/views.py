@@ -227,7 +227,7 @@ class ArticleCreateView(View):
                     'content': summary_points,
                     'date': article.event_date.strftime('%Y.%m.%d') if hasattr(article.event_date, 'strftime') else str(article.event_date),
                     'location': article.location,
-                    'images': []
+                    'images': article.images or []
                 }
                 from django.core.files.base import ContentFile
                 ppt_buffer = ppt_engine.create_presentation([article_data])
@@ -275,7 +275,7 @@ class ArticleArchiveView(ListView):
                     'date': str(art.event_date),
                     'location': art.location,
                     'grade': art.grade,
-                    'images': []
+                    'images': art.images or []
                 }
                 pdf.add_article(art_data, is_booklet=True)
             
@@ -293,7 +293,7 @@ class ArticleArchiveView(ListView):
                     'content': art.content_summary_list,
                     'date': str(art.event_date),
                     'location': art.location,
-                    'images': []
+                    'images': art.images or []
                 })
 
             ppt_buffer = ppt_engine.create_presentation(ppt_articles)
@@ -311,7 +311,7 @@ class ArticleArchiveView(ListView):
                     'date': str(art.event_date),
                     'location': art.location,
                     'grade': art.grade,
-                    'images': []
+                    'images': art.images or []
                 })
 
             word_buffer = word_engine.generate(word_articles)
@@ -362,7 +362,7 @@ class ArticleWordView(View):
             'date': str(article.event_date),
             'location': article.location,
             'grade': article.grade,
-            'images': []
+            'images': article.images or []
         }
 
         word_buffer = word_engine.generate([article_data])
