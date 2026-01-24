@@ -230,14 +230,14 @@ SOCIALACCOUNT_PROVIDERS = {
     'kakao': {
         'APP': {
             'client_id': os.environ.get('KAKAO_CLIENT_ID', ''),
-            'secret': os.environ.get('KAKAO_SECRET', ''),
+            'secret': os.environ.get('KAKAO_CLIENT_SECRET', ''),  # settings.py와 동일하게 통일
             'key': ''
         }
     },
     'naver': {
         'APP': {
             'client_id': os.environ.get('NAVER_CLIENT_ID', ''),
-            'secret': os.environ.get('NAVER_SECRET', ''),
+            'secret': os.environ.get('NAVER_CLIENT_SECRET', ''),  # settings.py와 동일하게 통일
             'key': ''
         }
     }
