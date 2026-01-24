@@ -43,7 +43,7 @@ class PadletAPIClient:
             raise ValueError("PADLET_API_KEY가 설정되지 않았습니다.")
 
         self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "X-Api-Key": self.api_key,
             "Content-Type": "application/json",
         }
 
