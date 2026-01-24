@@ -44,15 +44,22 @@
 
                 <!-- Left: Sticky YouTube Preview -->
                 <div id="youtubePreviewContainer" class="w-full md:w-[40%] md:sticky md:top-36 hidden z-10">
-                    <label class="block text-2xl font-bold text-gray-600 mb-4">
-                        <i class="fa-solid fa-video text-purple-500 mr-2"></i> 영상 참고하기
-                    </label>
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="block text-2xl font-bold text-gray-600">
+                            <i class="fa-solid fa-video text-purple-500 mr-2"></i> 영상 참고하기
+                        </label>
+                        <a id="youtubeDirectLink" href="#" target="_blank"
+                            class="text-xl text-blue-500 hover:underline font-hand">
+                            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>유튜브에서 직접보기
+                        </a>
+                    </div>
                     <div class="rounded-3xl overflow-hidden shadow-clay bg-black aspect-video">
                         <iframe id="youtubePreviewFrame" class="w-full h-full" frameborder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen></iframe>
+                            referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                     </div>
-                    <div class="mt-4 p-5 bg-white/40 rounded-3xl text-gray-600 font-hand text-xl shadow-clay-inner">
+
+                    <div class="mt-6 p-5 bg-white/40 rounded-3xl text-gray-600 font-hand text-xl shadow-clay-inner">
                         <p class="mb-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i> <b>꿀팁! 초스피드 이미지
                                 등록</b></p>
                         <p class="text-lg opacity-80 leading-relaxed">
@@ -60,6 +67,11 @@
                                 class="px-2 py-0.5 bg-gray-700 text-white rounded text-sm">Win+Shift+S</span> 키로
                             캡처하세요.<br>
                             2. 아래 단계의 <span class="text-purple-600 font-bold">📋 붙여넣기</span> 버튼을 누르면 즉시 이미지가 들어갑니다!
+                        </p>
+                        <hr class="my-4 border-gray-300 opacity-30">
+                        <p class="text-sm opacity-70 leading-normal">
+                            * 영상 제작자가 '퍼가기'를 차단한 경우 영상이 보이지 않을 수 있습니다. 이럴 땐 상단의 <span
+                                class="text-blue-500 underline">유튜브에서 직접보기</span>를 이용해주세요.
                         </p>
                     </div>
                 </div>
@@ -125,10 +137,12 @@
     const aiStatusEl = document.getElementById('aiStatus');
     const youtubePreviewContainer = document.getElementById('youtubePreviewContainer');
     const youtubePreviewFrame = document.getElementById('youtubePreviewFrame');
+    const youtubeDirectLink = document.getElementById('youtubeDirectLink');
 
-    // Extract YouTube Video ID
+    // Extract YouTube Video ID (Supporting regular, shorts, and tiny URLs)
     function extractVideoId(url) {
-        const match = url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        const match = url.match(regex);
         return match ? match[1] : null;
     }
 
@@ -137,11 +151,14 @@
         const url = videoUrlEl.value.trim();
         const videoId = extractVideoId(url);
         if (videoId) {
-            youtubePreviewFrame.src = `https://www.youtube.com/embed/${videoId}`;
+            // Using youtube-nocookie for better compatibility
+            youtubePreviewFrame.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&enablejsapi=1`;
+            youtubeDirectLink.href = `https://www.youtube.com/watch?v=${videoId}`;
             youtubePreviewContainer.classList.remove('hidden');
         } else {
             youtubePreviewContainer.classList.add('hidden');
             youtubePreviewFrame.src = '';
+            youtubeDirectLink.href = '#';
         }
     }
 
