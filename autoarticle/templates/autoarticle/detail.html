@@ -63,6 +63,26 @@
                     {{ article.full_text }}
                 </div>
 
+                <!-- Image Gallery -->
+                {% if article.images %}
+                <div class="mt-16 space-y-8">
+                    <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                        <i class="fa-solid fa-images text-purple-500"></i> 현장 사진
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for img_path in article.images %}
+                        <div
+                            class="group relative aspect-video rounded-3xl overflow-hidden shadow-clay bg-gray-100 hover:scale-[1.02] transition-all duration-300">
+                            <img src="{{ img_path }}" alt="행사 사진" class="w-full h-full object-cover">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Hashtags -->
                 <div class="mt-12 flex flex-wrap gap-3">
                     {% for tag in article.hashtags %}

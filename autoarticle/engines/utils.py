@@ -18,15 +18,23 @@ def get_image_data(img_path):
         return None
 
     try:
-        # URL인 경우
+        from django.conf import settings
+        # URL인 경우 (Cloudinary 포함)
         if img_path.startswith(('http://', 'https://')):
             response = requests.get(img_path, timeout=10)
             if response.status_code == 200:
                 return BytesIO(response.content)
             return None
+            
+        # /media/ 로 시작하는 웹 상대 경로인 경우 로컬 경로로 변환
+        processed_path = img_path
+        if img_path.startswith(settings.MEDIA_URL):
+            relative_path = img_path[len(settings.MEDIA_URL):]
+            processed_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
         # 로컬 파일인 경우
-        elif os.path.exists(img_path):
-            with open(img_path, 'rb') as f:
+        if os.path.exists(processed_path):
+            with open(processed_path, 'rb') as f:
                 return BytesIO(f.read())
         return None
     except Exception as e:
@@ -73,6 +81,7 @@ def download_image_to_temp(img_path):
         return None
 
     try:
+        from django.conf import settings
         # URL인 경우
         if img_path.startswith(('http://', 'https://')):
             response = requests.get(img_path, timeout=10)
@@ -92,9 +101,16 @@ def download_image_to_temp(img_path):
                 temp_file.close()
                 return temp_file.name
             return None
+            
+        # /media/ 로 시작하는 웹 상대 경로인 경우 로컬 경로로 변환
+        processed_path = img_path
+        if img_path.startswith(settings.MEDIA_URL):
+            relative_path = img_path[len(settings.MEDIA_URL):]
+            processed_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
         # 로컬 파일인 경우
-        elif os.path.exists(img_path):
-            return img_path
+        if os.path.exists(processed_path):
+            return processed_path
         return None
     except Exception as e:
         print(f"이미지 다운로드 실패: {img_path} - {e}")
