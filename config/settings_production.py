@@ -291,6 +291,7 @@ CSP_SCRIPT_SRC = (
     "'self'",
     "'unsafe-inline'",  # 인라인 스크립트 허용 (템플릿 내 스크립트)
     "'unsafe-eval'",    # marked.js 등 라이브러리용
+    "https://cdn.tailwindcss.com",  # Tailwind CSS CDN
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
     "https://unpkg.com",
