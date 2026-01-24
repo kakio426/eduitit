@@ -108,7 +108,16 @@ class ArticleCreateView(View):
 
                 if use_cloudinary:
                     # Cloudinary 업로드
+                    import cloudinary
                     import cloudinary.uploader
+
+                    # Cloudinary 설정 (환경변수에서)
+                    cloudinary.config(
+                        cloud_name=settings.CLOUDINARY_STORAGE.get('CLOUD_NAME'),
+                        api_key=settings.CLOUDINARY_STORAGE.get('API_KEY'),
+                        api_secret=settings.CLOUDINARY_STORAGE.get('API_SECRET')
+                    )
+
                     for img in uploaded_images[:5]:
                         ext = os.path.splitext(img.name)[1].lower()
                         if ext not in ALLOWED_IMAGE_EXTENSIONS:
@@ -122,9 +131,15 @@ class ArticleCreateView(View):
                                 public_id=str(uuid.uuid4()),
                                 resource_type='image'
                             )
-                            image_paths.append(result['secure_url'])
+                            if result and 'secure_url' in result:
+                                image_paths.append(result['secure_url'])
+                                print(f"Cloudinary upload success: {result['secure_url']}")
+                            else:
+                                print(f"Cloudinary upload failed - no secure_url in result: {result}")
                         except Exception as e:
+                            import traceback
                             print(f"Cloudinary upload error: {e}")
+                            traceback.print_exc()
                             continue
                 else:
                     # 로컬 파일 저장 (개발 환경)

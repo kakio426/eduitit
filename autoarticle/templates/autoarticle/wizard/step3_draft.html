@@ -28,7 +28,7 @@
                 <div class="flex flex-wrap gap-4">
                     {% for img_path in draft.images %}
                     <div class="relative w-32 h-32 rounded-2xl overflow-hidden shadow-clay">
-                        <img src="{{ MEDIA_URL }}{{ img_path }}" class="w-full h-full object-cover">
+                        <img src="{{ img_path }}" class="w-full h-full object-cover" alt="첨부 이미지">
                     </div>
                     {% endfor %}
                 </div>
