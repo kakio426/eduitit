@@ -57,15 +57,17 @@ class AutoArticleImageUploadTest(TestCase):
         self.assertIn('article_images', session, "Image paths not found in session")
         self.assertEqual(len(session['article_images']), 2)
         
-        # Verify files actually exist on disk in the media location
+        # Verify files actually exist on disk in the media location (if local)
+        # or have a valid Cloudinary URL (if remote)
         from django.conf import settings
         for path in session['article_images']:
+            if path.startswith('http'):
+                self.assertIn('cloudinary', path.lower())
+                continue
             full_path = os.path.join(settings.MEDIA_ROOT, path)
             self.assertTrue(os.path.exists(full_path), f"File {full_path} was not created")
             # Cleanup
             if os.path.exists(full_path):
-                # Ensure the file is closed before removing if possible, 
-                # but usually it's fine in tests
                 try:
                     os.remove(full_path)
                 except:
@@ -151,11 +153,12 @@ class AutoArticleImageUploadTest(TestCase):
         self.assertEqual(len(article.images), 1)
         self.assertTrue('autoarticle/images/' in article.images[0])
         
-        # Cleanup
+        # Cleanup (if local)
         from django.conf import settings
-        full_path = os.path.join(settings.MEDIA_ROOT, article.images[0])
-        if os.path.exists(full_path):
-            try:
-                os.remove(full_path)
-            except:
-                pass
+        if not article.images[0].startswith('http'):
+            full_path = os.path.join(settings.MEDIA_ROOT, article.images[0])
+            if os.path.exists(full_path):
+                try:
+                    os.remove(full_path)
+                except:
+                    pass
