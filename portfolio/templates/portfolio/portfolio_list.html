@@ -5,12 +5,15 @@
 <div class="container mx-auto px-4 pt-32 pb-20">
     <!-- Hero Introduction Section -->
     <section class="mb-24" data-aos="fade-up">
-        <div class="clay-card p-12 md:p-16 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 backdrop-blur-md border border-white/50">
+        <div
+            class="clay-card p-12 md:p-16 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 backdrop-blur-md border border-white/50">
             <div class="flex flex-col lg:flex-row items-center gap-12">
                 <!-- Profile Image -->
                 <div class="flex-shrink-0">
-                    <div class="w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 p-2 shadow-clay">
-                        <div class="w-full h-full rounded-full bg-white flex items-center justify-center text-7xl text-indigo-500">
+                    <div
+                        class="w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 p-2 shadow-clay">
+                        <div
+                            class="w-full h-full rounded-full bg-white flex items-center justify-center text-7xl text-indigo-500">
                             <i class="fa-solid fa-chalkboard-user"></i>
                         </div>
                     </div>
@@ -19,9 +22,11 @@
                 <!-- Introduction Text -->
                 <div class="flex-grow text-center lg:text-left">
                     <div class="flex items-center justify-center lg:justify-start gap-3 mb-4">
-                        <span class="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-full text-xl font-bold">경기도 초등교사</span>
+                        <span class="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-full text-xl font-bold">경기도
+                            초등교사</span>
                         <span class="px-4 py-2 bg-purple-100 text-purple-600 rounded-full text-xl font-bold">15년차</span>
-                        <span class="px-4 py-2 bg-green-100 text-green-600 rounded-full text-xl font-bold">AI 연수강사</span>
+                        <span class="px-4 py-2 bg-green-100 text-green-600 rounded-full text-xl font-bold">AI
+                            연수강사</span>
                     </div>
 
                     <h1 class="text-5xl md:text-6xl font-bold mb-6 text-gray-800">
@@ -53,21 +58,24 @@
             <!-- Key Points -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 pt-12 border-t border-indigo-100/50">
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-3xl mx-auto mb-4 shadow-clay-inner">
+                    <div
+                        class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-3xl mx-auto mb-4 shadow-clay-inner">
                         <i class="fa-solid fa-school"></i>
                     </div>
                     <h3 class="text-2xl font-bold text-gray-700 mb-2">현장 중심</h3>
                     <p class="text-xl text-gray-500 font-hand">실제 교실에서 검증된 AI 활용 노하우</p>
                 </div>
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mx-auto mb-4 shadow-clay-inner">
+                    <div
+                        class="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-3xl mx-auto mb-4 shadow-clay-inner">
                         <i class="fa-solid fa-lightbulb"></i>
                     </div>
                     <h3 class="text-2xl font-bold text-gray-700 mb-2">맞춤형 연수</h3>
                     <p class="text-xl text-gray-500 font-hand">학교·기관 상황에 맞는 커리큘럼 설계</p>
                 </div>
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-500 text-3xl mx-auto mb-4 shadow-clay-inner">
+                    <div
+                        class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-500 text-3xl mx-auto mb-4 shadow-clay-inner">
                         <i class="fa-solid fa-hands-helping"></i>
                     </div>
                     <h3 class="text-2xl font-bold text-gray-700 mb-2">실습 위주</h3>
@@ -113,8 +121,8 @@
                         <i class="fa-solid fa-building-columns text-lg"></i>
                         {{ achievement.issuer }}
                     </div>
-                    <div class="text-2xl text-gray-600 leading-relaxed whitespace-pre-wrap font-medium">
-                        {{ achievement.description }}
+                    <div class="text-2xl text-gray-600 leading-relaxed font-medium text-left">
+                        {{ achievement.description|linebreaksbr }}
                     </div>
                 </div>
             </div>
@@ -163,7 +171,7 @@
                     </span>
                 </div>
 
-                <div class="text-2xl text-gray-600 leading-relaxed font-medium">
+                <div class="text-2xl text-gray-600 leading-relaxed font-medium text-left">
                     {{ program.description|linebreaksbr }}
                 </div>
 
