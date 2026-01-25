@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
+    'cloudinary_storage',
     'core.apps.CoreConfig',
     'products.apps.ProductsConfig',
     'insights.apps.InsightsConfig',
@@ -208,6 +210,56 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# =============================================================================
+# CLOUDINARY SETTINGS
+# =============================================================================
+from urllib.parse import urlparse
+
+cloudinary_url = os.environ.get('CLOUDINARY_URL', '')
+cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+api_key = os.environ.get('CLOUDINARY_API_KEY', '')
+api_secret = os.environ.get('CLOUDINARY_API_SECRET', '')
+
+CLOUDINARY_STORAGE = {}
+
+if cloudinary_url:
+    try:
+        parsed = urlparse(cloudinary_url)
+        # 1. Start with parsed values
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': parsed.hostname or '',
+            'API_KEY': parsed.username or '',
+            'API_SECRET': parsed.password or '',
+        }
+    except Exception:
+        pass
+
+# 2. Override with individual variables if provided (Railway case)
+if cloud_name: CLOUDINARY_STORAGE['CLOUD_NAME'] = cloud_name
+if api_key: CLOUDINARY_STORAGE['API_KEY'] = api_key
+if api_secret: CLOUDINARY_STORAGE['API_SECRET'] = api_secret
+
+# Initialize Cloudinary library
+if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
+    try:
+        import cloudinary
+        cloudinary.config(
+            cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+            api_key=CLOUDINARY_STORAGE['API_KEY'],
+            api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+            secure=True
+        )
+        # Use Cloudinary for media storage
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        USE_CLOUDINARY = True
+        print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
+    except Exception as e:
+        print(f"DEBUG: Cloudinary initialization failed: {e}")
+        USE_CLOUDINARY = False
+else:
+    USE_CLOUDINARY = False
+    print("DEBUG: Cloudinary NOT configured, using local storage.")
 
 # =============================================================================
 # AUTHENTICATION
