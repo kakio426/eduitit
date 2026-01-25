@@ -167,7 +167,7 @@ def run():
     p_playaura = Product.objects.create(
         title="유튜브 탈알고리즘",
         lead_text="내 피드에 갇힌 시야를 넓혀보세요. 추천 영상 너머, 전 세계 친구들이 진짜로 보고 있는 세상을 만나요.",
-        description="유튜브의 방대한 정보를 한눈에! 국가별 인기 급상승 영상부터 교육적으로 활용 가능한 콘텐츠까지 AI가 핵심만 요약해 드립니다.",
+        description="대형 언론사나 유명 유튜버가 아닌, 사람들의 진심 어린 사랑을 받고 있는 숨은 보석 같은 유튜브 채널을 매일매일 발견하세요. 알고리즘에 갇히지 않고 새로운 콘텐츠를 만나는 특별한 경험을 선사합니다.",
         price=0,
         is_active=True,
         icon="fa-brands fa-youtube",
@@ -177,8 +177,8 @@ def run():
         external_url="https://motube-woad.vercel.app/",
         image="https://placehold.co/600x400/red/white?text=PlayAura"
     )
-    ProductFeature.objects.create(product=p_playaura, icon="fa-solid fa-globe", title="글로벌 트렌드", description="미국, 영국, 일본 등 각국의 유튜브 인기 순위를 실시간으로 확인합니다.")
-    ProductFeature.objects.create(product=p_playaura, icon="fa-solid fa-magnifying-glass-chart", title="AI 영상 요약", description="긴 영상도 핵심만 골라 요약해주는 스마트한 분석 도구를 경험하세요.")
+    ProductFeature.objects.create(product=p_playaura, icon="fa-solid fa-gem", title="숨은 보석 발굴", description="대형 채널을 제외하고 진짜 사랑받는 중소형 크리에이터들의 채널을 매일 추천합니다.")
+    ProductFeature.objects.create(product=p_playaura, icon="fa-solid fa-heart", title="진심 어린 큐레이션", description="조회수가 아닌 진정성으로 선별된 채널들을 통해 새로운 영감을 얻으세요.")
 
     # Schoolit (유지 또는 변경?) -> Schoolit은 업체명이므로 유지하는 것이 맞아 보임.
     p_schoolit = Product.objects.create(

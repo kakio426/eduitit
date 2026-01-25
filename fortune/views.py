@@ -8,6 +8,9 @@ from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
 from .forms import SajuForm
 from .prompts import get_prompt
+from .libs import calculator
+from datetime import datetime
+import pytz
 
 # 선생님 요청 모델명
 # 재미용 콘텐츠 → 가장 저렴한 Lite 모델
@@ -37,6 +40,30 @@ def get_gemini_client(request):
     return genai.Client(api_key=api_key)
 
 
+def get_chart_context(data):
+    """Refactor: Helper to get pillars from form data"""
+    try:
+        # Construct aware datetime from input
+        year = data['birth_year']
+        month = data['birth_month']
+        day = data['birth_day']
+        hour = data['birth_hour'] if data['birth_hour'] is not None else 12 # Default noon
+        minute = data['birth_minute'] if data['birth_minute'] is not None else 0
+        
+        # Assume Solar input for now. 
+        # TODO: Handle Lunar input if calendar_type is 'lunar' using manse.lunar_to_solar
+        
+        # User timezone assumption: KST (Asia/Seoul)
+        tz = pytz.timezone('Asia/Seoul')
+        dt = datetime(year, month, day, hour, minute, tzinfo=tz)
+        
+        return calculator.get_pillars(dt)
+    except Exception as e:
+        import logging
+        logging.error(f"Error calculating pillars: {e}")
+        return None
+
+
 @login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
 def saju_view(request):
@@ -50,29 +77,31 @@ def saju_view(request):
             data = form.cleaned_data
             mode = data['mode']
 
-            # 프롬프트 생성
-            prompt = get_prompt(mode, data)
+            # Logic Engine: Calculate Pillars
+            chart_context = get_chart_context(data)
+            
+            # Form Prompt with SSOT data
+            prompt = get_prompt(mode, data, chart_context=chart_context)
 
-            # Gemini 클라이언트 가져오기
+            # Gemini Client
             client = get_gemini_client(request)
 
             if not client:
                 error_message = "Gemini API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 등록해주세요."
             else:
                 try:
-                    # Gemini API 호출 (새 google-genai SDK)
+                    # Gemini API Call
                     response = client.models.generate_content(
                         model=FIXED_MODEL_NAME,
                         contents=prompt
                     )
 
-                    # 결과를 그대로 전달 (템플릿에서 마크다운 렌더링)
                     result_html = response.text
 
                 except Exception as e:
                     import logging
                     logging.exception("사주 분석 오류")
-                    error_message = "사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({str(e)})"
     else:
         form = SajuForm()
 
@@ -97,7 +126,11 @@ def saju_api_view(request):
 
     data = form.cleaned_data
     mode = data['mode']
-    prompt = get_prompt(mode, data)
+    
+    # Logic Engine
+    chart_context = get_chart_context(data)
+    
+    prompt = get_prompt(mode, data, chart_context=chart_context)
 
     client = get_gemini_client(request)
     if not client:
@@ -114,6 +147,12 @@ def saju_api_view(request):
             'result': response.text,
             'name': data['name'],
             'mode': mode,
+            'chart': {
+                'year': str(chart_context['year']['stem']) + str(chart_context['year']['branch']),
+                'month': str(chart_context['month']['stem']) + str(chart_context['month']['branch']),
+                'day': str(chart_context['day']['stem']) + str(chart_context['day']['branch']),
+                'hour': str(chart_context['hour']['stem']) + str(chart_context['hour']['branch']),
+            } if chart_context else None
         })
     except Exception as e:
         import logging

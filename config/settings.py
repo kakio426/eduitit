@@ -173,18 +173,18 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# 키 누락 시 로그 출력
+# 키 누락 시 로그 출력 (DEBUG 레벨로 변경하여 덜 시끄럽게)
 import logging
 logger = logging.getLogger(__name__)
 
 if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['client_id']:
-    logger.warning("NAVER_CLIENT_ID is not set in environment variables!")
+    logger.debug("NAVER_CLIENT_ID is not set in environment variables!")
 if not SOCIALACCOUNT_PROVIDERS['naver']['APP']['secret']:
-    logger.warning("NAVER_CLIENT_SECRET is not set in environment variables!")
+    logger.debug("NAVER_CLIENT_SECRET is not set in environment variables!")
 if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['client_id']:
-    logger.warning("KAKAO_CLIENT_ID is not set in environment variables!")
+    logger.debug("KAKAO_CLIENT_ID is not set in environment variables!")
 if not SOCIALACCOUNT_PROVIDERS['kakao']['APP']['secret']:
-    logger.warning("KAKAO_CLIENT_SECRET is not set in environment variables!")
+    logger.debug("KAKAO_CLIENT_SECRET is not set in environment variables!")
 
 
 # Internationalization
@@ -210,7 +210,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Cloudinary 설정
 print("=" * 80)
-print("🔍 CLOUDINARY 환경 변수 체크")
+print("[CLOUDINARY] Environment variable check")
 print("=" * 80)
 
 # 환경 변수 확인 (민감 정보 마스킹)
@@ -219,15 +219,15 @@ cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
 api_key = os.environ.get('CLOUDINARY_API_KEY', '')
 api_secret = os.environ.get('CLOUDINARY_API_SECRET', '')
 
-print(f"CLOUDINARY_URL: {'설정됨' if cloudinary_url else '❌ 없음'}")
-print(f"CLOUDINARY_CLOUD_NAME: {cloud_name if cloud_name else '❌ 없음'}")
-print(f"CLOUDINARY_API_KEY: {api_key[:4] + '...' if api_key else '❌ 없음'}")
-print(f"CLOUDINARY_API_SECRET: {'설정됨' if api_secret else '❌ 없음'}")
+print(f"CLOUDINARY_URL: {'SET' if cloudinary_url else '[X] NOT SET'}")
+print(f"CLOUDINARY_CLOUD_NAME: {cloud_name if cloud_name else '[X] NOT SET'}")
+print(f"CLOUDINARY_API_KEY: {api_key[:4] + '...' if api_key else '[X] NOT SET'}")
+print(f"CLOUDINARY_API_SECRET: {'SET' if api_secret else '[X] NOT SET'}")
 
 CLOUDINARY_STORAGE = {}
 
 if cloudinary_url:
-    print("📦 CLOUDINARY_URL 파싱 시도 중...")
+    print("[CLOUDINARY] Parsing CLOUDINARY_URL...")
     try:
         parsed = urlparse(cloudinary_url)
         # 1. URL 파싱 결과 우선 저장
@@ -246,14 +246,14 @@ if cloudinary_url:
         CLOUDINARY_STORAGE = parsed_storage
         
     except Exception as e:
-        print(f"❌ CLOUDINARY_URL 파싱 실패: {e}")
+        print(f"[X] CLOUDINARY_URL parsing failed: {e}")
         CLOUDINARY_STORAGE = {
             'CLOUD_NAME': cloud_name,
             'API_KEY': api_key,
             'API_SECRET': api_secret,
         }
 else:
-    print("📦 개별 환경변수 사용")
+    print("[CLOUDINARY] Using individual environment variables")
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': cloud_name,
         'API_KEY': api_key,
@@ -270,19 +270,19 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
             api_secret=CLOUDINARY_STORAGE['API_SECRET'],
             secure=True
         )
-        print(f"✅ Cloudinary 라이브러리 초기화 완료: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
+        print(f"[OK] Cloudinary library initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
     except Exception as e:
-        print(f"❌ Cloudinary 라이브러리 초기화 실패: {e}")
+        print(f"[X] Cloudinary library initialization failed: {e}")
 
 # Cloudinary 활성화 여부
 USE_CLOUDINARY = bool(CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'))
-print(f"🎯 USE_CLOUDINARY = {USE_CLOUDINARY}")
+print(f"[CLOUDINARY] USE_CLOUDINARY = {USE_CLOUDINARY}")
 
 if USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    print("✅ DEFAULT_FILE_STORAGE = cloudinary_storage.storage.MediaCloudinaryStorage")
+    print("[OK] DEFAULT_FILE_STORAGE = cloudinary_storage.storage.MediaCloudinaryStorage")
 else:
-    print("❌ Cloudinary 비활성화 - 로컬 파일 시스템 사용")
+    print("[INFO] Cloudinary disabled - using local file system")
 
 print("=" * 80)
 

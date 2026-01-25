@@ -51,6 +51,22 @@
             AI 시대를 이끄는 선생님의 시선.<br>
             유튜브 영상과 함께 선생님만의 통찰을 기록하고 공유합니다.
         </p>
+
+        <!-- Sort Buttons -->
+        <div class="flex justify-center gap-3 mt-8">
+            <a href="?sort=recent"
+                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'recent' %}bg-indigo-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-indigo-100{% endif %}">
+                <i class="fa-solid fa-clock mr-2"></i>최신순
+            </a>
+            <a href="?sort=popular"
+                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'popular' %}bg-pink-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-pink-100{% endif %}">
+                <i class="fa-solid fa-fire mr-2"></i>인기순
+            </a>
+            <a href="?sort=oldest"
+                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'oldest' %}bg-purple-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-purple-100{% endif %}">
+                <i class="fa-solid fa-history mr-2"></i>오래된순
+            </a>
+        </div>
     </header>
 
     <!-- Main Grid -->
@@ -113,13 +129,37 @@
                     </p>
                 </div>
                 {% endif %}
+
+                <!-- Like Button -->
+                <div class="mt-4 pt-4 border-t border-gray-200/50 flex items-center justify-between">
+                    {% if user.is_authenticated %}
+                    <button onclick="toggleLike({{ insight.pk }}, this)"
+                        class="like-btn flex items-center gap-2 px-4 py-2 rounded-full transition-all {% if user in insight.likes.all %}bg-pink-500 text-white{% else %}bg-gray-200 text-gray-600 hover:bg-pink-100 hover:text-pink-600{% endif %}"
+                        data-insight-id="{{ insight.pk }}"
+                        data-liked="{% if user in insight.likes.all %}true{% else %}false{% endif %}">
+                        <i class="fa-solid fa-heart"></i>
+                        <span class="font-bold like-count-{{ insight.pk }}">{{ insight.total_likes }}</span>
+                    </button>
+                    {% else %}
+                    <a href="{% url 'account_login' %}?next={% url 'insights:list' %}"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-600 hover:bg-pink-100 hover:text-pink-600 transition-all">
+                        <i class="fa-solid fa-heart"></i>
+                        <span class="font-bold">{{ insight.total_likes }}</span>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'insights:detail' insight.pk %}"
+                        class="text-indigo-600 hover:text-indigo-800 font-bold text-lg">
+                        자세히 보기 <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
             </div>
         </article>
         {% endfor %}
 
-        <!-- [Admin Add Button] -->
+        <!-- [Add Button] -->
+        {% if user.is_authenticated %}
         <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-purple-400 hover:text-purple-500 cursor-pointer transition-all min-h-[400px] bg-[#E0E5EC]/50 hover:bg-white/40 group"
-            onclick="location.href='/admin/insights/insight/add/'">
+            onclick="location.href='{% url 'insights:create' %}'">
             <div
                 class="w-24 h-24 rounded-full shadow-clay flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform bg-[#E0E5EC]">
                 <i class="fa-solid fa-plus"></i>
@@ -129,6 +169,19 @@
                 유튜브 링크만 있으면<br>나만의 인사이트 카드가 완성됩니다.
             </p>
         </div>
+        {% else %}
+        <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 transition-all min-h-[400px] bg-[#E0E5EC]/50"
+            onclick="location.href='{% url 'account_login' %}?next={% url 'insights:create' %}'">
+            <div
+                class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 bg-[#E0E5EC]">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <span class="font-hand text-4xl font-bold mb-2">로그인 필요</span>
+            <p class="font-sans text-lg text-center px-4">
+                인사이트를 등록하려면<br>로그인이 필요합니다.
+            </p>
+        </div>
+        {% endif %}
 
     </div>
 </main>
@@ -144,6 +197,40 @@
         x.textContent = message;
         x.className = "show";
         setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+    }
+
+    async function toggleLike(insightId, button) {
+        try {
+            const response = await fetch(`/insights/${insightId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to toggle like');
+            }
+
+            const data = await response.json();
+
+            // Update button appearance
+            if (data.liked) {
+                button.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
+                button.classList.add('bg-pink-500', 'text-white');
+            } else {
+                button.classList.remove('bg-pink-500', 'text-white');
+                button.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
+            }
+
+            // Update like count
+            document.querySelector(`.like-count-${insightId}`).textContent = data.total_likes;
+
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('좋아요 처리 중 오류가 발생했습니다.');
+        }
     }
 </script>
 {% endblock %}

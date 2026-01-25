@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Insight(models.Model):
     CATEGORY_CHOICES = [
@@ -15,11 +16,16 @@ class Insight(models.Model):
     kakio_note = models.TextField(blank=True, help_text="Teacher's special note")
     tags = models.CharField(max_length=100, help_text="Comma-separated tags e.g. #Leadership", blank=True)
     is_featured = models.BooleanField(default=False)
+    likes = models.ManyToManyField(User, related_name='liked_insights', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
+
+    @property
+    def total_likes(self):
+        return self.likes.count()
 
     def get_video_id(self):
         """Extracts video ID from YouTube URL"""

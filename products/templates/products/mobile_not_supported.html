@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}모바일 미지원 - Eduitit{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl mx-auto text-center clay-card p-12 bg-[#E0E5EC]">
+        <!-- Icon -->
+        <div class="w-32 h-32 mx-auto mb-8 rounded-full shadow-clay-inner flex items-center justify-center bg-[#E0E5EC]">
+            <i class="fa-solid fa-mobile-screen text-7xl text-gray-400"></i>
+        </div>
+
+        <!-- Title -->
+        <h1 class="text-5xl md:text-6xl font-bold text-gray-700 font-hand mb-4 leading-tight">
+            {{ service_name }}
+        </h1>
+
+        <!-- Reason -->
+        <p class="text-2xl md:text-3xl text-gray-500 font-hand mb-8 leading-relaxed">
+            {{ reason }}
+        </p>
+
+        <!-- Suggestion -->
+        <div class="p-6 rounded-3xl bg-blue-50 shadow-clay-inner mb-8">
+            <p class="text-xl md:text-2xl text-blue-700 font-bold font-hand">
+                <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>
+                {{ suggestion }}
+            </p>
+        </div>
+
+        <!-- Back Button -->
+        <a href="/" class="inline-block px-8 py-4 rounded-full bg-purple-500 text-white text-2xl font-bold shadow-clay hover:bg-purple-600 hover:scale-105 transition-all">
+            <i class="fa-solid fa-home mr-2"></i>홈으로 돌아가기
+        </a>
+    </div>
+</main>
+{% endblock %}
