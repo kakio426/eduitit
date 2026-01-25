@@ -33,7 +33,7 @@ class UserProfileUpdateForm(forms.ModelForm):
     )
     gemini_api_key = forms.CharField(
         required=False,
-        label="개인 Gemini API Key",
+        label="개인 Gemini API Key(선택)",
         widget=forms.PasswordInput(attrs={
             'class': 'w-full px-6 py-4 rounded-2xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-xl',
             'placeholder': '개인 API Key를 입력하세요'
@@ -41,7 +41,7 @@ class UserProfileUpdateForm(forms.ModelForm):
     )
     padlet_api_key = forms.CharField(
         required=False,
-        label="개인 Padlet API Key (Platinum/Pro)",
+        label="개인 Padlet API Key (선택 - Padlet Platinum/Pro 요금제만 사용 가능)",
         widget=forms.PasswordInput(attrs={
             'class': 'w-full px-6 py-4 rounded-2xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-xl',
             'placeholder': '개인 Padlet API Key를 입력하세요'
