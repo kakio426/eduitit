@@ -109,6 +109,21 @@ class ArticleCreateView(View):
                 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
                 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
                 use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
+                
+                # [DEBUG] Cloudinary 설정 상태 강제 출력
+                try:
+                    debug_cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', 'Not Set')
+                    debug_api_key = settings.CLOUDINARY_STORAGE.get('API_KEY', 'Not Set')
+                    # API Key는 보안상 일부만 출력
+                    if len(debug_api_key) > 5:
+                        debug_api_key_masked = debug_api_key[:5] + "***"
+                    else:
+                        debug_api_key_masked = debug_api_key
+
+                    logger.info(f"🔍 DEBUG: USE_CLOUDINARY={use_cloudinary}")
+                    logger.info(f"🔍 DEBUG: CLOUDINARY_STORAGE CloudName={debug_cloud_name}, APIKey={debug_api_key_masked}")
+                except Exception as e:
+                    logger.error(f"🔍 DEBUG LOGGING FAILED: {e}")
 
                 logger.info(f"Processing {len(uploaded_images)} images. USE_CLOUDINARY={use_cloudinary}")
 
