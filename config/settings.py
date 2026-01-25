@@ -230,12 +230,21 @@ if cloudinary_url:
     print("📦 CLOUDINARY_URL 파싱 시도 중...")
     try:
         parsed = urlparse(cloudinary_url)
-        CLOUDINARY_STORAGE = {
+        # 1. URL 파싱 결과 우선 저장
+        parsed_storage = {
             'CLOUD_NAME': parsed.hostname or '',
             'API_KEY': parsed.username or '',
             'API_SECRET': parsed.password or '',
         }
         print(f"✅ 파싱 성공 - CLOUD_NAME: {parsed.hostname}")
+        
+        # 2. 개별 환경 변수가 있다면 우선 적용 (Override)
+        if cloud_name: parsed_storage['CLOUD_NAME'] = cloud_name
+        if api_key: parsed_storage['API_KEY'] = api_key
+        if api_secret: parsed_storage['API_SECRET'] = api_secret
+        
+        CLOUDINARY_STORAGE = parsed_storage
+        
     except Exception as e:
         print(f"❌ CLOUDINARY_URL 파싱 실패: {e}")
         CLOUDINARY_STORAGE = {
