@@ -202,7 +202,7 @@ if not os.path.exists(STATIC_ROOT):
     os.makedirs(STATIC_ROOT)
 
 # WhiteNoise configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE is deprecated in favor of STORAGES['staticfiles']
 
 # =============================================================================
 # MEDIA FILES
@@ -251,8 +251,18 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
             secure=True
         )
         # Use Cloudinary for media storage
-        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
         USE_CLOUDINARY = True
+        
+        # Django 6.0+ STORAGES configuration
+        STORAGES = {
+            "default": {
+                "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+            },
+            "staticfiles": {
+                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            },
+        }
+        
         print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
     except Exception as e:
         print(f"DEBUG: Cloudinary initialization failed: {e}")
@@ -260,6 +270,16 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
 else:
     USE_CLOUDINARY = False
     print("DEBUG: Cloudinary NOT configured, using local storage.")
+    
+    # Fallback to local storage if Cloudinary is not available
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 # =============================================================================
 # AUTHENTICATION
