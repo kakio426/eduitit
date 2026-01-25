@@ -1,4 +1,10 @@
-<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
+
+import os
+import time
+
+file_path = r'c:\Users\kakio\eduitit\core\templates\core\includes\card_product.html'
+
+content = """<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
     data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
     <div class="clay-card p-6 md:p-8 h-full relative overflow-hidden group cursor-pointer card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
         role="button" tabindex="0" data-product-id="{{ product.id }}">
@@ -45,4 +51,26 @@
         <!-- Subtle Background Decorative Shape -->
         <div class="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-700"></div>
     </div>
-</div>
+</div>"""
+
+try:
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print("Deleted existing file.")
+        time.sleep(1) # Wait for filesystem
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("Created new file with correct content.")
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        read_back = f.read()
+        print("Read back content length:", len(read_back))
+        # Simple verification check
+        if "{% if" in read_back and "{% endif %}" in read_back:
+            print("Verification: Tags look present.")
+        else:
+            print("Verification: Tags missing??")
+
+except Exception as e:
+    print(f"Error: {e}")
