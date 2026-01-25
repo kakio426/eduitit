@@ -41,14 +41,14 @@ KAKAO_JS_KEY = os.environ.get('KAKAO_JS_KEY', 'default-dev-key')
 # Application definition
 
 INSTALLED_APPS = [
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary',
-    'cloudinary_storage',
     'core.apps.CoreConfig',
     'products.apps.ProductsConfig',
     'insights.apps.InsightsConfig',
@@ -235,6 +235,7 @@ if cloudinary_url:
             'CLOUD_NAME': parsed.hostname or '',
             'API_KEY': parsed.username or '',
             'API_SECRET': parsed.password or '',
+            'SECURE': True,
         }
         print(f"[OK] Parsing success - CLOUD_NAME: {parsed.hostname}")
         
@@ -251,6 +252,7 @@ if cloudinary_url:
             'CLOUD_NAME': cloud_name,
             'API_KEY': api_key,
             'API_SECRET': api_secret,
+            'SECURE': True,
         }
 else:
     print("[CLOUDINARY] Using individual environment variables")
@@ -258,6 +260,7 @@ else:
         'CLOUD_NAME': cloud_name,
         'API_KEY': api_key,
         'API_SECRET': api_secret,
+        'SECURE': True,
     }
 
 # Cloudinary 라이브러리 직접 초기화
