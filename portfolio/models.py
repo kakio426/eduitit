@@ -57,19 +57,19 @@ class LectureHistory(models.Model):
 
 class Inquiry(models.Model):
     name = models.CharField(max_length=100, verbose_name="성함")
-    organization = models.CharField(max_length=200, verbose_name="소속 기관")
+    organization = models.CharField(max_length=200, verbose_name="소속 기관/단체")
     email = models.EmailField(verbose_name="이메일")
     phone = models.CharField(max_length=20, verbose_name="연락처")
-    requested_date = models.DateField(verbose_name="희망 강의 일자", null=True, blank=True)
-    topic = models.CharField(max_length=200, verbose_name="강의 주제/목적")
-    message = models.TextField(verbose_name="전하실 말씀")
+    requested_date = models.DateField(verbose_name="희망 일시 (선택)", null=True, blank=True)
+    topic = models.CharField(max_length=200, verbose_name="제안 및 문의 주제")
+    message = models.TextField(verbose_name="상세 내용")
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="접수 일시")
     is_reviewed = models.BooleanField(default=False, verbose_name="검토 완료")
 
     class Meta:
-        verbose_name = "섭외 요청"
-        verbose_name_plural = "섭외 요청"
+        verbose_name = "협업 제안 및 문의"
+        verbose_name_plural = "협업 제안 및 문의"
         ordering = ['-created_at']
 
     def __str__(self):
