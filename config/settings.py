@@ -236,7 +236,7 @@ if cloudinary_url:
             'API_KEY': parsed.username or '',
             'API_SECRET': parsed.password or '',
         }
-        print(f"✅ 파싱 성공 - CLOUD_NAME: {parsed.hostname}")
+        print(f"[OK] Parsing success - CLOUD_NAME: {parsed.hostname}")
         
         # 2. 개별 환경 변수가 있다면 우선 적용 (Override)
         if cloud_name: parsed_storage['CLOUD_NAME'] = cloud_name
@@ -279,8 +279,17 @@ USE_CLOUDINARY = bool(CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAG
 print(f"[CLOUDINARY] USE_CLOUDINARY = {USE_CLOUDINARY}")
 
 if USE_CLOUDINARY:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    print("[OK] DEFAULT_FILE_STORAGE = cloudinary_storage.storage.MediaCloudinaryStorage")
+    # Django 4.2+ recommended storages configuration
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage' # Fallback for older patterns
+    print("[OK] STORAGES and DEFAULT_FILE_STORAGE configured for Cloudinary")
 else:
     print("[INFO] Cloudinary disabled - using local file system")
 
