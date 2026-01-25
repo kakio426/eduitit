@@ -25,36 +25,42 @@
     <!-- Dynamic Design System Styles -->
     <style>
         :root {
-            --theme-purple: 167, 139, 250;
+            --theme-purple: 129, 140, 248;
+            /* Indigo-400 */
             --theme-blue: 96, 165, 250;
-            --theme-green: 74, 222, 128;
+            /* Blue-400 */
+            --theme-green: 52, 211, 153;
+            /* Emerald-400 */
             --theme-orange: 251, 146, 60;
-            --theme-red: 248, 113, 113;
+            /* Orange-400 */
+            --theme-red: 251, 113, 113;
+            /* Red-400 */
             --theme-pink: 244, 114, 182;
-            --theme-dark: 74, 85, 104;
+            /* Pink-400 */
+            --theme-dark: 55, 65, 81;
+            /* Gray-700 */
         }
 
         .product-card {
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
         .product-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.05);
         }
 
         .icon-box {
-            width: 64px;
-            height: 64px;
-            border-radius: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s ease;
-            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05);
+            font-size: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.02);
         }
 
         /* Theme Variations */
@@ -83,17 +89,17 @@
         }
 
         .theme-icon {
-            background-color: rgba(var(--current-theme), 0.15);
+            background-color: rgba(var(--current-theme), 0.1);
             color: rgb(var(--current-theme));
         }
 
         .product-card:hover .theme-icon {
             background-color: rgb(var(--current-theme));
             color: white;
-            transform: rotate(-10deg) scale(1.1);
+            box-shadow: 0 8px 16px rgba(var(--current-theme), 0.3);
         }
 
-        .product-card .theme-badge {
+        .theme-badge {
             background-color: rgba(var(--current-theme), 0.1);
             color: rgb(var(--current-theme));
         }
@@ -101,122 +107,60 @@
 
     <!-- BENTO GRID -->
     <div class="bento-grid">
+        <!-- 1. Featured Hero Card -->
+        {% if featured_product %}
+        {% include 'core/includes/card_product.html' with product=featured_product delay='100' %}
+        {% endif %}
 
-        <!-- 1. [Hero Card] Dynamic Featured Product -->
-        <div class="md:col-span-2 md:row-span-2" data-aos="fade-up" data-aos-delay="100">
-            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer card-purple product-card bg-white/40 backdrop-blur-sm"
-                role="button" tabindex="0" data-product-id="{{ featured_product.id }}">
-
-                <div
-                    class="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-purple-500/5 group-hover:bg-purple-500/10 transition-all duration-700 blur-3xl">
-                </div>
-
-                <div class="relative z-10 h-full flex flex-col justify-between">
-                    <div>
-                        <span class="px-5 py-1.5 theme-badge rounded-full text-xl font-bold mb-6 inline-block">Featured
-                            Tool</span>
-                        <h2 class="text-6xl font-bold text-gray-800 mb-4 group-hover:text-purple-600 transition-colors">
-                            {{ featured_product.title }}
-                        </h2>
-                        <p class="text-3xl text-gray-500 font-hand leading-relaxed max-w-lg">
-                            {{ featured_product.lead_text|default:featured_product.description|truncatechars:100 }}
-                        </p>
-                    </div>
-
-                    <div class="flex justify-between items-end mt-12">
-                        <div class="icon-box theme-icon scale-150 ml-4 float-icon">
-                            {% if "fa-" in featured_product.icon %}<i class="{{ featured_product.icon }}"></i>{% else
-                            %}{{ featured_product.icon }}{% endif %}
-                        </div>
-                        <div
-                            class="w-20 h-20 rounded-full bg-gray-800 text-white shadow-xl flex items-center justify-center text-3xl group-hover:bg-purple-600 group-hover:rotate-45 transition-all duration-500">
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. [Dynamic Product Cards] -->
+        <!-- 2. Dynamic Product Cards -->
         {% for product in products %}
         {% if product.id != featured_product.id %}
-
-        <div class="{% if product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
-            data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter 1 50 %}">
-
-            <div class="clay-card p-10 h-full relative overflow-hidden group cursor-pointer product-card card-{{ product.color_theme }} bg-white/40 backdrop-blur-sm"
-                role="button" tabindex="0" data-product-id="{{ product.id }}">
-
-                <div class="relative z-10 flex flex-col h-full justify-between">
-                    <div>
-                        <div class="icon-box theme-icon">
-                            {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon
-                            }}{% endif %}
-                        </div>
-                        <div class="mb-2">
-                            <span class="text-lg font-bold tracking-widest uppercase opacity-50 mb-1 block">{{
-                                product.service_type|title }}</span>
-                            <h3 class="text-4xl font-bold text-gray-800 leading-tight">{{ product.title }}</h3>
-                        </div>
-                        <p class="text-2xl text-gray-500 font-hand mt-3 leading-snug">
-                            {{ product.lead_text|default:product.description|truncatechars:80 }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="mt-8 flex items-center gap-2 font-bold text-gray-400 group-hover:text-gray-800 transition-colors">
-                        <span class="text-xl">자세히 보기</span>
-                        <i class="fa-solid fa-chevron-right text-sm"></i>
-                    </div>
-                </div>
-
-                <!-- Subtle Background Decorative Shape -->
-                <div
-                    class="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-700">
-                </div>
-            </div>
-        </div>
+        {% include 'core/includes/card_product.html' with product=product delay='200' %}
         {% endif %}
         {% endfor %}
 
-        <!-- 7. [Info Card] Why Eduitit? -->
-        <div class="md:col-span-2 clay-card p-10 h-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none"
-            data-aos="fade-up" data-aos-delay="500">
-            <h3 class="text-4xl font-bold mb-8">무엇이 다른가요?</h3>
-            <div class="grid grid-cols-2 gap-8">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl"><i
-                            class="fa-solid fa-gift"></i></div>
-                    <span class="font-bold text-2xl">100% 무료</span>
+        <!-- 7. Why Eduitit? (System Card) -->
+        <div class="md:col-span-2 clay-card p-8 h-full bg-slate-900 text-white border-none shadow-xl" data-aos="fade-up"
+            data-aos-delay="500">
+            <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-sm"><i
+                        class="fa-solid fa-sparkles"></i></span>
+                EDUITIT만의 특별함
+            </h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-indigo-400 font-bold"><i class="fa-solid fa-check"></i>
+                        <span class="text-sm uppercase tracking-wider">Free Access</span></div>
+                    <p class="text-lg font-bold">100% 무료 도구</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl"><i
-                            class="fa-solid fa-bolt"></i></div>
-                    <span class="font-bold text-2xl">무설치 지원</span>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-blue-400 font-bold"><i class="fa-solid fa-check"></i> <span
+                            class="text-sm uppercase tracking-wider">Web Based</span></div>
+                    <p class="text-lg font-bold">무설치 지원</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl"><i
-                            class="fa-solid fa-brain"></i></div>
-                    <span class="font-bold text-2xl">AI 기반 도구</span>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-emerald-400 font-bold"><i class="fa-solid fa-check"></i>
+                        <span class="text-sm uppercase tracking-wider">Smart AI</span></div>
+                    <p class="text-lg font-bold">최신 AI 기술 결합</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl"><i
-                            class="fa-solid fa-chalkboard-user"></i></div>
-                    <span class="font-bold text-2xl">현직 교사 검수</span>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-orange-400 font-bold"><i class="fa-solid fa-check"></i>
+                        <span class="text-sm uppercase tracking-wider">Teacher Made</span></div>
+                    <p class="text-lg font-bold">현직 교사가 제작</p>
                 </div>
             </div>
         </div>
 
-        <!-- 8. [Contact Card] Feedback -->
-        <div class="md:col-span-2 clay-card p-10 h-full flex flex-col sm:flex-row items-center justify-between gap-6 group bg-white/60"
+        <!-- 8. Feedback (Action Card) -->
+        <div class="md:col-span-2 clay-card p-8 h-full flex flex-col md:flex-row items-center justify-between gap-6 bg-white/40 backdrop-blur-md"
             data-aos="fade-up" data-aos-delay="600">
             <div>
-                <h3 class="text-4xl font-bold text-gray-800 mb-2">새로운 기능이 필요한가요?</h3>
-                <p class="text-gray-500 font-hand text-2xl">선생님의 소중한 의견을 기다립니다.</p>
+                <h3 class="text-2xl font-bold text-gray-800 mb-1">새로운 도구 제안</h3>
+                <p class="text-gray-500 font-hand text-xl">선생님의 스마트한 교실을 위한 아이디어를 기다려요.</p>
             </div>
             <a href="mailto:kakio@naver.com"
-                class="px-10 py-4 bg-gray-800 text-white rounded-2xl font-bold text-2xl hover:bg-purple-600 transition-all flex items-center gap-3 shadow-lg hover:-translate-y-1">
-                <i class="fa-regular fa-paper-plane"></i> 제안하기
+                class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all flex items-center gap-3 shadow-lg hover:-translate-y-1">
+                <i class="fa-solid fa-paper-plane text-sm"></i> 의견 보내기
             </a>
         </div>
 
