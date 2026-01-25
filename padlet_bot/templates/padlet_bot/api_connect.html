@@ -150,13 +150,13 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <button onclick="syncPadlet({{ board.pk }})"
+                                <button onclick="syncPadlet('{{ board.pk }}')"
                                     class="px-4 py-2 rounded-full shadow-clay text-blue-600 hover:text-blue-700 text-base font-bold transition sync-btn"
                                     data-board-id="{{ board.pk }}" {% if not api_configured %}disabled{% endif %}>
                                     <i class="fa-solid fa-sync mr-1"></i>동기화
                                 </button>
 
-                                <button onclick="unlinkPadlet({{ board.pk }}, '{{ board.title|escapejs }}')"
+                                <button onclick="unlinkPadlet('{{ board.pk }}', '{{ board.title|escapejs }}')"
                                     class="px-4 py-2 rounded-full shadow-clay text-red-500 hover:text-red-600 text-base font-bold transition">
                                     <i class="fa-solid fa-unlink"></i>
                                 </button>

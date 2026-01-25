@@ -96,39 +96,82 @@ class ArticleCreateView(View):
                 messages.error(request, "행사명과 주요 내용을 입력해주세요.")
                 return redirect('autoarticle:create')
 
-            # 이미지 처리 - 간단히
+            # 이미지 처리
             uploaded_images = request.FILES.getlist('images')
             image_paths = []
+            upload_errors = []
 
-            try:
-                if uploaded_images:
-                    import uuid
-                    ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-                    MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-                    use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
+            if uploaded_images:
+                import uuid
+                import logging
+                logger = logging.getLogger(__name__)
 
-                    for img in uploaded_images[:5]:
-                        ext = os.path.splitext(img.name)[1].lower()
-                        if ext not in ALLOWED_IMAGE_EXTENSIONS or img.size > MAX_IMAGE_SIZE:
-                            continue
+                ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+                MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
 
-                        try:
-                            if use_cloudinary:
+                logger.info(f"Processing {len(uploaded_images)} images. USE_CLOUDINARY={use_cloudinary}")
+
+                for idx, img in enumerate(uploaded_images[:5]):
+                    ext = os.path.splitext(img.name)[1].lower()
+
+                    # Validate file
+                    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                        upload_errors.append(f"{img.name}: 지원하지 않는 파일 형식")
+                        continue
+                    if img.size > MAX_IMAGE_SIZE:
+                        upload_errors.append(f"{img.name}: 파일 크기 초과 (최대 10MB)")
+                        continue
+
+                    try:
+                        if use_cloudinary:
+                            # Cloudinary upload (REQUIRED for production)
+                            try:
                                 import cloudinary.uploader
-                                result = cloudinary.uploader.upload(img, folder='autoarticle/images', public_id=str(uuid.uuid4()))
-                                if result.get('secure_url'):
-                                    image_paths.append(result['secure_url'])
-                            else:
-                                from django.core.files.storage import FileSystemStorage
-                                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
-                                name = fs.save(f"{uuid.uuid4()}{ext}", img)
-                                image_paths.append(f"{settings.MEDIA_URL}autoarticle/images/{name}")
-                        except Exception as e:
-                            print(f"Image upload error: {e}")
-                            pass
-            except Exception as e:
-                print(f"Image processing error: {e}")
-                pass
+                                logger.info(f"Uploading image {idx+1} to Cloudinary: {img.name}")
+
+                                result = cloudinary.uploader.upload(
+                                    img,
+                                    folder='autoarticle/images',
+                                    public_id=str(uuid.uuid4()),
+                                    resource_type='image'
+                                )
+
+                                secure_url = result.get('secure_url')
+                                if secure_url:
+                                    image_paths.append(secure_url)
+                                    logger.info(f"SUCCESS: Uploaded to {secure_url}")
+                                else:
+                                    error_msg = f"{img.name}: Cloudinary URL 없음"
+                                    upload_errors.append(error_msg)
+                                    logger.error(error_msg)
+
+                            except Exception as cloud_err:
+                                error_msg = f"{img.name}: Cloudinary 업로드 실패 - {str(cloud_err)}"
+                                upload_errors.append(error_msg)
+                                logger.error(error_msg, exc_info=True)
+                        else:
+                            # Local filesystem (for development only)
+                            from django.core.files.storage import FileSystemStorage
+                            fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
+                            filename = f"{uuid.uuid4()}{ext}"
+                            name = fs.save(filename, img)
+                            url = f"{settings.MEDIA_URL}autoarticle/images/{name}"
+                            image_paths.append(url)
+                            logger.info(f"Saved locally: {url}")
+
+                    except Exception as e:
+                        error_msg = f"{img.name}: 업로드 중 오류 - {str(e)}"
+                        upload_errors.append(error_msg)
+                        logger.error(error_msg, exc_info=True)
+
+                # Alert user if there were errors
+                if upload_errors:
+                    for error in upload_errors:
+                        messages.warning(request, error)
+                        logger.warning(error)
+
+                logger.info(f"Image upload complete: {len(image_paths)} succeeded, {len(upload_errors)} failed")
             
             # Save input data and images to session
             request.session['article_input'] = input_data

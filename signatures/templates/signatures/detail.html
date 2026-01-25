@@ -35,10 +35,14 @@
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-xl text-gray-600">
-                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{ session.instructor }}</p>
-                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H:i" }}</p>
-                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{ session.location }}</p>
-                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{ signatures.count }}명</p>
+                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{
+                            session.instructor }}</p>
+                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{
+                            session.datetime|date:"Y년 m월 d일 H:i" }}</p>
+                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{
+                            session.location }}</p>
+                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{
+                            signatures.count }}명</p>
                     </div>
                     {% if session.description %}
                     <p class="mt-4 text-xl text-gray-500">{{ session.description }}</p>
@@ -106,7 +110,7 @@
                             </td>
                             <td class="py-3 px-4 text-gray-500">{{ sig.created_at|date:"H:i:s" }}</td>
                             <td class="py-3 px-4 text-center">
-                                <button onclick="deleteSignature({{ sig.pk }})"
+                                <button onclick="deleteSignature('{{ sig.pk }}')"
                                     class="text-red-400 hover:text-red-600 transition">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
@@ -143,18 +147,18 @@
                 'X-CSRFToken': '{{ csrf_token }}',
             },
         })
-        .then(response => response.json())
-        .then(data => {
-            const badge = document.getElementById('statusBadge');
-            const text = document.getElementById('statusText');
-            if (data.is_active) {
-                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
-                text.textContent = '활성';
-            } else {
-                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
-                text.textContent = '비활성';
-            }
-        });
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('statusBadge');
+                const text = document.getElementById('statusText');
+                if (data.is_active) {
+                    badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
+                    text.textContent = '활성';
+                } else {
+                    badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
+                    text.textContent = '비활성';
+                }
+            });
     }
 
     function deleteSignature(pk) {
@@ -166,12 +170,12 @@
                 'X-CSRFToken': '{{ csrf_token }}',
             },
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById(`row-${pk}`).remove();
-            }
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`row-${pk}`).remove();
+                }
+            });
     }
 </script>
 {% endblock %}
