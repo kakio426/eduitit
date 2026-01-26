@@ -93,7 +93,7 @@
 <!-- Modal Overlay (as per design 3) -->
 <div id="modal-overlay"
     class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50 hidden transition-opacity duration-300 opacity-0"
-    onclick="closeModal()"></div>
+    onclick="closeGuideModal()"></div>
 
 <!-- Modal Content -->
 <div id="modal-content"
@@ -110,7 +110,7 @@
                 <div id="modal-badge-container"></div>
             </div>
         </div>
-        <button onclick="closeModal()"
+        <button onclick="closeGuideModal()"
             class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
             <i class="fa-solid fa-xmark"></i>
         </button>
@@ -571,7 +571,7 @@
             filtered.forEach(tool => {
                 const card = document.createElement('div');
                 card.className = `clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]`;
-                card.onclick = () => openModal(tool);
+                card.onclick = () => openGuideModal(tool);
 
                 // Colors
                 let catText = '', catBg = '', catColor = '';
@@ -621,7 +621,7 @@
     const overlay = document.getElementById('modal-overlay');
     const modal = document.getElementById('modal-content');
 
-    function openModal(tool) {
+    function openGuideModal(tool) {
         document.getElementById('modal-icon').innerHTML = tool.icon;
         document.getElementById('modal-title').innerText = tool.name;
 
@@ -651,7 +651,7 @@
         document.body.style.overflow = 'hidden';
     }
 
-    function closeModal() {
+    function closeGuideModal() {
         overlay.classList.add('opacity-0');
         modal.classList.remove('scale-100');
         modal.classList.add('opacity-0', 'scale-95');
