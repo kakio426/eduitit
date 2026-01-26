@@ -19,7 +19,7 @@ from .engines.rag_service import StyleRAGService
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
-from .constants import FONT_PATH
+from .engines.constants import FONT_PATH
 
 class ArticleCreateView(View):
     THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
