@@ -10,4 +10,5 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('select-role/', views.select_role, name='select_role'),
     path('sso/schoolit/', views.sso_to_schoolit, name='sso_schoolit'),
+    path('policy/', views.policy_view, name='policy'),
 ]

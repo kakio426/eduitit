@@ -118,3 +118,7 @@ def sso_to_schoolit(request):
     import urllib.parse
     redirect_url = f"{target_url}?sso_token={token}"
     return redirect(redirect_url)
+
+def policy_view(request):
+    """이용약관 및 개인정보처리방침 페이지"""
+    return render(request, 'core/policy.html')

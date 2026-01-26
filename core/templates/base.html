@@ -223,7 +223,8 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span class="text-xl">
-                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username  }}{% endif %}님
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
+                            }}{% endif %}님
                         </span>
                         <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
@@ -291,7 +292,8 @@
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>
-                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username  }}{% endif %}님</span>
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
+                        }}{% endif %}님</span>
                 </div>
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
@@ -324,8 +326,31 @@
     {% block content %}{% endblock %}
 
     <!-- Footer -->
-    <footer class="py-12 text-center text-gray-400">
-        <p class="text-2xl font-hand">선생님의 칼퇴를 응원합니다. © 2026 Eduitit</p>
+    <footer class="py-16 px-6 bg-white/30 backdrop-blur-md mt-20 border-t border-white/20">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+            <div class="text-center md:text-left space-y-4">
+                <div class="flex items-center justify-center md:justify-start gap-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-white shadow-clay flex items-center justify-center text-purple-600">
+                        <i class="fa-solid fa-cloud"></i>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter text-gray-700">EDUITIT</span>
+                </div>
+                <p class="text-2xl font-hand text-gray-500">선생님의 칼퇴를 응원합니다.</p>
+                <div class="text-sm text-gray-400 font-medium">
+                    대표 유병주 | <a href="mailto:kakio@korea.kr"
+                        class="hover:text-purple-600 transition">kakio@korea.kr</a><br>
+                    © 2026 Eduitit. All rights reserved.
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-8 text-sm font-bold text-gray-500">
+                <a href="{% url 'policy' %}#terms" class="hover:text-purple-600 transition">이용약관</a>
+                <a href="{% url 'policy' %}#privacy" class="hover:text-purple-600 transition">개인정보처리방침</a>
+                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition">이용가이드</a>
+                <a href="mailto:kakio@korea.kr" class="hover:text-purple-600 transition">의견 보내기</a>
+            </div>
+        </div>
     </footer>
 
     <!-- Unified Modal for All Product Previews -->

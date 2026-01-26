@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}이용약관 및 개인정보처리방침 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .policy-container {
+        scroll-behavior: smooth;
+    }
+
+    .policy-section {
+        margin-bottom: 4rem;
+    }
+
+    .policy-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 32px;
+        padding: 3rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    }
+
+    .policy-card h2 {
+        color: #2d3748;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .policy-card h2 i {
+        color: #7c3aed;
+    }
+
+    .policy-card h3 {
+        color: #4a5568;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .policy-card p,
+    .policy-card li {
+        color: #718096;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+
+    .policy-card ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .important-clause {
+        background: #fef2f2;
+        border-left: 4px solid #ef4444;
+        padding: 1.5rem;
+        border-radius: 0 16px 16px 0;
+        margin: 1.5rem 0;
+    }
+
+    .important-clause strong {
+        color: #dc2626;
+    }
+
+    .free-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #e0e7ff;
+        color: #4338ca;
+        border-radius: 100px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .policy-nav {
+        position: sticky;
+        top: 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .policy-nav-link {
+        padding: 12px 24px;
+        border-radius: 16px;
+        background: #E0E5EC;
+        color: #4A5568;
+        font-weight: 700;
+        box-shadow: 5px 5px 10px rgba(163, 177, 198, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.5);
+        transition: all 0.3s;
+        text-align: left;
+    }
+
+    .policy-nav-link:hover,
+    .policy-nav-link.active {
+        background: #7c3aed;
+        color: white;
+        box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2);
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto policy-container">
+    <div class="text-center mb-16" data-aos="fade-down">
+        <h1 class="text-4xl md:text-6xl font-black text-gray-800 mb-6">운영정책</h1>
+        <p class="text-xl text-gray-500 font-medium">Eduitit은 선생님들을 위한 무료 AI 도구 플랫폼입니다.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        <!-- Sidebar Navigation -->
+        <aside class="hidden lg:block">
+            <nav class="policy-nav">
+                <a href="#terms" class="policy-nav-link active" id="nav-terms">이용약관</a>
+                <a href="#privacy" class="policy-nav-link" id="nav-privacy">개인정보처리방침</a>
+            </nav>
+        </aside>
+
+        <!-- Policy Content -->
+        <div class="lg:col-span-3">
+            <!-- 이용약관 -->
+            <section id="terms" class="policy-section" data-aos="fade-up">
+                <div class="policy-card">
+                    <span class="free-badge">무료 서비스 (Free Service)</span>
+                    <h2><i class="fa-solid fa-file-contract"></i> 이용약관</h2>
+                    <p class="mb-8 opacity-60">최종 수정일: 2026년 1월 26일</p>
+
+                    <h3>제1조 (목적)</h3>
+                    <p>본 약관은 '유병주'(이하 "운영자")가 개인적 목적으로 운영하는 교사용 AI 도구 플랫폼 'Eduitit'(이하 "서비스")의 이용 조건 및 절차를 규정합니다.</p>
+
+                    <h3>제2조 (서비스의 성격 및 요금)</h3>
+                    <div class="important-clause">
+                        <p>1. 본 서비스는 대한민국 교사들의 업무 경감을 위해 운영자가 <strong>전액 무료</strong>로 제공하는 비영리적 개인 프로젝트입니다.</p>
+                        <p>2. 유료 결제 기능이 존재하지 않으며, 운영자는 어떠한 명목으로도 사용자에게 비용을 요구하지 않습니다.</p>
+                    </div>
+
+                    <h3>제3조 (법적 면책 및 손해배상)</h3>
+                    <div class="important-clause">
+                        <strong>[강력한 면책 선언]:</strong>
+                        <p>1. <strong>AI 결과물의 한계</strong>: 본 서비스의 AI 분석 결과(사주, 절차 안내 등)는 알고리즘에 의해 자동 생성되며, '환각
+                            현상(Hallucination)'으로 인해 사실과 다른 정보를 포함할 수 있습니다. 이는 결코 법적, 행정적 상담을 대신할 수 없습니다.</p>
+                        <p>2. <strong>손해배상 책임의 부존재</strong>: 본 서비스는 무료로 제공되므로, 운영자는 서비스의 이용, 중단, 결과물의 오류 등으로 인해 사용자에게
+                            발생한 어떠한 직접적, 간접적, 특별한 손해에 대해서도 <strong>민·형사상 책임을 지지 않습니다.</strong></p>
+                    </div>
+
+                    <h3>제4조 (사용자의 의무 및 운영자 보호)</h3>
+                    <ul>
+                        <li>사용자는 저작권법 등 관련 법령을 준수해야 하며, 타인의 권리를 침해하는 데이터(URL 등)를 입력해서는 안 됩니다.</li>
+                        <li><strong>운영자 면책(Indemnification)</strong>: 사용자가 입력한 데이터로 인해 제3자가 운영자를 상대로 소송을 제기하거나 분쟁을 일으킬
+                            경우, 해당 입력을 수행한 사용자가 모든 법적 비용과 책임을 부담하며 운영자를 면책시켜야 합니다.</li>
+                    </ul>
+
+                    <h3>제5조 (서비스의 변경 및 중단)</h3>
+                    <p>본 서비스는 개인 프로젝트이므로 운영자의 사정, 서버 환경 변화 등에 따라 예고 없이 기능이 변경되거나 서비스가 영구 중단될 수 있습니다.</p>
+                </div>
+            </section>
+
+            <!-- 개인정보처리방침 -->
+            <section id="privacy" class="policy-section" data-aos="fade-up">
+                <div class="policy-card">
+                    <span class="free-badge">개인정보 최소화 정책</span>
+                    <h2><i class="fa-solid fa-shield-halved"></i> 개인정보처리방침</h2>
+                    <p class="mb-8 opacity-60">최종 수정일: 2026년 1월 26일</p>
+
+                    <h3>1. 소셜 로그인을 통한 개인정보 최소 수집</h3>
+                    <div class="important-clause">
+                        <strong>[비밀번호 미보관 정책]:</strong>
+                        <p>Eduitit은 사용자의 개인정보를 직접 관리하는 위험을 최소화하기 위해 <strong>자체 회원가입을 받지 않으며, 소셜 로그인(카카오, 네이버)만
+                                제공</strong>합니다.</p>
+                        <p>따라서 운영자는 사용자의 <strong>비밀번호를 절대 알 수 없으며 서버에 저장하지도 않습니다.</strong> 계정 보안 및 비밀번호 관리는 각 소셜 서비스
+                            제공사(카카오, 네이버)의 정책에 따릅니다.</p>
+                    </div>
+
+                    <h3>2. 수집 항목 및 목적</h3>
+                    <ul>
+                        <li><b>제공받는 정보:</b> 이메일, 닉네임, 프로필 사진 (사용자 식별용)</li>
+                        <li><b>서비스 이용 데이터:</b> 사주 데이터, 서명 데이터 등 (기능 제공용)</li>
+                        <li>모든 데이터는 서비스 환경 설정 및 사용자 편의 제공 이외의 목적으로 제3자에게 판매하거나 공유하지 않습니다.</li>
+                    </ul>
+
+                    <h3>3. 데이터 보관 및 파기</h3>
+                    <ul>
+                        <li>사용자가 입력한 사주 결과 등은 '보관함' 기능을 위해 서버에 저장됩니다.</li>
+                        <li><b>회원 탈퇴 시:</b> 사용자가 탈퇴를 요청할 경우, 소셜 연동을 해제하며 해당 사용자의 식별 정보는 즉시 파기합니다. 단, 법령에 따른 의무 보관 데이터는
+                            예외로 합니다.</li>
+                    </ul>
+
+                    <h3>4. 보호 책임자</h3>
+                    <p>Eduitit은 개인정보를 상업적으로 이용하지 않는 투명한 서비스를 지향합니다.</p>
+                    <p>문의: 유병주 (kakio@korea.kr)</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock %}
