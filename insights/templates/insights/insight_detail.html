@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -41,14 +41,14 @@
         <!-- Kakio's Note -->
         {% if insight.kakio_note %}
         <div class="mt-12 bg-yellow-50 p-6 rounded-xl border border-yellow-100">
-            <h3 class="text-lg font-bold text-yellow-800 mb-2">?뮕 Kakio's Note</h3>
+            <h3 class="text-lg font-bold text-yellow-800 mb-2">💡 Kakio's Note</h3>
             <p class="text-yellow-700">{{ insight.kakio_note|linebreaks }}</p>
         </div>
         {% endif %}
 
         <div class="mt-8 text-center">
-            <a href="{% url 'insights:list' %}" class="inline-block text-indigo-600 font-semibold hover:underline">紐⑸줉?쇰줈
-                ?뚯븘媛湲?/a>
+            <a href="{% url 'insights:list' %}" class="inline-block text-indigo-600 font-semibold hover:underline">목록으로
+                돌아가기</a>
         </div>
     </div>
 </div>

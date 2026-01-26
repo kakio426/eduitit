@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
@@ -9,7 +9,7 @@
         <div class="flex items-center justify-between" data-aos="fade-down">
             <a href="{% url 'autoarticle:create' %}"
                 class="flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-colors font-bold text-lg">
-                <i class="fa-solid fa-arrow-left"></i> ??湲곗궗 ?묒꽦?섎윭 媛湲?
+                <i class="fa-solid fa-arrow-left"></i> 새 기사 작성하러 가기
             </a>
             <div class="flex gap-4">
                 <span
@@ -44,7 +44,7 @@
 
                 <!-- Summary / Highlights -->
                 <div class="mb-12 p-8 bg-gray-50 rounded-3xl border-2 border-gray-100 border-dashed">
-                    <h3 class="text-sm font-bold text-purple-500 uppercase mb-4 tracking-widest">AI ?듭떖 ?붿빟 (PPT??</h3>
+                    <h3 class="text-sm font-bold text-purple-500 uppercase mb-4 tracking-widest">AI 핵심 요약 (PPT용)</h3>
                     <ul class="space-y-3">
                         {% for point in article.content_summary_list %}
                         <li class="flex items-start gap-3 text-lg text-gray-600">
@@ -67,13 +67,13 @@
                 {% if article.images %}
                 <div class="mt-16 space-y-8">
                     <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                        <i class="fa-solid fa-images text-purple-500"></i> ?꾩옣 ?ъ쭊
+                        <i class="fa-solid fa-images text-purple-500"></i> 현장 사진
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {% for img_path in article.images %}
                         <div
                             class="group relative aspect-video rounded-3xl overflow-hidden shadow-clay bg-gray-100 hover:scale-[1.02] transition-all duration-300">
-                            <img src="{{ img_path }}" alt="?됱궗 ?ъ쭊" class="w-full h-full object-cover">
+                            <img src="{{ img_path }}" alt="행사 사진" class="w-full h-full object-cover">
                             <div
                                 class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                             </div>
@@ -97,7 +97,7 @@
 
         <!-- Download & Tools Card -->
         <div class="clay-card bg-white p-8 border-2 border-purple-100" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6">?뱛 ?먮룞 ?앹꽦???뚯씪 ?ㅼ슫濡쒕뱶</h3>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">📂 자동 생성된 파일 다운로드</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% if article.ppt_file %}
                 <a href="{{ article.ppt_file.url }}"
@@ -108,8 +108,8 @@
                             <i class="fa-solid fa-file-powerpoint"></i>
                         </div>
                         <div>
-                            <span class="block font-bold text-gray-800 text-xl">?댁뒪?덊꽣 PPT</span>
-                            <span class="text-sm text-gray-500">諛쒗몴??& ?몄쭛??/span>
+                            <span class="block font-bold text-gray-800 text-xl">뉴스레터 PPT</span>
+                            <span class="text-sm text-gray-500">발표용 & 편집용</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-orange-400 group-hover:translate-y-1 transition-transform"></i>
@@ -125,8 +125,8 @@
                             <i class="fa-solid fa-file-pdf"></i>
                         </div>
                         <div>
-                            <span class="block font-bold text-gray-800 text-xl">湲곕낯 PDF ?덊룷??/span>
-                            <span class="text-sm text-gray-500">諛고룷??湲곗궗 臾몄꽌</span>
+                            <span class="block font-bold text-gray-800 text-xl">기본 PDF 레포트</span>
+                            <span class="text-sm text-gray-500">배포용 기사 문서</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-blue-400 group-hover:translate-y-1 transition-transform"></i>
@@ -143,8 +143,8 @@
                             <i class="fa-solid fa-image"></i>
                         </div>
                         <div>
-                            <span class="block font-bold text-gray-800 text-xl">?붿빟 移대뱶?댁뒪</span>
-                            <span class="text-sm text-gray-500">?몄뒪?洹몃옩 & SNS??/span>
+                            <span class="block font-bold text-gray-800 text-xl">요약 카드뉴스</span>
+                            <span class="text-sm text-gray-500">인스타그램 & SNS용</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-purple-400 group-hover:translate-y-1 transition-transform"></i>
@@ -158,8 +158,8 @@
                             <i class="fa-solid fa-file-word"></i>
                         </div>
                         <div>
-                            <span class="block font-bold text-gray-800 text-xl">Word ?댁뒪?덊꽣</span>
-                            <span class="text-sm text-gray-500">?몄쭛 媛?ν븳 臾몄꽌</span>
+                            <span class="block font-bold text-gray-800 text-xl">Word 뉴스레터</span>
+                            <span class="text-sm text-gray-500">편집 가능한 문서</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-indigo-400 group-hover:translate-y-1 transition-transform"></i>
@@ -169,14 +169,14 @@
             <div class="mt-8 pt-8 border-t border-gray-100 flex justify-end gap-4">
                 <a href="{% url 'autoarticle:edit' article.id %}"
                     class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-600 font-bold hover:bg-blue-50 hover:text-blue-600 transition-all">
-                    <i class="fa-solid fa-pen"></i> ?섏젙?섍린
+                    <i class="fa-solid fa-pen"></i> 수정하기
                 </a>
                 <form method="post" action="{% url 'autoarticle:delete' article.id %}" class="inline"
-                    onsubmit="return confirm('?뺣쭚 ??湲곗궗瑜???젣?섏떆寃좎뒿?덇퉴?');">
+                    onsubmit="return confirm('정말 이 기사를 삭제하시겠습니까?');">
                     {% csrf_token %}
                     <button type="submit"
                         class="px-6 py-3 rounded-2xl bg-gray-50 text-gray-400 font-bold hover:bg-red-50 hover:text-red-500 transition-all">
-                        <i class="fa-solid fa-trash"></i> ??젣?섍린
+                        <i class="fa-solid fa-trash"></i> 삭제하기
                     </button>
                 </form>
             </div>

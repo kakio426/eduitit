@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}ClassBoard{% endblock %}
@@ -103,23 +103,23 @@
             <div class="flex items-center gap-2">
                 <button onclick="window.dtApp.toggleFullscreen()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="?꾩껜?붾㈃">
+                    title="전체화면">
                     <i class="fa-solid fa-expand"></i>
                 </button>
                 <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="?뚮━ ?ㅼ젙">
+                    title="소리 설정">
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
                 <a href="{% url 'dt_admin_dashboard' %}"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="?ㅼ젙">
+                    title="설정">
                     <i class="fa-solid fa-gear"></i>
                 </a>
                 <div class="w-px h-6 bg-slate-700 mx-1"></div>
                 <a href="/"
                     class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg border border-slate-700 transition"
-                    title="?섍?湲?>
+                    title="나가기">
                     <i class="fa-solid fa-house"></i>
                 </a>
             </div>
@@ -135,14 +135,14 @@
                 <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
             <div>
-                <p class="font-bold text-indigo-100">?꾩옱 寃뚯뒪??紐⑤뱶?낅땲??/p>
-                <p class="text-sm text-indigo-300">釉뚮씪?곗?瑜??レ쑝硫??숈깮 紐낃낵 ?ㅼ젙???щ씪?몄슂. ?삦</p>
+                <p class="font-bold text-indigo-100">현재 게스트 모드입니다</p>
+                <p class="text-sm text-indigo-300">브라우저를 닫으면 학생 명과 설정이 사라져요. 😥</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
             <a href="{% url 'account_signup' %}"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg hover:-translate-y-1">
-                怨꾩젙 留뚮뱾怨???ν븯湲?
+                계정 만들고 저장하기
             </a>
             <button onclick="this.closest('#guestBanner').remove()"
                 class="p-2 text-indigo-400 hover:text-white transition-colors">
@@ -175,7 +175,7 @@
                 <div
                     class="flex-shrink-0 bg-black/20 backdrop-blur-md text-indigo-100 px-5 py-1.5 rounded-full text-sm font-bold mb-8 flex items-center gap-2 border border-white/5 shadow-lg z-10">
                     <i class="fa-solid fa-headphones text-indigo-300"></i>
-                    <span>吏묒쨷 ?쒓컙</span>
+                    <span>집중 시간</span>
                 </div>
 
                 <!-- Main Content (Timer + Message) -->
@@ -183,7 +183,7 @@
                     <!-- Giant Timer -->
                     <div id="mainTimerDisplay"
                         class="font-mono text-[8rem] lg:text-[10rem] leading-none font-black tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95"
-                        onclick="window.dtApp.toggleTimer()" title="??대㉧ ?쒖옉/?뺤?">
+                        onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
                         05:00
                     </div>
 
@@ -192,7 +192,7 @@
                         <div class="flex items-center justify-center gap-4 mb-3">
                             <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep"
                                 id="mainMissionTitle">
-                                ?섑븰 ?듯옒梨??湲?
+                                수학 익힘책 풀기
                             </h2>
                             <button onclick="window.dtApp.openMissionModal()"
                                 class="opacity-0 group-hover/mission:opacity-100 transition-opacity text-white/40 hover:text-white bg-white/10 w-10 h-10 rounded-full flex items-center justify-center">
@@ -201,7 +201,7 @@
                         </div>
                         <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep"
                             id="mainMissionDesc">
-                            24~25?섏씠吏 ?怨?梨꾩젏?섍린
+                            24~25페이지 풀고 채점하기
                         </p>
                     </div>
                 </div>
@@ -210,14 +210,14 @@
                 <div
                     class="flex-shrink-0 mt-8 flex gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 translate-y-4 group-hover:translate-y-0">
                     <button onclick="window.dtApp.setTimerMode(60)"
-                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1遺?/button>
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1분</button>
                     <button onclick="window.dtApp.setTimerMode(300)"
-                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">5遺?/button>
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">5분</button>
                     <button onclick="window.dtApp.setTimerMode(600)"
-                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">10遺?/button>
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">10분</button>
                     <div class="w-px h-auto bg-white/10 mx-1"></div>
                     <button onclick="window.dtApp.resetTimer()"
-                        class="px-5 py-2.5 bg-red-500/20 backdrop-blur-xl rounded-xl text-red-200 font-extrabold hover:bg-red-500/40 border border-red-500/20 active:scale-95 transition-all">珥덇린??/button>
+                        class="px-5 py-2.5 bg-red-500/20 backdrop-blur-xl rounded-xl text-red-200 font-extrabold hover:bg-red-500/40 border border-red-500/20 active:scale-95 transition-all">초기화</button>
                 </div>
             </div>
 
@@ -227,13 +227,13 @@
                 <div class="flex justify-between items-center mb-6 px-2">
                     <div class="flex items-center gap-4">
                         <h3 class="text-2xl font-black flex items-center gap-2 text-white">
-                            <span class="text-yellow-400">?룇</span>
-                            誘몄뀡 ?꾪솴
+                            <span class="text-yellow-400">🏆</span>
+                            미션 현황
                         </h3>
                         <!-- Progress Bar -->
                         <div
                             class="flex items-center gap-4 ml-6 bg-slate-900/40 px-5 py-2.5 rounded-2xl border border-slate-700/50">
-                            <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">?꾨즺??/div>
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">완료율</div>
                             <div
                                 class="w-48 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
                                 <div id="missionProgressBar"
@@ -247,7 +247,7 @@
                     <div class="flex gap-2">
                         <button onclick="window.dtApp.resetToMockup()"
                             class="p-2.5 bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl transition-all"
-                            title="?곗씠??珥덇린??>
+                            title="데이터 초기화">
                             <i class="fa-solid fa-rotate-left"></i>
                         </button>
                     </div>
@@ -270,10 +270,10 @@
                 <div class="flex justify-between items-center mb-6 px-2">
                     <h3 class="text-2xl font-black text-white flex items-center gap-2">
                         <span
-                            class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">?몣</span>
-                        ?ㅻ뒛????븷
+                            class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
+                        오늘의 역할
                     </h3>
-                    <button onclick="window.dtApp.rotateRolesManually()" title="??븷 ?쒗솚"
+                    <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환"
                         class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-slate-700 transition-all">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
@@ -287,8 +287,8 @@
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">??븷 ?대쫫</div>
-                            <div class="text-slate-400 text-sm">?대떦 ?숈깮</div>
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
@@ -297,8 +297,8 @@
                             <i class="fa-solid fa-hand-sparkles"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">??븷 ?대쫫</div>
-                            <div class="text-slate-400 text-sm">?대떦 ?숈깮</div>
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
@@ -307,8 +307,8 @@
                             <i class="fa-solid fa-book-open"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">??븷 ?대쫫</div>
-                            <div class="text-slate-400 text-sm">?대떦 ?숈깮</div>
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
                         </div>
                     </div>
                 </div>
@@ -320,7 +320,7 @@
                 <div class="flex justify-between items-start mb-4 px-2">
                     <h3 class="text-xl font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
                         <i class="fa-regular fa-bell text-yellow-400"></i>
-                        ?뚮┝?ы빆 ?놁쓬
+                        알림사항 없음
                     </h3>
                     <button id="broadcastToggleBtn"
                         class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
@@ -331,7 +331,7 @@
 
                 <div class="flex-1 relative overflow-hidden">
                     <p class="text-slate-400 font-bold leading-relaxed whitespace-pre-wrap" id="dashboardBroadcastText">
-                        ?대┃?댁꽌 ?꾩씠?ㅼ뿉寃??꾨떖??怨듭??ы빆?대굹 以鍮꾨Ъ???낅젰?섏꽭??
+                        클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.
                     </p>
                 </div>
             </div>
@@ -340,7 +340,7 @@
 
     <!-- Footer Quote -->
     <footer class="mt-4 text-center text-slate-600 text-sm font-medium">
-        "泥쒕━ 湲몃룄 ??嫄몄쓬遺?? ?ㅻ뒛??硫뗭쭊 ?섎（ 蹂대궡?? ??"
+        "천리 길도 한 걸음부터! 오늘도 멋진 하루 보내자! 🚀"
     </footer>
 
     <!-- Modals (Hidden) -->
@@ -348,15 +348,15 @@
         class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div
             class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
-            <h3 class="text-2xl font-bold text-white mb-6">?뱼 ?뚮┝?ы빆 ?깅줉</h3>
+            <h3 class="text-2xl font-bold text-white mb-6">📢 알림사항 등록</h3>
             <textarea id="broadcastInput" rows="4"
                 class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-6"
-                placeholder="?숈깮?ㅼ뿉寃??꾨떖???댁슜???낅젰?섏꽭??.."></textarea>
+                placeholder="학생들에게 전달할 내용을 입력하세요..."></textarea>
             <div class="flex gap-4">
                 <button id="broadcastCancelBtn"
-                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">痍⑥냼</button>
+                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
                 <button id="broadcastSubmitBtn"
-                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">?깅줉?섍린</button>
+                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">등록하기</button>
             </div>
         </div>
     </div>
@@ -367,7 +367,7 @@
         <div
             class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-700 max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-white" id="studentModalTitle">?숈깮 ?좏깮</h3>
+                <h3 class="text-2xl font-bold text-white" id="studentModalTitle">학생 선택</h3>
                 <button onclick="window.dtApp.closeStudentModal()" class="text-slate-400 hover:text-white"><i
                         class="fa-solid fa-xmark text-2xl"></i></button>
             </div>
@@ -377,7 +377,7 @@
             <div class="mt-6 pt-6 border-t border-slate-700 flex justify-end">
                 <button id="toggleRoleStatusBtn"
                     class="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition flex items-center gap-2">
-                    <i class="fa-solid fa-check"></i> ?꾨즺 泥섎━ / 痍⑥냼
+                    <i class="fa-solid fa-check"></i> 완료 처리 / 취소
                 </button>
             </div>
         </div>
@@ -388,26 +388,26 @@
         class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div
             class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
-            <h3 class="text-2xl font-bold text-white mb-6">?렞 誘몄뀡 ?댁슜 蹂寃?/h3>
+            <h3 class="text-2xl font-bold text-white mb-6">🎯 미션 내용 변경</h3>
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">??쒕ぉ</label>
+                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">대제목</label>
                     <input id="missionTitleInput" type="text"
                         class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors"
-                        placeholder="?? ?섏뾽 ?쒓컙??吏묒쨷?섍린">
+                        placeholder="예: 수업 시간에 집중하기">
                 </div>
                 <div>
-                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">?뚯젣紐??ㅻ챸</label>
+                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">소제목/설명</label>
                     <textarea id="missionDescInput" rows="3"
                         class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-base focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                        placeholder="?? 援먭낵??24履쎌쓣 ?닿퀬 ?좎깮?섏쓣 蹂댁꽭??"></textarea>
+                        placeholder="예: 교과서 24쪽을 펴고 선생님을 보세요."></textarea>
                 </div>
             </div>
             <div class="flex gap-4">
                 <button onclick="window.dtApp.closeMissionModal()"
-                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">痍⑥냼</button>
+                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
                 <button onclick="window.dtApp.handleUpdateMission()"
-                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">蹂寃쏀븯湲?/button>
+                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">변경하기</button>
             </div>
         </div>
     </div>
@@ -424,20 +424,20 @@
                     class="w-20 h-20 bg-indigo-600/20 text-indigo-400 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <h3 class="text-3xl font-black text-white mb-2">?좎깮?? 怨좎깮 留롮쑝?⑥뼱??</h3>
+                <h3 class="text-3xl font-black text-white mb-2">선생님, 고생 많으셨어요!</h3>
                 <p class="text-slate-400 text-lg mb-8 leading-relaxed">
-                    ?ㅻ뒛???뚯쨷??湲곕줉??<span class="text-indigo-400 font-bold">?섎컻??硫붾え由?/span>??媛??李쇱뒿?덈떎.<br>
-                    媛?낇븯?쒕㈃ ???곗씠?곕뱾???덉쟾???대씪?곕뱶濡???꺼 ?쒕┫源뚯슂? ?삃
+                    오늘의 소중한 기록이 <span class="text-indigo-400 font-bold">휘발성 메모리</span>에 가득 찼습니다.<br>
+                    가입하시면 이 데이터들을 안전한 클라우드로 옮겨 드릴까요? 😊
                 </p>
 
                 <div class="space-y-3">
                     <a href="{% url 'account_signup' %}"
                         class="block w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-xl shadow-indigo-600/30 hover:-translate-y-1">
-                        怨꾩젙 留뚮뱾怨??곗씠??蹂댁〈?섍린
+                        계정 만들고 데이터 보존하기
                     </a>
                     <button onclick="document.getElementById('limitModal').classList.add('hidden')"
                         class="block w-full py-3 text-slate-500 hover:text-slate-300 font-bold transition-colors">
-                        ?섏쨷???좉쾶??
+                        나중에 할게요
                     </button>
                 </div>
             </div>

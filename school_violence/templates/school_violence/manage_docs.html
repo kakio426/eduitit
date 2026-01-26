@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}吏??踰좎씠??愿由?- ?숆탳??젰 AI ?곷떞??% endblock %}
+{% block title %}지식 베이스 관리 - 학교폭력 AI 상담소{% endblock %}
 
 {% block content %}
 <main class="pt-28 pb-16 px-4 min-h-screen">
@@ -9,47 +9,51 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
                 <h1 class="text-5xl font-bold text-gray-700">
-                    <i class="fa-solid fa-database text-orange-500 mr-2"></i>吏??踰좎씠??愿由?                </h1>
-                <p class="text-2xl text-gray-500 mt-2">?숆탳??젰 媛?대뱶遺?諛?留ㅻ돱?쇱쓣 AI?먭쾶 ?숈뒿?쒗궢?덈떎</p>
+                    <i class="fa-solid fa-database text-orange-500 mr-2"></i>지식 베이스 관리
+                </h1>
+                <p class="text-2xl text-gray-500 mt-2">학교폭력 가이드북 및 매뉴얼을 AI에게 학습시킵니다</p>
             </div>
             <a href="{% url 'school_violence:chat' %}"
                 class="clay-card px-6 py-3 text-2xl font-bold text-purple-600 hover:text-purple-700 transition flex items-center gap-2">
-                <i class="fa-solid fa-comments"></i> ?곷떞?뚮줈 ?뚯븘媛湲?            </a>
+                <i class="fa-solid fa-comments"></i> 상담소로 돌아가기
+            </a>
         </div>
 
         <!-- Upload Form -->
         <div class="clay-card p-6 mb-8">
             <h2 class="text-3xl font-bold text-gray-700 mb-4">
-                <i class="fa-solid fa-cloud-arrow-up text-blue-500 mr-2"></i>??臾몄꽌 ?낅줈??            </h2>
+                <i class="fa-solid fa-cloud-arrow-up text-blue-500 mr-2"></i>새 문서 업로드
+            </h2>
 
             <form method="post" enctype="multipart/form-data" class="space-y-4">
                 {% csrf_token %}
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xl font-bold text-gray-600 mb-2">臾몄꽌 ?쒕ぉ *</label>
+                        <label class="block text-xl font-bold text-gray-600 mb-2">문서 제목 *</label>
                         {{ form.title }}
                     </div>
                     <div>
-                        <label class="block text-xl font-bold text-gray-600 mb-2">遺꾨쪟 *</label>
+                        <label class="block text-xl font-bold text-gray-600 mb-2">분류 *</label>
                         {{ form.category }}
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xl font-bold text-gray-600 mb-2">?뚯씪 ?좏깮 * (PDF, HWP, TXT)</label>
+                    <label class="block text-xl font-bold text-gray-600 mb-2">파일 선택 * (PDF, HWP, TXT)</label>
                     {{ form.file }}
                 </div>
 
                 <div>
-                    <label class="block text-xl font-bold text-gray-600 mb-2">?ㅻ챸 (?좏깮)</label>
+                    <label class="block text-xl font-bold text-gray-600 mb-2">설명 (선택)</label>
                     {{ form.description }}
                 </div>
 
                 <div class="flex justify-end">
                     <button type="submit"
                         class="clay-card px-8 py-4 text-2xl font-bold text-blue-600 hover:text-blue-700 hover:shadow-clay-hover transition flex items-center gap-2">
-                        <i class="fa-solid fa-upload"></i> ?낅줈??                    </button>
+                        <i class="fa-solid fa-upload"></i> 업로드
+                    </button>
                 </div>
             </form>
         </div>
@@ -57,7 +61,7 @@
         <!-- Documents List -->
         <div class="clay-card p-6">
             <h2 class="text-3xl font-bold text-gray-700 mb-4">
-                <i class="fa-solid fa-folder-tree text-green-500 mr-2"></i>?낅줈?쒕맂 臾몄꽌 紐⑸줉
+                <i class="fa-solid fa-folder-tree text-green-500 mr-2"></i>업로드된 문서 목록
             </h2>
 
             {% if documents %}
@@ -78,11 +82,12 @@
                                 </span>
                                 {% if doc.is_processed %}
                                 <span class="px-3 py-1 text-lg bg-green-100 text-green-600 rounded-full font-bold">
-                                    <i class="fa-solid fa-check mr-1"></i>?숈뒿?꾨즺 ({{ doc.chunk_count }}泥?겕)
+                                    <i class="fa-solid fa-check mr-1"></i>학습완료 ({{ doc.chunk_count }}청크)
                                 </span>
                                 {% else %}
                                 <span class="px-3 py-1 text-lg bg-yellow-100 text-yellow-600 rounded-full font-bold">
-                                    <i class="fa-solid fa-clock mr-1"></i>?숈뒿?湲?                                </span>
+                                    <i class="fa-solid fa-clock mr-1"></i>학습대기
+                                </span>
                                 {% endif %}
                             </div>
                             {% if doc.description %}
@@ -101,13 +106,14 @@
                             <button onclick="processDocument({{ doc.pk }})"
                                 class="px-4 py-2 rounded-xl shadow-clay text-xl font-bold text-blue-600 hover:text-blue-700 hover:shadow-clay-hover transition"
                                 id="process-btn-{{ doc.pk }}">
-                                <i class="fa-solid fa-brain mr-1"></i> AI ?숈뒿
+                                <i class="fa-solid fa-brain mr-1"></i> AI 학습
                             </button>
                             {% else %}
                             <button onclick="processDocument({{ doc.pk }})"
                                 class="px-4 py-2 rounded-xl shadow-clay-inner text-xl font-bold text-gray-500 hover:text-blue-600 transition"
                                 id="process-btn-{{ doc.pk }}">
-                                <i class="fa-solid fa-rotate mr-1"></i> ?ы븰??                            </button>
+                                <i class="fa-solid fa-rotate mr-1"></i> 재학습
+                            </button>
                             {% endif %}
                             <button onclick="deleteDocument({{ doc.pk }}, '{{ doc.title }}')"
                                 class="px-4 py-2 rounded-xl shadow-clay-inner text-xl font-bold text-gray-500 hover:text-red-600 transition">
@@ -121,8 +127,8 @@
             {% else %}
             <div class="text-center py-12">
                 <i class="fa-solid fa-folder-open text-6xl text-gray-300 mb-4"></i>
-                <p class="text-3xl text-gray-500 mb-2">?꾩쭅 ?낅줈?쒕맂 臾몄꽌媛 ?놁뒿?덈떎</p>
-                <p class="text-xl text-gray-400">???쇱뿉???숆탳??젰 媛?대뱶遺곸쓣 ?낅줈?쒗빐二쇱꽭??/p>
+                <p class="text-3xl text-gray-500 mb-2">아직 업로드된 문서가 없습니다</p>
+                <p class="text-xl text-gray-400">위 폼에서 학교폭력 가이드북을 업로드해주세요</p>
             </div>
             {% endif %}
         </div>
@@ -130,29 +136,29 @@
         <!-- Instructions -->
         <div class="clay-card p-6 mt-8">
             <h2 class="text-3xl font-bold text-gray-700 mb-4">
-                <i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>?ъ슜 諛⑸쾿
+                <i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>사용 방법
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xl text-gray-600">
                 <div class="text-center p-4">
                     <div class="w-16 h-16 mx-auto mb-3 rounded-full shadow-clay flex items-center justify-center">
                         <i class="fa-solid fa-upload text-3xl text-blue-400"></i>
                     </div>
-                    <h3 class="font-bold mb-2">1. 臾몄꽌 ?낅줈??/h3>
-                    <p class="text-lg text-gray-500">PDF, HWP, TXT ?뚯씪???낅줈?쒗빀?덈떎</p>
+                    <h3 class="font-bold mb-2">1. 문서 업로드</h3>
+                    <p class="text-lg text-gray-500">PDF, HWP, TXT 파일을 업로드합니다</p>
                 </div>
                 <div class="text-center p-4">
                     <div class="w-16 h-16 mx-auto mb-3 rounded-full shadow-clay flex items-center justify-center">
                         <i class="fa-solid fa-brain text-3xl text-purple-400"></i>
                     </div>
-                    <h3 class="font-bold mb-2">2. AI ?숈뒿</h3>
-                    <p class="text-lg text-gray-500">"AI ?숈뒿" 踰꾪듉?쇰줈 踰≫꽣DB????ν빀?덈떎</p>
+                    <h3 class="font-bold mb-2">2. AI 학습</h3>
+                    <p class="text-lg text-gray-500">"AI 학습" 버튼으로 벡터DB에 저장합니다</p>
                 </div>
                 <div class="text-center p-4">
                     <div class="w-16 h-16 mx-auto mb-3 rounded-full shadow-clay flex items-center justify-center">
                         <i class="fa-solid fa-comments text-3xl text-green-400"></i>
                     </div>
-                    <h3 class="font-bold mb-2">3. ?곷떞 ?쒖옉</h3>
-                    <p class="text-lg text-gray-500">AI媛 ?숈뒿???댁슜??諛뷀깢?쇰줈 ?듬??⑸땲??/p>
+                    <h3 class="font-bold mb-2">3. 상담 시작</h3>
+                    <p class="text-lg text-gray-500">AI가 학습한 내용을 바탕으로 답변합니다</p>
                 </div>
             </div>
         </div>
@@ -165,7 +171,7 @@
     async function processDocument(docId) {
         const btn = document.getElementById(`process-btn-${docId}`);
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 泥섎━以?..';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 처리중...';
         btn.disabled = true;
 
         try {
@@ -183,19 +189,19 @@
                 alert(data.message);
                 location.reload();
             } else {
-                alert(`?ㅻ쪟: ${data.error}`);
+                alert(`오류: ${data.error}`);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         } catch (error) {
-            alert('泥섎━ 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
+            alert('처리 중 오류가 발생했습니다.');
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     }
 
     async function deleteDocument(docId, title) {
-        if (!confirm(`"${title}" 臾몄꽌瑜???젣?섏떆寃좎뒿?덇퉴?\n踰≫꽣DB???숈뒿 ?곗씠?곕룄 ?④퍡 ??젣?⑸땲??`)) {
+        if (!confirm(`"${title}" 문서를 삭제하시겠습니까?\n벡터DB의 학습 데이터도 함께 삭제됩니다.`)) {
             return;
         }
 
@@ -214,12 +220,11 @@
                 document.getElementById(`doc-${docId}`).remove();
                 alert(data.message);
             } else {
-                alert(`?ㅻ쪟: ${data.error}`);
+                alert(`오류: ${data.error}`);
             }
         } catch (error) {
-            alert('??젣 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
+            alert('삭제 중 오류가 발생했습니다.');
         }
     }
 </script>
 {% endblock %}
-

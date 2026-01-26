@@ -1,7 +1,7 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}誘몄닠 ?섏뾽 ?꾩꽌愿 - Eduitit{% endblock %}
+{% block title %}미술 수업 도서관 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -34,14 +34,14 @@
         <!-- Header & Search -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 px-2">
             <div class="space-y-4">
-                <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">?뱴 誘몄닠 ?섏뾽 ?꾩꽌愿</h1>
-                <p class="text-xl text-gray-500 font-bold">?좎깮?섎뱾???몃젰???닿릿 理쒓퀬???섏뾽??/p>
+                <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">📚 미술 수업 도서관</h1>
+                <p class="text-xl text-gray-500 font-bold">선생님들의 노력이 담긴 최고의 수업들</p>
             </div>
 
             <form method="GET" class="w-full md:w-96 relative">
                 <input type="text" name="q" value="{{ query }}"
                     class="w-full pl-14 pr-6 py-4 rounded-[2rem] bg-white border-none shadow-clay outline-none text-lg focus:ring-4 focus:ring-purple-200 transition-all font-bold"
-                    placeholder="?섏뾽 ?쒕ぉ?쇰줈 寃??..">
+                    placeholder="수업 제목으로 검색...">
                 <i
                     class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 text-xl"></i>
             </form>
@@ -57,15 +57,15 @@
                     <i class="fa-solid fa-plus"></i>
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-gray-700">???섏뾽 留뚮뱾湲?/h3>
-                    <p class="text-gray-400 font-bold mt-2">?섎쭔??而ㅻ━?섎읆 ?ㅺ퀎</p>
+                    <h3 class="text-2xl font-black text-gray-700">새 수업 만들기</h3>
+                    <p class="text-gray-400 font-bold mt-2">나만의 커리큘럼 설계</p>
                 </div>
             </a>
 
             {% for item in shared_classes %}
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00"
-                onclick="openChoiceModal('{{ item.pk }}', '{{ item.title|escapejs }}', '{{ item.youtube_url }}', '{{ item.steps.count }}', '{% if item.created_by %}{{ item.created_by.username|escapejs }}{% else %}?듬챸???좎깮??% endif %}')">
+                onclick="openChoiceModal('{{ item.pk }}', '{{ item.title|escapejs }}', '{{ item.youtube_url }}', '{{ item.steps.count }}', '{% if item.created_by %}{{ item.created_by.username|escapejs }}{% else %}익명의 선생님{% endif %}')">
 
                 <!-- YouTube Thumbnail -->
                 <div class="relative aspect-video overflow-hidden thumb-wrapper shrink-0">
@@ -103,7 +103,7 @@
                             <i class="fa-solid fa-user-graduate"></i>
                         </div>
                         <span class="text-sm font-bold text-gray-500">
-                            {% if item.created_by %}{{ item.created_by.username }}{% else %}?듬챸???좎깮??% endif %}
+                            {% if item.created_by %}{{ item.created_by.username }}{% else %}익명의 선생님{% endif %}
                         </span>
                     </div>
                 </div>
@@ -133,18 +133,18 @@
             </div>
 
             <div class="space-y-2">
-                <h2 id="modalTitle" class="text-3xl font-black text-gray-800 leading-tight break-keep">?섏뾽 ?쒕ぉ</h2>
-                <p class="text-gray-500 font-bold">?좎깮?? ???섏뾽???대뼸寃??쒖옉?좉퉴??</p>
+                <h2 id="modalTitle" class="text-3xl font-black text-gray-800 leading-tight break-keep">수업 제목</h2>
+                <p class="text-gray-500 font-bold">선생님, 이 수업을 어떻게 시작할까요?</p>
             </div>
 
             <div class="grid grid-cols-1 gap-4 pt-4">
                 <a id="playLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
-                    <i class="fa-solid fa-play"></i> 諛붾줈 ?섏뾽 ?쒖옉?섍린
+                    <i class="fa-solid fa-play"></i> 바로 수업 시작하기
                 </a>
                 <a id="editLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> ?섏젙?섏뿬 ?ъ슜?섍린
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
                 </a>
             </div>
         </div>

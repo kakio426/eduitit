@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}?곗닔 ?쒕챸 愿由?- Eduitit{% endblock %}
+{% block title %}연수 서명 관리 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen">
@@ -9,13 +9,13 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
                 <h1 class="text-5xl font-bold text-gray-700">
-                    <i class="fa-solid fa-signature text-purple-500 mr-2"></i>?곗닔 ?쒕챸 愿由?
+                    <i class="fa-solid fa-signature text-purple-500 mr-2"></i>연수 서명 관리
                 </h1>
-                <p class="text-2xl text-gray-500 mt-2">援먮궡 ?곗닔 ?꾩옄 ?쒕챸??愿由ы빀?덈떎</p>
+                <p class="text-2xl text-gray-500 mt-2">교내 연수 전자 서명을 관리합니다</p>
             </div>
             <a href="{% url 'signatures:create' %}"
                 class="clay-card px-6 py-3 text-2xl font-bold text-purple-600 hover:text-purple-700 transition flex items-center gap-2">
-                <i class="fa-solid fa-plus"></i> ???곗닔 留뚮뱾湲?
+                <i class="fa-solid fa-plus"></i> 새 연수 만들기
             </a>
         </div>
 
@@ -30,11 +30,11 @@
                             <h2 class="text-3xl font-bold text-gray-700">{{ session.title }}</h2>
                             {% if session.is_active %}
                             <span class="px-3 py-1 text-lg bg-green-100 text-green-600 rounded-full font-bold">
-                                <i class="fa-solid fa-circle text-xs mr-1"></i>?쒖꽦
+                                <i class="fa-solid fa-circle text-xs mr-1"></i>활성
                             </span>
                             {% else %}
                             <span class="px-3 py-1 text-lg bg-gray-100 text-gray-500 rounded-full font-bold">
-                                <i class="fa-solid fa-circle text-xs mr-1"></i>鍮꾪솢??
+                                <i class="fa-solid fa-circle text-xs mr-1"></i>비활성
                             </span>
                             {% endif %}
                         </div>
@@ -43,18 +43,18 @@
                             <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.datetime|date:"Y.m.d H:i" }}</span>
                             <span><i class="fa-solid fa-location-dot mr-1"></i>{{ session.location }}</span>
                             <span class="font-bold text-purple-600">
-                                <i class="fa-solid fa-pen-nib mr-1"></i>?쒕챸 {{ session.signature_count }}紐?
+                                <i class="fa-solid fa-pen-nib mr-1"></i>서명 {{ session.signature_count }}명
                             </span>
                         </div>
                     </div>
                     <div class="flex gap-2">
                         <a href="{% url 'signatures:detail' uuid=session.uuid %}"
                             class="px-4 py-2 rounded-xl shadow-clay-inner text-xl font-bold text-gray-600 hover:text-purple-600 transition">
-                            <i class="fa-solid fa-eye"></i> ?곸꽭
+                            <i class="fa-solid fa-eye"></i> 상세
                         </a>
                         <a href="{% url 'signatures:print' uuid=session.uuid %}"
                             class="px-4 py-2 rounded-xl shadow-clay-inner text-xl font-bold text-gray-600 hover:text-purple-600 transition">
-                            <i class="fa-solid fa-print"></i> 異쒕젰
+                            <i class="fa-solid fa-print"></i> 출력
                         </a>
                     </div>
                 </div>
@@ -64,14 +64,13 @@
         {% else %}
         <div class="clay-card p-12 text-center">
             <i class="fa-solid fa-folder-open text-6xl text-gray-300 mb-4"></i>
-            <p class="text-3xl text-gray-500 mb-6">?꾩쭅 ?앹꽦???곗닔媛 ?놁뒿?덈떎</p>
+            <p class="text-3xl text-gray-500 mb-6">아직 생성한 연수가 없습니다</p>
             <a href="{% url 'signatures:create' %}"
                 class="inline-block clay-card px-8 py-4 text-2xl font-bold text-purple-600 hover:shadow-clay-hover transition">
-                <i class="fa-solid fa-plus mr-2"></i>泥??곗닔 留뚮뱾湲?
+                <i class="fa-solid fa-plus mr-2"></i>첫 연수 만들기
             </a>
         </div>
         {% endif %}
     </div>
 </main>
 {% endblock %}
-

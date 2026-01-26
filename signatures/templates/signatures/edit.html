@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}?곗닔 ?섏젙 - Eduitit{% endblock %}
+{% block title %}연수 수정 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-28 pb-16 px-4 min-h-screen">
@@ -8,9 +8,10 @@
         <!-- Header -->
         <div class="mb-8">
             <a href="{% url 'signatures:detail' uuid=session.uuid %}" class="text-xl text-gray-500 hover:text-purple-600 transition">
-                <i class="fa-solid fa-arrow-left mr-1"></i> ?뚯븘媛湲?            </a>
+                <i class="fa-solid fa-arrow-left mr-1"></i> 돌아가기
+            </a>
             <h1 class="text-5xl font-bold text-gray-700 mt-4">
-                <i class="fa-solid fa-edit text-purple-500 mr-2"></i>?곗닔 ?섏젙
+                <i class="fa-solid fa-edit text-purple-500 mr-2"></i>연수 수정
             </h1>
         </div>
 
@@ -20,7 +21,7 @@
 
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-heading mr-1"></i> ?곗닔 ?쒕ぉ
+                    <i class="fa-solid fa-heading mr-1"></i> 연수 제목
                 </label>
                 {{ form.title }}
             </div>
@@ -28,12 +29,13 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-solid fa-user-tie mr-1"></i> 媛뺤궗紐?                    </label>
+                        <i class="fa-solid fa-user-tie mr-1"></i> 강사명
+                    </label>
                     {{ form.instructor }}
                 </div>
                 <div>
                     <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-solid fa-location-dot mr-1"></i> ?μ냼
+                        <i class="fa-solid fa-location-dot mr-1"></i> 장소
                     </label>
                     {{ form.location }}
                 </div>
@@ -41,14 +43,14 @@
 
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-calendar mr-1"></i> ?곗닔 ?쇱떆
+                    <i class="fa-solid fa-calendar mr-1"></i> 연수 일시
                 </label>
                 {{ form.datetime }}
             </div>
 
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-align-left mr-1"></i> ?ㅻ챸 (?좏깮)
+                    <i class="fa-solid fa-align-left mr-1"></i> 설명 (선택)
                 </label>
                 {{ form.description }}
             </div>
@@ -56,21 +58,21 @@
             <div class="flex items-center gap-3">
                 {{ form.is_active }}
                 <label class="text-2xl font-bold text-gray-600">
-                    ?쒕챸 諛쏄린 ?쒖꽦??                </label>
+                    서명 받기 활성화
+                </label>
             </div>
 
             <div class="flex gap-4 pt-4">
                 <button type="submit"
                     class="flex-1 clay-card py-4 text-2xl font-bold text-white bg-purple-500 hover:bg-purple-600 transition rounded-2xl">
-                    <i class="fa-solid fa-check mr-2"></i>?섏젙 ?꾨즺
+                    <i class="fa-solid fa-check mr-2"></i>수정 완료
                 </button>
                 <a href="{% url 'signatures:detail' uuid=session.uuid %}"
                     class="px-8 py-4 text-2xl font-bold text-gray-500 hover:text-gray-700 transition">
-                    痍⑥냼
+                    취소
                 </a>
             </div>
         </form>
     </div>
 </main>
 {% endblock %}
-

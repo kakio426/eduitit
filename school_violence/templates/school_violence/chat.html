@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}?숆탳??젰 AI ?곷떞??- Eduitit{% endblock %}
+{% block title %}학교폭력 AI 상담소 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -53,7 +53,7 @@
         transform: translateY(-2px);
     }
 
-    /* ??댄븨 ?좊땲硫붿씠??*/
+    /* 타이핑 애니메이션 */
     .typing-indicator span {
         animation: typing 1.4s infinite;
         display: inline-block;
@@ -76,7 +76,7 @@
         }
     }
 
-    /* 留덊겕?ㅼ슫 ?ㅽ???*/
+    /* 마크다운 스타일 */
     .markdown-content h1,
     .markdown-content h2,
     .markdown-content h3 {
@@ -126,8 +126,9 @@
         <!-- Header -->
         <div class="text-center mb-6">
             <h1 class="text-5xl font-bold text-gray-700 mb-2">
-                <i class="fa-solid fa-shield-heart text-purple-500 mr-2"></i>?숆탳??젰 AI ?곷떞??            </h1>
-            <p class="text-2xl text-gray-500">媛?대뱶遺?湲곕컲 ?ъ븞泥섎━ ?덉감 ?덈궡</p>
+                <i class="fa-solid fa-shield-heart text-purple-500 mr-2"></i>학교폭력 AI 상담소
+            </h1>
+            <p class="text-2xl text-gray-500">가이드북 기반 사안처리 절차 안내</p>
         </div>
 
         <!-- Mode Selection -->
@@ -142,12 +143,12 @@
             </button>
             {% endfor %}
 
-            <!-- 愿由ъ옄 踰꾪듉 -->
+            <!-- 관리자 버튼 -->
             {% if user.is_staff %}
             <a href="{% url 'school_violence:manage_docs' %}"
                 class="clay-card px-5 py-3 flex items-center gap-2 text-xl font-bold text-gray-500 hover:text-orange-500 transition">
                 <i class="fa-solid fa-folder-open"></i>
-                <span class="hidden sm:inline">?먮즺 愿由?/span>
+                <span class="hidden sm:inline">자료 관리</span>
             </a>
             {% endif %}
         </div>
@@ -156,30 +157,30 @@
         <div class="clay-card p-4 sm:p-6">
             <!-- Chat Messages -->
             <div id="chatMessages" class="chat-container chat-messages overflow-y-auto mb-4 p-4 rounded-2xl shadow-clay-inner">
-                <!-- ?섏쁺 硫붿떆吏 -->
+                <!-- 환영 메시지 -->
                 <div id="welcomeMessage" class="text-center py-12 {% if chat_history %}hidden{% endif %}">
                     <div class="w-24 h-24 mx-auto mb-4 rounded-full shadow-clay flex items-center justify-center">
                         <i class="fa-solid fa-robot text-5xl text-purple-400"></i>
                     </div>
-                    <h2 class="text-3xl font-bold text-gray-600 mb-2">?덈뀞?섏꽭??</h2>
-                    <p class="text-xl text-gray-500 mb-4">?숆탳??젰 ?ъ븞泥섎━ 愿??吏덈Ц???댁＜?몄슂.</p>
+                    <h2 class="text-3xl font-bold text-gray-600 mb-2">안녕하세요!</h2>
+                    <p class="text-xl text-gray-500 mb-4">학교폭력 사안처리 관련 질문을 해주세요.</p>
                     <div class="flex flex-wrap justify-center gap-2">
-                        <button onclick="sendQuickMessage('?숆탳??젰 ?몄? ??泥??④퀎??臾댁뾿?멸???')"
+                        <button onclick="sendQuickMessage('학교폭력 인지 후 첫 단계는 무엇인가요?')"
                             class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
-                            <i class="fa-solid fa-lightbulb mr-1"></i> ?몄? ??泥??④퀎
+                            <i class="fa-solid fa-lightbulb mr-1"></i> 인지 후 첫 단계
                         </button>
-                        <button onclick="sendQuickMessage('?쇳빐?숈깮 蹂댄샇議곗튂 醫낅쪟瑜??뚮젮二쇱꽭??)"
+                        <button onclick="sendQuickMessage('피해학생 보호조치 종류를 알려주세요')"
                             class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
-                            <i class="fa-solid fa-hand-holding-heart mr-1"></i> ?쇳빐?숈깮 蹂댄샇議곗튂
+                            <i class="fa-solid fa-hand-holding-heart mr-1"></i> 피해학생 보호조치
                         </button>
-                        <button onclick="sendQuickMessage('?ъ븞議곗궗 ???좎쓽?ы빆??')"
+                        <button onclick="sendQuickMessage('사안조사 시 유의사항은?')"
                             class="px-4 py-2 rounded-full shadow-clay-inner text-lg text-gray-500 hover:text-purple-600 transition">
-                            <i class="fa-solid fa-magnifying-glass mr-1"></i> ?ъ븞議곗궗 ?좎쓽?ы빆
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> 사안조사 유의사항
                         </button>
                     </div>
                 </div>
 
-                <!-- 湲곗〈 梨꾪똿 湲곕줉 -->
+                <!-- 기존 채팅 기록 -->
                 {% for msg in chat_history %}
                 <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %} mb-4">
                     <div class="message-bubble {{ msg.role }} px-4 py-3 text-xl">
@@ -199,17 +200,17 @@
                 <div class="flex-1 relative">
                     <input type="text" id="messageInput" name="message"
                         class="w-full px-5 py-4 rounded-2xl shadow-clay-inner bg-transparent text-xl focus:outline-none focus:ring-2 focus:ring-purple-300 pr-12"
-                        placeholder="吏덈Ц???낅젰?섏꽭??.." autocomplete="off">
+                        placeholder="질문을 입력하세요..." autocomplete="off">
                     <button type="button" onclick="clearChat()"
                         class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center"
-                        title="???珥덇린??>
+                        title="대화 초기화">
                         <i class="fa-solid fa-trash-can text-sm"></i>
                     </button>
                 </div>
                 <button type="submit" id="sendButton"
                     class="clay-card px-6 py-4 text-xl font-bold text-purple-600 hover:text-purple-700 hover:shadow-clay-hover transition flex items-center gap-2">
                     <i class="fa-solid fa-paper-plane"></i>
-                    <span class="hidden sm:inline">?꾩넚</span>
+                    <span class="hidden sm:inline">전송</span>
                 </button>
             </form>
         </div>
@@ -217,7 +218,7 @@
         <!-- Privacy Notice -->
         <p class="text-center text-lg text-gray-400 mt-4">
             <i class="fa-solid fa-lock mr-1"></i>
-            ?곷떞 ?댁슜? 釉뚮씪?곗? ?몄뀡?먮쭔 ??λ릺硫? 李쎌쓣 ?レ쑝硫???젣?⑸땲??
+            상담 내용은 브라우저 세션에만 저장되며, 창을 닫으면 삭제됩니다.
         </p>
     </div>
 </main>
@@ -233,11 +234,12 @@
     const sendButton = document.getElementById('sendButton');
     const welcomeMessage = document.getElementById('welcomeMessage');
 
-    // ?ㅽ겕濡ㅼ쓣 留??꾨옒濡?    function scrollToBottom() {
+    // 스크롤을 맨 아래로
+    function scrollToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // 硫붿떆吏 異붽?
+    // 메시지 추가
     function addMessage(content, role) {
         welcomeMessage.classList.add('hidden');
 
@@ -248,7 +250,7 @@
         bubble.className = `message-bubble ${role} px-4 py-3 text-xl`;
 
         if (role === 'assistant') {
-            // DOMPurify濡?XSS 諛⑹?
+            // DOMPurify로 XSS 방지
             const sanitizedHTML = DOMPurify.sanitize(marked.parse(content));
             bubble.innerHTML = `<div class="markdown-content">${sanitizedHTML}</div>`;
         } else {
@@ -260,7 +262,7 @@
         scrollToBottom();
     }
 
-    // ??댄븨 ?몃뵒耳?댄꽣 異붽?
+    // 타이핑 인디케이터 추가
     function addTypingIndicator() {
         const typingDiv = document.createElement('div');
         typingDiv.id = 'typingIndicator';
@@ -278,17 +280,17 @@
         scrollToBottom();
     }
 
-    // ??댄븨 ?몃뵒耳?댄꽣 ?쒓굅
+    // 타이핑 인디케이터 제거
     function removeTypingIndicator() {
         const indicator = document.getElementById('typingIndicator');
         if (indicator) indicator.remove();
     }
 
-    // 硫붿떆吏 ?꾩넚
+    // 메시지 전송
     async function sendMessage(message) {
         if (!message.trim()) return;
 
-        // UI ?낅뜲?댄듃
+        // UI 업데이트
         addMessage(message, 'user');
         messageInput.value = '';
         messageInput.disabled = true;
@@ -311,11 +313,11 @@
             if (data.success) {
                 addMessage(data.response, 'assistant');
             } else {
-                addMessage(`?ㅻ쪟: ${data.error}`, 'assistant');
+                addMessage(`오류: ${data.error}`, 'assistant');
             }
         } catch (error) {
             removeTypingIndicator();
-            addMessage('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?ㅼ떆 ?쒕룄?댁＜?몄슂.', 'assistant');
+            addMessage('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'assistant');
         } finally {
             messageInput.disabled = false;
             sendButton.disabled = false;
@@ -323,18 +325,19 @@
         }
     }
 
-    // 鍮좊Ⅸ 硫붿떆吏 ?꾩넚
+    // 빠른 메시지 전송
     function sendQuickMessage(message) {
         sendMessage(message);
     }
 
-    // ???쒖텧
+    // 폼 제출
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         sendMessage(messageInput.value);
     });
 
-    // 紐⑤뱶 蹂寃?    async function setMode(mode) {
+    // 모드 변경
+    async function setMode(mode) {
         try {
             const formData = new FormData();
             formData.append('mode', mode);
@@ -348,7 +351,7 @@
             const data = await response.json();
 
             if (data.success) {
-                // UI ?낅뜲?댄듃
+                // UI 업데이트
                 document.querySelectorAll('.mode-chip').forEach(chip => {
                     const chipMode = chip.dataset.mode;
                     if (chipMode === mode) {
@@ -358,18 +361,19 @@
                     }
                 });
 
-                // 梨꾪똿 珥덇린??(紐⑤뱶 蹂寃???
+                // 채팅 초기화 (모드 변경 시)
                 chatMessages.innerHTML = '';
                 welcomeMessage.classList.remove('hidden');
                 chatMessages.appendChild(welcomeMessage);
             }
         } catch (error) {
-            console.error('紐⑤뱶 蹂寃??ㅽ뙣:', error);
+            console.error('모드 변경 실패:', error);
         }
     }
 
-    // ???珥덇린??    async function clearChat() {
-        if (!confirm('????댁슜??紐⑤몢 ??젣?섏떆寃좎뒿?덇퉴?')) return;
+    // 대화 초기화
+    async function clearChat() {
+        if (!confirm('대화 내용을 모두 삭제하시겠습니까?')) return;
 
         try {
             const formData = new FormData();
@@ -380,15 +384,16 @@
                 body: formData,
             });
 
-            // UI 珥덇린??            chatMessages.innerHTML = '';
+            // UI 초기화
+            chatMessages.innerHTML = '';
             welcomeMessage.classList.remove('hidden');
             chatMessages.appendChild(welcomeMessage);
         } catch (error) {
-            console.error('珥덇린???ㅽ뙣:', error);
+            console.error('초기화 실패:', error);
         }
     }
 
-    // ?섏씠吏 濡쒕뱶 ???ㅽ겕濡?    scrollToBottom();
+    // 페이지 로드 시 스크롤
+    scrollToBottom();
 </script>
 {% endblock %}
-

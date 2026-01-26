@@ -1,18 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
-    <meta name="description" content="Eduitit - ?좎깮?섏쓽 ?낅Т ?⑥쑉???믪뿬二쇰뒗 ?ㅻ쭏?명븳 AI ?꾧뎄 紐⑥쓬">
-    <meta property="og:title" content="Eduitit - ?좎깮?섏쓽 ?ㅻ쭏?명븳 ?섎（">
-    <meta property="og:description" content="AI ?꾨＼?꾪듃 ?덉떆?? ?꾧뎄 媛?대뱶, 援먯쑁??寃뚯엫源뚯?. 援먯떎?먯꽌???곸떊??吏湲??쒖옉?섏꽭??">
+    <meta name="description" content="Eduitit - 선생님의 업무 효율을 높여주는 스마트한 AI 도구 모음">
+    <meta property="og:title" content="Eduitit - 선생님의 스마트한 하루">
+    <meta property="og:description" content="AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://eduitit.coding.io">
     <meta property="og:image" content="https://placehold.co/1200x630/purple/white?text=Eduitit+AI+for+Teachers">
     <meta name="twitter:card" content="summary_large_image">
-    <title>{% block title %}Eduitit - ?좎깮?섏쓽 ?ㅻ쭏?명븳 ?섎（{% endblock %}</title>
+    <title>{% block title %}Eduitit - 선생님의 스마트한 하루{% endblock %}</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Fonts -->
@@ -201,13 +201,13 @@
 
             <!-- Desktop Navigation -->
             <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500 items-center">
-                <a href="/#services" class="hover:text-purple-600 transition">?쒕퉬??/a>
-                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition">?댁슜諛⑸쾿</a>
-                <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">?ы듃?대━??/a>
+                <a href="/#services" class="hover:text-purple-600 transition">서비스</a>
+                <a href="{% url 'settings' %}" class="hover:text-purple-600 transition">이용방법</a>
+                <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition flex items-center gap-2 px-4 py-1.5 rounded-full shadow-clay text-blue-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i> ?ㅼ엥???대룞
+                    <i class="fa-solid fa-graduation-cap text-xl"></i> 스쿨잇 이동
                 </a>
 
                 <!-- User Dropdown -->
@@ -219,8 +219,7 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span class="text-xl">
-                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username }}{% endif %}??
-
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username }}{% endif %}님
                         </span>
                         <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
@@ -231,12 +230,12 @@
                             <a href="{% url 'dashboard' %}"
                                 class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
                                 <i class="fa-solid fa-gauge-high"></i>
-                                <span>??쒕낫??/span>
+                                <span>대시보드</span>
                             </a>
                             <a href="{% url 'settings' %}"
                                 class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
                                 <i class="fa-solid fa-gear"></i>
-                                <span>???ㅼ젙</span>
+                                <span>내 설정</span>
                             </a>
                             <div class="h-px bg-gray-100 my-2"></div>
                             <form action="{% url 'account_logout' %}" method="post" class="block">
@@ -244,7 +243,7 @@
                                 <button type="submit"
                                     class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-red-400 hover:text-red-500 transition-all text-left">
                                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                                    <span>濡쒓렇?꾩썐</span>
+                                    <span>로그아웃</span>
                                 </button>
                             </form>
                         </div>
@@ -253,7 +252,7 @@
                 {% else %}
                 <a href="{% url 'account_login' %}"
                     class="hover:text-purple-600 transition px-5 py-1.5 rounded-full shadow-clay text-purple-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
-                    <i class="fa-solid fa-user-lock mr-1"></i> 濡쒓렇??
+                    <i class="fa-solid fa-user-lock mr-1"></i> 로그인
                 </a>
                 {% endif %}
             </div>
@@ -261,7 +260,7 @@
             <!-- Mobile Hamburger Button -->
             <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
                 class="md:hidden w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-purple-600 transition"
-                aria-label="硫붾돱 ?닿린" aria-expanded="false" aria-controls="mobileMenu">
+                aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobileMenu">
                 <i class="fa-solid fa-bars text-xl" id="menuIcon"></i>
             </button>
         </div>
@@ -275,44 +274,43 @@
         <div class="mx-4 clay-card p-6 bg-[#E0E5EC]/95 backdrop-blur-sm">
             <div class="flex flex-col gap-4 text-2xl font-bold text-gray-600">
                 <a href="/#services" class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-grid-2 mr-3 text-purple-400"></i> ?쒕퉬??
+                    <i class="fa-solid fa-grid-2 mr-3 text-purple-400"></i> 서비스
                 </a>
                 <a href="{% url 'settings' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-circle-info mr-3 text-purple-400"></i> ?댁슜諛⑸쾿
+                    <i class="fa-solid fa-circle-info mr-3 text-purple-400"></i> 이용방법
                 </a>
                 <a href="{% url 'portfolio:list' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> ?ы듃?대━??
+                    <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
                 </a>
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>
-                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username }}{% endif %}??/span>
-
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username }}{% endif %}님</span>
                 </div>
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-graduation-cap mr-3 text-blue-400"></i> ?ㅼ엥???대룞 (SSO)
+                    <i class="fa-solid fa-graduation-cap mr-3 text-blue-400"></i> 스쿨잇 이동 (SSO)
                 </a>
                 <a href="{% url 'dashboard' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-gauge-high mr-3 text-green-400"></i> ??쒕낫??
+                    <i class="fa-solid fa-gauge-high mr-3 text-green-400"></i> 대시보드
                 </a>
                 <a href="{% url 'settings' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-gear mr-3 text-gray-400"></i> ???ㅼ젙
+                    <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 내 설정
                 </a>
                 <form action="{% url 'account_logout' %}" method="post" class="py-2">
                     {% csrf_token %}
                     <button type="submit" class="w-full text-left text-red-500 hover:text-red-600 transition">
-                        <i class="fa-solid fa-arrow-right-from-bracket mr-3"></i> 濡쒓렇?꾩썐
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-3"></i> 로그아웃
                     </button>
                 </form>
                 {% else %}
                 <a href="{% url 'account_login' %}"
                     class="py-3 mt-2 text-center rounded-full shadow-clay text-purple-600 hover:shadow-clay-hover transition">
-                    <i class="fa-solid fa-user-lock mr-2"></i> 濡쒓렇??
+                    <i class="fa-solid fa-user-lock mr-2"></i> 로그인
                 </a>
                 {% endif %}
             </div>
@@ -323,7 +321,7 @@
 
     <!-- Footer -->
     <footer class="py-12 text-center text-gray-400">
-        <p class="text-2xl font-hand">?좎깮?섏쓽 移쇳눜瑜??묒썝?⑸땲?? 짤 2026 Eduitit</p>
+        <p class="text-2xl font-hand">선생님의 칼퇴를 응원합니다. © 2026 Eduitit</p>
     </footer>
 
     <!-- Unified Modal for All Product Previews -->
@@ -343,7 +341,7 @@
                         class="absolute inset-0 z-20 flex items-center justify-center bg-white/50 hidden">
                         <div class="flex flex-col items-center gap-4">
                             <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
-                            <p class="text-xl font-bold text-gray-500">?뺣낫瑜?媛?몄삤??以?..</p>
+                            <p class="text-xl font-bold text-gray-500">정보를 가져오는 중...</p>
                         </div>
                     </div>
 
@@ -377,7 +375,7 @@
                 menu.classList.add('-translate-y-full', 'opacity-0', 'pointer-events-none');
                 menu.setAttribute('aria-hidden', 'true');
                 btn.setAttribute('aria-expanded', 'false');
-                btn.setAttribute('aria-label', '硫붾돱 ?닿린');
+                btn.setAttribute('aria-label', '메뉴 열기');
                 icon.classList.remove('fa-xmark');
                 icon.classList.add('fa-bars');
                 document.body.style.overflow = 'auto';
@@ -387,7 +385,7 @@
                 menu.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
                 menu.setAttribute('aria-hidden', 'false');
                 btn.setAttribute('aria-expanded', 'true');
-                btn.setAttribute('aria-label', '硫붾돱 ?リ린');
+                btn.setAttribute('aria-label', '메뉴 닫기');
                 icon.classList.remove('fa-bars');
                 icon.classList.add('fa-xmark');
                 document.body.style.overflow = 'hidden';
@@ -454,9 +452,9 @@
                     content.innerHTML = `
                         <div class="flex flex-col items-center justify-center py-20 text-center space-y-6">
                             <i class="fa-solid fa-triangle-exclamation text-7xl text-gray-200"></i>
-                            <h3 class="text-3xl font-bold text-gray-700">?뺣낫瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??/h3>
-                            <p class="text-xl text-gray-400 font-hand">?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??</p>
-                            <button onclick="openModal(${productId})" class="px-8 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:scale-105 transition">?ㅼ떆 ?쒕룄</button>
+                            <h3 class="text-3xl font-bold text-gray-700">정보를 불러오지 못했습니다</h3>
+                            <p class="text-xl text-gray-400 font-hand">잠시 후 다시 시도해 주세요.</p>
+                            <button onclick="openModal(${productId})" class="px-8 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:scale-105 transition">다시 시도</button>
                         </div>
                     `;
                     loading.classList.add('hidden');

@@ -1,7 +1,7 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}?붿????룸???- Eduitit{% endblock %}
+{% block title %}디지털 윷놀이 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -178,7 +178,7 @@
     }
 
     .yut-stick.backdo::before {
-        content: '??;
+        content: '●';
         background: none;
         color: #fff;
         font-size: 40px;
@@ -355,7 +355,7 @@
         margin-top: auto;
     }
 
-    /* ?앹뾽 ?④낵 CSS */
+    /* 팝업 효과 CSS */
     #popup-overlay {
         position: absolute;
         top: 0;
@@ -430,26 +430,26 @@
 <div id="yut-game-wrapper">
     <div id="game-container">
         <div id="game-header">
-            <h1>?릮 ?몄떆?띿냽 ?⑤씪???룸????릮</h1>
+            <h1>🐎 세시풍속 온라인 윷놀이 🐎</h1>
         </div>
 
         <div id="left-panel">
-            <div class="section-title">寃뚯엫 ?뺣낫</div>
+            <div class="section-title">게임 정보</div>
 
             <div class="info-box" id="turn-info-box" style="transition: all 0.3s; border: 2px solid transparent;">
-                <div class="info-label" id="turn-label" style="color: inherit; opacity: 0.9;">?꾩옱 ??/div>
+                <div class="info-label" id="turn-label" style="color: inherit; opacity: 0.9;">현재 턴</div>
                 <div class="info-value" id="current-team"
-                    style="color: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">? 1</div>
+                    style="color: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">팀 1</div>
             </div>
 
             <div class="info-box">
-                <div class="info-label">? 1 ?섏삩 留?/div>
+                <div class="info-label">팀 1 나온 말</div>
                 <div class="info-value" id="team0-finished">0 / 4</div>
                 <div class="finished-pieces" id="team0-pieces"></div>
             </div>
 
             <div class="info-box">
-                <div class="info-label">? 2 ?섏삩 留?/div>
+                <div class="info-label">팀 2 나온 말</div>
                 <div class="info-value" id="team1-finished">0 / 4</div>
                 <div class="finished-pieces" id="team1-pieces"></div>
             </div>
@@ -461,10 +461,10 @@
                     <div class="yut-stick"></div>
                     <div class="yut-stick"></div>
                 </div>
-                <div id="yut-result">?룹쓣 ?섏??몄슂!</div>
+                <div id="yut-result">윷을 던지세요!</div>
                 <div id="yut-animal"></div>
             </div>
-            <button id="reset-btn" style="margin-top: auto;">?봽 寃뚯엫 珥덇린??/button>
+            <button id="reset-btn" style="margin-top: auto;">🔄 게임 초기화</button>
         </div>
 
         <div id="canvas-wrapper">
@@ -472,30 +472,30 @@
         </div>
 
         <div id="right-panel">
-            <div class="section-title">寃뚯엫 ?덈궡</div>
+            <div class="section-title">게임 안내</div>
             <div id="instruction">
-                ?룹쓣 ?섏??몄슂!
+                윷을 던지세요!
             </div>
 
-            <div class="section-title">寃뚯엫 濡쒓렇</div>
+            <div class="section-title">게임 로그</div>
             <div id="log"></div>
 
             <div id="button-container">
-                <button id="throw-btn">?? ???섏?湲?/button>
+                <button id="throw-btn">🚀 윷 던지기</button>
             </div>
         </div>
     </div>
 
-    <!-- ?앹뾽 ?ㅻ쾭?덉씠 -->
+    <!-- 팝업 오버레이 -->
     <div id="popup-overlay">
-        <div id="popup-text">?쒕쾲 ??</div>
+        <div id="popup-text">한번 더!</div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // ===== ?뵄 ?④낵???쒖뒪??=====
+    // ===== 🔊 효과음 시스템 =====
     let audioInitialized = false;
     const soundFiles = {
         roll: "{% static 'products/yut/roll.mp3' %}",
@@ -529,7 +529,7 @@
         const sound = sounds[soundName];
         if (sound) {
             sound.currentTime = 0;
-            sound.play().catch(e => console.log('?뚮━:', e));
+            sound.play().catch(e => console.log('소리:', e));
         }
     }
 
@@ -566,12 +566,12 @@
     };
 
     const YUT_INFO = {
-        1: { name: '??, korean: '?맰 ??, desc: '1移??대룞' },
-        2: { name: '媛?, korean: '?맯 媛?, desc: '2移??대룞' },
-        3: { name: '嫄?, korean: '?릲 嫄?, desc: '3移??대룞' },
-        4: { name: '??, korean: '?맢 ??, desc: '4移??대룞 (?쒕쾲 ??)' },
-        5: { name: '紐?, korean: '?맭 紐?, desc: '5移??대룞 (?쒕쾲 ??)' },
-        '-1': { name: '鍮쎈룄', korean: '燧낉툘 鍮쎈룄', desc: '?ㅻ줈 1移? }
+        1: { name: '도', korean: '🐷 도', desc: '1칸 이동' },
+        2: { name: '개', korean: '🐶 개', desc: '2칸 이동' },
+        3: { name: '걸', korean: '🐑 걸', desc: '3칸 이동' },
+        4: { name: '윷', korean: '🐮 윷', desc: '4칸 이동 (한번 더!)' },
+        5: { name: '모', korean: '🐴 모', desc: '5칸 이동 (한번 더!)' },
+        '-1': { name: '빽도', korean: '⬅️ 빽도', desc: '뒤로 1칸' }
     };
 
     class Board {
@@ -714,24 +714,24 @@
 
             let result;
             switch (sum) {
-                case 0: result = { steps: 5, extra: true, name: '紐?, sticks }; break;
+                case 0: result = { steps: 5, extra: true, name: '모', sticks }; break;
                 case 1:
                     if (Math.random() < 0.05) {
-                        result = { steps: -1, extra: false, name: '鍮쎈룄', sticks: [0, 0, 0, 2] };
+                        result = { steps: -1, extra: false, name: '빽도', sticks: [0, 0, 0, 2] };
                     } else {
-                        result = { steps: 1, extra: false, name: '??, sticks };
+                        result = { steps: 1, extra: false, name: '도', sticks };
                     }
                     break;
-                case 2: result = { steps: 2, extra: false, name: '媛?, sticks }; break;
-                case 3: result = { steps: 3, extra: false, name: '嫄?, sticks }; break;
-                case 4: result = { steps: 4, extra: true, name: '??, sticks }; break;
+                case 2: result = { steps: 2, extra: false, name: '개', sticks }; break;
+                case 3: result = { steps: 3, extra: false, name: '걸', sticks }; break;
+                case 4: result = { steps: 4, extra: true, name: '윷', sticks }; break;
             }
 
             this.pendingThrows.push(result);
             if (result.extra) this.remainingThrows++;
 
             const info = YUT_INFO[result.steps];
-            this.addLog(`? ${this.currentTeamId + 1}: ${info.korean} ${result.extra ? '?낇븳踰????? : ''}`);
+            this.addLog(`팀 ${this.currentTeamId + 1}: ${info.korean} ${result.extra ? '★한번 더!★' : ''}`);
 
             return result;
         }
@@ -948,17 +948,17 @@
             if (piece.finished) {
                 const stackSize = piece.stackSize;
                 if (stackSize > 1) {
-                    this.addLog(`?럦 ? ${this.currentTeamId + 1} 留?${stackSize}媛??꾩＜!`);
-                    showPopup(`?럦 ${stackSize}媛?怨⑥씤! ?럦`);
+                    this.addLog(`🎉 팀 ${this.currentTeamId + 1} 말 ${stackSize}개 완주!`);
+                    showPopup(`🎉 ${stackSize}개 골인! 🎉`);
                 } else {
-                    this.addLog(`?럦 ? ${this.currentTeamId + 1} 留?${piece.id + 1} ?꾩＜!`);
-                    showPopup('?럦 怨⑥씤! ?럦');
+                    this.addLog(`🎉 팀 ${this.currentTeamId + 1} 말 ${piece.id + 1} 완주!`);
+                    showPopup('🎉 골인! 🎉');
                 }
             } else {
                 const captured = this.checkCapture(piece);
                 if (captured) {
                     playSound('bonus');
-                    this.addLog(`??? ${this.currentTeamId + 1} ?↔린 ?깃났! ?쒕쾲 ??`);
+                    this.addLog(`⚡ 팀 ${this.currentTeamId + 1} 잡기 성공! 한번 더!`);
                     this.remainingThrows++;
                 } else {
                     playSound('tada');
@@ -1010,7 +1010,7 @@
                     piece.nodeId !== null) {
                     piece.stackSize += otherPiece.stackSize;
                     otherPiece.nodeId = -999;
-                    this.addLog(`?뫁 ? ${this.currentTeamId + 1} 留?寃뱀묠!`);
+                    this.addLog(`👥 팀 ${this.currentTeamId + 1} 말 겹침!`);
                 }
             }
         }
@@ -1019,7 +1019,7 @@
             if (this.pendingThrows.length === 0 && this.remainingThrows === 0) {
                 this.currentTeamId = 1 - this.currentTeamId;
                 this.remainingThrows = 1;
-                this.addLog(`?곣봺?곣봺??? ${this.currentTeamId + 1} 李⑤? ?곣봺?곣봺??);
+                this.addLog(`━━━━━ 팀 ${this.currentTeamId + 1} 차례 ━━━━━`);
             }
         }
 
@@ -1112,9 +1112,9 @@
             ctx.font = 'bold 14px Malgun Gothic';
             ctx.fillStyle = '#4CAF50';
             ctx.textAlign = 'center';
-            ctx.fillText('?쒖옉', node0.x, node0.y - 45);
+            ctx.fillText('시작', node0.x, node0.y - 45);
             ctx.fillStyle = '#FF5722';
-            ctx.fillText('?듦낵?믪셿二?, node0.x, node0.y + 45);
+            ctx.fillText('통과→완주', node0.x, node0.y + 45);
         }
 
         drawPieces() {
@@ -1272,7 +1272,7 @@
                     const winner = this.state.checkWin();
                     if (winner !== null) {
                         setTimeout(() => {
-                            alert(`?럦?럦?럦 ? ${winner + 1} ?밸━! ?럦?럦?럦`);
+                            alert(`🎉🎉🎉 팀 ${winner + 1} 승리! 🎉🎉🎉`);
                             this.handleReset();
                         }, 500);
                         return;
@@ -1283,9 +1283,9 @@
 
                     if (this.state.pendingThrows.length === 0) {
                         if (this.state.remainingThrows > 1) {
-                            showPopup('蹂대꼫?? 2踰???');
+                            showPopup('보너스! 2번 더!');
                         } else if (this.state.remainingThrows === 1 && !wasExtra) {
-                            showPopup('?≪븯?? ?쒕쾲 ??');
+                            showPopup('잡았다! 한번 더!');
                         }
 
                         if (this.state.remainingThrows === 0) {
@@ -1299,7 +1299,7 @@
 
         async handleThrow() {
             if (this.state.pendingThrows.length > 0) {
-                alert('癒쇱? 留먯쓣 ?대룞?섏꽭??');
+                alert('먼저 말을 이동하세요!');
                 return;
             }
 
@@ -1365,7 +1365,7 @@
             }, 10);
 
             if (result.extra) {
-                setTimeout(() => showPopup(result.name + '! ?쒕쾲 ??'), 200);
+                setTimeout(() => showPopup(result.name + '! 한번 더!'), 200);
             }
         }
 
@@ -1375,7 +1375,7 @@
             this.renderer.render();
             this.updateUI();
 
-            document.getElementById('yut-result').textContent = '?룹쓣 ?섏??몄슂!';
+            document.getElementById('yut-result').textContent = '윷을 던지세요!';
             document.getElementById('yut-animal').textContent = '';
 
             const sticks = document.querySelectorAll('.yut-stick');
@@ -1390,7 +1390,7 @@
             turnBox.style.color = 'white';
             turnBox.style.boxShadow = `0 4px 15px ${currentTeamColor}66`;
 
-            document.getElementById('current-team').textContent = `? ${this.state.currentTeamId + 1}`;
+            document.getElementById('current-team').textContent = `팀 ${this.state.currentTeamId + 1}`;
 
             for (let i = 0; i < 2; i++) {
                 const finishedCount = this.state.getFinishedCount(i);
@@ -1413,14 +1413,14 @@
 
             const instruction = document.getElementById('instruction');
             if (this.state.pendingThrows.length === 0) {
-                const bonusText = this.state.remainingThrows > 1 ? ` (蹂대꼫??${this.state.remainingThrows}踰?)` : '';
-                instruction.textContent = '?룹쓣 ?섏??몄슂!' + bonusText;
+                const bonusText = this.state.remainingThrows > 1 ? ` (보너스 ${this.state.remainingThrows}번!)` : '';
+                instruction.textContent = '윷을 던지세요!' + bonusText;
                 instruction.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
                 instruction.style.color = '#1565c0';
                 instruction.style.borderColor = '#42a5f5';
             } else {
                 const info = YUT_INFO[this.state.pendingThrows[0].steps];
-                instruction.textContent = `${info.korean}! 留먯쓣 ?대┃?섏꽭??`;
+                instruction.textContent = `${info.korean}! 말을 클릭하세요!`;
                 instruction.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)';
                 instruction.style.color = '#e65100';
                 instruction.style.borderColor = '#ff9800';

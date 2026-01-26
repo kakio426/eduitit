@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}???ъ＜ 蹂닿???- Eduitit{% endblock %}
+{% block title %}내 사주 보관함 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -26,12 +26,12 @@
 <main class="pt-32 pb-20 px-4 max-w-5xl mx-auto min-h-screen">
     <div class="flex justify-between items-center mb-10">
         <div>
-            <h1 class="text-4xl font-black text-gray-800 mb-2">?뵰 ???ъ＜ 蹂닿???/h1>
-            <p class="text-lg text-gray-500 font-medium">?좎깮?섏씠 ??ν븯???뚯쨷???곷떞 湲곕줉?ㅼ씠?먯슂.</p>
+            <h1 class="text-4xl font-black text-gray-800 mb-2">🔮 내 사주 보관함</h1>
+            <p class="text-lg text-gray-500 font-medium">선생님이 저장하신 소중한 상담 기록들이에요.</p>
         </div>
         <a href="{% url 'fortune:saju' %}"
             class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg">
-            ?덈줈 遺꾩꽍?섍린
+            새로 분석하기
         </a>
     </div>
 
@@ -49,9 +49,9 @@
 
             <h3 class="text-xl font-bold text-gray-700 mb-4">
                 {% if item.mode == 'daily' %}
-                ?뱟 {{ item.target_date|date:"m??d?? }}???댁꽭
+                📅 {{ item.target_date|date:"m월 d일" }}의 운세
                 {% else %}
-                ???뺥넻 ?ъ＜ 遺꾩꽍 ({{ item.natal_chart.day }})
+                ✨ 정통 사주 분석 ({{ item.natal_chart.day }})
                 {% endif %}
             </h3>
 
@@ -65,7 +65,7 @@
             <div class="flex gap-3">
                 <a href="{% url 'fortune:history_detail' item.id %}"
                     class="flex-1 py-3 text-center bg-white border-2 border-slate-100 hover:border-indigo-100 text-slate-600 rounded-xl font-bold transition">
-                    ?곸꽭蹂닿린
+                    상세보기
                 </a>
                 <button onclick="deleteItem('{{ item.id }}')"
                     class="w-12 h-12 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition">
@@ -77,12 +77,12 @@
     </div>
     {% else %}
     <div class="text-center py-20 bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200">
-        <div class="text-6xl mb-6">?룣截?/div>
-        <h3 class="text-2xl font-black text-slate-400">?꾩쭅 ??λ맂 湲곕줉???놁뒿?덈떎.</h3>
+        <div class="text-6xl mb-6">🏜️</div>
+        <h3 class="text-2xl font-black text-slate-400">아직 저장된 기록이 없습니다.</h3>
         <p class="text-slate-400 mt-2 mb-8 uppercase tracking-widest font-bold">First analyze your saju to list here</p>
         <a href="{% url 'fortune:saju' %}"
             class="inline-block py-4 px-10 bg-indigo-600 text-white rounded-2xl font-black hover:-translate-y-1 transition shadow-xl">
-            吏湲?泥?遺꾩꽍 ?쒖옉?섍린
+            지금 첫 분석 시작하기
         </a>
     </div>
     {% endif %}
@@ -95,12 +95,12 @@
             class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
             <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
-        <h4 class="text-2xl font-black text-gray-800 mb-2">湲곕줉??吏?멸퉴??</h4>
-        <p class="text-gray-500 mb-8 font-medium">?쒕쾲 ??젣?섎㈃ ?ㅼ떆??蹂듦뎄?????놁뒿?덈떎.</p>
+        <h4 class="text-2xl font-black text-gray-800 mb-2">기록을 지울까요?</h4>
+        <p class="text-gray-500 mb-8 font-medium">한번 삭제하면 다시는 복구할 수 없습니다.</p>
         <div class="flex gap-3">
             <button onclick="closeDeleteModal()"
-                class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold">痍⑥냼</button>
-            <button id="confirmDeleteBtn" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold">??젣?섍린</button>
+                class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold">취소</button>
+            <button id="confirmDeleteBtn" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold">삭제하기</button>
         </div>
     </div>
 </div>
@@ -138,19 +138,19 @@
             if (response.ok) {
                 document.getElementById(`item-${pendingDeleteId}`).remove();
                 closeDeleteModal();
-                showToast('湲곕줉????젣?섏뿀?듬땲??');
+                showToast('기록이 삭제되었습니다.');
 
                 if (document.querySelectorAll('.history-card').length === 0) {
                     location.reload();
                 }
             }
         } catch (e) {
-            alert('??젣 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
+            alert('삭제 중 오류가 발생했습니다.');
         }
     });
 
     function showToast(msg) {
-        // base.html???좎뒪?멸? ?덈떎硫??ъ슜
+        // base.html에 토스트가 있다면 사용
     }
 </script>
 {% endblock %}

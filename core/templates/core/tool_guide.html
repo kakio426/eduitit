@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}AI ?꾧뎄 媛?대뱶 - Eduitit{% endblock %}
+{% block title %}AI 도구 가이드 - Eduitit{% endblock %}
 
 {% block content %}
 <style type="text/tailwindcss">
@@ -52,35 +52,35 @@
     <div class="text-center mb-16" data-aos="fade-down">
         <span
             class="inline-block px-5 py-2 rounded-full bg-purple-100 text-purple-600 font-bold text-xl mb-6 shadow-sm">
-            ?몝 2026 Edu-Tech Guide
+            👋 2026 Edu-Tech Guide
         </span>
         <h1 class="text-6xl md:text-8xl font-bold text-gray-700 text-shadow mb-6 leading-tight">
-            "?좎깮?? ?대윺 ??br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">???꾧뎄</span>瑜??곗꽭??"
+            "선생님, 이럴 땐<br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">이 도구</span>를 쓰세요!"
         </h1>
         <p class="text-xl text-gray-500 font-bold leading-relaxed max-w-3xl mx-auto">
-            蹂듭옟??AI ?꾧뎄, ?곹솴蹂꾨줈 ??怨⑤씪?쒕┰?덈떎.<br>
-            ?섏뾽 以鍮꾨????됱젙 ?낅Т源뚯? ??踰덉뿉 ?앸궡?몄슂.
+            복잡한 AI 도구, 상황별로 딱 골라드립니다.<br>
+            수업 준비부터 행정 업무까지 한 번에 끝내세요.
         </p>
     </div>
 
     <!-- Filter Tabs -->
     <div class="flex flex-wrap justify-center gap-4 mb-12">
         <button onclick="filterTools('all')"
-            class="filter-btn active clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-700 hover:text-purple-600">?꾩껜
-            蹂닿린</button>
+            class="filter-btn active clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-700 hover:text-purple-600">전체
+            보기</button>
         <button onclick="filterTools('ai')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">?쨼
-            AI 鍮꾩꽌</button>
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🤖
+            AI 비서</button>
         <button onclick="filterTools('dev')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">?뮲
-            肄붾뵫/媛쒕컻</button>
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">💻
+            코딩/개발</button>
         <button onclick="filterTools('art')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">?렓
-            李쎌옉/?덉닠</button>
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🎨
+            창작/예술</button>
         <button onclick="filterTools('work')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">??
-            ?앹궛??/button>
+            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">⚡
+            생산성</button>
     </div>
 
     <!-- Tools Grid (as per design 2) -->
@@ -121,7 +121,7 @@
         <!-- Description -->
         <div>
             <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
-                <i class="fa-regular fa-lightbulb text-yellow-500"></i> ?대뼡 ?댁씤媛??
+                <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
             </h3>
             <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
                 <p id="modal-desc" class="text-gray-600 font-medium"></p>
@@ -131,7 +131,7 @@
         <!-- Latest Update -->
         <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
             <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
-                <i class="fa-solid fa-bolt"></i> 理쒖떊 ?낅뜲?댄듃 (2026.01)
+                <i class="fa-solid fa-bolt"></i> 최신 업데이트 (2026.01)
             </h3>
             <p id="modal-summary" class="text-blue-800 font-bold mb-4"></p>
             <ul id="modal-details" class="space-y-3 text-blue-700/90"></ul>
@@ -141,7 +141,7 @@
         <div class="text-center pt-8 pb-4">
             <a id="modal-link" href="#"
                 class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
-                怨듭떇 ?덊럹?댁? 媛湲?<i class="fa-solid fa-arrow-up-right-from-square"></i>
+                공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
         </div>
     </div>
@@ -149,15 +149,15 @@
 
 <script>
     const toolsData = [
-        // ========== AI 鍮꾩꽌 (AI Assistants) - 10媛?==========
+        // ========== AI 비서 (AI Assistants) - 10개 ==========
         {
             id: 'chatgpt',
             name: 'ChatGPT',
             category: 'ai',
             icon: '<i class="fa-solid fa-robot text-green-500"></i>',
-            desc: '留뚮뒫 ?닿껐?? 媛?뺥넻?좊Ц 珥덉븞, ?섏뾽 ?꾩씠?붿뼱, 怨좊? ?곷떞 ???띿뒪?몃줈 ?섎뒗 紐⑤뱺 ?쇱쓽 湲곕낯?낅땲??',
-            summary: 'Canvas 湲곕뒫??臾대즺濡???몄뼱?? 湲?곌린??肄붾뵫????蹂꾨룄 李쎌뿉???섏젙??媛?ν빐?몄꽌 ?⑥뵮 ?명빀?덈떎.',
-            details: ['Canvas 湲곕뒫 ?꾨㈃ 臾대즺??, 'SearchGPT ?듯빀?쇰줈 ?ㅼ떆媛?寃??媛뺥솕', '湲곗뼲(Memory) ?⑸웾 2諛?利앷?'],
+            desc: '만능 해결사. 가정통신문 초안, 수업 아이디어, 고민 상담 등 텍스트로 하는 모든 일의 기본입니다.',
+            summary: 'Canvas 기능이 무료로 풀렸어요! 글쓰기나 코딩할 때 별도 창에서 수정이 가능해져서 훨씬 편합니다.',
+            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가'],
             url: 'https://chat.openai.com'
         },
         {
@@ -165,9 +165,9 @@
             name: 'Claude',
             category: 'ai',
             icon: '<i class="fa-solid fa-brain text-orange-500"></i>',
-            desc: '湲?곌린? 肄붾뵫???? ChatGPT蹂대떎 ?쒓뎅??臾몄옣???⑥뵮 ?먯뿰?ㅻ읇怨? 湲?臾몄꽌瑜?遺꾩꽍?????곸썡?⑸땲??',
-            summary: '肄붾뵫 ?ㅻ젰??鍮꾩빟?곸쑝濡??곸듅??3.7 踰꾩쟾???섏솕?듬땲??',
-            details: ['Claude 3.7 Sonnet 紐⑤뜽 異쒖떆', 'Artifacts 湲곕뒫?쇰줈 寃곌낵臾?誘몃━蹂닿린', '200K ?좏겙 而⑦뀓?ㅽ듃 ?덈룄??],
+            desc: '글쓰기와 코딩의 신. ChatGPT보다 한국어 문장이 훨씬 자연스럽고, 긴 문서를 분석할 때 탁월합니다.',
+            summary: '코딩 실력이 비약적으로 상승한 3.7 버전이 나왔습니다.',
+            details: ['Claude 3.7 Sonnet 모델 출시', 'Artifacts 기능으로 결과물 미리보기', '200K 토큰 컨텍스트 윈도우'],
             url: 'https://claude.ai'
         },
         {
@@ -175,9 +175,9 @@
             name: 'Gemini',
             category: 'ai',
             icon: '<i class="fa-solid fa-star text-blue-500"></i>',
-            desc: '援ш? 李먯튇. 援ш? 臾몄꽌, ?ㅽ봽?덈뱶?쒗듃, ?좏뒠釉??댁슜??遺꾩꽍?섍굅???붿빟?댁빞 ????媛??媛뺣젰?⑸땲??',
-            summary: '援ш? ?뚰겕?ㅽ럹?댁뒪 ?곕룞?깆씠 媛뺥솕?섏뿀?듬땲??',
-            details: ['Gemini 2.5 Flash ?낅뜲?댄듃', 'Google Sheets ?먮룞 ?쒓컖??湲곕뒫', 'YouTube ?곸긽 ?붿빟 媛뺥솕'],
+            desc: '구글 찐친. 구글 문서, 스프레드시트, 유튜브 내용을 분석하거나 요약해야 할 때 가장 강력합니다.',
+            summary: '구글 워크스페이스 연동성이 강화되었습니다.',
+            details: ['Gemini 2.5 Flash 업데이트', 'Google Sheets 자동 시각화 기능', 'YouTube 영상 요약 강화'],
             url: 'https://gemini.google.com'
         },
         {
@@ -185,9 +185,9 @@
             name: 'Perplexity',
             category: 'ai',
             icon: '<i class="fa-solid fa-magnifying-glass text-teal-500"></i>',
-            desc: '嫄곗쭞留????섎뒗 寃??AI. ?쇰Ц, ?댁뒪 湲곗궗 ??"異쒖쿂"媛 以묒슂???먮즺瑜?李얠쓣 ???ㅼ씠踰?援ш? ????곗꽭??',
-            summary: 'Deep Research 紐⑤뱶媛 異붽??섏뿀?듬땲??',
-            details: ['Deep Research 湲곕뒫 踰좏?', 'Pro Search ?띾룄 媛쒖꽑', '?ㅼ떆媛??댁뒪 寃??媛뺥솕'],
+            desc: '거짓말 안 하는 검색 AI. 논문, 뉴스 기사 등 "출처"가 중요한 자료를 찾을 때 네이버/구글 대신 쓰세요.',
+            summary: 'Deep Research 모드가 추가되었습니다.',
+            details: ['Deep Research 기능 베타', 'Pro Search 속도 개선', '실시간 뉴스 검색 강화'],
             url: 'https://perplexity.ai'
         },
         {
@@ -195,9 +195,9 @@
             name: 'Microsoft Copilot',
             category: 'ai',
             icon: '<i class="fa-brands fa-microsoft text-blue-600"></i>',
-            desc: 'MS Office??AI 鍮꾩꽌. ?뚮뱶, ?묒?, ?뚯썙?ъ씤?몄뿉??諛붾줈 AI瑜?遺덈윭 臾몄꽌 ?묒뾽???먮룞?뷀븷 ???덉뒿?덈떎.',
-            summary: 'Office 365 ?듯빀???붿슧 媛뺥솕?섏뿀?듬땲??',
-            details: ['PowerPoint Designer AI 媛뺥솕', 'Excel ?섏떇 ?먮룞 ?앹꽦', 'Word 臾몄꽌 ?붿빟 湲곕뒫'],
+            desc: 'MS Office의 AI 비서. 워드, 엑셀, 파워포인트에서 바로 AI를 불러 문서 작업을 자동화할 수 있습니다.',
+            summary: 'Office 365 통합이 더욱 강화되었습니다.',
+            details: ['PowerPoint Designer AI 강화', 'Excel 수식 자동 생성', 'Word 문서 요약 기능'],
             url: 'https://copilot.microsoft.com'
         },
         {
@@ -205,9 +205,9 @@
             name: 'Poe',
             category: 'ai',
             icon: '<i class="fa-solid fa-comments text-purple-500"></i>',
-            desc: '?щ윭 AI瑜???怨녹뿉?? ChatGPT, Claude, Gemini ?깆쓣 ???섎굹濡?鍮꾧탳?섎ŉ ?ъ슜?????덉뒿?덈떎.',
-            summary: '而ㅼ뒪? 遊??앹꽦 湲곕뒫??臾대즺濡??쒓났?⑸땲??',
-            details: ['臾대즺 而ㅼ뒪? 遊??앹꽦', '?ㅼ쨷 AI 紐⑤뜽 ?숈떆 鍮꾧탳', '紐⑤컮????理쒖쟻??],
+            desc: '여러 AI를 한 곳에서. ChatGPT, Claude, Gemini 등을 앱 하나로 비교하며 사용할 수 있습니다.',
+            summary: '커스텀 봇 생성 기능이 무료로 제공됩니다.',
+            details: ['무료 커스텀 봇 생성', '다중 AI 모델 동시 비교', '모바일 앱 최적화'],
             url: 'https://poe.com'
         },
         {
@@ -215,9 +215,9 @@
             name: 'DeepL',
             category: 'ai',
             icon: '<i class="fa-solid fa-language text-indigo-500"></i>',
-            desc: '踰덉뿭???앺뙋?? 援ш? 踰덉뿭蹂대떎 ?⑥뵮 ?먯뿰?ㅻ윭??踰덉뿭???쒓났?⑸땲?? ?곸뼱 ?쇰Ц?대굹 ?멸뎅 ?먮즺 ?쎌쓣 ???꾩닔!',
-            summary: '?쒓뎅??踰덉뿭 ?덉쭏??????μ긽?섏뿀?듬땲??',
-            details: ['?쒓뎅??踰덉뿭 ?뺥솗??30% ?μ긽', '臾몄꽌 踰덉뿭 ?띾룄 媛쒖꽑', 'PDF 吏곸젒 踰덉뿭 吏??],
+            desc: '번역의 끝판왕. 구글 번역보다 훨씬 자연스러운 번역을 제공합니다. 영어 논문이나 외국 자료 읽을 때 필수!',
+            summary: '한국어 번역 품질이 대폭 향상되었습니다.',
+            details: ['한국어 번역 정확도 30% 향상', '문서 번역 속도 개선', 'PDF 직접 번역 지원'],
             url: 'https://deepl.com'
         },
         {
@@ -225,9 +225,9 @@
             name: 'Notion AI',
             category: 'ai',
             icon: '<i class="fa-solid fa-note-sticky text-black"></i>',
-            desc: '?몄뀡 ?덉뿉??諛붾줈 ?곕뒗 AI. ?뚯쓽濡??뺣━, ?꾩씠?붿뼱 ?뺤옣, 臾몄꽌 ?붿빟???몄뀡 ?섏씠吏 ?덉뿉??利됱떆 泥섎━?⑸땲??',
-            summary: 'Q&A 湲곕뒫?쇰줈 ?몄뀡 DB 寃?됱씠 媛?ν빐議뚯뒿?덈떎.',
-            details: ['Notion DB ?먯뿰??寃??, '?먮룞 ?쒓렇 ?앹꽦', '?쒗뵆由?AI 異붿쿇'],
+            desc: '노션 안에서 바로 쓰는 AI. 회의록 정리, 아이디어 확장, 문서 요약을 노션 페이지 안에서 즉시 처리합니다.',
+            summary: 'Q&A 기능으로 노션 DB 검색이 가능해졌습니다.',
+            details: ['Notion DB 자연어 검색', '자동 태그 생성', '템플릿 AI 추천'],
             url: 'https://notion.so/product/ai'
         },
         {
@@ -235,31 +235,31 @@
             name: 'Jasper',
             category: 'ai',
             icon: '<i class="fa-solid fa-pen-fancy text-red-500"></i>',
-            desc: '留덉???湲?곌린 ?꾨Ц AI. 釉붾줈洹??ъ뒪?? SNS 肄섑뀗痢? 愿묎퀬 臾멸뎄瑜?鍮좊Ⅴ寃??앹꽦?????좎슜?⑸땲??',
-            summary: 'Brand Voice 湲곕뒫?쇰줈 ?쇨????ㅼ븻留ㅻ꼫 ?좎?媛 媛?ν빀?덈떎.',
-            details: ['Brand Voice 而ㅼ뒪?곕쭏?댁쭠', 'SEO 理쒖쟻???쒖븞', '?ㅺ뎅??肄섑뀗痢??앹꽦'],
+            desc: '마케팅 글쓰기 전문 AI. 블로그 포스트, SNS 콘텐츠, 광고 문구를 빠르게 생성할 때 유용합니다.',
+            summary: 'Brand Voice 기능으로 일관된 톤앤매너 유지가 가능합니다.',
+            details: ['Brand Voice 커스터마이징', 'SEO 최적화 제안', '다국어 콘텐츠 생성'],
             url: 'https://jasper.ai'
         },
         {
             id: 'wrtn',
-            name: 'WRTN (琉쇳듉)',
+            name: 'WRTN (뤼튼)',
             category: 'ai',
             icon: '<i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i>',
-            desc: '?쒓뎅??AI ?뚮옯?? ?쒓뎅?댁뿉 ?뱁솕?섏뼱 ?덇퀬, ?ㅼ뼇??AI ?꾧뎄瑜?臾대즺濡??ъ슜?????덉뒿?덈떎.',
-            summary: '援먯쑁???쒗뵆由우씠 ???異붽??섏뿀?듬땲??',
-            details: ['援먯쑁 ?꾩슜 ?쒗뵆由?50+ 異붽?', '?쒓뎅??留욎땄踰?寃??媛뺥솕', '臾대즺 ?щ젅???뺣?'],
+            desc: '한국형 AI 플랫폼. 한국어에 특화되어 있고, 다양한 AI 도구를 무료로 사용할 수 있습니다.',
+            summary: '교육용 템플릿이 대폭 추가되었습니다.',
+            details: ['교육 전용 템플릿 50+ 추가', '한국어 맞춤법 검사 강화', '무료 크레딧 확대'],
             url: 'https://wrtn.ai'
         },
 
-        // ========== 肄붾뵫 & 媛쒕컻 (Coding & Development) - 10媛?==========
+        // ========== 코딩 & 개발 (Coding & Development) - 10개 ==========
         {
             id: 'cursor',
             name: 'Cursor',
             category: 'dev',
             icon: '<i class="fa-solid fa-terminal text-gray-700"></i>',
-            desc: 'AI媛 ?묒옱??肄붾뵫 ?몄쭛湲? "?닿굅 留뚮뱾?댁쨾"?쇨퀬 移섎㈃ 肄붾뱶瑜???吏쒖쨳?덈떎. 諛붿씠釉?肄붾뵫???듭떖 ??',
-            summary: 'Composer 湲곕뒫????媛뺣젰?댁죱?듬땲??',
-            details: ['Composer ?ㅼ쨷 ?뚯씪 ?몄쭛 湲곕뒫', '?먯뿰???곕???紐낅졊 吏??, 'Claude 3.7 ?듯빀'],
+            desc: 'AI가 탑재된 코딩 편집기. "이거 만들어줘"라고 치면 코드를 다 짜줍니다. 바이브 코딩의 핵심 툴!',
+            summary: 'Composer 기능이 더 강력해졌습니다.',
+            details: ['Composer 다중 파일 편집 기능', '자연어 터미널 명령 지원', 'Claude 3.7 통합'],
             url: 'https://cursor.sh'
         },
         {
@@ -267,9 +267,9 @@
             name: 'GitHub Copilot',
             category: 'dev',
             icon: '<i class="fa-brands fa-github text-black"></i>',
-            desc: 'VS Code ?덉뿉???곕뒗 AI 肄붾뵫 ?꾩슦誘? 肄붾뱶 ?먮룞?꾩꽦遺??踰꾧렇 ?섏젙源뚯? ?ㅼ떆媛꾩쑝濡??꾩?以띾땲??',
-            summary: 'Copilot Chat???붿슧 ?묐삊?댁죱?듬땲??',
-            details: ['Copilot Chat ?낃렇?덉씠??, '肄붾뱶 由щ럭 ?먮룞??, '蹂댁븞 痍⑥빟???먯?'],
+            desc: 'VS Code 안에서 쓰는 AI 코딩 도우미. 코드 자동완성부터 버그 수정까지 실시간으로 도와줍니다.',
+            summary: 'Copilot Chat이 더욱 똑똑해졌습니다.',
+            details: ['Copilot Chat 업그레이드', '코드 리뷰 자동화', '보안 취약점 탐지'],
             url: 'https://github.com/features/copilot'
         },
         {
@@ -277,9 +277,9 @@
             name: 'Codeium',
             category: 'dev',
             icon: '<i class="fa-solid fa-code text-blue-500"></i>',
-            desc: '臾대즺 AI 肄붾뵫 ?꾧뎄. GitHub Copilot怨?鍮꾩듂?섏?留??꾩쟾 臾대즺濡??ъ슜?????덉뒿?덈떎.',
-            summary: '70媛??댁긽???꾨줈洹몃옒諛??몄뼱瑜?吏?먰빀?덈떎.',
-            details: ['?꾩쟾 臾대즺 ?쒓났', '70+ ?몄뼱 吏??, 'IDE ?뚮윭洹몄씤 ?뺣?'],
+            desc: '무료 AI 코딩 도구. GitHub Copilot과 비슷하지만 완전 무료로 사용할 수 있습니다.',
+            summary: '70개 이상의 프로그래밍 언어를 지원합니다.',
+            details: ['완전 무료 제공', '70+ 언어 지원', 'IDE 플러그인 확대'],
             url: 'https://codeium.com'
         },
         {
@@ -287,9 +287,9 @@
             name: 'Tabnine',
             category: 'dev',
             icon: '<i class="fa-solid fa-microchip text-purple-600"></i>',
-            desc: '?꾨씪?대쾭??以묒떖 AI 肄붾뵫 ?꾧뎄. ?뚯궗 肄붾뱶瑜??몃?濡?蹂대궡吏 ?딄퀬 濡쒖뺄?먯꽌 AI瑜??ㅽ뻾?????덉뒿?덈떎.',
-            summary: '?⑦봽?덈???諛고룷 ?듭뀡??異붽??섏뿀?듬땲??',
-            details: ['濡쒖뺄 AI 紐⑤뜽 吏??, '湲곗뾽??蹂댁븞 媛뺥솕', '? 肄붾뱶 ?숈뒿 湲곕뒫'],
+            desc: '프라이버시 중심 AI 코딩 도구. 회사 코드를 외부로 보내지 않고 로컬에서 AI를 실행할 수 있습니다.',
+            summary: '온프레미스 배포 옵션이 추가되었습니다.',
+            details: ['로컬 AI 모델 지원', '기업용 보안 강화', '팀 코드 학습 기능'],
             url: 'https://tabnine.com'
         },
         {
@@ -297,9 +297,9 @@
             name: 'Replit Ghostwriter',
             category: 'dev',
             icon: '<i class="fa-solid fa-ghost text-orange-500"></i>',
-            desc: '?ㅼ튂 ?녿뒗 肄붾뵫. 蹂듭옟???명똿 ?놁씠 ?명꽣??李쎌뿉??諛붾줈 肄붾뵫?섍퀬 寃곌낵臾쇱쓣 怨듭쑀?????덉뒿?덈떎.',
-            summary: 'Replit Agent媛 ?뺤떇 異쒖떆?섏뿀?듬땲??',
-            details: ['Replit Agent ?뺤떇 ?곗묶', '紐⑤컮????肄붾뵫 吏??, '?ㅼ떆媛??묒뾽 媛뺥솕'],
+            desc: '설치 없는 코딩. 복잡한 세팅 없이 인터넷 창에서 바로 코딩하고 결과물을 공유할 수 있습니다.',
+            summary: 'Replit Agent가 정식 출시되었습니다.',
+            details: ['Replit Agent 정식 런칭', '모바일 앱 코딩 지원', '실시간 협업 강화'],
             url: 'https://replit.com'
         },
         {
@@ -307,9 +307,9 @@
             name: 'v0.dev',
             category: 'dev',
             icon: '<i class="fa-solid fa-shapes text-gray-700"></i>',
-            desc: '?붿옄??蹂듭궗湲? 留덉쓬???쒕뒗 ?ъ씠??罹≪쿂?댁꽌 ?щ━硫??묎컳? 紐⑥뼇??肄붾뱶瑜?留뚮뱾?댁쨳?덈떎.',
-            summary: '?쇨렇留?Figma) ?붿옄??蹂???뺥솗???μ긽.',
-            details: ['Figma to React 蹂??媛쒖꽑', 'Tailwind CSS 理쒖쟻??, 'shadcn/ui ?듯빀'],
+            desc: '디자인 복사기. 마음에 드는 사이트 캡처해서 올리면 똑같은 모양의 코드를 만들어줍니다.',
+            summary: '피그마(Figma) 디자인 변환 정확도 향상.',
+            details: ['Figma to React 변환 개선', 'Tailwind CSS 최적화', 'shadcn/ui 통합'],
             url: 'https://v0.dev'
         },
         {
@@ -317,9 +317,9 @@
             name: 'Sourcegraph Cody',
             category: 'dev',
             icon: '<i class="fa-solid fa-search-plus text-red-500"></i>',
-            desc: '肄붾뱶踰좎씠???꾩껜瑜??댄빐?섎뒗 AI. ?洹쒕え ?꾨줈?앺듃?먯꽌 ?뱀젙 肄붾뱶瑜?李얘굅???댄빐?????좎슜?⑸땲??',
-            summary: '肄붾뱶 寃???띾룄媛 10諛?鍮⑤씪議뚯뒿?덈떎.',
-            details: ['?洹쒕え 肄붾뱶踰좎씠??寃??理쒖쟻??, 'AI 肄붾뱶 ?ㅻ챸 湲곕뒫', '由ы뙥?좊쭅 ?쒖븞'],
+            desc: '코드베이스 전체를 이해하는 AI. 대규모 프로젝트에서 특정 코드를 찾거나 이해할 때 유용합니다.',
+            summary: '코드 검색 속도가 10배 빨라졌습니다.',
+            details: ['대규모 코드베이스 검색 최적화', 'AI 코드 설명 기능', '리팩토링 제안'],
             url: 'https://sourcegraph.com/cody'
         },
         {
@@ -327,9 +327,9 @@
             name: 'Warp Terminal',
             category: 'dev',
             icon: '<i class="fa-solid fa-square-terminal text-green-600"></i>',
-            desc: 'AI媛 ?ㅼ뼱媛??곕??? 紐낅졊?대? ?먯뿰?대줈 臾쇱뼱蹂대㈃ ?뺥솗??而ㅻ㎤?쒕? ?뚮젮以띾땲??',
-            summary: 'AI Command Search媛 ?붿슧 ?뺥솗?댁죱?듬땲??',
-            details: ['?먯뿰??紐낅졊??蹂??, '紐낅졊???덉뒪?좊━ AI 寃??, '? ?묒뾽 湲곕뒫'],
+            desc: 'AI가 들어간 터미널. 명령어를 자연어로 물어보면 정확한 커맨드를 알려줍니다.',
+            summary: 'AI Command Search가 더욱 정확해졌습니다.',
+            details: ['자연어 명령어 변환', '명령어 히스토리 AI 검색', '팀 협업 기능'],
             url: 'https://warp.dev'
         },
         {
@@ -337,9 +337,9 @@
             name: 'Amazon CodeWhisperer',
             category: 'dev',
             icon: '<i class="fa-brands fa-aws text-orange-600"></i>',
-            desc: 'AWS ?꾨Ц AI 肄붾뵫 ?꾧뎄. ?대씪?곕뱶 ?명봽??肄붾뱶瑜??묒꽦?????뱁엳 媛뺣젰?⑸땲??',
-            summary: 'AWS ?쒕퉬???듯빀??媛뺥솕?섏뿀?듬땲??',
-            details: ['AWS SDK ?먮룞?꾩꽦', '蹂댁븞 ?ㅼ틪 湲곕뒫', 'Lambda ?⑥닔 ?앹꽦 吏??],
+            desc: 'AWS 전문 AI 코딩 도구. 클라우드 인프라 코드를 작성할 때 특히 강력합니다.',
+            summary: 'AWS 서비스 통합이 강화되었습니다.',
+            details: ['AWS SDK 자동완성', '보안 스캔 기능', 'Lambda 함수 생성 지원'],
             url: 'https://aws.amazon.com/codewhisperer'
         },
         {
@@ -347,21 +347,21 @@
             name: 'Blackbox AI',
             category: 'dev',
             icon: '<i class="fa-solid fa-box text-black"></i>',
-            desc: '肄붾뱶 ?ㅻ땲??寃??AI. ?ㅽ깮?ㅻ쾭?뚮줈?곗쿂??肄붾뱶 ?덉젣瑜?李얜릺, AI媛 留λ씫??留욊쾶 ?섏젙?댁쨳?덈떎.',
-            summary: '?대?吏?먯꽌 肄붾뱶 異붿텧 湲곕뒫??異붽??섏뿀?듬땲??',
-            details: ['Image-to-Code 湲곕뒫', '?ㅼ떆媛?肄붾뱶 ?ㅻ챸', '?ㅺ뎅??肄붾뱶 蹂??],
+            desc: '코드 스니펫 검색 AI. 스택오버플로우처럼 코드 예제를 찾되, AI가 맥락에 맞게 수정해줍니다.',
+            summary: '이미지에서 코드 추출 기능이 추가되었습니다.',
+            details: ['Image-to-Code 기능', '실시간 코드 설명', '다국어 코드 변환'],
             url: 'https://blackbox.ai'
         },
 
-        // ========== ?앹궛???꾧뎄 (Productivity & Utilities) - 10媛?==========
+        // ========== 생산성 도구 (Productivity & Utilities) - 10개 ==========
         {
             id: 'zoomit',
             name: 'ZoomIt',
             category: 'work',
             icon: '<i class="fa-solid fa-magnifying-glass-plus text-blue-600"></i>',
-            desc: '?붾㈃ ?뺣? 諛??먯꽌 ?꾧뎄. ?섏뾽 以??붾㈃???ш쾶 ?뺣??섍굅??吏곸젒 洹몃┝??洹몃젮媛硫??ㅻ챸?????덉뒿?덈떎.',
-            summary: 'Microsoft 怨듭떇 臾대즺 ?꾧뎄濡??덉젙?깆씠 ?곗뼱?⑸땲??',
-            details: ['?붾㈃ ?뺣? (Ctrl+1)', '?붾㈃ ?먯꽌 (Ctrl+2)', '??대㉧ 湲곕뒫 (Ctrl+3)'],
+            desc: '화면 확대 및 판서 도구. 수업 중 화면을 크게 확대하거나 직접 그림을 그려가며 설명할 수 있습니다.',
+            summary: 'Microsoft 공식 무료 도구로 안정성이 뛰어납니다.',
+            details: ['화면 확대 (Ctrl+1)', '화면 판서 (Ctrl+2)', '타이머 기능 (Ctrl+3)'],
             url: 'https://learn.microsoft.com/sysinternals/downloads/zoomit'
         },
         {
@@ -369,9 +369,9 @@
             name: 'Snipaste',
             category: 'work',
             icon: '<i class="fa-solid fa-scissors text-orange-500"></i>',
-            desc: '罹≪쿂 ???붾㈃ 怨좎젙. ?ㅽ겕由곗꺑??李띿쑝硫?洹??대?吏瑜??붾㈃ ?꾩뿉 ?꾩썙?볤퀬 李멸퀬?섎ŉ ?묒뾽?????덉뒿?덈떎.',
-            summary: '罹≪쿂???대?吏瑜???긽 ?꾩뿉 怨좎젙?????덉뼱 硫?고깭?ㅽ궧???좎슜?⑸땲??',
-            details: ['F1?쇰줈 鍮좊Ⅸ 罹≪쿂', '罹≪쿂 ?대?吏 ?붾㈃ 怨좎젙', '?됱긽 異붿텧 湲곕뒫'],
+            desc: '캡처 후 화면 고정. 스크린샷을 찍으면 그 이미지를 화면 위에 띄워놓고 참고하며 작업할 수 있습니다.',
+            summary: '캡처한 이미지를 항상 위에 고정할 수 있어 멀티태스킹에 유용합니다.',
+            details: ['F1으로 빠른 캡처', '캡처 이미지 화면 고정', '색상 추출 기능'],
             url: 'https://snipaste.com'
         },
         {
@@ -379,9 +379,9 @@
             name: 'Monitorian',
             category: 'work',
             icon: '<i class="fa-solid fa-sun text-yellow-500"></i>',
-            desc: '紐⑤땲??諛앷린 議곗젅. ?щ윭 紐⑤땲?곗쓽 諛앷린瑜??뚰봽?몄썾?대줈 ??踰덉뿉 議곗젅?????덉뒿?덈떎.',
-            summary: '???紐⑤땲???ъ슜?먯뿉寃??꾩닔 ?꾧뎄?낅땲??',
-            details: ['?ㅼ쨷 紐⑤땲??諛앷린 ?듯빀 議곗젅', '?⑥텞??吏??, '?먮룞 諛앷린 議곗젅'],
+            desc: '모니터 밝기 조절. 여러 모니터의 밝기를 소프트웨어로 한 번에 조절할 수 있습니다.',
+            summary: '듀얼 모니터 사용자에게 필수 도구입니다.',
+            details: ['다중 모니터 밝기 통합 조절', '단축키 지원', '자동 밝기 조절'],
             url: 'https://github.com/emoacht/Monitorian'
         },
         {
@@ -389,9 +389,9 @@
             name: 'Everything',
             category: 'work',
             icon: '<i class="fa-solid fa-bolt text-yellow-600"></i>',
-            desc: '珥덇퀬???뚯씪 寃?? ?덈룄??湲곕낯 寃?됰낫??100諛?鍮좊Ⅴ寃?而댄벂???덉쓽 ?뚯씪??李얠븘以띾땲??',
-            summary: '?섎갚留?媛쒖쓽 ?뚯씪??1珥??덉뿉 寃?됲빀?덈떎.',
-            details: ['?ㅼ떆媛??몃뜳??, '?뺢퇋??寃??吏??, 'HTTP/FTP ?쒕쾭 湲곕뒫'],
+            desc: '초고속 파일 검색. 윈도우 기본 검색보다 100배 빠르게 컴퓨터 안의 파일을 찾아줍니다.',
+            summary: '수백만 개의 파일도 1초 안에 검색합니다.',
+            details: ['실시간 인덱싱', '정규식 검색 지원', 'HTTP/FTP 서버 기능'],
             url: 'https://voidtools.com'
         },
         {
@@ -399,9 +399,9 @@
             name: 'PowerToys',
             category: 'work',
             icon: '<i class="fa-brands fa-microsoft text-blue-500"></i>',
-            desc: 'Windows ?앹궛???꾧뎄 紐⑥쓬. 李??뺣젹, ?됱긽 異붿텧, ?뚯씪 ?대쫫 ?쇨큵 蹂寃????몄쓽 湲곕뒫??媛?앺빀?덈떎.',
-            summary: 'Microsoft 怨듭떇 臾대즺 ?꾧뎄?낅땲??',
-            details: ['FancyZones (李??뺣━)', 'PowerRename (?뚯씪紐??쇨큵 蹂寃?', 'Color Picker'],
+            desc: 'Windows 생산성 도구 모음. 창 정렬, 색상 추출, 파일 이름 일괄 변경 등 편의 기능이 가득합니다.',
+            summary: 'Microsoft 공식 무료 도구입니다.',
+            details: ['FancyZones (창 정리)', 'PowerRename (파일명 일괄 변경)', 'Color Picker'],
             url: 'https://github.com/microsoft/PowerToys'
         },
         {
@@ -409,9 +409,9 @@
             name: 'Obsidian',
             category: 'work',
             icon: '<i class="fa-solid fa-gem text-purple-600"></i>',
-            desc: '?????? ?명듃?ㅼ쓣 ?쒕줈 ?곌껐?섏뿬 吏???ㅽ듃?뚰겕瑜?留뚮뱾 ???덈뒗 硫붾え ?깆엯?덈떎.',
-            summary: '濡쒖뺄 ??μ쑝濡??곗씠???뚯쑀沅뚯쓣 蹂댁옣?⑸땲??',
-            details: ['留덊겕?ㅼ슫 湲곕컲', '洹몃옒??酉곕줈 ?명듃 ?곌껐 ?쒓컖??, '?뚮윭洹몄씤 ?앺깭怨?],
+            desc: '제2의 뇌. 노트들을 서로 연결하여 지식 네트워크를 만들 수 있는 메모 앱입니다.',
+            summary: '로컬 저장으로 데이터 소유권을 보장합니다.',
+            details: ['마크다운 기반', '그래프 뷰로 노트 연결 시각화', '플러그인 생태계'],
             url: 'https://obsidian.md'
         },
         {
@@ -419,9 +419,9 @@
             name: 'Raycast',
             category: 'work',
             icon: '<i class="fa-solid fa-rocket text-red-500"></i>',
-            desc: 'Mac ?앹궛???곗쿂. ?⑥텞???섎굹濡????ㅽ뻾, ?뚯씪 寃?? 怨꾩궛湲??깆쓣 利됱떆 ?ъ슜?????덉뒿?덈떎.',
-            summary: 'AI 紐낅졊??湲곕뒫??異붽??섏뿀?듬땲??',
-            details: ['AI Commands ?듯빀', '?뺤옣 ?꾨줈洹몃옩 ?ㅽ넗??, '?대┰蹂대뱶 ?덉뒪?좊━'],
+            desc: 'Mac 생산성 런처. 단축키 하나로 앱 실행, 파일 검색, 계산기 등을 즉시 사용할 수 있습니다.',
+            summary: 'AI 명령어 기능이 추가되었습니다.',
+            details: ['AI Commands 통합', '확장 프로그램 스토어', '클립보드 히스토리'],
             url: 'https://raycast.com'
         },
         {
@@ -429,9 +429,9 @@
             name: 'Linear',
             category: 'work',
             icon: '<i class="fa-solid fa-diagram-project text-indigo-600"></i>',
-            desc: '?꾨줈?앺듃 愿由??꾧뎄. 媛쒕컻????꾪븳 ?댁뒋 ?몃옒而ㅼ씠吏留? 援먯쑁 ?꾨줈?앺듃 愿由ъ뿉???좎슜?⑸땲??',
-            summary: '媛??鍮좊Ⅴ怨?源붾걫???꾨줈?앺듃 愿由??꾧뎄?낅땲??',
-            details: ['?ㅻ낫??以묒떖 ?명꽣?섏씠??, 'GitHub ?듯빀', '?먮룞 ?댁뒋 遺꾨쪟'],
+            desc: '프로젝트 관리 도구. 개발팀을 위한 이슈 트래커이지만, 교육 프로젝트 관리에도 유용합니다.',
+            summary: '가장 빠르고 깔끔한 프로젝트 관리 도구입니다.',
+            details: ['키보드 중심 인터페이스', 'GitHub 통합', '자동 이슈 분류'],
             url: 'https://linear.app'
         },
         {
@@ -439,9 +439,9 @@
             name: 'f.lux',
             category: 'work',
             icon: '<i class="fa-solid fa-moon text-indigo-400"></i>',
-            desc: '??蹂댄샇 ?꾧뎄. ?쒓컙????곕씪 ?붾㈃ ?됱삩?꾨? ?먮룞 議곗젅?섏뿬 ?덉쓽 ?쇰줈瑜?以꾩뿬以띾땲??',
-            summary: '?쇨컙 ?묒뾽 ??釉붾（?쇱씠?몃? 以꾩뿬 ?섎㈃??吏덉쓣 ?믪엯?덈떎.',
-            details: ['?먮룞 ?됱삩??議곗젅', '?꾩튂 湲곕컲 ?쇱텧/?쇰ぐ 媛먯?', '?ㅽ겕紐⑤뱶 ?곕룞'],
+            desc: '눈 보호 도구. 시간대에 따라 화면 색온도를 자동 조절하여 눈의 피로를 줄여줍니다.',
+            summary: '야간 작업 시 블루라이트를 줄여 수면의 질을 높입니다.',
+            details: ['자동 색온도 조절', '위치 기반 일출/일몰 감지', '다크모드 연동'],
             url: 'https://justgetflux.com'
         },
         {
@@ -449,21 +449,21 @@
             name: 'Trello',
             category: 'work',
             icon: '<i class="fa-brands fa-trello text-blue-500"></i>',
-            desc: '移몃컲 蹂대뱶 ?꾧뎄. ???쇱쓣 移대뱶濡?留뚮뱾???쒕옒洹몄븻?쒕∼?쇰줈 吏꾪뻾 ?곹솴??愿由ы븷 ???덉뒿?덈떎.',
-            summary: 'Butler ?먮룞??湲곕뒫?쇰줈 諛섎났 ?묒뾽???먮룞?뷀븷 ???덉뒿?덈떎.',
-            details: ['吏곴??곸씤 移몃컲 蹂대뱶', 'Butler ?먮룞??, '? ?묒뾽 湲곕뒫'],
+            desc: '칸반 보드 도구. 할 일을 카드로 만들어 드래그앤드롭으로 진행 상황을 관리할 수 있습니다.',
+            summary: 'Butler 자동화 기능으로 반복 작업을 자동화할 수 있습니다.',
+            details: ['직관적인 칸반 보드', 'Butler 자동화', '팀 협업 기능'],
             url: 'https://trello.com'
         },
 
-        // ========== 李쎌옉 & ?덉닠 (Creative Arts & Media) - 10媛?==========
+        // ========== 창작 & 예술 (Creative Arts & Media) - 10개 ==========
         {
             id: 'canva',
             name: 'Canva',
             category: 'art',
             icon: '<i class="fa-solid fa-palette text-cyan-500"></i>',
-            desc: '?붿옄??留뚮뒫 ?꾧뎄. ?ъ뒪?? ?명룷洹몃옒?? ?꾨젅?좏뀒?댁뀡???쒗뵆由?湲곕컲?쇰줈 ?쎄쾶 留뚮뱾 ???덉뒿?덈떎.',
-            summary: 'AI ?붿옄???앹꽦 湲곕뒫?????媛뺥솕?섏뿀?듬땲??',
-            details: ['Magic Design (AI ?먮룞 ?붿옄??', 'Magic Eraser (諛곌꼍 ?쒓굅)', '臾대즺 ?쒗뵆由?10留?'],
+            desc: '디자인 만능 도구. 포스터, 인포그래픽, 프레젠테이션을 템플릿 기반으로 쉽게 만들 수 있습니다.',
+            summary: 'AI 디자인 생성 기능이 대폭 강화되었습니다.',
+            details: ['Magic Design (AI 자동 디자인)', 'Magic Eraser (배경 제거)', '무료 템플릿 10만+'],
             url: 'https://canva.com'
         },
         {
@@ -471,9 +471,9 @@
             name: 'Midjourney',
             category: 'art',
             icon: '<i class="fa-solid fa-image text-purple-500"></i>',
-            desc: 'AI ?대?吏 ?앹꽦???앺뙋?? ?띿뒪?몃쭔 ?낅젰?섎㈃ ?덉닠 ?묓뭹 ?섏????대?吏瑜?留뚮뱾?댁쨳?덈떎.',
-            summary: 'V7 紐⑤뜽濡??ъ떎?깃낵 ?뷀뀒?쇱씠 洹밸??붾릺?덉뒿?덈떎.',
-            details: ['Midjourney V7 異쒖떆', '珥덇퀬?댁긽???낆뒪耳??, '?ㅽ????쇨????좎?'],
+            desc: 'AI 이미지 생성의 끝판왕. 텍스트만 입력하면 예술 작품 수준의 이미지를 만들어줍니다.',
+            summary: 'V7 모델로 사실성과 디테일이 극대화되었습니다.',
+            details: ['Midjourney V7 출시', '초고해상도 업스케일', '스타일 일관성 유지'],
             url: 'https://midjourney.com'
         },
         {
@@ -481,9 +481,9 @@
             name: 'Stable Diffusion',
             category: 'art',
             icon: '<i class="fa-solid fa-wand-sparkles text-pink-500"></i>',
-            desc: '?ㅽ뵂?뚯뒪 AI ?대?吏 ?앹꽦. 臾대즺濡??ъ슜?????덇퀬, ?먯떊??而댄벂?곗뿉???ㅽ뻾 媛?ν빀?덈떎.',
-            summary: 'SDXL 1.0?쇰줈 ?대?吏 ?덉쭏???ш쾶 ?μ긽?섏뿀?듬땲??',
-            details: ['?꾩쟾 臾대즺 ?ㅽ뵂?뚯뒪', 'LoRA 紐⑤뜽 而ㅼ뒪?곕쭏?댁쭠', 'ControlNet ?뺣? ?쒖뼱'],
+            desc: '오픈소스 AI 이미지 생성. 무료로 사용할 수 있고, 자신의 컴퓨터에서 실행 가능합니다.',
+            summary: 'SDXL 1.0으로 이미지 품질이 크게 향상되었습니다.',
+            details: ['완전 무료 오픈소스', 'LoRA 모델 커스터마이징', 'ControlNet 정밀 제어'],
             url: 'https://stability.ai'
         },
         {
@@ -491,9 +491,9 @@
             name: 'Runway Gen-2',
             category: 'art',
             icon: '<i class="fa-solid fa-video text-green-500"></i>',
-            desc: 'AI ?곸긽 ?앹꽦 ?꾧뎄. ?띿뒪?몃굹 ?대?吏瑜??낅젰?섎㈃ 吏㏃? ?곸긽 ?대┰??留뚮뱾?댁쨳?덈떎.',
-            summary: 'Gen-3 Alpha媛 異쒖떆?섏뼱 ?곸긽 ?덉쭏??鍮꾩빟?곸쑝濡??μ긽?섏뿀?듬땲??',
-            details: ['Gen-3 Alpha 異쒖떆', '16珥??곸긽 ?앹꽦', '紐⑥뀡 釉뚮윭??湲곕뒫'],
+            desc: 'AI 영상 생성 도구. 텍스트나 이미지를 입력하면 짧은 영상 클립을 만들어줍니다.',
+            summary: 'Gen-3 Alpha가 출시되어 영상 품질이 비약적으로 향상되었습니다.',
+            details: ['Gen-3 Alpha 출시', '16초 영상 생성', '모션 브러시 기능'],
             url: 'https://runwayml.com'
         },
         {
@@ -501,9 +501,9 @@
             name: 'Adobe Firefly',
             category: 'art',
             icon: '<i class="fa-solid fa-fire text-orange-600"></i>',
-            desc: 'Adobe??AI ?대?吏 ?앹꽦. Photoshop怨??듯빀?섏뼱 ?덉뼱 ?꾨Ц?곸씤 ?몄쭛 ?묒뾽???좎슜?⑸땲??',
-            summary: 'Firefly 3 紐⑤뜽濡??곸뾽???ъ슜???덉쟾?⑸땲??',
-            details: ['?곸뾽???ъ슜 ?덉쟾', 'Photoshop ?듯빀', 'Generative Fill'],
+            desc: 'Adobe의 AI 이미지 생성. Photoshop과 통합되어 있어 전문적인 편집 작업에 유용합니다.',
+            summary: 'Firefly 3 모델로 상업적 사용이 안전합니다.',
+            details: ['상업적 사용 안전', 'Photoshop 통합', 'Generative Fill'],
             url: 'https://firefly.adobe.com'
         },
         {
@@ -511,9 +511,9 @@
             name: 'Figma',
             category: 'art',
             icon: '<i class="fa-brands fa-figma text-purple-600"></i>',
-            desc: 'UI/UX ?붿옄???꾧뎄. ?뱀궗?댄듃?????붾㈃???붿옄?명븯怨??꾨줈?좏??낆쓣 留뚮뱾 ???덉뒿?덈떎.',
-            summary: 'AI ?붿옄???쒖븞 湲곕뒫??異붽??섏뿀?듬땲??',
-            details: ['?ㅼ떆媛??묒뾽', 'Dev Mode (媛쒕컻??紐⑤뱶)', 'AI ?붿옄???쒖븞'],
+            desc: 'UI/UX 디자인 도구. 웹사이트나 앱 화면을 디자인하고 프로토타입을 만들 수 있습니다.',
+            summary: 'AI 디자인 제안 기능이 추가되었습니다.',
+            details: ['실시간 협업', 'Dev Mode (개발자 모드)', 'AI 디자인 제안'],
             url: 'https://figma.com'
         },
         {
@@ -521,9 +521,9 @@
             name: 'CapCut',
             category: 'art',
             icon: '<i class="fa-solid fa-film text-black"></i>',
-            desc: '臾대즺 ?곸긽 ?몄쭛 ?꾧뎄. TikTok ?쒖옉?ш? 留뚮뱾?댁꽌 ?륂뤌 ?곸긽 ?몄쭛??理쒖쟻?붾릺???덉뒿?덈떎.',
-            summary: 'AI ?먮쭑 ?앹꽦怨?諛곌꼍 ?쒓굅 湲곕뒫??臾대즺?낅땲??',
-            details: ['AI ?먮룞 ?먮쭑', '諛곌꼍 ?쒓굅', '臾대즺 ?뚯븙 ?쇱씠釉뚮윭由?],
+            desc: '무료 영상 편집 도구. TikTok 제작사가 만들어서 숏폼 영상 편집에 최적화되어 있습니다.',
+            summary: 'AI 자막 생성과 배경 제거 기능이 무료입니다.',
+            details: ['AI 자동 자막', '배경 제거', '무료 음악 라이브러리'],
             url: 'https://capcut.com'
         },
         {
@@ -531,9 +531,9 @@
             name: 'ElevenLabs',
             category: 'art',
             icon: '<i class="fa-solid fa-microphone text-blue-600"></i>',
-            desc: 'AI ?뚯꽦 ?앹꽦. ?띿뒪?몃? ?낅젰?섎㈃ ?щ엺泥섎읆 ?먯뿰?ㅻ윭???뚯꽦?쇰줈 ?쎌뼱以띾땲??',
-            summary: '?쒓뎅???뚯꽦 ?덉쭏???ш쾶 ?μ긽?섏뿀?듬땲??',
-            details: ['?쒓뎅???뚯꽦 吏??, '媛먯젙 ?쒗쁽 媛??, '?뚯꽦 蹂듭젣 湲곕뒫'],
+            desc: 'AI 음성 생성. 텍스트를 입력하면 사람처럼 자연스러운 음성으로 읽어줍니다.',
+            summary: '한국어 음성 품질이 크게 향상되었습니다.',
+            details: ['한국어 음성 지원', '감정 표현 가능', '음성 복제 기능'],
             url: 'https://elevenlabs.io'
         },
         {
@@ -541,9 +541,9 @@
             name: 'Suno AI',
             category: 'art',
             icon: '<i class="fa-solid fa-music text-green-600"></i>',
-            desc: 'AI ?뚯븙 ?앹꽦. 媛?ъ? ?ㅽ??쇱쓣 ?낅젰?섎㈃ ?꾩꽦???몃옒瑜?留뚮뱾?댁쨳?덈떎.',
-            summary: 'V4 紐⑤뜽濡??뚯쭏怨?蹂댁뺄???ш쾶 媛쒖꽑?섏뿀?듬땲??',
-            details: ['V4 紐⑤뜽 異쒖떆', '2遺?湲몄씠 ?뚯븙 ?앹꽦', '?ㅼ뼇???λⅤ 吏??],
+            desc: 'AI 음악 생성. 가사와 스타일을 입력하면 완성된 노래를 만들어줍니다.',
+            summary: 'V4 모델로 음질과 보컬이 크게 개선되었습니다.',
+            details: ['V4 모델 출시', '2분 길이 음악 생성', '다양한 장르 지원'],
             url: 'https://suno.ai'
         },
         {
@@ -551,9 +551,9 @@
             name: 'Remove.bg',
             category: 'art',
             icon: '<i class="fa-solid fa-eraser text-red-500"></i>',
-            desc: '諛곌꼍 ?쒓굅 ?꾨Ц ?꾧뎄. ?ъ쭊?먯꽌 ?щ엺?대굹 臾쇱껜留??④린怨?諛곌꼍??源붾걫?섍쾶 吏?뚯쨳?덈떎.',
-            summary: 'AI ?뺥솗?꾧? 99% ?섏??쇰줈 ?μ긽?섏뿀?듬땲??',
-            details: ['5珥??덉뿉 諛곌꼍 ?쒓굅', 'API ?쒓났', '???泥섎━ 吏??],
+            desc: '배경 제거 전문 도구. 사진에서 사람이나 물체만 남기고 배경을 깔끔하게 지워줍니다.',
+            summary: 'AI 정확도가 99% 수준으로 향상되었습니다.',
+            details: ['5초 안에 배경 제거', 'API 제공', '대량 처리 지원'],
             url: 'https://remove.bg'
         }
     ];
@@ -575,10 +575,10 @@
 
                 // Colors
                 let catText = '', catBg = '', catColor = '';
-                if (tool.category === 'ai') { catText = 'AI 鍮꾩꽌'; catBg = 'bg-blue-100'; catColor = 'text-blue-600'; }
-                else if (tool.category === 'dev') { catText = '媛쒕컻/肄붾뵫'; catBg = 'bg-purple-100'; catColor = 'text-purple-600'; }
-                else if (tool.category === 'art') { catText = '李쎌옉/?덉닠'; catBg = 'bg-orange-100'; catColor = 'text-orange-600'; }
-                else { catText = '?앹궛??; catBg = 'bg-green-100'; catColor = 'text-green-600'; }
+                if (tool.category === 'ai') { catText = 'AI 비서'; catBg = 'bg-blue-100'; catColor = 'text-blue-600'; }
+                else if (tool.category === 'dev') { catText = '개발/코딩'; catBg = 'bg-purple-100'; catColor = 'text-purple-600'; }
+                else if (tool.category === 'art') { catText = '창작/예술'; catBg = 'bg-orange-100'; catColor = 'text-orange-600'; }
+                else { catText = '생산성'; catBg = 'bg-green-100'; catColor = 'text-green-600'; }
 
                 card.innerHTML = `
                     <div class="flex items-center gap-4 mb-6">
@@ -595,7 +595,7 @@
                     </p>
                     <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
                         <span class="text-lg text-gray-400 font-mono"><i class="fa-regular fa-clock"></i> 1d ago</span>
-                        <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">?낅뜲?댄듃 ?뺤씤 <i class="fa-solid fa-arrow-right"></i></span>
+                        <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">업데이트 확인 <i class="fa-solid fa-arrow-right"></i></span>
                     </div>
                 `;
                 grid.appendChild(card);

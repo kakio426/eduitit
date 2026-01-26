@@ -1,6 +1,6 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}?쒕챸?섍린 - {{ session.title }}{% endblock %}
+{% block title %}서명하기 - {{ session.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -47,14 +47,15 @@
             <!-- Position/Class Input -->
             <div class="mb-6">
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    <i class="fa-solid fa-id-card mr-1"></i> 吏곸쐞/?숇뀈諛?                </label>
+                    <i class="fa-solid fa-id-card mr-1"></i> 직위/학년반
+                </label>
                 {{ form.participant_affiliation }}
             </div>
 
             <!-- Name Input -->
             <div class="mb-6">
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    <i class="fa-solid fa-user mr-1"></i> ?대쫫
+                    <i class="fa-solid fa-user mr-1"></i> 이름
                 </label>
                 {{ form.participant_name }}
             </div>
@@ -63,12 +64,12 @@
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-3">
                     <label class="block text-2xl font-bold text-gray-600">
-                        <i class="fa-solid fa-signature mr-1"></i> ?쒕챸
+                        <i class="fa-solid fa-signature mr-1"></i> 서명
                     </label>
                     {% if user.is_authenticated %}
                     <button type="button" onclick="loadMySignatures()"
                         class="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-200 transition">
-                        <i class="fa-solid fa-folder-open mr-1"></i>???쒕챸 遺덈윭?ㅺ린
+                        <i class="fa-solid fa-folder-open mr-1"></i>내 서명 불러오기
                     </button>
                     {% endif %}
                 </div>
@@ -80,7 +81,7 @@
                     </button>
                 </div>
                 {{ form.signature_data }}
-                <p class="text-lg text-gray-400 mt-2 text-center">??移몄뿉 ?쒕챸??二쇱꽭??/p>
+                <p class="text-lg text-gray-400 mt-2 text-center">위 칸에 서명해 주세요</p>
             </div>
 
             <!-- Saved Signatures Modal -->
@@ -91,7 +92,7 @@
                         class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                         <i class="fa-solid fa-xmark text-2xl"></i>
                     </button>
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">???쒕챸 蹂닿???/h3>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">내 서명 보관함</h3>
                     <div id="signatureList" class="grid grid-cols-2 gap-4 max-h-60 overflow-y-auto p-2">
                         <!-- JS Loaded -->
                     </div>
@@ -101,7 +102,7 @@
             <!-- Submit -->
             <button type="submit" id="submitBtn"
                 class="w-full clay-card py-4 text-2xl font-bold text-white bg-purple-500 hover:bg-purple-600 transition rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="fa-solid fa-paper-plane mr-2"></i>?쒕챸 ?쒖텧?섍린
+                <i class="fa-solid fa-paper-plane mr-2"></i>서명 제출하기
             </button>
         </form>
     </div>
@@ -145,7 +146,7 @@
         // Validate name
         if (!nameInput.value.trim()) {
             e.preventDefault();
-            alert('?대쫫???낅젰??二쇱꽭??');
+            alert('이름을 입력해 주세요.');
             nameInput.focus();
             return;
         }
@@ -153,7 +154,7 @@
         // Validate signature
         if (signaturePad.isEmpty()) {
             e.preventDefault();
-            alert('?쒕챸????二쇱꽭??');
+            alert('서명을 해 주세요.');
             return;
         }
 
@@ -184,14 +185,14 @@
                     list.appendChild(div);
                 });
             } else {
-                list.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">??λ맂 ?쒕챸???놁뒿?덈떎.</p>';
+                list.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">저장된 서명이 없습니다.</p>';
             }
 
             document.getElementById('signatureModal').classList.remove('hidden');
             document.getElementById('signatureModal').classList.add('flex');
         } catch (e) {
             console.error(e);
-            alert('?쒕챸 紐⑸줉??遺덈윭?ㅻ뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
+            alert('서명 목록을 불러오는 중 오류가 발생했습니다.');
         }
     }
 

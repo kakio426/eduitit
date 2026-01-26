@@ -1,9 +1,9 @@
-﻿{% extends 'autoarticle/wizard/base_wizard.html' %}
+{% extends 'autoarticle/wizard/base_wizard.html' %}
 {% block wizard_content %}
 <div class='clay-card p-20 bg-white shadow-clay rounded-[2rem] text-center'>
-<div class='mb-8 text-6xl'>??/div>
-<h3 class='text-4xl font-bold text-gray-800 mb-4'>Gemini媛 湲곗궗瑜??묒꽦?섍퀬 ?덉뒿?덈떎...</h3>
-<p class='text-xl text-gray-500 font-hand'>?됯퇏 10珥??뺣룄 ?뚯슂?⑸땲?? ?좎떆留?湲곕떎?ㅼ＜?몄슂.</p>
+<div class='mb-8 text-6xl'>✨</div>
+<h3 class='text-4xl font-bold text-gray-800 mb-4'>Gemini가 기사를 작성하고 있습니다...</h3>
+<p class='text-xl text-gray-500 font-hand'>평균 10초 정도 소요됩니다. 잠시만 기다려주세요.</p>
 <form id='genForm' method='post' action='{% url "autoarticle:create" %}'>
 {% csrf_token %}
 <input type='hidden' name='step' value='2'>

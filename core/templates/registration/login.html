@@ -1,7 +1,7 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% load socialaccount %}
 
-{% block title %}濡쒓렇??- Eduitit{% endblock %}
+{% block title %}로그인 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -85,23 +85,23 @@
                 class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-5xl mx-auto mb-8 float-icon">
                 <i class="fa-solid fa-user-shield"></i>
             </div>
-            <h1 class="text-6xl font-bold text-gray-700 mb-2">?쒖옉?섍린</h1>
-            <p class="text-2xl text-gray-400 font-hand">?좎깮?섏쓽 ?ㅻ쭏?명븳 鍮꾩꽌, ?먮??댄떚??/p>
+            <h1 class="text-6xl font-bold text-gray-700 mb-2">시작하기</h1>
+            <p class="text-2xl text-gray-400 font-hand">선생님의 스마트한 비서, 에듀이티잇</p>
         </div>
 
         <!-- Social Login Section -->
         <div class="mb-10">
             <a href="{% provider_login_url 'kakao' %}" class="social-btn btn-kakao shadow-sm">
-                <i class="fa-solid fa-comment text-2xl"></i> 移댁뭅?ㅻ줈 ?쒖옉?섍린
+                <i class="fa-solid fa-comment text-2xl"></i> 카카오로 시작하기
             </a>
             <a href="{% provider_login_url 'naver' %}" class="social-btn btn-naver shadow-sm">
-                <i class="fa-solid fa-n text-2xl"></i> ?ㅼ씠踰꾨줈 ?쒖옉?섍린
+                <i class="fa-solid fa-n text-2xl"></i> 네이버로 시작하기
             </a>
         </div>
 
         <div class="flex items-center gap-4 mb-10">
             <div class="flex-1 h-px bg-gray-200"></div>
-            <span class="text-gray-300 text-xl font-hand">?먮뒗</span>
+            <span class="text-gray-300 text-xl font-hand">또는</span>
             <div class="flex-1 h-px bg-gray-200"></div>
         </div>
 
@@ -110,32 +110,32 @@
         <div
             class="p-4 mb-6 rounded-2xl bg-red-50 text-red-500 text-lg shadow-sm border border-red-100 flex items-center gap-3">
             <i class="fa-solid fa-circle-exclamation"></i>
-            ?꾩씠???뱀? 鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.
+            아이디 혹은 비밀번호가 일치하지 않습니다.
         </div>
         {% endif %}
 
         <form method="post" class="space-y-6">
             {% csrf_token %}
             <div>
-                <label for="id_username" class="block text-xl font-bold text-gray-600 mb-2 ml-2">?꾩씠??/label>
+                <label for="id_username" class="block text-xl font-bold text-gray-600 mb-2 ml-2">아이디</label>
                 <input type="text" name="username" id="id_username" class="form-input" placeholder="Username" required>
             </div>
             <div>
-                <label for="id_password" class="block text-xl font-bold text-gray-600 mb-2 ml-2">鍮꾨?踰덊샇</label>
-                <input type="password" name="password" id="id_password" class="form-input" placeholder="?™™™™™™™?
+                <label for="id_password" class="block text-xl font-bold text-gray-600 mb-2 ml-2">비밀번호</label>
+                <input type="password" name="password" id="id_password" class="form-input" placeholder="••••••••"
                     required>
             </div>
 
             <button type="submit" class="btn-auth">
-                濡쒓렇??
+                로그인
             </button>
         </form>
 
         <div class="mt-12 text-center">
             <p class="text-gray-400 text-2xl font-hand">
-                ?꾩쭅 怨꾩젙???놁쑝?좉??? <br>
-                <a href="mailto:kakio@naver.com?subject=[Eduitit] ?뚯썝媛??臾몄쓽"
-                    class="text-purple-500 font-bold hover:underline">?뚯썝媛??臾몄쓽?섍린</a>
+                아직 계정이 없으신가요? <br>
+                <a href="mailto:kakio@naver.com?subject=[Eduitit] 회원가입 문의"
+                    class="text-purple-500 font-bold hover:underline">회원가입 문의하기</a>
             </p>
         </div>
     </div>

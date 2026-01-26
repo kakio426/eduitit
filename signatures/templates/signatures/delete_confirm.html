@@ -1,32 +1,31 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}?곗닔 ??젣 - Eduitit{% endblock %}
+{% block title %}연수 삭제 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-28 pb-16 px-4 min-h-screen">
     <div class="max-w-lg mx-auto">
         <div class="clay-card p-8 text-center">
             <i class="fa-solid fa-triangle-exclamation text-6xl text-red-400 mb-6"></i>
-            <h1 class="text-4xl font-bold text-gray-700 mb-4">?곗닔瑜???젣?섏떆寃좎뒿?덇퉴?</h1>
+            <h1 class="text-4xl font-bold text-gray-700 mb-4">연수를 삭제하시겠습니까?</h1>
             <p class="text-2xl text-gray-500 mb-2">{{ session.title }}</p>
             <p class="text-xl text-red-400 mb-8">
                 <i class="fa-solid fa-exclamation-circle mr-1"></i>
-                {{ session.signature_count }}媛쒖쓽 ?쒕챸???④퍡 ??젣?⑸땲??
+                {{ session.signature_count }}개의 서명이 함께 삭제됩니다.
             </p>
 
             <form method="post" class="flex gap-4 justify-center">
                 {% csrf_token %}
                 <button type="submit"
                     class="px-8 py-4 clay-card text-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition rounded-2xl">
-                    <i class="fa-solid fa-trash mr-2"></i>??젣?섍린
+                    <i class="fa-solid fa-trash mr-2"></i>삭제하기
                 </button>
                 <a href="{% url 'signatures:detail' uuid=session.uuid %}"
                     class="px-8 py-4 text-2xl font-bold text-gray-500 hover:text-gray-700 transition">
-                    痍⑥냼
+                    취소
                 </a>
             </form>
         </div>
     </div>
 </main>
 {% endblock %}
-
