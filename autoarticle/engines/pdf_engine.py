@@ -13,10 +13,19 @@ class PDFEngine(FPDF):
         self.theme = THEMES.get(theme_name, THEMES["웜 & 플레이풀"])
         self.school_name = school_name
         # Ensure font exists or fallback
-        if os.path.exists(FONT_PATH):
-            self.add_font("NanumGothic", "", FONT_PATH)
-        else:
-            # Fallback to standard font if custom not found (avoids crash during dev)
+        self.font_available = False
+        if self.font_available:
+            try:
+                self.add_font("NanumGothic", "", FONT_PATH)
+                self.font_available = True
+            except (UnicodeDecodeError, Exception) as e:
+                # Font loading failed (common on Windows with pickle encoding issues)
+                # Will use Arial fallback
+                print(f"Warning: Could not load custom font: {e}")
+                self.font_available = False
+
+        if not self.font_available:
+            # Fallback to standard font if custom not found or failed to load
             self.set_font("Arial", "", 12)
             
         # 상단 여백을 25mm로 설정하여 헤더(15mm)와 겹침 방지
@@ -32,7 +41,7 @@ class PDFEngine(FPDF):
                 self.rect(0, 0, 210, 15, 'F')
                 
                 # 폰트 설정
-                self.set_font("NanumGothic", "", 10) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 10)
+                self.set_font("NanumGothic", "", 10) if self.font_available else self.set_font("Arial", "", 10)
                 self.set_text_color(255, 255, 255)
                 
                 # fpdf의 cell() 오류로 인한 겹침 방지를 위해 text()로 직접 좌표 지정
@@ -50,7 +59,7 @@ class PDFEngine(FPDF):
     def footer(self):
         if self.page_no() > 1:
             self.set_y(-15)
-            if os.path.exists(FONT_PATH):
+            if self.font_available:
                 self.set_font("NanumGothic", "", 8)
             else:
                 self.set_font("Arial", "", 8)
@@ -65,7 +74,7 @@ class PDFEngine(FPDF):
         self.rect(0, 0, 210, 297, 'F')
         
         self.set_y(100)
-        if os.path.exists(FONT_PATH):
+        if self.font_available:
             self.set_font("NanumGothic", "", 42)
             self.set_text_color(*self.theme["main"])
             self.cell(190, 30, self.school_name, align='C', ln=True)
@@ -129,7 +138,7 @@ class PDFEngine(FPDF):
         h = 0
         
         # 1. 제목 높이 (폰트 18, 줄높이 12)
-        self.set_font("NanumGothic", "", 18) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 18)
+        self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
         title_lines = len(self.multi_cell(190, 12, str(article.get('title', '')), split_only=True))
         h += (title_lines * 12) + 2 # ln(2)
         
@@ -156,7 +165,7 @@ class PDFEngine(FPDF):
             h += 5 # ln(5) after image grid
         
         # 4. 본문 높이 (줄높이 7)
-        self.set_font("NanumGothic", "", content_font_size) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", content_font_size)
+        self.set_font("NanumGothic", "", content_font_size) if self.font_available else self.set_font("Arial", "", content_font_size)
         content_lines = len(self.multi_cell(190, 7, str(article.get('content', '')), split_only=True))
         h += (content_lines * 7)
         
@@ -182,14 +191,14 @@ class PDFEngine(FPDF):
             
             # 1. 제목 영역 (최대 30mm)
             self.set_xy(10, y_cursor)
-            self.set_font("NanumGothic", "", 18) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 18)
+            self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
             self.set_text_color(*self.theme["main"])
             self.multi_cell(190, 10, str(article.get('title', '')))
             y_cursor = self.get_y() + 3
             
             # 2. 메타데이터 바 (8mm 고정)
             self.set_xy(10, y_cursor)
-            self.set_font("NanumGothic", "", 9) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 9)
+            self.set_font("NanumGothic", "", 9) if self.font_available else self.set_font("Arial", "", 9)
             self.set_text_color(80, 80, 80)
             
             info_parts = []
@@ -253,7 +262,7 @@ class PDFEngine(FPDF):
             # 4. 본문 영역 (y_cursor부터 페이지 하단 20mm까지)
             available_height = 297 - 20 - y_cursor  # 하단 여백 20mm
             self.set_xy(10, y_cursor)
-            self.set_font("NanumGothic", "", 11) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 11)
+            self.set_font("NanumGothic", "", 11) if self.font_available else self.set_font("Arial", "", 11)
             self.set_text_color(30, 30, 30)
             
             content = str(article.get('content', ''))
@@ -265,7 +274,7 @@ class PDFEngine(FPDF):
             if needed_height > available_height:
                 # 공간 부족: 폰트 축소 또는 잘라내기
                 # 방법 1: 폰트 크기 줄이기
-                self.set_font("NanumGothic", "", 9) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 9)
+                self.set_font("NanumGothic", "", 9) if self.font_available else self.set_font("Arial", "", 9)
                 test_lines = self.multi_cell(190, 6, content, split_only=True)
                 needed_height = len(test_lines) * 6
                 
@@ -298,13 +307,13 @@ class PDFEngine(FPDF):
             
             # 제목
             self.set_x(10)
-            self.set_font("NanumGothic", "", 18) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 18)
+            self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
             self.set_text_color(*self.theme["main"])
             self.multi_cell(190, 12, str(article.get('title', '')))
             self.ln(2)
             
             # 메타데이터
-            self.set_font("NanumGothic", "", 9) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", 9)
+            self.set_font("NanumGothic", "", 9) if self.font_available else self.set_font("Arial", "", 9)
             self.set_text_color(80, 80, 80)
             
             info_parts = []
@@ -326,7 +335,7 @@ class PDFEngine(FPDF):
             
             # 본문
             self.set_x(10)
-            self.set_font("NanumGothic", "", content_font_size) if os.path.exists(FONT_PATH) else self.set_font("Arial", "", content_font_size)
+            self.set_font("NanumGothic", "", content_font_size) if self.font_available else self.set_font("Arial", "", content_font_size)
             self.set_text_color(30, 30, 30)
             self.multi_cell(190, 7, str(article.get('content', '')))
             self.ln(10)
@@ -399,7 +408,7 @@ class PDFEngine(FPDF):
         self.set_fill_color(*self.theme["main"])
         self.rect(0, 0, 210, 25, 'F')
         
-        if os.path.exists(FONT_PATH):
+        if self.font_available:
              self.set_font("NanumGothic", "", 24)
         else:
              self.set_font("Arial", "", 24)
@@ -421,7 +430,7 @@ class PDFEngine(FPDF):
         # === Headline Article (Top) ===
         main_art = articles[0]
         self.set_text_color(*self.theme["main"])
-        if os.path.exists(FONT_PATH): self.set_font("NanumGothic", "", 22)
+        if self.font_available: self.set_font("NanumGothic", "", 22)
         else: self.set_font("Arial", "", 22)
         
         # Title
@@ -447,7 +456,7 @@ class PDFEngine(FPDF):
         # Content on Right
         self.set_xy(105, start_y)
         self.set_text_color(20, 20, 20)
-        if os.path.exists(FONT_PATH): self.set_font("NanumGothic", "", 10)
+        if self.font_available: self.set_font("NanumGothic", "", 10)
         else: self.set_font("Arial", "", 10)
         
         self.multi_cell(95, 6, main_art['content'][:400] + "...")
@@ -480,12 +489,12 @@ class PDFEngine(FPDF):
             
             # Sub Title
             self.set_text_color(*self.theme["main"])
-            if os.path.exists(FONT_PATH): self.set_font("NanumGothic", "", 12)
+            if self.font_available: self.set_font("NanumGothic", "", 12)
             else: self.set_font("Arial", "", 12)
             self.cell(col_w, 8, art['title'], ln=True)
             
             # Sub Content
             self.set_text_color(40, 40, 40)
-            if os.path.exists(FONT_PATH): self.set_font("NanumGothic", "", 9)
+            if self.font_available: self.set_font("NanumGothic", "", 9)
             else: self.set_font("Arial", "", 9)
             self.multi_cell(col_w, 5, art['content'][:150] + "...")

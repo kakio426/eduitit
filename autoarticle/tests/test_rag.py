@@ -20,8 +20,26 @@ class StyleRAGServiceTest(TestCase):
         self.rag = StyleRAGService(persist_directory=self.test_dir)
 
     def tearDown(self):
-        # Cleanup temporary directory
-        shutil.rmtree(self.test_dir)
+        # Cleanup ChromaDB client first to release file handles (Windows issue)
+        try:
+            if hasattr(self.rag, 'client'):
+                del self.rag.client
+            del self.rag
+        except:
+            pass
+
+        # Cleanup temporary directory with retry logic for Windows
+        import time
+        for attempt in range(3):
+            try:
+                shutil.rmtree(self.test_dir)
+                break
+            except PermissionError:
+                if attempt < 2:
+                    time.sleep(0.5)  # Wait for file handles to be released
+                else:
+                    # Last attempt failed, but this is OK for temp directories
+                    pass
 
     def test_learn_style_and_retrieve(self):
         # 1. Learn a style correction

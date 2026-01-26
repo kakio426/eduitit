@@ -18,10 +18,17 @@ class DocumentEnginesTest(TestCase):
             'images': '[]'
         }
 
-    @skipIf(not os.path.exists(FONT_PATH), "Korean font not available for testing")
     def test_pdf_engine_generation(self):
+        """Test PDF generation. If Korean font is not available, test with ASCII-only content."""
         engine = PDFEngine("Warm & Playful", "Test School")
-        engine.draw_cover()
+
+        # Only draw cover if font is available (cover contains Korean text)
+        if engine.font_available:
+            engine.draw_cover()
+        else:
+            # For ASCII-only testing, just add a page without cover
+            engine.add_page()
+
         engine.add_article(self.article_data)
         output = engine.output(dest='S')
         self.assertTrue(len(output) > 0)

@@ -25,12 +25,14 @@ class AutoArticleUITest(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AutoArticle")
-        self.assertContains(response, f"openQuickView({self.product.id})")
+        self.assertContains(response, f"openModal('{self.product.id}')")
 
     def test_wizard_sidebar_navigation(self):
         """Verify that the wizard sidebar contains expected links."""
         response = self.client.get(reverse('autoarticle:create'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '전체 기사 보관함')
-        self.assertContains(response, '보관함')
-        self.assertContains(response, reverse('autoarticle:archive'))
+        # Check for archive link URL (rendered)
+        archive_url = reverse('autoarticle:archive')
+        self.assertContains(response, archive_url)
+        # Check for sidebar elements
+        self.assertContains(response, '환경 설정')
