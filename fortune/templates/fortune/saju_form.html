@@ -170,13 +170,18 @@
         font-weight: bold;
         border: none;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         text-decoration: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
 
     .share-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .share-btn:active {
+        transform: translateY(0) scale(0.98);
     }
 
     .share-btn.kakao {
@@ -704,8 +709,8 @@
                         <i class="fa-solid fa-lock"></i>
                     </div>
                     <div class="text-left">
-                        <h4 class="text-xl font-black text-slate-700">결과 저장 및 일진 무제한 확인</h4>
-                        <p class="text-slate-500 font-medium">가입하시면 이 결과를 저장하고 모든 날짜의 운세를 볼 수 있어요. 😊</p>
+                        <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
+                        <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리 볼 수 있어요. 😊</p>
                     </div>
                 </div>
                 <a href="{% url 'account_signup' %}"
@@ -894,12 +899,10 @@
 
     // 공유카드 업데이트
     function updateShareCard(markdown) {
-        // 제목에서 이름 추출
-        const nameMatch = markdown.match(/# 🔮\s*([^\s]+)\s*(선생님|님)/);
-        if (nameMatch) {
-            const titleElem = document.getElementById('shareCardTitle');
-            if (titleElem) titleElem.textContent = `🔮 ${nameMatch[1]} ${nameMatch[2]}의 사주`;
-        }
+        // 템플릿 변수에서 이름 가져오기 (가장 정확함)
+        const nameContext = "{{ name|default:'선생님' }}";
+        const titleElem = document.getElementById('shareCardTitle');
+        if (titleElem) titleElem.textContent = `🔮 ${nameContext} 선생님의 사주`;
 
         // 일간 정보 업데이트
         for (const [char, info] of Object.entries(ELEMENT_MAP)) {
@@ -912,7 +915,7 @@
             }
         }
 
-        // 키워드 추출 (올해의 키워드 섹션에서)
+        // 키워드 추출 시도 (실패 시 기본값)
         const keywordMatch = markdown.match(/키워드[^"]*"([^"]+)"[^"]*"([^"]+)"[^"]*"([^"]+)"/);
         if (keywordMatch) {
             const keywordsContainer = document.getElementById('shareCardKeywords');
@@ -924,8 +927,7 @@
                 `;
             }
         }
-
-        // 행운의 색 추출
+        // 행운의 색 추출 시도
         const colorMatch = markdown.match(/행운[^:]*색[^:]*[:：]\s*([가-힣]+색?)/);
         if (colorMatch) {
             const colorElem = document.getElementById('shareCardLuckyColor');

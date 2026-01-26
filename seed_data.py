@@ -8,11 +8,16 @@ def run():
     from products.models import Product, ProductFeature
     from insights.models import Insight
     from django.contrib.auth.models import User
+    from django.core.management import call_command
 
     # Create superuser if it doesn't exist
     if not User.objects.filter(username='admin').exists():
         User.objects.create_superuser('admin', 'admin@example.com', 'admin1234')
         print("Superuser 'admin' created successfully!")
+
+    # 0. Seed Saju Data (Stems, Branches, 60 Jiazi)
+    print("Seeding Saju core data...")
+    call_command('seed_saju_data')
 
     # Force re-seeding for clean state
     print("Cleaning database...")

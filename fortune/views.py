@@ -99,18 +99,32 @@ def saju_view(request):
                 error_message = "Gemini API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 등록해주세요."
             else:
                 try:
-                    # Gemini API Call
-                    response = client.models.generate_content(
-                        model=FIXED_MODEL_NAME,
-                        contents=prompt
-                    )
-
-                    result_html = response.text
+                    # Gemini API Call with simple retry for 503
+                    max_retries = 2
+                    import time
+                    for i in range(max_retries + 1):
+                        try:
+                            response = client.models.generate_content(
+                                model=FIXED_MODEL_NAME,
+                                contents=prompt
+                            )
+                            result_html = response.text
+                            break
+                        except Exception as e:
+                            if '503' in str(e) and i < max_retries:
+                                time.sleep(1.5)
+                                continue
+                            raise e
 
                 except Exception as e:
                     import logging
                     logging.exception("사주 분석 오류")
-                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({str(e)})"
+                    if "matching query does not exist" in str(e):
+                        error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
+                    elif "503" in str(e):
+                        error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
+                    else:
+                        error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({str(e)})"
     else:
         form = SajuForm()
 
@@ -159,10 +173,22 @@ def saju_api_view(request):
         return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
 
     try:
-        response = client.models.generate_content(
-            model=FIXED_MODEL_NAME,
-            contents=prompt
-        )
+        # GPT/Gemini API Call with retry
+        max_retries = 2
+        import time
+        response = None
+        for i in range(max_retries + 1):
+            try:
+                response = client.models.generate_content(
+                    model=FIXED_MODEL_NAME,
+                    contents=prompt
+                )
+                break
+            except Exception as e:
+                if '503' in str(e) and i < max_retries:
+                    time.sleep(1.5)
+                    continue
+                raise e
 
         return JsonResponse({
             'success': True,
@@ -179,7 +205,11 @@ def saju_api_view(request):
     except Exception as e:
         import logging
         logging.exception("사주 API 오류")
-        return JsonResponse({'error': 'AI 응답 생성 중 오류가 발생했습니다.'}, status=500)
+        if "matching query does not exist" in str(e):
+            return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다. 관리자에게 문의하세요.'}, status=500)
+        if "503" in str(e):
+             return JsonResponse({'error': 'AI_OVERLOADED', 'message': 'AI가 현재 너무 바쁩니다. 잠시 후 다시 시도해주세요.'}, status=503)
+        return JsonResponse({'error': 'AI_ERROR', 'message': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -224,10 +254,22 @@ def daily_fortune_api(request):
         if not client:
             return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
 
-        response = client.models.generate_content(
-            model=FIXED_MODEL_NAME,
-            contents=prompt
-        )
+        # Gemini API call with retry
+        max_retries = 1
+        import time
+        response = None
+        for i in range(max_retries + 1):
+            try:
+                response = client.models.generate_content(
+                    model=FIXED_MODEL_NAME,
+                    contents=prompt
+                )
+                break
+            except Exception as e:
+                if '503' in str(e) and i < max_retries:
+                    time.sleep(1)
+                    continue
+                raise e
 
         return JsonResponse({
             'success': True,
