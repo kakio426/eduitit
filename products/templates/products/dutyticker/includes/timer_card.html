@@ -1,28 +1,30 @@
 <!-- Timer Card Component -->
-<div id="timerCardRoot" class="h-full clay-card p-6 md:p-10 flex flex-col justify-between">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 md:mb-6">
-        <h3 class="text-xl md:text-2xl font-bold text-purple-500 uppercase tracking-widest">Timer</h3>
-        <div class="flex gap-2 md:gap-3">
-            <button onclick="window.dtApp.setTimerMode(180)"
-                class="timer-mode px-4 md:px-5 py-2 shadow-clay-inner bg-white/30 text-base md:text-lg font-bold text-gray-600 hover:bg-purple-500 hover:text-white rounded-xl">3분</button>
-            <button onclick="window.dtApp.setTimerMode(300)"
-                class="timer-mode px-4 md:px-5 py-2 shadow-clay-inner bg-white/30 text-base md:text-lg font-bold text-gray-600 hover:bg-purple-500 hover:text-white rounded-xl">5분</button>
-            <button onclick="window.dtApp.setTimerMode(600)"
-                class="timer-mode px-4 md:px-5 py-2 shadow-clay-inner bg-white/30 text-base md:text-lg font-bold text-gray-600 hover:bg-purple-500 hover:text-white rounded-xl">10분</button>
+<div id="timerCardRoot"
+    class="h-full clay-card p-6 md:p-8 flex flex-col justify-center items-center relative overflow-hidden bg-white/80">
+    <div class="absolute top-6 right-6 flex gap-3 z-10">
+        <button onclick="window.dtApp.setTimerMode(180)"
+            class="timer-mode px-6 py-3 shadow-clay-inner bg-gray-100 text-lg md:text-xl font-black text-gray-500 hover:bg-purple-500 hover:text-white rounded-2xl transition hover:scale-105 active:scale-95">3m</button>
+        <button onclick="window.dtApp.setTimerMode(300)"
+            class="timer-mode px-6 py-3 shadow-clay-inner bg-gray-100 text-lg md:text-xl font-black text-gray-500 hover:bg-purple-500 hover:text-white rounded-2xl transition hover:scale-105 active:scale-95">5m</button>
+        <button onclick="window.dtApp.setTimerMode(600)"
+            class="timer-mode px-6 py-3 shadow-clay-inner bg-gray-100 text-lg md:text-xl font-black text-gray-500 hover:bg-purple-500 hover:text-white rounded-2xl transition hover:scale-105 active:scale-95">10m</button>
+    </div>
+
+    <div class="flex items-center justify-center w-full h-full pb-4">
+        <div class="text-[6rem] md:text-[7rem] lg:text-[9rem] font-black font-mono tracking-tighter tabular-nums text-gray-800 leading-none transition-all duration-300 scale-90"
+            id="timerDisplay">
+            05:00
         </div>
     </div>
-    <div class="text-5xl md:text-7xl font-bold text-center tracking-tighter tabular-nums shadow-clay-inner py-4 md:py-6 bg-white/20 rounded-2xl text-gray-700"
-        id="timerDisplay">
-        05:00
-    </div>
-    <div class="flex gap-4 md:gap-6 justify-center mt-6 md:mt-8">
+
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-8 z-10">
         <button id="timerToggle"
-            class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-500 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-clay hover:shadow-clay-hover">
-            <i class="fa-solid fa-play text-xl md:text-2xl"></i>
+            class="w-20 h-20 rounded-full bg-purple-600 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-clay hover:shadow-clay-hover ring-4 ring-white/50">
+            <i class="fa-solid fa-play text-3xl pl-1"></i>
         </button>
         <button id="timerReset"
-            class="w-14 h-14 md:w-16 md:h-16 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-gray-700 transition-all">
-            <i class="fa-solid fa-rotate-right text-xl md:text-2xl"></i>
+            class="w-20 h-20 rounded-full bg-gray-200 shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-white transition-all">
+            <i class="fa-solid fa-rotate-right text-3xl"></i>
         </button>
     </div>
 </div>

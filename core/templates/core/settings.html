@@ -24,6 +24,7 @@
 
                 <p>복잡해 보일 수 있지만, 한 번만 설정해두면 모든 AI 도구를 <span class="underline decoration-purple-300">비용 걱정 없이</span> 가장
                     쾌적한 속도로 이용하실 수 있습니다.
+                    (API 설정 없이도 체험해 보실 수 있지만, 사용량에 제한이 있을 수 있어요!)<br>
                     아래 가이드에 따라 선생님만의 열쇠를 등록해보세요!</p>
             </div>
         </div>
@@ -90,6 +91,41 @@
                         </button>
                     </div>
                 </form>
+
+                <!-- My Saved Content Quick Links -->
+                <div class="clay-card p-10 space-y-8 bg-white/60" data-aos="fade-up">
+                    <div class="flex items-center gap-4 mb-2">
+                        <div
+                            class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+                            <i class="fa-solid fa-folder-open text-xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-700 font-round">내 보관함 관리</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="{% url 'fortune:history' %}"
+                            class="group p-6 bg-white rounded-3xl border-2 border-slate-100 hover:border-indigo-200 transition-all flex items-center gap-5">
+                            <div
+                                class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                🔮</div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">사주 보관함</h4>
+                                <p class="text-slate-400 font-medium font-hand text-lg">상담 기록 다시보기</p>
+                            </div>
+                        </a>
+
+                        <a href="{% url 'signatures:style_list' %}"
+                            class="group p-6 bg-white rounded-3xl border-2 border-slate-100 hover:border-purple-200 transition-all flex items-center gap-5">
+                            <div
+                                class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                ⭐</div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">서명 즐겨찾기</h4>
+                                <p class="text-slate-400 font-medium font-hand text-lg">나만의 서명 스타일</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- API Key Guide Sidebar -->

@@ -1,104 +1,477 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}DutyTicker - 교실 현황판{% endblock %}
+{% block title %}ClassBoard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'products/dutyticker/css/dutyticker.css' %}">
+<style>
+    :root {
+        --dt-bg: #0f172a;
+        --dt-card: rgba(30, 41, 59, 0.5);
+        --dt-indigo: #6366f1;
+        --dt-violet: #8b5cf6;
+        --dt-emerald: #10b981;
+    }
+
+    body {
+        background-color: var(--dt-bg);
+        color: #f8fafc;
+        overflow: hidden;
+    }
+
+    .glass-card {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    /* Animation Utilities */
+    @keyframes pulse-soft {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+    }
+
+    .animate-pulse-soft {
+        animation: pulse-soft 2s infinite ease-in-out;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dutyticker-container min-h-screen p-6 md:p-10 pt-40 md:pt-48 transition-colors duration-500">
-    <!-- Header -->
-    <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
-        <div class="space-y-2">
-            <h1 class="text-5xl md:text-6xl font-bold tracking-tight text-gray-700"
-                style="text-shadow: 4px 4px 8px rgba(163, 177, 198, 0.4);">DUTYTICKER</h1>
-            <p class="text-2xl md:text-3xl text-gray-400 font-hand uppercase tracking-[0.15em] ml-1">Classroom Status
-                Board</p>
-            <a href="{% url 'dt_admin_dashboard' %}"
-                class="inline-block mt-2 text-sm text-purple-400 hover:text-purple-600 underline">
-                <i class="fa-solid fa-gear mr-1"></i>설정 및 관리
-            </a>
+<!-- Main App Container -->
+<div id="mainAppContainer"
+    class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-hidden flex flex-col z-[100]">
 
+    <!-- Header -->
+    <header class="flex-shrink-0 flex justify-between items-center mb-6 px-2">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-xl"></i>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <span class="text-indigo-400 font-extrabold">Eduitit</span>
+                </h1>
+            </a>
         </div>
-        <div id="digitalClock" class="clay-card px-8 py-4 md:px-10 md:py-6">
-            <div class="text-4xl md:text-5xl font-bold tracking-tighter tabular-nums text-gray-700" id="clockTime">
-                00:00:00</div>
-            <div class="text-lg md:text-xl text-gray-400 font-hand uppercase tracking-widest mt-1" id="clockDate">
-                0000. 0. 0. Day</div>
+
+        <div class="flex items-center gap-3">
+            <div
+                class="hidden md:flex items-center gap-4 bg-slate-800/50 backdrop-blur-xl px-6 py-2 rounded-full border border-slate-700/50 shadow-xl">
+                <div class="flex items-center gap-2 text-slate-300">
+                    <i class="fa-regular fa-calendar text-indigo-400"></i>
+                    <span class="text-base font-medium" id="headerDate">--. --. (.)</span>
+                </div>
+                <!-- Schedule Strip -->
+                <div class="h-4 w-px bg-slate-700 hidden lg:block"></div>
+                <div id="headerScheduleStrip"
+                    class="hidden lg:flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[350px]">
+                    <!-- JS Populated -->
+                </div>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <div class="flex items-center gap-2 text-white font-mono text-xl font-bold tracking-wider">
+                    <i class="fa-regular fa-clock text-indigo-400"></i>
+                    <span id="headerTime">--:--</span>
+                </div>
+            </div>
+
+            <!-- Global Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="window.dtApp.toggleFullscreen()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="전체화면">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="소리 설정">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <a href="{% url 'dt_admin_dashboard' %}"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="설정">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
+                <div class="w-px h-6 bg-slate-700 mx-1"></div>
+                <a href="/"
+                    class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg border border-slate-700 transition"
+                    title="나가기">
+                    <i class="fa-solid fa-house"></i>
+                </a>
+            </div>
         </div>
     </header>
 
+    {% if not user.is_authenticated %}
+    <!-- Guest Mode Banner -->
+    <div id="guestBanner"
+        class="flex-shrink-0 mb-6 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top duration-700">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <div>
+                <p class="font-bold text-indigo-100">현재 게스트 모드입니다</p>
+                <p class="text-sm text-indigo-300">브라우저를 닫으면 학생 명과 설정이 사라져요. 😥</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'account_signup' %}"
+                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg hover:-translate-y-1">
+                계정 만들고 저장하기
+            </a>
+            <button onclick="this.closest('#guestBanner').remove()"
+                class="p-2 text-indigo-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+
     <!-- Main Grid -->
-    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 min-h-[60vh]">
-        <!-- Left Column: Current Role & Timer (7/12) -->
-        <div class="lg:col-span-7 flex flex-col gap-6">
-            <!-- Current Role Card -->
-            <div id="currentRoleContainer" class="flex-grow min-h-[300px]">
-                {% include 'products/dutyticker/includes/role_card.html' %}
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+
+        <!-- [Left Column - 8] Mission & Status -->
+        <div class="lg:col-span-8 flex flex-col gap-6 h-full min-h-0">
+
+            <!-- 1. Timer & Current Mission Card -->
+            <div
+                class="flex-1 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden flex flex-col items-center text-center border-4 border-indigo-500/20 group">
+
+                <!-- Decor -->
+                <div
+                    class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 opacity-80">
+                </div>
+                <div
+                    class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:bg-white/15 transition-all duration-1000">
+                </div>
+
+                <!-- Status Tag -->
+                <div
+                    class="flex-shrink-0 bg-black/20 backdrop-blur-md text-indigo-100 px-5 py-1.5 rounded-full text-sm font-bold mb-8 flex items-center gap-2 border border-white/5 shadow-lg z-10">
+                    <i class="fa-solid fa-headphones text-indigo-300"></i>
+                    <span>집중 시간</span>
+                </div>
+
+                <!-- Main Content (Timer + Message) -->
+                <div class="flex-1 flex flex-col justify-center items-center w-full min-h-0 z-10">
+                    <!-- Giant Timer -->
+                    <div id="mainTimerDisplay"
+                        class="font-mono text-[8rem] lg:text-[10rem] leading-none font-black tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95"
+                        onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
+                        05:00
+                    </div>
+
+                    <!-- Mission Text -->
+                    <div class="max-w-3xl px-4 relative group/mission">
+                        <div class="flex items-center justify-center gap-4 mb-3">
+                            <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep"
+                                id="mainMissionTitle">
+                                수학 익힘책 풀기
+                            </h2>
+                            <button onclick="window.dtApp.openMissionModal()"
+                                class="opacity-0 group-hover/mission:opacity-100 transition-opacity text-white/40 hover:text-white bg-white/10 w-10 h-10 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-pen-to-square text-sm"></i>
+                            </button>
+                        </div>
+                        <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep"
+                            id="mainMissionDesc">
+                            24~25페이지 풀고 채점하기
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Timer Controls -->
+                <div
+                    class="flex-shrink-0 mt-8 flex gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 translate-y-4 group-hover:translate-y-0">
+                    <button onclick="window.dtApp.setTimerMode(60)"
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1분</button>
+                    <button onclick="window.dtApp.setTimerMode(300)"
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">5분</button>
+                    <button onclick="window.dtApp.setTimerMode(600)"
+                        class="px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">10분</button>
+                    <div class="w-px h-auto bg-white/10 mx-1"></div>
+                    <button onclick="window.dtApp.resetTimer()"
+                        class="px-5 py-2.5 bg-red-500/20 backdrop-blur-xl rounded-xl text-red-200 font-extrabold hover:bg-red-500/40 border border-red-500/20 active:scale-95 transition-all">초기화</button>
+                </div>
             </div>
 
-            <!-- Timer Card -->
-            <div class="h-56 md:h-64">
-                {% include 'products/dutyticker/includes/timer_card.html' %}
+            <!-- 2. Student Status Grid (Bottom) -->
+            <div
+                class="h-64 bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex flex-col shadow-2xl">
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <div class="flex items-center gap-4">
+                        <h3 class="text-2xl font-black flex items-center gap-2 text-white">
+                            <span class="text-yellow-400">🏆</span>
+                            미션 현황
+                        </h3>
+                        <!-- Progress Bar -->
+                        <div
+                            class="flex items-center gap-4 ml-6 bg-slate-900/40 px-5 py-2.5 rounded-2xl border border-slate-700/50">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">완료율</div>
+                            <div
+                                class="w-48 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                                <div id="missionProgressBar"
+                                    class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 w-[0%] transition-all duration-1000 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+                                </div>
+                            </div>
+                            <div id="missionProgressText" class="text-sm font-black text-emerald-400 min-w-[30px]">0%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.dtApp.resetToMockup()"
+                            class="p-2.5 bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl transition-all"
+                            title="데이터 초기화">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Student Grid Container -->
+                <div id="mainStudentGrid"
+                    class="grid grid-cols-6 lg:grid-cols-8 gap-4 overflow-y-auto pr-2 custom-scrollbar h-full content-start">
+                    <!-- JS populated -->
+                </div>
             </div>
         </div>
 
-        <!-- Right Column: Timeline/List (5/12) -->
-        <div class="lg:col-span-5 min-h-[400px] lg:h-auto overflow-hidden">
-            {% include 'products/dutyticker/includes/timeline.html' %}
+        <!-- [Right Column - 4] Roles & Notices -->
+        <div class="lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
+
+            <!-- 3. Today's Roles -->
+            <div
+                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <h3 class="text-2xl font-black text-white flex items-center gap-2">
+                        <span
+                            class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
+                        오늘의 역할
+                    </h3>
+                    <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-slate-700 transition-all">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+
+                <div id="mainRoleList" class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- JS populated -->
+                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
+                        <div
+                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
+                        <div
+                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
+                            <i class="fa-solid fa-hand-sparkles"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
+                        <div
+                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
+                            <i class="fa-solid fa-book-open"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
+                            <div class="text-slate-400 text-sm">담당 학생</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Notices / Broadcast -->
+            <div
+                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 h-60 flex flex-col shadow-2xl">
+                <div class="flex justify-between items-start mb-4 px-2">
+                    <h3 class="text-xl font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
+                        <i class="fa-regular fa-bell text-yellow-400"></i>
+                        알림사항 없음
+                    </h3>
+                    <button id="broadcastToggleBtn"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
+                        onclick="window.dtApp.openBroadcastModal()">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 relative overflow-hidden">
+                    <p class="text-slate-400 font-bold leading-relaxed whitespace-pre-wrap" id="dashboardBroadcastText">
+                        클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.
+                    </p>
+                </div>
+            </div>
         </div>
     </main>
 
-    <!-- Modals -->
-    {% include 'products/dutyticker/includes/modals.html' %}
+    <!-- Footer Quote -->
+    <footer class="mt-4 text-center text-slate-600 text-sm font-medium">
+        "천리 길도 한 걸음부터! 오늘도 멋진 하루 보내자! 🚀"
+    </footer>
 
-    <!-- Overlays -->
-    <div id="alertOverlayContainer"></div>
-
-    <!-- Floating Action Button -->
-    <div class="fixed bottom-6 md:bottom-10 right-6 md:right-10 z-[90] flex flex-col gap-4 items-center">
-        <!-- Broadcast Button -->
-        <button id="broadcastBtn"
-            class="p-5 md:p-6 rounded-full shadow-clay transition-all relative overflow-hidden bg-purple-500 text-white hover:scale-105 hover:shadow-clay-hover active:scale-95"
-            title="새 방송 알림">
-            <div id="broadcastBtnSpin"
-                class="absolute inset-0 border-4 border-white/20 rounded-full border-t-white hidden animate-spin"></div>
-            <div class="relative z-10">
-                <i id="broadcastIcon" class="fa-solid fa-bullhorn text-3xl md:text-4xl"></i>
+    <!-- Modals (Hidden) -->
+    <div id="broadcastModal"
+        class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
+            <h3 class="text-2xl font-bold text-white mb-6">📢 알림사항 등록</h3>
+            <textarea id="broadcastInput" rows="4"
+                class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-6"
+                placeholder="학생들에게 전달할 내용을 입력하세요..."></textarea>
+            <div class="flex gap-4">
+                <button id="broadcastCancelBtn"
+                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
+                <button id="broadcastSubmitBtn"
+                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">등록하기</button>
             </div>
-        </button>
+        </div>
     </div>
+
+    <!-- Settings/Student Modal Reuse -->
+    <div id="studentModal"
+        class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-700 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white" id="studentModalTitle">학생 선택</h3>
+                <button onclick="window.dtApp.closeStudentModal()" class="text-slate-400 hover:text-white"><i
+                        class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div id="studentListGrid" class="grid grid-cols-4 gap-3 overflow-y-auto custom-scrollbar p-1">
+                <!-- Populated by JS -->
+            </div>
+            <div class="mt-6 pt-6 border-t border-slate-700 flex justify-end">
+                <button id="toggleRoleStatusBtn"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-check"></i> 완료 처리 / 취소
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Update Modal -->
+    <div id="missionModal"
+        class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
+            <h3 class="text-2xl font-bold text-white mb-6">🎯 미션 내용 변경</h3>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">대제목</label>
+                    <input id="missionTitleInput" type="text"
+                        class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                        placeholder="예: 수업 시간에 집중하기">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">소제목/설명</label>
+                    <textarea id="missionDescInput" rows="3"
+                        class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-base focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                        placeholder="예: 교과서 24쪽을 펴고 선생님을 보세요."></textarea>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="window.dtApp.closeMissionModal()"
+                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
+                <button onclick="window.dtApp.handleUpdateMission()"
+                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">변경하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tier Limit Modal (Friendly UX) -->
+    <div id="limitModal" class="fixed inset-0 z-[300] hidden items-center justify-center bg-black/90 backdrop-blur-md">
+        <div
+            class="bg-slate-800 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-lg border border-slate-700 text-center relative overflow-hidden">
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10">
+                <div
+                    class="w-20 h-20 bg-indigo-600/20 text-indigo-400 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="text-3xl font-black text-white mb-2">선생님, 고생 많으셨어요!</h3>
+                <p class="text-slate-400 text-lg mb-8 leading-relaxed">
+                    오늘의 소중한 기록이 <span class="text-indigo-400 font-bold">휘발성 메모리</span>에 가득 찼습니다.<br>
+                    가입하시면 이 데이터들을 안전한 클라우드로 옮겨 드릴까요? 😊
+                </p>
+
+                <div class="space-y-3">
+                    <a href="{% url 'account_signup' %}"
+                        class="block w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-xl shadow-indigo-600/30 hover:-translate-y-1">
+                        계정 만들고 데이터 보존하기
+                    </a>
+                    <button onclick="document.getElementById('limitModal').classList.add('hidden')"
+                        class="block w-full py-3 text-slate-500 hover:text-slate-300 font-bold transition-colors">
+                        나중에 할게요
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Audio Elements -->
+    <div id="audioContainer"></div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
-
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
 <script>
-    // Initialize Clock
-    function updateClock() {
+    // Header Clock Logic
+    function updateHeaderClock() {
         const now = new Date();
-        const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '. ') + '. ' +
-            ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()];
+        const dateStr = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+        const timeStr = now.toLocaleTimeString('ko-KR', { hour12: true, hour: '2-digit', minute: '2-digit' });
 
-        document.getElementById('clockTime').textContent = timeStr;
-        document.getElementById('clockDate').textContent = dateStr;
+        const dateEl = document.getElementById('headerDate');
+        const timeEl = document.getElementById('headerTime');
+        if (dateEl) dateEl.textContent = dateStr;
+        if (timeEl) timeEl.textContent = timeStr;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateHeaderClock, 1000);
+    updateHeaderClock();
 
-    // Initialize Main App Logic
+    // App Init
     document.addEventListener('DOMContentLoaded', () => {
         window.dtApp = new DutyTickerManager();
         window.dtApp.init();
-
-        // AOS refresh for dynamic content
-        if (typeof AOS !== 'undefined') {
-            AOS.refresh();
-        }
     });
 </script>
 {% endblock %}

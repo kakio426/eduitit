@@ -1,4 +1,4 @@
-<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
+﻿<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
     data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
     <div class="clay-card p-6 md:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
         role="button" tabindex="0" data-product-id="{{ product.id }}">
@@ -24,7 +24,6 @@
 
                 <div>
                     <span class="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2 block">{{ product.service_type|title }}</span>
-
                     <h3
                         class="{% if product.card_size == 'hero' %}text-2xl md:text-3xl lg:text-4xl{% else %}text-xl md:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                         {{ product.title }}
