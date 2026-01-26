@@ -9,12 +9,29 @@ from django.db.models import Count
 def home(request):
     # Order by display_order first, then by creation date
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
-    # Get the featured product with lowest display_order (highest priority)
-    featured_product = Product.objects.filter(is_active=True, is_featured=True).order_by('display_order').first()
-    # Fallback to the product with lowest display_order if no featured one is set
-    if not featured_product:
-        featured_product = products.first()
+    
+    # If user is logged in, show the "dashboard-style" authenticated home
+    if request.user.is_authenticated:
+        from django.db.models import Q
+        # Get IDs of products explicitly owned by the user
+        owned_ids = request.user.owned_products.values_list('product_id', flat=True)
+        # Filter products that are either owned or free, and exclude specific ones
+        available_products = products.filter(
+            Q(id__in=owned_ids) | Q(price=0)
+        ).exclude(
+            Q(title__icontains="인사이트") | Q(title__icontains="사주")
+        ).distinct()
         
+        # SNS Posts
+        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
+        
+        return render(request, 'core/home_authenticated.html', {
+            'products': available_products,
+            'posts': posts
+        })
+    
+    # Else show the public home
+    featured_product = products.filter(is_featured=True).first() or products.first()
     return render(request, 'core/home.html', {
         'products': products,
         'featured_product': featured_product
@@ -22,24 +39,7 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    from django.db.models import Q
-    # Get IDs of products explicitly owned by the user
-    owned_ids = request.user.owned_products.values_list('product_id', flat=True)
-    # Filter products that are either owned or free, and exclude specific ones
-    available_products = Product.objects.filter(
-        Q(id__in=owned_ids) | Q(price=0),
-        is_active=True
-    ).exclude(
-        Q(title__icontains="인사이트") | Q(title__icontains="사주")
-    ).order_by('display_order', '-created_at').distinct()
-    
-    # SNS Posts - Optimized with select_related to prevent N+1
-    posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
-    
-    return render(request, 'core/dashboard_sns.html', {
-        'products': available_products,
-        'posts': posts
-    })
+    return redirect('home')
 
 @login_required
 def post_create(request):
@@ -61,7 +61,7 @@ def post_create(request):
         posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
         return render(request, 'core/partials/post_list.html', {'posts': posts})
         
-    return redirect('dashboard')
+    return redirect('home')
 
 @login_required
 def post_like(request, pk):
@@ -74,7 +74,7 @@ def post_like(request, pk):
     if request.headers.get('HX-Request'):
         return render(request, 'core/partials/post_item.html', {'post': post})
         
-    return redirect('dashboard')
+    return redirect('home')
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')
