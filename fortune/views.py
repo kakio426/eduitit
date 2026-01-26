@@ -77,6 +77,8 @@ def saju_view(request):
         })
     result_html = None
     error_message = None
+    chart_context = None
+
 
     if request.method == 'POST':
         form = SajuForm(request.POST)
