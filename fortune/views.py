@@ -16,8 +16,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 # 선생님 요청 모델명
-# 재미용 콘텐츠 -> 가장 저렴한 Lite 모델 (현재 2.5 lite는 한도가 너무 적어 1.5 flash로 유지)
-FIXED_MODEL_NAME = "gemini-1.5-flash"
+# 재미용 콘텐츠 → 가장 저렴한 Lite 모델
+FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
 
 
 def get_gemini_client(request):
