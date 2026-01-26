@@ -21,3 +21,4 @@ Thumbs.db
 
 # Tool specific
 .claude/
+mcp_config.json
