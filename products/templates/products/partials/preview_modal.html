@@ -3,7 +3,7 @@
     <div class="flex flex-col md:flex-row items-center gap-10 text-center md:text-left">
         <!-- Floating Icon Box -->
         <div
-            class="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] shadow-clay-inner flex items-center justify-center text-5xl md:text-6xl shrink-0 
+            class="w-32 h-32 md:w-44 md:h-44 rounded-[2.8rem] shadow-clay-inner flex items-center justify-center text-8xl shrink-0 
                     {% if product.color_theme == 'dark' %}bg-gray-800 text-white{% else %}bg-white{% endif %} float-icon">
             {% if "fa-" in product.icon %}
             <i class="{{ product.icon }}"></i>
@@ -15,17 +15,17 @@
         <div class="flex-1 space-y-4">
             <div class="flex flex-wrap justify-center md:justify-start gap-3">
                 <span
-                    class="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-black uppercase tracking-widest shadow-sm">
+                    class="px-4 py-1.5 bg-purple-100 text-purple-600 rounded-2xl text-xl font-bold uppercase tracking-wider shadow-sm">
                     {{ product.get_service_type_display }}
                 </span>
                 {% if product.is_featured %}
                 <span
-                    class="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-xs font-black uppercase tracking-widest shadow-sm">
+                    class="px-4 py-1.5 bg-amber-100 text-amber-600 rounded-2xl text-xl font-bold uppercase tracking-wider shadow-sm">
                     Featured
                 </span>
                 {% endif %}
             </div>
-            <h3 class="text-3xl md:text-5xl font-black text-gray-800 leading-tight tracking-tight break-keep">
+            <h3 class="text-6xl md:text-8xl font-black text-gray-800 leading-none tracking-tight">
                 {{ product.title }}
             </h3>
         </div>
@@ -34,15 +34,17 @@
     <!-- Description Card -->
     <div class="space-y-8">
         {% if product.lead_text %}
-        <div class="relative pl-6 border-l-4 border-purple-500">
-            <p class="text-xl md:text-2xl text-gray-700 font-bold leading-relaxed break-keep">
+        <div class="relative">
+            <div class="absolute -left-4 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-400 to-blue-400 rounded-full">
+            </div>
+            <p class="text-4xl md:text-5xl text-gray-700 font-bold leading-relaxed break-keep pl-6 py-2">
                 {{ product.lead_text|linebreaksbr }}
             </p>
         </div>
         {% endif %}
 
-        <div class="bg-gray-50/50 rounded-3xl p-6 md:p-8 border border-gray-100 shadow-clay-inner">
-            <p class="text-base md:text-lg text-gray-600 font-medium leading-loose break-keep">
+        <div class="bg-gray-50/50 rounded-3xl p-8 border border-gray-100 shadow-clay-inner">
+            <p class="text-3xl md:text-3xl text-gray-500 font-hand leading-relaxed break-keep">
                 {{ product.description|linebreaksbr }}
             </p>
         </div>
@@ -50,17 +52,18 @@
 
     <!-- Key Features Section -->
     {% if features %}
-    <div class="bg-[#F8FAFC]/50 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-clay-inner border border-white/60">
-        <h4 class="text-lg font-black text-gray-400 mb-6 uppercase tracking-[0.2em] flex items-center gap-3">
-            <span class="w-8 h-1 bg-gray-200"></span>
+    <div
+        class="bg-[#F8FAFC]/50 backdrop-blur-sm rounded-[3.5rem] p-10 md:p-14 shadow-clay-inner border border-white/60">
+        <h4 class="text-2xl font-black text-gray-400 mb-12 uppercase tracking-[0.3em] flex items-center gap-4">
+            <span class="w-12 h-1 bg-gray-200"></span>
             Key Features
         </h4>
 
-        <div class="grid grid-cols-1 gap-8">
+        <div class="grid grid-cols-1 gap-14">
             {% for feature in features %}
-            <div class="flex items-start gap-6 group">
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-8 group">
                 <!-- Feature Icon -->
-                <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl shadow-sm group-hover:shadow-md transition-all duration-300 shrink-0 
+                <div class="w-20 h-20 rounded-[1.8rem] bg-white flex items-center justify-center text-4xl shadow-clay-sm group-hover:shadow-clay transition-all duration-300 shrink-0 
                             {% if product.color_theme == 'purple' %}text-purple-500
                             {% elif product.color_theme == 'green' %}text-green-500
                             {% elif product.color_theme == 'red' %}text-red-500
@@ -74,10 +77,9 @@
                     {% endif %}
                 </div>
 
-                <div class="flex-1 space-y-1">
-                    <h5 class="text-lg font-bold text-gray-800">{{ feature.title }}</h5>
-                    <p class="text-base text-gray-500 font-medium leading-relaxed break-keep">{{ feature.description }}
-                    </p>
+                <div class="flex-1 text-center md:text-left space-y-2">
+                    <h5 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight">{{ feature.title }}</h5>
+                    <p class="text-2xl md:text-3xl text-gray-500 font-hand leading-snug break-keep">{{ feature.description }}</p>
                 </div>
             </div>
             {% endfor %}
@@ -86,17 +88,18 @@
     {% endif %}
 
     <!-- Footer Action -->
-    <div class="pt-6 flex flex-col sm:flex-row items-center gap-4">
+    <div class="pt-8 flex flex-col sm:flex-row items-center gap-6">
         {% if product.external_url %}
         <a href="{{ product.external_url }}"
-            class="w-full sm:flex-[2] clay-btn bg-purple-600 text-white py-4 rounded-2xl font-bold text-xl text-center hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 group">
+            class="w-full sm:flex-[2] clay-btn bg-purple-600 text-white py-8 rounded-[2.5rem] font-bold text-4xl text-center hover:bg-purple-700 transition-all shadow-clay active:scale-95 flex items-center justify-center gap-4 group">
             서비스 시작하기
-            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            <i
+                class="fa-solid fa-rocket group-hover:-translate-y-2 group-hover:translate-x-2 transition-transform duration-300"></i>
         </a>
         {% endif %}
 
         <button onclick="closeModal()"
-            class="w-full sm:flex-1 py-4 rounded-2xl font-bold text-lg text-gray-400 hover:bg-gray-100 transition-colors uppercase tracking-widest">
+            class="w-full sm:flex-1 py-8 rounded-[2.5rem] font-bold text-3xl text-gray-400 hover:bg-gray-100 transition-colors uppercase tracking-widest">
             Close
         </button>
     </div>

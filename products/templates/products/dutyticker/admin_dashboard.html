@@ -1,48 +1,26 @@
 {% extends 'base.html' %}
-{% load static %}
-
-{% block title %}DutyTicker - 관리자 설정{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 pt-36 pb-20 min-h-screen max-w-7xl">
-    <div class="flex justify-between items-center mb-10" data-aos="fade-down">
-        <div>
-            <h1 class="text-4xl md:text-5xl font-black text-gray-700 tracking-tight mb-2">설정 및 관리</h1>
-            <p class="text-xl text-gray-400 font-bold">학생 명단과 역할, 순환 규칙을 관리하세요.</p>
-        </div>
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">DutyTicker 설정</h1>
         <a href="{% url 'dutyticker' %}"
-            class="group flex items-center gap-3 bg-white hover:text-purple-600 text-gray-500 font-bold py-3 px-6 rounded-full shadow-clay hover:shadow-clay-hover hover:scale-105 transition-all text-lg">
-            <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
-            <span>메인으로</span>
+            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">
+            대시보드로 돌아가기
         </a>
     </div>
 
     <!-- Rotation Control Panel -->
-    <div class="clay-card p-8 mb-12 bg-gradient-to-br from-purple-500 to-indigo-600 text-white relative overflow-hidden"
-        data-aos="fade-up">
-        <!-- Decor -->
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-center">
-            <div class="flex items-start gap-6">
-                <div
-                    class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shadow-inner border border-white/30">
-                    <i class="fa-solid fa-arrows-spin animate-spin-slow"></i>
-                </div>
-                <div>
-                    <h2 class="text-3xl font-black mb-2">역할 순환</h2>
-                    <p class="text-lg text-purple-100 font-medium opacity-90 leading-relaxed">
-                        버튼을 누르면 모든 학생의 역할이 한 칸씩 밀립니다.<br>
-                        <span class="text-sm opacity-75">* 주로 하루 일과가 끝난 후 또는 아침 조회 시간에 사용하세요.</span>
-                    </p>
-                </div>
-            </div>
-            <button onclick="rotateRoles()"
-                class="bg-white text-purple-600 hover:bg-gray-50 px-8 py-4 rounded-2xl font-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xl whitespace-nowrap flex items-center gap-3">
-                <i class="fa-solid fa-rotate"></i>
-                지금 순환하기
-            </button>
+    <div
+        class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl shadow-lg p-6 mb-8 text-white flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold mb-1"><i class="fa-solid fa-arrows-rotate mr-2"></i> 역할 순환</h2>
+            <p class="opacity-90">버튼을 누르면 모든 학생의 역할이 한 칸씩 밀립니다. (오늘의 역할 바꾸기)</p>
         </div>
+        <button onclick="rotateRoles()"
+            class="bg-white text-purple-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold shadow-md transition transform active:scale-95">
+            <i class="fa-solid fa-play mr-2"></i>지금 순환하기
+        </button>
     </div>
 
     <script>
@@ -70,123 +48,97 @@
         }
     </script>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <!-- Student Management -->
-        <div class="clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="100">
-            <div class="flex items-center gap-4 mb-8">
-                <div
-                    class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-2xl shadow-sm">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </div>
-                <h2 class="text-3xl font-bold text-gray-700">학생 명단</h2>
-            </div>
+        <div class="bg-white rounded-2xl shadow-clay p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700 flex items-center">
+                <span class="mr-2">👨‍🎓</span> 학생 명단
+            </h2>
 
-            <form action="{% url 'dt_admin_add_student' %}" method="POST" class="mb-8">
+            <form action="{% url 'dt_admin_add_student' %}" method="POST" class="mb-6">
                 {% csrf_token %}
-                <label class="block text-lg font-bold text-gray-500 mb-3 ml-2">학생 추가 (쉼표로 구분)</label>
-                <div class="flex gap-3">
+                <label class="block text-sm font-medium text-gray-600 mb-2">학생 추가 (쉼표로 구분하여 여러 명 추가 가능)</label>
+                <div class="flex gap-2">
                     <input type="text" name="names"
-                        class="flex-1 w-full px-6 py-4 rounded-xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-bold text-lg text-gray-700 placeholder-gray-400"
+                        class="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                         placeholder="예: 김철수, 이영희, 박민수">
                     <button type="submit"
-                        class="bg-blue-500 hover:bg-blue-600 text-white w-16 rounded-xl font-bold shadow-clay hover:shadow-clay-hover active:shadow-inner transition-all flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-plus"></i>
+                        class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition">
+                        추가
                     </button>
                 </div>
             </form>
 
-            <div class="max-h-[500px] overflow-y-auto space-y-3 pr-2 dt-scrollbar">
+            <div class="max-h-[400px] overflow-y-auto space-y-2">
                 {% for student in students %}
                 <div
-                    class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100/50 shadow-sm group hover:scale-[1.02] transition-transform">
-                    <div class="flex items-center gap-4">
+                    class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100 group hover:shadow-sm transition">
+                    <div class="flex items-center gap-3">
                         <span
-                            class="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 text-sm font-black rounded-lg">
+                            class="w-6 h-6 flex items-center justify-center bg-gray-200 text-gray-600 text-xs font-bold rounded-full">
                             {{ student.number }}
                         </span>
-                        <span class="font-bold text-xl text-gray-700">{{ student.name }}</span>
+                        <span class="font-medium text-gray-700">{{ student.name }}</span>
                     </div>
                     <a href="{% url 'dt_admin_delete_student' student.pk %}"
-                        class="w-10 h-10 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
-                        title="삭제">
+                        class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition px-2">
                         <i class="fa-solid fa-trash"></i>
                     </a>
                 </div>
                 {% empty %}
-                <div class="text-center py-10 opacity-50">
-                    <i class="fa-solid fa-user-slash text-4xl mb-3 text-gray-300"></i>
-                    <p class="text-gray-400 text-lg font-bold">등록된 학생이 없습니다.</p>
-                </div>
+                <p class="text-gray-400 text-center py-4">등록된 학생이 없습니다.</p>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Role Management -->
-        <div class="clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="200">
-            <div class="flex items-center gap-4 mb-8">
-                <div
-                    class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-2xl shadow-sm">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </div>
-                <h2 class="text-3xl font-bold text-gray-700">역할 관리</h2>
-            </div>
+        <div class="bg-white rounded-2xl shadow-clay p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700 flex items-center">
+                <span class="mr-2">📋</span> 역할 관리
+            </h2>
 
-            <form action="{% url 'dt_admin_add_role' %}" method="POST" class="mb-8 space-y-4">
+            <form action="{% url 'dt_admin_add_role' %}" method="POST" class="mb-6 space-y-3">
                 {% csrf_token %}
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-500 mb-2 ml-2">역할 이름</label>
-                        <input type="text" name="name"
-                            class="w-full px-5 py-3 rounded-xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-gray-700"
-                            placeholder="예: 칠판 지우기" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-500 mb-2 ml-2">수행 시간</label>
-                        <input type="text" name="time_slot"
-                            class="w-full px-5 py-3 rounded-xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-gray-700"
-                            placeholder="예: 쉬는시간">
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">역할 이름</label>
+                    <input type="text" name="name"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="예: 칠판 지우기">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-500 mb-2 ml-2">설명 (선택)</label>
-                    <div class="flex gap-3">
-                        <input type="text" name="description"
-                            class="flex-1 px-5 py-3 rounded-xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-gray-700"
-                            placeholder="상세 설명">
-                        <button type="submit"
-                            class="bg-purple-500 hover:bg-purple-600 text-white w-14 rounded-xl font-bold shadow-clay hover:shadow-clay-hover active:shadow-inner transition-all flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                    </div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">수행 시간</label>
+                    <input type="text" name="time_slot"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="예: 쉬는시간, 점심시간">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">설명</label>
+                    <input type="text" name="description"
+                        class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="역할에 대한 상세 설명">
+                </div>
+                <button type="submit"
+                    class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-bold shadow-sm transition">
+                    역할 생성
+                </button>
             </form>
 
-            <div class="max-h-[500px] overflow-y-auto space-y-3 pr-2 dt-scrollbar">
+            <div class="max-h-[400px] overflow-y-auto space-y-2">
                 {% for role in roles %}
                 <div
-                    class="flex justify-between items-center bg-gray-50 p-5 rounded-2xl border border-gray-100/50 shadow-sm group hover:scale-[1.02] transition-transform relative overflow-hidden">
-                    <div class="relative z-10">
-                        <div class="flex items-center gap-3 mb-1">
-                            <h3 class="font-black text-xl text-gray-800">{{ role.name }}</h3>
-                            {% if role.time_slot %}
-                            <span
-                                class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-lg border border-purple-200">{{ role.time_slot }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-sm text-gray-500 font-bold opacity-80 pl-0.5">{{ role.description|default:"-" }}
-                        </p>
+                    class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100 group hover:shadow-sm transition">
+                    <div>
+                        <h3 class="font-bold text-gray-800">{{ role.name }}</h3>
+                        <p class="text-sm text-purple-500 font-medium">{{ role.time_slot }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ role.description }}</p>
                     </div>
                     <a href="{% url 'dt_admin_delete_role' role.pk %}"
-                        class="w-10 h-10 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10"
-                        title="삭제">
+                        class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition px-2">
                         <i class="fa-solid fa-trash"></i>
                     </a>
                 </div>
                 {% empty %}
-                <div class="text-center py-10 opacity-50">
-                    <i class="fa-solid fa-clipboard-question text-4xl mb-3 text-gray-300"></i>
-                    <p class="text-gray-400 text-lg font-bold">등록된 역할이 없습니다.</p>
-                </div>
+                <p class="text-gray-400 text-center py-4">등록된 역할이 없습니다.</p>
                 {% endfor %}
             </div>
         </div>

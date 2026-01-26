@@ -13,9 +13,9 @@
 
     /* 마크다운 스타일 커스텀 */
     .markdown-body {
-        font-family: 'NanumSquareRound', sans-serif;
-        font-size: 1.05rem;
-        line-height: 1.7;
+        font-family: 'Dongle', sans-serif;
+        font-size: 1.8rem;
+        line-height: 1.6;
         color: #4a5568;
         word-break: keep-all;
         overflow-wrap: break-word;
@@ -53,15 +53,15 @@
     }
 
     .markdown-body h1 {
-        font-size: 1.75rem;
+        font-size: 3rem;
     }
 
     .markdown-body h2 {
-        font-size: 1.5rem;
+        font-size: 2.5rem;
     }
 
     .markdown-body h3 {
-        font-size: 1.25rem;
+        font-size: 2.2rem;
     }
 
     .markdown-body p {
@@ -102,8 +102,8 @@
         gap: 10px;
         padding: 8px 18px;
         border-radius: 100px;
-        font-size: 1.1rem;
-        font-weight: 800;
+        font-size: 1.6rem;
+        font-weight: bold;
         color: white;
         margin-bottom: 1.5rem;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -145,8 +145,8 @@
     }
 
     .share-title {
-        font-size: 1.1rem;
-        font-weight: 800;
+        font-size: 1.6rem;
+        font-weight: bold;
         color: #64748b;
         margin-bottom: 1rem;
         display: flex;
@@ -205,7 +205,7 @@
         background: linear-gradient(145deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         border-radius: 32px;
         color: white;
-        font-family: 'NanumSquareRound', sans-serif;
+        font-family: 'Dongle', sans-serif;
     }
 
     .share-card-inner {
@@ -477,7 +477,7 @@
         <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-4">
             사주 <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-500">운세</span>
         </h1>
-        <p class="text-xl text-gray-500 font-bold">
+        <p class="text-2xl text-gray-500 font-hand">
             AI가 분석하는 나만의 사주팔자와 운세
         </p>
     </div>
@@ -643,78 +643,6 @@
                 </button>
             </div>
         </div>
-
-        <hr class="my-10 border-slate-200">
-
-        <!-- 특정 날짜 운세 (일진) -->
-        <div class="bg-indigo-50/50 rounded-3xl p-8 border border-indigo-100 mb-8">
-            <div class="flex items-center gap-3 mb-6">
-                <div
-                    class="w-10 h-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-calendar-check"></i>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-black text-slate-700">날짜별 운세 확인</h3>
-                    <p class="text-slate-500 font-medium">중요한 행사나 모임이 있는 날의 운세를 확인해보세요.</p>
-                </div>
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-4 items-center">
-                <input type="date" id="targetDateInput" value="{% now 'Y-m-d' %}"
-                    class="flex-1 w-full bg-white border-2 border-indigo-100 rounded-2xl p-4 text-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
-                <button onclick="checkDailyFortune()"
-                    class="w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                    운세 보기
-                </button>
-            </div>
-
-            <div id="dailyFortuneResult" class="mt-8 hidden animate-in fade-in slide-in-from-top duration-500">
-                <div class="bg-white rounded-2xl p-6 border border-indigo-50 shadow-sm markdown-body"
-                    id="dailyFortuneContent">
-                    <!-- JS Populated -->
-                </div>
-            </div>
-        </div>
-
-        {% if user.is_authenticated %}
-        <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="fa-solid fa-bookmark"></i>
-                    </div>
-                    <div class="text-left">
-                        <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
-                        <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
-                    </div>
-                </div>
-                <button onclick="saveToLibrary()"
-                    class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                    보관함에 저장
-                </button>
-            </div>
-        </div>
-        {% else %}
-        <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="fa-solid fa-lock"></i>
-                    </div>
-                    <div class="text-left">
-                        <h4 class="text-xl font-black text-slate-700">결과 저장 및 일진 무제한 확인</h4>
-                        <p class="text-slate-500 font-medium">가입하시면 이 결과를 저장하고 모든 날짜의 운세를 볼 수 있어요. 😊</p>
-                    </div>
-                </div>
-                <a href="{% url 'account_signup' %}"
-                    class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                    가입하고 혜택 받기
-                </a>
-            </div>
-        </div>
-        {% endif %}
         {% endif %}
 
         <div class="mt-10 text-center">
@@ -834,7 +762,6 @@
 
 {% if result %}
 {{ result|json_script:"saju-result-data" }}
-{{ chart|json_script:"saju-chart-data" }}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const resultDataElem = document.getElementById('saju-result-data');
@@ -1027,137 +954,6 @@
             console.error(err);
             showToast('이미지 저장에 실패했습니다.');
         });
-    }
-
-    // 일진(하루 운세) 확인 로직
-    async function checkDailyFortune() {
-        const targetDate = document.getElementById('targetDateInput').value;
-        if (!targetDate) return;
-
-        // 결과 영역에서 명식 추출 (또는 이미 저장된 데이터 사용)
-        // 여기서는 간단하게 서버에서 아까 계산해준 chart 정보를 활용하거나 파싱
-        const chartDataElem = document.getElementById('saju-chart-data');
-        let natalChart = {};
-
-        if (chartDataElem) {
-            natalChart = JSON.parse(chartDataElem.textContent);
-        } else {
-            // Fallback to parsing from markdown if chart-data is missing
-            const resultText = document.getElementById('markdownResult').innerText;
-            const yearMatch = resultText.match(/년주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const monthMatch = resultText.match(/월주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const hourMatch = resultText.match(/시주[^가-힣]*[:：]\s*([가-힣]{2})/);
-
-            if (yearMatch) natalChart.year = yearMatch[1];
-            if (monthMatch) natalChart.month = monthMatch[1];
-            if (dayMatch) natalChart.day = dayMatch[1];
-            if (hourMatch) natalChart.hour = hourMatch[1];
-        }
-
-        if (!natalChart.day) {
-            showToast('원국 분석 후 일진을 확인할 수 있습니다.');
-            return;
-        }
-
-        // 비회원 미래 날짜 제한 (예시)
-        const isGuest = "{{ user.is_authenticated }}" === "False";
-        const selectedDate = new Date(targetDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (isGuest && selectedDate > today) {
-            alert('선생님, 미래의 운세는 회원가입 후에 확인하실 수 있어요! 😊');
-            return;
-        }
-
-        document.getElementById('loadingOverlay').classList.add('show');
-
-        try {
-            const response = await fetch('{% url "fortune:daily_fortune_api" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({
-                    target_date: targetDate,
-                    natal_chart: natalChart,
-                    name: "{{ name|default:'선생님' }}",
-                    gender: "{{ gender|default:'female' }}"
-                })
-            });
-
-            const data = await response.json();
-            document.getElementById('loadingOverlay').classList.remove('show');
-
-            if (response.status === 429) {
-                alert(data.message);
-                return;
-            }
-
-            if (data.success) {
-                const dailyResultDiv = document.getElementById('dailyFortuneResult');
-                const dailyContentDiv = document.getElementById('dailyFortuneContent');
-                dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
-                dailyResultDiv.classList.remove('hidden');
-                dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                showToast(data.error || '분석 중 오류가 발생했습니다.');
-            }
-        } catch (e) {
-            document.getElementById('loadingOverlay').classList.remove('show');
-            console.error(e);
-            showToast('서버 통신 오류가 발생했습니다.');
-        }
-    }
-
-    async function saveToLibrary() {
-        const resultText = document.getElementById('markdownResult').innerText;
-        const chartDataElem = document.getElementById('saju-chart-data');
-        let natalChart = {};
-
-        if (chartDataElem) {
-            natalChart = JSON.parse(chartDataElem.textContent);
-        } else {
-            const yearMatch = resultText.match(/년주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const monthMatch = resultText.match(/월주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const hourMatch = resultText.match(/시주[^가-힣]*[:：]\s*([가-힣]{2})/);
-
-            if (yearMatch) natalChart.year = yearMatch[1];
-            if (monthMatch) natalChart.month = monthMatch[1];
-            if (dayMatch) natalChart.day = dayMatch[1];
-            if (hourMatch) natalChart.hour = hourMatch[1];
-        }
-
-        // 일진 결과가 있으면 같이 보관 (또는 따로 보관)
-        const dailyText = document.getElementById('dailyFortuneResult').classList.contains('hidden') ? null : document.getElementById('dailyFortuneContent').innerText;
-
-        try {
-            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({
-                    mode: dailyText ? 'daily' : 'teacher', // 간단하게
-                    natal_chart: natalChart,
-                    result_text: dailyText ? dailyText : resultText,
-                    target_date: dailyText ? document.getElementById('targetDateInput').value : null
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                showToast('성공적으로 보관함에 저장되었습니다! 🎁');
-            } else {
-                showToast('저장 실패: ' + data.error);
-            }
-        } catch (e) {
-            showToast('서버 통신 오류가 발생했습니다.');
-        }
     }
 </script>
 {% endif %}
