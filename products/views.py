@@ -47,4 +47,4 @@ def dutyticker_view(request):
             'suggestion': 'PC나 태블릿으로 접속해주세요!'
         })
 
-    return render(request, 'products/dutyticker/main.html')
+    return render(request, 'products/dutyticker/main.html', {'hide_navbar': True})

@@ -20,7 +20,6 @@ def get_calendar_korean(calendar_type):
     return "양력" if calendar_type == "solar" else "음력"
 
 
-
 def get_teacher_prompt(data, chart_context=None):
     """교사 맞춤형 사주 분석 프롬프트"""
     time_str = get_time_string(data.get('birth_hour'), data.get('birth_minute'))
@@ -164,6 +163,48 @@ def get_general_prompt(data, chart_context=None):
 💫 {data['name']}님의 행복한 미래를 응원합니다!
 """
 
+def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context):
+    """특정 날짜의 일진(운세) 분석 프롬프트"""
+    gender_str = get_gender_korean(gender)
+    
+    return f"""
+당신은 명리학 전문가입니다. 사용자의 사주 원국과 특정 날짜의 운로(일진)를 비교하여 오늘의 운세를 분석해주세요.
+
+[사용자 정보]
+- 이름: {name}
+- 성별: {gender_str}
+
+[사주 원국 (Natal Chart)]
+- 년주: {natal_context['year']['stem']}{natal_context['year']['branch']}
+- 월주: {natal_context['month']['stem']}{natal_context['month']['branch']}
+- 일주: {natal_context['day']['stem']}{natal_context['day']['branch']}
+- 시주: {natal_context['hour']['stem']}{natal_context['hour']['branch']}
+
+[분속 대상 날짜 (Target Date)]
+- 날짜: {target_date.strftime('%Y년 %m월 %d일')}
+- 일진(오늘의 간지): {target_context['day']['stem']}{target_context['day']['branch']}
+- 월운(이달의 간지): {target_context['month']['stem']}{target_context['month']['branch']}
+
+[분석 지침]
+1. 사용자의 **일간(Day Master)**과 오늘의 간지 사이의 생극제화(生剋制化)를 중심으로 분석하세요.
+2. **십신(Ten Gods)** 관계를 활용하여 오늘 어떤 에너지가 강한지 설명하세요. (예: 정재운, 식신운 등)
+3. 말투는 다정하고 긍정적으로, '오늘 선생님에게는 ~한 기운이 찾아오네요'와 같은 느낌으로 작성하세요.
+4. 모바일 최적화를 위해 짧은 문장 위주로 작성하세요.
+
+[출력 형식 - Markdown]
+## 📅 {target_date.strftime('%m월 %d일')} 오늘의 운세 요약
+- (한 줄 요약)
+
+## 🌟 오늘의 주요 기운
+- (비견/식신/재성 등 주요 십신 설명과 그 의미)
+
+## 💡 선생님을 위한 조언
+- (행동 지침, 주의할 점)
+
+## 🍀 행운 코드
+- **행운의 시간**: 
+- **행운의 색상**: 
+"""
 
 def get_prompt(mode, data, chart_context=None):
     """모드에 따른 프롬프트 반환"""

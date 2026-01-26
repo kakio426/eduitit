@@ -78,9 +78,9 @@ def get_welcome_message() -> str:
     return "안녕하세요! 패들릿 내용에 대해 질문해 주세요."
 
 
-@login_required
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='GET', block=False)
 def chat_view(request):
-    """채팅 메인 뷰 (로그인 필요)"""
+    """채팅 메인 뷰 (Guest: 3/h, Member: 10/h)"""
     # 세션에서 채팅 기록 가져오기 (최대 50개 유지)
     chat_history = request.session.get('padlet_chat_history', [])[-50:]
 
@@ -108,20 +108,23 @@ def chat_view(request):
     })
 
 
-@login_required
 def clear_chat(request):
-    """채팅 기록 삭제 (AJAX, 로그인 필요)"""
+    """채팅 기록 삭제 (AJAX)"""
     if request.method == 'POST':
         request.session['padlet_chat_history'] = []
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
 @require_POST
 def send_message(request):
-    """메시지 전송 및 AI 응답 (AJAX, 로그인 필요)"""
+    """메시지 전송 및 AI 응답 (Guest: 3/h, Member: 10/h)"""
+    if getattr(request, 'limited', False):
+        return JsonResponse({
+            'error': 'LIMIT_EXCEEDED',
+            'message': '오늘의 무료 봇 사용 한도에 도달했습니다. 가입하시면 더 많은 질문을 하실 수 있습니다! 😊'
+        }, status=429)
     user_message = request.POST.get('message', '').strip()
 
     if not user_message:

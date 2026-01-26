@@ -11,6 +11,9 @@ from .prompts import get_prompt
 from .libs import calculator
 from datetime import datetime
 import pytz
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 # 선생님 요청 모델명
 # 재미용 콘텐츠 → 가장 저렴한 Lite 모델
@@ -64,10 +67,14 @@ def get_chart_context(data):
         return None
 
 
-@login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
 def saju_view(request):
-    """사주 분석 메인 뷰 (마스터키: 10회/시간, 개인키: 무제한)"""
+    """사주 분석 메인 뷰 (Guest: 3/h, Member: 10/h)"""
+    if getattr(request, 'limited', False):
+        return render(request, 'fortune/saju_form.html', {
+            'form': SajuForm(request.POST),
+            'error': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+        })
     result_html = None
     error_message = None
 
@@ -109,14 +116,27 @@ def saju_view(request):
         'form': form,
         'result': result_html,
         'error': error_message,
+        'name': request.POST.get('name') if request.method == 'POST' else None,
+        'gender': request.POST.get('gender') if request.method == 'POST' else None,
+        'chart': {
+            'year': str(chart_context['year']['stem']) + str(chart_context['year']['branch']),
+            'month': str(chart_context['month']['stem']) + str(chart_context['month']['branch']),
+            'day': str(chart_context['day']['stem']) + str(chart_context['day']['branch']),
+            'hour': str(chart_context['hour']['stem']) + str(chart_context['hour']['branch']),
+        } if chart_context else None,
         'kakao_js_key': settings.KAKAO_JS_KEY,
     })
 
 
-@login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
 def saju_api_view(request):
-    """사주 분석 API (마스터키: 10회/시간, 개인키: 무제한)"""
+    """사주 분석 API (Guest: 3/h, Member: 10/h)"""
+    if getattr(request, 'limited', False):
+        return JsonResponse({
+            'error': 'LIMIT_EXCEEDED',
+            'message': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+        }, status=429)
+
     if request.method != 'POST':
         return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
 
@@ -158,3 +178,108 @@ def saju_api_view(request):
         import logging
         logging.exception("사주 API 오류")
         return JsonResponse({'error': 'AI 응답 생성 중 오류가 발생했습니다.'}, status=500)
+
+
+@csrf_exempt
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
+def daily_fortune_api(request):
+    """특정 날짜의 일진(운세) 분석 API (Guest: 3/h, Member: 10/h)"""
+    if getattr(request, 'limited', False):
+        return JsonResponse({
+            'error': 'LIMIT_EXCEEDED',
+            'message': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+        }, status=429)
+
+    try:
+        data = json.loads(request.body)
+        target_date_str = data.get('target_date') # YYYY-MM-DD
+        natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
+        name = data.get('name', '선생님')
+        gender = data.get('gender', 'female')
+
+        if not target_date_str:
+            return JsonResponse({'error': 'Target date required'}, status=400)
+
+        # Parse target date and get its pillars
+        target_dt = datetime.strptime(target_date_str, '%Y-%m-%d')
+        tz = pytz.timezone('Asia/Seoul')
+        target_dt = tz.localize(target_dt).replace(hour=12) # Noon check
+        target_context = calculator.get_pillars(target_dt)
+
+        # Build Natal Context from strings
+        natal_context = {
+            'year': {'stem': natal_data['year'][:1], 'branch': natal_data['year'][1:]},
+            'month': {'stem': natal_data['month'][:1], 'branch': natal_data['month'][1:]},
+            'day': {'stem': natal_data['day'][:1], 'branch': natal_data['day'][1:]},
+            'hour': {'stem': natal_data['hour'][:1], 'branch': natal_data['hour'][1:]}
+        }
+
+        # Prompt
+        from .prompts import get_daily_fortune_prompt
+        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
+
+        client = get_gemini_client(request)
+        if not client:
+            return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
+
+        response = client.models.generate_content(
+            model=FIXED_MODEL_NAME,
+            contents=prompt
+        )
+
+        return JsonResponse({
+            'success': True,
+            'result': response.text,
+            'target_date': target_date_str
+        })
+
+    except Exception as e:
+        import logging
+        logging.exception("일진 API 오류")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def save_fortune_api(request):
+    """결과 저장 API (회원 전용)"""
+    try:
+        data = json.loads(request.body)
+        from .models import FortuneResult
+        
+        FortuneResult.objects.create(
+            user=request.user,
+            mode=data.get('mode', 'teacher'),
+            natal_chart=data.get('natal_chart'),
+            result_text=data.get('result_text'),
+            target_date=data.get('target_date') if data.get('target_date') else None
+        )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def saju_history(request):
+    """내 사주 보관함 목록"""
+    from .models import FortuneResult
+    history = FortuneResult.objects.filter(user=request.user)
+    return render(request, 'fortune/history.html', {'history': history})
+
+
+@login_required
+@require_POST
+def delete_history_api(request, pk):
+    """보관함 항목 삭제"""
+    from .models import FortuneResult
+    item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
+    item.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+def saju_history_detail(request, pk):
+    """보관함 상세 보기"""
+    from .models import FortuneResult
+    item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
+    return render(request, 'fortune/detail.html', {'item': item})

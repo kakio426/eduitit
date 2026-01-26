@@ -69,16 +69,35 @@ def settings_view(request):
 
 @login_required
 def select_role(request):
-    """역할 선택 화면 (학교, 강사, 업체)"""
+    """역할 선택 및 별명 설정 화면"""
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+
+    # 이미 역할과 닉네임이 설정된 경우 스킵 (단, 명시적으로 수정을 위해 접근했을 수도 있으니 처리 필요하지만, 
+    # 보통 settings에서 수정하므로 여기는 초기 설정용으로 간주)
+    # 하지만 사용자가 강제로 URL로 들어올 수도 있으므로, GET 요청이고 이미 설정되어있다면 home으로 보낸다.
+    # 단, next가 있으면 next로 보낸다.
+    if request.method == 'GET' and profile.role and profile.nickname:
+        next_url = request.GET.get('next', 'home')
+        return redirect(next_url)
+
     if request.method == 'POST':
         role = request.POST.get('role')
+        nickname = request.POST.get('nickname')
+        
         if role in ['school', 'instructor', 'company']:
-            profile = request.user.userprofile
             profile.role = role
-            profile.save()
-            # 역할 선택 후 원래 가려던 SSO 페이지로 이동하거나 대시보드로 이동
-            next_url = request.GET.get('next', 'home')
-            return redirect(next_url)
+        
+        if nickname:
+            profile.nickname = nickname.strip()
+
+        profile.save()
+            
+        # 역할 선택 후 원래 가려던 SSO 페이지로 이동하거나 대시보드로 이동
+        next_url = request.GET.get('next', 'home')
+        return redirect(next_url)
     
     return render(request, 'core/select_role.html')
 

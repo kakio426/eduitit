@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}전자 서명 제작 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<link
+    href="https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Gamja+Flower&family=Poor+Story&family=Gowun+Batang:wght@400;700&display=swap"
+    rel="stylesheet">
+<style>
+    .font-preview-card {
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid transparent;
+    }
+
+    .font-preview-card:hover {
+        transform: translateY(-4px);
+        background: #f8fafc;
+    }
+
+    .font-preview-card.selected {
+        border-color: #6366f1;
+        background: #eef2ff;
+    }
+
+    .signature-display {
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 2rem;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    #signatureText {
+        font-size: 5rem;
+        line-height: 1;
+        user-select: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 max-w-6xl mx-auto min-h-screen">
+    <div class="text-center mb-12">
+        <h1 class="text-5xl font-black text-gray-800 mb-4">✍️ 전자 서명 메이커</h1>
+        <p class="text-xl text-gray-500 font-medium">선생님만의 멋진 전자 서명을 1초 만에 만들어보세요.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <!-- Controls -->
+        <div class="lg:col-span-4 space-y-8">
+            <div class="clay-card p-8">
+                <label class="block text-xl font-bold text-gray-700 mb-4">서명할 이름</label>
+                <input type="text" id="nameInput" maxlength="10" placeholder="이름을 입력하세요"
+                    value="{{ request.user.first_name|default:'스쿨잇' }}"
+                    class="w-full bg-slate-100 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-2xl font-bold transition-all outline-none">
+
+                <div class="mt-8">
+                    <label class="block text-xl font-bold text-gray-700 mb-4">글자 색상</label>
+                    <div class="flex gap-3">
+                        <button onclick="setColor('#000000')"
+                            class="w-10 h-10 rounded-full bg-black border-2 border-white shadow-sm ring-2 ring-transparent hover:ring-indigo-500 transition-all"></button>
+                        <button onclick="setColor('#1e40af')"
+                            class="w-10 h-10 rounded-full bg-blue-800 border-2 border-white shadow-sm ring-2 ring-transparent hover:ring-indigo-500 transition-all"></button>
+                        <button onclick="setColor('#991b1b')"
+                            class="w-10 h-10 rounded-full bg-red-800 border-2 border-white shadow-sm ring-2 ring-transparent hover:ring-indigo-500 transition-all"></button>
+                        <input type="color" id="colorPicker" onchange="setColor(this.value)"
+                            class="w-10 h-10 rounded-full border-0 p-0 overflow-hidden cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premium Hook -->
+            {% if is_guest %}
+            <div
+                class="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                <div class="relative z-10">
+                    <h4 class="text-2xl font-black mb-2">스타일 저장하기</h4>
+                    <p class="text-indigo-100 mb-6 leading-relaxed">자주 쓰는 서명 스타일을 보관함에 저장하고 언제든 다시 사용하세요!</p>
+                    <a href="{% url 'account_signup' %}"
+                        class="block w-full text-center py-4 bg-white text-indigo-600 rounded-2xl font-black text-lg hover:shadow-lg transition-transform hover:-translate-y-1">
+                        계정 만들고 혜택 받기
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <button onclick="saveStyle()"
+                class="w-full clay-card py-5 bg-indigo-600 hover:bg-neutral-800 text-white rounded-3xl font-black text-xl flex items-center justify-center gap-3 transition-all shadow-xl hover:-translate-y-1">
+                <i class="fa-solid fa-star"></i> 이 스타일 저장하기
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Preview -->
+        <div class="lg:col-span-8 space-y-6">
+            <div class="signature-display p-10 relative group" id="captureArea">
+                <div id="signatureText" style="font-family: 'Nanum Brush Script'; color: #000000;">{{
+                    request.user.first_name|default:'스쿨잇' }}</div>
+
+                <!-- Download Overlay -->
+                <div
+                    class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[2rem]">
+                    <button onclick="downloadSignature()"
+                        class="bg-white/90 backdrop-blur-sm px-8 py-3 rounded-xl font-bold text-gray-800 shadow-xl hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-download mr-2"></i> 이미지 저장
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {% for font in fonts %}
+                <div class="clay-card p-6 font-preview-card {% if forloop.first %}selected{% endif %}"
+                    onclick="setFont(this, '{{ font }}')">
+                    <div class="text-gray-400 text-xs font-bold mb-3">{{ font }}</div>
+                    <div style="font-family: '{{ font }}'; font-size: 2.5rem; text-align: center;">{{
+                        request.user.first_name|default:'스쿨잇' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script>
+    let currentFont = 'Nanum Brush Script';
+    let currentColor = '#000000';
+
+    const nameInput = document.getElementById('nameInput');
+    const signatureText = document.getElementById('signatureText');
+    const previews = document.querySelectorAll('.font-preview-card div:last-child');
+
+    nameInput.addEventListener('input', (e) => {
+        const val = e.target.value || '서명';
+        signatureText.textContent = val;
+        previews.forEach(p => p.textContent = val);
+    });
+
+    function setFont(el, font) {
+        document.querySelectorAll('.font-preview-card').forEach(card => card.classList.remove('selected'));
+        el.classList.add('selected');
+        currentFont = font;
+        signatureText.style.fontFamily = font;
+    }
+
+    function setColor(color) {
+        currentColor = color;
+        signatureText.style.color = color;
+    }
+
+    async function downloadSignature() {
+        // 투명 배경 처리를 위해 별도 렌더링 시도
+        const area = document.getElementById('captureArea');
+        const canvas = await html2canvas(area, {
+            backgroundColor: null,
+            scale: 2
+        });
+
+        const link = document.createElement('a');
+        link.download = `signature-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    async function saveStyle() {
+        const area = document.getElementById('captureArea');
+        const canvas = await html2canvas(area, {
+            backgroundColor: null,
+            scale: 2
+        });
+        const imageData = canvas.toDataURL('image/png');
+
+        const data = {
+            name: `${nameInput.value} 스타일`,
+            font_family: currentFont,
+            color: currentColor,
+            background_color: 'transparent',
+            image_data: imageData
+        };
+
+        try {
+            const response = await fetch('{% url "signatures:save_style_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('즐겨찾기와 서명 이미지가 저장되었습니다! 보관함에서 확인하세요.');
+            } else {
+                alert('저장 실패: ' + result.error);
+            }
+        } catch (e) {
+            alert('오류가 발생했습니다.');
+        }
+    }
+</script>
+{% endblock %}

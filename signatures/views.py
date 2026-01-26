@@ -134,3 +134,88 @@ def delete_signature(request, pk):
     signature = get_object_or_404(Signature, pk=pk, training_session__created_by=request.user)
     signature.delete()
     return JsonResponse({'success': True})
+@login_required
+def style_list(request):
+    """내 서명 스타일 즐겨찾기 목록"""
+    from .models import SignatureStyle
+    styles = SignatureStyle.objects.filter(user=request.user)
+    return render(request, 'signatures/style_list.html', {'styles': styles})
+
+
+@login_required
+@require_POST
+def save_style_api(request):
+    """스타일 즐겨찾기 저장 API"""
+    import json
+    try:
+        data = json.loads(request.body)
+        from .models import SignatureStyle, SavedSignature
+        
+        # 스타일 저장
+        SignatureStyle.objects.create(
+            user=request.user,
+            name=data.get('name', '내 서명 스타일'),
+            font_family=data.get('font_family'),
+            color=data.get('color'),
+            background_color=data.get('background_color')
+        )
+
+        # 이미지 데이터가 있으면 별도 저장 (선택)
+        if data.get('image_data'):
+            SavedSignature.objects.create(
+                user=request.user,
+                image_data=data.get('image_data')
+            )
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def save_signature_image_api(request):
+    """서명 이미지 저장 API (스타일 없이 이미지만)"""
+    import json
+    try:
+        data = json.loads(request.body)
+        from .models import SavedSignature
+        SavedSignature.objects.create(
+            user=request.user,
+            image_data=data.get('image_data')
+        )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def get_my_signatures_api(request):
+    """내 저장된 서명 이미지 목록 가져오기"""
+    from .models import SavedSignature
+    signatures = SavedSignature.objects.filter(user=request.user).order_by('-created_at')[:5]
+    data = [{'id': sig.id, 'image_data': sig.image_data} for sig in signatures]
+    return JsonResponse({'signatures': data})
+
+
+@login_required
+@require_POST
+def delete_style_api(request, pk):
+    """스타일 삭제"""
+    from .models import SignatureStyle
+    style = get_object_or_404(SignatureStyle, pk=pk, user=request.user)
+    style.delete()
+    return JsonResponse({'success': True})
+
+
+def signature_maker(request):
+    """전자 서명 제작 도구 (비회원 개방)"""
+    # 추천 폰트 리스트
+    fonts = [
+        'Nanum Brush Script', 'Nanum Pen Script', 'Cafe24 Ssurround Air', 
+        'Gowun Batang', 'Gamja Flower', 'Poor Story'
+    ]
+    return render(request, 'signatures/maker.html', {
+        'fonts': fonts,
+        'is_guest': not request.user.is_authenticated
+    })

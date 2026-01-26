@@ -73,3 +73,28 @@ class ConsultationMode(models.Model):
 
     def __str__(self):
         return self.display_name
+
+
+class ChatSession(models.Model):
+    """학교폭력 상담 세션"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sv_chat_sessions')
+    topic = models.CharField('주제 (첫 메시지 요약)', max_length=200, default='새로운 상담')
+    mode = models.CharField('상담 모드', max_length=20, default='homeroom')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.topic} ({self.created_at.strftime('%Y-%m-%d')})"
+
+class ChatMessage(models.Model):
+    """상담 메시지"""
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField('역할', max_length=10, choices=[('user', 'User'), ('assistant', 'AI')])
+    content = models.TextField('내용')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']

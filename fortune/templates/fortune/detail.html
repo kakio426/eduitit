@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}사주 분석 상세보기 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pillar-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.5rem 1rem;
+        border-radius: 2rem;
+        background: white;
+        min-width: 90px;
+        box-shadow: var(--clay-shadow);
+        transition: transform 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .pillar-box:hover {
+        transform: translateY(-5px);
+        border-color: rgba(99, 102, 241, 0.2);
+    }
+
+    .pillar-top {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #94a3b8;
+    }
+
+    .pillar-main {
+        font-size: 2.75rem;
+        font-weight: 900;
+        line-height: 1.1;
+        font-family: 'NanumGothic', serif;
+    }
+
+    .pillar-sub {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    /* Element Colors */
+    .color-wood {
+        color: #10b981;
+    }
+
+    /* Green */
+    .color-fire {
+        color: #ef4444;
+    }
+
+    /* Red */
+    .color-earth {
+        color: #f59e0b;
+    }
+
+    /* Yellow/Orange */
+    .color-metal {
+        color: #94a3b8;
+    }
+
+    /* Gray/Silver */
+    .color-water {
+        color: #3b82f6;
+    }
+
+    /* Blue */
+    .color-black {
+        color: #1e293b;
+    }
+
+    /* Alternative Water */
+
+    .analysis-content h2 {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: #1e293b;
+        margin-top: 2.5rem;
+        margin-bottom: 1.25rem;
+        padding-left: 1rem;
+        border-left: 5px solid #6366f1;
+    }
+
+    .analysis-content h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #334155;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .analysis-content p {
+        line-height: 1.8;
+        color: #475569;
+        margin-bottom: 1.25rem;
+        word-break: keep-all;
+    }
+
+    .analysis-content ul {
+        list-style-type: none;
+        padding-left: 0;
+    }
+
+    .analysis-content li {
+        margin-bottom: 0.75rem;
+        padding-left: 1.5rem;
+        position: relative;
+    }
+
+    .analysis-content li::before {
+        content: "•";
+        color: #6366f1;
+        font-weight: bold;
+        position: absolute;
+        left: 0.5rem;
+    }
+
+    #markdown-output blockquote {
+        border-left: 4px solid #e2e8f0;
+        padding-left: 1rem;
+        font-style: italic;
+        color: #64748b;
+        margin: 1.5rem 0;
+    }
+
+    @media print {
+        .no-print {
+            display: none;
+        }
+
+        .clay-card {
+            box-shadow: none;
+            border: 1px solid #e2e8f0;
+        }
+
+        body {
+            background: white;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-20 px-4 max-w-4xl mx-auto min-h-screen">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 no-print">
+        <div>
+            <nav class="flex text-sm font-bold text-slate-400 mb-2 gap-2">
+                <a href="{% url 'fortune:history' %}" class="hover:text-indigo-500 transition">내 보관함</a>
+                <span>/</span>
+                <span class="text-slate-600">상세내역</span>
+            </nav>
+            <h1 class="text-4xl font-black text-slate-800">
+                {% if item.mode == 'daily' %}
+                📅 {{ item.target_date|date:"m월 d일" }}의 운세
+                {% else %}
+                ✨ 정통 사주 상담 기록
+                {% endif %}
+            </h1>
+            <p class="text-lg text-slate-500 font-medium mt-2">상담 일시: {{ item.created_at|date:"Y.m.d H:i" }}</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="window.print()"
+                class="clay-card px-5 py-3 bg-white text-slate-600 font-bold hover:bg-slate-50 transition">
+                <i class="fa-solid fa-print mr-2"></i>인쇄
+            </button>
+            <button onclick="deleteItem('{{ item.id }}')"
+                class="clay-card px-5 py-3 bg-red-50 text-red-500 font-bold hover:bg-red-500 hover:text-white transition">
+                <i class="fa-solid fa-trash-can mr-2"></i>삭제
+            </button>
+        </div>
+    </div>
+
+    <!-- Natal Chart Section -->
+    {% if item.natal_chart %}
+    <div class="clay-card p-6 md:p-10 mb-10 bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100">
+        <h2 class="text-2xl font-black text-slate-700 mb-8 flex items-center gap-2">
+            <i class="fa-solid fa-dharmachakra text-indigo-500"></i>
+            분석 대상 사주 명식
+        </h2>
+
+        <div class="grid grid-cols-4 gap-2 md:gap-6">
+            <!-- 시주 -->
+            <div class="pillar-box">
+                <span class="pillar-top">시주</span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.hour|first }}"></span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.hour|last }}"></span>
+                <span class="pillar-sub">말년운</span>
+            </div>
+            <!-- 일주 -->
+            <div class="pillar-box border-indigo-400 bg-indigo-50/30">
+                <span class="pillar-top text-indigo-600">일주</span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|first }}"></span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|last }}"></span>
+                <span class="pillar-sub text-indigo-600">나 자신</span>
+            </div>
+            <!-- 월주 -->
+            <div class="pillar-box">
+                <span class="pillar-top">월주</span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.month|first }}"></span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.month|last }}"></span>
+                <span class="pillar-sub">사회운/청년</span>
+            </div>
+            <!-- 년주 -->
+            <div class="pillar-box">
+                <span class="pillar-top">년주</span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.year|first }}"></span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.year|last }}"></span>
+                <span class="pillar-sub">조상/초년</span>
+            </div>
+        </div>
+
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+            <div class="flex items-center gap-2 text-xs font-bold px-3 py-1 bg-green-100 text-green-700 rounded-full">●
+                목(Wood)</div>
+            <div class="flex items-center gap-2 text-xs font-bold px-3 py-1 bg-red-100 text-red-700 rounded-full">●
+                화(Fire)</div>
+            <div class="flex items-center gap-2 text-xs font-bold px-3 py-1 bg-amber-100 text-amber-700 rounded-full">●
+                토(Earth)</div>
+            <div class="flex items-center gap-2 text-xs font-bold px-3 py-1 bg-slate-200 text-slate-700 rounded-full">●
+                금(Metal)</div>
+            <div class="flex items-center gap-2 text-xs font-bold px-3 py-1 bg-blue-100 text-blue-700 rounded-full">●
+                수(Water)</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Analysis Text -->
+    <div class="clay-card p-8 md:p-12 bg-white analysis-content">
+        <div id="markdown-output" class="prose prose-slate max-w-none">
+            {{ item.result_text }}
+        </div>
+    </div>
+
+    <!-- Bottom Action -->
+    <div class="mt-12 text-center no-print">
+        <a href="{% url 'fortune:history' %}"
+            class="inline-block px-10 py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:-translate-y-1 transition">
+            목록으로 돌아가기
+        </a>
+    </div>
+</main>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Element Mapping
+    const elementMap = {
+        '甲': 'wood', '乙': 'wood', '寅': 'wood', '卯': 'wood',
+        '丙': 'fire', '丁': 'fire', '巳': 'fire', '午': 'fire',
+        '戊': 'earth', '己': 'earth', '辰': 'earth', '戌': 'earth', '丑': 'earth', '未': 'earth',
+        '庚': 'metal', '辛': 'metal', '申': 'metal', '酉': 'metal',
+        '壬': 'water', '癸': 'water', '亥': 'water', '子': 'water'
+    };
+
+    // Initialize Coloring
+    document.querySelectorAll('.natal-char').forEach(el => {
+        const char = el.getAttribute('data-char');
+        if (char && char !== '?') {
+            el.innerText = char;
+            const element = elementMap[char];
+            if (element) el.classList.add(`color-${element}`);
+        } else {
+            el.innerText = '?';
+            el.classList.add('text-slate-200');
+        }
+    });
+
+    // Render Markdown
+    const outputArea = document.getElementById('markdown-output');
+    const rawText = outputArea.innerText;
+    outputArea.innerHTML = marked.parse(rawText);
+
+    async function deleteItem(id) {
+        if (!confirm('이 기록을 영구히 삭제할까요?')) return;
+
+        try {
+            const response = await fetch(`/fortune/history/${id}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+            if (response.ok) {
+                location.href = "{% url 'fortune:history' %}";
+            }
+        } catch (e) {
+            alert('삭제 중 오류가 발생했습니다.');
+        }
+    }
+</script>
+{% endblock %}

@@ -63,3 +63,35 @@ class Signature(models.Model):
 
     def __str__(self):
         return f"{self.participant_name} - {self.training_session.title}"
+
+
+class SignatureStyle(models.Model):
+    """사용자가 즐겨찾는 서명 스타일"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='signature_styles')
+    name = models.CharField('스타일 이름', max_length=100, default='내 서명 스타일')
+    
+    # 스타일 옵션들
+    font_family = models.CharField('폰트', max_length=100, default='Nanum Brush Script')
+    color = models.CharField('글자 색상', max_length=20, default='#000000')
+    background_color = models.CharField('배경 색상', max_length=20, default='transparent')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}의 스타일: {self.name}"
+
+
+class SavedSignature(models.Model):
+    """사용자가 저장한 서명 이미지"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_signatures')
+    image_data = models.TextField('이미지 데이터 (Base64)') # 간단하게 텍스트로 저장 (실제 서비스에선 ImageField + S3 권장)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}의 서명 ({self.created_at.strftime('%Y-%m-%d')})"

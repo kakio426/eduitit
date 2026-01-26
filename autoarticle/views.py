@@ -14,7 +14,9 @@ from .engines.ppt_engine import PPTEngine
 from .engines.pdf_engine import PDFEngine
 from .engines.card_engine import CardNewsEngine
 from .engines.word_engine import WordEngine
-from .engines.rag_service import StyleRAGService
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
+from core.utils import ratelimit_key_for_master_only
 
 class ArticleCreateView(View):
     THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
@@ -73,7 +75,11 @@ class ArticleCreateView(View):
             return user_key, False  # 사용자 키 사용
         return os.environ.get("GEMINI_API_KEY"), True  # 마스터 키 사용
 
+    @method_decorator(ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False))
     def post(self, request):
+        if getattr(request, 'limited', False):
+             messages.error(request, "무료 사용 한도에 도달했습니다. 가입하시면 더 많은 기사를 생성하고 파일로 다운로드할 수 있습니다! 😊")
+             return redirect('autoarticle:create')
         step = request.POST.get('step', '1')
         
         if 'school_name' in request.POST:

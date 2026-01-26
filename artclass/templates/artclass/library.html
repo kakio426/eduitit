@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}미술 수업 도서관 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .library-container {
+        font-family: 'NanumSquareRound', sans-serif;
+    }
+
+    .thumb-wrapper::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+    }
+
+    .art-card {
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .art-card:hover {
+        transform: translateY(-10px) scale(1.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="min-h-screen pt-24 md:pt-32 pb-20 px-4 library-container">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header & Search -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 px-2">
+            <div class="space-y-4">
+                <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">📚 미술 수업 도서관</h1>
+                <p class="text-xl text-gray-500 font-bold">선생님들의 노력이 담긴 최고의 수업들</p>
+            </div>
+
+            <form method="GET" class="w-full md:w-96 relative">
+                <input type="text" name="q" value="{{ query }}"
+                    class="w-full pl-14 pr-6 py-4 rounded-[2rem] bg-white border-none shadow-clay outline-none text-lg focus:ring-4 focus:ring-purple-200 transition-all font-bold"
+                    placeholder="수업 제목으로 검색...">
+                <i
+                    class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 text-xl"></i>
+            </form>
+        </div>
+
+        <!-- Library Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- Create New Card -->
+            <a href="{% url 'artclass:setup' %}"
+                class="clay-card p-8 flex flex-col items-center justify-center text-center gap-6 border-4 border-dashed border-purple-100 group hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-500 min-h-[320px]">
+                <div
+                    class="w-20 h-20 rounded-[2rem] bg-purple-50 flex items-center justify-center text-purple-500 text-4xl group-hover:bg-purple-600 group-hover:text-white group-hover:rotate-90 transition-all duration-500 shadow-inner">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-gray-700">새 수업 만들기</h3>
+                    <p class="text-gray-400 font-bold mt-2">나만의 커리큘럼 설계</p>
+                </div>
+            </a>
+
+            {% for item in shared_classes %}
+            <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
+                data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00"
+                onclick="openChoiceModal('{{ item.pk }}', '{{ item.title|escapejs }}', '{{ item.youtube_url }}', '{{ item.steps.count }}', '{% if item.created_by %}{{ item.created_by.username|escapejs }}{% else %}익명의 선생님{% endif %}')">
+
+                <!-- YouTube Thumbnail -->
+                <div class="relative aspect-video overflow-hidden thumb-wrapper shrink-0">
+                    <img src="https://img.youtube.com/vi/{{ item.youtube_url|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/'|truncatechars:11|cut:'...' }}/maxresdefault.jpg"
+                        onerror="this.src='https://img.youtube.com/vi/{{ item.youtube_url|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/'|truncatechars:11|cut:'...' }}/0.jpg'"
+                        alt="{{ item.title }}" class="w-full h-full object-cover">
+
+                    <div class="absolute bottom-3 left-4 z-10 text-white flex items-center gap-2">
+                        <i class="fa-solid fa-eye text-sm opacity-80"></i>
+                        <span class="text-sm font-black">{{ item.view_count }}</span>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="p-6 flex-grow flex flex-col justify-between gap-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span
+                                class="text-[10px] font-black tracking-widest uppercase text-purple-600 bg-purple-100 px-2.5 py-1 rounded-lg">
+                                {{ item.steps.count }} STEPS
+                            </span>
+                            <span class="text-[10px] font-black tracking-widest uppercase text-gray-400">
+                                {{ item.created_at|date:"Y.m.d" }}
+                            </span>
+                        </div>
+                        <h3
+                            class="text-xl font-black text-gray-800 leading-snug break-keep group-hover:text-purple-600">
+                            {{ item.title }}
+                        </h3>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
+                        <div
+                            class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 shadow-sm border border-white">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                        <span class="text-sm font-bold text-gray-500">
+                            {% if item.created_by %}{{ item.created_by.username }}{% else %}익명의 선생님{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+
+<!-- Action Choice Modal -->
+<div id="choiceModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-md transition-opacity duration-300 opacity-0"
+        id="choiceBackdrop" onclick="closeChoiceModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="relative w-full max-w-lg bg-white/90 backdrop-blur-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-white p-8 md:p-10 transform scale-90 opacity-0 transition-all duration-300"
+        id="choicePanel">
+
+        <button onclick="closeChoiceModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-800 p-2">
+            <i class="fa-solid fa-xmark text-2xl"></i>
+        </button>
+
+        <div class="space-y-8 text-center">
+            <div id="modalThumb" class="aspect-video rounded-3xl overflow-hidden shadow-lg border-4 border-white">
+                <img src="" class="w-full h-full object-cover">
+            </div>
+
+            <div class="space-y-2">
+                <h2 id="modalTitle" class="text-3xl font-black text-gray-800 leading-tight break-keep">수업 제목</h2>
+                <p class="text-gray-500 font-bold">선생님, 이 수업을 어떻게 시작할까요?</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 pt-4">
+                <a id="playLink" href="#"
+                    class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
+                    <i class="fa-solid fa-play"></i> 바로 수업 시작하기
+                </a>
+                <a id="editLink" href="#"
+                    class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openChoiceModal(pk, title, youtubeUrl, stepCount, creator) {
+        const modal = document.getElementById('choiceModal');
+        const backdrop = document.getElementById('choiceBackdrop');
+        const panel = document.getElementById('choicePanel');
+
+        // Populate content
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('playLink').href = `/artclass/classroom/${pk}/`;
+        document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
+
+        // Extract video ID for thumbnail
+        const videoId = youtubeUrl.match(/(?:v=|youtu\.be\/|shorts\/)([^&?]+)/)?.[1] || '';
+        document.getElementById('modalThumb').querySelector('img').src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+
+        // Show modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        // Animate
+        requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('scale-90', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        });
+    }
+
+    function closeChoiceModal() {
+        const backdrop = document.getElementById('choiceBackdrop');
+        const panel = document.getElementById('choicePanel');
+        const modal = document.getElementById('choiceModal');
+
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('scale-100', 'opacity-100');
+        panel.classList.add('scale-90', 'opacity-0');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }, 300);
+    }
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeChoiceModal();
+    });
+</script>
+{% endblock %}

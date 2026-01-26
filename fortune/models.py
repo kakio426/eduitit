@@ -109,3 +109,18 @@ class InterpretationRule(models.Model):
 
     def __str__(self):
         return f"[{self.trigger_type}] {self.element_1} vs {self.element_2}"
+class FortuneResult(models.Model):
+    """사용자가 저장한 사주/운세 결과"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_fortunes')
+    mode = models.CharField(max_length=20, choices=[('teacher', '교사 모드'), ('general', '일반 모드'), ('daily', '일진 모드')])
+    natal_chart = models.JSONField(help_text="저장 당시의 사주 원국 간지")
+    result_text = models.TextField(help_text="AI가 생성한 분석 결과 내용")
+    target_date = models.DateField(null=True, blank=True, help_text="일진 모드인 경우 해당 날짜")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        date_str = self.target_date.strftime('%Y-%m-%d') if self.target_date else "원국"
+        return f"[{self.get_mode_display()}] {self.user.username} - {date_str}"

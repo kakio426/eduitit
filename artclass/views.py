@@ -26,27 +26,42 @@ def get_gemini_client():
     return genai.Client(api_key=api_key)
 
 
-def setup_view(request):
-    """Setup Page - 수업 준비 페이지"""
+def setup_view(request, pk=None):
+    """Setup Page - 수업 준비 및 수정 페이지"""
+    art_class = None
+    if pk:
+        art_class = get_object_or_404(ArtClass, pk=pk)
+        
     if request.method == 'POST':
-        # multipart/form-data 처리
         video_url = request.POST.get('videoUrl', '')
         interval = int(request.POST.get('stepInterval', 10))
         title = request.POST.get('title', '')
         
-        # ArtClass 생성
-        art_class = ArtClass.objects.create(
-            title=title,
-            youtube_url=video_url,
-            default_interval=interval,
-            created_by=request.user if request.user.is_authenticated else None
-        )
+        if art_class:
+            # 기존 수업 수정
+            art_class.title = title
+            art_class.youtube_url = video_url
+            art_class.default_interval = interval
+            art_class.save()
+            # 기존 단계 삭제 후 재생성 (단순화를 위해)
+            art_class.steps.all().delete()
+        else:
+            # 새 수업 생성
+            art_class = ArtClass.objects.create(
+                title=title,
+                youtube_url=video_url,
+                default_interval=interval,
+                created_by=request.user if request.user.is_authenticated else None
+            )
         
-        # Steps 처리 (동적으로 추가된 필드들)
+        # Steps 처리
         step_count = int(request.POST.get('step_count', 0))
         for i in range(step_count):
             description = request.POST.get(f'step_text_{i}', '')
             image = request.FILES.get(f'step_image_{i}')
+            
+            # 수정 시 이미지가 새로 업로드되지 않았다면 기존 이미지 주소를 히든으로 받아와서 유지하는 로직이 필요하지만,
+            # 여기서는 새로 업로드된 것만 처리하도록 되어 있음. (추후 보강 가능)
             
             ArtStep.objects.create(
                 art_class=art_class,
@@ -57,12 +72,29 @@ def setup_view(request):
         
         return redirect('artclass:classroom', pk=art_class.pk)
     
-    return render(request, 'artclass/setup.html')
+    # 수정 모드라면 기존 단계를 JSON으로 전달하여 JS에서 렌더링하도록 함
+    initial_steps_json = "[]"
+    if art_class:
+        initial_steps = [
+            {'text': step.description, 'imagePreview': step.image.url if step.image else None}
+            for step in art_class.steps.all()
+        ]
+        initial_steps_json = json.dumps(initial_steps, ensure_ascii=False)
+
+    return render(request, 'artclass/setup.html', {
+        'art_class': art_class,
+        'initial_steps_json': initial_steps_json
+    })
 
 
 def classroom_view(request, pk):
     """Classroom Page - 수업 진행 페이지"""
     art_class = get_object_or_404(ArtClass, pk=pk)
+    
+    # 조회수 증가
+    art_class.view_count += 1
+    art_class.save(update_fields=['view_count'])
+    
     steps = art_class.steps.all()
     
     # JSON 형태로 전달 (JS에서 사용)
@@ -123,10 +155,15 @@ def get_video_info(url):
     return title, transcript_text
 
 
-@login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
 def generate_steps_api(request):
-    """AI Step Generation API"""
+    """AI Step Generation API (Guest: 3/h, Member: 10/h via internal check)"""
+    if getattr(request, 'limited', False):
+        return JsonResponse({
+            'error': 'LIMIT_EXCEEDED',
+            'message': '무료 사용 한도에 도달했습니다. 가입하시면 더 넉넉한 한도를 제공해 드려요! 😊'
+        }, status=429)
+
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -183,3 +220,17 @@ def generate_steps_api(request):
         return JsonResponse({'error': 'INVALID_JSON'}, status=400)
     except Exception:
         return JsonResponse({'error': 'INTERNAL_ERROR'}, status=500)
+
+
+def library_view(request):
+    """Shared Library - 다른 선생님들이 공유한 수업 목록"""
+    query = request.GET.get('q', '')
+    if query:
+        shared_classes = ArtClass.objects.filter(is_shared=True, title__icontains=query)
+    else:
+        shared_classes = ArtClass.objects.filter(is_shared=True)
+    
+    return render(request, 'artclass/library.html', {
+        'shared_classes': shared_classes,
+        'query': query
+    })

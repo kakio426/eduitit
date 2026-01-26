@@ -9,6 +9,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
+    is_guest_allowed = models.BooleanField(default=False, help_text="비회원 체험 가능 여부")
     
     # Display metadata fields
     COLOR_CHOICES = [
@@ -80,6 +81,9 @@ class DTSettings(models.Model):
         default='daily'
     )
     last_rotation_date = models.DateField(null=True, blank=True)
+    last_broadcast_message = models.TextField(blank=True, help_text="Persisted broadcast message")
+    mission_title = models.CharField(max_length=200, default="오늘도 행복한 우리 교실", help_text="Main display mission title")
+    mission_desc = models.TextField(default="선생님 말씀에 집중해 주세요.", help_text="Main display mission description")
     
     def __str__(self):
         return f"{self.user.username}'s Settings"
@@ -90,6 +94,7 @@ class DTStudent(models.Model):
     name = models.CharField(max_length=100)
     number = models.IntegerField(default=0, help_text="Student number for ordering")
     is_active = models.BooleanField(default=True)
+    is_mission_completed = models.BooleanField(default=False, help_text="Daily mission completion status")
     
     class Meta:
         ordering = ['number', 'name']

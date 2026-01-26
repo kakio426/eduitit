@@ -298,5 +298,5 @@ else:
 
 print("=" * 80)
 
-LOGIN_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'select_role'
 LOGOUT_REDIRECT_URL = 'home'

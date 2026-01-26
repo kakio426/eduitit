@@ -23,17 +23,24 @@ class StyleRAGService:
             embedding_function=self.embedding_fn
         )
 
-    def learn_style(self, original_text, corrected_text, tags=None):
+    def learn_style(self, original_text, corrected_text, user_id=None, tags=None):
         """
         Learns from a correction by storing the original/corrected pair.
         The 'document' for retrieval is the 'original_text' (what AI wrote),
         so when AI writes something similar again, we find how it was fixed.
         """
-        # We store the "diff" logic context
+        import time
+        
+        # Simple rule extraction (Placeholder for more complex diff logic)
+        # In reality, we might want to use Gemini to extract the "rule" here.
+        rule_desc = f"Avoid '{original_text[:20]}...', Use '{corrected_text[:20]}...'"
+
         metadata = {
             "corrected": corrected_text,
             "tags": tags if tags else "general",
-            "timestamp": str(os.path.getmtime(__file__)) # Placeholder timestamp
+            "rule": rule_desc,
+            "user_id": str(user_id) if user_id else "all",
+            "timestamp": str(time.time())
         }
         
         self.collection.add(

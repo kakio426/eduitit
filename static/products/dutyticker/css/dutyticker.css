@@ -8,6 +8,20 @@
     min-height: calc(100vh - 200px);
 }
 
+/* Classroom Fullscreen Immersive Mode */
+body.dt-fullscreen-mode nav,
+body.dt-fullscreen-mode #dtSubNav {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.dt-fullscreen-mode .dutyticker-container {
+    padding-top: 2rem !important;
+    transition: padding 0.4s ease;
+}
+
 /* ============================================
    DutyTicker 전용 컴포넌트
    ============================================ */
@@ -15,7 +29,7 @@
 /* Clay Inner (눌린 효과) */
 .dt-clay-inner {
     box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7),
-                inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
+        inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
     border-radius: 20px;
 }
 
@@ -25,7 +39,7 @@
     color: white;
     border-radius: 50%;
     box-shadow: 4px 4px 10px rgba(163, 177, 198, 0.6),
-                -4px -4px 10px rgba(255, 255, 255, 0.5);
+        -4px -4px 10px rgba(255, 255, 255, 0.5);
     transition: all 0.2s ease;
 }
 
@@ -54,18 +68,33 @@
 }
 
 /* ============================================
-   역할 카드 상태
+   역할 카드 상태 (High Contrast Theme)
    ============================================ */
 
-/* 방송 상태 */
+/* 방송/공지 상태 - 더 강렬하게 */
 .role-broadcast {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+    background: #FFD600 !important;
+    /* Vivid Yellow */
+    color: #000000 !important;
+    border: 8px solid #000000;
+}
+
+/* 현재 역할 카드 - 시인성 극대화 */
+.role-active-theme {
+    background: #ffffff !important;
+    border: 6px solid #FFD600 !important;
+    box-shadow: 0 20px 40px rgba(255, 214, 0, 0.2) !important;
+}
+
+.role-active-header {
+    background: #000000 !important;
+    color: #FFD600 !important;
 }
 
 /* 빈 상태 */
 .role-empty {
-    background: #E0E5EC;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
 }
 
 /* ============================================
@@ -96,6 +125,7 @@
     from {
         transform: translateY(0);
     }
+
     to {
         transform: translateY(-50%);
     }
@@ -114,7 +144,7 @@
     background: #E0E5EC;
     border-radius: 20px;
     box-shadow: 6px 6px 12px rgba(163, 177, 198, 0.5),
-                -6px -6px 12px rgba(255, 255, 255, 0.6);
+        -6px -6px 12px rgba(255, 255, 255, 0.6);
     padding: 1.25rem 1.5rem;
     transition: all 0.3s ease;
 }
@@ -122,7 +152,7 @@
 .timeline-item:hover {
     transform: translateX(4px);
     box-shadow: 8px 8px 16px rgba(163, 177, 198, 0.6),
-                -8px -8px 16px rgba(255, 255, 255, 0.7);
+        -8px -8px 16px rgba(255, 255, 255, 0.7);
 }
 
 .timeline-item.current {
@@ -148,23 +178,57 @@
 }
 
 @keyframes pulse-dot {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.7;
         transform: scale(1.1);
     }
 }
 
+/* Urgent Timer State */
+.timer-urgent {
+    color: #ef4444 !important;
+    animation: urgent-shake 0.5s ease-in-out infinite;
+}
+
+@keyframes urgent-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-2px);
+    }
+
+    75% {
+        transform: translateX(2px);
+    }
+}
+
+.role-highlight-text {
+    color: #1a202c !important;
+    /* High contrast black */
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
 /* ============================================
    애니메이션
    ============================================ */
 @keyframes bounce-subtle {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(-3px);
     }
+
     50% {
         transform: translateY(0);
     }
@@ -213,4 +277,14 @@
     .timeline-item {
         padding: 1rem;
     }
+}
+
+.animate-spin-slow {
+    animation: spin 3s linear infinite;
+}
+
+/* Header & FAB Transitions for Immersive Mode */
+header,
+#fabContainer {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }

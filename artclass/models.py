@@ -14,6 +14,8 @@ class ArtClass(models.Model):
         related_name='art_classes',
         verbose_name="생성자"
     )
+    is_shared = models.BooleanField(default=True, verbose_name="공유 여부")
+    view_count = models.PositiveIntegerField(default=0, verbose_name="조회수")
 
     class Meta:
         verbose_name = "미술 수업"

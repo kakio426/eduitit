@@ -109,3 +109,27 @@ class PadletBotSettings(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ChatSession(models.Model):
+    """패들릿 봇 상담 세션"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='padlet_chat_sessions')
+    topic = models.CharField('주제', max_length=200, default='새로운 대화')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.topic} ({self.created_at.strftime('%Y-%m-%d')})"
+
+class ChatMessage(models.Model):
+    """상담 메시지"""
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField('역할', max_length=10, choices=[('user', 'User'), ('assistant', 'AI')])
+    content = models.TextField('내용')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']

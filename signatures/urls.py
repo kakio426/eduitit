@@ -18,4 +18,11 @@ urlpatterns = [
 
     # 서명 삭제 (AJAX)
     path('signature/<int:pk>/delete/', views.delete_signature, name='delete_signature'),
+    # 스타일 즐겨찾기
+    path('styles/', views.style_list, name='style_list'),
+    path('styles/save/', views.save_style_api, name='save_style_api'),
+    path('api/save_image/', views.save_signature_image_api, name='save_image_api'), # New
+    path('api/my_signatures/', views.get_my_signatures_api, name='get_my_signatures_api'),
+    path('styles/<int:pk>/delete/', views.delete_style_api, name='delete_style_api'),
+    path('maker/', views.signature_maker, name='maker'),
 ]

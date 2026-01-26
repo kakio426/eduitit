@@ -12,7 +12,11 @@ def has_personal_api_key(user):
     if not user or not user.is_authenticated:
         return False
     try:
-        api_key = user.userprofile.gemini_api_key
+        # UserProfile이 없을 수도 있으므로 safe check
+        profile = getattr(user, 'userprofile', None)
+        if not profile:
+            return False
+        api_key = profile.gemini_api_key
         return bool(api_key and api_key.strip())
     except Exception:
         return False
@@ -20,22 +24,30 @@ def has_personal_api_key(user):
 
 def ratelimit_key_for_master_only(group, request):
     """
-    마스터 키 사용자에게만 Rate Limit 적용
-    - 개인 키 사용자: None 반환 → Rate Limit 미적용
-    - 마스터 키 사용자: user_id 반환 → Rate Limit 적용
+    마스터 키 사용자 및 비회원에게 Rate Limit 적용
+    - 개인 키 사용자: 고유 UUID 반환 → Rate Limit 미적용 (무제한)
+    - 회원 (마스터 키): user_id 반환 → 회원용 제한 적용
+    - 비회원 (게스트): client_ip 반환 → IP 기반의 엄격한 제한 적용
 
     사용법:
     @ratelimit(key=ratelimit_key_for_master_only, rate='10/h', block=True)
     """
     user = request.user
+    
     if has_personal_api_key(user):
-        # 개인 키 사용자는 Rate Limit 건너뛰기
-        # 고유한 키를 매번 생성하여 사실상 무제한
         import uuid
         return f'personal:{uuid.uuid4()}'
+    
+    if user.is_authenticated:
+        return f'user:{user.id}'
+    
+    # 비회원은 IP 주소 기반으로 제한
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
     else:
-        # 마스터 키 사용자는 user_id 기반으로 제한
-        return f'master:{user.id}'
+        ip = request.META.get('REMOTE_ADDR')
+    return f'ip:{ip}'
 
 def generate_sso_token(user):
     """
