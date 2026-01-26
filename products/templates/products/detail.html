@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ product.title }} - Eduitit{% endblock %}
 
@@ -171,9 +171,9 @@
         <p class="product-description">{{ product.description }}</p>
 
         {% if product.price == 0 %}
-        <div class="price-tag free">무료</div>
+        <div class="price-tag free">臾대즺</div>
         {% else %}
-        <div class="price-tag">₩{{ product.price|floatformat:0 }}</div>
+        <div class="price-tag">??{ product.price|floatformat:0 }}</div>
         {% endif %}
 
         <!-- Action Buttons -->
@@ -181,25 +181,25 @@
             {% if is_owned or product.price == 0 %}
             {% if product.external_url %}
             <a href="{{ product.external_url }}" target="_blank" class="btn-launch">
-                <i class="fa-solid fa-rocket"></i> 서비스 시작하기
+                <i class="fa-solid fa-rocket"></i> ?쒕퉬???쒖옉?섍린
             </a>
             {% elif product.service_type == "game" %}
             <a href="{% url 'yut_game' %}" class="btn-launch">
-                <i class="fa-solid fa-gamepad"></i> 게임 시작하기
+                <i class="fa-solid fa-gamepad"></i> 寃뚯엫 ?쒖옉?섍린
             </a>
             {% else %}
-            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
-                <i class="fa-solid fa-clock"></i> 준비 중
+            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="以鍮?以묒엯?덈떎">
+                <i class="fa-solid fa-clock"></i> 以鍮?以?
             </button>
             {% endif %}
             {% else %}
-            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
-                <i class="fa-solid fa-clock"></i> 준비 중
+            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="以鍮?以묒엯?덈떎">
+                <i class="fa-solid fa-clock"></i> 以鍮?以?
             </button>
             {% endif %}
 
             <a href="/" class="btn-back">
-                <i class="fa-solid fa-arrow-left"></i> 홈으로
+                <i class="fa-solid fa-arrow-left"></i> ?덉쑝濡?
             </a>
         </div>
     </div>
@@ -208,67 +208,67 @@
     <div class="features-grid">
         {% if product.service_type == "game" %}
         <div class="feature-card">
-            <div class="feature-icon">🎮</div>
-            <div class="feature-title">즉시 플레이</div>
-            <div class="feature-description">설치 없이 브라우저에서 바로 즐기세요</div>
+            <div class="feature-icon">?렜</div>
+            <div class="feature-title">利됱떆 ?뚮젅??/div>
+            <div class="feature-description">?ㅼ튂 ?놁씠 釉뚮씪?곗??먯꽌 諛붾줈 利먭린?몄슂</div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">👥</div>
-            <div class="feature-title">멀티플레이어</div>
-            <div class="feature-description">친구들과 함께 즐기는 재미</div>
+            <div class="feature-icon">?뫁</div>
+            <div class="feature-title">硫?고뵆?덉씠??/div>
+            <div class="feature-description">移쒓뎄?ㅺ낵 ?④퍡 利먭린???щ?</div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">🏆</div>
-            <div class="feature-title">학급 대항전</div>
-            <div class="feature-description">교육 현장에 최적화된 게임</div>
+            <div class="feature-icon">?룇</div>
+            <div class="feature-title">?숆툒 ???쟾</div>
+            <div class="feature-description">援먯쑁 ?꾩옣??理쒖쟻?붾맂 寃뚯엫</div>
         </div>
         {% elif product.service_type == "tool" %}
         <div class="feature-card">
-            <div class="feature-icon">⚡</div>
-            <div class="feature-title">빠른 처리</div>
-            <div class="feature-description">Enterprise급 처리 속도</div>
+            <div class="feature-icon">??/div>
+            <div class="feature-title">鍮좊Ⅸ 泥섎━</div>
+            <div class="feature-description">Enterprise湲?泥섎━ ?띾룄</div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <div class="feature-title">안전한 보안</div>
-            <div class="feature-description">SOC2 인증 데이터 암호화</div>
+            <div class="feature-icon">?뵏</div>
+            <div class="feature-title">?덉쟾??蹂댁븞</div>
+            <div class="feature-description">SOC2 ?몄쬆 ?곗씠???뷀샇??/div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">📊</div>
-            <div class="feature-title">99.9% 가동률</div>
-            <div class="feature-description">안정적인 서비스 제공</div>
+            <div class="feature-icon">?뱤</div>
+            <div class="feature-title">99.9% 媛?숇쪧</div>
+            <div class="feature-description">?덉젙?곸씤 ?쒕퉬???쒓났</div>
         </div>
         {% elif product.service_type == "platform" %}
         <div class="feature-card">
-            <div class="feature-icon">🌐</div>
-            <div class="feature-title">클라우드 기반</div>
-            <div class="feature-description">언제 어디서나 접속 가능</div>
+            <div class="feature-icon">?뙋</div>
+            <div class="feature-title">?대씪?곕뱶 湲곕컲</div>
+            <div class="feature-description">?몄젣 ?대뵒?쒕굹 ?묒냽 媛??/div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">👨‍🏫</div>
-            <div class="feature-title">교육 특화</div>
-            <div class="feature-description">선생님과 학생을 위한 플랫폼</div>
+            <div class="feature-icon">?뫅?랅윆?/div>
+            <div class="feature-title">援먯쑁 ?뱁솕</div>
+            <div class="feature-description">?좎깮?섍낵 ?숈깮???꾪븳 ?뚮옯??/div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">💬</div>
-            <div class="feature-title">실시간 소통</div>
-            <div class="feature-description">교육 공동체 네트워킹</div>
+            <div class="feature-icon">?뮠</div>
+            <div class="feature-title">?ㅼ떆媛??뚰넻</div>
+            <div class="feature-description">援먯쑁 怨듬룞泥??ㅽ듃?뚰궧</div>
         </div>
         {% else %}
         <div class="feature-card">
-            <div class="feature-icon">✨</div>
-            <div class="feature-title">간편한 사용</div>
-            <div class="feature-description">직관적인 인터페이스</div>
+            <div class="feature-icon">??/div>
+            <div class="feature-title">媛꾪렪???ъ슜</div>
+            <div class="feature-description">吏곴??곸씤 ?명꽣?섏씠??/div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">🎯</div>
-            <div class="feature-title">높은 효율</div>
-            <div class="feature-description">업무 시간 단축</div>
+            <div class="feature-icon">?렞</div>
+            <div class="feature-title">?믪? ?⑥쑉</div>
+            <div class="feature-description">?낅Т ?쒓컙 ?⑥텞</div>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">💡</div>
-            <div class="feature-title">스마트 기능</div>
-            <div class="feature-description">AI 기반 자동화</div>
+            <div class="feature-icon">?뮕</div>
+            <div class="feature-title">?ㅻ쭏??湲곕뒫</div>
+            <div class="feature-description">AI 湲곕컲 ?먮룞??/div>
         </div>
         {% endif %}
     </div>

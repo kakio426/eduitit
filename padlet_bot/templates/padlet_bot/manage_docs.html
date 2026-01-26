@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}패들릿 문서 관리 - Eduitit{% endblock %}
+{% block title %}?⑤뱾由?臾몄꽌 愿由?- Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -36,41 +36,38 @@
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-5xl font-bold text-gray-700 mb-2">
-                <i class="fa-solid fa-folder-open text-orange-500 mr-2"></i>패들릿 문서 관리
-            </h1>
-            <p class="text-2xl text-gray-500">패들릿 내보내기 파일을 업로드하고 관리합니다</p>
+                <i class="fa-solid fa-folder-open text-orange-500 mr-2"></i>?⑤뱾由?臾몄꽌 愿由?            </h1>
+            <p class="text-2xl text-gray-500">?⑤뱾由??대낫?닿린 ?뚯씪???낅줈?쒗븯怨?愿由ы빀?덈떎</p>
             <a href="{% url 'padlet_bot:chat' %}" class="inline-block mt-4 px-6 py-3 rounded-full shadow-clay text-pink-600 hover:text-pink-700 transition">
-                <i class="fa-solid fa-arrow-left mr-2"></i>챗봇으로 돌아가기
-            </a>
+                <i class="fa-solid fa-arrow-left mr-2"></i>梨쀫큸?쇰줈 ?뚯븘媛湲?            </a>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- 업로드 폼 -->
+            <!-- ?낅줈????-->
             <div class="lg:col-span-1">
                 <div class="clay-card p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                        <i class="fa-solid fa-upload text-pink-500 mr-2"></i>새 문서 업로드
-                    </h2>
+                        <i class="fa-solid fa-upload text-pink-500 mr-2"></i>??臾몄꽌 ?낅줈??                    </h2>
 
                     <form method="post" enctype="multipart/form-data" class="space-y-4">
                         {% csrf_token %}
 
                         <div>
-                            <label class="block text-lg text-gray-600 mb-2">문서 제목</label>
+                            <label class="block text-lg text-gray-600 mb-2">臾몄꽌 ?쒕ぉ</label>
                             {{ form.title }}
                         </div>
 
                         <div>
-                            <label class="block text-lg text-gray-600 mb-2">파일 (PDF, CSV)</label>
+                            <label class="block text-lg text-gray-600 mb-2">?뚯씪 (PDF, CSV)</label>
                             {{ form.file }}
                             <p class="text-sm text-gray-400 mt-1">
                                 <i class="fa-solid fa-info-circle mr-1"></i>
-                                패들릿에서 내보내기한 PDF 또는 CSV 파일
+                                ?⑤뱾由우뿉???대낫?닿린??PDF ?먮뒗 CSV ?뚯씪
                             </p>
                         </div>
 
                         <div>
-                            <label class="block text-lg text-gray-600 mb-2">설명 (선택)</label>
+                            <label class="block text-lg text-gray-600 mb-2">?ㅻ챸 (?좏깮)</label>
                             {{ form.description }}
                         </div>
 
@@ -84,29 +81,28 @@
 
                         <button type="submit"
                             class="w-full py-4 rounded-2xl shadow-clay text-xl font-bold text-pink-600 hover:text-pink-700 hover:shadow-clay-hover transition">
-                            <i class="fa-solid fa-cloud-upload mr-2"></i>업로드
-                        </button>
+                            <i class="fa-solid fa-cloud-upload mr-2"></i>?낅줈??                        </button>
                     </form>
 
-                    <!-- 안내 -->
+                    <!-- ?덈궡 -->
                     <div class="mt-6 p-4 rounded-xl bg-blue-50 text-blue-700 text-lg">
-                        <p class="font-bold mb-2"><i class="fa-solid fa-lightbulb mr-1"></i> 패들릿 내보내기 방법</p>
+                        <p class="font-bold mb-2"><i class="fa-solid fa-lightbulb mr-1"></i> ?⑤뱾由??대낫?닿린 諛⑸쾿</p>
                         <ol class="list-decimal list-inside space-y-1 text-base">
-                            <li>패들릿 열기 → 우측 상단 ⋮ 클릭</li>
-                            <li>"내보내기" 선택</li>
-                            <li>PDF 또는 CSV 형식 선택</li>
-                            <li>다운로드 후 여기에 업로드</li>
+                            <li>?⑤뱾由??닿린 ???곗륫 ?곷떒 ???대┃</li>
+                            <li>"?대낫?닿린" ?좏깮</li>
+                            <li>PDF ?먮뒗 CSV ?뺤떇 ?좏깮</li>
+                            <li>?ㅼ슫濡쒕뱶 ???ш린???낅줈??/li>
                         </ol>
                     </div>
                 </div>
             </div>
 
-            <!-- 문서 목록 -->
+            <!-- 臾몄꽌 紐⑸줉 -->
             <div class="lg:col-span-2">
                 <div class="clay-card p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                        <i class="fa-solid fa-list text-purple-500 mr-2"></i>등록된 문서
-                        <span class="text-lg text-gray-400 ml-2">({{ documents.count }}개)</span>
+                        <i class="fa-solid fa-list text-purple-500 mr-2"></i>?깅줉??臾몄꽌
+                        <span class="text-lg text-gray-400 ml-2">({{ documents.count }}媛?</span>
                     </h2>
 
                     {% if documents %}
@@ -126,20 +122,20 @@
                                 {% endif %}
                                 <p class="text-gray-400 text-sm">
                                     {{ doc.created_at|date:"Y.m.d H:i" }}
-                                    {% if doc.uploaded_by %}· {{ doc.uploaded_by.username }}{% endif %}
+                                    {% if doc.uploaded_by %}쨌 {{ doc.uploaded_by.username }}{% endif %}
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-2">
                                 {% if doc.is_processed %}
                                 <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-base">
-                                    <i class="fa-solid fa-check mr-1"></i>{{ doc.chunk_count }}청크
+                                    <i class="fa-solid fa-check mr-1"></i>{{ doc.chunk_count }}泥?겕
                                 </span>
                                 {% else %}
                                 <button onclick="processDocument({{ doc.pk }})"
                                     class="px-4 py-2 rounded-full shadow-clay text-blue-600 hover:text-blue-700 text-base font-bold transition process-btn"
                                     data-doc-id="{{ doc.pk }}">
-                                    <i class="fa-solid fa-cog mr-1"></i>처리
+                                    <i class="fa-solid fa-cog mr-1"></i>泥섎━
                                 </button>
                                 {% endif %}
 
@@ -154,8 +150,8 @@
                     {% else %}
                     <div class="text-center py-12 text-gray-400">
                         <i class="fa-solid fa-folder-open text-6xl mb-4"></i>
-                        <p class="text-xl">아직 등록된 문서가 없습니다.</p>
-                        <p class="text-lg">왼쪽에서 패들릿 파일을 업로드해주세요.</p>
+                        <p class="text-xl">?꾩쭅 ?깅줉??臾몄꽌媛 ?놁뒿?덈떎.</p>
+                        <p class="text-lg">?쇱そ?먯꽌 ?⑤뱾由??뚯씪???낅줈?쒗빐二쇱꽭??</p>
                     </div>
                     {% endif %}
                 </div>
@@ -167,12 +163,12 @@
 
 {% block extra_js %}
 <script>
-    // 문서 처리
+    // 臾몄꽌 泥섎━
     async function processDocument(docId) {
         const btn = document.querySelector(`button[data-doc-id="${docId}"]`);
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>처리 중...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>泥섎━ 以?..';
 
         try {
             const response = await fetch(`/padlet/docs/${docId}/process/`, {
@@ -185,26 +181,25 @@
             const data = await response.json();
 
             if (data.success) {
-                // 버튼을 완료 상태로 변경
-                btn.outerHTML = `<span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-base">
-                    <i class="fa-solid fa-check mr-1"></i>${data.chunk_count}청크
+                // 踰꾪듉???꾨즺 ?곹깭濡?蹂寃?                btn.outerHTML = `<span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-base">
+                    <i class="fa-solid fa-check mr-1"></i>${data.chunk_count}泥?겕
                 </span>`;
                 alert(data.message);
             } else {
-                alert('오류: ' + data.error);
+                alert('?ㅻ쪟: ' + data.error);
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
+            alert('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }
 
-    // 문서 삭제
+    // 臾몄꽌 ??젣
     async function deleteDocument(docId, title) {
-        if (!confirm(`"${title}" 문서를 삭제하시겠습니까?\n벡터DB의 데이터도 함께 삭제됩니다.`)) {
+        if (!confirm(`"${title}" 臾몄꽌瑜???젣?섏떆寃좎뒿?덇퉴?\n踰≫꽣DB???곗씠?곕룄 ?④퍡 ??젣?⑸땲??`)) {
             return;
         }
 
@@ -219,21 +214,22 @@
             const data = await response.json();
 
             if (data.success) {
-                // 문서 카드 제거
+                // 臾몄꽌 移대뱶 ?쒓굅
                 document.getElementById(`doc-${docId}`).remove();
                 alert(data.message);
 
-                // 문서가 없으면 빈 상태 표시
+                // 臾몄꽌媛 ?놁쑝硫?鍮??곹깭 ?쒖떆
                 const docCards = document.querySelectorAll('.doc-card');
                 if (docCards.length === 0) {
                     location.reload();
                 }
             } else {
-                alert('오류: ' + data.error);
+                alert('?ㅻ쪟: ' + data.error);
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
+            alert('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
         }
     }
 </script>
 {% endblock %}
+

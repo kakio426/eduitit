@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}패들릿 API 연동 - Eduitit{% endblock %}
+{% block title %}?⑤뱾由?API ?곕룞 - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -36,43 +36,42 @@
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-5xl font-bold text-gray-700 mb-2">
-                <i class="fa-solid fa-plug text-blue-500 mr-2"></i>패들릿 API 연동
+                <i class="fa-solid fa-plug text-blue-500 mr-2"></i>?⑤뱾由?API ?곕룞
             </h1>
-            <p class="text-2xl text-gray-500">패들릿 URL을 입력하여 실시간 연동</p>
+            <p class="text-2xl text-gray-500">?⑤뱾由?URL???낅젰?섏뿬 ?ㅼ떆媛??곕룞</p>
             <div class="flex justify-center gap-4 mt-4">
                 <a href="{% url 'padlet_bot:chat' %}"
                     class="px-6 py-3 rounded-full shadow-clay text-pink-600 hover:text-pink-700 transition">
-                    <i class="fa-solid fa-comments mr-2"></i>챗봇
+                    <i class="fa-solid fa-comments mr-2"></i>梨쀫큸
                 </a>
                 <a href="{% url 'padlet_bot:manage_docs' %}"
                     class="px-6 py-3 rounded-full shadow-clay text-orange-600 hover:text-orange-700 transition">
-                    <i class="fa-solid fa-folder-open mr-2"></i>파일 업로드
-                </a>
+                    <i class="fa-solid fa-folder-open mr-2"></i>?뚯씪 ?낅줈??                </a>
             </div>
         </div>
 
         {% if not api_configured %}
-        <!-- API 키 미설정 경고 -->
+        <!-- API ??誘몄꽕??寃쎄퀬 -->
         <div class="clay-card p-6 mb-8 bg-pink-50 border-2 border-pink-200" data-aos="fade-up">
             <div class="flex items-start gap-4">
                 <i class="fa-solid fa-key text-4xl text-pink-500 mt-1"></i>
                 <div class="flex-1">
-                    <h2 class="text-2xl font-bold text-pink-700 mb-2">패들릿 API 키를 등록해주세요!</h2>
-                    <p class="text-xl text-pink-600 mb-2 font-hand">패들릿 API 연동 기능은 사용자의 <strong>개인 API 키(Pro/Platinum
-                            이상)</strong>가 필요합니다.</p>
+                    <h2 class="text-2xl font-bold text-pink-700 mb-2">?⑤뱾由?API ?ㅻ? ?깅줉?댁＜?몄슂!</h2>
+                    <p class="text-xl text-pink-600 mb-2 font-hand">?⑤뱾由?API ?곕룞 湲곕뒫? ?ъ슜?먯쓽 <strong>媛쒖씤 API ??Pro/Platinum
+                            ?댁긽)</strong>媛 ?꾩슂?⑸땲??</p>
                     <p class="text-lg text-pink-500 mb-6 font-hand">
                         <i class="fa-solid fa-info-circle mr-1"></i>
-                        참고: 패들릿 API는 Pro 플랜 이상의 유료 사용자만 발급받을 수 있습니다.
+                        李멸퀬: ?⑤뱾由?API??Pro ?뚮옖 ?댁긽???좊즺 ?ъ슜?먮쭔 諛쒓툒諛쏆쓣 ???덉뒿?덈떎.
                     </p>
 
                     <div class="flex flex-col sm:flex-row gap-4">
                         <a href="{% url 'settings' %}"
                             class="px-6 py-3 rounded-2xl bg-pink-500 text-white font-bold text-xl hover:bg-pink-600 transition shadow-clay inline-flex items-center gap-2">
-                            <i class="fa-solid fa-gear"></i> 내 프로필에서 키 설정하기
+                            <i class="fa-solid fa-gear"></i> ???꾨줈?꾩뿉?????ㅼ젙?섍린
                         </a>
                         <a href="https://padlet.com/settings/developer" target="_blank"
                             class="px-6 py-3 rounded-2xl bg-white text-gray-700 font-bold text-xl hover:bg-gray-50 transition border border-gray-200 inline-flex items-center gap-2">
-                            <i class="fa-solid fa-external-link text-sm"></i> 패들릿에서 키 발급받기
+                            <i class="fa-solid fa-external-link text-sm"></i> ?⑤뱾由우뿉????諛쒓툒諛쏄린
                         </a>
                     </div>
                 </div>
@@ -81,17 +80,17 @@
         {% endif %}
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- 연동 폼 -->
+            <!-- ?곕룞 ??-->
             <div class="lg:col-span-1">
                 <div class="clay-card p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                        <i class="fa-solid fa-link text-blue-500 mr-2"></i>새 패들릿 연동
+                        <i class="fa-solid fa-link text-blue-500 mr-2"></i>???⑤뱾由??곕룞
                     </h2>
 
                     <form id="linkForm" class="space-y-4">
                         {% csrf_token %}
                         <div>
-                            <label class="block text-lg text-gray-600 mb-2">패들릿 URL</label>
+                            <label class="block text-lg text-gray-600 mb-2">?⑤뱾由?URL</label>
                             <input type="url" id="padletUrl" name="padlet_url"
                                 class="w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-transparent text-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
                                 placeholder="https://padlet.com/..." {% if not api_configured %}disabled{% endif %}>
@@ -100,29 +99,28 @@
                         <button type="submit" id="linkBtn"
                             class="w-full py-4 rounded-2xl shadow-clay text-xl font-bold text-blue-600 hover:text-blue-700 hover:shadow-clay-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
                             {% if not api_configured %}disabled{% endif %}>
-                            <i class="fa-solid fa-plug mr-2"></i>연동하기
+                            <i class="fa-solid fa-plug mr-2"></i>?곕룞?섍린
                         </button>
                     </form>
 
-                    <!-- 안내 -->
+                    <!-- ?덈궡 -->
                     <div class="mt-6 p-4 rounded-xl bg-blue-50 text-blue-700 text-lg">
-                        <p class="font-bold mb-2"><i class="fa-solid fa-lightbulb mr-1"></i> 사용 방법</p>
+                        <p class="font-bold mb-2"><i class="fa-solid fa-lightbulb mr-1"></i> ?ъ슜 諛⑸쾿</p>
                         <ol class="list-decimal list-inside space-y-1 text-base">
-                            <li>패들릿 URL을 복사</li>
-                            <li>위 입력창에 붙여넣기</li>
-                            <li>"연동하기" 클릭</li>
-                            <li>"동기화" 버튼으로 데이터 가져오기</li>
+                            <li>?⑤뱾由?URL??蹂듭궗</li>
+                            <li>???낅젰李쎌뿉 遺숈뿬?ｊ린</li>
+                            <li>"?곕룞?섍린" ?대┃</li>
+                            <li>"?숆린?? 踰꾪듉?쇰줈 ?곗씠??媛?몄삤湲?/li>
                         </ol>
                     </div>
                 </div>
             </div>
 
-            <!-- 연동된 패들릿 목록 -->
+            <!-- ?곕룞???⑤뱾由?紐⑸줉 -->
             <div class="lg:col-span-2">
                 <div class="clay-card p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                        <i class="fa-solid fa-list text-purple-500 mr-2"></i>연동된 패들릿
-                        <span class="text-lg text-gray-400 ml-2">({{ linked_boards.count }}개)</span>
+                        <i class="fa-solid fa-list text-purple-500 mr-2"></i>?곕룞???⑤뱾由?                        <span class="text-lg text-gray-400 ml-2">({{ linked_boards.count }}媛?</span>
                     </h2>
 
                     {% if linked_boards %}
@@ -134,21 +132,20 @@
                                 <div class="flex items-center gap-2 mb-1">
                                     <span
                                         class="status-badge {% if board.is_processed %}status-synced{% else %}status-pending{% endif %}">
-                                        {% if board.is_processed %}동기화됨{% else %}대기중{% endif %}
+                                        {% if board.is_processed %}?숆린?붾맖{% else %}?湲곗쨷{% endif %}
                                     </span>
                                     <h3 class="text-xl font-bold text-gray-700">{{ board.title }}</h3>
                                 </div>
                                 <p class="text-gray-500 text-base mb-1">
-                                    <i class="fa-solid fa-sticky-note mr-1"></i>{{ board.post_count }}개 게시물
-                                    {% if board.chunk_count > 0 %}
-                                    · <i class="fa-solid fa-puzzle-piece mr-1"></i>{{ board.chunk_count }}청크
+                                    <i class="fa-solid fa-sticky-note mr-1"></i>{{ board.post_count }}媛?寃뚯떆臾?                                    {% if board.chunk_count > 0 %}
+                                    쨌 <i class="fa-solid fa-puzzle-piece mr-1"></i>{{ board.chunk_count }}泥?겕
                                     {% endif %}
                                 </p>
                                 <p class="text-gray-400 text-sm">
                                     {% if board.last_synced %}
-                                    마지막 동기화: {{ board.last_synced|date:"Y.m.d H:i" }}
+                                    留덉?留??숆린?? {{ board.last_synced|date:"Y.m.d H:i" }}
                                     {% else %}
-                                    아직 동기화되지 않음
+                                    ?꾩쭅 ?숆린?붾릺吏 ?딆쓬
                                     {% endif %}
                                 </p>
                             </div>
@@ -157,8 +154,7 @@
                                 <button onclick="syncPadlet('{{ board.pk }}')"
                                     class="px-4 py-2 rounded-full shadow-clay text-blue-600 hover:text-blue-700 text-base font-bold transition sync-btn"
                                     data-board-id="{{ board.pk }}" {% if not api_configured %}disabled{% endif %}>
-                                    <i class="fa-solid fa-sync mr-1"></i>동기화
-                                </button>
+                                    <i class="fa-solid fa-sync mr-1"></i>?숆린??                                </button>
 
                                 <button onclick="unlinkPadlet('{{ board.pk }}', '{{ board.title|escapejs }}')"
                                     class="px-4 py-2 rounded-full shadow-clay text-red-500 hover:text-red-600 text-base font-bold transition">
@@ -171,8 +167,8 @@
                     {% else %}
                     <div class="text-center py-12 text-gray-400">
                         <i class="fa-solid fa-plug text-6xl mb-4"></i>
-                        <p class="text-xl">아직 연동된 패들릿이 없습니다.</p>
-                        <p class="text-lg">왼쪽에서 패들릿 URL을 입력해주세요.</p>
+                        <p class="text-xl">?꾩쭅 ?곕룞???⑤뱾由우씠 ?놁뒿?덈떎.</p>
+                        <p class="text-lg">?쇱そ?먯꽌 ?⑤뱾由?URL???낅젰?댁＜?몄슂.</p>
                     </div>
                     {% endif %}
                 </div>
@@ -188,18 +184,18 @@
     const linkBtn = document.getElementById('linkBtn');
     const padletUrlInput = document.getElementById('padletUrl');
 
-    // 패들릿 연동
+    // ?⑤뱾由??곕룞
     linkForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const url = padletUrlInput.value.trim();
         if (!url) {
-            alert('패들릿 URL을 입력해주세요.');
+            alert('?⑤뱾由?URL???낅젰?댁＜?몄슂.');
             return;
         }
 
         linkBtn.disabled = true;
-        linkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>연동 중...';
+        linkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>?곕룞 以?..';
 
         try {
             const formData = new FormData();
@@ -217,22 +213,21 @@
                 alert(data.message);
                 location.reload();
             } else {
-                alert('오류: ' + data.error);
+                alert('?ㅻ쪟: ' + data.error);
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
+            alert('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
         } finally {
             linkBtn.disabled = false;
-            linkBtn.innerHTML = '<i class="fa-solid fa-plug mr-2"></i>연동하기';
+            linkBtn.innerHTML = '<i class="fa-solid fa-plug mr-2"></i>?곕룞?섍린';
         }
     });
 
-    // 동기화
-    async function syncPadlet(boardId) {
+    // ?숆린??    async function syncPadlet(boardId) {
         const btn = document.querySelector(`button[data-board-id="${boardId}"]`);
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>동기화 중...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>?숆린??以?..';
 
         try {
             const response = await fetch(`/padlet/api/${boardId}/sync/`, {
@@ -248,20 +243,20 @@
                 alert(data.message);
                 location.reload();
             } else {
-                alert('오류: ' + data.error);
+                alert('?ㅻ쪟: ' + data.error);
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
+            alert('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }
 
-    // 연동 해제
+    // ?곕룞 ?댁젣
     async function unlinkPadlet(boardId, title) {
-        if (!confirm(`"${title}" 연동을 해제하시겠습니까?\n벡터DB의 데이터도 함께 삭제됩니다.`)) {
+        if (!confirm(`"${title}" ?곕룞???댁젣?섏떆寃좎뒿?덇퉴?\n踰≫꽣DB???곗씠?곕룄 ?④퍡 ??젣?⑸땲??`)) {
             return;
         }
 
@@ -279,16 +274,16 @@
                 document.getElementById(`board-${boardId}`).remove();
                 alert(data.message);
 
-                // 목록이 비면 새로고침
+                // 紐⑸줉??鍮꾨㈃ ?덈줈怨좎묠
                 const boards = document.querySelectorAll('.board-card');
                 if (boards.length === 0) {
                     location.reload();
                 }
             } else {
-                alert('오류: ' + data.error);
+                alert('?ㅻ쪟: ' + data.error);
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
+            alert('?ㅽ듃?뚰겕 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
         }
     }
 </script>

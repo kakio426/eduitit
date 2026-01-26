@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ session.title }} - Eduitit{% endblock %}
 
@@ -8,7 +8,7 @@
         <!-- Header -->
         <div class="mb-6">
             <a href="{% url 'signatures:list' %}" class="text-xl text-gray-500 hover:text-purple-600 transition">
-                <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
+                <i class="fa-solid fa-arrow-left mr-1"></i> 紐⑸줉?쇰줈
             </a>
         </div>
 
@@ -31,18 +31,18 @@
                             class="px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer
                             {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
                             <i class="fa-solid fa-circle text-xs mr-1"></i>
-                            <span id="statusText">{% if session.is_active %}활성{% else %}비활성{% endif %}</span>
+                            <span id="statusText">{% if session.is_active %}?쒖꽦{% else %}鍮꾪솢??% endif %}</span>
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-xl text-gray-600">
-                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{
-                            session.instructor }}</p>
-                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{
-                            session.datetime|date:"Y년 m월 d일 H:i" }}</p>
-                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{
-                            session.location }}</p>
-                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{
-                            signatures.count }}명</p>
+                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>媛뺤궗:</strong> {{ session.instructor }}</p>
+
+                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>?쇱떆:</strong> {{ session.datetime|date:"Y??m??d??H:i" }}</p>
+
+                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>?μ냼:</strong> {{ session.location }}</p>
+
+                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>?쒕챸:</strong> {{ signatures.count }}紐?/p>
+
                     </div>
                     {% if session.description %}
                     <p class="mt-4 text-xl text-gray-500">{{ session.description }}</p>
@@ -51,15 +51,15 @@
                 <div class="flex flex-col gap-3">
                     <a href="{% url 'signatures:edit' uuid=session.uuid %}"
                         class="px-6 py-3 text-xl font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center">
-                        <i class="fa-solid fa-edit mr-1"></i> 수정
+                        <i class="fa-solid fa-edit mr-1"></i> ?섏젙
                     </a>
                     <a href="{% url 'signatures:print' uuid=session.uuid %}"
                         class="px-6 py-3 text-xl font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center">
-                        <i class="fa-solid fa-print mr-1"></i> 출석부 출력
+                        <i class="fa-solid fa-print mr-1"></i> 異쒖꽍遺 異쒕젰
                     </a>
                     <a href="{% url 'signatures:delete' uuid=session.uuid %}"
                         class="px-6 py-3 text-xl font-bold text-red-400 rounded-xl shadow-clay-inner hover:text-red-600 transition text-center">
-                        <i class="fa-solid fa-trash mr-1"></i> 삭제
+                        <i class="fa-solid fa-trash mr-1"></i> ??젣
                     </a>
                 </div>
             </div>
@@ -68,7 +68,7 @@
         <!-- Share Link -->
         <div class="clay-card p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-3">
-                <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i>서명 링크 공유
+                <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i>?쒕챸 留곹겕 怨듭쑀
             </h2>
             <div class="flex gap-3">
                 <input type="text" id="shareLink" readonly
@@ -76,16 +76,16 @@
                     class="flex-1 px-4 py-3 rounded-xl shadow-clay-inner bg-bg-soft text-xl text-gray-600">
                 <button onclick="copyLink()"
                     class="px-6 py-3 clay-card text-xl font-bold text-purple-600 hover:shadow-clay-hover transition">
-                    <i class="fa-solid fa-copy mr-1"></i> 복사
+                    <i class="fa-solid fa-copy mr-1"></i> 蹂듭궗
                 </button>
             </div>
-            <p class="text-lg text-gray-400 mt-2">이 링크를 선생님들에게 공유하세요. 로그인 없이 서명할 수 있습니다.</p>
+            <p class="text-lg text-gray-400 mt-2">??留곹겕瑜??좎깮?섎뱾?먭쾶 怨듭쑀?섏꽭?? 濡쒓렇???놁씠 ?쒕챸?????덉뒿?덈떎.</p>
         </div>
 
         <!-- Signature List -->
         <div class="clay-card p-6">
             <h2 class="text-3xl font-bold text-gray-700 mb-6">
-                <i class="fa-solid fa-list-check text-purple-500 mr-2"></i>서명 목록 ({{ signatures.count }}명)
+                <i class="fa-solid fa-list-check text-purple-500 mr-2"></i>?쒕챸 紐⑸줉 ({{ signatures.count }}紐?
             </h2>
 
             {% if signatures %}
@@ -93,11 +93,11 @@
                 <table class="w-full text-xl">
                     <thead>
                         <tr class="border-b-2 border-gray-200">
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">번호</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">이름</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">서명</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">서명 시간</th>
-                            <th class="py-3 px-4 text-center text-gray-500 font-bold">관리</th>
+                            <th class="py-3 px-4 text-left text-gray-500 font-bold">踰덊샇</th>
+                            <th class="py-3 px-4 text-left text-gray-500 font-bold">?대쫫</th>
+                            <th class="py-3 px-4 text-left text-gray-500 font-bold">?쒕챸</th>
+                            <th class="py-3 px-4 text-left text-gray-500 font-bold">?쒕챸 ?쒓컙</th>
+                            <th class="py-3 px-4 text-center text-gray-500 font-bold">愿由?/th>
                         </tr>
                     </thead>
                     <tbody id="signatureTable">
@@ -106,7 +106,7 @@
                             <td class="py-3 px-4 text-gray-600">{{ forloop.counter }}</td>
                             <td class="py-3 px-4 font-bold text-gray-700">{{ sig.participant_name }}</td>
                             <td class="py-3 px-4">
-                                <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[150px] object-contain">
+                                <img src="{{ sig.signature_data }}" alt="?쒕챸" class="h-12 max-w-[150px] object-contain">
                             </td>
                             <td class="py-3 px-4 text-gray-500">{{ sig.created_at|date:"H:i:s" }}</td>
                             <td class="py-3 px-4 text-center">
@@ -123,7 +123,7 @@
             {% else %}
             <div class="text-center py-12">
                 <i class="fa-solid fa-inbox text-5xl text-gray-300 mb-4"></i>
-                <p class="text-2xl text-gray-400">아직 서명이 없습니다</p>
+                <p class="text-2xl text-gray-400">?꾩쭅 ?쒕챸???놁뒿?덈떎</p>
             </div>
             {% endif %}
         </div>
@@ -137,7 +137,7 @@
         const input = document.getElementById('shareLink');
         input.select();
         navigator.clipboard.writeText(input.value);
-        alert('링크가 복사되었습니다!');
+        alert('留곹겕媛 蹂듭궗?섏뿀?듬땲??');
     }
 
     function toggleActive() {
@@ -153,16 +153,16 @@
                 const text = document.getElementById('statusText');
                 if (data.is_active) {
                     badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
-                    text.textContent = '활성';
+                    text.textContent = '?쒖꽦';
                 } else {
                     badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
-                    text.textContent = '비활성';
+                    text.textContent = '鍮꾪솢??;
                 }
             });
     }
 
     function deleteSignature(pk) {
-        if (!confirm('이 서명을 삭제하시겠습니까?')) return;
+        if (!confirm('???쒕챸????젣?섏떆寃좎뒿?덇퉴?')) return;
 
         fetch(`/signatures/signature/${pk}/delete/`, {
             method: 'POST',

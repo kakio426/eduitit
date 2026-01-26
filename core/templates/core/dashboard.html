@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}대시보드 - Eduitit{% endblock %}
+{% block title %}??쒕낫??- Eduitit{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen">
@@ -8,10 +8,10 @@
         <!-- Header -->
         <div class="text-center mb-16 space-y-4">
             <h1 class="text-5xl md:text-6xl font-bold text-gray-700">
-                오늘도 환영합니다, {{ user.username }} 선생님! 👋
+                ?ㅻ뒛???섏쁺?⑸땲?? {{ user.username }} ?좎깮?? ?몝
             </h1>
             <p class="text-2xl text-gray-400 font-hand">
-                사용 가능한 서비스들을 확인해보세요.
+                ?ъ슜 媛?ν븳 ?쒕퉬?ㅻ뱾???뺤씤?대낫?몄슂.
             </p>
         </div>
 
@@ -43,18 +43,18 @@
                 </p>
 
                 <div class="flex items-center gap-2 text-purple-400 font-bold text-lg">
-                    바로가기 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    諛붾줈媛湲?<i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </div>
             </div>
             {% endfor %}
             {% if not products %}
             <div class="col-span-full clay-card p-12 text-center">
-                <div class="text-6xl mb-6">🏜️</div>
-                <h3 class="text-3xl font-bold text-gray-500 mb-2">사용 가능한 서비스가 없습니다.</h3>
-                <p class="text-xl text-gray-400 font-hand mb-8">홈페이지에서 마음에 드는 서비스를 찾아보세요!</p>
+                <div class="text-6xl mb-6">?룣截?/div>
+                <h3 class="text-3xl font-bold text-gray-500 mb-2">?ъ슜 媛?ν븳 ?쒕퉬?ㅺ? ?놁뒿?덈떎.</h3>
+                <p class="text-xl text-gray-400 font-hand mb-8">?덊럹?댁??먯꽌 留덉쓬???쒕뒗 ?쒕퉬?ㅻ? 李얠븘蹂댁꽭??</p>
                 <a href="/"
                     class="px-8 py-3 bg-purple-500 text-white rounded-full text-xl font-bold hover:shadow-lg transition">
-                    서비스 보러가기
+                    ?쒕퉬??蹂대윭媛湲?
                 </a>
             </div>
             {% endif %}

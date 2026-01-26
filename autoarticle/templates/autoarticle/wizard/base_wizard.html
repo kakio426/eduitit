@@ -1,22 +1,22 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 {% block content %}
 <div class='min-h-screen bg-[#F0F2F5] pt-32 pb-20 px-4'>
     <div class='max-w-7xl mx-auto flex flex-col lg:flex-row gap-8'>
         <aside class='lg:w-80'>
             <div class='clay-card p-6 bg-white shadow-clay rounded-[2rem]'>
-                <h2 class='text-2xl font-bold mb-6 text-gray-800'>환경 설정</h2>
+                <h2 class='text-2xl font-bold mb-6 text-gray-800'>?섍꼍 ?ㅼ젙</h2>
                 <form method='post' action='{% url "autoarticle:create" %}'>
                     {% csrf_token %}
                     <input type='hidden' name='step' value='{{ step }}'>
                     <div class='mb-6'>
-                        <label class='block text-sm font-bold mb-2 text-gray-700'>학교명</label>
+                        <label class='block text-sm font-bold mb-2 text-gray-700'>?숆탳紐?/label>
                         <input type='text' name='school_name' value='{{ school_name }}'
                             class='w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner'
                             onchange='this.form.submit()'>
                     </div>
                     <div class='mb-6'>
-                        <label class='block text-sm font-bold mb-2 text-gray-700'>디자인 테마</label>
+                        <label class='block text-sm font-bold mb-2 text-gray-700'>?붿옄???뚮쭏</label>
                         <div class='grid gap-3'>
                             {% for t_name in theme_list %}
                             <label class='cursor-pointer'>
@@ -31,10 +31,10 @@
                 </form>
                 <div class='pt-6 border-t border-gray-100 flex flex-col gap-3'>
                     <a href='{% url "autoarticle:archive" %}'
-                        class='flex items-center justify-center p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold hover:bg-purple-200 transition-colors'>전체
-                        기사 보관함</a>
+                        class='flex items-center justify-center p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold hover:bg-purple-200 transition-colors'>?꾩껜
+                        湲곗궗 蹂닿???/a>
                     <a href='{% url "autoarticle:create" %}'
-                        class='text-center text-gray-400 hover:text-gray-600 transition-colors'>새로 시작하기</a>
+                        class='text-center text-gray-400 hover:text-gray-600 transition-colors'>?덈줈 ?쒖옉?섍린</a>
                 </div>
             </div>
         </aside>

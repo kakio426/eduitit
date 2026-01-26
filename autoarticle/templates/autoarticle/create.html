@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
@@ -6,8 +6,8 @@
     <div class="max-w-3xl mx-auto">
         <!-- Header -->
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4 font-display">✨ 자동 기사/PPT 생성기</h1>
-            <p class="text-lg text-gray-500 font-bold">주제만 입력하면 AI가 자료조사부터 뉴스레터, PPT까지 한 번에 제작합니다.</p>
+            <h1 class="text-4xl font-bold text-gray-900 mb-4 font-display">???먮룞 湲곗궗/PPT ?앹꽦湲?/h1>
+            <p class="text-lg text-gray-500 font-bold">二쇱젣留??낅젰?섎㈃ AI媛 ?먮즺議곗궗遺???댁뒪?덊꽣, PPT源뚯? ??踰덉뿉 ?쒖옉?⑸땲??</p>
         </div>
 
         <!-- Card -->
@@ -26,11 +26,11 @@
 
                 <!-- Topic Input -->
                 <div class="space-y-2">
-                    <label class="block text-lg font-bold text-gray-700">주제 입력</label>
+                    <label class="block text-lg font-bold text-gray-700">二쇱젣 ?낅젰</label>
                     <div class="relative">
                         <input type="text" name="topic"
                             class="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all text-lg shadow-inner bg-gray-50"
-                            placeholder="예: 2025년 AI 디지털 교과서 도입 계획">
+                            placeholder="?? 2025??AI ?붿???援먭낵???꾩엯 怨꾪쉷">
                         <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                         </div>
@@ -43,22 +43,22 @@
                         <div class="w-full border-t border-gray-200"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="px-4 bg-white text-gray-500 rounded-full border border-gray-200">또는 파일로 분석하기</span>
+                        <span class="px-4 bg-white text-gray-500 rounded-full border border-gray-200">?먮뒗 ?뚯씪濡?遺꾩꽍?섍린</span>
                     </div>
                 </div>
 
                 <!-- File Input -->
                 <div class="space-y-2">
-                    <label class="block text-lg font-bold text-gray-700">참고 자료 (PDF)</label>
+                    <label class="block text-lg font-bold text-gray-700">李멸퀬 ?먮즺 (PDF)</label>
                     <div class="flex items-center justify-center w-full">
                         <label for="dropzone-file"
                             class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group">
                             <div class="flex flex-col items-center justify-center pt-5 pb-6">
                                 <i
                                     class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-3 group-hover:text-purple-500 transition-colors"></i>
-                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">클릭하여 업로드</span> 또는 드래그
-                                    앤 드롭</p>
-                                <p class="text-xs text-gray-500">PDF 파일 (최대 10MB)</p>
+                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">?대┃?섏뿬 ?낅줈??/span> ?먮뒗 ?쒕옒洹?
+                                    ???쒕∼</p>
+                                <p class="text-xs text-gray-500">PDF ?뚯씪 (理쒕? 10MB)</p>
                             </div>
                             <input id="dropzone-file" name="file" type="file" accept=".pdf" class="hidden" />
                         </label>
@@ -76,7 +76,7 @@
                 <!-- Submit Button -->
                 <button type="submit"
                     class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-6 rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all font-bold text-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group">
-                    <span>분석 및 생성 시작</span>
+                    <span>遺꾩꽍 諛??앹꽦 ?쒖옉</span>
                     <i class="fa-solid fa-rocket group-hover:translate-x-1 transition-transform"></i>
                 </button>
             </form>
@@ -84,7 +84,7 @@
 
         <!-- Help Text -->
         <div class="mt-8 text-center text-gray-500 text-sm">
-            <p><i class="fa-solid fa-circle-info mr-1"></i> 생성에는 약 30초~1분 정도 소요될 수 있습니다.</p>
+            <p><i class="fa-solid fa-circle-info mr-1"></i> ?앹꽦?먮뒗 ??30珥?1遺??뺣룄 ?뚯슂?????덉뒿?덈떎.</p>
         </div>
     </div>
 </div>
@@ -94,8 +94,8 @@
     class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center">
     <div class="text-center space-y-4">
         <div class="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
-        <h3 class="text-2xl font-bold text-gray-800">AI가 열심히 분석 중입니다...</h3>
-        <p class="text-gray-600 animate-pulse">자료 조사 → 요약 → PPT 생성 진행 중</p>
+        <h3 class="text-2xl font-bold text-gray-800">AI媛 ?댁떖??遺꾩꽍 以묒엯?덈떎...</h3>
+        <p class="text-gray-600 animate-pulse">?먮즺 議곗궗 ???붿빟 ??PPT ?앹꽦 吏꾪뻾 以?/p>
     </div>
 </div>
 

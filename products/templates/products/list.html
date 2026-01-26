@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Our Services - Eduitit{% endblock %}
 
@@ -107,8 +107,8 @@ color: white;
             <h3>{{ product.title }}</h3>
             <p>{{ product.description|truncatewords:15 }}</p>
             <div class="card-footer">
-                <div class="price">₩{{ product.price|floatformat:0 }}</div>
-                {% if product.title == "🐎 온라인 윷놀이" %}
+                <div class="price">??{ product.price|floatformat:0 }}</div>
+                {% if product.title == "?릮 ?⑤씪???룸??? %}
                 <a href="{% url 'yut_game' %}" class="btn btn-primary"
                     style="background: #10b981; border-color: #10b981;">Play Now</a>
                 {% else %}

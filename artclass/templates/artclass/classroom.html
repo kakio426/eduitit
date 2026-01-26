@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}수업 진행 중 - Eduitit{% endblock %}
+{% block title %}?섏뾽 吏꾪뻾 以?- Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -74,10 +74,10 @@
         <div class="flex items-center gap-4">
             <a href="{% url 'artclass:setup_edit' art_class.pk %}"
                 class="flex items-center gap-2 hover:bg-white/10 px-4 py-2 rounded-xl transition-all">
-                <i class="fa-solid fa-arrow-left"></i> <span class="font-bold">편집으로 돌아가기</span>
+                <i class="fa-solid fa-arrow-left"></i> <span class="font-bold">?몄쭛?쇰줈 ?뚯븘媛湲?/span>
             </a>
             <div class="h-6 w-px bg-white/20"></div>
-            <h1 class="text-lg font-bold text-white/80 hidden md:block">🎨 {{ art_class.title|default:"미술 수업" }}</h1>
+            <h1 class="text-lg font-bold text-white/80 hidden md:block">?렓 {{ art_class.title|default:"誘몄닠 ?섏뾽" }}</h1>
         </div>
         <div class="flex items-center gap-2">
             <button id="btnFullscreen" class="p-3 hover:bg-white/10 rounded-full transition-all">
@@ -98,8 +98,8 @@
                 class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 glass-dark px-6 py-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20">
                 <button id="btnLoop"
                     class="flex items-center gap-2 text-white font-bold hover:text-purple-400 transition"
-                    title="현재 장면 10초 구간 반복">
-                    <i class="fa-solid fa-repeat"></i> <span id="loopStatus">구간 반복 OFF</span>
+                    title="?꾩옱 ?λ㈃ 10珥?援ш컙 諛섎났">
+                    <i class="fa-solid fa-repeat"></i> <span id="loopStatus">援ш컙 諛섎났 OFF</span>
                 </button>
                 <div class="h-4 w-px bg-white/20"></div>
                 <span id="totalTimer" class="font-mono text-white/80">00:00</span>
@@ -117,7 +117,7 @@
                     <div id="noImage"
                         class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
                         <i class="fa-solid fa-paintbrush text-6xl mb-4 opacity-30"></i>
-                        <p class="font-bold opacity-50">활동 이미지가 없습니다</p>
+                        <p class="font-bold opacity-50">?쒕룞 ?대?吏媛 ?놁뒿?덈떎</p>
                     </div>
                 </div>
 
@@ -135,7 +135,7 @@
 
                     <div id="stepTextContainer">
                         <p id="stepText" class="text-gray-800 text-jumbo leading-tight break-keep">
-                            로딩 중...
+                            濡쒕뵫 以?..
                         </p>
                     </div>
                 </div>
@@ -146,17 +146,17 @@
                 <!-- Interval Setup & Loop Mode -->
                 <div class="flex items-center justify-between">
                     <div class="flex flex-col gap-1">
-                        <span class="text-xs font-black text-gray-400 uppercase tracking-widest">자동 전환 모드</span>
+                        <span class="text-xs font-black text-gray-400 uppercase tracking-widest">?먮룞 ?꾪솚 紐⑤뱶</span>
                         <button id="btnStepRepeat"
                             class="w-14 h-14 rounded-2xl shadow-clay bg-[#E0E5EC] text-gray-400 flex items-center justify-center transition-all relative group"
-                            title="전체 반복 / 한 단계 반복 설정">
+                            title="?꾩껜 諛섎났 / ???④퀎 諛섎났 ?ㅼ젙">
                             <i class="fa-solid fa-arrows-rotate text-2xl"></i>
                             <span id="stepRepeatBadge"
                                 class="absolute top-3 right-3 w-4 h-4 bg-purple-600 text-white text-[10px] flex items-center justify-center rounded-full font-black hidden">1</span>
                         </button>
                     </div>
                     <div class="flex flex-col items-end gap-1">
-                        <span class="text-xs font-black text-gray-400 uppercase tracking-widest">다음 단계까지</span>
+                        <span class="text-xs font-black text-gray-400 uppercase tracking-widest">?ㅼ쓬 ?④퀎源뚯?</span>
                         <div class="flex items-center gap-4">
                             <button id="btnDecreaseTime"
                                 class="w-10 h-10 rounded-xl shadow-clay bg-[#E0E5EC] text-gray-600 font-heavy text-xl active:scale-95 transition-all">-</button>
@@ -172,16 +172,16 @@
                 <div class="grid grid-cols-3 gap-4">
                     <button id="btnPrev"
                         class="px-3 py-4 rounded-xl shadow-clay bg-[#E0E5EC] text-gray-600 font-heavy hover:text-purple-600 transition-all flex flex-col items-center gap-2 active:scale-95">
-                        <i class="fa-solid fa-backward-step"></i> <span class="text-sm">이전</span>
+                        <i class="fa-solid fa-backward-step"></i> <span class="text-sm">?댁쟾</span>
                     </button>
                     <button id="btnFreeze"
                         class="px-3 py-4 rounded-xl shadow-clay bg-amber-100 text-amber-600 font-heavy hover:bg-amber-200 transition-all flex flex-col items-center gap-2 active:scale-95">
                         <i id="freezeIcon" class="fa-solid fa-pause"></i> <span id="freezeText"
-                            class="text-sm">일시정지</span>
+                            class="text-sm">?쇱떆?뺤?</span>
                     </button>
                     <button id="btnNext"
                         class="px-3 py-4 rounded-xl shadow-clay bg-[#E0E5EC] text-gray-600 font-heavy hover:text-purple-600 transition-all flex flex-col items-center gap-2 active:scale-95">
-                        <i class="fa-solid fa-forward-step"></i> <span class="text-sm">다음</span>
+                        <i class="fa-solid fa-forward-step"></i> <span class="text-sm">?ㅼ쓬</span>
                     </button>
                 </div>
             </div>
@@ -241,7 +241,7 @@
         void stepText.offsetWidth;
         stepText.parentElement.classList.add('animate-slide-up');
 
-        stepText.textContent = step.text || '(설명 없음)';
+        stepText.textContent = step.text || '(?ㅻ챸 ?놁쓬)';
         document.getElementById('currentStepNum').textContent = currentStep + 1;
 
         if (step.image_url) {
@@ -316,12 +316,12 @@
 
         if (isFrozen) {
             icon.className = 'fa-solid fa-play';
-            text.textContent = '계속하기';
+            text.textContent = '怨꾩냽?섍린';
             btn.classList.replace('bg-amber-100', 'bg-blue-600');
             btn.classList.replace('text-amber-600', 'text-white');
         } else {
             icon.className = 'fa-solid fa-pause';
-            text.textContent = '일시정지';
+            text.textContent = '?쇱떆?뺤?';
             btn.classList.replace('bg-blue-600', 'bg-amber-100');
             btn.classList.replace('text-white', 'text-amber-600');
             lastTime = Date.now();
@@ -337,11 +337,11 @@
             loopStart = Math.max(0, now - 5);
             loopEnd = now + 5;
             isLooping = true;
-            document.getElementById('loopStatus').textContent = "구간 반복 ON";
+            document.getElementById('loopStatus').textContent = "援ш컙 諛섎났 ON";
             document.getElementById('loopStatus').style.color = "#a855f7";
         } else {
             isLooping = false;
-            document.getElementById('loopStatus').textContent = "구간 반복 OFF";
+            document.getElementById('loopStatus').textContent = "援ш컙 諛섎났 OFF";
             document.getElementById('loopStatus').style.color = "white";
         }
     };

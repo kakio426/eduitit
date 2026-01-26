@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ title }} - Eduitit{% endblock %}
 
@@ -8,13 +8,13 @@
     <header class="text-center mb-12">
         <span
             class="inline-block px-4 py-1 rounded-full bg-purple-100 text-purple-600 font-bold text-2xl mb-4 shadow-sm font-hand tracking-wide">
-            ✍️ {{ title }}
+            ?랃툘 {{ title }}
         </span>
         <h1 class="text-6xl md:text-7xl font-bold text-gray-700 font-hand text-shadow mb-2 leading-none">
             Insight Form
         </h1>
         <p class="text-2xl md:text-3xl text-gray-400 font-hand max-w-2xl mx-auto leading-tight">
-            유튜브 링크와 함께 나만의 인사이트를 기록하세요.
+            ?좏뒠釉?留곹겕? ?④퍡 ?섎쭔???몄궗?댄듃瑜?湲곕줉?섏꽭??
         </p>
     </header>
 
@@ -59,7 +59,7 @@
             <!-- Video URL -->
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    {{ form.video_url.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>
+                    {{ form.video_url.label }} <span class="text-gray-400 text-lg font-normal">(?좏깮?ы빆)</span>
                 </label>
                 {{ form.video_url }}
                 {% if form.video_url.errors %}
@@ -81,7 +81,7 @@
             <!-- Kakio Note -->
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    {{ form.kakio_note.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>
+                    {{ form.kakio_note.label }} <span class="text-gray-400 text-lg font-normal">(?좏깮?ы빆)</span>
                 </label>
                 {{ form.kakio_note }}
                 {% if form.kakio_note.errors %}
@@ -92,7 +92,7 @@
             <!-- Tags -->
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    {{ form.tags.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>
+                    {{ form.tags.label }} <span class="text-gray-400 text-lg font-normal">(?좏깮?ы빆)</span>
                 </label>
                 {{ form.tags }}
                 {% if form.tags.errors %}
@@ -104,14 +104,14 @@
             <div class="flex gap-4 pt-6">
                 <button type="submit"
                     class="flex-1 py-4 rounded-full bg-purple-500 text-white text-2xl font-bold shadow-clay hover:bg-purple-600 hover:scale-105 active:scale-95 transition-all">
-                    <i class="fa-solid fa-check mr-2"></i>저장하기
-                </button>
+                    <i class="fa-solid fa-check mr-2"></i>??ν븯湲?                </button>
                 <a href="{% url 'insights:list' %}"
                     class="px-8 py-4 rounded-full bg-gray-300 text-gray-700 text-2xl font-bold shadow-clay hover:bg-gray-400 transition-all text-center">
-                    <i class="fa-solid fa-xmark mr-2"></i>취소
+                    <i class="fa-solid fa-xmark mr-2"></i>痍⑥냼
                 </a>
             </div>
         </form>
     </div>
 </main>
 {% endblock %}
+

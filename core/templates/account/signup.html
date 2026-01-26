@@ -1,8 +1,8 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load i18n %}
 {% load account socialaccount %}
 
-{% block title %}에듀이티잇 - 회원가입{% endblock %}
+{% block title %}?먮??댄떚??- ?뚯썝媛??% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
@@ -14,30 +14,30 @@
                     class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-blue-500 text-4xl mb-6">
                     <i class="fa-solid fa-user-plus"></i>
                 </div>
-                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">선생님, 환영합니다!</h1>
-                <p class="text-2xl text-gray-400 font-hand">에듀이티잇과 함께 스마트한 교실을 만들어봐요.</p>
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">?좎깮?? ?섏쁺?⑸땲??</h1>
+                <p class="text-2xl text-gray-400 font-hand">?먮??댄떚?뉕낵 ?④퍡 ?ㅻ쭏?명븳 援먯떎??留뚮뱾?대킄??</p>
             </div>
 
             <!-- Social Login Prompt -->
             <div class="space-y-8 animate-fade-in-up">
                 <p class="text-center text-xl text-gray-500 mb-8 font-hand text-balance">
-                    별도의 회원가입 절차 없이,<br>
-                    카카오나 네이버 계정으로 바로 이용할 수 있어요.
+                    蹂꾨룄???뚯썝媛???덉감 ?놁씠,<br>
+                    移댁뭅?ㅻ굹 ?ㅼ씠踰?怨꾩젙?쇰줈 諛붾줈 ?댁슜?????덉뼱??
                 </p>
 
                 <div class="space-y-4">
                     <a href="{% provider_login_url 'kakao' %}"
                         class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
-                            class="w-7 h-7" alt="카카오">
-                        <span class="text-2xl font-bold text-[#3C1E1E]">카카오로 계속하기</span>
+                            class="w-7 h-7" alt="移댁뭅??>
+                        <span class="text-2xl font-bold text-[#3C1E1E]">移댁뭅?ㅻ줈 怨꾩냽?섍린</span>
                     </a>
 
                     <a href="{% provider_login_url 'naver' %}"
                         class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://clova-static.itv.co.kr/public/0.0.1/images/naver-logo.png"
-                            class="w-6 h-6 filter brightness-0 invert" alt="네이버">
-                        <span class="text-2xl font-bold text-white">네이버로 계속하기</span>
+                            class="w-6 h-6 filter brightness-0 invert" alt="?ㅼ씠踰?>
+                        <span class="text-2xl font-bold text-white">?ㅼ씠踰꾨줈 怨꾩냽?섍린</span>
                     </a>
                 </div>
 
@@ -49,18 +49,18 @@
                     </div>
                     <div class="relative z-10">
                         <h4 class="text-xl font-bold text-indigo-600 mb-2 flex items-center gap-2">
-                            <i class="fa-solid fa-face-smile text-lg"></i> 현직 선생님의 진심
+                            <i class="fa-solid fa-face-smile text-lg"></i> ?꾩쭅 ?좎깮?섏쓽 吏꾩떖
                         </h4>
                         <p class="text-lg text-gray-500 font-hand leading-relaxed">
-                            에듀이티잇은 선생님들을 위한 1인 개발 서비스입니다.<br>
-                            개인 정보는 최소한만 수집하며 안전하게 보호됩니다.
+                            ?먮??댄떚?뉗? ?좎깮?섎뱾???꾪븳 1??媛쒕컻 ?쒕퉬?ㅼ엯?덈떎.<br>
+                            媛쒖씤 ?뺣낫??理쒖냼?쒕쭔 ?섏쭛?섎ŉ ?덉쟾?섍쾶 蹂댄샇?⑸땲??
                         </p>
                     </div>
                 </div>
 
                 <div class="text-center mt-8">
                     <a href="{% url 'account_login' %}"
-                        class="text-gray-400 font-bold hover:text-purple-600 transition">이미 가입하셨나요? 로그인하기</a>
+                        class="text-gray-400 font-bold hover:text-purple-600 transition">?대? 媛?낇븯?⑤굹?? 濡쒓렇?명븯湲?/a>
                 </div>
             </div>
         </div>

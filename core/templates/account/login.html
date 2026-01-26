@@ -1,8 +1,8 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load i18n %}
 {% load account socialaccount %}
 
-{% block title %}에듀이티잇 - 로그인{% endblock %}
+{% block title %}?먮??댄떚??- 濡쒓렇??% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
@@ -14,15 +14,15 @@
                     class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-purple-500 text-4xl mb-6">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">반가워요, 선생님!</h1>
-                <p class="text-2xl text-gray-400 font-hand">오늘도 선생님의 퇴근을 응원합니다.</p>
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">諛섍??뚯슂, ?좎깮??</h1>
+                <p class="text-2xl text-gray-400 font-hand">?ㅻ뒛???좎깮?섏쓽 ?닿렐???묒썝?⑸땲??</p>
             </div>
 
             <!-- Social Login Only -->
             <div class="space-y-8 animate-fade-in-up">
                 <p class="text-center text-xl text-gray-500 mb-8 font-hand text-balance">
-                    복잡한 아이디/비밀번호 기억할 필요 없이<br>
-                    사용하시던 계정으로 간편하게 시작하세요.
+                    蹂듭옟???꾩씠??鍮꾨?踰덊샇 湲곗뼲???꾩슂 ?놁씠<br>
+                    ?ъ슜?섏떆??怨꾩젙?쇰줈 媛꾪렪?섍쾶 ?쒖옉?섏꽭??
                 </p>
 
                 <div class="space-y-4">
@@ -30,16 +30,16 @@
                     <a href="{% provider_login_url 'kakao' %}"
                         class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
-                            class="w-7 h-7" alt="카카오">
-                        <span class="text-2xl font-bold text-[#3C1E1E]">카카오로 3초 만에 시작하기</span>
+                            class="w-7 h-7" alt="移댁뭅??>
+                        <span class="text-2xl font-bold text-[#3C1E1E]">移댁뭅?ㅻ줈 3珥?留뚯뿉 ?쒖옉?섍린</span>
                     </a>
 
                     <!-- Naver -->
                     <a href="{% provider_login_url 'naver' %}"
                         class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://clova-static.itv.co.kr/public/0.0.1/images/naver-logo.png"
-                            class="w-6 h-6 filter brightness-0 invert" alt="네이버">
-                        <span class="text-2xl font-bold text-white">네이버로 시작하기</span>
+                            class="w-6 h-6 filter brightness-0 invert" alt="?ㅼ씠踰?>
+                        <span class="text-2xl font-bold text-white">?ㅼ씠踰꾨줈 ?쒖옉?섍린</span>
                     </a>
                 </div>
 
@@ -47,14 +47,14 @@
                     class="mt-12 p-6 rounded-[2rem] bg-purple-50 border border-purple-100 shadow-sm relative overflow-hidden text-center">
                     <p class="text-lg text-purple-700 font-hand">
                         <i class="fa-solid fa-shield-halved mr-2"></i>
-                        선생님의 개인정보는 안전하게 보호됩니다.
+                        ?좎깮?섏쓽 媛쒖씤?뺣낫???덉쟾?섍쾶 蹂댄샇?⑸땲??
                     </p>
                 </div>
 
                 <!-- Hidden Admin Login Link (Optional) -->
                 <div class="text-center mt-8">
-                    <a href="{% url 'admin:index' %}" class="text-gray-300 text-sm hover:text-gray-400 transition">관리자
-                        접속</a>
+                    <a href="{% url 'admin:index' %}" class="text-gray-300 text-sm hover:text-gray-400 transition">愿由ъ옄
+                        ?묒냽</a>
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-<!-- Modal System (Ported from BroadcastModal, StudentSelectModal, AlertOverlay) -->
+﻿<!-- Modal System (Ported from BroadcastModal, StudentSelectModal, AlertOverlay) -->
 
 <!-- 1. Alert Overlay (Emergency/Notification) -->
 <div id="alertOverlay"
@@ -8,11 +8,11 @@
         <h2 class="text-3xl md:text-4xl font-black mb-6 md:mb-8 drop-shadow-lg">Attention</h2>
         <div id="alertMessage"
             class="text-2xl md:text-3xl lg:text-5xl font-black mb-8 md:mb-12 leading-tight tracking-tight break-keep">
-            알림 메시지
+            ?뚮┝ 硫붿떆吏
         </div>
         <button id="alertDismissBtn"
             class="bg-white text-purple-500 px-10 md:px-12 py-4 md:py-5 rounded-full text-3xl md:text-4xl font-bold hover:scale-110 active:scale-95 transition-all shadow-xl">
-            확인완료
+            ?뺤씤?꾨즺
         </button>
     </div>
 </div>
@@ -23,13 +23,13 @@
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeBroadcastModal()"></div>
     <div
         class="relative bg-[#E0E5EC] border border-white/50 w-full max-w-lg rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-clay">
-        <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center text-gray-700">전체 방송 알림</h2>
+        <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center text-gray-700">?꾩껜 諛⑹넚 ?뚮┝</h2>
         <textarea id="broadcastInput"
             class="w-full h-32 md:h-40 bg-white/30 border border-white/50 rounded-2xl p-4 md:p-6 text-lg md:text-xl mb-4 md:mb-6 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all resize-none text-gray-700 shadow-clay-inner"
-            placeholder="아이들에게 전달할 메시지를 입력하세요..."></textarea>
+            placeholder="?꾩씠?ㅼ뿉寃??꾨떖??硫붿떆吏瑜??낅젰?섏꽭??.."></textarea>
 
         <div class="flex items-center justify-between mb-6 md:mb-8 px-2">
-            <span class="text-sm md:text-base font-bold text-gray-500">알림음 재생</span>
+            <span class="text-sm md:text-base font-bold text-gray-500">?뚮┝???ъ깮</span>
             <button id="toggleSoundBtn" class="w-14 h-8 bg-purple-500 rounded-full relative transition-colors">
                 <div class="w-6 h-6 bg-white rounded-full absolute top-1 left-7 transition-all shadow-sm"></div>
             </button>
@@ -37,10 +37,10 @@
 
         <div class="flex gap-3 md:gap-4">
             <button onclick="closeBroadcastModal()"
-                class="flex-1 py-3 md:py-4 bg-white/30 font-bold rounded-2xl border border-white/50 hover:bg-white/50 transition-colors text-gray-600">취소</button>
+                class="flex-1 py-3 md:py-4 bg-white/30 font-bold rounded-2xl border border-white/50 hover:bg-white/50 transition-colors text-gray-600">痍⑥냼</button>
             <button id="sendBroadcastBtn"
-                class="flex-[2] py-3 md:py-4 bg-purple-500 text-white font-bold rounded-2xl shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-95 transition-all">방송
-                시작</button>
+                class="flex-[2] py-3 md:py-4 bg-purple-500 text-white font-bold rounded-2xl shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-95 transition-all">諛⑹넚
+                ?쒖옉</button>
         </div>
     </div>
 </div>
@@ -51,8 +51,8 @@
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeStudentModal()"></div>
     <div
         class="relative bg-[#E0E5EC] border border-white/50 w-full max-w-3xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-clay max-h-[85vh] flex flex-col">
-        <h2 class="text-2xl md:text-3xl font-bold mb-2 text-center text-gray-700" id="studentModalTitle">담당 학생 선택</h2>
-        <p class="text-center text-gray-400 mb-6 md:mb-8 font-bold" id="studentModalDesc">역할을 수행할 사람을 선택해주세요.</p>
+        <h2 class="text-2xl md:text-3xl font-bold mb-2 text-center text-gray-700" id="studentModalTitle">?대떦 ?숈깮 ?좏깮</h2>
+        <p class="text-center text-gray-400 mb-6 md:mb-8 font-bold" id="studentModalDesc">??븷???섑뻾???щ엺???좏깮?댁＜?몄슂.</p>
 
         <div id="studentListGrid"
             class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 md:gap-3 overflow-y-auto dt-scrollbar flex-grow p-2">
@@ -61,10 +61,10 @@
 
         <div class="flex gap-3 md:gap-4 mt-6 md:mt-8">
             <button id="toggleRoleStatusBtn"
-                class="flex-1 py-3 md:py-4 bg-green-500/20 text-green-600 font-bold rounded-2xl border border-green-500/30 hover:bg-green-500/30 transition-colors">수행
-                완료로 변경</button>
+                class="flex-1 py-3 md:py-4 bg-green-500/20 text-green-600 font-bold rounded-2xl border border-green-500/30 hover:bg-green-500/30 transition-colors">?섑뻾
+                ?꾨즺濡?蹂寃?/button>
             <button onclick="closeStudentModal()"
-                class="flex-1 py-3 md:py-4 bg-white/30 font-bold rounded-2xl border border-white/50 text-gray-600 hover:bg-white/50 transition-colors">닫기</button>
+                class="flex-1 py-3 md:py-4 bg-white/30 font-bold rounded-2xl border border-white/50 text-gray-600 hover:bg-white/50 transition-colors">?リ린</button>
         </div>
     </div>
 </div>

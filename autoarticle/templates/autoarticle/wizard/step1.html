@@ -1,70 +1,69 @@
-{% extends 'autoarticle/wizard/base_wizard.html' %}
+﻿{% extends 'autoarticle/wizard/base_wizard.html' %}
 {% block wizard_content %}
 <div class='clay-card p-10 bg-white shadow-clay rounded-[2rem]'>
-    <h3 class='text-3xl font-bold text-gray-800 mb-2'>📝 정보 입력</h3>
-    <p class='text-gray-500 mb-10 font-hand text-xl'>교실 소식을 AI가 멋진 기사로 바꿔드려요.</p>
+    <h3 class='text-3xl font-bold text-gray-800 mb-2'>?뱷 ?뺣낫 ?낅젰</h3>
+    <p class='text-gray-500 mb-10 font-hand text-xl'>援먯떎 ?뚯떇??AI媛 硫뗭쭊 湲곗궗濡?諛붽퓭?쒕젮??</p>
     <form method='post' action='{% url "autoarticle:create" %}' id='creationForm' enctype="multipart/form-data">
         {% csrf_token %}
         <input type='hidden' name='step' value='1'>
         <div class='grid grid-cols-1 md:grid-cols-2 gap-8'>
             <div class='space-y-6'>
                 <div>
-                    <label class='block text-sm font-bold text-gray-700 mb-2'>📌 대상 학년</label>
+                    <label class='block text-sm font-bold text-gray-700 mb-2'>?뱦 ????숇뀈</label>
                     <select name='grade'
                         class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 bg-gray-50 shadow-inner'>
-                        <option>전교생</option>
-                        <option>1학년</option>
-                        <option>2학년</option>
-                        <option>3학년</option>
-                        <option>4학년</option>
-                        <option>5학년</option>
-                        <option>6학년</option>
+                        <option>?꾧탳??/option>
+                        <option>1?숇뀈</option>
+                        <option>2?숇뀈</option>
+                        <option>3?숇뀈</option>
+                        <option>4?숇뀈</option>
+                        <option>5?숇뀈</option>
+                        <option>6?숇뀈</option>
                     </select>
                 </div>
                 <div>
-                    <label class='block text-sm font-bold text-gray-700 mb-2'>🎉 행사명</label>
-                    <input type='text' name='event_name' placeholder='예: 숲 체험 학습' required
+                    <label class='block text-sm font-bold text-gray-700 mb-2'>?럦 ?됱궗紐?/label>
+                    <input type='text' name='event_name' placeholder='?? ??泥댄뿕 ?숈뒿' required
                         class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'>
                 </div>
                 <div class='grid grid-cols-2 gap-4'>
                     <div>
-                        <label class='block text-sm font-bold text-gray-700 mb-2'>📍 장소</label>
-                        <input type='text' name='location' placeholder='예: 학교 운동장'
+                        <label class='block text-sm font-bold text-gray-700 mb-2'>?뱧 ?μ냼</label>
+                        <input type='text' name='location' placeholder='?? ?숆탳 ?대룞??
                             class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'>
                     </div>
                     <div>
-                        <label class='block text-sm font-bold text-gray-700 mb-2'>📅 일시</label>
+                        <label class='block text-sm font-bold text-gray-700 mb-2'>?뱟 ?쇱떆</label>
                         <input type='date' name='date' value='{{ today }}'
                             class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'>
                     </div>
                 </div>
                 <div>
-                    <label class='block text-sm font-bold text-gray-700 mb-2'>🎨 기사 톤</label>
+                    <label class='block text-sm font-bold text-gray-700 mb-2'>?렓 湲곗궗 ??/label>
                     <select name='tone'
                         class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-500 bg-gray-50 shadow-inner'>
-                        <option value='따뜻하고 정감 있는'>따뜻하고 정감 있는</option>
-                        <option value='활기차고 밝은'>활기차고 밝은</option>
-                        <option value='정중하고 격식 있는'>정중하고 격식 있는</option>
-                        <option value='친근하고 유쾌한'>친근하고 유쾌한</option>
+                        <option value='?곕쑜?섍퀬 ?뺢컧 ?덈뒗'>?곕쑜?섍퀬 ?뺢컧 ?덈뒗</option>
+                        <option value='?쒓린李④퀬 諛앹?'>?쒓린李④퀬 諛앹?</option>
+                        <option value='?뺤쨷?섍퀬 寃⑹떇 ?덈뒗'>?뺤쨷?섍퀬 寃⑹떇 ?덈뒗</option>
+                        <option value='移쒓렐?섍퀬 ?좎풄??>移쒓렐?섍퀬 ?좎풄??/option>
                     </select>
                 </div>
             </div>
             <div class='space-y-6'>
                 <div>
-                    <label class='block text-sm font-bold text-gray-700 mb-2'>✍️ 주요 내용 (키워드)</label>
-                    <textarea name='keywords' rows='4' required placeholder='예: 도토리 줍기, 숲 해설사님 설명...'
+                    <label class='block text-sm font-bold text-gray-700 mb-2'>?랃툘 二쇱슂 ?댁슜 (?ㅼ썙??</label>
+                    <textarea name='keywords' rows='4' required placeholder='?? ?꾪넗由?以띻린, ???댁꽕?щ떂 ?ㅻ챸...'
                         class='w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-purple-400 bg-gray-50 shadow-inner'></textarea>
                 </div>
                 <div>
-                    <label class='block text-sm font-bold text-gray-700 mb-2'>📸 행사 사진 (최대 5장)</label>
+                    <label class='block text-sm font-bold text-gray-700 mb-2'>?벝 ?됱궗 ?ъ쭊 (理쒕? 5??</label>
                     <input type="file" name="images" multiple accept="image/*"
                         class="w-full px-5 py-3 rounded-2xl border-2 border-dashed border-gray-200 hover:border-purple-400 bg-gray-50 transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
-                    <p class="mt-1 text-sm text-gray-400 px-1">기사 하단에 삽입될 사진을 선택해주세요.</p>
+                    <p class="mt-1 text-sm text-gray-400 px-1">湲곗궗 ?섎떒???쎌엯???ъ쭊???좏깮?댁＜?몄슂.</p>
                 </div>
                 <button type='submit'
                     class='w-full py-5 rounded-3xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold text-2xl shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-95 transition-all'>
-                    AI로 초안 만들기
-                </button>
+                    AI濡?珥덉븞 留뚮뱾湲?                </button>
             </div>
         </div>
     </form>
