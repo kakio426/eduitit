@@ -13,12 +13,12 @@ class PDFEngine(FPDF):
         self.theme = THEMES.get(theme_name, THEMES["웜 & 플레이풀"])
         self.school_name = school_name
         # Ensure font exists or fallback
-        self.font_available = False
+        self.font_available = os.path.exists(FONT_PATH)
         if self.font_available:
             try:
                 self.add_font("NanumGothic", "", FONT_PATH)
                 self.font_available = True
-            except (UnicodeDecodeError, Exception) as e:
+            except Exception as e:
                 # Font loading failed (common on Windows with pickle encoding issues)
                 # Will use Arial fallback
                 print(f"Warning: Could not load custom font: {e}")

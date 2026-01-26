@@ -1,0 +1,8 @@
+{% for post in posts %}
+{% include 'core/partials/post_item.html' %}
+{% empty %}
+<div class="text-center py-10 text-slate-400 text-sm">
+    아직 작성된 글이 없습니다.<br>
+    첫 번째 글을 남겨보세요! 👋
+</div>
+{% endfor %}

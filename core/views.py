@@ -1,9 +1,10 @@
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from products.models import Product
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile
+from .models import UserProfile, Post
 from django.contrib import messages
+from django.db.models import Count
 
 def home(request):
     # Order by display_order first, then by creation date
@@ -32,7 +33,48 @@ def dashboard(request):
         Q(title__icontains="인사이트") | Q(title__icontains="사주")
     ).order_by('display_order', '-created_at').distinct()
     
-    return render(request, 'core/dashboard.html', {'products': available_products})
+    # SNS Posts - Optimized with select_related to prevent N+1
+    posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
+    
+    return render(request, 'core/dashboard_sns.html', {
+        'products': available_products,
+        'posts': posts
+    })
+
+@login_required
+def post_create(request):
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        image = request.FILES.get('image')
+        
+        if content or image:
+            Post.objects.create(
+                author=request.user,
+                content=content,
+                image=image
+            )
+            
+    # HTMX request check if needed, but for now redirecting or returning list could work. 
+    # Ideally, for HTMX, we return the new list or the single new post.
+    # To enable full refresh-less behavior, let's return the full list partial.
+    if request.headers.get('HX-Request'):
+        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
+        return render(request, 'core/partials/post_list.html', {'posts': posts})
+        
+    return redirect('dashboard')
+
+@login_required
+def post_like(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.user in post.likes.all():
+        post.likes.remove(request.user)
+    else:
+        post.likes.add(request.user)
+        
+    if request.headers.get('HX-Request'):
+        return render(request, 'core/partials/post_item.html', {'post': post})
+        
+    return redirect('dashboard')
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')

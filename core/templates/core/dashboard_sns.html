@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block title %}대시보드 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<!-- Pretendard Font -->
+<link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+{% endblock %}
+
+{% block extra_js %}
+<!-- HTMX -->
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+    document.body.addEventListener('htmx:configRequest', (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+</script>
+<!-- Phosphor Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Adjusting main container for 2-column layout (SNS Left, Dashboard Right) -->
+<!-- We override the default "min-h-screen" padding on body/main from base if needed, 
+     but here we will just create a flex container that fits within the existing structure.
+     Since base.html usually has a header, we need to respect the top padding (pt-32).
+-->
+<div class="flex flex-col md:flex-row min-h-screen pt-24 max-w-[1920px] mx-auto bg-[#F1F5F9] font-[Pretendard]">
+
+    <!-- [Left Area] SNS 위젯 (Fixed width on desktop, full on mobile) -->
+    <aside
+        class="w-full md:w-[380px] flex flex-col h-[calc(100vh-6rem)] md:sticky md:top-24 z-20 flex-shrink-0 bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+
+        <!-- 1. Header -->
+        <div
+            class="p-5 border-b border-slate-100 bg-white/90 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
+                <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
+                실시간 소통
+            </h2>
+            <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
+                hx-get="{% url 'dashboard' %}" hx-select="#post-list-container" hx-target="#post-list-container"
+                hx-swap="outerHTML">
+                <i class="ph ph-arrows-clockwise text-xl"></i>
+            </button>
+        </div>
+
+        <!-- 2. Infinite Scroll Feed Area -->
+        <div class="flex-1 overflow-y-auto bg-slate-50/50 p-4 space-y-3 custom-scrollbar" id="feed-scroll-container">
+
+            <!-- Write Input -->
+            <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="innerHTML"
+                hx-on::after-request="this.reset()" hx-encoding="multipart/form-data"
+                class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
+                {% csrf_token %}
+                <textarea name="content"
+                    class="w-full resize-none outline-none text-sm placeholder-slate-400 bg-transparent" rows="2"
+                    placeholder="팀원들에게 공유할 내용이 있나요?" required></textarea>
+
+                <!-- Image Preview (Optional Enhancement) -->
+                <!-- Simple File Input hidden -->
+                <input type="file" name="image" id="post-image-input" class="hidden" accept="image/*">
+
+                <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-50">
+                    <button type="button" onclick="document.getElementById('post-image-input').click()"
+                        class="text-slate-400 hover:text-indigo-500 p-1 rounded hover:bg-slate-50 transition">
+                        <i class="ph ph-image text-lg"></i>
+                    </button>
+                    <button type="submit"
+                        class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow-sm hover:translate-y-[-1px]">
+                        등록
+                    </button>
+                </div>
+            </form>
+
+            <!-- Feed List Container -->
+            <div id="post-list-container" class="space-y-3 pb-10">
+                {% include 'core/partials/post_list.html' %}
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- [Right Area] Main Dashboard Content -->
+    <main class="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                    대시보드
+                    <span
+                        class="text-sm font-normal text-slate-400 px-2 py-1 bg-white rounded-lg border border-slate-200">Beta</span>
+                </h1>
+                <p class="text-slate-500 mt-2 font-medium">
+                    오늘도 환영합니다, <span class="text-indigo-600 font-bold">{{ user.username }}</span> 선생님! 👋
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <div
+                    class="bg-white px-4 py-2 rounded-full border border-slate-200 text-sm font-bold text-slate-600 shadow-sm flex items-center gap-2">
+                    <span class="relative flex h-3 w-3">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    서비스 정상 운영중
+                </div>
+                <!-- Profile Avatar -->
+                <div
+                    class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md ring-2 ring-indigo-100">
+                    {% if user.userprofile.nickname %}{{ user.userprofile.nickname|slice:":1" }}{% else %}{{
+                    user.username|slice:":1" }}{% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Product Grid (Migrated from original dashboard) -->
+        <h3 class="font-bold text-xl text-slate-700 mb-6 flex items-center gap-2">
+            <i class="ph-fill ph-squares-four text-purple-500"></i> 내 서비스 목록
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {% for product in products %}
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-purple-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
+                onclick="window.location.href='/products/{{ product.slug }}'"><!-- Assuming link or modal logic -->
+
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl
+                                group-hover:bg-purple-50 group-hover:scale-110 transition-all duration-300
+                                {% if product.color_theme == 'purple' %}text-purple-500
+                                {% elif product.color_theme == 'green' %}text-green-500
+                                {% elif product.color_theme == 'red' %}text-red-500
+                                {% elif product.color_theme == 'blue' %}text-blue-500
+                                {% else %}text-gray-500{% endif %}">
+                        {% if "fa-" in product.icon %}
+                        <i class="{{ product.icon }}"></i>
+                        {% else %}
+                        {{ product.icon }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold text-slate-800 mb-2 group-hover:text-purple-600 transition-colors">
+                    {{ product.title }}
+                </h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 flex-1">
+                    {{ product.description|truncatechars:60 }}
+                </p>
+
+                <div class="pt-4 border-t border-slate-50 flex items-center justify-between">
+                    <span
+                        class="text-xs font-bold text-slate-400 group-hover:text-purple-500 transition-colors">바로가기</span>
+                    <i
+                        class="ph-bold ph-arrow-right text-slate-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not products %}
+            <div class="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+                <div class="text-6xl mb-4 grayscale opacity-50">🏜️</div>
+                <h3 class="text-lg font-bold text-slate-500 mb-2">사용 가능한 서비스가 없습니다.</h3>
+                <p class="text-slate-400 mb-6">홈페이지에서 마음에 드는 서비스를 찾아보세요!</p>
+                <a href="/"
+                    class="px-6 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition">
+                    서비스 보러가기
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+    </main>
+</div>
+
+<style>
+    /* Custom Scrollbar for Feed */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+</style>
+
+{% endblock %}

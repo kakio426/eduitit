@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
+    'django_htmx',
+    'django.contrib.humanize',
     
     # Auth & Allauth
     'django.contrib.sites',
@@ -81,6 +83,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Allauth middleware
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

@@ -1,0 +1,38 @@
+{% load humanize %}
+<div class="bg-white p-3 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-indigo-200 transition group cursor-pointer"
+    id="post-{{ post.id }}">
+    <div class="flex gap-2.5">
+        <div
+            class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold flex-shrink-0 overflow-hidden">
+            <!-- Avatar Placeholder or Initials if no image -->
+            {% if post.author.userprofile.role == 'school' %}🏫{% elif post.author.userprofile.role == 'instructor'
+            %}👩‍🏫{% else %}👤{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-baseline mb-0.5">
+                <span class="font-bold text-sm text-slate-900">
+                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{
+                    post.author.username }}{% endif %}
+                </span>
+                <span class="text-xs text-slate-400">{{ post.created_at|timesince }} 전</span>
+            </div>
+            <p class="text-sm text-slate-700 leading-snug break-words whitespace-pre-line">
+                {{ post.content }}
+            </p>
+            {% if post.image %}
+            <div class="mt-2 rounded-lg overflow-hidden border border-slate-100">
+                <img src="{{ post.image.url }}" alt="Post Image" class="w-full h-auto max-h-60 object-cover">
+            </div>
+            {% endif %}
+
+            <div class="flex gap-3 mt-2 text-slate-400 text-xs">
+                <button
+                    class="flex items-center gap-1 hover:text-pink-500 cursor-pointer transition-colors {% if user in post.likes.all %}text-pink-500{% endif %}"
+                    hx-post="{% url 'post_like' post.pk %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML">
+                    <i class="{% if user in post.likes.all %}ph-fill{% else %}ph{% endif %} ph-heart"></i>
+                    <span>{{ post.like_count }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

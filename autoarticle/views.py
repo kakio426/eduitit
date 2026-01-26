@@ -14,13 +14,18 @@ from .engines.ppt_engine import PPTEngine
 from .engines.pdf_engine import PDFEngine
 from .engines.card_engine import CardNewsEngine
 from .engines.word_engine import WordEngine
+from .engines.rag_service import StyleRAGService
+from .engines.rag_service import StyleRAGService
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
+from .constants import FONT_PATH
 
 class ArticleCreateView(View):
     THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
     STEPS = ["정보 입력", "AI 초안 생성", "편집 및 보존"]
+    # 문체 학습용 → 중간급 1.5 Flash (안정적)
+    FIXED_MODEL_NAME = "gemini-1.5-flash"
     
     _style_rag = None
 
