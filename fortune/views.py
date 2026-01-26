@@ -16,8 +16,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 # 선생님 요청 모델명
-# 재미용 콘텐츠 → 가장 저렴한 Lite 모델
-FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
+# 재미용 콘텐츠 -> 가장 저렴한 Lite 모델 (현재 2.5 lite는 한도가 너무 적어 1.5 flash로 유지)
+FIXED_MODEL_NAME = "gemini-1.5-flash"
 
 
 def get_gemini_client(request):
@@ -121,6 +121,11 @@ def saju_view(request):
                     logging.exception("사주 분석 오류")
                     if "matching query does not exist" in str(e):
                         error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
+                    elif "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        if request.user.is_authenticated:
+                            error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
+                        else:
+                            error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
                     elif "503" in str(e):
                         error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
                     else:
