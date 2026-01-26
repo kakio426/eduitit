@@ -75,8 +75,8 @@ def run():
     # 3. 토닥토닥 선생님 운세 (구 Teacher Saju)
     p_fortune = Product.objects.create(
         title="토닥토닥 선생님 운세",
-        lead_text="많이 힘드셨죠? 지친 선생님의 하루에 작은 위로와 웃음을 드려요.",
-        description="힘든 학급 붕괴의 위기 속에서도 웃음을 잃지 마세요. 재미로 보는 '토닥토닥 선생님 운세'가 선생님의 지친 하루에 작은 위로와 활력소가 되어드릴 것입니다. (물론, 맹신은 금물입니다!)",
+        lead_text="지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.",
+        description="타고난 나의 기질과 학생들과의 케미, 그리고 2026년 운세까지! 명리학 전문가가 분석하는 선생님만을 위한 일대일 맞춤 운세 서비스를 만나보세요.",
         price=0,
         is_active=True,
         icon="🔮",
@@ -86,9 +86,9 @@ def run():
         external_url="/fortune/",
         image="https://placehold.co/600x400/blue/white?text=Fortune"
     )
-    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-heart-pulse", title="오늘의 생존 지수", description="출근길, 오늘의 학급 평화가 지켜질지 미리 확인해보세요.")
-    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-gift", title="행운의 아이템", description="오늘 나를 지켜줄 소지품이나 간식을 추천해 드립니다.")
-    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-handshake", title="동료 교사 궁합", description="옆 반 선생님과의 케미를 재미로 알아보는 기능도 제공합니다.")
+    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-chalkboard-user", title="교직 생활 기질 분석", description="나의 타고난 성향을 자연에 비유하여 교사로서의 강점과 보완점을 콕 짚어드립니다.")
+    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-people-roof", title="학생 지도 & 케미 분석", description="아이들에게 비춰지는 나의 모습과 딱 맞는 학급 경영 및 상담 스타일을 제안합니다.")
+    ProductFeature.objects.create(product=p_fortune, icon="fa-solid fa-calendar-check", title="2026년 운세 & 힐링", description="올해의 핵심 흐름부터 나를 지켜줄 행운 아이템과 힐링 팁을 꼼꼼히 챙겨드립니다.")
 
     # 4. 가뿐하게 서명 톡 (구 Signatures)
     p_signatures = Product.objects.create(
