@@ -1,4 +1,4 @@
-<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
+﻿<div class="{% if product.card_size == 'hero' %}md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
     data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
     <div class="clay-card p-6 md:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
         role="button" tabindex="0" data-product-id="{{ product.id }}">
@@ -8,8 +8,7 @@
                 <div class="flex justify-between items-start">
                     <div
                         class="w-12 h-12 rounded-2xl bg-white shadow-inner flex items-center justify-center text-2xl text-purple-500 theme-icon">
-                        {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{%
-                        endif %}
+                        {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
                     </div>
                     {% if product.card_size == 'hero' %}
                     <span

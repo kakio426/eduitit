@@ -409,7 +409,11 @@ CSP_CONNECT_SRC = (
     "'self'",
     "https://api.padlet.com",
     "https://generativelanguage.googleapis.com",
+    "https://assetsconfigcdn.org",      # Statsig (Loom extension)
+    "https://beyondwickedmapping.org", # Statsig (Loom extension)
+    "https://cloudflare-dns.com",      # DNS fallback
 )
+
 CSP_FRAME_SRC = (
     "'self'",
     "https://padlet.com",

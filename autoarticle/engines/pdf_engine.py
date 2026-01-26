@@ -39,21 +39,29 @@ class PDFEngine(FPDF):
                 # 배경 상자
                 self.set_fill_color(*self.theme["main"])
                 self.rect(0, 0, 210, 15, 'F')
-                
-                # 폰트 설정
-                self.set_font("NanumGothic", "", 10) if self.font_available else self.set_font("Arial", "", 10)
-                self.set_text_color(255, 255, 255)
-                
-                # fpdf의 cell() 오류로 인한 겹침 방지를 위해 text()로 직접 좌표 지정
-                # Y축 10mm 지점이 15mm 박스의 시각적 중앙입니다.
-                header_text = f"{self.school_name} 소식지"
-                self.text(12, 10, header_text)
-                
-                # 우측 날짜: 너비를 계산하여 수동 정렬
-                import datetime
-                date_text = datetime.datetime.now().strftime("%Y. %m. %d")
-                date_w = self.get_string_width(date_text)
-                self.text(198 - date_w, 10, date_text)
+
+                if self.font_available:
+                    # 한글 폰트 사용 가능
+                    self.set_font("NanumGothic", "", 10)
+                    self.set_text_color(255, 255, 255)
+
+                    header_text = f"{self.school_name} 소식지"
+                    self.text(12, 10, header_text)
+
+                    import datetime
+                    date_text = datetime.datetime.now().strftime("%Y. %m. %d")
+                    date_w = self.get_string_width(date_text)
+                    self.text(198 - date_w, 10, date_text)
+                else:
+                    # ASCII만 사용
+                    self.set_font("Arial", "", 10)
+                    self.set_text_color(255, 255, 255)
+                    self.text(12, 10, f"{self.school_name} Newsletter")
+
+                    import datetime
+                    date_text = datetime.datetime.now().strftime("%Y.%m.%d")
+                    date_w = self.get_string_width(date_text)
+                    self.text(198 - date_w, 10, date_text)
             except: pass
 
     def footer(self):
@@ -200,11 +208,16 @@ class PDFEngine(FPDF):
             self.set_xy(10, y_cursor)
             self.set_font("NanumGothic", "", 9) if self.font_available else self.set_font("Arial", "", 9)
             self.set_text_color(80, 80, 80)
-            
+
             info_parts = []
-            if article.get('date'): info_parts.append(f"일시: {article['date']}")
-            if article.get('location'): info_parts.append(f"장소: {article['location']}")
-            if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+            if self.font_available:
+                if article.get('date'): info_parts.append(f"일시: {article['date']}")
+                if article.get('location'): info_parts.append(f"장소: {article['location']}")
+                if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+            else:
+                if article.get('date'): info_parts.append(f"Date: {article['date']}")
+                if article.get('location'): info_parts.append(f"Location: {article['location']}")
+                if article.get('grade'): info_parts.append(f"Grade: {article['grade']}")
             meta_info = "  |  ".join(info_parts)
             
             self.set_fill_color(248, 248, 248)
@@ -315,11 +328,16 @@ class PDFEngine(FPDF):
             # 메타데이터
             self.set_font("NanumGothic", "", 9) if self.font_available else self.set_font("Arial", "", 9)
             self.set_text_color(80, 80, 80)
-            
+
             info_parts = []
-            if article.get('date'): info_parts.append(f"일시: {article['date']}")
-            if article.get('location'): info_parts.append(f"장소: {article['location']}")
-            if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+            if self.font_available:
+                if article.get('date'): info_parts.append(f"일시: {article['date']}")
+                if article.get('location'): info_parts.append(f"장소: {article['location']}")
+                if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+            else:
+                if article.get('date'): info_parts.append(f"Date: {article['date']}")
+                if article.get('location'): info_parts.append(f"Location: {article['location']}")
+                if article.get('grade'): info_parts.append(f"Grade: {article['grade']}")
             meta_info = "  |  ".join(info_parts)
             
             self.set_fill_color(248, 248, 248)

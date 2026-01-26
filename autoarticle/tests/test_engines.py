@@ -32,7 +32,11 @@ class DocumentEnginesTest(TestCase):
         engine.add_article(self.article_data)
         output = engine.output(dest='S')
         self.assertTrue(len(output) > 0)
-        self.assertIsInstance(output, bytearray)
+        # Check if it's a valid PDF (starts with %PDF)
+        if isinstance(output, str):
+            self.assertTrue(output.startswith('%PDF'))
+        elif isinstance(output, (bytes, bytearray)):
+            self.assertTrue(output.startswith(b'%PDF'))
 
     def test_ppt_engine_generation(self):
         engine = PPTEngine("Cool & Modern", "Test School")
