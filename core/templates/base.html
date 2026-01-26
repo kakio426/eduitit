@@ -75,42 +75,26 @@
         .bento-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-auto-rows: minmax(220px, auto);
+            grid-auto-rows: minmax(200px, auto);
             gap: 1.5rem;
-        }
-
-        /* Large Hero Card positioning */
-        .bento-grid>div:first-child {
-            grid-column: span 2;
-            grid-row: span 2;
-        }
-
-        /* Wide Card positioning */
-        .bento-grid>div:nth-child(2) {
-            grid-column: span 2;
+            grid-auto-flow: dense;
         }
 
         /* Responsive adjustments */
         @media (max-width: 1024px) {
             .bento-grid {
                 grid-template-columns: repeat(2, 1fr);
-                grid-auto-rows: minmax(200px, auto);
-            }
-
-            .bento-grid>div:first-child {
-                grid-column: span 2;
+                grid-auto-rows: minmax(180px, auto);
             }
         }
 
         @media (max-width: 640px) {
             .bento-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .bento-grid>div:first-child {
-                grid-column: span 1;
+                grid-auto-rows: minmax(160px, auto);
             }
         }
+
 
 
         /* Spans */
@@ -239,8 +223,7 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span class="text-xl">
-                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
-                            }}{% endif %}님
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username  }}{% endif %}님
                         </span>
                         <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
@@ -308,8 +291,7 @@
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>
-                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
-                        }}{% endif %}님</span>
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username  }}{% endif %}님</span>
                 </div>
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
