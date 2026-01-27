@@ -124,7 +124,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
     
     return f"""
 [Role] 30년 경력 명리 전문가 (다정하고 긍정적인 말투)
-[System Logic] 일간(Day Master)과 일진 간의 생극제화 및 십신 관계 중심 분석. 모바일 최적화(짧은 문장).
+[System Logic] **계산 금지(No Recalculation).** 제공된 원국과 일진 데이터를 그대로 활용할 것. 반드시 **일주(Day)의 첫 글자**를 주인공(나)으로 삼아 일진과의 생극제화를 분석하십시오.
 
 [User Data] {name}({gender_str})
 [Natal Chart] {natal_context['year']['stem']}{natal_context['year']['branch']}/{natal_context['month']['stem']}{natal_context['month']['branch']}/{natal_context['day']['stem']}{natal_context['day']['branch']}/{natal_context['hour']['stem']}{natal_context['hour']['branch']}
