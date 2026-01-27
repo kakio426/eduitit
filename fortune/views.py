@@ -155,6 +155,10 @@ def saju_view(request):
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
             
+            # [DEBUG] 로그: 입력 데이터와 계산된 사주 명식 확인
+            logger.info(f"User Input: {data}")
+            logger.info(f"Calculated Chart: {chart_context}")
+            
             # Form Prompt with SSOT data
             prompt = get_prompt(mode, data, chart_context=chart_context)
 
