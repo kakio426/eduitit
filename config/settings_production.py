@@ -214,22 +214,7 @@ if not os.path.exists(STATIC_ROOT):
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# =============================================================================
-# STATIC FILES (WhiteNoise - Global Configuration)
-# =============================================================================
-# Force non-manifest storage to bypass strict dependency checks (fixing deployment)
-WHITENOISE_USE_FINDERS = True
-WHITENOISE_MANIFEST_STRICT = False
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # No Hash, No Strict Check
-
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
-    },
-}
+# Static definitions moved to the bottom of the file for enforcement.
 
 # =============================================================================
 # CLOUDINARY SETTINGS
@@ -270,17 +255,11 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
             api_secret=CLOUDINARY_STORAGE['API_SECRET'],
             secure=True
         )
-        # Use Cloudinary ONLY for media storage
+        # Initialization success
         USE_CLOUDINARY = True
-        
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        
-        # Django 6.0+ STORAGES configuration - Update only 'default'
-        STORAGES["default"] = {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-        }
-        
         print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
+
     except Exception as e:
         print(f"DEBUG: Cloudinary initialization failed: {e}")
         USE_CLOUDINARY = False
@@ -471,4 +450,32 @@ def sync_site_domain():
 # 서버 실행 시 자동 실행
 import threading
 if os.environ.get('RUN_MAIN') != 'true':
-    threading.Timer(5.0, sync_site_domain).start()
+    # collectstatic 중에는 실행되지 않도록 함
+    import sys
+    if 'collectstatic' not in sys.argv:
+        threading.Timer(5.0, sync_site_domain).start()
+
+# =============================================================================
+# FINAL STORAGE CONFIGURATION (FIX FOR DEPLOYMENT)
+# =============================================================================
+# 1. compression 및 manifest를 모두 끕니다. (가장 안전한 설정)
+STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_USE_FINDERS = False
+
+# 2. Django 6.0+ STORAGES 설정 강제
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if CLOUDINARY_STORAGE.get('CLOUD_NAME') else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.StaticFilesStorage",
+    },
+}
+
+print("="*60)
+print(f"DEBUG: STATICFILES_STORAGE => {STATICFILES_STORAGE}")
+print(f"DEBUG: STORAGES['staticfiles'] => {STORAGES['staticfiles']['BACKEND']}")
+print(f"DEBUG: STORAGES['default'] => {STORAGES['default']['BACKEND']}")
+print("="*60)
+
