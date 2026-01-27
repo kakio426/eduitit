@@ -215,6 +215,23 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # =============================================================================
+# STATIC FILES (WhiteNoise - Global Configuration)
+# =============================================================================
+# Force non-manifest storage to bypass strict dependency checks (fixing deployment)
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_MANIFEST_STRICT = False
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # No Hash, No Strict Check
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
+# =============================================================================
 # CLOUDINARY SETTINGS
 # =============================================================================
 from urllib.parse import urlparse
@@ -253,30 +270,15 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
             api_secret=CLOUDINARY_STORAGE['API_SECRET'],
             secure=True
         )
-        # Use Cloudinary for media storage
+        # Use Cloudinary ONLY for media storage
         USE_CLOUDINARY = True
         
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-        # Django 6.0+ STORAGES configuration
-        STORAGES = {
-            "default": {
-                "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-            },
-            "staticfiles": {
-                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-            },
-        }
-
-        # 3. Prevent Cloudinary from handling static files!
-        # This is critical. Even with STORAGES, the library might try to hijack if not explicitly told.
-        # We re-assert STATICFILES_STORAGE here just in case.
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
         
-        # 4. Relax WhiteNoise strictness
-        # If a referenced file is missing, do NOT crash the build.
-        WHITENOISE_MANIFEST_STRICT = False
+        # Django 6.0+ STORAGES configuration - Update only 'default'
+        STORAGES["default"] = {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        }
         
         print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
     except Exception as e:
@@ -284,20 +286,8 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
         USE_CLOUDINARY = False
 else:
     USE_CLOUDINARY = False
-    # Only need to set this once if not already set above, but safe to repeat
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    WHITENOISE_MANIFEST_STRICT = False
     print("DEBUG: Cloudinary NOT configured, using local storage.")
-    
-    # Fallback to local storage if Cloudinary is not available
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
+    # Local storage is already set in the global block above.
 
 # =============================================================================
 # AUTHENTICATION
