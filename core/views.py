@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from products.models import Product
 from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post

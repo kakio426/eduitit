@@ -1,0 +1,40 @@
+# Git 속성 설정: UTF-8 파일 보호
+# antigravity 계정에서 push 시 파일 깨짐 방지
+
+# 텍스트 파일은 LF로 통일 (줄바꿈 자동 변환 방지)
+* text=auto eol=lf
+
+# Python 파일
+*.py text eol=lf
+
+# HTML/CSS/JS 파일
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Django 템플릿
+*.html text eol=lf encoding=utf-8
+
+# 설정 파일
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+
+# 환경 변수 파일
+.env* text eol=lf
+
+# 바이너리 파일
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.sqlite3 binary

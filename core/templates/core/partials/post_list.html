@@ -1,8 +1,9 @@
 {% for post in posts %}
-{% include 'core/partials/post_item.html' %}
+    {% include 'core/partials/post_item.html' %}
 {% empty %}
-<div class="text-center py-10 text-slate-400 text-sm">
-    아직 작성된 글이 없습니다.<br>
-    첫 번째 글을 남겨보세요! 👋
-</div>
+    <div class="text-center py-12 text-slate-400">
+        <i class="ph ph-chat-circle-dots text-5xl mb-3 opacity-30"></i>
+        <p class="font-medium">아직 작성된 글이 없습니다.</p>
+        <p class="text-sm mt-1">첫 번째 글을 작성해보세요!</p>
+    </div>
 {% endfor %}
