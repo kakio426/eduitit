@@ -123,7 +123,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {% for product in products %}
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-purple-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
-                onclick="window.location.href='/products/{{ product.slug }}'"><!-- Assuming link or modal logic -->
+                onclick="window.location.href='{% url 'product_detail' product.pk %}'">
 
                 <div class="flex justify-between items-start mb-4">
                     <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl

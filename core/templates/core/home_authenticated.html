@@ -134,7 +134,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                 {% for product in products %}
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.12)] hover:border-indigo-200 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col h-full relative overflow-hidden"
-                    onclick="window.location.href='/products/{{ product.slug }}'">
+                    onclick="window.location.href='{% url 'product_detail' product.pk %}'">
 
                     <!-- Hover Effect Background -->
                     <div
