@@ -182,8 +182,9 @@
             background: #ffffff;
             box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2);
         }
+
+        {% block extra_css %}{% endblock %}
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
 
 <body class="selection:bg-purple-200">
