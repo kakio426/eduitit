@@ -256,6 +256,9 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
         # Use Cloudinary for media storage
         USE_CLOUDINARY = True
         
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
         # Django 6.0+ STORAGES configuration
         STORAGES = {
             "default": {
@@ -272,6 +275,7 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
         USE_CLOUDINARY = False
 else:
     USE_CLOUDINARY = False
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
     print("DEBUG: Cloudinary NOT configured, using local storage.")
     
     # Fallback to local storage if Cloudinary is not available

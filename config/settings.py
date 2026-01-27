@@ -320,9 +320,11 @@ if USE_CLOUDINARY:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage' # Fallback for older patterns
-    print("[OK] STORAGES and DEFAULT_FILE_STORAGE configured for Cloudinary")
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    print("[OK] STORAGES and legacy storage constants configured for Cloudinary")
 else:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
     print("[INFO] Cloudinary disabled - using local file system")
 
 print("=" * 80)
