@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from products.models import Product
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post
+from .models import UserProfile, Post, Comment
 from django.contrib import messages
 from django.db.models import Count
 
@@ -28,7 +28,7 @@ def home(request):
         ).distinct()
         
         # SNS Posts
-        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
+        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes', 'comments', 'comments__author', 'comments__author__userprofile').all()
         
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
@@ -63,7 +63,7 @@ def post_create(request):
     # Ideally, for HTMX, we return the new list or the single new post.
     # To enable full refresh-less behavior, let's return the full list partial.
     if request.headers.get('HX-Request'):
-        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes').all()
+        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes', 'comments', 'comments__author', 'comments__author__userprofile').all()
         return render(request, 'core/partials/post_list.html', {'posts': posts})
         
     return redirect('home')
@@ -76,6 +76,23 @@ def post_like(request, pk):
     else:
         post.likes.add(request.user)
         
+    if request.headers.get('HX-Request'):
+        return render(request, 'core/partials/post_item.html', {'post': post})
+        
+    return redirect('home')
+
+@login_required
+def comment_create(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            Comment.objects.create(
+                post=post,
+                author=request.user,
+                content=content
+            )
+            
     if request.headers.get('HX-Request'):
         return render(request, 'core/partials/post_item.html', {'post': post})
         
