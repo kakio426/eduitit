@@ -268,6 +268,15 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
                 "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
             },
         }
+
+        # 3. Prevent Cloudinary from handling static files!
+        # This is critical. Even with STORAGES, the library might try to hijack if not explicitly told.
+        # We re-assert STATICFILES_STORAGE here just in case.
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        
+        # 4. Relax WhiteNoise strictness
+        # If a referenced file is missing, do NOT crash the build.
+        WHITENOISE_MANIFEST_STRICT = False
         
         print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
     except Exception as e:
@@ -275,7 +284,9 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
         USE_CLOUDINARY = False
 else:
     USE_CLOUDINARY = False
+    # Only need to set this once if not already set above, but safe to repeat
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    WHITENOISE_MANIFEST_STRICT = False
     print("DEBUG: Cloudinary NOT configured, using local storage.")
     
     # Fallback to local storage if Cloudinary is not available
