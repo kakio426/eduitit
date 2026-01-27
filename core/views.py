@@ -12,6 +12,10 @@ def home(request):
     
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
+        # Ensure profile exists to prevent 500 errors for legacy users
+        if not hasattr(request.user, 'userprofile'):
+            UserProfile.objects.create(user=request.user)
+
         from django.db.models import Q
         # Get IDs of products explicitly owned by the user
         owned_ids = request.user.owned_products.values_list('product_id', flat=True)

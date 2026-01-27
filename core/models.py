@@ -37,14 +37,6 @@ class Post(models.Model):
         return self.likes.count()
 
 @receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    # Retrieve the profile to trigger creation if it doesn't exist (e.g. for existing users)
-    if not hasattr(instance, 'userprofile'):
-        UserProfile.objects.create(user=instance)
-    else:
-        instance.userprofile.save()
+    # Ensure profile exists whenever user is saved
+    UserProfile.objects.get_or_create(user=instance)

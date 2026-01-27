@@ -110,12 +110,38 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# PostgreSQL 지원 (DATABASE_URL 환경 변수 사용 시)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # 프로덕션 환경: PostgreSQL 사용
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,  # 연결 풀링: 10분
+                conn_health_checks=True,  # 연결 상태 체크
+            )
+        }
+        print(f"[DATABASE] Using PostgreSQL with conn_max_age=600")
+    except ImportError:
+        print("[WARNING] dj-database-url not installed. Falling back to SQLite.")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+else:
+    # 로컬 개발 환경: SQLite 사용
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+    print("[DATABASE] Using SQLite (development)")
 
 
 # Password validation

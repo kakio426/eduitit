@@ -52,14 +52,14 @@ CSRF_TRUSTED_ORIGINS = [
 # =============================================================================
 
 INSTALLED_APPS = [
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary',
-    'cloudinary_storage',
     'core.apps.CoreConfig',
     'products.apps.ProductsConfig',
     'insights.apps.InsightsConfig',
@@ -70,7 +70,9 @@ INSTALLED_APPS = [
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
-    
+    'django_htmx',
+    'django.contrib.humanize',
+
     # Auth & Allauth
     'django.contrib.sites',
     'allauth',
@@ -94,6 +96,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Allauth middleware
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -285,7 +288,7 @@ else:
 # AUTHENTICATION
 # =============================================================================
 
-LOGIN_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'select_role'
 LOGOUT_REDIRECT_URL = 'home'
 
 # Authentication Backends
