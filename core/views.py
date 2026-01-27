@@ -76,6 +76,17 @@ def post_like(request, pk):
         
     return redirect('home')
 
+@login_required
+def post_delete(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    # Check if the user is the author
+    if post.author == request.user:
+        post.delete()
+        if request.headers.get('HX-Request'):
+            return HttpResponse("") # HTMX expects empty string for deletion
+            
+    return redirect('home')
+
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')
 

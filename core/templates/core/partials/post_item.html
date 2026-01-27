@@ -32,6 +32,15 @@
                     <i class="{% if user in post.likes.all %}ph-fill{% else %}ph{% endif %} ph-heart"></i>
                     <span>{{ post.like_count }}</span>
                 </button>
+
+                {% if post.author == user %}
+                <button class="flex items-center gap-1 hover:text-red-500 cursor-pointer transition-colors"
+                    hx-delete="{% url 'post_delete' post.pk %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
+                    hx-confirm="정말로 이 게시물을 삭제하시겠습니까?">
+                    <i class="ph ph-trash"></i>
+                    <span>삭제</span>
+                </button>
+                {% endif %}
             </div>
         </div>
     </div>
