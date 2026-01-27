@@ -116,14 +116,15 @@ def clear_chat(request):
     return JsonResponse({'success': False}, status=400)
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=False)
 @require_POST
 def send_message(request):
-    """메시지 전송 및 AI 응답 (Guest: 3/h, Member: 10/h)"""
+    """메시지 전송 및 AI 응답 (통합 한도: 5/h, 10/d)"""
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '오늘의 무료 봇 사용 한도에 도달했습니다. 가입하시면 더 많은 질문을 하실 수 있습니다! 😊'
+            'message': '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속 이용하실 수 있습니다! 😊'
         }, status=429)
     user_message = request.POST.get('message', '').strip()
 

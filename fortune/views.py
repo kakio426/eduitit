@@ -35,11 +35,13 @@ def get_user_gemini_key(request):
             pass
     return None
 
-def fortune_rate(group, request):
-    """회원 5회, 비회원 1회 차등 제한"""
-    if request.user.is_authenticated:
-        return '5/h'
-    return '1/h'
+def fortune_rate_h(group, request):
+    """1시간당 5회 제한"""
+    return '5/h'
+
+def fortune_rate_d(group, request):
+    """1일당 10회 제한"""
+    return '10/d'
 
 def generate_ai_response(prompt, request):
     """
@@ -129,14 +131,12 @@ def get_chart_context(data):
         return None
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_view(request):
-    """사주 분석 메인 뷰 (Guest: 1/h, Member: 5/h)"""
+    """사주 분석 메인 뷰 (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
-        if request.user.is_authenticated:
-            error_message = '선생님, 공용 AI 시간당 한도를 모두 사용하셨어요! [설정]에서 개인 API 키를 등록하시면 무제한으로 계속 이용하실 수 있습니다. 😊'
-        else:
-            error_message = '선생님, 비회원 한도를 사용하셨어요! 로그인하시면 더 넉넉한 혜택과 개인 보관함 기능을 이용하실 수 있습니다. 😊'
+        error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
         
         return render(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
@@ -200,17 +200,14 @@ def saju_view(request):
     })
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_api_view(request):
-    """사주 분석 API (Guest: 1/h, Member: 5/h)"""
+    """사주 분석 API (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
-        if request.user.is_authenticated:
-            msg = '선생님, 공용 AI 시간당 한도를 사용하셨어요! [설정]에서 개인 키를 등록하시면 무제한 이용 가능합니다.'
-        else:
-            msg = '선생님, 비회원 한도를 사용하셨어요! 로그인하시면 더 넉넉한 혜택을 이용하실 수 있습니다. 😊'
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': msg
+            'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
         }, status=429)
 
     if request.method != 'POST':
@@ -258,13 +255,14 @@ def saju_api_view(request):
 
 
 @csrf_exempt
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def daily_fortune_api(request):
-    """특정 날짜의 일진(운세) 분석 API (Guest: 1/h, Member: 5/h)"""
+    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 공용 AI 운세 보기 한도가 초과되었습니다! 가입 또는 개인 키 등록을 권장합니다.'
+            'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
         }, status=429)
 
     try:
