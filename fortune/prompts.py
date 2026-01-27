@@ -35,7 +35,7 @@ def get_teacher_prompt(data, chart_context=None):
 [System Logic (SSOT)] **상단 데이터를 절대 기준으로 해석하되, AI의 자체 추측이나 제목 추가를 금지함.**
 1. **정체성(Identity) 고정**: 선생님의 정체성은 반드시 **상단 [SSOT Data]의 'Day' 첫 글자**입니다. 년주(Year)의 글자를 자신으로 묘사(예: 무토 등)하는 것은 치명적 오독입니다.
 2. **8글자 구성**: 천간 4개와 지지 4개를 각각 확인하여 오행 합계가 정확히 8이 되도록 산출하십시오.
-3. **출력 시작 지점**: **절대 주의!** 응답은 반드시 (줄바꿈 후) `##`으로 시작해야 합니다. 그 앞에 이모티콘, 오행 이름(기토 등), 인사말 등을 넣는 행위는 엄격히 금지됩니다.
+3. **출력 시작 지점**: **절대 주의!** 응답은 반드시 (줄바꿈 후) `## ` (샵 두 개 뒤에 공백 필수)로 시작해야 합니다.
 
 [Input Data]
 - 이름: {data['name']} / 성별: {gender_str}
@@ -84,7 +84,7 @@ def get_general_prompt(data, chart_context=None):
 [System Logic (SSOT)] **상단 데이터를 절대 기준으로 해석하되, 서론 및 별도 제목을 금지함.**
 1. **정체성 고정**: 사용자의 정체성은 반드시 **상단 [SSOT Data]의 'Day' 첫 글자**입니다. 다른 글자와 혼동하지 마십시오.
 2. **수학적 검증**: 천간 4개, 지지 4개를 각각 세어 오행 합계가 반드시 8이 되게 하십시오.
-3. **시작 규칙**: 응답은 반드시 (줄바꿈 후) `##`으로 시작하십시오. 그 앞에 어떠한 전조 증상(이모티콘, 텍스트)도 허용하지 않습니다.
+3. **시작 규칙**: 응답은 반드시 (줄바꿈 후) `## ` (샵 뒤 공백)으로 시작하십시오. 붙여쓰기 금지 (`##제목` (X) -> `## 제목` (O)).
 
 [Input Data]
 - 이름: {data['name']} / 성별: {gender_str}
@@ -127,7 +127,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 [System Logic] **데이터 절대 준수 및 서식 규칙 엄수.**
 1. **계산 금지**: 제공된 원국 데이터를 그대로 쓰십시오.
 2. **주인공 고정**: 반드시 **일주(Day)의 첫 글자**를 기준으로 분석하십시오.
-3. **즉시 시작**: 응답은 반드시 (줄바꿈 후) `##`으로 시작하십시오. 제목이나 이모티콘을 미리 넣지 마십시오.
+3. **즉시 시작**: 응답은 반드시 (줄바꿈 후) `## ` (샵 뒤 공백 필수)로 시작하십시오.
 
 [User Data] {name}({gender_str})
 [Natal Chart] {natal_context['year']['stem']}{natal_context['year']['branch']}/{natal_context['month']['stem']}{natal_context['month']['branch']}/{natal_context['day']['stem']}{natal_context['day']['branch']}/{natal_context['hour']['stem']}{natal_context['hour']['branch']}
