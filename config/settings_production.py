@@ -367,6 +367,7 @@ CSP_SCRIPT_SRC = (
     "https://unpkg.com",
     "https://t1.kakaocdn.net",
     "https://developers.kakao.com",
+    "https://html2canvas.hertzen.com",
 )
 CSP_STYLE_SRC = (
     "'self'",
@@ -375,6 +376,7 @@ CSP_STYLE_SRC = (
     "https://cdnjs.cloudflare.com",
     "https://fonts.googleapis.com",
     "https://unpkg.com",
+    "https://hangeul.pstatic.net",
 )
 CSP_FONT_SRC = (
     "'self'",
@@ -384,6 +386,7 @@ CSP_FONT_SRC = (
     "https://cdnjs.cloudflare.com",
     "https://cdn.jsdelivr.net",
     "https://unpkg.com",
+    "https://hangeul.pstatic.net",
 )
 CSP_IMG_SRC = (
     "'self'",
@@ -399,6 +402,7 @@ CSP_CONNECT_SRC = (
     "https://assetsconfigcdn.org",      # Statsig (Loom extension)
     "https://beyondwickedmapping.org", # Statsig (Loom extension)
     "https://cloudflare-dns.com",      # DNS fallback
+    "https://cdn.jsdelivr.net",        # JS source maps
 )
 
 CSP_FRAME_SRC = (
