@@ -1,6 +1,8 @@
 import os
+import time
 from google import genai
-from django.shortcuts import render
+from openai import OpenAI
+from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -12,36 +14,97 @@ from .libs import calculator
 from datetime import datetime
 import pytz
 import json
+import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-# 선생님 요청 모델명
-# 재미용 콘텐츠 → 가장 저렴한 Lite 모델
-FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
+# 로거 설정
+logger = logging.getLogger(__name__)
 
+# 모델 설정
+GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"
+DEEPSEEK_MODEL_NAME = "deepseek-chat"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-def get_gemini_client(request):
-    """Gemini 클라이언트 생성 (사용자 API 키 또는 환경변수 사용)"""
-    api_key = None
-
-    # 로그인한 사용자의 개인 API 키 우선
+def get_user_gemini_key(request):
+    """사용자의 개인 Gemini API 키 반환"""
     if request.user.is_authenticated:
         try:
-            user_key = request.user.userprofile.gemini_api_key
-            if user_key:
-                api_key = user_key
+            return request.user.userprofile.gemini_api_key
         except Exception:
             pass
+    return None
 
-    # 환경변수 폴백
-    if not api_key:
-        api_key = os.environ.get('GEMINI_API_KEY', '')
+def fortune_rate(group, request):
+    """회원 5회, 비회원 1회 차등 제한"""
+    if request.user.is_authenticated:
+        return '5/h'
+    return '1/h'
 
-    if not api_key:
-        return None
+def generate_ai_response(prompt, request):
+    """
+    하이브리드 AI 응답 생성 함수
+    1순위: 사용자 개인 Gemini 키 (존재하는 경우)
+    2순위: 마스터 DeepSeek 키 (환경변수)
+    """
+    user_gemini_key = get_user_gemini_key(request)
+    
+    # 1. 사용자 개인 Gemini API 키 사용
+    if user_gemini_key:
+        try:
+            client = genai.Client(api_key=user_gemini_key)
+            
+            # Gemini Retry Logic
+            max_retries = 2
+            for i in range(max_retries + 1):
+                try:
+                    response = client.models.generate_content(
+                        model=GEMINI_MODEL_NAME,
+                        contents=prompt
+                    )
+                    return response.text
+                except Exception as e:
+                    if '503' in str(e) and i < max_retries:
+                        time.sleep(1.5)
+                        continue
+                    raise e
+        except Exception as e:
+            logger.exception(f"Gemini API Error (User Key): {e}")
+            raise e
 
-    return genai.Client(api_key=api_key)
-
+    # 2. 마스터 DeepSeek API 사용 (Fallback)
+    master_deepseek_key = os.environ.get('MASTER_DEEPSEEK_API_KEY')
+    if master_deepseek_key:
+        try:
+            client = OpenAI(
+                api_key=master_deepseek_key,
+                base_url=DEEPSEEK_BASE_URL
+            )
+            
+            # DeepSeek Retry Logic
+            max_retries = 2
+            for i in range(max_retries + 1):
+                try:
+                    response = client.chat.completions.create(
+                        model=DEEPSEEK_MODEL_NAME,
+                        messages=[
+                            {"role": "system", "content": "You are a professional Saju (Four Pillars of Destiny) master."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        stream=False
+                    )
+                    return response.choices[0].message.content
+                except Exception as e:
+                    if '503' in str(e) and i < max_retries:
+                        time.sleep(1.5)
+                        continue
+                    raise e
+        except Exception as e:
+            logger.exception(f"DeepSeek API Error (Master): {e}")
+            raise e
+            
+    # 키가 없는 경우
+    raise Exception("API_KEY_MISSING: API 키가 설정되지 않았습니다.")
 
 def get_chart_context(data):
     """Refactor: Helper to get pillars from form data"""
@@ -62,23 +125,26 @@ def get_chart_context(data):
         
         return calculator.get_pillars(dt)
     except Exception as e:
-        import logging
-        logging.error(f"Error calculating pillars: {e}")
+        logger.error(f"Error calculating pillars: {e}")
         return None
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
 def saju_view(request):
-    """사주 분석 메인 뷰 (Guest: 3/h, Member: 10/h)"""
+    """사주 분석 메인 뷰 (Guest: 1/h, Member: 5/h)"""
     if getattr(request, 'limited', False):
+        if request.user.is_authenticated:
+            error_message = '선생님, 공용 AI 시간당 한도를 모두 사용하셨어요! [설정]에서 개인 API 키를 등록하시면 무제한으로 계속 이용하실 수 있습니다. 😊'
+        else:
+            error_message = '선생님, 비회원 한도를 사용하셨어요! 로그인하시면 더 넉넉한 혜택과 개인 보관함 기능을 이용하실 수 있습니다. 😊'
+        
         return render(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
-            'error': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+            'error': error_message
         })
     result_html = None
     error_message = None
     chart_context = None
-
 
     if request.method == 'POST':
         form = SajuForm(request.POST)
@@ -92,44 +158,29 @@ def saju_view(request):
             # Form Prompt with SSOT data
             prompt = get_prompt(mode, data, chart_context=chart_context)
 
-            # Gemini Client
-            client = get_gemini_client(request)
-
-            if not client:
-                error_message = "Gemini API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 등록해주세요."
-            else:
-                try:
-                    # Gemini API Call with simple retry for 503
-                    max_retries = 2
-                    import time
-                    for i in range(max_retries + 1):
-                        try:
-                            response = client.models.generate_content(
-                                model=FIXED_MODEL_NAME,
-                                contents=prompt
-                            )
-                            result_html = response.text
-                            break
-                        except Exception as e:
-                            if '503' in str(e) and i < max_retries:
-                                time.sleep(1.5)
-                                continue
-                            raise e
-
-                except Exception as e:
-                    import logging
-                    logging.exception("사주 분석 오류")
-                    if "matching query does not exist" in str(e):
-                        error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
-                    elif "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                        if request.user.is_authenticated:
-                            error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
-                        else:
-                            error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
-                    elif "503" in str(e):
-                        error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
+            try:
+                result_html = generate_ai_response(prompt, request)
+            except Exception as e:
+                logger.exception("사주 분석 오류")
+                error_str = str(e)
+                if "API_KEY_MISSING" in error_str:
+                     error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
+                elif "matching query does not exist" in error_str:
+                    error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
+                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
+                    if request.user.is_authenticated:
+                        error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
                     else:
-                        error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({str(e)})"
+                        error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
+                elif "503" in error_str:
+                    error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
+                elif "Insufficient Balance" in error_str: # DeepSeek specific
+                     if request.user.is_authenticated:
+                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
+                     else:
+                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
+                else:
+                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
     else:
         form = SajuForm()
 
@@ -149,13 +200,17 @@ def saju_view(request):
     })
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
 def saju_api_view(request):
-    """사주 분석 API (Guest: 3/h, Member: 10/h)"""
+    """사주 분석 API (Guest: 1/h, Member: 5/h)"""
     if getattr(request, 'limited', False):
+        if request.user.is_authenticated:
+            msg = '선생님, 공용 AI 시간당 한도를 사용하셨어요! [설정]에서 개인 키를 등록하시면 무제한 이용 가능합니다.'
+        else:
+            msg = '선생님, 비회원 한도를 사용하셨어요! 로그인하시면 더 넉넉한 혜택을 이용하실 수 있습니다. 😊'
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+            'message': msg
         }, status=429)
 
     if request.method != 'POST':
@@ -173,31 +228,12 @@ def saju_api_view(request):
     
     prompt = get_prompt(mode, data, chart_context=chart_context)
 
-    client = get_gemini_client(request)
-    if not client:
-        return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
-
     try:
-        # GPT/Gemini API Call with retry
-        max_retries = 2
-        import time
-        response = None
-        for i in range(max_retries + 1):
-            try:
-                response = client.models.generate_content(
-                    model=FIXED_MODEL_NAME,
-                    contents=prompt
-                )
-                break
-            except Exception as e:
-                if '503' in str(e) and i < max_retries:
-                    time.sleep(1.5)
-                    continue
-                raise e
-
+        response_text = generate_ai_response(prompt, request)
+        
         return JsonResponse({
             'success': True,
-            'result': response.text,
+            'result': response_text,
             'name': data['name'],
             'mode': mode,
             'chart': {
@@ -208,23 +244,27 @@ def saju_api_view(request):
             } if chart_context else None
         })
     except Exception as e:
-        import logging
-        logging.exception("사주 API 오류")
-        if "matching query does not exist" in str(e):
-            return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다. 관리자에게 문의하세요.'}, status=500)
-        if "503" in str(e):
-             return JsonResponse({'error': 'AI_OVERLOADED', 'message': 'AI가 현재 너무 바쁩니다. 잠시 후 다시 시도해주세요.'}, status=503)
-        return JsonResponse({'error': 'AI_ERROR', 'message': str(e)}, status=500)
+        logger.exception("사주 API 오류")
+        error_str = str(e)
+        if "API_KEY_MISSING" in error_str:
+            return JsonResponse({'error': 'CONFIG_ERROR', 'message': 'API 키가 설정되지 않았습니다.'}, status=500)
+        if "matching query does not exist" in error_str:
+            return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다.'}, status=500)
+        if "503" in error_str:
+             return JsonResponse({'error': 'AI_OVERLOADED', 'message': 'AI가 현재 너무 바쁩니다.'}, status=503)
+        if "Insufficient Balance" in error_str:
+             return JsonResponse({'error': 'AI_LIMIT', 'message': '선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 개인 API 키를 등록해주세요!'}, status=429)
+        return JsonResponse({'error': 'AI_ERROR', 'message': error_str}, status=500)
 
 
 @csrf_exempt
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate, method='POST', block=False)
 def daily_fortune_api(request):
-    """특정 날짜의 일진(운세) 분석 API (Guest: 3/h, Member: 10/h)"""
+    """특정 날짜의 일진(운세) 분석 API (Guest: 1/h, Member: 5/h)"""
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 오늘의 무료 한도를 모두 사용하셨어요! 가입하시면 더 넉넉하게 보실 수 있습니다. 😊'
+            'message': '선생님, 공용 AI 운세 보기 한도가 초과되었습니다! 가입 또는 개인 키 등록을 권장합니다.'
         }, status=429)
 
     try:
@@ -255,36 +295,16 @@ def daily_fortune_api(request):
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
 
-        client = get_gemini_client(request)
-        if not client:
-            return JsonResponse({'error': 'API 키가 설정되지 않았습니다.'}, status=400)
-
-        # Gemini API call with retry
-        max_retries = 1
-        import time
-        response = None
-        for i in range(max_retries + 1):
-            try:
-                response = client.models.generate_content(
-                    model=FIXED_MODEL_NAME,
-                    contents=prompt
-                )
-                break
-            except Exception as e:
-                if '503' in str(e) and i < max_retries:
-                    time.sleep(1)
-                    continue
-                raise e
+        response_text = generate_ai_response(prompt, request)
 
         return JsonResponse({
             'success': True,
-            'result': response.text,
+            'result': response_text,
             'target_date': target_date_str
         })
 
     except Exception as e:
-        import logging
-        logging.exception("일진 API 오류")
+        logger.exception("일진 API 오류")
         return JsonResponse({'error': str(e)}, status=500)
 
 
