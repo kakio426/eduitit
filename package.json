@@ -1,0 +1,29 @@
+{
+  "name": "eduitit",
+  "version": "1.0.0",
+  "description": "김재현 님의 클로드 코드 configuration 설정 값입니다. 어디서나 이식해서 사용하세요.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/dist.css --minify",
+    "watch:css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/dist.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kakio426/eduitit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kakio426/eduitit/issues"
+  },
+  "homepage": "https://github.com/kakio426/eduitit#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "tailwindcss": "^4.1.18"
+  }
+}

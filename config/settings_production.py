@@ -469,8 +469,8 @@ if os.environ.get('RUN_MAIN') != 'true':
 # =============================================================================
 # FINAL STORAGE CONFIGURATION (FIX FOR DEPLOYMENT)
 # =============================================================================
-# 1. compression 및 manifest를 모두 끕니다. (가장 안전한 설정)
-STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
+# 1. compression 및 manifest를 활성화합니다.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_USE_FINDERS = False
 
@@ -480,7 +480,7 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if CLOUDINARY_STORAGE.get('CLOUD_NAME') else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="ko">
 
 <head>
@@ -50,6 +51,7 @@
             }
         }
     </script>
+
 
     <style>
         body {
@@ -563,13 +565,15 @@
         });
     </script>
 
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
     <script>
         // Initialize Animate On Scroll
-        AOS.init({
-            once: true,
-            offset: 50,
-            duration: 800,
+        document.addEventListener('DOMContentLoaded', function () {
+            AOS.init({
+                once: true,
+                offset: 50,
+                duration: 800,
+            });
         });
 
         // Auto Logout Logic
