@@ -1,6 +1,12 @@
+[phases.setup]
+nixPkgs = ["python3", "nodejs_18", "npm-9_x"]
+
+[phases.install]
+cmds = ["npm ci", "pip install -r requirements.txt"]
+
 [phases.build]
 cmds = [
-    "python manage.py collectstatic --noinput",
-    "python manage.py migrate --noinput",
-    "python seed_data.py"
+    "python3 manage.py collectstatic --noinput",
+    "python3 manage.py migrate --noinput",
+    "python3 seed_data.py"
 ]
