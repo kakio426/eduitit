@@ -632,15 +632,16 @@
     <div id="resultContainer" class="{% if not result %}hidden{% endif %}">
         <div class="clay-card p-8 md:p-12" data-aos="fade-up" id="resultCard">
 
-            {% if result %}
             <!-- 오행 배지 (JavaScript로 동적 생성) -->
             <div id="elementBadge" class="text-center mb-6"></div>
 
             <!-- 마크다운 결과 -->
-            <div class="markdown-body" id="markdownResult"></div>
+            <div class="markdown-body" id="markdownResult">
+                {% if result %}{{ result|safe }}{% endif %}
+            </div>
 
-            <!-- 공유 섹션 -->
-            <div class="share-section">
+            <!-- 공유 섹션 (JS로 제어하거나 항상 표시) -->
+            <div id="shareSection" class="share-section {% if not result %}hidden{% endif %}">
                 <div class="share-title">
                     <i class="fa-solid fa-share-nodes"></i>
                     친구에게 공유하기
@@ -664,10 +665,11 @@
                 </div>
             </div>
 
-            <hr class="my-10 border-slate-200">
+            <hr class="my-10 border-slate-200 {% if not result %}hidden{% endif %}" id="resultDivider">
 
             <!-- 특정 날짜 운세 (일진) -->
-            <div class="bg-indigo-50/50 rounded-3xl p-8 border border-indigo-100 mb-8">
+            <div id="dailyFortuneSection"
+                class="bg-indigo-50/50 rounded-3xl p-8 border border-indigo-100 mb-8 {% if not result %}hidden{% endif %}">
                 <div class="flex items-center gap-3 mb-6">
                     <div
                         class="w-10 h-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
@@ -696,53 +698,56 @@
                 </div>
             </div>
 
-            {% if user.is_authenticated %}
-            <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
-                            <i class="fa-solid fa-bookmark"></i>
+            <!-- 저장/가입 유도 섹션 -->
+            <div id="saveSection" class="{% if not result %}hidden{% endif %}">
+                {% if user.is_authenticated %}
+                <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-bookmark"></i>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
+                                <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
+                            </div>
                         </div>
-                        <div class="text-left">
-                            <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
-                            <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
-                        </div>
+                        <button onclick="saveToLibrary()"
+                            class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                            보관함에 저장
+                        </button>
                     </div>
-                    <button onclick="saveToLibrary()"
-                        class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                        보관함에 저장
-                    </button>
                 </div>
-            </div>
-            {% else %}
-            <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
-                            <i class="fa-solid fa-lock"></i>
+                {% else %}
+                <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
+                                <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리 볼 수 있어요. 😊</p>
+                            </div>
                         </div>
-                        <div class="text-left">
-                            <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
-                            <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리 볼 수 있어요. 😊</p>
-                        </div>
+                        <a href="{% url 'account_signup' %}"
+                            class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                            가입하고 혜택 받기
+                        </a>
                     </div>
-                    <a href="{% url 'account_signup' %}"
-                        class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                        가입하고 혜택 받기
-                    </a>
                 </div>
+                {% endif %}
             </div>
-            {% endif %}
-            <div class="mt-10 text-center">
+
+            <div class="mt-10 text-center" id="restartSection">
                 <a href="{% url 'fortune:saju' %}" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
                     bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                     shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
                     <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
                 </a>
             </div>
-            {% endif %}
         </div>
     </div>
 
@@ -855,6 +860,12 @@
         // UI 전환
         document.getElementById('formContainer').classList.add('hidden');
         document.getElementById('resultContainer').classList.remove('hidden');
+
+        // 결과 섹션 노출 (초기엔 숨겨져 있을 수 있음)
+        document.getElementById('shareSection').classList.remove('hidden');
+        document.getElementById('dailyFortuneSection').classList.remove('hidden');
+        document.getElementById('saveSection').classList.remove('hidden');
+        document.getElementById('resultDivider').classList.remove('hidden');
 
         const resultTarget = document.getElementById('markdownResult');
         resultTarget.innerHTML = '<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> 주역을 풀이하고 있습니다...</div>';
