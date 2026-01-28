@@ -61,17 +61,28 @@ def generate_ai_response(prompt, request):
             for i in range(max_retries + 1):
                 try:
                     # Google GenAI SDK streaming
-                    response = client.models.generate_content(
-                        model=GEMINI_MODEL_NAME,
-                        contents=prompt,
-                        config={'stream': True} if hasattr(client.models, 'generate_content_stream') or True else None # Placeholder logic
-                    )
-                    # For google-genai, streaming might be different. 
-                    # Generally: for chunk in client.models.generate_content_stream(...): yield chunk.text
-                    # Checking current SDK: if config={'stream': True}, response is an iterator
+                    # Use generate_content_stream for proper streaming behavior
+                    if hasattr(client.models, 'generate_content_stream'):
+                        response = client.models.generate_content_stream(
+                            model=GEMINI_MODEL_NAME,
+                            contents=prompt,
+                        )
+                    else:
+                        # Fallback for older versions or strict interface
+                        response = client.models.generate_content(
+                            model=GEMINI_MODEL_NAME,
+                            contents=prompt,
+                            config={'stream': True}
+                        )
+
+                    chunk_count = 0
                     for chunk in response:
                         if chunk.text:
+                            chunk_count += 1
                             yield chunk.text
+                    
+                    if chunk_count == 0:
+                        logger.warning("Gemini stream yielded 0 chunks.")
                     return
                 except Exception as e:
                     if '503' in str(e) and i < max_retries:
