@@ -6,8 +6,8 @@ import os
 from collections import deque
 
 # --- 설정 ---
-# 문체 학습용 → 중간급 1.5 Flash (안정적)
-FIXED_MODEL_NAME = "gemini-1.5-flash"
+# 문체 학습용 → 2026년 표준 gemini-2.5-flash-lite
+FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
 
 # Rate Limiter (5분에 2회 제한)
 _usage_timestamps = deque()

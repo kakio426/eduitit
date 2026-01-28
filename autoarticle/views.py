@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class ArticleCreateView(View):
     THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
     STEPS = ["정보 입력", "AI 초안 생성", "편집 및 보존"]
-    # 문체 학습용 → 중간급 1.5 Flash (안정적)
-    FIXED_MODEL_NAME = "gemini-1.5-flash"
+    # 문체 학습용 → 2026년 표준 gemini-2.5-flash-lite
+    FIXED_MODEL_NAME = "gemini-2.5-flash-lite"
     
     _style_rag = None
 
