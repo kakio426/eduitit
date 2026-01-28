@@ -2,7 +2,7 @@
 nixPkgs = ["python3", "nodejs_18", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm ci", "pip install -r requirements.txt"]
+cmds = ["npm ci", "python3 -m pip install -r requirements.txt"]
 
 [phases.build]
 cmds = [
