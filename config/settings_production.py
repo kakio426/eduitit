@@ -30,6 +30,7 @@ ALLOWED_HOSTS = [h.strip() for h in env_hosts if h.strip()]
 ALLOWED_HOSTS.extend([
     '.onrender.com', 
     '.railway.app', 
+    '.up.railway.app',
     'eduitit.site', 
     'www.eduitit.site', 
     'localhost', 
@@ -43,6 +44,7 @@ KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'https://*.railway.app',
+    'https://*.up.railway.app',
     'https://eduitit.site',
     'https://www.eduitit.site',
 ]
