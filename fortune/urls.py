@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.saju_view, name='saju'),
     path('saju/', views.saju_view, name='saju_alt'),
     path('api/', views.saju_api_view, name='saju_api'),
+    path('api/streaming/', views.saju_streaming_api, name='saju_streaming_api'),
     path('api/daily/', views.daily_fortune_api, name='daily_fortune_api'),
     path('api/save/', views.save_fortune_api, name='save_fortune_api'),
     path('history/', views.saju_history, name='history'),

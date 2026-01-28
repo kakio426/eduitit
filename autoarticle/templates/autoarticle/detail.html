@@ -99,8 +99,7 @@
         <div class="clay-card bg-white p-8 border-2 border-purple-100" data-aos="fade-up" data-aos-delay="100">
             <h3 class="text-2xl font-bold text-gray-800 mb-6">📂 자동 생성된 파일 다운로드</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {% if article.ppt_file %}
-                <a href="{{ article.ppt_file.url }}"
+                <a href="{% url 'autoarticle:ppt_download' article.id %}"
                     class="p-6 rounded-3xl bg-orange-50 border-2 border-orange-100 flex items-center justify-between group hover:bg-orange-100 transition-all shadow-clay">
                     <div class="flex items-center gap-4">
                         <div
@@ -109,12 +108,12 @@
                         </div>
                         <div>
                             <span class="block font-bold text-gray-800 text-xl">뉴스레터 PPT</span>
-                            <span class="text-sm text-gray-500">발표용 & 편집용</span>
+                            <span class="text-sm text-gray-500">{% if article.ppt_file %}다운로드{% else %}생성 및 다운로드{% endif
+                                %}</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-orange-400 group-hover:translate-y-1 transition-transform"></i>
                 </a>
-                {% endif %}
 
                 {% if article.pdf_file %}
                 <a href="{{ article.pdf_file.url }}"

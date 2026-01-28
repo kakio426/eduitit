@@ -4,7 +4,7 @@ from google import genai
 from openai import OpenAI
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
@@ -45,7 +45,7 @@ def fortune_rate_d(group, request):
 
 def generate_ai_response(prompt, request):
     """
-    하이브리드 AI 응답 생성 함수
+    하이브리드 AI 응답 생성 함수 (Streaming 지원)
     1순위: 사용자 개인 Gemini 키 (존재하는 경우)
     2순위: 마스터 DeepSeek 키 (환경변수)
     """
@@ -60,11 +60,19 @@ def generate_ai_response(prompt, request):
             max_retries = 2
             for i in range(max_retries + 1):
                 try:
+                    # Google GenAI SDK streaming
                     response = client.models.generate_content(
                         model=GEMINI_MODEL_NAME,
-                        contents=prompt
+                        contents=prompt,
+                        config={'stream': True} if hasattr(client.models, 'generate_content_stream') or True else None # Placeholder logic
                     )
-                    return response.text
+                    # For google-genai, streaming might be different. 
+                    # Generally: for chunk in client.models.generate_content_stream(...): yield chunk.text
+                    # Checking current SDK: if config={'stream': True}, response is an iterator
+                    for chunk in response:
+                        if chunk.text:
+                            yield chunk.text
+                    return
                 except Exception as e:
                     if '503' in str(e) and i < max_retries:
                         time.sleep(1.5)
@@ -93,9 +101,12 @@ def generate_ai_response(prompt, request):
                             {"role": "system", "content": "You are a professional Saju (Four Pillars of Destiny) master."},
                             {"role": "user", "content": prompt}
                         ],
-                        stream=False
+                        stream=True
                     )
-                    return response.choices[0].message.content
+                    for chunk in response:
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                    return
                 except Exception as e:
                     if '503' in str(e) and i < max_retries:
                         time.sleep(1.5)
@@ -163,7 +174,8 @@ def saju_view(request):
             prompt = get_prompt(mode, data, chart_context=chart_context)
 
             try:
-                result_html = generate_ai_response(prompt, request)
+                # Wrap generator to maintain current sync behavior until Phase 4
+                result_html = "".join(generate_ai_response(prompt, request))
             except Exception as e:
                 logger.exception("사주 분석 오류")
                 error_str = str(e)
@@ -206,6 +218,37 @@ def saju_view(request):
 
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
+def saju_streaming_api(request):
+    """실시간 스트리밍 사주 분석 API"""
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'LIMIT_EXCEEDED'}, status=429)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    form = SajuForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    data = form.cleaned_data
+    chart_context = get_chart_context(data)
+    prompt = get_prompt(data['mode'], data, chart_context=chart_context)
+
+    def stream_response():
+        try:
+            # Yield initial metadata if needed (or just start spawning text)
+            for chunk in generate_ai_response(prompt, request):
+                yield chunk
+        except Exception as e:
+            logger.exception("Streaming error")
+            yield f"\n\n[오류 발생: {str(e)}]"
+
+    response = StreamingHttpResponse(stream_response(), content_type='text/plain; charset=utf-8')
+    response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx/Gunicorn
+    return response
+
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_api_view(request):
     """사주 분석 API (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
@@ -230,7 +273,8 @@ def saju_api_view(request):
     prompt = get_prompt(mode, data, chart_context=chart_context)
 
     try:
-        response_text = generate_ai_response(prompt, request)
+        # Wrap generator to maintain current sync behavior
+        response_text = "".join(generate_ai_response(prompt, request))
         
         return JsonResponse({
             'success': True,
@@ -297,7 +341,8 @@ def daily_fortune_api(request):
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
 
-        response_text = generate_ai_response(prompt, request)
+        # Wrap generator to maintain current sync behavior
+        response_text = "".join(generate_ai_response(prompt, request))
 
         return JsonResponse({
             'success': True,

@@ -20,6 +20,9 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
 from .engines.constants import FONT_PATH
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ArticleCreateView(View):
     THEMES = ["웜 & 플레이풀", "꿈꾸는 파랑", "발랄한 노랑", "산뜻한 민트"]
@@ -109,13 +112,20 @@ class ArticleCreateView(View):
 
             # 이미지 처리
             uploaded_images = request.FILES.getlist('images')
+            client_image_urls = request.POST.getlist('image_urls[]') or request.POST.getlist('image_urls')
             image_paths = []
             upload_errors = []
 
+            # 1. 클라이언트에서 직접 업로드한 URL 처리 (추천 방식)
+            if client_image_urls:
+                for url in client_image_urls:
+                    if url.startswith('http') and 'cloudinary.com' in url:
+                        image_paths.append(url)
+                logger.info(f"Received {len(image_paths)} direct URLs from client.")
+
+            # 2. 서버를 통한 파일 업로드 처리 (기존 방식 유지)
             if uploaded_images:
                 import uuid
-                import logging
-                logger = logging.getLogger(__name__)
 
                 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
                 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -280,23 +290,8 @@ class ArticleCreateView(View):
                     images=draft.get('images', [])
                 )
                 
-                api_key, _ = self.get_api_key(request)
-                summary_points = summarize_article_for_ppt(final_content, api_key)
-                theme = request.session.get('autoarticle_theme', self.THEMES[0])
-                ppt_engine = PPTEngine(theme, article.school_name)
-                
-                article_data = {
-                    'title': final_title,
-                    'content': summary_points,
-                    'date': article.event_date.strftime('%Y.%m.%d') if hasattr(article.event_date, 'strftime') else str(article.event_date),
-                    'location': article.location,
-                    'images': article.images or []
-                }
-                from django.core.files.base import ContentFile
-                ppt_buffer = ppt_engine.create_presentation([article_data])
-                article.ppt_file.save(f"newsletter_{article.id}.pptx", ContentFile(ppt_buffer.getvalue()))
-                article.content_summary = '\n'.join(summary_points)
-
+                # [OPTIMIZATION] PPT generation is now lazy (on demand)
+                # Just save basic info
                 article.save()
                 
                 del request.session['article_draft']
@@ -477,3 +472,56 @@ class ArticleEditView(View):
         article.save()
         messages.success(request, "기사가 수정되었습니다.")
         return redirect('autoarticle:detail', pk=pk)
+
+
+class ArticlePPTDownloadView(View):
+    """기사 PPT 다운로드 (Lazy Generation)"""
+    def get(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+        
+        # 1. 이미 파일이 있으면 즉시 반환
+        if article.ppt_file:
+            try:
+                # FileField의 url이 absolute인 경우와 relative인 경우 처리
+                return redirect(article.ppt_file.url)
+            except Exception:
+                pass
+
+        # 2. 파일이 없으면 생성 시작
+        try:
+            # API 키 가져오기
+            parent_view = ArticleCreateView()
+            api_key, _ = parent_view.get_api_key(request)
+            
+            # 요약 생성 (이미 있으면 재사용)
+            summary_points = article.content_summary_list
+            if not summary_points:
+                summary_points = summarize_article_for_ppt(article.full_text, api_key)
+                article.content_summary = '\n'.join(summary_points)
+                article.save()
+
+            # PPT 생성
+            theme = request.session.get('autoarticle_theme', ArticleCreateView.THEMES[0])
+            ppt_engine = PPTEngine(theme, article.school_name)
+            
+            article_data = {
+                'title': article.title,
+                'content': summary_points,
+                'date': article.event_date.strftime('%Y.%m.%d') if article.event_date else '',
+                'location': article.location,
+                'images': article.images or []
+            }
+            
+            from django.core.files.base import ContentFile
+            ppt_buffer = ppt_engine.create_presentation([article_data])
+            article.ppt_file.save(f"newsletter_{article.id}.pptx", ContentFile(ppt_buffer.getvalue()))
+            article.save()
+            
+            return redirect(article.ppt_file.url)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Lazy PPT Generation failed: {e}", exc_info=True)
+            messages.error(request, f"PPT 생성 중 오류가 발생했습니다: {str(e)}")
+            return redirect('autoarticle:detail', pk=pk)
