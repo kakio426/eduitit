@@ -1198,48 +1198,76 @@
 
     // 보관함 저장
     async function saveToLibrary() {
+        console.log("Saving to library...");
+
         if ("{{ user.is_authenticated }}" === "False") {
             alert('로그인 후 이용 가능합니다. 😊');
             return;
         }
 
-        const resultText = document.getElementById('markdownResult').innerText;
+        const resultElem = document.getElementById('markdownResult');
+        if (!resultElem) {
+            console.error("Result element not found");
+            return;
+        }
+
+        const resultText = resultElem.innerText;
         const chartDataElem = document.getElementById('saju-chart-data');
         let natalChart = {};
 
         if (chartDataElem) {
-            natalChart = JSON.parse(chartDataElem.textContent);
+            try {
+                natalChart = JSON.parse(chartDataElem.textContent);
+            } catch (e) {
+                console.error("Chart JSON parse error", e);
+            }
         } else {
-            const resultText = document.getElementById('markdownResult').innerText;
+            // 스트리밍 모드인 경우 텍스트에서 간단히 일주 보존
             const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
             if (dayMatch) natalChart.day = dayMatch[1];
         }
 
-        const dailyText = document.getElementById('dailyFortuneResult').classList.contains('hidden') ? null : document.getElementById('dailyFortuneContent').innerText;
+        const dailyResultDiv = document.getElementById('dailyFortuneResult');
+        const dailyContentDiv = document.getElementById('dailyFortuneContent');
+        const dailyText = (dailyResultDiv && !dailyResultDiv.classList.contains('hidden') && dailyContentDiv) ? dailyContentDiv.innerText : null;
 
         try {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (!csrfInput) {
+                throw new Error("보안 토큰(CSRF)을 찾을 수 없습니다. 페이지를 새로고침해주세요.");
+            }
+
             const response = await fetch('{% url "fortune:save_fortune_api" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': csrfInput.value
                 },
                 body: JSON.stringify({
                     mode: dailyText ? 'daily' : 'teacher',
                     natal_chart: natalChart,
                     result_text: dailyText ? dailyText : resultText,
-                    target_date: dailyText ? document.getElementById('targetDateInput').value : null
+                    target_date: dailyText ? document.getElementById('targetDateInput')?.value : null
                 })
             });
 
             const data = await response.json();
             if (data.success) {
                 showToast('보관함에 저장되었습니다! 🎁');
+                // 버튼 상태 변경 (중복 저장 방지)
+                const saveBtn = document.querySelector('#saveSection button');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>저장 완료';
+                    saveBtn.classList.remove('bg-purple-600');
+                    saveBtn.classList.add('bg-gray-400');
+                }
             } else {
-                showToast('저장 실패: ' + data.error);
+                showToast('저장 실패: ' + (data.error || '알 수 없는 오류'));
             }
         } catch (e) {
-            showToast('서버 통신 오류가 발생했습니다.');
+            console.error(e);
+            showToast(e.message || '서버 통신 오류가 발생했습니다.');
         }
     }
 </script>

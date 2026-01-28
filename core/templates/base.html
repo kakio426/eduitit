@@ -236,6 +236,11 @@
                                 <i class="fa-solid fa-gauge-high"></i>
                                 <span>내 홈페이지</span>
                             </a>
+                            <a href="{% url 'fortune:history' %}"
+                                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
+                                <i class="fa-solid fa-box-archive"></i>
+                                <span>사주 보관함</span>
+                            </a>
                             <a href="{% url 'settings' %}"
                                 class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
                                 <i class="fa-solid fa-gear"></i>
@@ -295,6 +300,10 @@
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-graduation-cap mr-3 text-blue-400"></i> 스쿨잇 이동 (SSO)
                 </a>
+                <a href="{% url 'fortune:history' %}"
+                    class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
+                    <i class="fa-solid fa-box-archive mr-3 text-purple-400"></i> 사주 보관함
+                </a>
                 <a href="{% url 'settings' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 내 설정
@@ -344,6 +353,43 @@
             </div>
         </div>
     </footer>
+
+    <!-- Auto Logout Warning Modal -->
+    <div id="autoLogoutModal" class="fixed inset-0 z-[110] hidden" aria-labelledby="modal-title" role="dialog"
+        aria-modal="true">
+        <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300"></div>
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div
+                    class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border-2 border-purple-100 p-8">
+                    <div class="flex flex-col items-center text-center space-y-6">
+                        <div
+                            class="w-20 h-20 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 text-3xl shadow-clay-inner">
+                            <i class="fa-solid fa-clock-rotate-left float-icon"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">자동 로그아웃 안내</h3>
+                            <p class="text-gray-500 font-medium">보안을 위해 장기간 활동이 없어<br><span id="logoutTimer"
+                                    class="text-purple-600 font-bold">60</span>초 후 자동으로 로그아웃됩니다.</p>
+                        </div>
+                        <div class="flex flex-col w-full gap-3">
+                            <button onclick="extendSession()"
+                                class="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-clay hover:bg-purple-700 transition transform hover:scale-[1.02] active:scale-[0.98]">
+                                로그인 연장하기
+                            </button>
+                            <form action="{% url 'account_logout' %}" method="post" class="w-full">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="w-full py-4 text-gray-400 font-bold hover:text-gray-600 transition">
+                                    지금 로그아웃
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Unified Modal for All Product Previews -->
     <div id="unifiedModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog"
@@ -525,6 +571,95 @@
             offset: 50,
             duration: 800,
         });
+
+        // Auto Logout Logic
+        {% if user.is_authenticated %}
+        (function () {
+            let timeoutMinutes = 60; // SESSION_COOKIE_AGE와 동일하게 설정 (1시간)
+            let warningMinutes = 59; // 59분에 경고 표시
+            let logoutTimer;
+            let warningTimer;
+            let countdownInterval;
+            let secondsLeft = 60;
+
+            function startTimers() {
+                clearTimeout(logoutTimer);
+                clearTimeout(warningTimer);
+                clearInterval(countdownInterval);
+                document.getElementById('autoLogoutModal').classList.add('hidden');
+
+                // 경고창 표시 타이머
+                warningTimer = setTimeout(showWarning, warningMinutes * 60 * 1000);
+
+                // 실제 로그아웃 타이머 (실제 세션 만료보다 약간 먼저 로그아웃 처리)
+                logoutTimer = setTimeout(autoLogout, timeoutMinutes * 60 * 1000);
+            }
+
+            function showWarning() {
+                document.getElementById('autoLogoutModal').classList.remove('hidden');
+                secondsLeft = 60;
+                updateCountdown();
+                countdownInterval = setInterval(updateCountdown, 1000);
+            }
+
+            function updateCountdown() {
+                const timerEl = document.getElementById('logoutTimer');
+                if (timerEl) {
+                    timerEl.textContent = secondsLeft;
+                    if (secondsLeft <= 0) {
+                        clearInterval(countdownInterval);
+                    }
+                    secondsLeft--;
+                }
+            }
+
+            function autoLogout() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'account_logout' %}";
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = 'csrfmiddlewaretoken';
+                csrf.value = '{{ csrf_token }}';
+                form.appendChild(csrf);
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            window.extendSession = function () {
+                // 단순히 아무 API나 호출하여 세션을 갱신 (CSRF 필요 없음, 세션 쿠키만 전송되면 됨)
+                fetch(window.location.href, { method: 'HEAD' })
+                    .then(() => {
+                        startTimers();
+                        console.log('Session extended');
+                    })
+                    .catch(err => console.error('Failed to extend session', err));
+            };
+
+            // 사용자 활동 감지 (클릭, 키보드 입력 등)
+            const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+            let throttleTimer;
+
+            function handleActivity() {
+                if (throttleTimer) return;
+
+                throttleTimer = setTimeout(() => {
+                    // 경고창이 보이지 않을 때만 타이머 리셋
+                    if (document.getElementById('autoLogoutModal').classList.contains('hidden')) {
+                        startTimers();
+                    }
+                    throttleTimer = null;
+                }, 10000); // 10초마다 체크 (성능 최적화)
+            }
+
+            activities.forEach(activity => {
+                window.addEventListener(activity, handleActivity, true);
+            });
+
+            // 초기 타이머 시작
+            startTimers();
+        })();
+        {% endif %}
     </script>
     {% block extra_js %}{% endblock %}
 </body>

@@ -83,45 +83,48 @@ color: white;
 
 {% block content %}
 <div class="pt-32 pb-20 px-4">
-<div style="text-align: center; margin-bottom: 4rem;">
-    <h1 style="font-size: 3.5rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.02em;">Digital Solutions
-    </h1>
-    <p style="color: #94a3b8; font-size: 1.25rem;">Hand-crafted tools and high-performance services for your workflow.
-    </p>
-</div>
+    <div style="text-align: center; margin-bottom: 4rem;">
+        <h1 style="font-size: 3.5rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.02em;">Digital Solutions
+        </h1>
+        <p style="color: #94a3b8; font-size: 1.25rem;">Hand-crafted tools and high-performance services for your
+            workflow.
+        </p>
+    </div>
 
-<div class="grid">
-    {% for product in products %}
-    <div class="card">
-        <div class="card-image">
-            {% if product.image %}
-            <img src="{{ product.image.url }}" alt="{{ product.title }}">
-            {% else %}
-            <div
-                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #1e293b, #0f172a); color: #475569;">
-                <span style="font-weight: 600;">No Preview Available</span>
-            </div>
-            {% endif %}
-        </div>
-        <div class="card-content">
-            <h3>{{ product.title }}</h3>
-            <p>{{ product.description|truncatewords:15 }}</p>
-            <div class="card-footer">
-                <div class="price">₩{{ product.price|floatformat:0 }}</div>
-                {% if product.title == "🐎 온라인 윷놀이" %}
-                <a href="{% url 'yut_game' %}" class="btn btn-primary"
-                    style="background: #10b981; border-color: #10b981;">Play Now</a>
+    <div class="grid">
+        {% for product in products %}
+        <div class="card">
+            <div class="card-image">
+                {% if product.image %}
+                {% load cloudinary_extras %}
+                <img src="{{ product.image.url|thumbnail:'600' }}" alt="{{ product.title }}" loading="lazy">
                 {% else %}
-                <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary">Details</a>
+                <div
+                    style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #1e293b, #0f172a); color: #475569;">
+                    <span style="font-weight: 600;">No Preview Available</span>
+                </div>
                 {% endif %}
             </div>
+            <div class="card-content">
+                <h3>{{ product.title }}</h3>
+                <p>{{ product.description|truncatewords:15 }}</p>
+                <div class="card-footer">
+                    <div class="price">₩{{ product.price|floatformat:0 }}</div>
+                    {% if product.title == "🐎 온라인 윷놀이" %}
+                    <a href="{% url 'yut_game' %}" class="btn btn-primary"
+                        style="background: #10b981; border-color: #10b981;">Play Now</a>
+                    {% else %}
+                    <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary">Details</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
+        {% empty %}
+        <div
+            style="grid-column: 1/-1; text-align: center; padding: 4rem; background: var(--glass); border-radius: 24px;">
+            <p style="color: #94a3b8;">No services are currently available. Check back soon!</p>
+        </div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div style="grid-column: 1/-1; text-align: center; padding: 4rem; background: var(--glass); border-radius: 24px;">
-        <p style="color: #94a3b8;">No services are currently available. Check back soon!</p>
-    </div>
-    {% endfor %}
-</div>
 </div>
 {% endblock %}
