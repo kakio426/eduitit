@@ -317,18 +317,25 @@ def rotation_trigger(request):
     user = request.user
     students = list(DTStudent.objects.filter(user=user, is_active=True).order_by('number'))
     if not students: return JsonResponse({'success': False, 'error': 'No students'})
-    assignments = list(DTRoleAssignment.objects.filter(user=user))
+    assignments = list(DTRoleAssignment.objects.filter(user=user).select_related('student'))
     student_ids = [s.id for s in students]
+    student_map = {s.id: s for s in students}
     total_students = len(student_ids)
+    
+    updated_assignments = []
     for assign in assignments:
         if assign.student:
             try:
                 current_idx = student_ids.index(assign.student.id)
                 next_idx = (current_idx + 1) % total_students
-                assign.student = DTStudent.objects.get(id=student_ids[next_idx])
+                assign.student = student_map[student_ids[next_idx]]
                 assign.is_completed = False
-                assign.save()
-            except ValueError: pass
+                updated_assignments.append(assign)
+            except (ValueError, KeyError): pass
+            
+    if updated_assignments:
+        DTRoleAssignment.objects.bulk_update(updated_assignments, ['student', 'is_completed'])
+        
     return JsonResponse({'success': True, 'message': 'Rotated successfully'})
 
 @require_http_methods(["POST"])

@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
 from google import genai
+from django.db.models import Count
 from .models import ArtClass, ArtStep
 
 try:
@@ -226,10 +227,13 @@ def generate_steps_api(request):
 def library_view(request):
     """Shared Library - 다른 선생님들이 공유한 수업 목록"""
     query = request.GET.get('q', '')
+    
+    shared_classes = ArtClass.objects.select_related('created_by').annotate(
+        steps_count=Count('steps')
+    ).filter(is_shared=True)
+    
     if query:
-        shared_classes = ArtClass.objects.filter(is_shared=True, title__icontains=query)
-    else:
-        shared_classes = ArtClass.objects.filter(is_shared=True)
+        shared_classes = shared_classes.filter(title__icontains=query)
     
     return render(request, 'artclass/library.html', {
         'shared_classes': shared_classes,

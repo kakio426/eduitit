@@ -23,11 +23,15 @@ def add_student(request):
     # Bulk add support (comma separated)
     current_count = DTStudent.objects.filter(user=request.user).count()
     
+    new_students = []
     for name in names:
         name = name.strip()
         if name:
             current_count += 1
-            DTStudent.objects.create(user=request.user, name=name, number=current_count)
+            new_students.append(DTStudent(user=request.user, name=name, number=current_count))
+    
+    if new_students:
+        DTStudent.objects.bulk_create(new_students)
             
     return redirect('dt_admin_dashboard')
 

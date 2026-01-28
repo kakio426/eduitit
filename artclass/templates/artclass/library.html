@@ -64,8 +64,9 @@
 
             {% for item in shared_classes %}
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
-                data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00"
-                onclick="openChoiceModal('{{ item.pk }}', '{{ item.title|escapejs }}', '{{ item.youtube_url }}', '{{ item.steps.count }}', '{% if item.created_by %}{{ item.created_by.username|escapejs }}{% else %}익명의 선생님{% endif %}')">
+                data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
+                data-title="{{ item.title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
+                data-creator="{{ item.created_by.username|default:'익명의 선생님' }}" onclick="openChoiceModalFromData(this)">
 
                 <!-- YouTube Thumbnail -->
                 <div class="relative aspect-video overflow-hidden thumb-wrapper shrink-0">
@@ -85,7 +86,7 @@
                         <div class="flex items-center gap-2 mb-3">
                             <span
                                 class="text-[10px] font-black tracking-widest uppercase text-purple-600 bg-purple-100 px-2.5 py-1 rounded-lg">
-                                {{ item.steps.count }} STEPS
+                                {{ item.steps_count }} STEPS
                             </span>
                             <span class="text-[10px] font-black tracking-widest uppercase text-gray-400">
                                 {{ item.created_at|date:"Y.m.d" }}
@@ -152,6 +153,15 @@
 </div>
 
 <script>
+    function openChoiceModalFromData(el) {
+        const pk = el.getAttribute('data-pk');
+        const title = el.getAttribute('data-title');
+        const youtubeUrl = el.getAttribute('data-url');
+        const stepCount = el.getAttribute('data-steps');
+        const creator = el.getAttribute('data-creator');
+        openChoiceModal(pk, title, youtubeUrl, stepCount, creator);
+    }
+
     function openChoiceModal(pk, title, youtubeUrl, stepCount, creator) {
         const modal = document.getElementById('choiceModal');
         const backdrop = document.getElementById('choiceBackdrop');

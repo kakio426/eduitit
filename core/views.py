@@ -28,7 +28,18 @@ def home(request):
         ).distinct()
         
         # SNS Posts
-        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes', 'comments', 'comments__author', 'comments__author__userprofile').all()
+        posts = Post.objects.select_related(
+            'author', 
+            'author__userprofile'
+        ).prefetch_related(
+            'likes', 
+            'comments', 
+            'comments__author', 
+            'comments__author__userprofile'
+        ).annotate(
+            likes_count_annotated=Count('likes', distinct=True),
+            comments_count_annotated=Count('comments', distinct=True)
+        ).all()
         
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
@@ -63,7 +74,18 @@ def post_create(request):
     # Ideally, for HTMX, we return the new list or the single new post.
     # To enable full refresh-less behavior, let's return the full list partial.
     if request.headers.get('HX-Request'):
-        posts = Post.objects.select_related('author', 'author__userprofile').prefetch_related('likes', 'comments', 'comments__author', 'comments__author__userprofile').all()
+        posts = Post.objects.select_related(
+            'author', 
+            'author__userprofile'
+        ).prefetch_related(
+            'likes', 
+            'comments', 
+            'comments__author', 
+            'comments__author__userprofile'
+        ).annotate(
+            likes_count_annotated=Count('likes', distinct=True),
+            comments_count_annotated=Count('comments', distinct=True)
+        ).all()
         return render(request, 'core/partials/post_list.html', {'posts': posts})
         
     return redirect('home')

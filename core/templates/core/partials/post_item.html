@@ -48,11 +48,11 @@
             class="flex items-center gap-2 text-sm font-medium transition-colors
                        {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}">
             <i class="{% if user in post.likes.all %}ph-fill{% else %}ph{% endif %} ph-heart text-lg"></i>
-            <span>{{ post.likes.count }}</span>
+            <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
         </button>
         <div class="flex items-center gap-2 text-sm font-medium text-slate-400">
             <i class="ph ph-chat-circle text-lg"></i>
-            <span>{{ post.comments.count }}</span>
+            <span>{{ post.comments_count_annotated|default:post.comments.count }}</span>
         </div>
     </div>
 
