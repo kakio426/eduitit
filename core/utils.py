@@ -34,7 +34,7 @@ def ratelimit_key_for_master_only(group, request):
     """
     user = request.user
     
-    if has_personal_api_key(user):
+    if has_personal_api_key(user) or (user and user.is_authenticated and user.is_superuser):
         import uuid
         return f'personal:{uuid.uuid4()}'
     

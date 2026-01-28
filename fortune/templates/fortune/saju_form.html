@@ -949,7 +949,7 @@
         }
     }
 
-    // --- REFACTORED FUNCTIONS FOR STREAMING Support ---
+    // --- Core UI & Analysis Functions ---
 
     // 일간 감지 및 오행 배지 표시
     function detectAndShowElement(markdown) {
@@ -984,7 +984,7 @@
         }
     }
 
-    // 공유카드 업데이트
+    // 공유카드 업데이트 (이미지 저장용)
     function updateShareCard(markdown) {
         const nameContext = "{{ name|default:'선생님' }}";
         const titleElem = document.getElementById('shareCardTitle');
@@ -1017,138 +1017,47 @@
             if (colorElem) colorElem.textContent = colorMatch[1];
         }
     }
-</script>
 
-{% if result %}
-{{ result|json_script:"saju-result-data" }}
-{{ chart|json_script:"saju-chart-data" }}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const resultDataElem = document.getElementById('saju-result-data');
-        if (resultDataElem) {
-            const rawMarkdown = JSON.parse(resultDataElem.textContent);
-
-            // marked 옵션 설정
-            marked.setOptions({
-                breaks: true,
-                gfm: true
-            });
-
-            // 마크다운을 HTML로 변환 (DOMPurify로 XSS 방지)
-            const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
-            document.getElementById('markdownResult').innerHTML = htmlContent;
-
-            // 오행 배지 생성
-            detectAndShowElement(rawMarkdown);
-
-            // 공유카드 업데이트
-            updateShareCard(rawMarkdown);
-        }
-    });
-
-    // 일간 감지 및 오행 배지 표시
-    function detectAndShowElement(markdown) {
-        const badgeContainer = document.getElementById('elementBadge');
-        if (!badgeContainer) return;
-
-        // "일주(나): OO" 또는 "일간: O" 패턴에서 첫 글자(천간) 추출
-        // 마크다운(**)이나 공백이 섞여 있어도 인식하도록 수정
-        const patterns = [
-            /일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일간[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일주[^:]*:[^가-힣]*([갑을병정무기경신임계])/  // 안전장치: 한글 나오기 전까지 특수문자 건너뛰기
-        ];
-
-        let detected = null;
-        for (const pattern of patterns) {
-            const match = markdown.match(pattern);
-            if (match) {
-                detected = match[1];
-                break;
-            }
-        }
-
-        if (detected && ELEMENT_MAP[detected]) {
-            const info = ELEMENT_MAP[detected];
-            badgeContainer.innerHTML = `
-                <div class="element-badge ${info.element}">
-                    <span class="element-icon">${info.icon}</span>
-                    <span>${info.name}</span>
-                    <span style="opacity: 0.8; font-weight: normal;">- ${info.desc}</span>
-                </div>
-            `;
-        }
-    }
-
-    // 공유카드 업데이트
-    function updateShareCard(markdown) {
-        // 템플릿 변수에서 이름 가져오기 (가장 정확함)
-        const nameContext = "{{ name|default:'선생님' }}";
-        const titleElem = document.getElementById('shareCardTitle');
-        if (titleElem) titleElem.textContent = `🔮 ${nameContext} 선생님의 사주`;
-
-        // 일간 정보 업데이트
-        for (const [char, info] of Object.entries(ELEMENT_MAP)) {
-            if (markdown.includes(char)) {
-                const iconElem = document.getElementById('shareCardElement')?.querySelector('.icon');
-                const textElem = document.getElementById('shareCardElementText');
-                if (iconElem) iconElem.textContent = info.icon;
-                if (textElem) textElem.textContent = info.name;
-                break;
-            }
-        }
-
-        // 키워드 추출 시도 (실패 시 기본값)
-        const keywordMatch = markdown.match(/키워드[^"]*"([^"]+)"[^"]*"([^"]+)"[^"]*"([^"]+)"/);
-        if (keywordMatch) {
-            const keywordsContainer = document.getElementById('shareCardKeywords');
-            if (keywordsContainer) {
-                keywordsContainer.innerHTML = `
-                    <span class="share-card-keyword">"${keywordMatch[1]}"</span>
-                    <span class="share-card-keyword">"${keywordMatch[2]}"</span>
-                    <span class="share-card-keyword">"${keywordMatch[3]}"</span>
-                `;
-            }
-        }
-        // 행운의 색 추출 시도
-        const colorMatch = markdown.match(/행운[^:]*색[^:]*[:：]\s*([가-힣]+색?)/);
-        if (colorMatch) {
-            const colorElem = document.getElementById('shareCardLuckyColor');
-            if (colorElem) colorElem.textContent = colorMatch[1];
-        }
-    }
-
-    // 카카오톡 공유
+    // 카카오톡 공유 (카드 형태)
     function shareToKakao() {
         try {
-            if (!Kakao.isInitialized()) {
+            if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
                 showToast('카카오톡 연결 중입니다. 잠시 후 다시 시도해주세요.');
                 return;
             }
 
-            // 결과 내용에서 제목과 간단한 요약 추출 시도
+            const nameContext = "{{ name|default:'선생님' }}";
             const resultText = document.getElementById('markdownResult')?.innerText || '';
-            const summary = resultText.substring(0, 100).replace(/\n/g, ' ') + '...';
+
+            // 일간 정보에 따른 아이콘/이름 추출
+            let elementIcon = '🔮';
+            let elementName = '사주 분석';
+            for (const [char, info] of Object.entries(ELEMENT_MAP)) {
+                if (resultText.includes(char)) {
+                    elementIcon = info.icon;
+                    elementName = info.name;
+                    break;
+                }
+            }
+
+            const description = resultText.substring(0, 80).replace(/\n/g, ' ') + '...';
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: '🔮 Eduitit AI 사주 분석 결과',
-                    description: summary || '나의 운세와 오행 분석 결과를 확인해보세요!',
-                    imageUrl: 'https://images.unsplash.com/photo-1534346953335-519bb5a67c4a?q=80&w=600&auto=format&fit=crop', // Mystical background
+                    title: `${elementIcon} ${nameContext} 선생님의 사주 결과`,
+                    description: `${elementName} 기운을 가진 선생님을 위한 분석입니다.`,
+                    imageUrl: 'https://images.unsplash.com/photo-1515940175183-6798529cb860?q=80&w=800&auto=format&fit=crop',
                     link: {
-                        mobileWebUrl: window.location.href,
-                        webUrl: window.location.href,
+                        mobileWebUrl: window.location.origin + '/fortune/saju/',
+                        webUrl: window.location.origin + '/fortune/saju/',
                     },
                 },
+                itemContent: {
+                    profileText: 'Eduitit AI 사주운세',
+                    profileImageUrl: 'https://eduitit.coding.io/static/images/logo.png',
+                },
                 buttons: [
-                    {
-                        title: '결과 확인하기',
-                        link: {
-                            mobileWebUrl: window.location.href,
-                            webUrl: window.location.href,
-                        },
-                    },
                     {
                         title: '나도 사주보기',
                         link: {
@@ -1164,7 +1073,7 @@
                 navigator.share({
                     title: '🔮 AI 사주 분석 결과',
                     text: 'Eduitit에서 내 사주를 분석해봤어요!',
-                    url: window.location.href
+                    url: window.location.origin + '/fortune/saju/'
                 });
             } else {
                 copyLink();
@@ -1204,7 +1113,7 @@
         }).then(canvas => {
             shareCard.style.left = '-9999px';
             const link = document.createElement('a');
-            link.download = 'saju-result.png';
+            link.download = `saju_${Date.now()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             showToast('이미지가 저장되었습니다!');
@@ -1214,20 +1123,17 @@
         });
     }
 
-    // 일진(하루 운세) 확인 로직
+    // 일진 확인
     async function checkDailyFortune() {
         const targetDate = document.getElementById('targetDateInput').value;
         if (!targetDate) return;
 
-        // 결과 영역에서 명식 추출 (또는 이미 저장된 데이터 사용)
-        // 여기서는 간단하게 서버에서 아까 계산해준 chart 정보를 활용하거나 파싱
         const chartDataElem = document.getElementById('saju-chart-data');
         let natalChart = {};
 
         if (chartDataElem) {
             natalChart = JSON.parse(chartDataElem.textContent);
         } else {
-            // Fallback to parsing from markdown if chart-data is missing
             const resultText = document.getElementById('markdownResult').innerText;
             const yearMatch = resultText.match(/년주[^가-힣]*[:：]\s*([가-힣]{2})/);
             const monthMatch = resultText.match(/월주[^가-힣]*[:：]\s*([가-힣]{2})/);
@@ -1245,7 +1151,6 @@
             return;
         }
 
-        // 비회원 미래 날짜 제한 (예시)
         const isGuest = "{{ user.is_authenticated }}" === "False";
         const selectedDate = new Date(targetDate);
         const today = new Date();
@@ -1276,11 +1181,6 @@
             const data = await response.json();
             document.getElementById('loadingOverlay').classList.remove('show');
 
-            if (response.status === 429) {
-                alert(data.message);
-                return;
-            }
-
             if (data.success) {
                 const dailyResultDiv = document.getElementById('dailyFortuneResult');
                 const dailyContentDiv = document.getElementById('dailyFortuneContent');
@@ -1292,12 +1192,17 @@
             }
         } catch (e) {
             document.getElementById('loadingOverlay').classList.remove('show');
-            console.error(e);
             showToast('서버 통신 오류가 발생했습니다.');
         }
     }
 
+    // 보관함 저장
     async function saveToLibrary() {
+        if ("{{ user.is_authenticated }}" === "False") {
+            alert('로그인 후 이용 가능합니다. 😊');
+            return;
+        }
+
         const resultText = document.getElementById('markdownResult').innerText;
         const chartDataElem = document.getElementById('saju-chart-data');
         let natalChart = {};
@@ -1305,18 +1210,11 @@
         if (chartDataElem) {
             natalChart = JSON.parse(chartDataElem.textContent);
         } else {
-            const yearMatch = resultText.match(/년주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const monthMatch = resultText.match(/월주[^가-힣]*[:：]\s*([가-힣]{2})/);
+            const resultText = document.getElementById('markdownResult').innerText;
             const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const hourMatch = resultText.match(/시주[^가-힣]*[:：]\s*([가-힣]{2})/);
-
-            if (yearMatch) natalChart.year = yearMatch[1];
-            if (monthMatch) natalChart.month = monthMatch[1];
             if (dayMatch) natalChart.day = dayMatch[1];
-            if (hourMatch) natalChart.hour = hourMatch[1];
         }
 
-        // 일진 결과가 있으면 같이 보관 (또는 따로 보관)
         const dailyText = document.getElementById('dailyFortuneResult').classList.contains('hidden') ? null : document.getElementById('dailyFortuneContent').innerText;
 
         try {
@@ -1327,7 +1225,7 @@
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 body: JSON.stringify({
-                    mode: dailyText ? 'daily' : 'teacher', // 간단하게
+                    mode: dailyText ? 'daily' : 'teacher',
                     natal_chart: natalChart,
                     result_text: dailyText ? dailyText : resultText,
                     target_date: dailyText ? document.getElementById('targetDateInput').value : null
@@ -1336,7 +1234,7 @@
 
             const data = await response.json();
             if (data.success) {
-                showToast('성공적으로 보관함에 저장되었습니다! 🎁');
+                showToast('보관함에 저장되었습니다! 🎁');
             } else {
                 showToast('저장 실패: ' + data.error);
             }
@@ -1344,6 +1242,25 @@
             showToast('서버 통신 오류가 발생했습니다.');
         }
     }
+</script>
+
+{% if result %}
+{{ result|json_script:"saju-result-data" }}
+{{ chart|json_script:"saju-chart-data" }}
+<script>
+    // SSR 결과 렌더링
+    document.addEventListener('DOMContentLoaded', function () {
+        const resultDataElem = document.getElementById('saju-result-data');
+        if (resultDataElem) {
+            const rawMarkdown = JSON.parse(resultDataElem.textContent);
+            marked.setOptions({ breaks: true, gfm: true });
+            const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
+            document.getElementById('markdownResult').innerHTML = htmlContent;
+
+            detectAndShowElement(rawMarkdown);
+            updateShareCard(rawMarkdown);
+        }
+    });
 </script>
 {% endif %}
 {% endblock %}

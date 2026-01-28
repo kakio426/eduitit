@@ -36,11 +36,15 @@ def get_user_gemini_key(request):
     return None
 
 def fortune_rate_h(group, request):
-    """1시간당 5회 제한"""
+    """1시간당 5회 제한 (관리자 무제한)"""
+    if request.user and request.user.is_authenticated and request.user.is_superuser:
+        return None
     return '5/h'
 
 def fortune_rate_d(group, request):
-    """1일당 10회 제한"""
+    """1일당 10회 제한 (관리자 무제한)"""
+    if request.user and request.user.is_authenticated and request.user.is_superuser:
+        return None
     return '10/d'
 
 def generate_ai_response(prompt, request):
