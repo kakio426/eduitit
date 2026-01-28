@@ -77,9 +77,14 @@ def generate_ai_response(prompt, request):
 
                     chunk_count = 0
                     for chunk in response:
-                        if chunk.text:
-                            chunk_count += 1
-                            yield chunk.text
+                        try:
+                            # Verify if text is available (handles safety blocks gracefully)
+                            if chunk.text:
+                                chunk_count += 1
+                                yield chunk.text
+                        except Exception:
+                            # Ignored blocked/safety-filtered chunks
+                            continue
                     
                     if chunk_count == 0:
                         logger.warning("Gemini stream yielded 0 chunks.")
@@ -186,7 +191,15 @@ def saju_view(request):
 
             try:
                 # Wrap generator to maintain current sync behavior until Phase 4
-                result_html = "".join(generate_ai_response(prompt, request))
+                generated_text = "".join(generate_ai_response(prompt, request))
+                
+                # Validation: If result is empty/whitespace, treat as None/Error
+                if generated_text and generated_text.strip():
+                    result_html = generated_text
+                else:
+                    logger.warning("AI returned empty response")
+                    result_html = None
+                    error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
             except Exception as e:
                 logger.exception("사주 분석 오류")
                 error_str = str(e)
