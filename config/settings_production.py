@@ -394,6 +394,8 @@ CSP_IMG_SRC = (
     "blob:",
     "https:",
     "http:",
+    "https://k.kakaocdn.net", # Kakao profile/assets
+    "https://*.kakaocdn.net",
 )
 CSP_CONNECT_SRC = (
     "'self'",
@@ -403,16 +405,18 @@ CSP_CONNECT_SRC = (
     "https://beyondwickedmapping.org", # Statsig (Loom extension)
     "https://cloudflare-dns.com",      # DNS fallback
     "https://cdn.jsdelivr.net",        # JS source maps
+    "https://*.kakao.com",             # Kakao APIs
 )
 
 CSP_FRAME_SRC = (
     "'self'",
     "https://padlet.com",
+    "https://*.kakao.com",
 )
 CSP_MEDIA_SRC = ("'self'",)
 CSP_OBJECT_SRC = ("'none'",)
 CSP_BASE_URI = ("'self'",)
-CSP_FORM_ACTION = ("'self'",)
+CSP_FORM_ACTION = ("'self'", "https://sharer.kakao.com")
 
 # =============================================================================
 # AUTO-FIX: Sync Site Domain with Production Host
