@@ -886,6 +886,13 @@
                 const chunk = decoder.decode(value, { stream: true });
                 accumulatedText += chunk;
 
+                // [Error Detection] Check for error signatures in the stream
+                // Sometimes backend streams an error message instead of failing the request
+                if (accumulatedText.startsWith('[오류 발생:') || accumulatedText.startsWith('{"error":')) {
+                    const errorMsg = accumulatedText.replace('[오류 발생:', '').replace(']', '').trim();
+                    throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
+                }
+
                 // 마크다운 실시간 렌더링
                 resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
 
@@ -899,7 +906,22 @@
 
         } catch (err) {
             console.error(err);
-            resultTarget.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-xl border-2 border-red-100 font-bold">⚠️ 오류: ${err.message}</div>`;
+            let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
+
+            // 힌트 제공 (선택적)
+            if (err.message && !err.message.includes('fetch')) {
+                userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
+            }
+
+            resultTarget.innerHTML = `
+                <div class="p-6 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-center shadow-sm">
+                    <div class="text-4xl mb-3">🌪️</div>
+                    <div class="font-bold text-lg whitespace-pre-line">${userMessage}</div>
+                    <button onclick="window.location.reload()" class="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">
+                        <i class="fa-solid fa-rotate-right mr-2"></i>다시 시도하기
+                    </button>
+                </div>
+            `;
         }
     });
 

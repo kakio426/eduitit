@@ -119,9 +119,18 @@ def generate_ai_response(prompt, request):
                         ],
                         stream=True
                     )
+                    
+                    chunk_count = 0
                     for chunk in response:
                         if chunk.choices and chunk.choices[0].delta.content:
-                            yield chunk.choices[0].delta.content
+                            content = chunk.choices[0].delta.content
+                            chunk_count += 1
+                            yield content
+                    
+                    if chunk_count == 0:
+                        logger.warning("DeepSeek stream yielded 0 chunks.")
+                        raise Exception("DeepSeek API returned empty response")
+                        
                     return
                 except Exception as e:
                     if '503' in str(e) and i < max_retries:
