@@ -20,15 +20,48 @@ def get_calendar_korean(calendar_type):
     return "양력" if calendar_type == "solar" else "음력"
 
 
+def get_chart_info(chart_context):
+    """사주 명식 정보를 상세 문자열로 변환 (오행 정보 포함)"""
+    if not chart_context:
+        return ""
+    
+    element_map = {
+        'wood': '목',
+        'fire': '화',
+        'earth': '토',
+        'metal': '금',
+        'water': '수'
+    }
+    
+    def get_el(obj):
+        # Handle both object (with .element) and plain string/dict if needed
+        if hasattr(obj, 'element'):
+            return element_map.get(obj.element, obj.element)
+        return ""
+
+    y_s = chart_context['year']['stem']
+    y_b = chart_context['year']['branch']
+    m_s = chart_context['month']['stem']
+    m_b = chart_context['month']['branch']
+    d_s = chart_context['day']['stem']
+    d_b = chart_context['day']['branch']
+    h_s = chart_context['hour']['stem']
+    h_b = chart_context['hour']['branch']
+    
+    return f"[SSOT Data]\n" \
+           f"- 년주: {y_s}{y_b} (천간:{get_el(y_s)}, 지지:{get_el(y_b)})\n" \
+           f"- 월주: {m_s}{m_b} (천간:{get_el(m_s)}, 지지:{get_el(m_b)})\n" \
+           f"- 일주: {d_s}{d_b} (천간:{get_el(d_s)}, 지지:{get_el(d_b)})\n" \
+           f"- 시주: {h_s}{h_b} (천간:{get_el(h_s)}, 지지:{get_el(h_b)})"
+
+
 def get_teacher_prompt(data, chart_context=None):
     """교사 맞춤형 사주 분석 프롬프트 (Lite 최적화)"""
     time_str = get_time_string(data.get('birth_hour'), data.get('birth_minute'))
     gender_str = get_gender_korean(data['gender'])
     calendar_str = get_calendar_korean(data['calendar_type'])
 
-    chart_info = ""
-    if chart_context:
-        chart_info = f"[SSOT Data] Year:{chart_context['year']['stem']}{chart_context['year']['branch']}, Month:{chart_context['month']['stem']}{chart_context['month']['branch']}, Day:{chart_context['day']['stem']}{chart_context['day']['branch']}, Hour:{chart_context['hour']['stem']}{chart_context['hour']['branch']}"
+    chart_info = get_chart_info(chart_context)
 
     return f"""
 [Role] 30년 경력 교사 전문 명리 상담사 (다정하고 부드러운 말투)
@@ -75,9 +108,7 @@ def get_general_prompt(data, chart_context=None):
     gender_str = get_gender_korean(data['gender'])
     calendar_str = get_calendar_korean(data['calendar_type'])
 
-    chart_info = ""
-    if chart_context:
-        chart_info = f"[SSOT Data] Year:{chart_context['year']['stem']}{chart_context['year']['branch']}, Month:{chart_context['month']['stem']}{chart_context['month']['branch']}, Day:{chart_context['day']['stem']}{chart_context['day']['branch']}, Hour:{chart_context['hour']['stem']}{chart_context['hour']['branch']}"
+    chart_info = get_chart_info(chart_context)
 
     return f"""
 [Role] 30년 경력 명리 전문가 (따뜻하고 희망적인 어조)
@@ -121,6 +152,8 @@ def get_general_prompt(data, chart_context=None):
 def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context):
     """특정 날짜의 일진(운세) 분석 프롬프트 (Lite 최적화)"""
     gender_str = get_gender_korean(gender)
+    natal_info = get_chart_info(natal_context)
+    target_info = get_chart_info(target_context)
     
     return f"""
 [Role] 30년 경력 명리 전문가 (다정하고 긍정적인 말투)
@@ -130,8 +163,9 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 3. **즉시 시작**: 응답은 반드시 (줄바꿈 후) `## ` (샵 뒤 공백 필수)로 시작하십시오.
 
 [User Data] {name}({gender_str})
-[Natal Chart] {natal_context['year']['stem']}{natal_context['year']['branch']}/{natal_context['month']['stem']}{natal_context['month']['branch']}/{natal_context['day']['stem']}{natal_context['day']['branch']}/{natal_context['hour']['stem']}{natal_context['hour']['branch']}
-[Target Date] {target_date.strftime('%Y-%m-%d')} (일진:{target_context['day']['stem']}{target_context['day']['branch']}, 월운:{target_context['month']['stem']}{target_context['month']['branch']})
+{natal_info}
+[Target Date] {target_date.strftime('%Y-%m-%d')}
+{target_info}
 
 
 ## 📅 {target_date.strftime('%m월 %d일')} 오늘의 운세 요약

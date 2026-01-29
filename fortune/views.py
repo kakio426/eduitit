@@ -366,12 +366,23 @@ def daily_fortune_api(request):
         target_dt = tz.localize(target_dt).replace(hour=12) # Noon check
         target_context = calculator.get_pillars(target_dt)
 
-        # Build Natal Context from strings
+        # Build Natal Context with objects to include element info
+        from .models import Stem, Branch
+        def get_pillar_obj(ganji_str):
+            if not ganji_str or len(ganji_str) < 2:
+                return {'stem': None, 'branch': None}
+            s_char = ganji_str[:1]
+            b_char = ganji_str[1:]
+            return {
+                'stem': Stem.objects.filter(character=s_char).first(),
+                'branch': Branch.objects.filter(character=b_char).first()
+            }
+
         natal_context = {
-            'year': {'stem': natal_data['year'][:1], 'branch': natal_data['year'][1:]},
-            'month': {'stem': natal_data['month'][:1], 'branch': natal_data['month'][1:]},
-            'day': {'stem': natal_data['day'][:1], 'branch': natal_data['day'][1:]},
-            'hour': {'stem': natal_data['hour'][:1], 'branch': natal_data['hour'][1:]}
+            'year': get_pillar_obj(natal_data.get('year')),
+            'month': get_pillar_obj(natal_data.get('month')),
+            'day': get_pillar_obj(natal_data.get('day')),
+            'hour': get_pillar_obj(natal_data.get('hour'))
         }
 
         # Prompt
