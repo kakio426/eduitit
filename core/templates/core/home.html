@@ -98,89 +98,81 @@
 <!-- API Notice Modal -->
 <div id="apiNoticeModal" class="fixed inset-0 z-[9999] hidden overflow-y-auto" aria-labelledby="modal-title"
     role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-start justify-center p-4 md:p-8 text-center pt-10 pb-20">
-        <!-- Backdrop -->
-        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeNotice()"
-            aria-hidden="true"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-start justify-center p-4 text-center pt-10 pb-40">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" onclick="closeNotice()"
+                aria-hidden="true"></div>
 
-        <!-- Modal Panel -->
-        <div class="relative transform overflow-hidden rounded-3xl bg-white/95 backdrop-blur-md md:backdrop-blur-xl text-left shadow-2xl transition-all w-full max-w-2xl border-none clay-card z-10"
-            data-aos="zoom-in">
-
-            <!-- Mobile Optimized Close Button (Top-Right) -->
+            <!-- Fixed Close Button - ALWAYS visible on screen, not inside modal -->
             <button onclick="closeNotice()"
-                class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors shadow-sm"
-                aria-label="안내창 닫기">
-                <i class="fa-solid fa-xmark text-xl"></i>
+                class="fixed top-6 right-6 z-[10000] w-14 h-14 rounded-full bg-slate-800 text-white shadow-2xl flex items-center justify-center hover:bg-black transition-all"
+                aria-label="창 닫기">
+                <i class="fa-solid fa-xmark text-2xl"></i>
             </button>
 
-            <div class="p-6 md:p-10">
-                <h2 class="text-2xl md:text-4xl font-extrabold text-gray-800 mb-6 flex items-center gap-3 pr-8">
-                    <span class="text-indigo-600">📢</span> Gemini AI 서비스 방식 변경
-                </h2>
-                <div class="space-y-4 text-gray-600 text-base md:text-lg leading-relaxed break-keep">
-                    <p class="font-bold text-gray-800">안녕하세요, 선생님! Eduitit입니다.</p>
-                    <p>
-                        최근 구글(Google)의 인공지능 정책 변경으로 인해, 서버에서 제공하던 <span
-                            class="text-red-600 font-bold underline decoration-red-200">공용 마스터 API의 사용 한도가 하루 단
-                            20회</span>로
-                        극히 제한되었습니다. 이 때문에 서비스가 예기치 않게 중단되는 상황이 발생하고 있습니다.
-                    </p>
-                    <div
-                        class="bg-indigo-50 border-l-4 border-indigo-500 p-4 md:p-6 rounded-r-2xl my-6 space-y-3 text-sm md:text-base">
-                        <p class="flex items-start gap-2">
-                            <i class="fa-solid fa-circle-check text-indigo-600 mt-1 shrink-0"></i>
-                            <span><strong>현재 상황:</strong> 구글 정책 강화로 공용 API 상시 중단 중</span>
-                        </p>
-                        <p class="flex items-start gap-2">
-                            <i class="fa-solid fa-circle-check text-indigo-600 mt-1 shrink-0"></i>
-                            <span><strong>해결 방법:</strong> 가입 후 <strong>[설정]</strong>에서 개인 Gemini API 키 등록</span>
-                        </p>
-                        <p class="flex items-start gap-2">
-                            <i class="fa-solid fa-circle-check text-indigo-600 mt-1 shrink-0"></i>
-                            <span><strong>장점:</strong> 개인 키 등록 시 <strong>중단 없는 이용</strong> 가능 (무료)</span>
-                        </p>
-                    </div>
+            <!-- Modal Panel -->
+            <div
+                class="relative transform rounded-3xl bg-white text-left shadow-2xl transition-all w-full max-w-2xl border-none clay-card z-10">
+                <div class="p-6 md:p-10">
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-gray-800 mb-6 flex items-center gap-3 pr-10">
+                        <span class="text-indigo-600">📢</span> Gemini AI 방식 변경 안내
+                    </h2>
 
-                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <p class="text-base font-bold text-slate-700 mb-2">🔑 API 키가 없으신가요?</p>
-                        <p class="text-sm text-slate-500 mb-3">Google AI Studio에서 1분 만에 무료로 발급받으실 수 있습니다.</p>
+                    <div class="space-y-4 text-gray-600 text-base md:text-lg leading-relaxed break-keep">
+                        <p class="font-bold text-gray-800">안녕하세요, 선생님! Eduitit입니다.</p>
+                        <p>
+                            구글 정책 변경으로 공용 API 사용이 매우 어렵게 되어, 부득이하게 **개인 API 키 등록** 방식으로 전환하게 되었습니다.
+                        </p>
+
+                        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-2xl my-6 space-y-2">
+                            <p class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle-check text-indigo-600 mt-1 shrink-0"></i>
+                                <span>가입 후 **[설정]**에서 번거로우시더라도 **개인 Gemini API 키**를 딱 한 번만 등록해 주세요.</span>
+                            </p>
+                            <p class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle-check text-indigo-600 mt-1 shrink-0"></i>
+                                <span>개인 키를 쓰시면 **무료이면서도 훨씬 빠르고 끊김 없이** 이용 가능합니다! 😊</span>
+                            </p>
+                        </div>
+
                         <a href="https://aistudio.google.com/app/apikey" target="_blank"
-                            class="text-indigo-600 hover:text-indigo-800 text-sm font-bold flex items-center gap-1">
-                            무료 API 키 발급 가이드 바로가기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                            class="block p-4 bg-slate-100 rounded-xl border border-slate-200 hover:bg-slate-200 transition-colors">
+                            <p class="text-base font-bold text-slate-700 mb-1">🔑 1분 만에 무료 API 키 발급받기</p>
+                            <p class="text-sm text-indigo-600 font-bold">여기를 눌러 가이드를 확인해 보세요 <i
+                                    class="fa-solid fa-arrow-up-right-from-square text-xs"></i></p>
                         </a>
                     </div>
 
-                    <p class="text-sm md:text-base text-gray-500">선생님들의 원활한 업무 지원을 위한 불가피한 조치이오니 너그러운 양해 부탁드립니다.</p>
-                </div>
+                    <!-- Action Buttons - Reordered for Mobile -->
+                    <div class="mt-8 flex flex-col gap-3">
+                        <button onclick="closeNotice()"
+                            class="w-full py-5 bg-gray-200 text-gray-800 rounded-2xl font-black text-xl hover:bg-gray-300 transition-all">
+                            닫기 (창 닫기)
+                        </button>
+                        <a href="{% url 'settings' %}"
+                            class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xl hover:bg-slate-800 transition-all text-center shadow-lg">
+                            지금 API 키 등록하러 가기
+                        </a>
+                    </div>
 
-                <div class="mt-8 md:mt-10 flex flex-col sm:flex-row items-center gap-4">
-                    <a href="{% url 'settings' %}"
-                        class="w-full sm:w-auto px-6 py-3 md:px-8 md:py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all text-center shadow-lg hover:-translate-y-1">
-                        지금 API 키 등록하러 가기
-                    </a>
-                    <button onclick="closeNotice()"
-                        class="w-full sm:w-auto px-6 py-3 md:px-8 md:py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition-all">
-                        닫기
-                    </button>
+                    <div class="mt-6 flex justify-center">
+                        <label for="dontShowToday"
+                            class="flex items-center gap-3 py-3 px-4 cursor-pointer select-none text-gray-500 bg-gray-50 rounded-xl border border-gray-100">
+                            <input type="checkbox" id="dontShowToday"
+                                class="w-6 h-6 rounded border-gray-300 text-indigo-600">
+                            <span class="text-sm font-bold">오늘 하루 다시 보지 않기</span>
+                        </label>
+                    </div>
                 </div>
-
-                <!-- Touch target optimized checkbox area -->
-                <div class="mt-6 flex justify-center sm:justify-start">
-                    <label for="dontShowToday"
-                        class="flex items-center gap-3 py-3 px-2 cursor-pointer select-none text-gray-500 hover:bg-gray-50 rounded-lg transition-colors -ml-2">
-                        <input type="checkbox" id="dontShowToday"
-                            class="w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm font-medium">오늘 하루 다시 보지 않기</span>
-                    </label>
-                </div>
-            </div>
-            <!-- Accent Decor -->
-            <div
-                class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none">
             </div>
         </div>
     </div>
+    <!-- Accent Decor -->
+    <div class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none">
+    </div>
+</div>
+</div>
 </div>
 
 <script>
