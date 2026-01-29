@@ -65,13 +65,13 @@
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-300 to-orange-500"></div>
 
             <div class="inline-block p-2 rounded-full bg-white shadow-clay-inner mb-6 relative z-10">
-                <img src="{% static 'fortune/images/zoo/' %}{{ animal_image }}" alt="{{ result.mbti_type }}"
+                <img src="{% static 'fortune/images/zoo/' %}{{ animal_image }}" alt="{{ result.animal_name }}"
                     class="w-48 h-48 object-cover rounded-full">
             </div>
 
             <h2 class="text-4xl md:text-5xl font-bold text-gray-800 font-title mb-3">
                 <span class="text-orange-500 block text-2xl mb-2 font-hand">교실 속 당신의 영혼은</span>
-                {{ result.mbti_type }} {{ result.animal_name }}
+                {{ result.animal_name }}
             </h2>
         </div>
 
@@ -115,7 +115,7 @@
             objectType: 'feed',
             content: {
                 title: '나의 교실 속 영혼의 동물은?',
-                description: '나는 {{ result.mbti_type }} 선생님입니다! 당신의 동물은 무엇인가요?',
+                description: '나는 [{{ result.animal_name }}] 선생님입니다! 당신의 동물은 무엇인가요?',
                 imageUrl: 'https://{{ request.get_host }}{% static "fortune/images/zoo/share_thumb.png" %}',
                 link: {
                     mobileWebUrl: window.location.href,

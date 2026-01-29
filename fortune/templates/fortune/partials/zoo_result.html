@@ -6,13 +6,13 @@
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-300 to-orange-500"></div>
 
         <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10">
-            <img src="{% static 'fortune/images/zoo/' %}{{ animal_image }}" alt="{{ mbti_type }}"
+            <img src="{% static 'fortune/images/zoo/' %}{{ animal_image }}" alt="{{ animal_name }}"
                 class="w-80 h-80 object-contain rounded-full">
         </div>
 
         <h2 class="text-5xl md:text-6xl font-bold text-gray-800 font-title mb-4">
-            <span class="text-orange-500 block text-3xl mb-3 font-hand">교실 속 당신의 영혼은</span>
-            {{ mbti_type }} {{ animal_name }}
+            <span class="text-orange-500 block text-3xl mb-3 font-hand">교실 속 당신의 동물은</span>
+            {{ animal_name }}
         </h2>
     </div>
 

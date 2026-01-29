@@ -181,6 +181,8 @@ def zoo_analyze_view(request):
     }
     summary = taglines.get(mbti_type, '교실 속 특별한 영혼을 가진 선생님')
 
+    animal_image = MBTI_ANIMAL_MAP.get(mbti_type, 'lion.png')
+
     return render(request, 'fortune/partials/zoo_result.html', {
         'result_html': result_html, 
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
