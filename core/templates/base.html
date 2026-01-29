@@ -400,9 +400,9 @@
         <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300 opacity-0"
             id="modalBackdrop" aria-hidden="true" onclick="closeModal()"></div>
 
-        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
-            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div class="relative transform overflow-hidden rounded-[3rem] bg-white/90 backdrop-blur-2xl text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border-2 border-white/50 scale-95 opacity-0 duration-300"
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center">
+                <div class="relative transform overflow-hidden rounded-[2.5rem] md:rounded-[3rem] bg-white/95 backdrop-blur-2xl text-left shadow-2xl transition-all w-full max-w-4xl border-2 border-white/50 scale-95 opacity-0 duration-300"
                     id="modalPanel">
 
                     <!-- Loading Spinner Overlay -->
@@ -414,20 +414,19 @@
                         </div>
                     </div>
 
-                    <!-- Close Button (Top) -->
-                    <button onclick="closeModal()"
-                        class="absolute top-8 right-8 z-10 w-14 h-14 rounded-full bg-gray-100/80 hover:bg-white transition-all flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-clay-sm hover:shadow-clay group"
-                        aria-label="Close modal">
-                        <i
-                            class="fa-solid fa-xmark text-2xl group-hover:rotate-90 transition-transform duration-300"></i>
-                    </button>
-
-                    <div id="modalContent" class="p-10 md:p-14 min-h-[400px]">
+                    <div id="modalContent" class="p-6 md:p-14 min-h-[400px]">
                         <!-- Content will be loaded here -->
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Improved Close Button: Fixed position to stay visible during scroll -->
+        <button onclick="closeModal()"
+            class="fixed top-6 right-6 md:top-10 md:right-10 z-[110] w-14 h-14 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-2xl transition-all flex items-center justify-center group"
+            aria-label="Close modal">
+            <i class="fa-solid fa-xmark text-2xl group-hover:rotate-90 transition-transform duration-300"></i>
+        </button>
     </div>
 
     <script>
@@ -575,9 +574,10 @@
                 duration: 800,
             });
         });
-
+    </script>
+    {% if user.is_authenticated %}
+    <script>
         // Auto Logout Logic
-        {% if user.is_authenticated %}
         (function () {
             let timeoutMinutes = 60; // SESSION_COOKIE_AGE와 동일하게 설정 (1시간)
             let warningMinutes = 59; // 59분에 경고 표시
@@ -663,8 +663,8 @@
             // 초기 타이머 시작
             startTimers();
         })();
-        {% endif %}
     </script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 
