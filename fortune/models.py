@@ -124,3 +124,18 @@ class FortuneResult(models.Model):
     def __str__(self):
         date_str = self.target_date.strftime('%Y-%m-%d') if self.target_date else "원국"
         return f"[{self.get_mode_display()}] {self.user.username} - {date_str}"
+
+class ZooResult(models.Model):
+    """사용자가 저장한 티처블 동물원(MBTI) 결과"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='zoo_results')
+    mbti_type = models.CharField(max_length=4, help_text="e.g. ENFP")
+    animal_name = models.CharField(max_length=50, help_text="e.g. 해달")
+    result_text = models.TextField(help_text="AI가 생성한 분석 결과 내용")
+    answers_json = models.JSONField(help_text="사용자가 선택한 답변들", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.animal_name}({self.mbti_type})"

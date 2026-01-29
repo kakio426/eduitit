@@ -8,23 +8,21 @@
                 <div class="flex justify-between items-start">
                     <div
                         class="w-12 h-12 rounded-2xl bg-white shadow-inner flex items-center justify-center text-2xl text-purple-500 theme-icon">
-                        {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{%  endif %}
+                        {% if "fa-" in product.icon %}
+                        <i class="{{ product.icon }}"></i>
+                        {% else %}
+                        {{ product.icon }}
+                        {% endif %}
                     </div>
                     {% if product.card_size == 'hero' %}
                     <span
                         class="px-3 py-1 theme-badge rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
                     {% endif %}
-                    {% if product.is_guest_allowed %}
-                    <span
-                        class="px-3 py-1 bg-white/50 backdrop-blur-sm text-gray-800 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border border-gray-200">
-                        <i class="fa-solid fa-unlock-keyhole mr-1"></i>무료 체험 가능
-                    </span>
-                    {% endif %}
                 </div>
 
                 <div>
-                    <span class="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2 block">{{  product.service_type|title }}</span>
-
+                    <span
+                        class="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2 block">{{product.service_type|title}}</span>
                     <h3
                         class="{% if product.card_size == 'hero' %}text-2xl md:text-3xl lg:text-4xl{% else %}text-xl md:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                         {{ product.title }}
