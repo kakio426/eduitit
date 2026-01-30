@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex items-center justify-between mb-12">
+            <div>
+                <h1 class="text-5xl font-bold text-gray-700 font-title mb-2">동물원 보관함</h1>
+                <p class="text-2xl text-gray-400 font-hand">나의 지난 MBTI 분석 결과들을 모아보세요.</p>
+            </div>
+            <a href="{% url 'ssambti:main' %}"
+                class="px-8 py-3 bg-orange-500 text-white rounded-full font-bold shadow-clay hover:scale-105 transition">
+                테스트하러 가기
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for result in history %}
+            <div class="clay-card p-6 group hover:shadow-clay-hover cursor-pointer transition-all duration-300"
+                onclick="location.href='{% url 'ssambti:detail' result.pk %}'">
+                <div class="flex items-center gap-4 mb-4">
+                    <div
+                        class="w-16 h-16 rounded-2xl shadow-clay-inner overflow-hidden flex items-center justify-center bg-white">
+                        <img src="{% static 'ssambti/images/animals/' %}{{ result.animal_image }}"
+                            alt="{{ result.animal_name }}" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-700">{{ result.animal_name }}</h3>
+                    </div>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">{{ result.created_at|date:"Y.m.d H:i" }}</p>
+                <div class="flex items-center gap-2 text-purple-400 font-bold">
+                    상세보기 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full clay-card p-12 text-center">
+                <div class="text-6xl mb-6">🏜️</div>
+                <h3 class="text-3xl font-bold text-gray-400 mb-2">아직 저장된 결과가 없습니다.</h3>
+                <p class="text-xl text-gray-400 font-hand">영혼의 동물을 찾아보세요!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

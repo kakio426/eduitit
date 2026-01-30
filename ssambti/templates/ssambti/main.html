@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .quiz-step {
+        display: none;
+        min-height: 400px;
+    }
+
+    .quiz-step.active {
+        display: block;
+        animation: slideIn 0.5s ease-out;
+        min-height: 400px;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #f97316, #fbbf24);
+        transition: width 0.3s ease;
+    }
+
+    .option-btn {
+        width: 100%;
+        padding: 1.5rem;
+        background: #E0E5EC;
+        border-radius: 20px;
+        box-shadow: 6px 6px 12px #b8bec5, -6px -6px 12px #ffffff;
+        text-align: left;
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #4a5568;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        margin-bottom: 1rem;
+    }
+
+    .option-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
+    }
+
+    .option-btn.selected {
+        box-shadow: inset 4px 4px 8px #b8bec5, inset -4px -4px 8px #ffffff;
+        border-color: #f97316;
+        color: #f97316;
+    }
+
+    /* Animation for results */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    /* Badges for AI Result */
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-weight: bold;
+        font-size: 0.875rem;
+        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.05), inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+    }
+
+    .badge-orange {
+        background-color: #ffedd5;
+        color: #c2410c;
+    }
+
+    .badge-purple {
+        background-color: #f3e8ff;
+        color: #7e22ce;
+    }
+
+    .badge-green {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    /* Loader Visibility Control */
+    #zoo-loader {
+        display: none;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    #zoo-loader.htmx-request {
+        display: flex;
+        opacity: 1;
+        pointer-events: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-3xl mx-auto" id="results-wrapper">
+
+        <!-- Everything inside this div will be replaced by the result -->
+        <div id="quiz-ui-container">
+            <!-- 1. 헤더 섹션 -->
+            <div class="text-center mb-12" data-aos="fade-up">
+                <div class="mb-10 rounded-3xl overflow-hidden shadow-clay-inner">
+                    <img src="{% static 'ssambti/images/animals/main_header.png' %}" alt="Teachable Zoo"
+                        class="w-full h-auto object-cover max-h-[400px]">
+                </div>
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 font-title mb-4">
+                    {{ title }}
+                </h1>
+                {% if user.is_authenticated %}
+                <a href="{% url 'ssambti:history' %}"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 text-gray-500 hover:text-orange-500 transition shadow-sm mb-4">
+                    <i class="fa-solid fa-box-archive"></i> 내 결과 보관함
+                </a>
+                {% else %}
+                <div
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 text-gray-400 mb-4 cursor-default">
+                    <i class="fa-solid fa-info-circle"></i> 결과 저장을 위해선 로그인이 필요해요
+                </div>
+                {% endif %}
+                <div class="flex items-center justify-between mb-4 mt-8">
+                    <span class="text-xl font-bold text-orange-600 font-title">동물 MBTI 테스트</span>
+                    <span class="text-xl font-bold text-gray-400" id="stepIndicator">1 / 12</span>
+                </div>
+                <div class="progress-bar mb-6 shadow-clay-inner">
+                    <div class="progress-fill" id="progressBar" style="width: 8.33%;"></div>
+                </div>
+            </div>
+
+            <!-- Quiz Container -->
+            <div class="clay-card p-8 md:p-12 relative min-h-[500px] flex flex-col justify-center" data-aos="zoom-in">
+                <form id="quizForm" hx-post="{% url 'ssambti:analyze' %}" hx-target="#results-wrapper"
+                    hx-indicator="#zoo-loader" hx-swap="innerHTML" onsubmit="return validateQuiz()">
+                    {% csrf_token %}
+
+                    <!-- Q1-Q12 steps will be injected here via JS for cleaner template -->
+                    <div id="quizSteps">
+                        <!-- Steps will be generated by JS -->
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="mt-8 flex justify-between items-center">
+                        <button type="button" id="prevBtn" onclick="prevStep()"
+                            class="hidden px-8 py-3 rounded-full text-gray-400 font-bold hover:text-gray-600 transition">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> 이전
+                        </button>
+                        <!-- '다음' 버튼 삭제 (자동 이동) -->
+                        <button type="submit" id="submitBtn"
+                            class="hidden ml-auto px-10 py-4 bg-gradient-to-r from-orange-600 to-orange-400 text-white rounded-full text-2xl font-bold shadow-clay hover:shadow-clay-hover transition transform active:scale-95">
+                            결과 확인하기 <i class="fa-solid fa-wand-sparkles ml-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="zoo-loader"
+        class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
+        <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
+            <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
+        </div>
+        <p class="text-3xl font-title text-orange-600 animate-pulse">결과 계산 중...</p>
+    </div>
+</section>
+
+<script>
+    const questions = [
+        { id: 1, title: "Q1. 쉬는 시간에 아이들이 우르르 찾아오면?", options: ["아이들과 수다 떨며 즐겁게 보낸다", "조금 힘들지만 웃으며 응대하고 혼자 있고 싶어한다"] },
+        { id: 2, title: "Q2. 동료 선생님들과의 점심시간은?", options: ["다함께 북적북적 이야기꽃을 피우는게 좋다", "친한 분 한두 분과 조용히 식사하는걸 선호한다"] },
+        { id: 3, title: "Q3. 선호하는 교실 분위기는?", options: ["아이들의 활기찬 웃음소리가 끊이지 않는 분위기", "모두가 각자의 일에 집중하는 차분한 분위기"] },
+        { id: 4, title: "Q4. 수업 준비를 할 때 가장 먼저 챙기는 것은?", options: ["교과서 내용과 지도안의 흐름", "이번 수업에서 던질 핵심 질문과 영감"] },
+        { id: 5, title: "Q5. 처음 맡은 학생을 파악할 때 나는?", options: ["생활기록부와 관찰된 행동 데이터를 중시한다", "말 한마디 성격의 이면을 직관적으로 느낀다"] },
+        { id: 6, title: "Q6. 학급에 문제가 생겼을 때 해결 방식은?", options: ["비슷한 과거 사례나 매뉴얼을 찾아본다", "상황에 맞는 창의적인 해결책을 떠올린다"] },
+        { id: 7, title: "Q7. 학생을 꾸중할 때 내가 더 신경 쓰는 것은?", options: ["잘못된 이유를 명확히 짚어주는 것", "학생이 상처받지 않게 마음을 어루만지는 것"] },
+        { id: 8, title: "Q8. 수행평가 점수를 줄 때 나의 기준은?", options: ["결과물이 루브릭(채점기준)에 얼마나 부합하는가", "과정 속에서 학생이 얼마나 노력하고 성장했는가"] },
+        { id: 9, title: "Q9. 힘들어하는 동료 선생님을 위로할 때 나는?", options: ["문제를 해결할 수 있는 현실적인 조언을 해준다", "그 마음 충분히 이해한다며 끝까지 들어준다"] },
+        { id: 10, title: "Q10. 나의 하루 일과 스타일은?", options: ["계획된 시간표대로 움직여야 마음이 편하다", "상황에 따라 유연하게 일정을 조정한다"] },
+        { id: 11, title: "Q11. 현재 나의 교무실 책상 상태는?", options: ["어디에 무엇이 있는지 알도록 용도별로 정돈됨", "나만의 질서가 있는 자유로운 상태"] },
+        { id: 12, title: "Q12. 현장체험학습 계획을 짤 때 나는?", options: ["분 단위로 상세 동선을 미리 계획한다", "굵직한 일정만 정하고 현장 상황을 즐긴다"] }
+    ];
+
+    let currentStep = 1;
+    const totalSteps = questions.length;
+
+    function renderQuestions() {
+        const container = document.getElementById('quizSteps');
+        container.innerHTML = questions.map(q => `
+            <div class="quiz-step ${q.id === 1 ? 'active' : ''}" id="step-${q.id}">
+                <h2 class="text-3xl font-bold text-gray-700 mb-8 break-keep">${q.title}</h2>
+                <div class="space-y-4">
+                    ${q.options.map((opt, idx) => `
+                        <button type="button" class="option-btn" onclick="selectOption(${q.id}, ${idx}, this)">
+                            ${opt}
+                        </button>
+                    `).join('')}
+                    <input type="hidden" name="q${q.id}" id="input-q${q.id}" value="">
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function selectOption(step, value, btn) {
+        // Mark as selected
+        const buttons = document.getElementById(`step-${step}`).querySelectorAll('.option-btn');
+        buttons.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+
+        // Set input value
+        document.getElementById(`input-q${step}`).value = value;
+
+        // Auto move to next step after short delay
+        setTimeout(() => {
+            if (currentStep < totalSteps) {
+                nextStep();
+            } else {
+                updateStepUI();
+            }
+        }, 300);
+    }
+
+    function updateStepUI() {
+        document.querySelectorAll('.quiz-step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+
+        document.getElementById('stepIndicator').innerText = `${currentStep} / ${totalSteps}`;
+        document.getElementById('progressBar').style.width = `${(currentStep / totalSteps) * 100}%`;
+
+        document.getElementById('prevBtn').classList.toggle('hidden', currentStep === 1);
+
+        const submitBtn = document.getElementById('submitBtn');
+        // 마지막 단계이고, 12번 문항에 답이 채워졌을 때만 '결과 확인하기' 노출
+        if (currentStep === totalSteps && document.getElementById(`input-q${totalSteps}`).value !== "") {
+            submitBtn.classList.remove('hidden');
+        } else {
+            submitBtn.classList.add('hidden');
+        }
+    }
+
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateStepUI();
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            updateStepUI();
+        }
+    }
+
+    function validateQuiz() {
+        for (let i = 1; i <= totalSteps; i++) {
+            if (!document.getElementById(`input-q${i}`).value) {
+                alert(`질문 ${i}번에 답변해주세요!`);
+                currentStep = i;
+                updateStepUI();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', renderQuestions);
+
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.detail.target.id === 'zoo-result-area') {
+            document.getElementById('quizForm').classList.add('hidden');
+            document.getElementById('zoo-result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+</script>
+{% endblock %}

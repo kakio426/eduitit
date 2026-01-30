@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'portfolio.apps.PortfolioConfig',
     'autoarticle.apps.AutoarticleConfig',
     'fortune.apps.FortuneConfig',
+    'ssambti.apps.SsambtiConfig',
     'signatures.apps.SignaturesConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',

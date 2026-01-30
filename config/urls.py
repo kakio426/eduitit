@@ -29,6 +29,7 @@ urlpatterns = [
     path('', include('insights.urls', namespace='insights')),
     path('autoarticle/', include('autoarticle.urls', namespace='autoarticle')),
     path('fortune/', include('fortune.urls', namespace='fortune')),
+    path('ssambti/', include('ssambti.urls', namespace='ssambti')),
     path('artclass/', include('artclass.urls', namespace='artclass')),
     path('signatures/', include('signatures.urls', namespace='signatures')),
     path('school-violence/', include('school_violence.urls', namespace='school_violence')),
