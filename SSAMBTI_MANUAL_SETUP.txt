@@ -1,0 +1,32 @@
+==========================================
+Django Admin에서 쌤BTI 수동 추가 방법
+==========================================
+
+URL: https://[your-railway-url]/secret-admin-kakio/products/product/add/
+
+=== 기본 정보 ===
+Title: 쌤BTI
+Lead text: 나는 어떤 선생님일까? 🦁
+Description: 12가지 질문으로 알아보는 나의 교육 스타일! MBTI 기반 티처블 동물원에서 나와 닮은 동물을 찾아보세요.
+Image: (비워두기)
+Price: 0.00
+
+=== 체크박스 ===
+☑ Is active
+☐ Is featured
+☑ Is guest allowed
+
+=== 디스플레이 설정 ===
+Icon: 🦁
+Color theme: Orange
+Card size: Small (1x1)
+Display order: 13
+Service type: Game
+External url: (완전히 비워두기 - 매우 중요!)
+
+=== 주의사항 ===
+⚠️ External url 필드는 반드시 비워야 합니다!
+   - 비어있지 않으면 카드가 작동하지 않습니다
+   - /ssambti/ 같은 내부 URL도 입력하면 안 됩니다
+
+저장 후 메인 페이지를 Ctrl+Shift+R로 새로고침하세요.
