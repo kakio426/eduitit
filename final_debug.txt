@@ -1,0 +1,7 @@
+STATIC_ROOT: C:\Users\kakio\eduitit\static_prod
+STATICFILES_DIRS: [WindowsPath('C:/Users/kakio/eduitit/static')]
+Total files found in source: 353
+Admin files found: 260
+Duplicate files count: 130
+Sample duplicate: admin\css\autocomplete.css
+Target dir exists: True

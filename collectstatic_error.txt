@@ -1,0 +1,95 @@
+﻿python : NAVER_CLIENT_ID is not set in environm
+ent variables!
+위치 줄:1 문자:1
++ python manage.py collectstatic --noinput --se
+ttings=config.settings_p ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (N 
+   AVER_CLIENT_ID...ment variables!:String) [  
+  ], RemoteException
+    + FullyQualifiedErrorId : NativeCommandErr 
+   or
+ 
+KAKAO_CLIENT_ID is not set in environment varia
+bles!
+DEBUG: Cloudinary NOT configured, using local storage.
+============================================================
+DEBUG: STATICFILES_STORAGE => whitenoise.storage.CompressedStaticFilesStorage
+DEBUG: STORAGES['staticfiles'] => whitenoise.storage.CompressedStaticFilesStorage
+DEBUG: STORAGES['default'] => django.core.files.storage.FileSystemStorage
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\kakio\eduitit\manage.py", line
+ 22, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\kakio\eduitit\manage.py", line
+ 18, in main
+    execute_from_command_line(sys.argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\core\management\_
+_init__.py", line 443, in execute_from_command_
+line
+    utility.execute()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\core\management\_
+_init__.py", line 437, in execute
+    self.fetch_command(subcommand).run_from_arg
+v(self.argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\core\management\b
+ase.py", line 420, in run_from_argv
+    self.execute(*args, **cmd_options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\core\management\b
+ase.py", line 464, in execute
+    output = self.handle(*args, **options)
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\contrib\staticfil
+es\management\commands\collectstatic.py", line 
+214, in handle
+    collected = self.collect()
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\django\contrib\staticfil
+es\management\commands\collectstatic.py", line 
+151, in collect
+    for original_path, processed_path, processe
+d in processor:
+                                               
+     ^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\whitenoise\storage.py", 
+line 53, in post_process
+    yield from future.result()
+               ~~~~~~~~~~~~~^^
+  File "C:\Program Files\Python313\Lib\concurre
+nt\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Program Files\Python313\Lib\concurre
+nt\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Program Files\Python313\Lib\concurre
+nt\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\whitenoise\storage.py", 
+line 41, in _compress_path
+    for compressed_path in self.compressor.comp
+ress(full_path):
+                           ~~~~~~~~~~~~~~~~~~~~
+~~~~^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\P
+ython313\site-packages\whitenoise\compress.py",
+ line 84, in compress
+    with open(path, "rb") as f:
+         ~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or di
+rectory: 'C:\\Users\\kakio\\eduitit\\staticfile
+s\\admin\\img\\icon-debug-dark.svg'
