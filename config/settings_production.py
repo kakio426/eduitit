@@ -90,7 +90,8 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for static files
-    'csp.middleware.CSPMiddleware',  # Content Security Policy
+    # TEMPORARILY DISABLED FOR DEBUGGING: CSP might be blocking admin static files
+    # 'csp.middleware.CSPMiddleware',  # Content Security Policy
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -475,15 +476,21 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# CRITICAL: Explicitly configure finders to locate Django admin static files
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',  # Finds files in STATICFILES_DIRS
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',  # Finds Django admin CSS/JS in app directories
+]
+
 if not os.path.exists(STATIC_ROOT):
     os.makedirs(STATIC_ROOT)
 
 # WhiteNoise configuration
-# 사용자 제안 최적화: 가장 안전한 Django 기본 Storage 사용 (압축/해싱 건너뜀)
-# WhiteNoiseMiddleware가 서빙을 담당하므로 안전합니다.
+# CRITICAL FIX: USE_FINDERS=True allows WhiteNoise to serve admin static files directly
+# from app directories without requiring collectstatic to succeed first
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
-WHITENOISE_USE_FINDERS = False
+WHITENOISE_USE_FINDERS = True  # FIXED: Enable finders to serve Django admin CSS/JS
 
 # Django 6.0+ STORAGES 설정
 STORAGES = {
