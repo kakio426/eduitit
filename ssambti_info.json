@@ -1,0 +1,14 @@
+{
+  "id": 134,
+  "title": "쌤BTI",
+  "description": "12가지 간단한 질문으로 알아보는 나의 교실 속 영혼의 동물! 동료 선생님들과 쌤BTI를 공유하고 서로의 스타일을 알아보세요.",
+  "lead_text": "나는 교실에서 어떤 동물일까? 1분 만에 알아보는 교사 본캐 테스트!",
+  "icon": "🦁",
+  "price": 0.0,
+  "service_type": "tool",
+  "display_order": 0,
+  "color_theme": "orange",
+  "card_size": "small",
+  "is_featured": false,
+  "external_url": "/ssambti/"
+}
