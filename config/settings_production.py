@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'portfolio.apps.PortfolioConfig',
     'autoarticle.apps.AutoarticleConfig',
     'fortune.apps.FortuneConfig',
+    'ssambti.apps.SsambtiConfig',  # Teachable Zoo MBTI (쌤BTI)
     'signatures.apps.SignaturesConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
