@@ -1,1 +1,1 @@
-web: python3 manage.py collectstatic --noinput && python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && gunicorn config.wsgi --log-file - --timeout 120
+web: echo "=== Starting collectstatic ===" && python3 manage.py collectstatic --noinput && echo "=== Starting migrations ===" && python3 manage.py migrate --noinput && echo "=== Ensuring Ssambti product ===" && python3 manage.py ensure_ssambti && echo "=== Starting Gunicorn ===" && gunicorn config.wsgi --log-file - --timeout 120
