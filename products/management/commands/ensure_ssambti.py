@@ -9,7 +9,7 @@ the product if it doesn't exist, or update it if settings changed.
 """
 
 from django.core.management.base import BaseCommand
-from products.models import Product
+from products.models import Product, ProductFeature
 
 
 class Command(BaseCommand):
@@ -72,6 +72,42 @@ class Command(BaseCommand):
                 external_url='',  # CRITICAL: Must be empty for internal service
             )
             self.stdout.write(self.style.SUCCESS(f'[OK] Created Ssambti product (ID: {ssambti.id})'))
+
+        # Ensure ProductFeatures exist
+        self.stdout.write('')
+        self.stdout.write('[Ensuring Product Features...]')
+
+        existing_features = ssambti.features.count()
+        if existing_features > 0:
+            self.stdout.write(f'  [!] Found {existing_features} existing features, deleting...')
+            ssambti.features.all().delete()
+
+        # Create features
+        features_data = [
+            {
+                'icon': '🎯',
+                'title': '12가지 질문 MBTI',
+                'description': 'MBTI 이론 기반의 12가지 질문으로 교사의 성향을 정확하게 분석합니다. 빠르고 재미있게 나의 교육 스타일을 발견하세요.'
+            },
+            {
+                'icon': '🦁',
+                'title': '16가지 동물 캐릭터',
+                'description': '교사 유형을 16가지 귀여운 동물 캐릭터로 표현합니다. 사자, 펭귄, 코알라 등 나와 닮은 동물을 만나보세요!'
+            },
+            {
+                'icon': '📊',
+                'title': '상세한 성향 분석',
+                'description': '교실 운영 스타일, 학생 소통 방식, 업무 처리 패턴 등 교사로서의 강점과 특징을 자세히 알려드립니다.'
+            }
+        ]
+
+        for feature_data in features_data:
+            ProductFeature.objects.create(
+                product=ssambti,
+                **feature_data
+            )
+
+        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {len(features_data)} features'))
 
         # Final summary - ASCII-safe output
         self.stdout.write('')
