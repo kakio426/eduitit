@@ -198,14 +198,8 @@ USE_I18N = True
 USE_TZ = True
 
 # =============================================================================
-# STATIC FILES (WhiteNoise)
+# STATIC FILES & MEDIA DEFINITIONS (MOVED TO BOTTOM FOR ENFORCEMENT)
 # =============================================================================
-
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-if not os.path.exists(STATIC_ROOT):
-    os.makedirs(STATIC_ROOT)
 
 # WhiteNoise configuration
 # STATICFILES_STORAGE is deprecated in favor of STORAGES['staticfiles']
@@ -470,26 +464,40 @@ if os.environ.get('RUN_MAIN') != 'true':
         threading.Timer(5.0, sync_site_domain).start()
 
 # =============================================================================
-# FINAL STORAGE CONFIGURATION (FIX FOR DEPLOYMENT)
+# STATIC FILES (WhiteNoise)
 # =============================================================================
-# 1. compression 및 manifest를 활성화합니다.
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# [사용자 제안] 목적지(staticfiles)가 소스(static)에 포함되지 않도록 확실히 분리
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+if not os.path.exists(STATIC_ROOT):
+    os.makedirs(STATIC_ROOT)
+
+# WhiteNoise configuration
+# 사용자 제안 최적화: 가장 안전한 Django 기본 Storage 사용 (압축/해싱 건너뜀)
+# WhiteNoiseMiddleware가 서빙을 담당하므로 안전합니다.
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_USE_FINDERS = False
 
-# 2. Django 6.0+ STORAGES 설정 강제
+# Django 6.0+ STORAGES 설정
 STORAGES = {
     "default": {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if CLOUDINARY_STORAGE.get('CLOUD_NAME') else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 print("="*60)
+print(f"DEBUG: STATIC_ROOT => {STATIC_ROOT}")
+print(f"DEBUG: STATICFILES_DIRS => {STATICFILES_DIRS}")
 print(f"DEBUG: STATICFILES_STORAGE => {STATICFILES_STORAGE}")
-print(f"DEBUG: STORAGES['staticfiles'] => {STORAGES['staticfiles']['BACKEND']}")
-print(f"DEBUG: STORAGES['default'] => {STORAGES['default']['BACKEND']}")
 print("="*60)
 
