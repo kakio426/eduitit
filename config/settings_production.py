@@ -38,7 +38,7 @@ ALLOWED_HOSTS.extend([
 ])
 
 # Kakao API Key
-KAKAO_JS_KEY = os.environ.get('YOUR_KAKAO_API_KEY')
+KAKAO_JS_KEY = os.environ.get('KAKAO_JS_KEY')
 
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
@@ -456,13 +456,22 @@ def sync_site_domain():
         print(f"DEBUG: 자동 동기화/정리 실패: {str(e)}")
         pass
 
+def run_startup_tasks():
+    sync_site_domain()
+    # Also ensure Ssambti product exists/is updated
+    try:
+        from django.core.management import call_command
+        call_command('ensure_ssambti')
+    except Exception as e:
+        print(f"DEBUG: Startup ensure_ssambti failed: {e}")
+
 # 서버 실행 시 자동 실행
 import threading
 if os.environ.get('RUN_MAIN') != 'true':
     # collectstatic 중에는 실행되지 않도록 함
     import sys
     if 'collectstatic' not in sys.argv:
-        threading.Timer(5.0, sync_site_domain).start()
+        threading.Timer(10.0, run_startup_tasks).start()
 
 # =============================================================================
 # STATIC FILES (WhiteNoise)
