@@ -14,8 +14,8 @@
                     class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-blue-500 text-4xl mb-6">
                     <i class="fa-solid fa-user-plus"></i>
                 </div>
-                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2">선생님, 환영합니다!</h1>
-                <p class="text-2xl text-gray-400 font-hand">에듀이티잇과 함께 스마트한 교실을 만들어봐요.</p>
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2 break-keep">선생님 환영합니다!</h1>
+                <p class="text-2xl text-gray-400 font-hand break-keep">에듀이티잇과 함께 스마트한 교실을 만들어봐요.</p>
             </div>
 
             <!-- Social Login Prompt -->
@@ -27,17 +27,17 @@
 
                 <div class="space-y-4">
                     <a href="{% provider_login_url 'kakao' %}"
-                        class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
+                        class="flex items-center justify-center gap-3 py-5 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
-                            class="w-7 h-7" alt="카카오">
-                        <span class="text-2xl font-bold text-[#3C1E1E]">카카오로 계속하기</span>
+                            class="w-7 h-7 object-contain" alt="카카오">
+                        <span class="text-2xl font-bold text-[#3C1E1E]">3초만에 시작하기</span>
                     </a>
 
                     <a href="{% provider_login_url 'naver' %}"
-                        class="flex items-center justify-center gap-4 py-5 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
+                        class="flex items-center justify-center gap-3 py-5 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
                         <img src="https://clova-static.itv.co.kr/public/0.0.1/images/naver-logo.png"
-                            class="w-6 h-6 filter brightness-0 invert" alt="네이버">
-                        <span class="text-2xl font-bold text-white">네이버로 계속하기</span>
+                            class="w-6 h-6 object-contain filter brightness-0 invert" alt="네이버">
+                        <span class="text-2xl font-bold text-white">시작하기</span>
                     </a>
                 </div>
 
