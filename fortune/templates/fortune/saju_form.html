@@ -446,27 +446,47 @@
         text-align: center;
     }
 
-    /* 복사 완료 토스트 */
+    /* 토스트 메시지 스타일 개선 */
     .toast {
         position: fixed;
-        bottom: 100px;
+        bottom: 50px;
         left: 50%;
         transform: translateX(-50%) translateY(100px);
-        background: linear-gradient(135deg, #10b981, #059669);
+        background: rgba(31, 41, 55, 0.95);
+        /* 세련된 다크 그레이 */
+        backdrop-filter: blur(8px);
         color: white;
-        padding: 16px 32px;
-        border-radius: 100px;
-        font-size: 1.5rem;
-        font-weight: bold;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 14px 28px;
+        border-radius: 20px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         opacity: 0;
-        transition: all 0.4s;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         z-index: 9999;
+        width: calc(100% - 40px);
+        max-width: 450px;
+        text-align: center;
+        word-break: keep-all;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .toast.show {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
+    }
+
+    /* 토스트 색상 테마 */
+    .toast.success {
+        background: linear-gradient(135deg, #059669, #10b981);
+    }
+
+    .toast.error {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+    }
+
+    .toast.info {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
     }
 </style>
 {% endblock %}
@@ -1037,13 +1057,22 @@
     });
 
     // 토스트 메시지
-    function showToast(message) {
+    function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         const toastMsg = document.getElementById('toastMessage');
         if (toast && toastMsg) {
             toastMsg.textContent = message;
+
+            // 기존 타입 클래스 제거
+            toast.classList.remove('success', 'error', 'info');
+            toast.classList.add(type);
+
             toast.classList.add('show');
-            setTimeout(() => {
+
+            // 이전 타이머 있으면 제거
+            if (window.toastTimer) clearTimeout(window.toastTimer);
+
+            window.toastTimer = setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
         }
@@ -1258,19 +1287,21 @@
             natalChart = JSON.parse(chartDataElem.textContent);
         } else {
             const resultText = document.getElementById('markdownResult').innerText;
-            const yearMatch = resultText.match(/년주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const monthMatch = resultText.match(/월주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            const hourMatch = resultText.match(/시주[^가-힣]*[:：]\s*([가-힣]{2})/);
+            // 더 유연한 정규표현식: 괄호 내 한자 포함 지원 및 불필요한 공백/별표 무시
+            const extractPillar = (type) => {
+                const regex = new RegExp(type + '[^가-힣]*[:：]?\\s*([가-힣]{1,2}|[\\u4E00-\\u9FFF]{1,2})');
+                const match = resultText.match(regex);
+                return match ? match[1].substring(0, 2) : null;
+            };
 
-            if (yearMatch) natalChart.year = yearMatch[1];
-            if (monthMatch) natalChart.month = monthMatch[1];
-            if (dayMatch) natalChart.day = dayMatch[1];
-            if (hourMatch) natalChart.hour = hourMatch[1];
+            natalChart.year = extractPillar('년주');
+            natalChart.month = extractPillar('월주');
+            natalChart.day = extractPillar('일주') || extractPillar('일간');
+            natalChart.hour = extractPillar('시주');
         }
 
         if (!natalChart.day) {
-            showToast('원국 분석 후 일진을 확인할 수 있습니다.');
+            showToast('분석 결과를 찾을 수 없습니다. 먼저 사주 분석을 완료해주세요.', 'error');
             return;
         }
 
