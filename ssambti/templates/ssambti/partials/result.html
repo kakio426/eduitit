@@ -166,13 +166,7 @@
         }
 
         try {
-            {% if saved_result_id %}
-            // 로그인한 사용자: 카드 클릭 시 저장된 결과 페이지로 이동
-            var shareUrl = 'https://{{ request.get_host }}{% url "ssambti:detail" saved_result_id %}';
-            {% else %}
-            // 비로그인 사용자: 카드 클릭 시 메인 페이지로 이동
-            var shareUrl = 'https://{{ request.get_host }}{% url "ssambti:main" %}';
-            {% endif %}
+            var shareUrl = "{% if saved_result_id %}https://{{ request.get_host }}{% url 'ssambti:detail' saved_result_id %}{% else %}https://{{ request.get_host }}{% url 'ssambti:main' %}{% endif %}";
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
