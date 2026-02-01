@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_head %}
+<!-- Open Graph 메타 태그 -->
+<meta property="og:title" content="쌤BTI 결과: {{ result.animal_name }} 선생님" />
+<meta property="og:description" content="{{ result.mbti_type }} - 교실 속 당신의 동물은?" />
+<meta property="og:image" content="https://{{ request.get_host }}{% static 'ssambti/images/animals/' %}{{ animal_image }}" />
+<meta property="og:url" content="{{ request.build_absolute_uri }}" />
+<meta property="og:type" content="website" />
+{% endblock %}
+
 {% block extra_css %}
 <style>
     /* Animation for results */
@@ -114,9 +123,9 @@
         Kakao.Share.sendDefault({
             objectType: 'feed',
             content: {
-                title: '나의 교실 속 영혼의 동물은?',
-                description: '나는 [{{ result.animal_name }}] 선생님입니다! 당신의 동물은 무엇인가요?',
-                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/animals/share_thumb.png" %}',
+                title: '🎯 쌤BTI 결과: {{ result.animal_name }} 선생님',
+                description: '{{ result.animal_name }} 선생님 ({{ result.mbti_type }})으로 판정받았어요!\n\n당신도 교실 속 당신의 동물을 찾아보세요! 🦁🐧🦝',
+                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/animals/" %}{{ animal_image }}',
                 link: {
                     mobileWebUrl: window.location.href,
                     webUrl: window.location.href,

@@ -26,6 +26,25 @@ MBTI_ANIMAL_MAP = {
     'ENTJ': 'lion.png',
 }
 
+MBTI_COLOR_THEMES = {
+    'ISTJ': {'primary': '#3B82F6', 'bg': '#DBEAFE', 'accent': '#1E40AF', 'emoji': '🐧'},
+    'ISFJ': {'primary': '#F59E0B', 'bg': '#FEF3C7', 'accent': '#D97706', 'emoji': '🦘'},
+    'INFJ': {'primary': '#A78BFA', 'bg': '#EDE9FE', 'accent': '#7C3AED', 'emoji': '🐆'},
+    'INTJ': {'primary': '#1F2937', 'bg': '#F3F4F6', 'accent': '#111827', 'emoji': '🐈‍⬛'},
+    'ISTP': {'primary': '#6B7280', 'bg': '#F9FAFB', 'accent': '#374151', 'emoji': '🦝'},
+    'ISFP': {'primary': '#10B981', 'bg': '#D1FAE5', 'accent': '#059669', 'emoji': '🐨'},
+    'INFP': {'primary': '#06B6D4', 'bg': '#CFFAFE', 'accent': '#0891B2', 'emoji': '🦦'},
+    'INTP': {'primary': '#8B5CF6', 'bg': '#EDE9FE', 'accent': '#6D28D9', 'emoji': '🦉'},
+    'ESTP': {'primary': '#EF4444', 'bg': '#FEE2E2', 'accent': '#DC2626', 'emoji': '🐆'},
+    'ESFP': {'primary': '#EC4899', 'bg': '#FCE7F3', 'accent': '#DB2777', 'emoji': '🐬'},
+    'ENFP': {'primary': '#F97316', 'bg': '#FFEDD5', 'accent': '#EA580C', 'emoji': '🦝'},
+    'ENTP': {'primary': '#14B8A6', 'bg': '#CCFBF1', 'accent': '#0F766E', 'emoji': '🦔'},
+    'ESTJ': {'primary': '#DC2626', 'bg': '#FEE2E2', 'accent': '#991B1B', 'emoji': '🐯'},
+    'ESFJ': {'primary': '#FB923C', 'bg': '#FFEDD5', 'accent': '#EA580C', 'emoji': '🐘'},
+    'ENFJ': {'primary': '#FBBF24', 'bg': '#FEF3C7', 'accent': '#F59E0B', 'emoji': '🐕'},
+    'ENTJ': {'primary': '#B45309', 'bg': '#FED7AA', 'accent': '#92400E', 'emoji': '🦁'},
+}
+
 def main_view(request):
     """
     [SIS Standard] 쌤BTI 메인 뷰 (12문항 버전)
@@ -80,70 +99,73 @@ def analyze_view(request):
     mbti_type += 'S' if get_dim_count(4, 6) >= 2 else 'N'
     mbti_type += 'T' if get_dim_count(7, 9) >= 2 else 'F'
     mbti_type += 'J' if get_dim_count(10, 12) >= 2 else 'P'
-    
+
     # 정적 데이터에서 결과 가져오기
     result_data = MBTI_RESULTS.get(mbti_type, MBTI_RESULTS['ENFP'])  # 기본값: ENFP
     animal_name = result_data['animal_name']
-    
+
+    # 테마 컬러 가져오기
+    theme = MBTI_COLOR_THEMES.get(mbti_type, MBTI_COLOR_THEMES['ENFP'])
+
     # HTML 생성
     result_html = f"""
-    <div class="space-y-8 text-left animate-fade-in-up">
-        
+    <div class="space-y-6 md:space-y-8 text-left animate-fade-in-up">
+
         <!-- 1. 영혼의 메시지 (가장 중요) -->
-        <div class="clay-card p-8 bg-white/80 border-l-8 border-orange-400">
-            <h3 class="text-3xl font-bold text-gray-800 mb-6 font-title flex items-center gap-2">
-                <span class="text-4xl">💌</span> 선생님을 위한 영혼의 메시지
+        <div class="clay-card p-6 md:p-8 bg-white/80 border-l-8" style="border-color: {theme['primary']}">
+            <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 font-title flex items-center gap-2">
+                <span class="text-2xl md:text-3xl">{theme['emoji']}</span> 선생님을 위한 영혼의 메시지
             </h3>
-            <p class="text-3xl text-gray-600 leading-relaxed font-hand whitespace-pre-line">
+            <p class="text-lg md:text-2xl text-gray-600 leading-relaxed font-hand whitespace-pre-line">
                 "{result_data['soul_message']}"
             </p>
         </div>
 
         <!-- 2. 교실 속 자아 분석 -->
-        <div class="clay-card p-8 bg-[#fdfbf7]">
-            <h3 class="text-3xl font-bold text-gray-800 mb-6 font-title flex items-center gap-2">
-                <span class="text-4xl">🏫</span> 교실 속 {animal_name} 선생님은?
+        <div class="clay-card p-6 md:p-8 bg-[#fdfbf7]">
+            <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 font-title flex items-center gap-2">
+                <span class="text-2xl md:text-3xl">{theme['emoji']}</span> 교실 속 {animal_name} 선생님은?
             </h3>
-            <div class="space-y-6">
+            <div class="space-y-4 md:space-y-6">
                 <div>
-                    <span class="badge badge-orange mb-3 text-lg">평소 모습</span>
-                    <p class="text-2xl text-gray-700 font-hand leading-relaxed">{result_data['normal']}</p>
+                    <span class="badge badge-orange mb-2 md:mb-3 text-sm md:text-base">평소 모습</span>
+                    <p class="text-base md:text-xl text-gray-700 font-hand leading-relaxed">{result_data['normal']}</p>
                 </div>
                 <div>
-                    <span class="badge badge-purple mb-3 text-lg">스트레스 받을 때</span>
-                    <p class="text-2xl text-gray-700 font-hand leading-relaxed">{result_data['stress']}</p>
+                    <span class="badge badge-purple mb-2 md:mb-3 text-sm md:text-base">스트레스 받을 때</span>
+                    <p class="text-base md:text-xl text-gray-700 font-hand leading-relaxed">{result_data['stress']}</p>
                 </div>
                 <div>
-                    <span class="badge badge-green mb-3 text-lg">최고의 순간</span>
-                    <p class="text-2xl text-gray-700 font-hand leading-relaxed">{result_data['best_moment']}</p>
+                    <span class="badge badge-green mb-2 md:mb-3 text-sm md:text-base">최고의 순간</span>
+                    <p class="text-base md:text-xl text-gray-700 font-hand leading-relaxed">{result_data['best_moment']}</p>
                 </div>
             </div>
         </div>
 
         <!-- 3. 최고의 짝꿍 / 최악의 짝꿍 -->
-        <div class="grid md:grid-cols-2 gap-6">
-            <div class="clay-card p-6 bg-green-50/50">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl">🥰</div>
-                    <h3 class="text-2xl font-bold text-green-800 font-title">찰떡궁합 학생</h3>
+        <div class="grid md:grid-cols-2 gap-4 md:gap-6">
+            <div class="clay-card p-4 md:p-6 bg-green-50/50">
+                <div class="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-100 flex items-center justify-center text-xl md:text-2xl">🥰</div>
+                    <h3 class="text-lg md:text-xl font-bold text-green-800 font-title">찰떡궁합 학생</h3>
                 </div>
-                <p class="text-gray-600 font-hand text-2xl leading-relaxed">{result_data['good_student']}</p>
+                <p class="text-gray-600 font-hand text-sm md:text-lg leading-relaxed">{result_data['good_student']}</p>
             </div>
-            <div class="clay-card p-6 bg-red-50/50">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-2xl">🤯</div>
-                    <h3 class="text-2xl font-bold text-red-800 font-title">조심해야 할 상황</h3>
+            <div class="clay-card p-4 md:p-6 bg-red-50/50">
+                <div class="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-100 flex items-center justify-center text-xl md:text-2xl">🤯</div>
+                    <h3 class="text-lg md:text-xl font-bold text-red-800 font-title">조심해야 할 상황</h3>
                 </div>
-                <p class="text-gray-600 font-hand text-2xl leading-relaxed">{result_data['caution']}</p>
+                <p class="text-gray-600 font-hand text-sm md:text-lg leading-relaxed">{result_data['caution']}</p>
             </div>
         </div>
 
         <!-- 4. 처방전 -->
-        <div class="clay-card p-8 bg-purple-50/50 text-center">
-            <h3 class="text-3xl font-bold text-purple-800 mb-6 font-title">
-                🎁 {animal_name} 선생님을 위한 힐링 처방전
+        <div class="clay-card p-6 md:p-8 text-center" style="background: {theme['bg']}">
+            <h3 class="text-xl md:text-2xl font-bold mb-4 md:mb-6 font-title" style="color: {theme['accent']}">
+                {theme['emoji']} {animal_name} 선생님을 위한 힐링 처방전
             </h3>
-            <p class="text-3xl text-gray-600 font-hand leading-relaxed">
+            <p class="text-lg md:text-2xl text-gray-600 font-hand leading-relaxed">
                 "{result_data['prescription']}"
             </p>
         </div>

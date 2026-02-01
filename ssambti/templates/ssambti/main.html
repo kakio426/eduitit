@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_head %}
+<!-- Open Graph 메타 태그 -->
+<meta property="og:title" content="쌤BTI - 교실 속 나의 동물 찾기" />
+<meta property="og:description" content="12가지 질문으로 알아보는 선생님의 교실 속 자아!" />
+<meta property="og:image" content="https://{{ request.get_host }}{% static 'ssambti/images/animals/share_thumb.png' %}" />
+<meta property="og:url" content="{{ request.build_absolute_uri }}" />
+<meta property="og:type" content="website" />
+{% endblock %}
+
 {% block extra_css %}
 <style>
     .quiz-step {

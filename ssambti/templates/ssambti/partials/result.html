@@ -98,9 +98,9 @@
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: '나의 교실 속 영혼은 [{{ animal_name }}] 선생님!',
-                    description: '평소 나는 어떤 교사일까? "{{ summary }}"\n지금 테스트하고 교실 속 당신의 동물을 확인해보세요!',
-                    imageUrl: 'https://placehold.co/800x800/f97316/white?text={{ animal_name }}%20Teacher',
+                    title: '🎯 나는 [{{ animal_name }}] 선생님!',
+                    description: '{{ animal_name }} 선생님의 특징: {{ summary }}\n\n당신은 어떤 선생님인가요? 지금 바로 확인해보세요! 🏫',
+                    imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/animals/" %}{{ animal_image }}',
                     link: {
                         mobileWebUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
                         webUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
@@ -108,7 +108,7 @@
                 },
                 buttons: [
                     {
-                        title: '동료 선생님의 동물 확인하기',
+                        title: '나도 쌤BTI 테스트하기 🦁',
                         link: {
                             mobileWebUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
                             webUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
