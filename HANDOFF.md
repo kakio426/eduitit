@@ -132,7 +132,8 @@ requirements.txt                # cloudinary, django-cloudinary-storage 추가
 
 ## 마지막 상태
 
-- **배포 도메인**: `https://web-production-f2869.up.railway.app/`
+- **메인 도메인**: `https://eduitit.site/`
+- **Railway 도메인**: `https://web-production-f2869.up.railway.app/`
 - **테스트**: Django check 통과, import 테스트 통과
 - **서버 실행**: 수동 테스트 필요
 

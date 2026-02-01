@@ -1183,14 +1183,21 @@
         }
     }
 
-    // 링크 복사
+    // 링크 복사 (카카오톡 공유와 동일한 로직)
     function copyLink() {
-        const url = window.location.origin + '/fortune/saju/';
-        navigator.clipboard.writeText(url).then(() => {
+        // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
+        let shareUrl = window.location.origin + '/fortune/saju/';
+        {% if user.is_authenticated %}
+        if (savedResultId) {
+            shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
+        }
+        {% endif %}
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
             showToast('링크가 복사되었습니다!');
         }).catch(() => {
             const textarea = document.createElement('textarea');
-            textarea.value = url;
+            textarea.value = shareUrl;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
@@ -1199,29 +1206,43 @@
         });
     }
 
-    // 이미지 저장
+    // 이미지 저장 (현재 결과 화면 전체 캡처)
     function saveAsImage() {
-        const shareCard = document.getElementById('shareCardContainer');
-        if (!shareCard) return;
+        const resultCard = document.getElementById('resultCard');
+        if (!resultCard) {
+            showToast('저장할 결과가 없습니다.');
+            return;
+        }
 
-        shareCard.style.left = '0';
-        shareCard.style.position = 'absolute';
-        shareCard.style.zIndex = '-1';
+        // 로딩 표시
+        showToast('이미지를 생성하고 있습니다...');
 
-        html2canvas(shareCard, {
-            backgroundColor: null,
-            scale: 2,
-            useCORS: true
+        // 캡처할 요소 준비 (no-print 요소들 임시 숨김)
+        const noPrintElements = document.querySelectorAll('.no-print');
+        noPrintElements.forEach(el => el.style.display = 'none');
+
+        html2canvas(resultCard, {
+            backgroundColor: '#E0E5EC',  // 배경색
+            scale: 2,  // 고해상도
+            useCORS: true,
+            logging: false,
+            windowWidth: resultCard.scrollWidth,
+            windowHeight: resultCard.scrollHeight
         }).then(canvas => {
-            shareCard.style.left = '-9999px';
+            // no-print 요소들 복원
+            noPrintElements.forEach(el => el.style.display = '');
+
             const link = document.createElement('a');
-            link.download = `saju_${Date.now()}.png`;
+            const nameContext = "{{ name|default:'사주결과' }}";
+            link.download = `${nameContext}_사주분석_${new Date().toISOString().split('T')[0]}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             showToast('이미지가 저장되었습니다!');
         }).catch(err => {
             console.error(err);
-            showToast('이미지 저장에 실패했습니다.');
+            // no-print 요소들 복원
+            noPrintElements.forEach(el => el.style.display = '');
+            showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
         });
     }
 
