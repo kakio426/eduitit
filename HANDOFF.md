@@ -7,7 +7,21 @@
 
 ## 완료된 작업
 
-### 1. AutoArticle 원본 비교 및 기능 구현 (오늘)
+### 1. Fortune(사주) & Ssambti 카카오톡 공유 카드 구현 (2026-02-01)
+- [x] **Ssambti 카카오톡 공유 수정** - 저장된 결과 페이지로 공유되도록 변경
+  - views.py: saved_result_id 반환하도록 수정
+  - detail.html: 카카오톡 공유 기능 추가
+  - partials/result.html: 저장된 결과 페이지로 링크 수정
+  - detail_view: @login_required 제거하여 공개 접근 가능
+
+- [x] **Fortune 사주 서비스 카드 UI 구현**
+  - detail.html: 사주 명식 강조 카드 형태로 재구성
+  - 헤더 카드: 일간(천간) 정보 + 이모지/이미지 표시
+  - 사주 명식 카드: 일주 강조 (크기 확대 + 보라색 테두리)
+  - 카카오톡 공유 기능 추가 (일간 정보 자동 추출)
+  - views.py: save_fortune_api에서 pk 반환, detail_view 공개화
+
+### 2. AutoArticle 원본 비교 및 기능 구현 (이전 세션)
 - [x] 원본 GitHub 레포 분석 (https://github.com/kakio426/autoarticle)
 - [x] **step1.html 입력 필드 추가** - 장소, 날짜, 톤 필드 복원
 - [x] **테마 일관성 수정** - views.py THEMES를 constants.py와 통일
@@ -133,6 +147,140 @@ requirements.txt                # cloudinary, django-cloudinary-storage 추가
 
 ---
 
+---
+
+## 📸 사주 서비스 이미지 추가 방법
+
+> 작업일: 2026-02-01
+> 담당: fortune 앱 카드 UI 구현 완료
+
+### 현재 상태
+- ✅ 사주 서비스에 ssambti와 동일한 카드 형태 구현 완료
+- ✅ 카카오톡 공유 기능 구현 완료
+- ⏳ 일간 이미지는 현재 **이모지**로 표시 중 (이미지로 교체 가능)
+
+### 이미지 추가 옵션
+
+#### 옵션 1: 천간별 이미지 (10개) - 추천 ⭐
+
+각 천간(天干)마다 하나씩 만들어주세요:
+
+**폴더 위치**: `fortune/static/fortune/images/stems/`
+
+**파일명 및 컨셉**:
+- `갑.png` (甲) - 큰 나무 이미지
+- `을.png` (乙) - 풀/넝쿨 이미지
+- `병.png` (丙) - 태양 이미지
+- `정.png` (丁) - 촛불 이미지
+- `무.png` (戊) - 큰 산 이미지
+- `기.png` (己) - 논밭 이미지
+- `경.png` (庚) - 칼/바위 이미지
+- `신.png` (辛) - 보석 이미지
+- `임.png` (壬) - 바다 이미지
+- `계.png` (癸) - 비/이슬 이미지
+
+**이미지 사양**:
+- 크기: **512x512px** (정사각형)
+- 형식: **PNG** (투명 배경 권장)
+- 스타일: 심플하고 현대적인 일러스트 또는 아이콘 스타일
+
+#### 옵션 2: 오행별 이미지 (5개) - 간단함
+
+**폴더 위치**: `fortune/static/fortune/images/elements/`
+
+**파일명**:
+- `wood.png` (목 木) - 나무/숲 이미지
+- `fire.png` (화 火) - 불꽃 이미지
+- `earth.png` (토 土) - 흙/산 이미지
+- `metal.png` (금 金) - 금속/칼 이미지
+- `water.png` (수 水) - 물/파도 이미지
+
+### 코드 수정 방법
+
+이미지 파일을 위 폴더에 넣은 후, `fortune/templates/fortune/detail.html` 파일을 수정하세요.
+
+**파일**: `fortune/templates/fortune/detail.html`
+**위치**: 약 295번째 줄 근처
+
+#### 현재 코드 (이모지 사용):
+```javascript
+// 헤더 카드 업데이트 (일간 정보)
+if (dayStemCharacter && stemKoreanMap[dayStemCharacter]) {
+    const stemIcon = document.getElementById('stemIcon');
+    const stemName = document.getElementById('stemName');
+    const stemDesc = document.getElementById('stemDesc');
+
+    if (stemIcon) stemIcon.textContent = stemEmojiMap[dayStemCharacter];
+    if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
+    if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
+
+    // 이미지가 있다면 표시 (나중에 이미지 추가 시)
+    // const stemImageContainer = document.getElementById('stemImageContainer');
+    // stemImageContainer.innerHTML = `<img src="/static/fortune/images/stems/${dayStemCharacter}.png" class="w-48 h-48 object-cover rounded-full" alt="${stemKoreanMap[dayStemCharacter]}">`;
+}
+```
+
+#### 수정할 코드 (이미지 사용):
+
+**천간별 이미지 사용 시**:
+```javascript
+// 헤더 카드 업데이트 (일간 정보)
+if (dayStemCharacter && stemKoreanMap[dayStemCharacter]) {
+    const stemName = document.getElementById('stemName');
+    const stemDesc = document.getElementById('stemDesc');
+    const stemImageContainer = document.getElementById('stemImageContainer');
+
+    // 한자를 한글로 변환 (파일명 매핑)
+    const hanjaToKorean = {
+        '甲': '갑', '乙': '을', '丙': '병', '丁': '정', '戊': '무',
+        '己': '기', '庚': '경', '辛': '신', '壬': '임', '癸': '계'
+    };
+    const koreanFileName = hanjaToKorean[dayStemCharacter];
+
+    // 이미지 표시
+    if (stemImageContainer && koreanFileName) {
+        stemImageContainer.innerHTML = `
+            <img src="/static/fortune/images/stems/${koreanFileName}.png"
+                 class="w-48 h-48 object-cover rounded-full"
+                 alt="${stemKoreanMap[dayStemCharacter]}"
+                 onerror="this.parentElement.innerHTML='<div class=\\'w-48 h-48 flex items-center justify-center text-9xl\\'>${stemEmojiMap[dayStemCharacter]}</div>'">
+        `;
+    }
+
+    if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
+    if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
+}
+```
+
+**오행별 이미지 사용 시**:
+```javascript
+// 오행 매핑
+const elementMapping = {
+    '甲': 'wood', '乙': 'wood',
+    '丙': 'fire', '丁': 'fire',
+    '戊': 'earth', '己': 'earth',
+    '庚': 'metal', '辛': 'metal',
+    '壬': 'water', '癸': 'water'
+};
+const elementType = elementMapping[dayStemCharacter];
+
+if (stemImageContainer && elementType) {
+    stemImageContainer.innerHTML = `
+        <img src="/static/fortune/images/elements/${elementType}.png"
+             class="w-48 h-48 object-cover rounded-full"
+             alt="${stemKoreanMap[dayStemCharacter]}">
+    `;
+}
+```
+
+### 참고사항
+
+1. **이미지 없이도 동작함**: 현재 이모지로 표시되므로 이미지 없이도 문제없습니다.
+2. **폴백 처리**: 위 코드의 `onerror` 속성으로 이미지 로드 실패 시 이모지로 대체됩니다.
+3. **캐싱**: 이미지 변경 시 브라우저 캐시 때문에 반영이 안 될 수 있습니다. 강제 새로고침(Ctrl+F5)으로 해결하세요.
+
+---
+
 ## 다음 세션 시작 방법
 
 ```
@@ -142,4 +290,9 @@ HANDOFF.md 읽고 이어서 작업해줘
 또는:
 ```
 Cloudinary 이미지 저장소 연동해줘
+```
+
+또는:
+```
+사주 서비스 이미지 추가해줘
 ```

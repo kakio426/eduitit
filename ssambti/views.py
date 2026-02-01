@@ -173,15 +173,17 @@ def analyze_view(request):
     """
     
     # 결과 저장 (로그인 사용자만)
+    saved_result_id = None
     if request.user.is_authenticated:
-        SsambtiResult.objects.create(
+        saved_result = SsambtiResult.objects.create(
             user=request.user,
             mbti_type=mbti_type,
             animal_name=animal_name,
             result_text=result_html,
             answers_json=answers
         )
-    
+        saved_result_id = saved_result.pk
+
     # 공유용 요약 문구 생성
     taglines = {
         'ISTJ': '철저한 준비와 원칙으로 신뢰를 주는 기둥',
@@ -206,12 +208,13 @@ def analyze_view(request):
     animal_image = MBTI_ANIMAL_MAP.get(mbti_type, 'lion.png')
 
     return render(request, 'ssambti/partials/result.html', {
-        'result_html': result_html, 
+        'result_html': result_html,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
         'animal_image': animal_image,
         'mbti_type': mbti_type,
         'animal_name': animal_name,
-        'summary': summary
+        'summary': summary,
+        'saved_result_id': saved_result_id
     })
 
 @login_required
@@ -223,13 +226,12 @@ def history_view(request):
         item.animal_image = MBTI_ANIMAL_MAP.get(item.mbti_type, 'lion.png')
     return render(request, 'ssambti/history.html', {'history': history})
 
-@login_required
 def detail_view(request, pk):
-    """특정 결과 상세보기 (공유 페이지로도 활용 가능)"""
-    result = get_object_or_404(SsambtiResult, pk=pk) 
+    """특정 결과 상세보기 (공유 페이지로도 활용 가능 - 공개 접근 가능)"""
+    result = get_object_or_404(SsambtiResult, pk=pk)
     animal_image = MBTI_ANIMAL_MAP.get(result.mbti_type, 'lion.png')
     return render(request, 'ssambti/detail.html', {
-        'result': result, 
+        'result': result,
         'animal_image': animal_image,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY
     })

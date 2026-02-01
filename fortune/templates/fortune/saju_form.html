@@ -732,7 +732,7 @@
                                 <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리 볼 수 있어요. 😊</p>
                             </div>
                         </div>
-                        <a href="{% url 'account_signup' %}"
+                        <a href="{% url 'account_signup' %}?next={% url 'fortune:saju' %}"
                             class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
                             가입하고 혜택 받기
                         </a>
@@ -823,7 +823,82 @@
             resultContainer.classList.add('hidden');
             formContainer.classList.remove('hidden');
         }
+
+        // 로컬 스토리지에서 이전 결과 복원 (가입 후 돌아온 경우)
+        restorePendingSajuResult();
     });
+
+    // 이전 사주 결과 복원 함수
+    function restorePendingSajuResult() {
+        const isAuthenticated = "{{ user.is_authenticated }}" === "True";
+        const pendingData = localStorage.getItem('pendingSajuResult');
+
+        if (!pendingData) return;
+
+        try {
+            const data = JSON.parse(pendingData);
+            const age = Date.now() - data.timestamp;
+
+            // 24시간 이내 데이터만 복원
+            if (age > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem('pendingSajuResult');
+                return;
+            }
+
+            // 결과가 이미 있으면 복원하지 않음
+            const hasCurrentResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
+            if (hasCurrentResult) return;
+
+            // UI 전환
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('shareSection').classList.remove('hidden');
+            document.getElementById('dailyFortuneSection').classList.remove('hidden');
+            document.getElementById('saveSection').classList.remove('hidden');
+            document.getElementById('resultDivider').classList.remove('hidden');
+
+            // 결과 복원
+            const resultTarget = document.getElementById('markdownResult');
+            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
+
+            detectAndShowElement(data.result);
+            updateShareCard(data.result);
+
+            // 스크롤
+            setTimeout(() => {
+                document.getElementById('resultContainer').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 100);
+
+            // 로그인한 경우 자동 저장 제안
+            if (isAuthenticated) {
+                showToast('이전 사주 결과를 복원했습니다!');
+
+                // 자동으로 보관함에 저장 제안
+                setTimeout(() => {
+                    if (confirm('복원된 사주 결과를 보관함에 저장하시겠습니까?')) {
+                        // 임시로 chart 데이터 저장
+                        const chartDataContainer = document.createElement('script');
+                        chartDataContainer.id = 'saju-chart-data';
+                        chartDataContainer.type = 'application/json';
+                        chartDataContainer.textContent = JSON.stringify(data.chart);
+                        document.body.appendChild(chartDataContainer);
+
+                        saveToLibrary();
+                        localStorage.removeItem('pendingSajuResult');
+                    }
+                }, 1000);
+            } else {
+                showToast('이전 사주 결과를 복원했습니다! 회원가입하면 영구 보관할 수 있어요.');
+            }
+
+        } catch (e) {
+            console.error('Failed to restore pending result:', e);
+            localStorage.removeItem('pendingSajuResult');
+        }
+    }
 
     // 오행별 이모티콘 매핑
     const ELEMENT_MAP = {
@@ -866,6 +941,18 @@
         document.getElementById('dailyFortuneSection').classList.remove('hidden');
         document.getElementById('saveSection').classList.remove('hidden');
         document.getElementById('resultDivider').classList.remove('hidden');
+
+        // 결과 영역 상단으로 부드럽게 스크롤
+        const resultContainer = document.getElementById('resultContainer');
+        if (resultContainer) {
+            // 약간의 지연 후 스크롤 (UI 전환이 완료된 후)
+            setTimeout(() => {
+                resultContainer.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 100);
+        }
 
         const resultTarget = document.getElementById('markdownResult');
         resultTarget.innerHTML = '<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> 주역을 풀이하고 있습니다...</div>';
@@ -914,6 +1001,19 @@
             // 완료 후 추가 처리
             detectAndShowElement(accumulatedText);
             updateShareCard(accumulatedText);
+
+            // 비회원 결과 보존: 로컬 스토리지에 저장
+            const chartDataElem = document.getElementById('saju-chart-data');
+            const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
+
+            localStorage.setItem('pendingSajuResult', JSON.stringify({
+                result: accumulatedText,
+                chart: chartData,
+                name: "{{ name|default:'' }}",
+                gender: "{{ gender|default:'' }}",
+                mode: formData.get('mode'),
+                timestamp: Date.now()
+            }));
 
         } catch (err) {
             console.error(err);
@@ -1040,26 +1140,28 @@
                 }
             }
 
-            const description = resultText.substring(0, 80).replace(/\n/g, ' ') + '...';
+            // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
+            let shareUrl = window.location.origin + '/fortune/saju/';
+            {% if user.is_authenticated %}
+            if (savedResultId) {
+                shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
+            }
+            {% endif %}
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
                     title: `${elementIcon} ${nameContext} 선생님의 사주 결과`,
-                    description: `${elementName} 기운을 가진 선생님을 위한 분석입니다.`,
+                    description: `${elementName} 기운을 가진 선생님을 위한 분석입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
                     imageUrl: 'https://images.unsplash.com/photo-1515940175183-6798529cb860?q=80&w=800&auto=format&fit=crop',
                     link: {
-                        mobileWebUrl: window.location.origin + '/fortune/saju/',
-                        webUrl: window.location.origin + '/fortune/saju/',
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
                     },
-                },
-                itemContent: {
-                    profileText: 'Eduitit AI 사주운세',
-                    profileImageUrl: 'https://eduitit.coding.io/static/images/logo.png',
                 },
                 buttons: [
                     {
-                        title: '나도 사주보기',
+                        title: '나도 사주보기 🔮',
                         link: {
                             mobileWebUrl: window.location.origin + '/fortune/saju/',
                             webUrl: window.location.origin + '/fortune/saju/',
@@ -1196,6 +1298,9 @@
         }
     }
 
+    // 저장된 결과 ID를 저장할 변수
+    let savedResultId = null;
+
     // 보관함 저장
     async function saveToLibrary() {
         console.log("Saving to library...");
@@ -1253,6 +1358,7 @@
 
             const data = await response.json();
             if (data.success) {
+                savedResultId = data.result_id; // 저장된 ID 저장
                 showToast('보관함에 저장되었습니다! 🎁');
                 // 버튼 상태 변경 (중복 저장 방지)
                 const saveBtn = document.querySelector('#saveSection button');

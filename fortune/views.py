@@ -406,19 +406,19 @@ def daily_fortune_api(request):
 @login_required
 @require_POST
 def save_fortune_api(request):
-    """결과 저장 API (회원 전용)"""
+    """결과 저장 API (회원 전용) - 저장된 pk 반환"""
     try:
         data = json.loads(request.body)
         from .models import FortuneResult
-        
-        FortuneResult.objects.create(
+
+        saved_result = FortuneResult.objects.create(
             user=request.user,
             mode=data.get('mode', 'teacher'),
             natal_chart=data.get('natal_chart'),
             result_text=data.get('result_text'),
             target_date=data.get('target_date') if data.get('target_date') else None
         )
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True, 'result_id': saved_result.pk})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
@@ -441,9 +441,11 @@ def delete_history_api(request, pk):
     return JsonResponse({'success': True})
 
 
-@login_required
 def saju_history_detail(request, pk):
-    """보관함 상세 보기"""
+    """보관함 상세 보기 (공유 페이지로도 활용 가능 - 공개 접근 가능)"""
     from .models import FortuneResult
-    item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
-    return render(request, 'fortune/detail.html', {'item': item})
+    item = get_object_or_404(FortuneResult, pk=pk)
+    return render(request, 'fortune/detail.html', {
+        'item': item,
+        'kakao_js_key': settings.KAKAO_JS_KEY
+    })

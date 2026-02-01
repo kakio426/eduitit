@@ -6,7 +6,7 @@
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-300 to-orange-500"></div>
 
         <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10">
-            <img src="{% static 'fortune/images/zoo/' %}{{ animal_image }}" alt="{{ animal_name }}"
+            <img src="{% static 'ssambti/images/animals/' %}{{ animal_image }}" alt="{{ animal_name }}"
                 class="w-80 h-80 object-contain rounded-full">
         </div>
 
@@ -29,7 +29,7 @@
             <p class="text-orange-700 font-bold font-hand text-xl">
                 <i class="fa-solid fa-triangle-exclamation mr-2"></i> 로그인하지 않으면 이 결과는 저장되지 않아요!
             </p>
-            <a href="{% url 'account_login' %}?next={% url 'fortune:zoo_main' %}"
+            <a href="{% url 'account_login' %}?next={% url 'ssambti:main' %}"
                 class="inline-block mt-2 text-sm text-orange-600 underline font-bold hover:text-orange-800">
                 로그인하고 결과 영구 저장하기
             </a>
@@ -44,7 +44,7 @@
                 class="px-8 py-4 rounded-full bg-[#FEE500] text-[#3C1E1E] font-bold hover:scale-105 transition shadow-clay flex items-center justify-center gap-2 text-lg">
                 <i class="fa-solid fa-comment"></i> 카카오톡 공유
             </button>
-            <a href="{% url 'fortune:zoo_main' %}"
+            <a href="{% url 'ssambti:main' %}"
                 class="px-8 py-4 rounded-full bg-orange-500 text-white font-bold hover:bg-orange-600 transition shadow-clay flex items-center justify-center gap-2 text-lg">
                 <i class="fa-solid fa-rotate-right"></i> 다시 테스트하기
             </a>
@@ -95,6 +95,14 @@
         }
 
         try {
+            {% if saved_result_id %}
+            // 로그인한 사용자: 카드 클릭 시 저장된 결과 페이지로 이동
+            var shareUrl = 'https://{{ request.get_host }}{% url "ssambti:detail" saved_result_id %}';
+            {% else %}
+            // 비로그인 사용자: 카드 클릭 시 메인 페이지로 이동
+            var shareUrl = 'https://{{ request.get_host }}{% url "ssambti:main" %}';
+            {% endif %}
+
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
@@ -102,16 +110,16 @@
                     description: '{{ animal_name }} 선생님의 특징: {{ summary }}\n\n당신은 어떤 선생님인가요? 지금 바로 확인해보세요! 🏫',
                     imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/animals/" %}{{ animal_image }}',
                     link: {
-                        mobileWebUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
-                        webUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
                     },
                 },
                 buttons: [
                     {
                         title: '나도 쌤BTI 테스트하기 🦁',
                         link: {
-                            mobileWebUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
-                            webUrl: 'https://{{ request.get_host }}{% url "fortune:zoo_main" %}',
+                            mobileWebUrl: 'https://{{ request.get_host }}{% url "ssambti:main" %}',
+                            webUrl: 'https://{{ request.get_host }}{% url "ssambti:main" %}',
                         },
                     },
                 ],
