@@ -390,7 +390,7 @@
             content: {
                 title: '🎯 쌤BTI 결과: {{ result.animal_name }} 선생님',
                 description: '{{ result.animal_name }} 선생님 ({{ result.mbti_type }})으로 판정받았어요!\n\n당신도 교실 속 당신의 동물을 찾아보세요! 🦁🐧🦝',
-                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/share_cards/" %}{{ result.mbti_type }}_card.png',
+                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/share_cards/" %}{{ animal_image|slice:":-4" }}_card.png',
                 link: {
                     mobileWebUrl: window.location.href,
                     webUrl: window.location.href,

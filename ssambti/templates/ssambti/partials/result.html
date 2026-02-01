@@ -356,7 +356,7 @@
                 content: {
                     title: '🎯 나는 [{{ animal_name }}] 선생님!',
                     description: '{{ animal_name }} 선생님의 특징: {{ summary }}\n\n당신은 어떤 선생님인가요? 지금 바로 확인해보세요! 🏫',
-                    imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/share_cards/" %}{{ mbti_type }}_card.png',
+                    imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/share_cards/" %}{{ animal_image|slice:":-4" }}_card.png',
                     link: {
                         mobileWebUrl: shareUrl,
                         webUrl: shareUrl,
@@ -381,7 +381,7 @@
     async function downloadImage() {
         const button = event.target.closest('button');
         const originalText = button.innerHTML;
-        const imageUrl = '{% static "ssambti/images/share_cards/" %}{{ mbti_type }}_card.png';
+        const imageUrl = '{% static "ssambti/images/share_cards/" %}{{ animal_image|slice:":-4" }}_card.png';
 
         try {
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 이미지 준비 중...';
