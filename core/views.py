@@ -6,11 +6,26 @@ from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post, Comment
 from django.contrib import messages
 from django.db.models import Count
+from PIL import Image
 
 def home(request):
     # Order by display_order first, then by creation date
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
-    
+
+    # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
+    posts = Post.objects.select_related(
+        'author',
+        'author__userprofile'
+    ).prefetch_related(
+        'likes',
+        'comments',
+        'comments__author',
+        'comments__author__userprofile'
+    ).annotate(
+        likes_count_annotated=Count('likes', distinct=True),
+        comments_count_annotated=Count('comments', distinct=True)
+    ).order_by('-created_at')
+
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
         # Ensure profile exists to prevent 500 errors for legacy users
@@ -26,31 +41,18 @@ def home(request):
         ).exclude(
             Q(title__icontains="인사이트") | Q(title__icontains="사주")
         ).distinct()
-        
-        # SNS Posts
-        posts = Post.objects.select_related(
-            'author', 
-            'author__userprofile'
-        ).prefetch_related(
-            'likes', 
-            'comments', 
-            'comments__author', 
-            'comments__author__userprofile'
-        ).annotate(
-            likes_count_annotated=Count('likes', distinct=True),
-            comments_count_annotated=Count('comments', distinct=True)
-        ).all()
-        
+
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
             'posts': posts
         })
-    
+
     # Else show the public home
     featured_product = products.filter(is_featured=True).first() or products.first()
     return render(request, 'core/home.html', {
         'products': products,
-        'featured_product': featured_product
+        'featured_product': featured_product,
+        'posts': posts
     })
 
 @login_required
@@ -62,32 +64,53 @@ def post_create(request):
     if request.method == 'POST':
         content = request.POST.get('content')
         image = request.FILES.get('image')
-        
+
+        # 이미지 검증
+        if image:
+            MAX_SIZE = 10 * 1024 * 1024  # 10MB
+            ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+            if image.size > MAX_SIZE:
+                messages.error(request, '이미지 크기는 10MB 이하만 가능합니다.')
+                return redirect('home')
+
+            if image.content_type not in ALLOWED_TYPES:
+                messages.error(request, '허용되지 않는 파일 형식입니다. (JPEG, PNG, GIF, WebP만 가능)')
+                return redirect('home')
+
+            # PIL로 이미지 무결성 검증 (악성 파일 방지)
+            try:
+                img = Image.open(image)
+                img.verify()
+                image.seek(0)  # 포인터 리셋
+            except Exception:
+                messages.error(request, '올바른 이미지 파일이 아닙니다.')
+                return redirect('home')
+
+        # 게시물 생성
         if content or image:
             Post.objects.create(
                 author=request.user,
                 content=content,
                 image=image
             )
-            
-    # HTMX request check if needed, but for now redirecting or returning list could work. 
-    # Ideally, for HTMX, we return the new list or the single new post.
-    # To enable full refresh-less behavior, let's return the full list partial.
+
+    # HTMX 응답
     if request.headers.get('HX-Request'):
         posts = Post.objects.select_related(
-            'author', 
+            'author',
             'author__userprofile'
         ).prefetch_related(
-            'likes', 
-            'comments', 
-            'comments__author', 
+            'likes',
+            'comments',
+            'comments__author',
             'comments__author__userprofile'
         ).annotate(
             likes_count_annotated=Count('likes', distinct=True),
             comments_count_annotated=Count('comments', distinct=True)
-        ).all()
+        ).order_by('-created_at')
         return render(request, 'core/partials/post_list.html', {'posts': posts})
-        
+
     return redirect('home')
 
 @login_required

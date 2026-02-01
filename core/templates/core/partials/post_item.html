@@ -5,13 +5,11 @@
         <div class="flex items-center gap-3">
             <div
                 class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shadow-sm">
-                {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|slice:":1" }}{% else %}{{
-                post.author.username|slice:":1" }}{% endif %}
+                {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|slice:":1" }}{% else %}{{ post.author.username|slice:":1" }}{% endif %}
             </div>
             <div>
                 <p class="font-bold text-slate-700 text-sm">
-                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{
-                    post.author.username }}{% endif %}
+                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %}
                 </p>
                 <p class="text-xs text-slate-400">{{ post.created_at|timesince }} 전</p>
             </div>
@@ -38,12 +36,20 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-4 py-3 border-t border-slate-50">
+        {% if user.is_authenticated %}
         <button hx-post="{% url 'post_like' post.id %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
             class="flex items-center gap-2 text-sm font-medium transition-colors
                        {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}">
             <i class="{% if user in post.likes.all %}ph-fill{% else %}ph{% endif %} ph-heart text-lg"></i>
             <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
         </button>
+        {% else %}
+        <a href="{% url 'account_login' %}?next={{ request.path }}"
+            class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-red-500 transition-colors">
+            <i class="ph ph-heart text-lg"></i>
+            <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
+        </a>
+        {% endif %}
         <div class="flex items-center gap-2 text-sm font-medium text-slate-400">
             <i class="ph ph-chat-circle text-lg"></i>
             <span>{{ post.comments_count_annotated|default:post.comments.count }}</span>
@@ -57,13 +63,11 @@
         <div class="flex gap-2 text-sm">
             <div
                 class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else
-                %}{{ comment.author.username|slice:":1" }}{% endif %}
+                {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else %}{{ comment.author.username|slice:":1" }}{% endif %}
             </div>
             <div class="flex-1">
                 <div class="flex items-baseline gap-2">
-                    <span class="font-bold text-slate-700 text-xs">{% if comment.author.userprofile.nickname %}{{
-                        comment.author.userprofile.nickname }}{% else %}{{ comment.author.username }}{% endif %}</span>
+                    <span class="font-bold text-slate-700 text-xs">{% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname }}{% else %}{{ comment.author.username }}{% endif %}</span>
                     <span class="text-[10px] text-slate-400">{{ comment.created_at|timesince }} 전</span>
                 </div>
                 <p class="text-slate-600 leading-snug mt-0.5 text-xs">{{ comment.content }}</p>
@@ -74,6 +78,7 @@
     {% endif %}
 
     <!-- Comment Form -->
+    {% if user.is_authenticated %}
     <form hx-post="{% url 'comment_create' post.id %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
         hx-on::after-request="this.reset()" class="mt-3 flex items-center gap-2">
         <div class="flex-1 bg-slate-100 rounded-xl px-4 py-2 flex items-center">
@@ -84,4 +89,16 @@
             <i class="ph ph-paper-plane-right text-xl"></i>
         </button>
     </form>
+    {% else %}
+    <div class="mt-3 flex items-center gap-2">
+        <div class="flex-1 bg-slate-100 rounded-xl px-4 py-2 flex items-center">
+            <input type="text" placeholder="댓글을 작성하려면 로그인하세요" disabled
+                class="w-full bg-transparent border-none outline-none text-xs text-slate-400 placeholder-slate-400 font-medium cursor-not-allowed">
+        </div>
+        <a href="{% url 'account_login' %}?next={{ request.path }}"
+            class="text-indigo-600 hover:text-indigo-700 p-1.5 transition-colors">
+            <i class="ph ph-sign-in text-xl"></i>
+        </a>
+    </div>
+    {% endif %}
 </div>

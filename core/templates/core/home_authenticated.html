@@ -70,57 +70,8 @@
 <div
     class="flex flex-col md:flex-row min-h-screen pt-44 md:pt-40 max-w-[1920px] mx-auto bg-[#E0E5EC] font-[Pretendard]">
 
-    <!-- [Left Area] SNS 위젯 -->
-    <aside
-        class="w-full md:w-[380px] flex flex-col h-auto md:h-[calc(100vh-8rem)] md:sticky md:top-32 z-20 flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden ml-0 md:ml-6 mb-6 md:mb-0">
-
-        <!-- 1. Header -->
-        <div
-            class="p-5 border-b border-slate-100 bg-white/90 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0">
-            <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
-                <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
-                실시간 소통
-            </h2>
-            <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
-                hx-get="{% url 'home' %}" hx-select="#post-list-container" hx-target="#post-list-container"
-                hx-swap="outerHTML">
-                <i class="ph ph-arrows-clockwise text-xl"></i>
-            </button>
-        </div>
-
-        <!-- 2. Infinite Scroll Feed Area -->
-        <div class="flex-1 overflow-y-auto bg-slate-50/50 p-4 space-y-3 custom-scrollbar" id="feed-scroll-container">
-
-            <!-- Write Input -->
-            <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="innerHTML"
-                hx-on::after-request="this.reset()" hx-encoding="multipart/form-data"
-                class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
-                {% csrf_token %}
-                <textarea name="content"
-                    class="w-full resize-none outline-none text-sm placeholder-slate-400 bg-transparent font-medium"
-                    rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?" required></textarea>
-
-                <input type="file" name="image" id="post-image-input" class="hidden" accept="image/*">
-
-                <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
-                    <button type="button" onclick="document.getElementById('post-image-input').click()"
-                        class="text-slate-400 hover:text-indigo-500 p-2 rounded-lg hover:bg-slate-50 transition">
-                        <i class="ph ph-image text-xl"></i>
-                    </button>
-                    <button type="submit"
-                        class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md hover:translate-y-[-1px]">
-                        등록하기
-                    </button>
-                </div>
-            </form>
-
-            <!-- Feed List Container -->
-            <div id="post-list-container" class="space-y-4 pb-10">
-                {% include 'core/partials/post_list.html' %}
-            </div>
-
-        </div>
-    </aside>
+    <!-- SNS 위젯 -->
+    {% include 'core/partials/sns_widget.html' %}
 
     <!-- [Right Area] Main Content -->
     <main class="flex-1 p-6 md:px-10 lg:px-12 overflow-y-auto pt-0 md:pt-0">

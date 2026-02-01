@@ -2,13 +2,78 @@
 
 {% block title %}Eduitit - 선생님의 스마트한 하루{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Custom Scrollbar for Feed */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- HTMX -->
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+    document.body.addEventListener('htmx:configRequest', (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+</script>
+<!-- Phosphor Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Product Cards Modal Logic
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', function (e) {
+                const id = this.getAttribute('data-product-id');
+                if (window.openModal) {
+                    window.openModal(id);
+                }
+            });
+
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <!-- URL Definitions -->
 {% url 'yut_game' as yut_url %}
 {% url 'prompt_lab' as prompt_lab_url %}
 {% url 'tool_guide' as tool_guide_url %}
 
-<main class="pt-44 md:pt-40 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row min-h-screen pt-44 md:pt-40 max-w-[1920px] mx-auto bg-[#E0E5EC]">
+
+    <!-- SNS 위젯 -->
+    {% include 'core/partials/sns_widget.html' %}
+
+    <!-- 메인 콘텐츠 -->
+    <main class="flex-1 pb-12 px-4 md:px-8 overflow-y-auto pt-0 md:pt-0">
 
     <!-- Header / Hero Section -->
     <div class="flex flex-col justify-center text-center mb-16 md:mb-24" data-aos="fade-up">
@@ -93,9 +158,8 @@
         </div>
 
     </div> <!-- End Bento Grid -->
-</main>
+    </main>
 
-</div>
 </div>
 
 <script>
