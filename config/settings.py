@@ -94,6 +94,8 @@ MIDDLEWARE = [
     # Allauth middleware
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    # Custom Middleware
+    'core.middleware.VisitorTrackingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -109,6 +111,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
+                # Custom Context Processors
+                'core.context_processors.visitor_counts',
             ],
         },
     },

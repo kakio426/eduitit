@@ -13,6 +13,7 @@
     <meta property="og:url" content="https://eduitit.site">
     <meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
     <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <title>{% block title %}Eduitit - 선생님의 스마트한 하루{% endblock %}</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -211,6 +212,16 @@
             <div class="hidden md:flex gap-8 mt-2 text-2xl font-bold text-gray-500 items-center">
                 <a href="{% url 'settings' %}" class="hover:text-purple-600 transition">이용방법</a>
                 <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
+
+                <!-- Visitor Count (Desktop) -->
+                <div class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-full bg-white/60 shadow-clay-inner text-sm transition hover:scale-105 cursor-help select-none"
+                    title="오늘 방문자 / 전체 방문자">
+                    <span class="text-orange-500 font-extrabold flex items-center gap-1.5"><i
+                            class="fa-solid fa-user-clock"></i> {{ today_visitor_count|default:"0" }}</span>
+                    <span class="text-gray-300 font-light">|</span>
+                    <span class="text-purple-600 font-extrabold flex items-center gap-1.5"><i
+                            class="fa-solid fa-users-line"></i> {{ total_visitor_count|default:"0" }}</span>
+                </div>
                 {% if user.is_authenticated %}
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition flex items-center gap-2 px-4 py-1.5 rounded-full shadow-clay text-blue-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
@@ -294,6 +305,17 @@
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
                 </a>
+
+                <!-- Visitor Count (Mobile) -->
+                <div
+                    class="flex md:hidden items-center gap-4 px-4 py-3 rounded-2xl bg-white/60 shadow-inner text-gray-500 font-bold text-sm justify-center mb-2">
+                    <span class="text-orange-500 flex items-center gap-2"><i class="fa-solid fa-user-clock"></i> Today:
+                        {{ today_visitor_count|default:"0" }}</span>
+                    <span class="text-gray-400">|</span>
+                    <span class="text-purple-600 flex items-center gap-2"><i class="fa-solid fa-users-line"></i> Total:
+                        {{ total_visitor_count|default:"0" }}</span>
+                </div>
+
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>

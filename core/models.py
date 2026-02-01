@@ -52,3 +52,16 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author.username} on {self.post}"
+
+class VisitorLog(models.Model):
+    ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
+    visit_date = models.DateField(auto_now_add=True, verbose_name="방문 날짜")
+
+    class Meta:
+        # Prevent multiple entries for same IP on same day
+        unique_together = ('ip_address', 'visit_date')
+        verbose_name = "방문자 기록"
+        verbose_name_plural = "방문자 기록"
+
+    def __str__(self):
+        return f"{self.visit_date} - {self.ip_address}"

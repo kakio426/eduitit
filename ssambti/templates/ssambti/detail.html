@@ -5,8 +5,8 @@
 <!-- Open Graph 메타 태그 -->
 <meta property="og:title" content="쌤BTI 결과: {{ result.animal_name }} 선생님" />
 <meta property="og:description" content="{{ result.mbti_type }} - 교실 속 당신의 동물은?" />
-<meta property="og:image" content="https://{{ request.get_host }}{% static 'ssambti/images/animals/' %}{{ animal_image }}" />
-<meta property="og:url" content="{{ request.build_absolute_uri }}" />
+<meta property="og:image" content="https://eduitit.site{% static 'ssambti/images/animals/' %}{{ animal_image }}" />
+<meta property="og:url" content="https://eduitit.site/ssambti/detail/{{ result.pk }}/" />
 <meta property="og:type" content="website" />
 {% endblock %}
 
@@ -53,6 +53,222 @@
         background-color: #dcfce7;
         color: #15803d;
     }
+
+    /* Result Content Readability Improvements */
+    .zoo-result-content {
+        font-family: 'NanumSquareRound', 'Inter', sans-serif;
+        font-size: 18px;
+        line-height: 1.8;
+        color: #374151;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+    }
+
+    @media (min-width: 768px) {
+        .zoo-result-content {
+            font-size: 20px;
+        }
+    }
+
+    .zoo-result-content h1,
+    .zoo-result-content h2,
+    .zoo-result-content h3 {
+        font-family: 'NanumSquareRound', sans-serif;
+        font-weight: 800;
+        color: #1f2937;
+        margin-top: 1.5em;
+        margin-bottom: 0.75em;
+        line-height: 1.4;
+    }
+
+    .zoo-result-content p {
+        margin-bottom: 1em;
+    }
+
+    .zoo-result-content ul,
+    .zoo-result-content ol {
+        margin-left: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .zoo-result-content li {
+        margin-bottom: 0.5em;
+    }
+
+    .zoo-result-content strong {
+        font-weight: 800;
+        color: #7c3aed;
+    }
+
+
+
+    /* Share Card Styles (Premium Design - 9:16 Ratio) */
+    #shareCard {
+        position: fixed;
+        left: -9999px;
+        top: 0;
+        width: 600px;
+        height: 1066px;
+        /* 9:16 Ratio */
+        background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 50%, #F3F4F6 100%);
+        font-family: 'NanumSquareRound',
+            'Malgun Gothic',
+            sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 60px 40px;
+        box-sizing: border-box;
+        text-align: center;
+        text-align: center;
+        overflow: hidden;
+        border: 6px solid #64748B !important;
+        /* Thicker card border */
+        border-radius: 24px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Decorative Background Elements */
+    #shareCard::before {
+        content: '';
+        position: absolute;
+        top: -150px;
+        right: -150px;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+        z-index: 0;
+    }
+
+    #shareCard::after {
+        content: '';
+        position: absolute;
+        bottom: -100px;
+        left: -100px;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(249, 115, 22, 0.4) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+        z-index: 0;
+    }
+
+    /* Header */
+    #shareCard .card-header {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 40px;
+        width: 100%;
+    }
+
+    #shareCard .card-logo-icon {
+        font-size: 48px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+
+    #shareCard .card-logo-text {
+        font-size: 42px;
+        font-weight: 800;
+        color: #374151;
+        letter-spacing: -0.02em;
+    }
+
+    /* Prefix */
+    #shareCard .card-title-prefix {
+        position: relative;
+        z-index: 10;
+        font-size: 24px;
+        font-weight: 700;
+        color: #F97316;
+        margin-bottom: 30px;
+        font-family: 'NanumSquareRound', sans-serif;
+    }
+
+    /* Animal Image Container */
+    #shareCard .card-animal-container {
+        position: relative;
+        z-index: 10;
+        width: 440px;
+        height: 440px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 10px 20px rgba(0, 0, 0, 0.04), inset 0 0 0 4px rgba(255, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 40px;
+        padding: 30px;
+    }
+
+    #shareCard .card-animal-img {
+        width: 100%;
+        height: 100%;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.15));
+    }
+
+    /* Typography */
+    #shareCard .card-animal-name {
+        position: relative;
+        z-index: 10;
+        font-size: 64px;
+        font-weight: 900;
+        color: #1F2937;
+        margin-bottom: 30px;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        word-break: keep-all;
+    }
+
+    #shareCard .card-subtitle-box {
+        position: relative;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 24px 30px;
+        border-radius: 20px;
+        margin-bottom: auto;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        max-width: 90%;
+    }
+
+    #shareCard .card-subtitle {
+        font-size: 22px;
+        color: #4B5563;
+        font-weight: 700;
+        line-height: 1.5;
+        word-break: keep-all;
+    }
+
+    /* Footer */
+    #shareCard .card-footer {
+        position: relative;
+        z-index: 10;
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 2px solid rgba(229, 231, 235, 0.8);
+        width: 80%;
+        text-align: center;
+    }
+
+    #shareCard .card-footer-text {
+        font-size: 16px;
+        color: #9CA3AF;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    #shareCard .card-url {
+        font-size: 22px;
+        font-weight: 800;
+        color: #7C3AED;
+        letter-spacing: 0.02em;
+    }
 </style>
 {% endblock %}
 
@@ -66,7 +282,10 @@
                 class="inline-flex items-center gap-2 text-gray-500 hover:text-orange-500 transition font-bold">
                 <i class="fa-solid fa-arrow-left"></i> 보관함으로 돌아가기
             </a>
-            <span class="text-gray-400 font-hand">{{ result.created_at|date:"Y.m.d" }} 분석</span>
+            <p class="text-orange-700 font-bold text-xl">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i> 로그인하지 않으면 이 결과는 저장되지 않아요!
+            </p>
+            <span class="text-gray-400">{{ result.created_at|date:"Y.m.d" }} 분석</span>
         </div>
 
         <!-- 1. 헤더 카드 (동물 이미지 & 타이틀) -->
@@ -78,8 +297,8 @@
                     class="w-48 h-48 object-cover rounded-full">
             </div>
 
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-800 font-title mb-3">
-                <span class="text-orange-500 block text-2xl mb-2 font-hand">교실 속 당신의 영혼은</span>
+            <h2 class="text-5xl md:text-6xl font-bold text-gray-800 font-title mb-4">
+                <span class="text-orange-500 block text-3xl mb-3">교실 속 당신의 동물은</span>
                 {{ result.animal_name }}
             </h2>
         </div>
@@ -99,6 +318,10 @@
                     class="px-8 py-4 bg-[#FEE500] text-[#3C1E1E] rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
                     <i class="fa-solid fa-comment"></i> 카카오톡 공유
                 </button>
+                <button onclick="downloadImage()"
+                    class="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
+                    <i class="fa-solid fa-share-nodes"></i> 이미지 저장/공유
+                </button>
                 <button onclick="copyLink()"
                     class="px-8 py-4 bg-white text-gray-600 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay border border-gray-100 text-lg">
                     <i class="fa-solid fa-link"></i> 링크 복사
@@ -112,9 +335,51 @@
     </div>
 </section>
 
+<!-- Hidden Share Card for Image Generation -->
+<div id="shareCard">
+    <div class="card-header">
+        <span class="card-logo-icon">🦁</span>
+        <span class="card-logo-text">쌤BTI</span>
+    </div>
+
+    <div class="card-title-prefix">교실 속 당신의 동물은</div>
+
+    <div class="card-animal-container">
+        <!-- background-image div to prevent squashing in html2canvas -->
+        <div class="card-animal-img"
+            style="background-image: url('{% static 'ssambti/images/animals/' %}{{ animal_image }}');">
+        </div>
+    </div>
+
+    <div class="card-animal-name">{{ result.animal_name }}</div>
+
+    <div class="card-subtitle-box">
+        <div class="card-subtitle">"{{ result.summary }}"</div>
+    </div>
+
+    <div class="card-footer">
+        <div class="card-footer-text">나의 교실 속 본캐 찾기</div>
+        <div class="card-url">eduitit.site/ssambti</div>
+    </div>
+</div>
+
+<!-- html2canvas Library -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 <!-- Kakao SDK -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
 <script>
+    // [Hotfix] Remove 'font-hand' class from legacy data (run once on load)
+    (function removeHandwrittenFont() {
+        var elements = document.querySelectorAll('.font-hand');
+        if (elements.length > 0) {
+            elements.forEach(function (el) {
+                el.classList.remove('font-hand');
+            });
+            console.log('✅ Removed font-hand from ' + elements.length + ' legacy elements');
+        }
+    })();
+
     if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
         Kakao.init('{{ KAKAO_JS_KEY }}');
     }
@@ -125,7 +390,7 @@
             content: {
                 title: '🎯 쌤BTI 결과: {{ result.animal_name }} 선생님',
                 description: '{{ result.animal_name }} 선생님 ({{ result.mbti_type }})으로 판정받았어요!\n\n당신도 교실 속 당신의 동물을 찾아보세요! 🦁🐧🦝',
-                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/animals/" %}{{ animal_image }}',
+                imageUrl: 'https://{{ request.get_host }}{% static "ssambti/images/share_cards/" %}{{ result.mbti_type }}_card.png',
                 link: {
                     mobileWebUrl: window.location.href,
                     webUrl: window.location.href,
@@ -148,6 +413,50 @@
         navigator.clipboard.writeText(url).then(() => {
             alert('링크가 클립보드에 복사되었습니다!');
         });
+    }
+
+    async function downloadImage() {
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        const imageUrl = '{% static "ssambti/images/share_cards/" %}{{ result.mbti_type }}_card.png';
+
+        try {
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 이미지 준비 중...';
+            button.disabled = true;
+
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'ssambti_{{ result.animal_name }}.png', { type: 'image/png' });
+
+            button.innerHTML = originalText;
+            button.disabled = false;
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: '쌤BTI 결과',
+                        text: '{{ result.animal_name }} 선생님의 교실 속 본캐를 확인해보세요!'
+                    });
+                    return;
+                } catch (shareError) {
+                    if (shareError.name !== 'AbortError') console.log('Share failed:', shareError);
+                    else return;
+                }
+            }
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ssambti_{{ result.animal_name }}.png';
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+        } catch (error) {
+            console.error('❌ Download error:', error);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            alert('이미지 다운로드 중 오류가 발생했습니다.');
+        }
     }
 </script>
 {% endblock %}
