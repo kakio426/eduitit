@@ -129,6 +129,54 @@
         }
     });
 
+    // 드래그 오버 이벤트 (기본 동작 방지)
+    textarea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        textarea.style.backgroundColor = '#f0f9ff'; // 하늘색 배경
+        textarea.style.borderColor = '#3b82f6'; // 파란색 테두리
+    });
+
+    // 드래그 떠남 이벤트 (스타일 원복)
+    textarea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        textarea.style.backgroundColor = '';
+        textarea.style.borderColor = '';
+    });
+
+    // 드롭 이벤트 (드래그 앤 드롭)
+    textarea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 스타일 원복
+        textarea.style.backgroundColor = '';
+        textarea.style.borderColor = '';
+
+        const files = e.dataTransfer?.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0]; // 첫 번째 파일만 사용
+
+        if (file && validateImage(file)) {
+            try {
+                // 이미지 최적화
+                const optimizedFile = await optimizeImage(file);
+
+                // file input에 최적화된 이미지 할당
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(optimizedFile);
+                fileInput.files = dataTransfer.files;
+
+                showPreview(optimizedFile);
+            } catch (error) {
+                console.error('이미지 최적화 실패:', error);
+                alert('이미지 처리에 실패했습니다. 다시 시도해주세요.');
+            }
+        }
+    });
+
     // 파일 선택 버튼 (최적화 적용)
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];

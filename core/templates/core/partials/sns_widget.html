@@ -29,8 +29,10 @@
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
             {% csrf_token %}
             <textarea name="content" id="post-content-textarea"
-                class="w-full resize-none outline-none text-sm placeholder-slate-400 bg-transparent font-medium"
+                class="w-full resize-none outline-none text-sm placeholder-slate-400 bg-transparent font-medium transition-colors"
                 rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?"></textarea>
+
+            <p class="text-xs text-slate-400 mt-1">💡 이미지: Ctrl+V 붙여넣기 또는 드래그 앤 드롭</p>
 
             <!-- 이미지 미리보기 영역 -->
             <div id="image-preview-container" class="hidden mt-3 relative">
