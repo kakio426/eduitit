@@ -146,13 +146,74 @@ def comment_create(request, pk):
 @login_required
 def post_delete(request, pk):
     post = get_object_or_404(Post, pk=pk)
-    # Check if the user is the author
-    if post.author == request.user:
+    # Check if the user is the author or staff
+    if post.author == request.user or request.user.is_staff:
         post.delete()
         if request.headers.get('HX-Request'):
             return HttpResponse("") # HTMX expects empty string for deletion
             
     return redirect('home')
+
+@login_required
+def post_edit(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    # Only author can edit
+    if post.author != request.user:
+        return HttpResponse("Unauthorized", status=403)
+        
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            post.content = content
+            post.save()
+            # Return the updated post item (expanded)
+            return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
+            
+    # GET: Return the edit form
+    return render(request, 'core/partials/post_edit_form.html', {'post': post})
+
+@login_required
+def post_detail_partial(request, pk):
+    """Helper view to return the read-only post item (e.g. for Cancel button)"""
+    post = get_object_or_404(Post, pk=pk)
+    # Force expansion when returning from edit mode
+    return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
+
+@login_required
+def comment_delete(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+    # Check if the user is the author or staff
+    if comment.author == request.user or request.user.is_staff:
+        comment.delete()
+        if request.headers.get('HX-Request'):
+            return HttpResponse("") # HTMX expects empty string
+            
+    return redirect('home')
+
+@login_required
+def comment_edit(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+    
+    # Only author can edit
+    if comment.author != request.user:
+        return HttpResponse("Unauthorized", status=403)
+        
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            comment.content = content
+            comment.save()
+            return render(request, 'core/partials/comment_item.html', {'comment': comment})
+            
+    # GET: Return the edit form
+    return render(request, 'core/partials/comment_edit_form.html', {'comment': comment})
+
+@login_required
+def comment_item_partial(request, pk):
+    """Helper view to return the read-only comment item"""
+    comment = get_object_or_404(Comment, pk=pk)
+    return render(request, 'core/partials/comment_item.html', {'comment': comment})
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')

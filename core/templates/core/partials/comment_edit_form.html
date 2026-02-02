@@ -1,0 +1,19 @@
+<form hx-post="{% url 'comment_edit' comment.id %}" hx-target="#comment-{{ comment.id }}" hx-swap="outerHTML"
+    class="flex gap-2 text-sm w-full">
+    <div
+        class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+        {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else
+        %}{{comment.author.username|slice:":1" }}{% endif %}
+    </div>
+    <div class="flex-1">
+        <textarea name="content" rows="2" required
+            class="w-full bg-white border border-indigo-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-100 outline-none resize-none">{{ comment.content }}</textarea>
+        <div class="flex justify-end gap-2 mt-1">
+            <button type="button" hx-get="{% url 'comment_item' comment.id %}" hx-target="closest form"
+                hx-swap="outerHTML"
+                class="text-xs text-slate-500 hover:text-slate-700 font-medium px-2 py-1">취소</button>
+            <button type="submit"
+                class="text-xs bg-indigo-600 text-white font-bold px-3 py-1 rounded-md hover:bg-indigo-700">수정</button>
+        </div>
+    </div>
+</form>

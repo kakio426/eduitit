@@ -1,0 +1,30 @@
+<form hx-post="{% url 'post_edit' post.id %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
+    class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
+
+    <div class="mb-3">
+        <label class="block text-xs font-bold text-slate-500 mb-1">내용 수정</label>
+        <textarea name="content" rows="4" required
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-100 outline-none resize-none">{{ post.content }}</textarea>
+    </div>
+
+    <!-- Image handling could be added here, but keeping it simple for now as text edit is primary -->
+    {% if post.image %}
+    <div class="mb-3 relative group">
+        <p class="text-xs text-slate-400 mb-1">현재 이미지:</p>
+        <img src="{{ post.image.url }}" class="h-20 w-auto rounded-lg border border-slate-100 object-cover">
+        <!-- Delete image option could go here -->
+    </div>
+    {% endif %}
+
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" hx-get="{% url 'post_detail_partial' post.id %}" hx-target="closest form"
+            hx-swap="outerHTML"
+            class="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-50 rounded-lg transition-colors font-medium">
+            취소
+        </button>
+        <button type="submit"
+            class="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-bold shadow-sm">
+            수정 완료
+        </button>
+    </div>
+</form>

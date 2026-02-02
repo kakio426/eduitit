@@ -1,0 +1,40 @@
+<div id="comment-{{ comment.id }}" class="group flex gap-2 text-sm">
+    <div
+        class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+        {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else %}{{comment.author.username|slice:":1" }}{% endif %}
+    </div>
+    <div class="flex-1">
+        <div class="flex items-baseline gap-2">
+            <span class="font-bold text-slate-700 text-xs">
+                {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname }}{% else %}{{comment.author.username }}{% endif %}
+                {% if comment.author.is_staff %}
+                <span class="text-xs text-yellow-500 ml-0.5" title="관리자">👑</span>
+                {% endif %}
+            </span>
+            <span class="text-[10px] text-slate-400">
+                {{ comment.created_at|timesince }} 전
+                {% if comment.updated_at|date:"YmdHi" != comment.created_at|date:"YmdHi" %}
+                <span class="text-slate-400/80">(수정됨)</span>
+                {% endif %}
+            </span>
+
+            <!-- Actions (Edit/Delete) -->
+            <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                {% if user == comment.author %}
+                <button hx-get="{% url 'comment_edit' comment.id %}" hx-target="#comment-{{ comment.id }}"
+                    hx-swap="outerHTML" class="text-slate-400 hover:text-indigo-500 p-0.5">
+                    <i class="ph ph-pencil-simple"></i>
+                </button>
+                {% endif %}
+
+                {% if user == comment.author or user.is_staff %}
+                <button hx-delete="{% url 'comment_delete' comment.id %}" hx-target="#comment-{{ comment.id }}"
+                    hx-swap="outerHTML" hx-confirm="댓글을 삭제하시겠습니까?" class="text-slate-400 hover:text-red-500 p-0.5">
+                    <i class="ph ph-trash"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <p class="text-slate-600 leading-snug mt-0.5 text-xs whitespace-pre-wrap break-words">{{ comment.content }}</p>
+    </div>
+</div>
