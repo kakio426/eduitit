@@ -95,6 +95,14 @@ class ArticleCreateView(View):
         if 'theme' in request.POST:
             request.session['autoarticle_theme'] = request.POST.get('theme')
 
+        # [FIX] 디자인 테마나 학교명만 변경한 경우(사이드바 폼 제출), 다음 단계로 진행하지 않고 현재 페이지 유지.
+        # HTMX 요청인 경우 204 No Content를 반환하여 페이지 새로고침 없이 세션만 업데이트함.
+        if ('school_name' in request.POST or 'theme' in request.POST) and \
+           'event_name' not in request.POST and 'title' not in request.POST:
+            if request.headers.get('HX-Request') == 'true':
+                return HttpResponse(status=204)
+            return redirect(f"{reverse('autoarticle:create')}?step={step}")
+
         if step == '1':
             input_data = {
                 'school': request.POST.get('school_name', '스쿨잇 초등학교'),

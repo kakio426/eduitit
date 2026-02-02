@@ -27,15 +27,18 @@ class VisitorTrackingMiddleware:
 
             # Check session to avoid DB hit on every request
             session_key = f'visitor_recorded_{today}'
-            if not request.session.get(session_key):
+            already_recorded = request.session.get(session_key, False)
+
+            logger.info(f"[VISITOR] Path: {request.path} | IP: {ip} | Already recorded: {already_recorded}")
+
+            if not already_recorded:
                 try:
                     # Use get_or_create to avoid duplicates for the same IP on the same day
                     obj, created = VisitorLog.objects.get_or_create(ip_address=ip, visit_date=today)
                     request.session[session_key] = True
-                    if created:
-                        logger.info(f"New visitor recorded: {ip} on {today}")
+                    logger.info(f"[VISITOR] DB operation - Created: {created} | IP: {ip} | Date: {today}")
                 except Exception as e:
-                    logger.error(f"VisitorLog Error: {e}", exc_info=True)
+                    logger.error(f"[VISITOR] Error: {e}", exc_info=True)
 
         response = self.get_response(request)
         return response

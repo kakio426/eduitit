@@ -35,6 +35,11 @@
                 width: 100% !important;
             }
 
+            /* Page break for multi-page support */
+            .page-break-before {
+                page-break-before: always;
+            }
+
             /* Ensure table borders are sharp in print */
             table {
                 border-collapse: collapse !important;
@@ -114,10 +119,11 @@
         </a>
     </div>
 
-    <div class="print-container max-w-[210mm] mx-auto bg-white">
+    {% for page in pages %}
+    <div class="print-container max-w-[210mm] mx-auto bg-white {% if not forloop.first %}page-break-before{% endif %}">
         <!-- Title -->
         <h1 class="official-title">
-            {% now "Y" %} 연수등록부
+            {% now "Y" %} 연수등록부{% if total_pages > 1 %} ({{ page.page_number }}/{{ total_pages }}){% endif %}
         </h1>
 
         <!-- Header Info Table Style -->
@@ -149,9 +155,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sig in left_sigs %}
+                    {% for sig in page.left_sigs %}
                     <tr>
-                        <td>{{ forloop.counter }}</td>
+                        <td>{{ forloop.counter|add:page.left_rows.0|add:-1 }}</td>
                         <td>{{ sig.participant_affiliation|default:"-" }}</td>
                         <td class="font-bold">{{ sig.participant_name }}</td>
                         <td>
@@ -162,10 +168,10 @@
                     </tr>
                     {% endfor %}
 
-                    {% for i in left_rows %}
-                    {% if forloop.counter > left_sigs|length %}
+                    {% for i in page.left_rows %}
+                    {% if forloop.counter > page.left_sigs|length %}
                     <tr>
-                        <td>{{ forloop.counter }}</td>
+                        <td>{{ i }}</td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -186,9 +192,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sig in right_sigs %}
+                    {% for sig in page.right_sigs %}
                     <tr>
-                        <td>{{ forloop.counter|add:30 }}</td>
+                        <td>{{ forloop.counter|add:page.right_rows.0|add:-1 }}</td>
                         <td>{{ sig.participant_affiliation|default:"-" }}</td>
                         <td class="font-bold">{{ sig.participant_name }}</td>
                         <td>
@@ -199,8 +205,8 @@
                     </tr>
                     {% endfor %}
 
-                    {% for i in right_rows %}
-                    {% if forloop.counter > right_sigs|length %}
+                    {% for i in page.right_rows %}
+                    {% if forloop.counter > page.right_sigs|length %}
                     <tr>
                         <td>{{ i }}</td>
                         <td></td>
@@ -219,6 +225,7 @@
             <span>출력일시 : {% now "Y. m. d. H:i" %}</span>
         </div>
     </div>
+    {% endfor %}
 
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">

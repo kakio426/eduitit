@@ -80,7 +80,7 @@ def main_view(request):
     
     stats_qs = SsambtiResult.objects.values('mbti_type', 'animal_name') \
         .annotate(count=Count('id')) \
-        .order_by('-count')[:5]
+        .order_by('-count')
     
     stats = []
     if total_count > 0:
@@ -233,10 +233,10 @@ def analyze_view(request):
     # 1. Total logged-in participants
     total_count = SsambtiResult.objects.count()
     
-    # 2. Aggregation by MBTI type (Top 5 for better UX)
+    # 2. Aggregation by MBTI type (All types)
     stats_qs = SsambtiResult.objects.values('mbti_type', 'animal_name') \
         .annotate(count=Count('id')) \
-        .order_by('-count')[:5]
+        .order_by('-count')
     
     stats = []
     if total_count > 0:

@@ -92,25 +92,40 @@ def sign(request, uuid):
 
 @login_required
 def print_view(request, uuid):
-    """출석부 인쇄 페이지 (2단 구성)"""
+    """출석부 인쇄 페이지 (자동 페이지 분할 지원)"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
     signatures = list(session.signatures.all())
+    total_count = len(signatures)
     
-    # 2단 구성을 위해 리스트 분할 (최대 60명 기준, 넘어가면 페이지 분할은 나중에)
-    left_sigs = signatures[:30]
-    right_sigs = signatures[30:60]
+    # 페이지당 60명씩 분할
+    SIGS_PER_PAGE = 60
+    pages = []
     
-    # 빈 줄 생성을 위한 숫자 리스트
-    left_rows = range(30)
-    right_rows = range(31, 61)
+    # 60명 단위로 페이지 생성
+    for page_num in range(0, total_count, SIGS_PER_PAGE):
+        page_sigs = signatures[page_num:page_num + SIGS_PER_PAGE]
+        
+        # 각 페이지를 좌우 30명씩 분할
+        left_sigs = page_sigs[:30]
+        right_sigs = page_sigs[30:60]
+        
+        # 빈 줄 생성 (30줄 고정, 순번은 절대 위치 기준)
+        left_rows = range(page_num + 1, page_num + 31)
+        right_rows = range(page_num + 31, page_num + 61)
+        
+        pages.append({
+            'page_number': (page_num // SIGS_PER_PAGE) + 1,
+            'left_sigs': left_sigs,
+            'right_sigs': right_sigs,
+            'left_rows': left_rows,
+            'right_rows': right_rows,
+        })
     
     return render(request, 'signatures/print_view.html', {
         'session': session,
-        'left_sigs': left_sigs,
-        'right_sigs': right_sigs,
-        'left_rows': left_rows,
-        'right_rows': right_rows,
-        'total_count': len(signatures),
+        'pages': pages,
+        'total_count': total_count,
+        'total_pages': len(pages),
     })
 
 

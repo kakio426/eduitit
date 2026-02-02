@@ -6,23 +6,26 @@
         <aside class='lg:w-80'>
             <div class='clay-card p-6 bg-white shadow-clay rounded-[2rem]'>
                 <h2 class='text-2xl font-bold mb-6 text-gray-800'>환경 설정</h2>
-                <form method='post' action='{% url "autoarticle:create" %}'>
+                <form method='post' action='{% url "autoarticle:create" %}' hx-post='{% url "autoarticle:create" %}'
+                    hx-trigger='change' hx-swap='none'>
                     {% csrf_token %}
                     <input type='hidden' name='step' value='{{ step }}'>
                     <div class='mb-6'>
                         <label class='block text-sm font-bold mb-2 text-gray-700'>학교명</label>
                         <input type='text' name='school_name' value='{{ school_name }}'
-                            class='w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner'
-                            onchange='this.form.submit()'>
+                            class='w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all bg-gray-50 shadow-inner'>
                     </div>
                     <div class='mb-6'>
                         <label class='block text-sm font-bold mb-2 text-gray-700'>디자인 테마</label>
                         <div class='grid gap-3'>
                             {% for t_name in theme_list %}
                             <label class='cursor-pointer'>
-                                <input type='radio' name='theme' value='{{ t_name }}' class='peer sr-only' {% if theme == t_name %}checked{% endif %} onchange='this.form.submit()'>
-                                <div class='p-3 rounded-2xl border-2 border-gray-100 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all'>
-                                    <span class='font-medium text-gray-600 peer-checked:text-purple-700'>{{ t_name }}</span>
+                                <input type='radio' name='theme' value='{{ t_name }}' class='peer sr-only' {% if
+                                    theme==t_name %}checked{% endif %}>
+                                <div
+                                    class='p-3 rounded-2xl border-2 border-gray-100 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all'>
+                                    <span class='font-medium text-gray-600 peer-checked:text-purple-700'>{{ t_name
+                                        }}</span>
                                 </div>
                             </label>
                             {% endfor %}
