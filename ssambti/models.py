@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 class SsambtiResult(models.Model):
     """사용자가 저장한 쌤BTI(Teachable Zoo MBTI) 결과"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ssambti_results')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ssambti_results', null=True, blank=True)
     mbti_type = models.CharField(max_length=4, help_text="e.g. ENFP")
     animal_name = models.CharField(max_length=50, help_text="e.g. 해달")
     result_text = models.TextField(help_text="AI가 생성한 분석 결과 내용")

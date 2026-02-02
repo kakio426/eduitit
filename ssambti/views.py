@@ -189,17 +189,20 @@ def analyze_view(request):
     </div>
     """
     
-    # 결과 저장 (로그인 사용자만)
+    
+    # 결과 저장 (로그인 여부 무관)
     saved_result_id = None
-    if request.user.is_authenticated:
-        saved_result = SsambtiResult.objects.create(
-            user=request.user,
-            mbti_type=mbti_type,
-            animal_name=animal_name,
-            result_text=result_html,
-            answers_json=answers
-        )
-        saved_result_id = saved_result.pk
+    user_instance = request.user if request.user.is_authenticated else None
+    
+    saved_result = SsambtiResult.objects.create(
+        user=user_instance,
+        mbti_type=mbti_type,
+        animal_name=animal_name,
+        result_text=result_html,
+        answers_json=answers
+    )
+    saved_result_id = saved_result.pk
+
 
     # --- [New Feature] Teacher Statistics Aggregation ---
     from django.db.models import Count
