@@ -35,50 +35,56 @@ def session_detail(request, uuid):
     """연수 상세 (관리자용) - 미매칭 및 중복 감지 포함"""
     from .models import ExpectedParticipant
     from collections import defaultdict
+    from django.http import HttpResponse
+    import traceback
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
-    signatures = session.signatures.all()
-    expected = session.expected_participants.all()
-    
-    # 1. 미매칭 서명 찾기 (명단이 있는 경우에만 수행)
-    suggestions = []
-    if expected.exists():
-        matched_sig_ids = expected.filter(
-            matched_signature__isnull=False
-        ).values_list('matched_signature_id', flat=True)
+    try:
+        session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+        signatures = session.signatures.all()
+        expected = session.expected_participants.all()
         
-        unmatched_signatures = signatures.exclude(id__in=matched_sig_ids)
-        
-        # 각 미매칭 서명에 대해 정확히 일치하는 예상 참석자 찾기
-        for sig in unmatched_signatures:
-            exact_matches = expected.filter(
-                name=sig.participant_name,
-                matched_signature__isnull=True
-            )
+        # 1. 미매칭 서명 찾기 (명단이 있는 경우에만 수행)
+        suggestions = []
+        if expected.exists():
+            matched_sig_ids = expected.filter(
+                matched_signature__isnull=False
+            ).values_list('matched_signature_id', flat=True)
             
-            suggestions.append({
-                'signature': sig,
-                'exact_matches': list(exact_matches),
-                'has_matches': exact_matches.exists(),
-            })
-    
-    # 3. 중복 서명 감지 (항상 수행)
-    sig_dict = defaultdict(list)
-    for sig in signatures:
-        key = (sig.participant_name, sig.participant_affiliation or '')
-        sig_dict[key].append(sig)
-    
-    duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
-    
-    return render(request, 'signatures/detail.html', {
-        'session': session,
-        'signatures': signatures,
-        'expected_participants': expected,
-        'unmatched_suggestions': suggestions,
-        'duplicates': duplicates,
-        'has_unmatched': len(suggestions) > 0,
-        'has_duplicates': len(duplicates) > 0,
-    })
+            unmatched_signatures = signatures.exclude(id__in=matched_sig_ids)
+            
+            # 각 미매칭 서명에 대해 정확히 일치하는 예상 참석자 찾기
+            for sig in unmatched_signatures:
+                exact_matches = expected.filter(
+                    name=sig.participant_name,
+                    matched_signature__isnull=True
+                )
+                
+                suggestions.append({
+                    'signature': sig,
+                    'exact_matches': list(exact_matches),
+                    'has_matches': exact_matches.exists(),
+                })
+        
+        # 3. 중복 서명 감지 (항상 수행)
+        sig_dict = defaultdict(list)
+        for sig in signatures:
+            key = (sig.participant_name, sig.participant_affiliation or '')
+            sig_dict[key].append(sig)
+        
+        duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
+        
+        return render(request, 'signatures/detail.html', {
+            'session': session,
+            'signatures': signatures,
+            'expected_participants': expected,
+            'unmatched_suggestions': suggestions,
+            'duplicates': duplicates,
+            'has_unmatched': len(suggestions) > 0,
+            'has_duplicates': len(duplicates) > 0,
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return HttpResponse(f"Server Error in session_detail: {str(e)}<br><pre>{traceback.format_exc()}</pre>", status=500)
 
 
 
