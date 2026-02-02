@@ -30,7 +30,7 @@
 
     <!-- [Left Area] SNS 위젯 (Fixed width on desktop, full on mobile) -->
     <aside
-        class="w-full md:w-[380px] flex flex-col h-[calc(100vh-6rem)] md:sticky md:top-24 z-20 flex-shrink-0 bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        class="w-full md:w-[380px] flex flex-col h-auto md:h-[calc(100vh-6rem)] md:sticky md:top-24 z-20 flex-shrink-0 bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
 
         <!-- 1. Header -->
         <div
@@ -47,7 +47,7 @@
         </div>
 
         <!-- 2. Infinite Scroll Feed Area -->
-        <div class="flex-1 overflow-y-auto bg-slate-50/50 p-4 space-y-3 custom-scrollbar" id="feed-scroll-container">
+        <div class="flex-1 md:overflow-y-auto bg-slate-50/50 p-4 space-y-3 custom-scrollbar" id="feed-scroll-container">
 
             <!-- Write Input -->
             <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="innerHTML"
@@ -83,7 +83,7 @@
     </aside>
 
     <!-- [Right Area] Main Dashboard Content -->
-    <main class="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto">
+    <main class="flex-1 p-6 md:p-10 lg:p-12 md:overflow-y-auto">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-slate-800 flex items-center gap-2">
@@ -123,7 +123,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {% for product in products %}
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-purple-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
-                onclick="window.location.href='{% url 'product_detail' product.pk %}'">
+                data-url="{% url 'product_detail' product.pk %}" onclick="window.location.href=this.dataset.url;">
 
                 <div class="flex justify-between items-start mb-4">
                     <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl

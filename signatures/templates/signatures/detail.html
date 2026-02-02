@@ -7,7 +7,8 @@
     <div class="max-w-5xl mx-auto">
         <!-- Header -->
         <div class="mb-3 md:mb-6">
-            <a href="{% url 'signatures:list' %}" class="text-base md:text-xl text-gray-500 hover:text-purple-600 transition">
+            <a href="{% url 'signatures:list' %}"
+                class="text-base md:text-xl text-gray-500 hover:text-purple-600 transition">
                 <i class="fa-solid fa-arrow-left mr-1"></i> 목록
             </a>
         </div>
@@ -34,10 +35,19 @@
                         </button>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-sm md:text-base text-gray-600">
-                        <p class="flex items-center"><i class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.instructor }}</span></p>
-                        <p class="flex items-center"><i class="fa-solid fa-calendar mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.datetime|date:"m.d H:i" }}</span></p>
-                        <p class="flex items-center"><i class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.location }}</span></p>
-                        <p class="flex items-center"><i class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{ signatures.count }}명{% if has_duplicates %}<span class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
+                        <p class="flex items-center"><i
+                                class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span
+                                class="truncate">{{ session.instructor }}</span></p>
+                        <p class="flex items-center"><i
+                                class="fa-solid fa-calendar mr-2 text-purple-400 flex-shrink-0"></i><span
+                                class="truncate">{{ session.datetime|date:"m.d H:i" }}</span></p>
+                        <p class="flex items-center"><i
+                                class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span
+                                class="truncate">{{ session.location }}</span></p>
+                        <p class="flex items-center"><i
+                                class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{
+                                signatures.count }}명{% if has_duplicates %}<span
+                                    class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
                     </div>
                     {% if session.description %}
                     <p class="mt-3 text-sm md:text-base text-gray-500">{{ session.description }}</p>
@@ -74,276 +84,290 @@
                     <span class="text-sm md:text-base font-bold text-purple-600">
                         {% widthratio signatures.count session.expected_count 100 %}%
                     </span>
-                    {% if signatures.count < session.expected_count %}
-                    <span class="text-xl md:text-2xl">⚠️</span>
-                    {% elif signatures.count == session.expected_count %}
-                    <span class="text-xl md:text-2xl">✅</span>
-                    {% else %}
-                    <span class="text-xl md:text-2xl">📝</span>
-                    {% endif %}
+                    {% if signatures.count < session.expected_count %} <span class="text-xl md:text-2xl">⚠️</span>
+                        {% elif signatures.count == session.expected_count %}
+                        <span class="text-xl md:text-2xl">✅</span>
+                        {% else %}
+                        <span class="text-xl md:text-2xl">📝</span>
+                        {% endif %}
                 </div>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-4 md:h-6">
-                <div class="bg-purple-500 h-4 md:h-6 rounded-full transition-all"
-                    style="width: {% widthratio signatures.count session.expected_count 100 %}%">
-                </div>
+                {% widthratio signatures.count session.expected_count 100 as progress %}
+                <div class="bg-purple-500 h-4 md:h-6 rounded-full transition-all" style="width: {{ progress }}%;"></div>
             </div>
-            {% if signatures.count < session.expected_count %}
-            <p class="text-xs md:text-sm text-orange-600 mt-2 text-right">{{ session.expected_count|add:signatures.count|add:"-" }}명 미서명</p>
-            {% elif signatures.count > session.expected_count %}
-            <p class="text-xs md:text-sm text-blue-600 mt-2 text-right">+{{ signatures.count|add:session.expected_count|add:"-" }}명 추가</p>
-            {% endif %}
+            {% if signatures.count < session.expected_count %} <p
+                class="text-xs md:text-sm text-orange-600 mt-2 text-right">
+                {{ session.expected_count|add:signatures.count|add:"-" }}명 미서명
+                </p>
+                {% elif signatures.count > session.expected_count %}
+                <p class="text-xs md:text-sm text-blue-600 mt-2 text-right">
+                    +{{ signatures.count|add:session.expected_count|add:"-" }}명 추가
+                </p>
+                {% endif %}
         </div>
         {% endif %}
 
-    <!-- Unmatched Signatures Warnings -->
-    {% if has_unmatched %}
-    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-orange-50/50">
-        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{ unmatched_suggestions|length }})
-        </h2>
-        <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
-        <div class="space-y-4">
-            {% for item in unmatched_suggestions %}
-            <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name }}</span>
-                            {% if item.signature.participant_affiliation %}
-                            <span class="text-gray-500">({{ item.signature.participant_affiliation }})</span>
-                            {% endif %}
-                            <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
+        <!-- Unmatched Signatures Warnings -->
+        {% if has_unmatched %}
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-orange-50/50">
+            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
+                <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{
+                unmatched_suggestions|length }})
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
+            <div class="space-y-4">
+                {% for item in unmatched_suggestions %}
+                <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name
+                                    }}</span>
+                                {% if item.signature.participant_affiliation %}
+                                <span class="text-gray-500">({{ item.signature.participant_affiliation }})</span>
+                                {% endif %}
+                                <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
+                            </div>
+                            <img src="{{ item.signature.signature_data }}" alt="서명"
+                                class="h-16 max-w-[200px] object-contain border rounded p-1">
                         </div>
-                        <img src="{{ item.signature.signature_data }}" alt="서명"
-                            class="h-16 max-w-[200px] object-contain border rounded p-1">
+                    </div>
+                    {% if item.has_matches %}
+                    <div class="mb-3">
+                        <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for participant in item.exact_matches %}
+                            <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
+                                class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
+                                <span>{{ participant.name }}</span>
+                                {% if participant.affiliation %}
+                                <span class="font-normal">({{ participant.affiliation }})</span>
+                                {% endif %}
+                                <span>와 연결</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="flex gap-2">
+                        <button onclick="deleteSignature('{{ item.signature.pk }}')"
+                            class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
+                            <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
+                        </button>
                     </div>
                 </div>
-                {% if item.has_matches %}
-                <div class="mb-3">
-                    <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
-                    <div class="flex flex-wrap gap-2">
-                        {% for participant in item.exact_matches %}
-                        <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
-                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
-                            <span>{{ participant.name }}</span>
-                            {% if participant.affiliation %}
-                            <span class="font-normal">({{ participant.affiliation }})</span>
-                            {% endif %}
-                            <span>와 연결</span>
-                        </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Duplicate Signatures Warnings -->
+        {% if has_duplicates %}
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-yellow-50/50">
+            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
+                <i class="fa-solid fa-copy text-yellow-600 mr-1"></i>중복 서명 ({{ duplicates|length }})
+            </h2>
+            <div class="space-y-4">
+                {% for dup_group in duplicates %}
+                <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
+                    <p class="font-bold text-gray-700 mb-3">
+                        {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{
+                        dup_group|length }}번 서명
+                    </p>
+                    <div class="grid md:grid-cols-2 gap-3">
+                        {% for sig in dup_group %}
+                        <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                            <div>
+                                <img src="{{ sig.signature_data }}" alt="서명"
+                                    class="h-12 max-w-[150px] object-contain mb-1">
+                                <p class="text-sm text-gray-500">{{ sig.created_at|date:"H:i:s" }}</p>
+                            </div>
+                            <button onclick="deleteSignature('{{ sig.pk }}')"
+                                class="px-3 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-sm">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
-                {% endif %}
-                <div class="flex gap-2">
-                    <button onclick="deleteSignature('{{ item.signature.pk }}')"
-                        class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
-                        <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Duplicate Signatures Warnings -->
-    {% if has_duplicates %}
-    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-yellow-50/50">
-        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
-            <i class="fa-solid fa-copy text-yellow-600 mr-1"></i>중복 서명 ({{ duplicates|length }})
-        </h2>
-        <div class="space-y-4">
-            {% for dup_group in duplicates %}
-            <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
-                <p class="font-bold text-gray-700 mb-3">
-                    {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{
-                    dup_group|length }}번 서명
-                </p>
-                <div class="grid md:grid-cols-2 gap-3">
-                    {% for sig in dup_group %}
-                    <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                        <div>
-                            <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[150px] object-contain mb-1">
-                            <p class="text-sm text-gray-500">{{ sig.created_at|date:"H:i:s" }}</p>
-                        </div>
-                        <button onclick="deleteSignature('{{ sig.pk }}')"
-                            class="px-3 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-sm">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Expected Participants Management -->
-    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-        <div class="flex items-start justify-between mb-3 md:mb-4">
-            <div class="flex-1">
-                <h2 class="text-base md:text-lg font-bold text-gray-700 mb-1 md:mb-2">
-                    <i class="fa-solid fa-users text-purple-500 mr-1"></i>참석자 명단
-                    <span class="text-sm md:text-base text-gray-400 font-normal">(선택)</span>
-                </h2>
-                <p class="text-xs md:text-sm text-gray-600 hidden md:block">
-                    명단을 미리 등록하면 출석 관리가 편리합니다
-                </p>
-            </div>
-            <button onclick="toggleGuide()" type="button"
-                class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1 flex-shrink-0">
-                <i class="fa-solid fa-circle-info text-xs"></i>
-                <span class="hidden sm:inline">가이드</span>
-            </button>
-        </div>
-
-        <!-- 안내 메시지 (토글 가능) -->
-        <div id="participantGuide" class="mb-4 p-3 md:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 hidden">
-            <div class="flex items-start gap-3 mb-3">
-                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-solid fa-lightbulb text-white text-sm md:text-base"></i>
-                </div>
-                <div class="flex-1">
-                    <h3 class="text-sm md:text-base font-bold text-gray-800 mb-2">언제 사용하나요?</h3>
-                    <div class="space-y-2 text-xs md:text-sm text-gray-700">
-                        <div class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                            <p><strong>학교/기업 연수:</strong> 출석 확인 간편</p>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                            <p><strong>출석률 추적:</strong> 실시간 진행률</p>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                            <p><strong>오타 감지:</strong> 자동 매칭</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg p-3 mt-3 border border-purple-100">
-                <p class="text-xs md:text-sm text-gray-700 mb-2"><strong>사용 방법:</strong></p>
-                <ol class="space-y-1 text-xs md:text-sm text-gray-600 list-decimal list-inside">
-                    <li>텍스트 입력 또는 파일 업로드</li>
-                    <li>자동 매칭</li>
-                    <li>진행률 확인</li>
-                </ol>
+                {% endfor %}
             </div>
         </div>
-
-        <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-            <!-- Inputs -->
-            <div>
-                <div class="mb-4 md:mb-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm md:text-base font-bold">텍스트 입력</label>
-                        <button onclick="fillExample()" type="button"
-                            class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs md:text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
-                            <i class="fa-solid fa-clipboard-list text-xs"></i>
-                            <span>예시</span>
-                        </button>
-                    </div>
-                    <textarea id="bulkInput" rows="4" placeholder="이름, 소속&#10;예: 홍길동, 1-1"
-                        class="w-full p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
-                    <button onclick="submitBulkInput()"
-                        class="mt-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition w-full md:w-auto">
-                        <i class="fa-solid fa-plus mr-1"></i> 등록
-                    </button>
-                </div>
-                <div class="pt-4 md:pt-6 border-t border-gray-100">
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm md:text-base font-bold">파일 업로드</label>
-                        <div class="flex gap-1">
-                            <a href="{% url 'signatures:download_template_csv' %}"
-                                class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs md:text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
-                                <i class="fa-solid fa-download text-xs"></i>
-                                <span>CSV</span>
-                            </a>
-                            <a href="{% url 'signatures:download_template_excel' %}"
-                                class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
-                                <i class="fa-solid fa-download text-xs"></i>
-                                <span>Excel</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="file" id="participantFile" accept=".csv, .xlsx"
-                            class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl shadow-clay-inner bg-bg-soft">
-                        <button onclick="uploadFile()"
-                            class="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
-                            <i class="fa-solid fa-upload"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- List -->
-            <div>
-                <label class="text-sm md:text-base font-bold mb-2 block">명단 (<span id="participantCount">0</span>)</label>
-                <div id="participantList" class="h-48 md:h-64 overflow-y-auto p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft">
-                    <p class="text-gray-400 text-center py-4 md:py-8 text-xs md:text-sm">명단을 등록해주세요</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Share Link -->
-    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-            <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>링크 공유
-        </h2>
-        <div class="flex gap-2">
-            <input type="text" id="shareLink" readonly
-                value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
-                class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
-            <button onclick="copyLink()"
-                class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
-                <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">복사</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Signature List -->
-    <div class="clay-card p-4 md:p-6">
-        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3 md:mb-4">
-            <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
-        </h2>
-        {% if signatures %}
-        <div class="overflow-x-auto -mx-4 md:mx-0">
-            <table class="w-full text-sm md:text-base text-left">
-                <thead class="border-b border-gray-200 text-gray-500">
-                    <tr>
-                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">#</th>
-                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">이름</th>
-                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">서명</th>
-                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">시간</th>
-                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm text-center">삭제</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sig in signatures %}
-                    <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
-                        <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{{ forloop.counter }}</td>
-                        <td class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{{ sig.participant_name }}</td>
-                        <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-6 md:h-10"></td>
-                        <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{ sig.created_at|date:"H:i" }}</td>
-                        <td class="py-2 px-2 md:px-4 text-center">
-                            <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600 p-1">
-                                <i class="fa-solid fa-trash text-xs md:text-sm"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-center py-8 md:py-12 text-gray-400 text-sm md:text-base">아직 서명이 없습니다</p>
         {% endif %}
-    </div>
+
+        <!-- Expected Participants Management -->
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+            <div class="flex items-start justify-between mb-3 md:mb-4">
+                <div class="flex-1">
+                    <h2 class="text-base md:text-lg font-bold text-gray-700 mb-1 md:mb-2">
+                        <i class="fa-solid fa-users text-purple-500 mr-1"></i>참석자 명단
+                        <span class="text-sm md:text-base text-gray-400 font-normal">(선택)</span>
+                    </h2>
+                    <p class="text-xs md:text-sm text-gray-600 hidden md:block">
+                        명단을 미리 등록하면 출석 관리가 편리합니다
+                    </p>
+                </div>
+                <button onclick="toggleGuide()" type="button"
+                    class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1 flex-shrink-0">
+                    <i class="fa-solid fa-circle-info text-xs"></i>
+                    <span class="hidden sm:inline">가이드</span>
+                </button>
+            </div>
+
+            <!-- 안내 메시지 (토글 가능) -->
+            <div id="participantGuide"
+                class="mb-4 p-3 md:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 hidden">
+                <div class="flex items-start gap-3 mb-3">
+                    <div
+                        class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-lightbulb text-white text-sm md:text-base"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm md:text-base font-bold text-gray-800 mb-2">언제 사용하나요?</h3>
+                        <div class="space-y-2 text-xs md:text-sm text-gray-700">
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                <p><strong>학교/기업 연수:</strong> 출석 확인 간편</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                <p><strong>출석률 추적:</strong> 실시간 진행률</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                <p><strong>오타 감지:</strong> 자동 매칭</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-3 mt-3 border border-purple-100">
+                    <p class="text-xs md:text-sm text-gray-700 mb-2"><strong>사용 방법:</strong></p>
+                    <ol class="space-y-1 text-xs md:text-sm text-gray-600 list-decimal list-inside">
+                        <li>텍스트 입력 또는 파일 업로드</li>
+                        <li>자동 매칭</li>
+                        <li>진행률 확인</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                <!-- Inputs -->
+                <div>
+                    <div class="mb-4 md:mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-sm md:text-base font-bold">텍스트 입력</label>
+                            <button onclick="fillExample()" type="button"
+                                class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs md:text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
+                                <i class="fa-solid fa-clipboard-list text-xs"></i>
+                                <span>예시</span>
+                            </button>
+                        </div>
+                        <textarea id="bulkInput" rows="4" placeholder="이름, 소속&#10;예: 홍길동, 1-1"
+                            class="w-full p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
+                        <button onclick="submitBulkInput()"
+                            class="mt-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition w-full md:w-auto">
+                            <i class="fa-solid fa-plus mr-1"></i> 등록
+                        </button>
+                    </div>
+                    <div class="pt-4 md:pt-6 border-t border-gray-100">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-sm md:text-base font-bold">파일 업로드</label>
+                            <div class="flex gap-1">
+                                <a href="{% url 'signatures:download_template_csv' %}"
+                                    class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs md:text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-download text-xs"></i>
+                                    <span>CSV</span>
+                                </a>
+                                <a href="{% url 'signatures:download_template_excel' %}"
+                                    class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-download text-xs"></i>
+                                    <span>Excel</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="file" id="participantFile" accept=".csv, .xlsx"
+                                class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl shadow-clay-inner bg-bg-soft">
+                            <button onclick="uploadFile()"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
+                                <i class="fa-solid fa-upload"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- List -->
+                <div>
+                    <label class="text-sm md:text-base font-bold mb-2 block">명단 (<span
+                            id="participantCount">0</span>)</label>
+                    <div id="participantList"
+                        class="h-48 md:h-64 overflow-y-auto p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft">
+                        <p class="text-gray-400 text-center py-4 md:py-8 text-xs md:text-sm">명단을 등록해주세요</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Link -->
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
+                <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>링크 공유
+            </h2>
+            <div class="flex gap-2">
+                <input type="text" id="shareLink" readonly
+                    value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
+                    class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
+                <button onclick="copyLink()"
+                    class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
+                    <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">복사</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Signature List -->
+        <div class="clay-card p-4 md:p-6">
+            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3 md:mb-4">
+                <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
+            </h2>
+            {% if signatures %}
+            <div class="overflow-x-auto -mx-4 md:mx-0">
+                <table class="w-full text-sm md:text-base text-left">
+                    <thead class="border-b border-gray-200 text-gray-500">
+                        <tr>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm">#</th>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm">이름</th>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm">서명</th>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">시간</th>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm text-center">삭제</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sig in signatures %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
+                            <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{{ forloop.counter }}</td>
+                            <td
+                                class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">
+                                {{ sig.participant_name }}</td>
+                            <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명"
+                                    class="h-6 md:h-10"></td>
+                            <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{
+                                sig.created_at|date:"H:i" }}</td>
+                            <td class="py-2 px-2 md:px-4 text-center">
+                                <button onclick="deleteSignature('{{ sig.pk }}')"
+                                    class="text-red-400 hover:text-red-600 p-1">
+                                    <i class="fa-solid fa-trash text-xs md:text-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center py-8 md:py-12 text-gray-400 text-sm md:text-base">아직 서명이 없습니다</p>
+            {% endif %}
+        </div>
     </div>
 </main>
 {% endblock %}
