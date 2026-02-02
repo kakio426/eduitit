@@ -74,13 +74,36 @@ def main_view(request):
     if service and request.user.is_authenticated:
         is_premium = request.user.owned_products.filter(product=service).exists()
 
+    # Statistics for main page
+    from django.db.models import Count
+    total_count = SsambtiResult.objects.count()
+    
+    stats_qs = SsambtiResult.objects.values('mbti_type', 'animal_name') \
+        .annotate(count=Count('id')) \
+        .order_by('-count')[:5]
+    
+    stats = []
+    if total_count > 0:
+        for item in stats_qs:
+            percentage = int((item['count'] / total_count) * 100)
+            theme_color = MBTI_COLOR_THEMES.get(item['mbti_type'], MBTI_COLOR_THEMES['ENFP'])
+            stats.append({
+                'mbti_type': item['mbti_type'],
+                'animal_name': item['animal_name'],
+                'count': item['count'],
+                'percentage': percentage,
+                'theme': theme_color
+            })
+
     context = {
         'service': service,
         'title': service.title if service else "쌤BTI",
         'icon': "🦁", 
         'description': "12가지 질문으로 알아보는 디테일한 교실 속 자아 찾기!",
         'is_premium': is_premium,
-        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY
+        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
+        'stats': stats,
+        'total_participants': total_count
     }
     return render(request, 'ssambti/main.html', context)
 
