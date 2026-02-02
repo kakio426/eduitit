@@ -156,3 +156,43 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Claude가 자주 실수하는 것 (여기에 추가)
 <!-- Claude가 실수할 때마다 여기에 규칙 추가 -->
+
+### ⚠️ Django 설정 파일 동기화 (중요!)
+
+**문제 상황**:
+- 로컬에서는 작동하는데 프로덕션(Railway/Heroku)에서 안 되는 경우
+- 특히 미들웨어, context processor, INSTALLED_APPS 등 설정 관련
+
+**원인**:
+```
+로컬: config/settings.py 사용
+프로덕션: config/settings_production.py 사용 (wsgi.py에서 지정)
+```
+
+**해결 규칙**:
+1. **Django에서 기능 추가 시 반드시 체크**:
+   - `settings.py`에 추가했으면
+   - `settings_production.py`에도 동일하게 추가
+
+2. **특히 주의할 설정들**:
+   - `MIDDLEWARE` - 미들웨어 추가 시
+   - `INSTALLED_APPS` - 앱 추가 시
+   - `TEMPLATES['OPTIONS']['context_processors']` - context processor 추가 시
+   - `LOGGING` - 로깅 설정 변경 시
+
+3. **확인 방법**:
+   ```bash
+   # 두 파일 비교
+   diff config/settings.py config/settings_production.py
+   ```
+
+**실제 사례 (2026-02-02)**:
+- 방문자 카운터가 10번 넘게 수정해도 0명
+- 코드는 완벽, 로컬에서 정상 작동
+- 문제: `settings_production.py`에 미들웨어/context processor 누락
+- 해결: 두 설정 파일 동기화
+
+**베스트 프랙티스**:
+- 공통 설정은 `settings_base.py`로 분리
+- 환경별 차이만 각 설정 파일에 작성
+- 또는 settings.py 하나만 사용하고 환경변수로 분기
