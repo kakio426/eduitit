@@ -93,7 +93,14 @@
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden shadow-inner">
                     <div class="bg-gradient-to-r h-3 md:h-4 rounded-full transition-all duration-1000 ease-out transform -translate-x-full group-hover:translate-x-0"
-                        style="width: {{ item.percentage }}%; background-color: {{ item.theme.primary }}; --tw-gradient-from: {{ item.theme.primary }}; --tw-gradient-to: {{ item.theme.accent }}; animation: slideRight 1s ease-out forwards; animation-delay: {{ forloop.counter }}00ms;">
+                        style="
+                            width: {{ item.percentage }}%;
+                            background-color: {{ item.theme.primary }};
+                            --tw-gradient-from: {{ item.theme.primary }};
+                            --tw-gradient-to: {{ item.theme.accent }};
+                            animation: slideRight 1s ease-out forwards;
+                            animation-delay: 0.{{ forloop.counter }}s;
+                        ">
                     </div>
                 </div>
             </div>

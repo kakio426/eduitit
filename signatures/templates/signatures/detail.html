@@ -141,10 +141,13 @@
                     <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
                     <div class="flex flex-wrap gap-2">
                         {% for participant in item.exact_matches %}
-                        <button onclick="matchSignature({{ item.signature.id }}, {{ participant.id }})"
+                        <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
                             class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
-                            {{ participant.name }}{% if participant.affiliation %} ({{ participant.affiliation }}){%
-                            endif %}와 연결
+                            <span>{{ participant.name }}</span>
+                            {% if participant.affiliation %}
+                            <span class="font-normal">({{ participant.affiliation }})</span>
+                            {% endif %}
+                            <span>와 연결</span>
                         </button>
                         {% endfor %}
                     </div>
