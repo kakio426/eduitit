@@ -32,4 +32,8 @@ urlpatterns = [
     path('<uuid:uuid>/participants/', views.get_expected_participants, name='get_participants'),
     path('<uuid:uuid>/participants/<int:participant_id>/delete/', views.delete_expected_participant, name='delete_participant'),
     path('<uuid:uuid>/signatures/<int:signature_id>/match/', views.match_signature, name='match_signature'),
+
+    # 참석자 명단 양식 다운로드
+    path('template/csv/', views.download_participant_template, {'format': 'csv'}, name='download_template_csv'),
+    path('template/excel/', views.download_participant_template, {'format': 'excel'}, name='download_template_excel'),
 ]

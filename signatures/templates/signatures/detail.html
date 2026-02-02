@@ -193,6 +193,7 @@
             <div class="flex-1">
                 <h2 class="text-2xl font-bold text-gray-700 mb-3">
                     <i class="fa-solid fa-users text-purple-500 mr-2"></i>예상 참석자 명단 관리
+                    <span class="text-lg text-gray-400 font-normal">(선택)</span>
                 </h2>
                 <p class="text-lg text-gray-600 mb-4">
                     연수 참석 예정자 명단을 미리 등록하면 출석 관리가 더욱 편리해집니다.
@@ -272,8 +273,15 @@
             <!-- Inputs -->
             <div>
                 <div class="mb-6">
-                    <label class="text-lg font-bold mb-2 block">텍스트로 입력</label>
-                    <textarea id="bulkInput" rows="5" placeholder="이름, 소속 (한 줄에 한 명)"
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-lg font-bold">텍스트로 입력</label>
+                        <button onclick="fillExample()" type="button"
+                            class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
+                            <i class="fa-solid fa-clipboard-list text-xs"></i>
+                            <span>예시 채우기</span>
+                        </button>
+                    </div>
+                    <textarea id="bulkInput" rows="5" placeholder="이름, 소속 (한 줄에 한 명)&#10;예: 홍길동, 1-1"
                         class="w-full p-4 rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
                     <button onclick="submitBulkInput()"
                         class="mt-3 px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition">
@@ -281,7 +289,21 @@
                     </button>
                 </div>
                 <div class="pt-6 border-t border-gray-100">
-                    <label class="text-lg font-bold mb-2 block">파일로 업로드 (.csv, .xlsx)</label>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="text-lg font-bold">파일로 업로드 (.csv, .xlsx)</label>
+                        <div class="flex gap-2">
+                            <a href="{% url 'signatures:download_template_csv' %}"
+                                class="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
+                                <i class="fa-solid fa-download text-xs"></i>
+                                <span>CSV 양식</span>
+                            </a>
+                            <a href="{% url 'signatures:download_template_excel' %}"
+                                class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
+                                <i class="fa-solid fa-download text-xs"></i>
+                                <span>Excel 양식</span>
+                            </a>
+                        </div>
+                    </div>
                     <div class="flex gap-2">
                         <input type="file" id="participantFile" accept=".csv, .xlsx"
                             class="flex-1 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
@@ -290,7 +312,10 @@
                             <i class="fa-solid fa-upload mr-1"></i>
                         </button>
                     </div>
-                    <p class="text-xs text-gray-400 mt-2">첫 번째 열: 이름, 두 번째 열: 소속</p>
+                    <p class="text-xs text-gray-400 mt-2">
+                        <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>
+                        양식 파일을 다운로드하여 작성 후 업로드하세요 (첫 번째 열: 이름, 두 번째 열: 소속)
+                    </p>
                 </div>
             </div>
             <!-- List -->
@@ -368,6 +393,28 @@
     function toggleGuide() {
         const guide = document.getElementById('participantGuide');
         guide.classList.toggle('hidden');
+    }
+
+    function fillExample() {
+        const textarea = document.getElementById('bulkInput');
+        const exampleText = `홍길동, 1-1
+김철수, 1-2
+박영희, 교사
+이순신, 2-1
+최영, 3-1`;
+
+        if (textarea.value.trim() && !confirm('기존 내용을 지우고 예시를 채우시겠습니까?')) {
+            return;
+        }
+
+        textarea.value = exampleText;
+        textarea.focus();
+
+        // 살짝 애니메이션 효과
+        textarea.style.backgroundColor = '#EEF2FF';
+        setTimeout(() => {
+            textarea.style.backgroundColor = '';
+        }, 300);
     }
 
     function copyLink() {

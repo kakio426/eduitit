@@ -1,10 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from .models import TrainingSession, Signature
 from .forms import TrainingSessionForm, SignatureForm
+import csv
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from io import BytesIO
 
 
 @login_required
@@ -536,11 +540,94 @@ def match_signature(request, uuid, signature_id):
         participant.matched_signature = signature
         participant.is_confirmed = True
         participant.save()
-        
+
         return JsonResponse({
             'success': True,
             'message': f'{signature.participant_name} → {participant.name} 연결 완료'
         })
-    
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+def download_participant_template(request, format='csv'):
+    """예상 참석자 명단 양식 다운로드 (CSV 또는 Excel)"""
+
+    if format == 'csv':
+        # CSV 파일 생성
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="참석자명단_양식.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['이름', '소속/학년반'])
+        writer.writerow(['홍길동', '1-1'])
+        writer.writerow(['김철수', '1-2'])
+        writer.writerow(['박영희', '교사'])
+        writer.writerow(['이순신', '2-1'])
+
+        return response
+
+    elif format == 'excel':
+        # Excel 파일 생성
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "참석자 명단"
+
+        # 헤더 스타일
+        header_fill = PatternFill(start_color="7B68EE", end_color="7B68EE", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        # 헤더 작성
+        ws['A1'] = '이름'
+        ws['B1'] = '소속/학년반'
+
+        for cell in ['A1', 'B1']:
+            ws[cell].fill = header_fill
+            ws[cell].font = header_font
+            ws[cell].alignment = header_alignment
+
+        # 예시 데이터
+        example_data = [
+            ['홍길동', '1-1'],
+            ['김철수', '1-2'],
+            ['박영희', '교사'],
+            ['이순신', '2-1'],
+        ]
+
+        for idx, row in enumerate(example_data, start=2):
+            ws[f'A{idx}'] = row[0]
+            ws[f'B{idx}'] = row[1]
+
+        # 열 너비 조정
+        ws.column_dimensions['A'].width = 15
+        ws.column_dimensions['B'].width = 20
+
+        # 안내 시트 추가
+        ws_guide = wb.create_sheet("사용 안내")
+        ws_guide['A1'] = "📋 참석자 명단 작성 안내"
+        ws_guide['A1'].font = Font(bold=True, size=14, color="7B68EE")
+
+        ws_guide['A3'] = "1. 첫 번째 열에 참석자 이름을 입력하세요."
+        ws_guide['A4'] = "2. 두 번째 열에 소속이나 학년반을 입력하세요."
+        ws_guide['A5'] = "3. 헤더(첫 번째 행)는 삭제하지 마세요."
+        ws_guide['A6'] = "4. 예시 데이터는 삭제하고 실제 데이터를 입력하세요."
+        ws_guide['A7'] = "5. 완성 후 파일을 저장하고 업로드하세요."
+
+        ws_guide.column_dimensions['A'].width = 60
+
+        # 파일 저장
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="참석자명단_양식.xlsx"'
+
+        return response
+
+    else:
+        return HttpResponse("Invalid format", status=400)
