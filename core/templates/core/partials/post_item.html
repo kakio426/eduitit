@@ -5,13 +5,13 @@
         <div class="flex items-center gap-3">
             <div
                 class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shadow-sm">
-                {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|slice:":1" }}{%else%}{{post.author.username|slice:":1" }}{% endif %}
+                {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|slice:":1" }}{% else %}{{post.author.username|slice:":1" }}{% endif %}
             </div>
             <div>
                 <p class="font-bold text-slate-700 text-sm flex items-center gap-1">
-                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{%else%}{{post.author.username }}{% endif %}
+                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{post.author.username }}{% endif %}
                     {% if post.author.is_staff %}
-                    <span class="text-xs text-yellow-500" title="관리자">👑</span>
+                    <span class="text-xs text-indigo-500" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
                     {% endif %}
                 </p>
                 <p class="text-xs text-slate-400">
@@ -41,8 +41,8 @@
         {% endif %}
     </div>
 
-    <!-- Collapsible Body for Mobile -->
-    <div id="post-body-{{ post.id }}" class="{% if not is_first %}hidden md:block{% endif %}">
+    <!-- Content Body -->
+    <div id="post-body-{{ post.id }}">
         <!-- Content -->
         <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words">{{ post.content }}</p>
 
@@ -57,8 +57,7 @@
         <div class="flex items-center gap-4 py-3 border-t border-slate-50">
             {% if user.is_authenticated %}
             <button hx-post="{% url 'post_like' post.id %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
-                class="flex items-center gap-2 text-sm font-medium transition-colors
-                           {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}">
+                class="flex items-center gap-2 text-sm font-medium transition-colors {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}">
                 <i class="{% if user in post.likes.all %}ph-fill{% else %}ph{% endif %} ph-heart text-lg"></i>
                 <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
             </button>
@@ -109,12 +108,4 @@
         </div>
         {% endif %}
     </div>
-
-    <!-- Show More Button (Mobile Only) -->
-    {% if not is_first %}
-    <button onclick="document.getElementById('post-body-{{ post.id }}').classList.remove('hidden'); this.remove()"
-        class="w-full text-center py-2 text-slate-400 text-sm font-medium hover:text-indigo-600 md:hidden border-t border-slate-50 mt-1">
-        더 보기 <i class="ph ph-caret-down ml-1"></i>
-    </button>
-    {% endif %}
 </div>

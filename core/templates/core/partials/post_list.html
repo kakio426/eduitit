@@ -1,5 +1,28 @@
 {% for post in posts %}
-{% include 'core/partials/post_item.html' with is_first=forloop.first %}
+{% if forloop.first %}
+{% include 'core/partials/post_item.html' with is_first=True %}
+{% if posts.count > 1 %}
+<div class="md:hidden text-center my-3 relative group">
+    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+        <div class="w-full border-t border-indigo-100"></div>
+    </div>
+    <div class="relative flex justify-center">
+        <button
+            onclick="document.getElementById('older-posts-container').classList.remove('hidden'); this.closest('.group').remove()"
+            class="bg-white px-4 py-1.5 text-xs font-bold text-slate-500 rounded-full border border-indigo-100 shadow-sm hover:text-indigo-600 hover:border-indigo-300 transition-all flex items-center gap-1.5 ring-4 ring-slate-50">
+            <span>이전 대화 보기</span>
+            <i class="ph-bold ph-caret-down"></i>
+        </button>
+    </div>
+</div>
+<div id="older-posts-container" class="hidden md:block space-y-3">
+    {% endif %}
+    {% else %}
+    {% include 'core/partials/post_item.html' with is_first=False %}
+    {% endif %}
+    {% if forloop.last and posts.count > 1 %}
+</div>
+{% endif %}
 {% empty %}
 <div class="text-center py-12 text-slate-400">
     <i class="ph ph-chat-circle-dots text-5xl mb-3 opacity-30"></i>

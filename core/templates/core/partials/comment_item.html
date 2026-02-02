@@ -8,7 +8,7 @@
             <span class="font-bold text-slate-700 text-xs">
                 {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname }}{% else %}{{comment.author.username }}{% endif %}
                 {% if comment.author.is_staff %}
-                <span class="text-xs text-yellow-500 ml-0.5" title="관리자">👑</span>
+                <span class="text-xs text-indigo-500 ml-0.5" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
                 {% endif %}
             </span>
             <span class="text-[10px] text-slate-400">
