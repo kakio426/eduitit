@@ -1,10 +1,13 @@
 from .models import VisitorLog
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(',')[0].strip()
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
@@ -19,21 +22,20 @@ class VisitorTrackingMiddleware:
             ip = get_client_ip(request)
             if not ip:
                 ip = '0.0.0.0' # Fallback for unknown IPs
-                
+
             today = timezone.localdate()
-            
+
             # Check session to avoid DB hit on every request
             session_key = f'visitor_recorded_{today}'
             if not request.session.get(session_key):
                 try:
                     # Use get_or_create to avoid duplicates for the same IP on the same day
-                    VisitorLog.objects.get_or_create(ip_address=ip, visit_date=today)
+                    obj, created = VisitorLog.objects.get_or_create(ip_address=ip, visit_date=today)
                     request.session[session_key] = True
-                    # Optional: Clean up old session keys if needed
+                    if created:
+                        logger.info(f"New visitor recorded: {ip} on {today}")
                 except Exception as e:
-                    # Still fail silently but you might want to log this in a real prod env
-                    # print(f"VisitorLog Error: {e}")
-                    pass
-        
+                    logger.error(f"VisitorLog Error: {e}", exc_info=True)
+
         response = self.get_response(request)
         return response

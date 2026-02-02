@@ -1,5 +1,8 @@
 from .models import VisitorLog
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 def visitor_counts(request):
     """
@@ -9,19 +12,16 @@ def visitor_counts(request):
     try:
         today = timezone.localdate()
         today_count = VisitorLog.objects.filter(visit_date=today).count()
-        # total_count = VisitorLog.objects.count() # This is row count (daily unique hits sum)
-        
-        # Or if we want total unique IPs ever:
-        # total_count = VisitorLog.objects.values('ip_address').distinct().count()
-        
-        # Let's stick to "Cumulative Visits" (Sum of daily uniques) as it looks better (bigger number)
         total_count = VisitorLog.objects.count()
-        
+
+        logger.debug(f"Visitor counts - Today: {today_count}, Total: {total_count}")
+
         return {
             'today_visitor_count': today_count,
             'total_visitor_count': total_count
         }
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error fetching visitor counts: {e}", exc_info=True)
         return {
             'today_visitor_count': 0,
             'total_visitor_count': 0
