@@ -70,6 +70,59 @@
         {{ result_html|safe }}
     </div>
 
+    <!-- 2.5 Teacher Statistics Graph -->
+    <div class="clay-card p-6 md:p-8 bg-white/60 text-left">
+        <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 font-title flex items-center gap-2">
+            <span class="text-2xl md:text-3xl">📊</span> 전체 참여 교사 통계 <span
+                class="text-sm font-normal text-gray-500 ml-2">(총 {{ total_participants }}명 참여)</span>
+        </h3>
+
+        <div class="space-y-4">
+            {% if total_participants > 0 %}
+            {% for item in stats %}
+            <div class="group">
+                <div class="flex justify-between items-end mb-1">
+                    <span class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                        <span class="text-xl inline-block w-8 text-center">{{ forloop.counter }}</span>
+                        <span class="text-2xl">{{ item.theme.emoji }}</span>
+                        {{ item.animal_name }}
+                        <span class="text-sm text-gray-400 font-normal ml-1">({{ item.mbti_type }})</span>
+                    </span>
+                    <span class="text-sm font-bold text-gray-500">
+                        {{ item.count }}명 <span class="text-purple-600 ml-1">({{ item.percentage }}%)</span>
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden shadow-inner">
+                    <div class="bg-gradient-to-r h-3 md:h-4 rounded-full transition-all duration-1000 ease-out transform -translate-x-full group-hover:translate-x-0"
+                        style="width: {{ item.percentage }}%; background-color: {{ item.theme.primary }}; --tw-gradient-from: {{ item.theme.primary }}; --tw-gradient-to: {{ item.theme.accent }}; animation: slideRight 1s ease-out forwards; animation-delay: {{ forloop.counter }}00ms;">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-10 text-gray-400">
+                <i class="fa-solid fa-chart-simple text-4xl mb-3"></i>
+                <p>아직 데이터가 충분하지 않아요! <br>첫 번째 주인공이 되어주세요.</p>
+            </div>
+            {% endif %}
+        </div>
+        <div class="mt-6 text-right text-xs text-gray-400">
+            * 로그인한 교사들의 결과를 바탕으로 집계된 데이터입니다.
+        </div>
+    </div>
+
+    <style>
+        @keyframes slideRight {
+            from {
+                transform: translateX(-100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+    </style>
+
     <!-- 3. 공유 액션 카드 -->
     <div class="clay-card p-8 bg-white/50 border border-white/60 text-center">
 
