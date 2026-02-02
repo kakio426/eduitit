@@ -45,9 +45,7 @@
                                 class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span
                                 class="truncate">{{ session.location }}</span></p>
                         <p class="flex items-center"><i
-                                class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{
-                                signatures.count }}명{% if has_duplicates %}<span
-                                    class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
+                                class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{signatures.count}}명{% if has_duplicates %}<span class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
                     </div>
                     {% if session.description %}
                     <p class="mt-3 text-sm md:text-base text-gray-500">{{ session.description }}</p>
@@ -112,8 +110,7 @@
         {% if has_unmatched %}
         <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-orange-50/50">
             <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-                <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{
-                unmatched_suggestions|length }})
+                <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{unmatched_suggestions|length }})
             </h2>
             <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
             <div class="space-y-4">
@@ -122,8 +119,7 @@
                     <div class="flex items-start justify-between mb-3">
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
-                                <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name
-                                    }}</span>
+                                <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name}}</span>
                                 {% if item.signature.participant_affiliation %}
                                 <span class="text-gray-500">({{ item.signature.participant_affiliation }})</span>
                                 {% endif %}
@@ -172,8 +168,7 @@
                 {% for dup_group in duplicates %}
                 <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
                     <p class="font-bold text-gray-700 mb-3">
-                        {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{
-                        dup_group|length }}번 서명
+                        {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{dup_group|length }}번 서명
                     </p>
                     <div class="grid md:grid-cols-2 gap-3">
                         {% for sig in dup_group %}
@@ -351,8 +346,7 @@
                                 {{ sig.participant_name }}</td>
                             <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명"
                                     class="h-6 md:h-10"></td>
-                            <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{
-                                sig.created_at|date:"H:i" }}</td>
+                            <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{sig.created_at|date:"H:i" }}</td>
                             <td class="py-2 px-2 md:px-4 text-center">
                                 <button onclick="deleteSignature('{{ sig.pk }}')"
                                     class="text-red-400 hover:text-red-600 p-1">
