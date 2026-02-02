@@ -25,4 +25,11 @@ urlpatterns = [
     path('api/my_signatures/', views.get_my_signatures_api, name='get_my_signatures_api'),
     path('styles/<int:pk>/delete/', views.delete_style_api, name='delete_style_api'),
     path('maker/', views.signature_maker, name='maker'),
+    
+    # Expected Participants (Phase 2)
+    path('<uuid:uuid>/participants/add/', views.add_expected_participants, name='add_participants'),
+    path('<uuid:uuid>/participants/upload/', views.upload_participants_file, name='upload_participants_file'),
+    path('<uuid:uuid>/participants/', views.get_expected_participants, name='get_participants'),
+    path('<uuid:uuid>/participants/<int:participant_id>/delete/', views.delete_expected_participant, name='delete_participant'),
+    path('<uuid:uuid>/signatures/<int:signature_id>/match/', views.match_signature, name='match_signature'),
 ]

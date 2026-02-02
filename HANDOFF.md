@@ -1,11 +1,149 @@
 # 작업 인계 문서
 
-> 최근 업데이트: 2026-02-01
-> 최근 세션: eduitit SNS 기능 확장 구현
+> 최근 업데이트: 2026-02-02
+> 최근 세션: 방문자 카운터 기능 디버깅 (진행 중)
 
 ---
 
-## 🆕 최신 작업 (2026-02-01)
+## 🆕 최신 작업 (2026-02-02)
+
+### 방문자 카운터 기능 구현 및 디버깅 (진행 중) ⚠️
+
+**문제 상황**: 방문자 카운터가 화면에 0으로 표시되는 문제
+
+#### 진행 상황:
+
+**✅ 완료된 작업**:
+
+1. **VisitorLog 모델 및 마이그레이션 생성**
+   - `core/models.py`: VisitorLog 모델 (IP 주소, 방문 날짜, unique_together 제약)
+   - `core/migrations/0007_visitorlog.py`: 초기 마이그레이션
+   - `core/migrations/0008_alter_visitorlog_visit_date.py`: visit_date 필드 수정
+   - `core/migrations/0009_alter_visitorlog_visit_date.py`: 추가 필드 수정
+
+2. **미들웨어 구현**
+   - `core/middleware.py`: VisitorTrackingMiddleware
+   - IP 주소 감지 (HTTP_X_FORWARDED_FOR 지원)
+   - 세션 기반 중복 방지 (하루 한 번만 기록)
+   - static/media/admin 경로 제외
+   - **settings.py에 등록 완료** (98번 줄)
+
+3. **Context Processor 구현**
+   - `core/context_processors.py`: visitor_counts()
+   - today_visitor_count, total_visitor_count 반환
+   - **settings.py에 등록 완료** (115번 줄)
+
+4. **템플릿 표시**
+   - `core/templates/base.html`: 217-224줄 (데스크톱), 310-317줄 (모바일)
+   - 오렌지색 아이콘 (오늘 방문자)
+   - 보라색 아이콘 (전체 방문자)
+
+5. **진단 도구 추가**
+   - `core/management/commands/check_visitors.py`: 데이터베이스 상태 확인 명령어
+   - Procfile에 배포 시 자동 실행 추가
+
+6. **로깅 설정 추가**
+   - `config/settings.py`: LOGGING 딕셔너리 추가 (352-383줄)
+   - core.middleware와 core.context_processors 로거 설정
+   - gunicorn 로그 레벨 설정: `--log-level info --access-logfile -`
+
+7. **Procfile 수정**
+   - 중복 `web:` 라인 제거 (원인: 첫 번째 주석만 실행되어 마이그레이션 안 됨)
+   - gunicorn 로그 옵션 추가
+
+**🔍 발견된 문제**:
+
+1. **프로덕션 환경에서 로그 미출력**
+   - HTTP 요청은 들어오지만 `[INFO] [VISITOR]` 로그가 전혀 없음
+   - logger.info()가 gunicorn에서 출력되지 않는 문제
+
+2. **로컬 환경 테스트 결과**
+   - ✅ 미들웨어 정상 작동 확인
+   - ✅ 데이터베이스 기록 정상 (5개 로그 존재)
+   - ✅ logger.info() 출력 정상
+   - ✅ print 문 출력 정상
+   - **결론**: 코드는 완벽하게 작동함, 문제는 gunicorn 로깅 설정
+
+**🛠️ 현재 상태 (미완료)**:
+
+- print 문을 추가하여 디버깅용으로 사용 (logger 대신)
+- print는 gunicorn에서도 항상 stdout으로 출력됨
+- **아직 push 하지 않음** (사용자 요청으로 대기 중)
+
+#### 다음에 해야 할 일:
+
+**즉시 실행 필요**:
+
+1. **print 문이 포함된 코드 push**
+   ```bash
+   cd eduitit
+   git add core/middleware.py
+   git commit -m "debug: 방문자 미들웨어에 print 디버깅 추가"
+   git push origin main
+   ```
+
+2. **Railway 배포 로그 확인**
+   - `[VISITOR DEBUG]` 로그가 보이는지 확인
+   - 만약 print 로그도 안 보이면 → 미들웨어가 실행되지 않는 문제
+   - print 로그는 보이는데 logger 로그는 안 보이면 → 로깅 설정 문제
+
+3. **방문자 카운터 작동 확인**
+   - eduitit.site 방문
+   - 헤더의 오렌지색/보라색 숫자 확인
+   - Railway 로그에서 `[VISITOR DEBUG]` 메시지 확인
+
+**추가 디버깅 (필요 시)**:
+
+- gunicorn 로그 핸들러 추가 설정
+- Django의 LOGGING을 gunicorn 설정으로 이동
+- 또는 print 문을 그대로 사용 (가장 확실함)
+
+#### 수정된 파일:
+
+**신규 생성 (3개)**:
+1. `core/management/__init__.py`
+2. `core/management/commands/__init__.py`
+3. `core/management/commands/check_visitors.py`
+
+**신규 마이그레이션 (3개)**:
+1. `core/migrations/0007_visitorlog.py`
+2. `core/migrations/0008_alter_visitorlog_visit_date.py`
+3. `core/migrations/0009_alter_visitorlog_visit_date.py`
+
+**수정 (6개)**:
+1. `config/settings.py` - MIDDLEWARE, TEMPLATES, LOGGING 추가
+2. `core/middleware.py` - VisitorTrackingMiddleware 구현 + print 디버깅
+3. `core/context_processors.py` - visitor_counts() 구현 + 로깅
+4. `core/models.py` - VisitorLog 모델 추가
+5. `core/templates/base.html` - 방문자 카운터 표시 (데스크톱/모바일)
+6. `Procfile` - 중복 라인 제거, gunicorn 로그 설정, check_visitors 추가
+
+#### 로컬 테스트 결과:
+
+```bash
+Testing visitor middleware...
+[VISITOR DEBUG] Path: / | IP: 127.0.0.1 | Already recorded: False
+[VISITOR DEBUG] DB operation - Created: False | IP: 127.0.0.1 | Date: 2026-02-02
+Middleware executed successfully!
+Total visitor logs: 5
+[INFO] 2026-02-02 13:50:49,182 core.middleware - [VISITOR] Path: / | IP: 127.0.0.1
+```
+
+**결론**: 코드는 정상 작동, 프로덕션 환경의 로깅 설정만 해결하면 됨
+
+#### 알려진 이슈:
+
+1. **gunicorn에서 logger.info() 미출력**
+   - 원인: Django LOGGING 설정이 gunicorn에서 무시됨
+   - 해결: print 문 사용 (임시) 또는 gunicorn 로그 핸들러 추가 설정 (영구)
+
+2. **Railway 환경에서 방문자 데이터 0개**
+   - 원인: 미들웨어가 실행되지 않거나 로그만 보이지 않는 것
+   - 확인 필요: print 디버깅으로 실제 실행 여부 확인
+
+---
+
+## 🆕 이전 작업 (2026-02-01)
 
 ### eduitit SNS 기능 확장 구현 완료 ✅
 

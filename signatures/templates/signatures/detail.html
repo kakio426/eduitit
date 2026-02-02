@@ -35,10 +35,17 @@
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-xl text-gray-600">
-                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{ session.instructor }}</p>
-                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H:i" }}</p>
-                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{ session.location }}</p>
-                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{ signatures.count }}명</p>
+                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{
+                            session.instructor }}</p>
+                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{
+                            session.datetime|date:"Y년 m월 d일 H:i" }}</p>
+                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{
+                            session.location }}</p>
+                        <p>
+                            <i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{
+                            signatures.count }}명
+                            {% if has_duplicates %}<span class="text-orange-500 text-sm">(중복 의심)</span>{% endif %}
+                        </p>
                     </div>
                     {% if session.description %}
                     <p class="mt-4 text-xl text-gray-500">{{ session.description }}</p>
@@ -61,74 +68,235 @@
             </div>
         </div>
 
-        <!-- Share Link -->
-        <div class="clay-card p-6 mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-3">
-                <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i>서명 링크 공유
+        <!-- Progress Indicator -->
+        {% if session.expected_count %}
+        <div class="clay-card p-6 mb-8 bg-blue-50/50">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">
+                <i class="fa-solid fa-chart-line text-purple-500 mr-2"></i>서명 진행률
             </h2>
-            <div class="flex gap-3">
-                <input type="text" id="shareLink" readonly
-                    value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
-                    class="flex-1 px-4 py-3 rounded-xl shadow-clay-inner bg-bg-soft text-xl text-gray-600">
-                <button onclick="copyLink()"
-                    class="px-6 py-3 clay-card text-xl font-bold text-purple-600 hover:shadow-clay-hover transition">
-                    <i class="fa-solid fa-copy mr-1"></i> 복사
-                </button>
+            <div class="flex items-center gap-6">
+                <div class="flex-1">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-xl text-gray-600">
+                            {{ signatures.count }} / {{ session.expected_count }}명
+                        </span>
+                        <span class="text-xl font-bold text-purple-600">
+                            {% widthratio signatures.count session.expected_count 100 %}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-6">
+                        <div class="bg-purple-500 h-6 rounded-full transition-all"
+                            style="width: {% widthratio signatures.count session.expected_count 100 %}%">
+                        </div>
+                    </div>
+                </div>
+                {% if signatures.count < session.expected_count %} <div class="text-center">
+                    <div class="text-3xl text-orange-500 mb-1">⚠️</div>
+                    <div class="text-lg font-bold text-orange-600">
+                        {{ session.expected_count|add:"-"|add:signatures.count }}명 미서명
+                    </div>
             </div>
-            <p class="text-lg text-gray-400 mt-2">이 링크를 선생님들에게 공유하세요. 로그인 없이 서명할 수 있습니다.</p>
-        </div>
-
-        <!-- Signature List -->
-        <div class="clay-card p-6">
-            <h2 class="text-3xl font-bold text-gray-700 mb-6">
-                <i class="fa-solid fa-list-check text-purple-500 mr-2"></i>서명 목록 ({{ signatures.count }}명)
-            </h2>
-
-            {% if signatures %}
-            <div class="overflow-x-auto">
-                <table class="w-full text-xl">
-                    <thead>
-                        <tr class="border-b-2 border-gray-200">
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">번호</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">이름</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">서명</th>
-                            <th class="py-3 px-4 text-left text-gray-500 font-bold">서명 시간</th>
-                            <th class="py-3 px-4 text-center text-gray-500 font-bold">관리</th>
-                        </tr>
-                    </thead>
-                    <tbody id="signatureTable">
-                        {% for sig in signatures %}
-                        <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
-                            <td class="py-3 px-4 text-gray-600">{{ forloop.counter }}</td>
-                            <td class="py-3 px-4 font-bold text-gray-700">{{ sig.participant_name }}</td>
-                            <td class="py-3 px-4">
-                                <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[150px] object-contain">
-                            </td>
-                            <td class="py-3 px-4 text-gray-500">{{ sig.created_at|date:"H:i:s" }}</td>
-                            <td class="py-3 px-4 text-center">
-                                <button onclick="deleteSignature('{{ sig.pk }}')"
-                                    class="text-red-400 hover:text-red-600 transition">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            {% elif signatures.count == session.expected_count %}
+            <div class="text-center">
+                <div class="text-3xl text-green-500 mb-1">✅</div>
+                <div class="text-lg font-bold text-green-600">전원 완료!</div>
             </div>
             {% else %}
-            <div class="text-center py-12">
-                <i class="fa-solid fa-inbox text-5xl text-gray-300 mb-4"></i>
-                <p class="text-2xl text-gray-400">아직 서명이 없습니다</p>
+            <div class="text-center">
+                <div class="text-3xl text-blue-500 mb-1">📝</div>
+                <div class="text-lg font-bold text-blue-600">+{{ signatures.count|add:"-"|add:session.expected_count }}명
+                    추가</div>
             </div>
             {% endif %}
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Unmatched Signatures Warnings -->
+    {% if has_unmatched %}
+    <div class="clay-card p-6 mb-8 bg-orange-50/50">
+        <h2 class="text-2xl font-bold text-gray-700 mb-4">
+            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-2"></i>미매칭 서명 ({{ unmatched_suggestions|length
+            }}건)
+        </h2>
+        <p class="text-gray-600 mb-4">명단과 연결되지 않은 서명입니다. 수동으로 연결하거나 삭제해주세요.</p>
+        <div class="space-y-4">
+            {% for item in unmatched_suggestions %}
+            <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name }}</span>
+                            {% if item.signature.participant_affiliation %}
+                            <span class="text-gray-500">({{ item.signature.participant_affiliation }})</span>
+                            {% endif %}
+                            <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
+                        </div>
+                        <img src="{{ item.signature.signature_data }}" alt="서명"
+                            class="h-16 max-w-[200px] object-contain border rounded p-1">
+                    </div>
+                </div>
+                {% if item.has_matches %}
+                <div class="mb-3">
+                    <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for participant in item.exact_matches %}
+                        <button onclick="matchSignature({{ item.signature.id }}, {{ participant.id }})"
+                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
+                            {{ participant.name }}{% if participant.affiliation %} ({{ participant.affiliation }}){%
+                            endif %}와 연결
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="flex gap-2">
+                    <button onclick="deleteSignature('{{ item.signature.pk }}')"
+                        class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
+                        <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Duplicate Signatures Warnings -->
+    {% if has_duplicates %}
+    <div class="clay-card p-6 mb-8 bg-yellow-50/50">
+        <h2 class="text-2xl font-bold text-gray-700 mb-4">
+            <i class="fa-solid fa-copy text-yellow-600 mr-2"></i>중복 서명 감지 ({{ duplicates|length }}건)
+        </h2>
+        <div class="space-y-4">
+            {% for dup_group in duplicates %}
+            <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
+                <p class="font-bold text-gray-700 mb-3">
+                    {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{
+                    dup_group|length }}번 서명
+                </p>
+                <div class="grid md:grid-cols-2 gap-3">
+                    {% for sig in dup_group %}
+                    <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                        <div>
+                            <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[150px] object-contain mb-1">
+                            <p class="text-sm text-gray-500">{{ sig.created_at|date:"H:i:s" }}</p>
+                        </div>
+                        <button onclick="deleteSignature('{{ sig.pk }}')"
+                            class="px-3 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-sm">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Expected Participants Management -->
+    <div class="clay-card p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-700 mb-4">
+            <i class="fa-solid fa-users text-purple-500 mr-2"></i>예상 참석자 명단 관리
+        </h2>
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Inputs -->
+            <div>
+                <div class="mb-6">
+                    <label class="text-lg font-bold mb-2 block">텍스트로 입력</label>
+                    <textarea id="bulkInput" rows="5" placeholder="이름, 소속 (한 줄에 한 명)"
+                        class="w-full p-4 rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
+                    <button onclick="submitBulkInput()"
+                        class="mt-3 px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition">
+                        <i class="fa-solid fa-plus mr-1"></i> 명단 등록
+                    </button>
+                </div>
+                <div class="pt-6 border-t border-gray-100">
+                    <label class="text-lg font-bold mb-2 block">파일로 업로드 (.csv, .xlsx)</label>
+                    <div class="flex gap-2">
+                        <input type="file" id="participantFile" accept=".csv, .xlsx"
+                            class="flex-1 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                        <button onclick="uploadFile()"
+                            class="px-6 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
+                            <i class="fa-solid fa-upload mr-1"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">첫 번째 열: 이름, 두 번째 열: 소속</p>
+                </div>
+            </div>
+            <!-- List -->
+            <div>
+                <label class="text-lg font-bold mb-2 block">등록된 명단 (<span id="participantCount">0</span>명)</label>
+                <div id="participantList" class="h-80 overflow-y-auto p-4 rounded-xl shadow-clay-inner bg-bg-soft">
+                    <p class="text-gray-400 text-center py-8">명단을 등록해주세요</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Link -->
+    <div class="clay-card p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-700 mb-3">
+            <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i>서명 링크 공유
+        </h2>
+        <div class="flex gap-3">
+            <input type="text" id="shareLink" readonly
+                value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
+                class="flex-1 px-4 py-3 rounded-xl shadow-clay-inner bg-bg-soft text-xl text-gray-600">
+            <button onclick="copyLink()"
+                class="px-6 py-3 clay-card text-xl font-bold text-purple-600 hover:shadow-clay-hover transition">
+                <i class="fa-solid fa-copy mr-1"></i> 복사
+            </button>
+        </div>
+    </div>
+
+    <!-- Signature List -->
+    <div class="clay-card p-6">
+        <h2 class="text-3xl font-bold text-gray-700 mb-6">
+            <i class="fa-solid fa-list-check text-purple-500 mr-2"></i>서명 목록 ({{ signatures.count }}명)
+        </h2>
+        {% if signatures %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-xl text-left">
+                <thead class="border-b-2 border-gray-200 text-gray-500">
+                    <tr>
+                        <th class="py-3 px-4">번호</th>
+                        <th class="py-3 px-4">이름</th>
+                        <th class="py-3 px-4">서명</th>
+                        <th class="py-3 px-4">시간</th>
+                        <th class="py-3 px-4 text-center">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sig in signatures %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
+                        <td class="py-3 px-4 text-gray-600">{{ forloop.counter }}</td>
+                        <td class="py-3 px-4 font-bold text-gray-700">{{ sig.participant_name }}</td>
+                        <td class="py-3 px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-10"></td>
+                        <td class="py-3 px-4 text-gray-500">{{ sig.created_at|date:"H:i:s" }}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center py-12 text-gray-400 text-2xl">아직 서명이 없습니다</p>
+        {% endif %}
+    </div>
     </div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    const sessionUuid = '{{ session.uuid }}';
+
     function copyLink() {
         const input = document.getElementById('shareLink');
         input.select();
@@ -137,41 +305,103 @@
     }
 
     function toggleActive() {
-        fetch('{% url "signatures:toggle" uuid=session.uuid %}', {
+        fetch(`/signatures/${sessionUuid}/toggle/`, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
-        })
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('statusBadge');
-                const text = document.getElementById('statusText');
-                if (data.is_active) {
-                    badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
-                    text.textContent = '활성';
-                } else {
-                    badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
-                    text.textContent = '비활성';
-                }
-            });
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        }).then(res => res.json()).then(data => {
+            const badge = document.getElementById('statusBadge');
+            const text = document.getElementById('statusText');
+            if (data.is_active) {
+                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
+                text.textContent = '활성';
+            } else {
+                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
+                text.textContent = '비활성';
+            }
+        });
     }
 
     function deleteSignature(pk) {
         if (!confirm('이 서명을 삭제하시겠습니까?')) return;
-
         fetch(`/signatures/signature/${pk}/delete/`, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById(`row-${pk}`).remove();
-                }
-            });
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        }).then(res => res.json()).then(data => {
+            if (data.success) location.reload();
+        });
     }
+
+    function submitBulkInput() {
+        const input = document.getElementById('bulkInput');
+        if (!input.value.trim()) return alert('명단을 입력해주세요.');
+        fetch(`/signatures/${sessionUuid}/participants/add/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ participants: input.value.trim() })
+        }).then(res => res.json()).then(data => {
+            if (data.success) { alert(data.message); input.value = ''; loadParticipants(); location.reload(); }
+        });
+    }
+
+    function uploadFile() {
+        const fileInput = document.getElementById('participantFile');
+        if (!fileInput.files[0]) return alert('파일을 선택해주세요.');
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        fetch(`/signatures/${sessionUuid}/participants/upload/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: formData
+        }).then(res => res.json()).then(data => {
+            if (data.success) { alert(data.message); loadParticipants(); location.reload(); }
+            else alert('오류: ' + data.error);
+        });
+    }
+
+    function loadParticipants() {
+        fetch(`/signatures/${sessionUuid}/participants/`).then(res => res.json()).then(data => {
+            const list = document.getElementById('participantList');
+            document.getElementById('participantCount').textContent = data.participants.length;
+            if (data.participants.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 text-center py-8">명단을 등록해주세요</p>';
+                return;
+            }
+            let html = '<div class="space-y-2">';
+            data.participants.forEach(p => {
+                html += `
+                <div class="flex items-center justify-between p-2 rounded hover:bg-white/50 transition">
+                    <div class="flex items-center gap-2">
+                        ${p.has_signed ? '<span class="text-green-600">✅</span>' : '<span class="text-orange-400">⏳</span>'}
+                        <span class="font-bold text-gray-700">${p.name}</span>
+                        <span class="text-gray-400 text-sm">${p.affiliation || ''}</span>
+                    </div>
+                    <button onclick="deleteParticipant(${p.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-sm"></i></button>
+                </div>`;
+            });
+            list.innerHTML = html + '</div>';
+        });
+    }
+
+    function deleteParticipant(id) {
+        if (!confirm('삭제하시겠습니까?')) return;
+        fetch(`/signatures/${sessionUuid}/participants/${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        }).then(res => res.json()).then(data => { if (data.success) loadParticipants(); });
+    }
+
+    function matchSignature(sigId, partId) {
+        if (!confirm('연결하시겠습니까?')) return;
+        fetch(`/signatures/${sessionUuid}/signatures/${sigId}/match/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ participant_id: partId })
+        }).then(res => res.json()).then(data => {
+            if (data.success) location.reload();
+            else alert('오류: ' + data.error);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadParticipants);
 </script>
 {% endblock %}

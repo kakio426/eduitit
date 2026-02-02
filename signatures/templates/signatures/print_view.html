@@ -155,28 +155,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sig in page.left_sigs %}
+                    {% for item in page.left_items %}
                     <tr>
-                        <td>{{ forloop.counter|add:page.left_rows.0|add:-1 }}</td>
-                        <td>{{ sig.participant_affiliation|default:"-" }}</td>
-                        <td class="font-bold">{{ sig.participant_name }}</td>
+                        <td>{{ forloop.counter|add:page.left_start_index|add:-1 }}</td>
+                        <td>{{ item.affiliation|default:"-" }}</td>
+                        <td class="font-bold">{{ item.name }}</td>
                         <td>
-                            {% if sig.signature_data %}
-                            <img src="{{ sig.signature_data }}" class="sig-img" alt="서명">
+                            {% if item.signature_data %}
+                            <img src="{{ item.signature_data }}" class="sig-img" alt="서명">
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
 
-                    {% for i in page.left_rows %}
-                    {% if forloop.counter > page.left_sigs|length %}
+                    {% for i in page.left_padding %}
                     <tr>
-                        <td>{{ i }}</td>
+                        <td>{{ i|add:page.left_start_index|add:page.left_items|length }}</td>
                         <td></td>
                         <td></td>
                         <td></td>
                     </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -192,28 +190,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sig in page.right_sigs %}
+                    {% for item in page.right_items %}
                     <tr>
-                        <td>{{ forloop.counter|add:page.right_rows.0|add:-1 }}</td>
-                        <td>{{ sig.participant_affiliation|default:"-" }}</td>
-                        <td class="font-bold">{{ sig.participant_name }}</td>
+                        <td>{{ forloop.counter|add:page.right_start_index|add:-1 }}</td>
+                        <td>{{ item.affiliation|default:"-" }}</td>
+                        <td class="font-bold">{{ item.name }}</td>
                         <td>
-                            {% if sig.signature_data %}
-                            <img src="{{ sig.signature_data }}" class="sig-img" alt="서명">
+                            {% if item.signature_data %}
+                            <img src="{{ item.signature_data }}" class="sig-img" alt="서명">
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
 
-                    {% for i in page.right_rows %}
-                    {% if forloop.counter > page.right_sigs|length %}
+                    {% for i in page.right_padding %}
                     <tr>
-                        <td>{{ i }}</td>
+                        <td>{{ i|add:page.right_start_index|add:page.right_items|length }}</td>
                         <td></td>
                         <td></td>
                         <td></td>
                     </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -221,7 +217,12 @@
 
         <!-- Footer -->
         <div class="mt-4 flex justify-between text-sm text-gray-600">
-            <span>참석인원 : 총 {{ total_count }}명</span>
+            <span>
+                참석인원 : 총 {{ total_count }}명
+                {% if unsigned_count > 0 %}
+                (서명 {{ signed_count }}명, 미서명 {{ unsigned_count }}명)
+                {% endif %}
+            </span>
             <span>출력일시 : {% now "Y. m. d. H:i" %}</span>
         </div>
     </div>

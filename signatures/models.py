@@ -26,6 +26,14 @@ class TrainingSession(models.Model):
 
     # Session status
     is_active = models.BooleanField('서명 받기 활성화', default=True)
+    
+    # Attendance tracking
+    expected_count = models.IntegerField(
+        '예상 참석 인원',
+        null=True,
+        blank=True,
+        help_text='입력 시 진행률을 실시간으로 확인할 수 있습니다'
+    )
 
     class Meta:
         verbose_name = '연수'
@@ -95,3 +103,55 @@ class SavedSignature(models.Model):
 
     def __str__(self):
         return f"{self.user.username}의 서명 ({self.created_at.strftime('%Y-%m-%d')})"
+
+
+class ExpectedParticipant(models.Model):
+    """예상 참석자 명단"""
+    training_session = models.ForeignKey(
+        TrainingSession,
+        on_delete=models.CASCADE,
+        related_name='expected_participants',
+        verbose_name='연수'
+    )
+    name = models.CharField('이름', max_length=100)
+    affiliation = models.CharField(
+        '소속/학년반',
+        max_length=100,
+        blank=True,
+        help_text='예: 1-1, 2-3, 교사'
+    )
+    
+    # Matching metadata
+    matched_signature = models.ForeignKey(
+        Signature,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='matched_expected',
+        verbose_name='매칭된 서명'
+    )
+    is_confirmed = models.BooleanField('매칭 확인', default=False)
+    match_note = models.CharField(
+        '매칭 메모',
+        max_length=200,
+        blank=True,
+        help_text='예: 오타 수정 (박영이 → 박영희)'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['name', 'affiliation']
+        unique_together = ('training_session', 'name', 'affiliation')
+        verbose_name = '예상 참석자'
+        verbose_name_plural = '예상 참석자 목록'
+    
+    def __str__(self):
+        if self.affiliation:
+            return f"{self.name} ({self.affiliation})"
+        return self.name
+    
+    @property
+    def has_signed(self):
+        """서명 완료 여부"""
+        return self.matched_signature is not None

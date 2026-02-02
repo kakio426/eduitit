@@ -7,7 +7,7 @@ class TrainingSessionForm(forms.ModelForm):
 
     class Meta:
         model = TrainingSession
-        fields = ['title', 'instructor', 'datetime', 'location', 'description', 'is_active']
+        fields = ['title', 'instructor', 'datetime', 'location', 'description', 'expected_count', 'is_active']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
@@ -29,6 +29,11 @@ class TrainingSessionForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none',
                 'rows': 3,
                 'placeholder': '연수에 대한 추가 설명 (선택사항)',
+            }),
+            'expected_count': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
+                'placeholder': '예: 50',
+                'min': '1',
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 rounded shadow-clay-inner accent-purple-500',
