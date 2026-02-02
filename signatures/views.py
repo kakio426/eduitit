@@ -600,6 +600,9 @@ def download_participant_template(request, format='csv'):
         for idx, row in enumerate(example_data, start=2):
             ws[f'A{idx}'] = row[0]
             ws[f'B{idx}'] = row[1]
+            # 텍스트 형식으로 명시 (날짜 자동 변환 방지)
+            ws[f'A{idx}'].number_format = '@'
+            ws[f'B{idx}'].number_format = '@'
 
         # 열 너비 조정
         ws.column_dimensions['A'].width = 15
