@@ -3,58 +3,58 @@
 {% block title %}{{ session.title }} - Eduitit{% endblock %}
 
 {% block content %}
-<main class="pt-28 pb-16 px-4 min-h-screen">
+<main class="pt-20 md:pt-28 pb-8 md:pb-16 px-3 md:px-4 min-h-screen">
     <div class="max-w-5xl mx-auto">
         <!-- Header -->
-        <div class="mb-6">
-            <a href="{% url 'signatures:list' %}" class="text-xl text-gray-500 hover:text-purple-600 transition">
-                <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
+        <div class="mb-3 md:mb-6">
+            <a href="{% url 'signatures:list' %}" class="text-base md:text-xl text-gray-500 hover:text-purple-600 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> 목록
             </a>
         </div>
 
         <!-- Messages -->
         {% if messages %}
         {% for message in messages %}
-        <div class="clay-card p-4 mb-6 bg-green-50 text-green-700 text-xl font-bold">
+        <div class="clay-card p-3 md:p-4 mb-3 md:mb-6 bg-green-50 text-green-700 text-base md:text-xl font-bold">
             <i class="fa-solid fa-check-circle mr-2"></i>{{ message }}
         </div>
         {% endfor %}
         {% endif %}
 
         <!-- Session Info Card -->
-        <div class="clay-card p-8 mb-8">
-            <div class="flex flex-col lg:flex-row justify-between gap-6">
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+            <div class="flex flex-col lg:flex-row justify-between gap-4">
                 <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-4">
-                        <h1 class="text-4xl font-bold text-gray-700">{{ session.title }}</h1>
+                    <div class="flex items-center flex-wrap gap-2 mb-3">
+                        <h1 class="text-xl md:text-3xl font-bold text-gray-700">{{ session.title }}</h1>
                         <button onclick="toggleActive()" id="statusBadge"
-                            class="px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+                            class="px-3 py-0.5 text-sm md:text-base rounded-full font-bold transition cursor-pointer {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
                             <i class="fa-solid fa-circle text-xs mr-1"></i>
                             <span id="statusText">{% if session.is_active %}활성{% else %}비활성{% endif %}</span>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-4 text-xl text-gray-600">
-                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{ session.instructor }}</p>
-                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H:i" }}</p>
-                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{ session.location }}</p>
-                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{ signatures.count }}명{% if has_duplicates %}<span class="text-orange-500 text-sm">(중복 의심)</span>{% endif %}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-sm md:text-base text-gray-600">
+                        <p class="flex items-center"><i class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.instructor }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-calendar mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.datetime|date:"m.d H:i" }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.location }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{ signatures.count }}명{% if has_duplicates %}<span class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
                     </div>
                     {% if session.description %}
-                    <p class="mt-4 text-xl text-gray-500">{{ session.description }}</p>
+                    <p class="mt-3 text-sm md:text-base text-gray-500">{{ session.description }}</p>
                     {% endif %}
                 </div>
-                <div class="flex flex-col gap-3">
+                <div class="flex flex-row lg:flex-col gap-2">
                     <a href="{% url 'signatures:edit' uuid=session.uuid %}"
-                        class="px-6 py-3 text-xl font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center">
-                        <i class="fa-solid fa-edit mr-1"></i> 수정
+                        class="flex-1 lg:flex-none px-4 py-2 text-sm md:text-base font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center whitespace-nowrap">
+                        <i class="fa-solid fa-edit mr-1"></i><span class="hidden sm:inline">수정</span>
                     </a>
                     <a href="{% url 'signatures:print' uuid=session.uuid %}"
-                        class="px-6 py-3 text-xl font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center">
-                        <i class="fa-solid fa-print mr-1"></i> 출석부 출력
+                        class="flex-1 lg:flex-none px-4 py-2 text-sm md:text-base font-bold text-gray-600 rounded-xl shadow-clay-inner hover:text-purple-600 transition text-center whitespace-nowrap">
+                        <i class="fa-solid fa-print mr-1"></i><span class="hidden sm:inline">출력</span>
                     </a>
                     <a href="{% url 'signatures:delete' uuid=session.uuid %}"
-                        class="px-6 py-3 text-xl font-bold text-red-400 rounded-xl shadow-clay-inner hover:text-red-600 transition text-center">
-                        <i class="fa-solid fa-trash mr-1"></i> 삭제
+                        class="flex-1 lg:flex-none px-4 py-2 text-sm md:text-base font-bold text-red-400 rounded-xl shadow-clay-inner hover:text-red-600 transition text-center whitespace-nowrap">
+                        <i class="fa-solid fa-trash mr-1"></i><span class="hidden sm:inline">삭제</span>
                     </a>
                 </div>
             </div>
@@ -62,53 +62,47 @@
 
         <!-- Progress Indicator -->
         {% if session.expected_count %}
-        <div class="clay-card p-6 mb-8 bg-blue-50/50">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                <i class="fa-solid fa-chart-line text-purple-500 mr-2"></i>서명 진행률
-            </h2>
-            <div class="flex items-center gap-6">
-                <div class="flex-1">
-                    <div class="flex justify-between mb-2">
-                        <span class="text-xl text-gray-600">
-                            {{ signatures.count }} / {{ session.expected_count }}명
-                        </span>
-                        <span class="text-xl font-bold text-purple-600">
-                            {% widthratio signatures.count session.expected_count 100 %}%
-                        </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-6">
-                        <div class="bg-purple-500 h-6 rounded-full transition-all"
-                            style="width: {% widthratio signatures.count session.expected_count 100 %}%">
-                        </div>
-                    </div>
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-blue-50/50">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base md:text-lg font-bold text-gray-700">
+                    <i class="fa-solid fa-chart-line text-purple-500 mr-1"></i>진행률
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm md:text-base text-gray-600">
+                        {{ signatures.count }}/{{ session.expected_count }}
+                    </span>
+                    <span class="text-sm md:text-base font-bold text-purple-600">
+                        {% widthratio signatures.count session.expected_count 100 %}%
+                    </span>
+                    {% if signatures.count < session.expected_count %}
+                    <span class="text-xl md:text-2xl">⚠️</span>
+                    {% elif signatures.count == session.expected_count %}
+                    <span class="text-xl md:text-2xl">✅</span>
+                    {% else %}
+                    <span class="text-xl md:text-2xl">📝</span>
+                    {% endif %}
                 </div>
-                {% if signatures.count < session.expected_count %}
-                <div class="text-center">
-                    <div class="text-3xl text-orange-500 mb-1">⚠️</div>
-                    <div class="text-lg font-bold text-orange-600">{{ session.expected_count|add:signatures.count|add:"-" }}명 미서명</div>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 md:h-6">
+                <div class="bg-purple-500 h-4 md:h-6 rounded-full transition-all"
+                    style="width: {% widthratio signatures.count session.expected_count 100 %}%">
                 </div>
-            {% elif signatures.count == session.expected_count %}
-            <div class="text-center">
-                <div class="text-3xl text-green-500 mb-1">✅</div>
-                <div class="text-lg font-bold text-green-600">전원 완료!</div>
             </div>
-            {% else %}
-            <div class="text-center">
-                <div class="text-3xl text-blue-500 mb-1">📝</div>
-                <div class="text-lg font-bold text-blue-600">+{{ signatures.count|add:session.expected_count|add:"-" }}명 추가</div>
-            </div>
+            {% if signatures.count < session.expected_count %}
+            <p class="text-xs md:text-sm text-orange-600 mt-2 text-right">{{ session.expected_count|add:signatures.count|add:"-" }}명 미서명</p>
+            {% elif signatures.count > session.expected_count %}
+            <p class="text-xs md:text-sm text-blue-600 mt-2 text-right">+{{ signatures.count|add:session.expected_count|add:"-" }}명 추가</p>
             {% endif %}
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
 
     <!-- Unmatched Signatures Warnings -->
     {% if has_unmatched %}
-    <div class="clay-card p-6 mb-8 bg-orange-50/50">
-        <h2 class="text-2xl font-bold text-gray-700 mb-4">
-            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-2"></i>미매칭 서명 ({{ unmatched_suggestions|length }}건)
+    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-orange-50/50">
+        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
+            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{ unmatched_suggestions|length }})
         </h2>
-        <p class="text-gray-600 mb-4">명단과 연결되지 않은 서명입니다. 수동으로 연결하거나 삭제해주세요.</p>
+        <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
         <div class="space-y-4">
             {% for item in unmatched_suggestions %}
             <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
@@ -156,9 +150,9 @@
 
     <!-- Duplicate Signatures Warnings -->
     {% if has_duplicates %}
-    <div class="clay-card p-6 mb-8 bg-yellow-50/50">
-        <h2 class="text-2xl font-bold text-gray-700 mb-4">
-            <i class="fa-solid fa-copy text-yellow-600 mr-2"></i>중복 서명 감지 ({{ duplicates|length }}건)
+    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-yellow-50/50">
+        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
+            <i class="fa-solid fa-copy text-yellow-600 mr-1"></i>중복 서명 ({{ duplicates|length }})
         </h2>
         <div class="space-y-4">
             {% for dup_group in duplicates %}
@@ -188,189 +182,157 @@
     {% endif %}
 
     <!-- Expected Participants Management -->
-    <div class="clay-card p-6 mb-8">
-        <div class="flex items-start justify-between mb-6">
+    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+        <div class="flex items-start justify-between mb-3 md:mb-4">
             <div class="flex-1">
-                <h2 class="text-2xl font-bold text-gray-700 mb-3">
-                    <i class="fa-solid fa-users text-purple-500 mr-2"></i>예상 참석자 명단 관리
-                    <span class="text-lg text-gray-400 font-normal">(선택)</span>
+                <h2 class="text-base md:text-lg font-bold text-gray-700 mb-1 md:mb-2">
+                    <i class="fa-solid fa-users text-purple-500 mr-1"></i>참석자 명단
+                    <span class="text-sm md:text-base text-gray-400 font-normal">(선택)</span>
                 </h2>
-                <p class="text-lg text-gray-600 mb-4">
-                    연수 참석 예정자 명단을 미리 등록하면 출석 관리가 더욱 편리해집니다.
+                <p class="text-xs md:text-sm text-gray-600 hidden md:block">
+                    명단을 미리 등록하면 출석 관리가 편리합니다
                 </p>
             </div>
-            <button onclick="toggleGuide()"
-                class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition flex items-center gap-2 whitespace-nowrap">
-                <i class="fa-solid fa-circle-info"></i>
-                <span>사용 가이드</span>
+            <button onclick="toggleGuide()" type="button"
+                class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1 flex-shrink-0">
+                <i class="fa-solid fa-circle-info text-xs"></i>
+                <span class="hidden sm:inline">가이드</span>
             </button>
         </div>
 
         <!-- 안내 메시지 (토글 가능) -->
-        <div id="participantGuide" class="mb-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border-2 border-purple-200 hidden">
-            <div class="flex items-start gap-4 mb-4">
-                <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-solid fa-lightbulb text-white text-xl"></i>
+        <div id="participantGuide" class="mb-4 p-3 md:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 hidden">
+            <div class="flex items-start gap-3 mb-3">
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-lightbulb text-white text-sm md:text-base"></i>
                 </div>
                 <div class="flex-1">
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">예상 참석자 명단, 언제 사용하나요?</h3>
-                    <div class="space-y-3 text-gray-700">
-                        <div class="flex items-start gap-3">
-                            <span class="text-green-600 font-bold text-xl">✓</span>
-                            <div>
-                                <strong>학교/기업 연수</strong>
-                                <p class="text-gray-600">미리 참석자 명단을 알고 있을 때 등록하면 누가 서명했는지, 누가 빠졌는지 한눈에 확인할 수 있습니다.</p>
-                            </div>
+                    <h3 class="text-sm md:text-base font-bold text-gray-800 mb-2">언제 사용하나요?</h3>
+                    <div class="space-y-2 text-xs md:text-sm text-gray-700">
+                        <div class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                            <p><strong>학교/기업 연수:</strong> 출석 확인 간편</p>
                         </div>
-                        <div class="flex items-start gap-3">
-                            <span class="text-green-600 font-bold text-xl">✓</span>
-                            <div>
-                                <strong>출석률 추적</strong>
-                                <p class="text-gray-600">전체 인원 대비 몇 명이 서명했는지 진행률을 실시간으로 확인할 수 있습니다.</p>
-                            </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                            <p><strong>출석률 추적:</strong> 실시간 진행률</p>
                         </div>
-                        <div class="flex items-start gap-3">
-                            <span class="text-green-600 font-bold text-xl">✓</span>
-                            <div>
-                                <strong>이름 오타 자동 감지</strong>
-                                <p class="text-gray-600">서명한 이름과 명단의 이름을 자동으로 매칭해서 오타나 중복을 찾아줍니다.</p>
-                            </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                            <p><strong>오타 감지:</strong> 자동 매칭</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl p-5 mt-4 border border-purple-100">
-                <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-shoe-prints text-purple-500"></i>
-                    <span>사용 방법</span>
-                </h4>
-                <ol class="space-y-2 text-gray-700">
-                    <li class="flex items-start gap-3">
-                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">1</span>
-                        <span><strong>텍스트로 직접 입력</strong>하거나 <strong>엑셀/CSV 파일 업로드</strong> (형식: 이름, 소속)</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">2</span>
-                        <span>참석자들이 서명하면 자동으로 명단과 매칭됩니다</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">3</span>
-                        <span>서명 진행률과 미서명자를 실시간으로 확인하세요</span>
-                    </li>
+            <div class="bg-white rounded-lg p-3 mt-3 border border-purple-100">
+                <p class="text-xs md:text-sm text-gray-700 mb-2"><strong>사용 방법:</strong></p>
+                <ol class="space-y-1 text-xs md:text-sm text-gray-600 list-decimal list-inside">
+                    <li>텍스트 입력 또는 파일 업로드</li>
+                    <li>자동 매칭</li>
+                    <li>진행률 확인</li>
                 </ol>
-            </div>
-
-            <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <p class="text-gray-700 text-sm flex items-start gap-2">
-                    <i class="fa-solid fa-info-circle text-blue-500 mt-0.5"></i>
-                    <span><strong>참고:</strong> 명단 등록은 선택 사항입니다. 등록하지 않아도 서명 수집은 정상적으로 진행됩니다.</span>
-                </p>
             </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
             <!-- Inputs -->
             <div>
-                <div class="mb-6">
+                <div class="mb-4 md:mb-6">
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-lg font-bold">텍스트로 입력</label>
+                        <label class="text-sm md:text-base font-bold">텍스트 입력</label>
                         <button onclick="fillExample()" type="button"
-                            class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
+                            class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs md:text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
                             <i class="fa-solid fa-clipboard-list text-xs"></i>
-                            <span>예시 채우기</span>
+                            <span>예시</span>
                         </button>
                     </div>
-                    <textarea id="bulkInput" rows="5" placeholder="이름, 소속 (한 줄에 한 명)&#10;예: 홍길동, 1-1"
-                        class="w-full p-4 rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
+                    <textarea id="bulkInput" rows="4" placeholder="이름, 소속&#10;예: 홍길동, 1-1"
+                        class="w-full p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
                     <button onclick="submitBulkInput()"
-                        class="mt-3 px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition">
-                        <i class="fa-solid fa-plus mr-1"></i> 명단 등록
+                        class="mt-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition w-full md:w-auto">
+                        <i class="fa-solid fa-plus mr-1"></i> 등록
                     </button>
                 </div>
-                <div class="pt-6 border-t border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <label class="text-lg font-bold">파일로 업로드 (.csv, .xlsx)</label>
-                        <div class="flex gap-2">
+                <div class="pt-4 md:pt-6 border-t border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm md:text-base font-bold">파일 업로드</label>
+                        <div class="flex gap-1">
                             <a href="{% url 'signatures:download_template_csv' %}"
-                                class="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
+                                class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs md:text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
                                 <i class="fa-solid fa-download text-xs"></i>
-                                <span>CSV 양식</span>
+                                <span>CSV</span>
                             </a>
                             <a href="{% url 'signatures:download_template_excel' %}"
-                                class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
+                                class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
                                 <i class="fa-solid fa-download text-xs"></i>
-                                <span>Excel 양식</span>
+                                <span>Excel</span>
                             </a>
                         </div>
                     </div>
                     <div class="flex gap-2">
                         <input type="file" id="participantFile" accept=".csv, .xlsx"
-                            class="flex-1 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                            class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl shadow-clay-inner bg-bg-soft">
                         <button onclick="uploadFile()"
-                            class="px-6 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
-                            <i class="fa-solid fa-upload mr-1"></i>
+                            class="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
+                            <i class="fa-solid fa-upload"></i>
                         </button>
                     </div>
-                    <p class="text-xs text-gray-400 mt-2">
-                        <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>
-                        양식 파일을 다운로드하여 작성 후 업로드하세요 (첫 번째 열: 이름, 두 번째 열: 소속)
-                    </p>
                 </div>
             </div>
             <!-- List -->
             <div>
-                <label class="text-lg font-bold mb-2 block">등록된 명단 (<span id="participantCount">0</span>명)</label>
-                <div id="participantList" class="h-80 overflow-y-auto p-4 rounded-xl shadow-clay-inner bg-bg-soft">
-                    <p class="text-gray-400 text-center py-8">명단을 등록해주세요</p>
+                <label class="text-sm md:text-base font-bold mb-2 block">명단 (<span id="participantCount">0</span>)</label>
+                <div id="participantList" class="h-48 md:h-64 overflow-y-auto p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft">
+                    <p class="text-gray-400 text-center py-4 md:py-8 text-xs md:text-sm">명단을 등록해주세요</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Share Link -->
-    <div class="clay-card p-6 mb-8">
-        <h2 class="text-2xl font-bold text-gray-700 mb-3">
-            <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i>서명 링크 공유
+    <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
+            <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>링크 공유
         </h2>
-        <div class="flex gap-3">
+        <div class="flex gap-2">
             <input type="text" id="shareLink" readonly
                 value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
-                class="flex-1 px-4 py-3 rounded-xl shadow-clay-inner bg-bg-soft text-xl text-gray-600">
+                class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
             <button onclick="copyLink()"
-                class="px-6 py-3 clay-card text-xl font-bold text-purple-600 hover:shadow-clay-hover transition">
-                <i class="fa-solid fa-copy mr-1"></i> 복사
+                class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
+                <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">복사</span>
             </button>
         </div>
     </div>
 
     <!-- Signature List -->
-    <div class="clay-card p-6">
-        <h2 class="text-3xl font-bold text-gray-700 mb-6">
-            <i class="fa-solid fa-list-check text-purple-500 mr-2"></i>서명 목록 ({{ signatures.count }}명)
+    <div class="clay-card p-4 md:p-6">
+        <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3 md:mb-4">
+            <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
         </h2>
         {% if signatures %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-xl text-left">
-                <thead class="border-b-2 border-gray-200 text-gray-500">
+        <div class="overflow-x-auto -mx-4 md:mx-0">
+            <table class="w-full text-sm md:text-base text-left">
+                <thead class="border-b border-gray-200 text-gray-500">
                     <tr>
-                        <th class="py-3 px-4">번호</th>
-                        <th class="py-3 px-4">이름</th>
-                        <th class="py-3 px-4">서명</th>
-                        <th class="py-3 px-4">시간</th>
-                        <th class="py-3 px-4 text-center">관리</th>
+                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">#</th>
+                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">이름</th>
+                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm">서명</th>
+                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">시간</th>
+                        <th class="py-2 px-2 md:px-4 text-xs md:text-sm text-center">삭제</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for sig in signatures %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
-                        <td class="py-3 px-4 text-gray-600">{{ forloop.counter }}</td>
-                        <td class="py-3 px-4 font-bold text-gray-700">{{ sig.participant_name }}</td>
-                        <td class="py-3 px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-10"></td>
-                        <td class="py-3 px-4 text-gray-500">{{ sig.created_at|date:"H:i:s" }}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600">
-                                <i class="fa-solid fa-trash"></i>
+                        <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{{ forloop.counter }}</td>
+                        <td class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{{ sig.participant_name }}</td>
+                        <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-6 md:h-10"></td>
+                        <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{ sig.created_at|date:"H:i" }}</td>
+                        <td class="py-2 px-2 md:px-4 text-center">
+                            <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600 p-1">
+                                <i class="fa-solid fa-trash text-xs md:text-sm"></i>
                             </button>
                         </td>
                     </tr>
@@ -379,7 +341,7 @@
             </table>
         </div>
         {% else %}
-        <p class="text-center py-12 text-gray-400 text-2xl">아직 서명이 없습니다</p>
+        <p class="text-center py-8 md:py-12 text-gray-400 text-sm md:text-base">아직 서명이 없습니다</p>
         {% endif %}
     </div>
     </div>

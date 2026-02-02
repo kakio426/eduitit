@@ -564,6 +564,7 @@ def download_participant_template(request, format='csv'):
         writer.writerow(['김철수', '1-2'])
         writer.writerow(['박영희', '교사'])
         writer.writerow(['이순신', '2-1'])
+        writer.writerow(['최영', '3-1'])
 
         return response
 
@@ -593,6 +594,7 @@ def download_participant_template(request, format='csv'):
             ['김철수', '1-2'],
             ['박영희', '교사'],
             ['이순신', '2-1'],
+            ['최영', '3-1'],
         ]
 
         for idx, row in enumerate(example_data, start=2):
