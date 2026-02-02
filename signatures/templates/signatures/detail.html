@@ -28,24 +28,16 @@
                     <div class="flex items-center gap-3 mb-4">
                         <h1 class="text-4xl font-bold text-gray-700">{{ session.title }}</h1>
                         <button onclick="toggleActive()" id="statusBadge"
-                            class="px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer
-                            {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+                            class="px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
                             <i class="fa-solid fa-circle text-xs mr-1"></i>
                             <span id="statusText">{% if session.is_active %}활성{% else %}비활성{% endif %}</span>
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-xl text-gray-600">
-                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{
-                            session.instructor }}</p>
-                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{
-                            session.datetime|date:"Y년 m월 d일 H:i" }}</p>
-                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{
-                            session.location }}</p>
-                        <p>
-                            <i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{
-                            signatures.count }}명
-                            {% if has_duplicates %}<span class="text-orange-500 text-sm">(중복 의심)</span>{% endif %}
-                        </p>
+                        <p><i class="fa-solid fa-user-tie mr-2 text-purple-400"></i><strong>강사:</strong> {{ session.instructor }}</p>
+                        <p><i class="fa-solid fa-calendar mr-2 text-purple-400"></i><strong>일시:</strong> {{ session.datetime|date:"Y년 m월 d일 H:i" }}</p>
+                        <p><i class="fa-solid fa-location-dot mr-2 text-purple-400"></i><strong>장소:</strong> {{ session.location }}</p>
+                        <p><i class="fa-solid fa-pen-nib mr-2 text-purple-400"></i><strong>서명:</strong> {{ signatures.count }}명{% if has_duplicates %}<span class="text-orange-500 text-sm">(중복 의심)</span>{% endif %}</p>
                     </div>
                     {% if session.description %}
                     <p class="mt-4 text-xl text-gray-500">{{ session.description }}</p>
@@ -90,12 +82,11 @@
                         </div>
                     </div>
                 </div>
-                {% if signatures.count < session.expected_count %} <div class="text-center">
+                {% if signatures.count < session.expected_count %}
+                <div class="text-center">
                     <div class="text-3xl text-orange-500 mb-1">⚠️</div>
-                    <div class="text-lg font-bold text-orange-600">
-                        {{ session.expected_count|add:"-"|add:signatures.count }}명 미서명
-                    </div>
-            </div>
+                    <div class="text-lg font-bold text-orange-600">{{ session.expected_count|add:signatures.count|add:"-" }}명 미서명</div>
+                </div>
             {% elif signatures.count == session.expected_count %}
             <div class="text-center">
                 <div class="text-3xl text-green-500 mb-1">✅</div>
@@ -104,8 +95,7 @@
             {% else %}
             <div class="text-center">
                 <div class="text-3xl text-blue-500 mb-1">📝</div>
-                <div class="text-lg font-bold text-blue-600">+{{ signatures.count|add:"-"|add:session.expected_count }}명
-                    추가</div>
+                <div class="text-lg font-bold text-blue-600">+{{ signatures.count|add:session.expected_count|add:"-" }}명 추가</div>
             </div>
             {% endif %}
         </div>
@@ -116,8 +106,7 @@
     {% if has_unmatched %}
     <div class="clay-card p-6 mb-8 bg-orange-50/50">
         <h2 class="text-2xl font-bold text-gray-700 mb-4">
-            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-2"></i>미매칭 서명 ({{ unmatched_suggestions|length
-            }}건)
+            <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-2"></i>미매칭 서명 ({{ unmatched_suggestions|length }}건)
         </h2>
         <p class="text-gray-600 mb-4">명단과 연결되지 않은 서명입니다. 수동으로 연결하거나 삭제해주세요.</p>
         <div class="space-y-4">
@@ -200,9 +189,85 @@
 
     <!-- Expected Participants Management -->
     <div class="clay-card p-6 mb-8">
-        <h2 class="text-2xl font-bold text-gray-700 mb-4">
-            <i class="fa-solid fa-users text-purple-500 mr-2"></i>예상 참석자 명단 관리
-        </h2>
+        <div class="flex items-start justify-between mb-6">
+            <div class="flex-1">
+                <h2 class="text-2xl font-bold text-gray-700 mb-3">
+                    <i class="fa-solid fa-users text-purple-500 mr-2"></i>예상 참석자 명단 관리
+                </h2>
+                <p class="text-lg text-gray-600 mb-4">
+                    연수 참석 예정자 명단을 미리 등록하면 출석 관리가 더욱 편리해집니다.
+                </p>
+            </div>
+            <button onclick="toggleGuide()"
+                class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>사용 가이드</span>
+            </button>
+        </div>
+
+        <!-- 안내 메시지 (토글 가능) -->
+        <div id="participantGuide" class="mb-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border-2 border-purple-200 hidden">
+            <div class="flex items-start gap-4 mb-4">
+                <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-lightbulb text-white text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">예상 참석자 명단, 언제 사용하나요?</h3>
+                    <div class="space-y-3 text-gray-700">
+                        <div class="flex items-start gap-3">
+                            <span class="text-green-600 font-bold text-xl">✓</span>
+                            <div>
+                                <strong>학교/기업 연수</strong>
+                                <p class="text-gray-600">미리 참석자 명단을 알고 있을 때 등록하면 누가 서명했는지, 누가 빠졌는지 한눈에 확인할 수 있습니다.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-green-600 font-bold text-xl">✓</span>
+                            <div>
+                                <strong>출석률 추적</strong>
+                                <p class="text-gray-600">전체 인원 대비 몇 명이 서명했는지 진행률을 실시간으로 확인할 수 있습니다.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-green-600 font-bold text-xl">✓</span>
+                            <div>
+                                <strong>이름 오타 자동 감지</strong>
+                                <p class="text-gray-600">서명한 이름과 명단의 이름을 자동으로 매칭해서 오타나 중복을 찾아줍니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 mt-4 border border-purple-100">
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-shoe-prints text-purple-500"></i>
+                    <span>사용 방법</span>
+                </h4>
+                <ol class="space-y-2 text-gray-700">
+                    <li class="flex items-start gap-3">
+                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">1</span>
+                        <span><strong>텍스트로 직접 입력</strong>하거나 <strong>엑셀/CSV 파일 업로드</strong> (형식: 이름, 소속)</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">2</span>
+                        <span>참석자들이 서명하면 자동으로 명단과 매칭됩니다</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-sm flex items-center justify-center flex-shrink-0 font-bold">3</span>
+                        <span>서명 진행률과 미서명자를 실시간으로 확인하세요</span>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <p class="text-gray-700 text-sm flex items-start gap-2">
+                    <i class="fa-solid fa-info-circle text-blue-500 mt-0.5"></i>
+                    <span><strong>참고:</strong> 명단 등록은 선택 사항입니다. 등록하지 않아도 서명 수집은 정상적으로 진행됩니다.</span>
+                </p>
+            </div>
+        </div>
+
         <div class="grid md:grid-cols-2 gap-6 mb-6">
             <!-- Inputs -->
             <div>
@@ -299,6 +364,11 @@
 {% block extra_js %}
 <script>
     const sessionUuid = '{{ session.uuid }}';
+
+    function toggleGuide() {
+        const guide = document.getElementById('participantGuide');
+        guide.classList.toggle('hidden');
+    }
 
     function copyLink() {
         const input = document.getElementById('shareLink');
