@@ -17,17 +17,22 @@ class VisitorTrackingMiddleware:
         # Exclude static, media, and admin paths to reduce DB load
         if not any(request.path.startswith(p) for p in ['/static/', '/media/', '/admin/', '/favicon.ico']):
             ip = get_client_ip(request)
+            if not ip:
+                ip = '0.0.0.0' # Fallback for unknown IPs
+                
             today = timezone.localdate()
             
-            # Check session to avoid DB hit on every request for the same user session
-            if not request.session.get('vh_recorded_date') == str(today):
+            # Check session to avoid DB hit on every request
+            session_key = f'visitor_recorded_{today}'
+            if not request.session.get(session_key):
                 try:
-                    # Try to create a log entry for this IP and date
+                    # Use get_or_create to avoid duplicates for the same IP on the same day
                     VisitorLog.objects.get_or_create(ip_address=ip, visit_date=today)
-                    # Mark session as recorded for today
-                    request.session['vh_recorded_date'] = str(today)
-                except Exception:
-                    # Fail silently to avoid 500 errors on tracking
+                    request.session[session_key] = True
+                    # Optional: Clean up old session keys if needed
+                except Exception as e:
+                    # Still fail silently but you might want to log this in a real prod env
+                    # print(f"VisitorLog Error: {e}")
                     pass
         
         response = self.get_response(request)
