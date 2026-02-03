@@ -28,6 +28,11 @@ urlpatterns = [
     path('api/favorites/<int:pk>/delete/', views.favorite_date_delete_api, name='favorite_date_delete_api'),
     path('api/statistics/', views.statistics_api, name='statistics_api'),
     
+    
+    # 사주 대시보드 API (v2)
+    path('api/v2/calculate/', api_views.calculate_pillars_only, name='calculate_pillars'),
+    path('api/v2/analyze/', api_views.analyze_topic, name='analyze_topic'),
+    
     # 티처블 동물원 (Animal MBTI) - Redirects to /ssambti/
     path('zoo/', RedirectView.as_view(url='/ssambti/', permanent=True), name='zoo_main'),
     path('zoo/analyze/', RedirectView.as_view(url='/ssambti/analyze/', permanent=True), name='zoo_analyze'),
