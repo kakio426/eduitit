@@ -2599,6 +2599,60 @@
             showToast(e.message || '서버 통신 오류가 발생했습니다.');
         }
     }
+
+    // 캐시된 결과 로딩 애니메이션 (자연스러운 UX를 위한 인위적 딜레이)
+    {% if cached %}
+    document.addEventListener('DOMContentLoaded', function() {
+        const resultContainer = document.getElementById('markdownResult');
+        const loadingMessages = [
+            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
+            '🔮 천간지지의 비밀을 해독하는 중...',
+            '⚡ 음양오행의 조화를 계산하는 중...',
+            '🌟 하늘의 별자리에 질문을 던지는 중...',
+            '📿 육십갑자의 숨은 의미를 찾는 중...',
+            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
+            '✨ 당신의 운명 코드를 분석하는 중...',
+            '🧙 30년 경력 명리학자가 사주를 보는 중...',
+            '📖 주역 64괘를 펼쳐보는 중...',
+            '🎴 천기누설! 운명의 실타래를 푸는 중...',
+            '🔥 오행의 균형을 측정하는 중...',
+            '💫 우주의 기운과 교신하는 중...',
+            '🎯 당신만의 행운 포인트를 찾는 중...',
+            '🌙 달의 위상과 당신의 운을 대조하는 중...',
+            '🎐 바람의 방향으로 길흉을 점치는 중...'
+        ];
+
+        // 실제 결과를 임시 저장
+        const actualResult = resultContainer.innerHTML;
+
+        // 랜덤 로딩 메시지 선택
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+
+        // 로딩 화면으로 교체
+        resultContainer.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
+
+        // 3-5초 랜덤 딜레이 후 실제 결과 표시
+        const delay = 3000 + Math.random() * 2000; // 3000ms ~ 5000ms
+        setTimeout(() => {
+            // 부드러운 페이드 효과
+            resultContainer.style.opacity = '0';
+            resultContainer.style.transition = 'opacity 0.3s ease-in-out';
+
+            setTimeout(() => {
+                resultContainer.innerHTML = actualResult;
+                resultContainer.style.opacity = '1';
+
+                // 결과 표시 후 오행 배지 등 업데이트
+                if (typeof detectAndShowElement === 'function') {
+                    detectAndShowElement(actualResult);
+                }
+                if (typeof updateShareCard === 'function') {
+                    updateShareCard(actualResult);
+                }
+            }, 300);
+        }, delay);
+    });
+    {% endif %}
 </script>
 
 {% if result %}
