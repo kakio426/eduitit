@@ -88,7 +88,10 @@ def calculate_pillars_only(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+from django_ratelimit.decorators import ratelimit
+
 @csrf_exempt
+@ratelimit(key='user_or_ip', rate='20/d', method='POST', block=False)
 def analyze_topic(request):
     """
     Step 2: 주제별 AI 분석 (DB 캐싱 적용)
@@ -96,6 +99,10 @@ def analyze_topic(request):
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
+
+    # Rate Limit Check
+    if getattr(request, 'limited', False):
+         return JsonResponse({'error': '일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!'}, status=429)
 
     try:
         data = json.loads(request.body)
@@ -194,6 +201,16 @@ def build_focused_prompt(topic, pillars, name, gender):
             - 당신의 연애 스타일과 배우자 복 (관성/재성 기준)
             - 귀인이 되어줄 이성의 기운 (오행/십신)
             - 행복한 관계를 위한 마음가짐
+        """,
+        'teacher': f"""
+            [Role] {role} (교직 전문 상담가)
+            [Target] {name}({gender})
+            [Chart] {chart_str}
+            ## 👨‍🏫 교직 운세와 학교 생활
+            - **교사로서의 적성**: 학생들을 가르치고 이끄는 기운(식상/인성)이 얼마나 강한지
+            - **학생/학부모 관계**: 올해 및 타고난 대인관계 운과 주의할 점
+            - **업무 및 승진**: 관리자(교감/교장)로 나아갈 운인지, 전문직 교사로 남을 운인지
+            - **개운법**: 학교 생활에서 스트레스를 줄이고 보람을 찾는 마음가짐
         """
     }
     

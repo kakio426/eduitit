@@ -135,7 +135,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="saju-dashboard pt-20 pb-20 px-4">
+<div class="saju-dashboard pt-40 pb-20 px-4">
     <div class="max-w-4xl mx-auto">
 
         <!-- Header -->
@@ -291,6 +291,19 @@
 
             <!-- Analysis Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 0. Teacher Mode (New) -->
+                <button onclick="requestAnalysis(this, 'teacher')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden ring-2 ring-purple-500/50">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-chalkboard-user text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-purple-200 mb-2"><i
+                                class="fa-solid fa-chalkboard-user mr-2"></i>교직 운세</h3>
+                        <p class="text-gray-400 text-sm">학생, 학부모, 승진 등<br>선생님만을 위한 특별 분석.</p>
+                    </div>
+                </button>
+
                 <!-- 1. Personality -->
                 <button onclick="requestAnalysis(this, 'personality')"
                     class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden">
@@ -594,6 +607,7 @@
 
     function showResult(topic, markdownText) {
         const titleMap = {
+            'teacher': '👨‍🏫 교직 운세 및 학교 생활',
             'personality': '타고난 기질 분석',
             'wealth': '재물운 심층 분석',
             'career': '직업과 적성 분석',

@@ -118,6 +118,7 @@ class FortuneResult(models.Model):
         ('personality', '성격'),
         ('wealth', '재물'),
         ('career', '직업'),
+        ('teacher', '교직 운세'),
         ('compatibility', '연애/인연'),
         ('daily', '일진')
     ], help_text="분석 주제")

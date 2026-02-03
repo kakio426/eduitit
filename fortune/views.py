@@ -45,7 +45,7 @@ def fortune_rate_d(group, request):
     """1일당 10회 제한 (관리자 무제한)"""
     if request.user and request.user.is_authenticated and request.user.is_superuser:
         return None
-    return '10/d'
+    return '20/d'
 
 def generate_ai_response(prompt, request):
     """
