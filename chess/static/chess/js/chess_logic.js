@@ -4,6 +4,8 @@ var moveHistory = [];
 var stockfish = null;
 var isAIThinking = false;
 var selectedSquare = null;
+var isEngineReady = false;
+var pendingCommands = [];
 
 // [CONFIGURATION]
 // These variables must be defined in the HTML before loading this script:
@@ -67,32 +69,68 @@ function initStockfish() {
         console.log("Initializing Stockfish from:", STOCKFISH_PATH);
         stockfish = new Worker(STOCKFISH_PATH);
 
-        stockfish.onmessage = onStockfishMessage;
-        stockfish.onerror = function (e) {
-            console.error("Stockfish Worker Error:", e);
-            alert("AI 엔진 로드에 실패했습니다. (경로/파일 확인 필요)");
+        stockfish.onmessage = function (event) {
+            var line = event.data;
+            console.log("Engine:", line);
+
+            // UCI 준비 완료
+            if (line === 'uciok') {
+                console.log("UCI mode ready, setting options...");
+                setEngineOptions();
+            }
+            // 엔진 완전히 준비됨
+            else if (line === 'readyok') {
+                console.log("Engine ready!");
+                isEngineReady = true;
+                flushPendingCommands();
+            }
+            // 최선의 수 응답
+            else if (line.indexOf('bestmove') !== -1) {
+                onBestMove(line);
+            }
         };
 
-        // UCI Initialization
+        stockfish.onerror = function (e) {
+            console.error("Stockfish Worker Error:", e);
+            alert("AI 엔진 로드에 실패했습니다.");
+        };
+
+        // UCI 모드 시작
         stockfish.postMessage('uci');
-
-        // Memory Optimization (Crucial for Pure JS version)
-        stockfish.postMessage('setoption name Hash value 16');
-        stockfish.postMessage('setoption name Threads value 1');
-
-        // Set Skill Level
-        var skillLevel = 10;
-        if (typeof AI_DIFFICULTY !== 'undefined') {
-            if (AI_DIFFICULTY === 'easy') skillLevel = 0;      // Very Easy
-            else if (AI_DIFFICULTY === 'medium') skillLevel = 5; // Moderate
-            else if (AI_DIFFICULTY === 'hard') skillLevel = 10;  // Hard
-            else if (AI_DIFFICULTY === 'expert') skillLevel = 20; // Max
-        }
-        console.log("Setting AI Skill Level to:", skillLevel);
-        stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
 
     } catch (e) {
         console.error("Failed to create Stockfish worker:", e);
+        alert("AI 엔진을 시작할 수 없습니다: " + e.message);
+    }
+}
+
+function setEngineOptions() {
+    // 난이도에 따른 Skill Level 설정
+    var skillLevel = 10;
+    if (typeof AI_DIFFICULTY !== 'undefined') {
+        if (AI_DIFFICULTY === 'easy') skillLevel = 0;      // 초급 (학생용)
+        else if (AI_DIFFICULTY === 'medium') skillLevel = 5; // 중급
+        else if (AI_DIFFICULTY === 'hard') skillLevel = 10;  // 고급
+        else if (AI_DIFFICULTY === 'expert') skillLevel = 20; // 최강
+    }
+    console.log("Setting AI Skill Level to:", skillLevel);
+
+    // 브라우저 성능 고려 - 가벼운 설정
+    stockfish.postMessage('setoption name Hash value 16');      // 메모리 최소화
+    stockfish.postMessage('setoption name Threads value 1');    // 단일 스레드
+    stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+
+    // 준비 확인 요청
+    stockfish.postMessage('isready');
+}
+
+function flushPendingCommands() {
+    if (pendingCommands.length > 0) {
+        console.log("Flushing", pendingCommands.length, "pending commands");
+        for (var i = 0; i < pendingCommands.length; i++) {
+            stockfish.postMessage(pendingCommands[i]);
+        }
+        pendingCommands = [];
     }
 }
 
@@ -172,42 +210,44 @@ function makeAIMove() {
     document.getElementById('aiThinking').classList.add('active');
 
     var fen = game.fen();
-    stockfish.postMessage('position fen ' + fen);
 
-    // Move time based on difficulty (simulating thought)
+    // 엔진이 준비되지 않았으면 대기열에 추가
+    if (!isEngineReady) {
+        console.log("Engine not ready yet, queuing commands...");
+        pendingCommands.push('position fen ' + fen);
+        pendingCommands.push('go depth 10');
+        return;
+    }
+
+    // 브라우저 성능 고려 - 깊이 제한 (학생용이므로 가볍게)
     var depth = 10;
-    // Pure JS might be slower, so we limit depth or time
+    stockfish.postMessage('position fen ' + fen);
     stockfish.postMessage('go depth ' + depth);
 }
 
-function onStockfishMessage(event) {
-    var line = event.data;
-    // console.log("Engine:", line); // Debugging
+function onBestMove(line) {
+    var match = line.match(/bestmove\s+(\w+)/);
+    if (match) {
+        var moveStr = match[1];
+        var from = moveStr.substring(0, 2);
+        var to = moveStr.substring(2, 4);
+        var promotion = moveStr.length > 4 ? moveStr[4] : 'q';
 
-    if (line.indexOf('bestmove') !== -1) {
-        var match = line.match(/bestmove\s+(\w+)/);
-        if (match) {
-            var moveStr = match[1];
-            var from = moveStr.substring(0, 2);
-            var to = moveStr.substring(2, 4);
-            var promotion = moveStr.length > 4 ? moveStr[4] : 'q';
+        var move = game.move({
+            from: from,
+            to: to,
+            promotion: promotion
+        });
 
-            var move = game.move({
-                from: from,
-                to: to,
-                promotion: promotion
-            });
-
-            if (move) {
-                board.position(game.fen());
-                moveHistory.push(move);
-                updateMoveHistory();
-                updateStatus();
-            }
-
-            isAIThinking = false;
-            document.getElementById('aiThinking').classList.remove('active');
+        if (move) {
+            board.position(game.fen());
+            moveHistory.push(move);
+            updateMoveHistory();
+            updateStatus();
         }
+
+        isAIThinking = false;
+        document.getElementById('aiThinking').classList.remove('active');
     }
 }
 

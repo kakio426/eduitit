@@ -276,8 +276,7 @@
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 {% if mode == 'ai' %}
-<!-- 로컬 Stockfish 파일 로드 (유저 경로) -->
-<script src="{% static 'chess/js/stockfish.js' %}"></script>
+<!-- Stockfish는 Worker로만 로드됨 (chess_logic.js에서 처리) -->
 {% endif %}
 
 <script>
