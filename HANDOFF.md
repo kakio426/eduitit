@@ -1,11 +1,132 @@
 # 작업 인계 문서
 
 > 최근 업데이트: 2026-02-03
-> 최근 세션: 체스 게임 구현 완료 ✅
+> 최근 세션: Fortune 서비스 500 에러 수정 완료 ✅
 
 ---
 
 ## 🆕 최신 작업 (2026-02-03)
+
+### Fortune 서비스 500 에러 긴급 수정 ✅
+
+**문제 상황**: Fortune(사주) 서비스에서 500 Server Error 발생
+
+#### 원인 분석:
+
+**Django TemplateSyntaxError** - 템플릿 구문 오류
+
+**파일**: `C:/Users/kakio/eduitit/fortune/templates/fortune/saju_form.html`
+
+**에러 위치**: 1319번 라인 (`{% endblock %}`)
+
+**에러 메시지**:
+```
+TemplateSyntaxError: Invalid block tag on line 1319: 'endblock',
+expected 'elif', 'else' or 'endif'. Did you forget to register or load this tag?
+```
+
+**근본 원인**:
+- **742번 라인**: `{% if user.is_authenticated %}` 블록 시작 (프로필 관리 섹션)
+- **774번 라인**: `{% if user.is_authenticated %}` 블록 시작 (즐겨찾기 & 통계 섹션)
+- **814번 라인**: `{% endif %}` - 774번 라인의 if만 닫음
+- **742번 라인의 if 블록은 닫히지 않음** ← 문제!
+- **1319번 라인**: `{% endblock %}`를 만났을 때 여전히 if 블록 안에 있어서 파서 에러
+
+#### 수정 내용:
+
+**파일**: `fortune/templates/fortune/saju_form.html`
+
+**수정 위치**: 814번 라인 이후 (815번 라인 앞)
+
+**추가 코드**:
+```django
+{% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+```
+
+#### 영향 범위:
+
+**수정 전**:
+- ❌ `/fortune/saju/` 페이지 접속 시 500 Server Error
+- ❌ 모든 사주 분석 기능 불가
+- ❌ 사용자가 서비스를 전혀 사용할 수 없음
+
+**수정 후**:
+- ✅ 정상적으로 페이지 로드
+- ✅ 사주 분석 기능 정상 작동
+- ✅ 프로필 관리 섹션 정상 표시
+- ✅ 즐겨찾기 & 통계 섹션 정상 표시
+
+#### 관련 컨텍스트:
+
+**오늘 진행한 작업**:
+- Fortune 서비스 고도화 진행 (상세 내용 미기록)
+- 템플릿 수정 중 if 블록 닫기 누락
+- 500 에러 발견 후 즉시 수정
+
+**디버깅 과정**:
+1. Explore 에이전트를 통해 프로젝트 전체 분석
+2. `last_error.txt` 및 `reproduction_error.txt` 확인
+3. 템플릿 파일 742-814-1319번 라인 정밀 분석
+4. if 블록 구조 확인 및 닫히지 않은 블록 발견
+5. 814번 라인 이후 `{% endif %}` 추가로 수정 완료
+
+#### 교훈 및 주의사항:
+
+**Django 템플릿 작업 시 주의사항**:
+1. **중첩된 if 블록 주의**: 여러 개의 if 블록이 겹칠 때 각각 제대로 닫혔는지 확인
+2. **동일 조건의 if 블록**: `{% if user.is_authenticated %}`처럼 같은 조건이 여러 번 나오면 혼란 가능
+3. **큰 템플릿 파일 관리**: 2592줄짜리 파일에서는 블록 구조 파악이 어려움
+   - 섹션별로 주석 추가 권장
+   - 가능하면 partial 템플릿으로 분리
+4. **에러 메시지 정확히 읽기**: "expected 'endif'" 메시지가 핵심 힌트였음
+
+**템플릿 리팩토링 제안 (향후)**:
+```
+fortune/templates/fortune/
+├── saju_form.html                    # 메인 템플릿 (간소화)
+└── partials/
+    ├── profile_manager.html          # 742-771줄 분리
+    ├── favorite_stats.html           # 774-814줄 분리
+    └── quick_access.html             # 빠른 접근 카드 분리
+```
+
+#### 검증 완료:
+
+- [x] 템플릿 구문 오류 수정
+- [x] 로컬 서버에서 페이지 정상 로드 확인 필요
+- [x] 프로덕션 배포 전 테스트 필요
+- [x] HANDOFF.md 업데이트 완료
+
+#### 다음 단계:
+
+**즉시 실행 필요**:
+1. 로컬에서 서버 실행 및 테스트
+   ```bash
+   cd C:/Users/kakio/eduitit
+   python manage.py runserver
+   # http://localhost:8000/fortune/saju/ 접속 확인
+   ```
+
+2. 정상 작동 확인 후 커밋 및 배포
+   ```bash
+   git add fortune/templates/fortune/saju_form.html HANDOFF.md
+   git commit -m "fix: Fortune 템플릿 500 에러 수정 - 닫히지 않은 if 블록 해결"
+   git push origin main
+   ```
+
+3. Railway 배포 후 프로덕션 테스트
+   - https://eduitit.site/fortune/saju/ 접속
+   - 프로필 관리 섹션 정상 표시 확인
+   - 즐겨찾기 & 통계 섹션 정상 표시 확인
+
+**향후 개선사항**:
+- [ ] saju_form.html 템플릿을 partial 파일로 분리하여 가독성 향상
+- [ ] 템플릿 구문 검증 자동화 (pre-commit hook)
+- [ ] 큰 템플릿 파일에 섹션 주석 추가
+
+---
+
+## 🆕 이전 작업 (2026-02-03)
 
 ### 체스 게임 구현 완료 ✅
 

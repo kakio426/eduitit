@@ -463,12 +463,13 @@ def sync_site_domain():
 
 def run_startup_tasks():
     sync_site_domain()
-    # Also ensure Ssambti product exists/is updated
+    # Also ensure Ssambti and Chess products exist/are updated
     try:
         from django.core.management import call_command
         call_command('ensure_ssambti')
+        call_command('ensure_chess')
     except Exception as e:
-        print(f"DEBUG: Startup ensure_ssambti failed: {e}")
+        print(f"DEBUG: Startup product ensure tasks failed: {e}")
 
 # 서버 실행 시 자동 실행
 import threading

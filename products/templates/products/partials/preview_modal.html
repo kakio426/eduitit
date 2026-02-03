@@ -88,7 +88,7 @@
     <!-- Footer Action -->
     <div class="pt-10 flex flex-col sm:flex-row items-center gap-4">
         {% comment %}Build target URL based on product{% endcomment %}
-        <a href="{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == 'AI 도구 가이드' %}{% url 'tool_guide' %}{% elif product.title == 'AI 프롬프트 레시피' %}{% url 'prompt_lab' %}{% else %}{% url 'home' %}{% endif %}"
+        <a href="{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '두뇌 풀가동! 교실 체스' %}{% url 'chess:index' %}{% elif product.title == 'AI 도구 가이드' %}{% url 'tool_guide' %}{% elif product.title == 'AI 프롬프트 레시피' %}{% url 'prompt_lab' %}{% else %}{% url 'home' %}{% endif %}"
             class="w-full sm:flex-[2] py-5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-[1.5rem] font-bold text-2xl text-center hover:shadow-purple-200 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group shadow-clay">
             바로 시작하기
             <i class="fa-solid fa-circle-play group-hover:scale-125 transition-transform"></i>
