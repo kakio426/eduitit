@@ -100,7 +100,7 @@ function initStockfish() {
         };
 
         // UCI 모드 시작
-        stockfish.postMessage('uci');
+        sendCommand('uci');
 
     } catch (e) {
         console.error("Failed to create Stockfish worker:", e);
@@ -117,22 +117,37 @@ function setEngineOptions() {
         else if (AI_DIFFICULTY === 'hard') skillLevel = 10;  // 고급
         else if (AI_DIFFICULTY === 'expert') skillLevel = 20; // 최강
     }
+
     console.log("Setting AI Skill Level to:", skillLevel);
 
-    // 브라우저 성능 고려 - 가벼운 설정
-    stockfish.postMessage('setoption name Hash value 16');      // 메모리 최소화
-    stockfish.postMessage('setoption name Threads value 1');    // 단일 스레드
-    stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+    // 불필요한 중복 설정 제거 (로그 분석 결과 기본값과 동일)
+    sendCommand('setoption name Skill Level value ' + skillLevel);
 
     // 준비 확인 요청
-    stockfish.postMessage('isready');
+    sendCommand('isready');
+
+    // [Fallback] 엔진이 readyok를 보내지 않을 경우를 대비해 2초 후 강제 준비 완료
+    setTimeout(function () {
+        if (!isEngineReady) {
+            console.warn("Engine did not respond with readyok in time. Forcing ready state...");
+            isEngineReady = true;
+            flushPendingCommands();
+        }
+    }, 2000);
+}
+
+function sendCommand(cmd) {
+    if (stockfish) {
+        console.log("To Engine:", cmd);
+        stockfish.postMessage(cmd);
+    }
 }
 
 function flushPendingCommands() {
     if (pendingCommands.length > 0) {
         console.log("Flushing", pendingCommands.length, "pending commands");
         for (var i = 0; i < pendingCommands.length; i++) {
-            stockfish.postMessage(pendingCommands[i]);
+            sendCommand(pendingCommands[i]);
         }
         pendingCommands = [];
     }
@@ -225,8 +240,8 @@ function makeAIMove() {
 
     // 브라우저 성능 고려 - 깊이 제한 (학생용이므로 가볍게)
     var depth = 10;
-    stockfish.postMessage('position fen ' + fen);
-    stockfish.postMessage('go depth ' + depth);
+    sendCommand('position fen ' + fen);
+    sendCommand('go depth ' + depth);
 }
 
 function onBestMove(line) {
