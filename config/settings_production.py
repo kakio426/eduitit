@@ -286,9 +286,8 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Settings
 ACCOUNT_LOGOUT_ON_GET = True
-ACCOUNT_EMAIL_REQUIRED = True  # 회원가입 시 이메일 필수
 ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스 진입 장벽 낮춤)
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']  # email 필수 표시
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']  # email* = 필수
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
 SESSION_COOKIE_AGE = 3600  # 1시간 동안 활동이 없으면 로그아웃
 SESSION_SAVE_EVERY_REQUEST = True  # 활동할 때마다 세션 만료 시간 연장
