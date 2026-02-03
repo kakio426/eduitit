@@ -139,3 +139,63 @@ class ZooResult(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.animal_name}({self.mbti_type})"
+
+class UserSajuProfile(models.Model):
+    """사용자가 저장한 여러 사주 프로필 (나, 가족, 친구 등)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saju_profiles')
+    profile_name = models.CharField(max_length=20, help_text="프로필 이름 (예: 나, 엄마, 친구)")
+    person_name = models.CharField(max_length=20, help_text="실제 이름")
+    gender = models.CharField(max_length=10, choices=[('male', '남자'), ('female', '여자')])
+    birth_year = models.IntegerField()
+    birth_month = models.IntegerField()
+    birth_day = models.IntegerField()
+    birth_hour = models.IntegerField(null=True, blank=True)
+    birth_minute = models.IntegerField(null=True, blank=True)
+    calendar_type = models.CharField(max_length=10, choices=[('solar', '양력'), ('lunar', '음력')], default='solar')
+    natal_chart = models.JSONField(help_text="계산된 사주 팔자", null=True, blank=True)
+    is_default = models.BooleanField(default=False, help_text="기본 프로필 여부")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_default', '-created_at']
+        unique_together = ['user', 'profile_name']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.profile_name} ({self.person_name})"
+
+    def save(self, *args, **kwargs):
+        # 기본 프로필 설정 시 다른 프로필의 is_default를 False로
+        if self.is_default:
+            UserSajuProfile.objects.filter(user=self.user, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
+
+class FavoriteDate(models.Model):
+    """사용자가 즐겨찾기한 날짜 (시험일, 생일, 기념일 등)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_dates')
+    profile = models.ForeignKey(UserSajuProfile, on_delete=models.CASCADE, related_name='favorite_dates', null=True, blank=True)
+    date = models.DateField()
+    label = models.CharField(max_length=50, help_text="날짜 라벨 (예: 시험일, 생일)")
+    memo = models.TextField(blank=True, help_text="메모")
+    color = models.CharField(max_length=20, default='indigo', help_text="UI 색상")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date']
+        unique_together = ['user', 'date', 'label']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.label} ({self.date})"
+
+class DailyFortuneLog(models.Model):
+    """일진 조회 기록 (통계용)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fortune_logs')
+    profile = models.ForeignKey(UserSajuProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    target_date = models.DateField()
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-viewed_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.target_date}"

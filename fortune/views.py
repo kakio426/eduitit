@@ -392,6 +392,14 @@ def daily_fortune_api(request):
         # Wrap generator to maintain current sync behavior
         response_text = "".join(generate_ai_response(prompt, request))
 
+        # 통계용 로그 저장
+        if request.user.is_authenticated:
+            from .models import DailyFortuneLog
+            DailyFortuneLog.objects.create(
+                user=request.user,
+                target_date=target_dt.date()
+            )
+
         return JsonResponse({
             'success': True,
             'result': response_text,
@@ -439,6 +447,213 @@ def delete_history_api(request, pk):
     item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
     item.delete()
     return JsonResponse({'success': True})
+
+
+# ============================================
+# 프로필 관리 API
+# ============================================
+
+def profile_list_api(request):
+    """사용자의 사주 프로필 목록 조회"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'profiles': []})
+
+    from .models import UserSajuProfile
+    profiles = UserSajuProfile.objects.filter(user=request.user)
+    data = [{
+        'id': p.id,
+        'profile_name': p.profile_name,
+        'person_name': p.person_name,
+        'gender': p.gender,
+        'birth_date': f"{p.birth_year}.{p.birth_month:02d}.{p.birth_day:02d}",
+        'birth_year': p.birth_year,
+        'birth_month': p.birth_month,
+        'birth_day': p.birth_day,
+        'birth_hour': p.birth_hour,
+        'birth_minute': p.birth_minute,
+        'calendar_type': p.calendar_type,
+        'is_default': p.is_default,
+        'natal_chart': p.natal_chart
+    } for p in profiles]
+    return JsonResponse({'profiles': data})
+
+
+@login_required
+@require_POST
+def profile_create_api(request):
+    """새 프로필 생성"""
+    from .models import UserSajuProfile
+    try:
+        data = json.loads(request.body)
+        profile = UserSajuProfile.objects.create(
+            user=request.user,
+            profile_name=data['profile_name'],
+            person_name=data['person_name'],
+            gender=data['gender'],
+            birth_year=data['birth_year'],
+            birth_month=data['birth_month'],
+            birth_day=data['birth_day'],
+            birth_hour=data.get('birth_hour'),
+            birth_minute=data.get('birth_minute'),
+            calendar_type=data.get('calendar_type', 'solar'),
+            is_default=data.get('is_default', False)
+        )
+        return JsonResponse({'success': True, 'profile_id': profile.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def profile_update_api(request, pk):
+    """프로필 수정"""
+    from .models import UserSajuProfile
+    try:
+        profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
+        data = json.loads(request.body)
+
+        for field in ['profile_name', 'person_name', 'gender', 'birth_year',
+                      'birth_month', 'birth_day', 'birth_hour', 'birth_minute',
+                      'calendar_type', 'is_default', 'natal_chart']:
+            if field in data:
+                setattr(profile, field, data[field])
+
+        profile.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def profile_delete_api(request, pk):
+    """프로필 삭제"""
+    from .models import UserSajuProfile
+    profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
+    profile.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_POST
+def profile_set_default_api(request, pk):
+    """기본 프로필 설정"""
+    from .models import UserSajuProfile
+    profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
+    UserSajuProfile.objects.filter(user=request.user).update(is_default=False)
+    profile.is_default = True
+    profile.save()
+    return JsonResponse({'success': True})
+
+
+# ============================================
+# 즐겨찾기 날짜 API
+# ============================================
+
+def favorite_dates_api(request):
+    """즐겨찾기 날짜 목록 조회"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'favorites': []})
+
+    from .models import FavoriteDate
+    from datetime import date
+
+    favorites = FavoriteDate.objects.filter(user=request.user).order_by('date')
+    today = date.today()
+
+    data = [{
+        'id': f.id,
+        'date': f.date.strftime('%Y-%m-%d'),
+        'label': f.label,
+        'memo': f.memo,
+        'color': f.color,
+        'is_past': f.date < today,
+        'days_until': (f.date - today).days
+    } for f in favorites]
+
+    return JsonResponse({'favorites': data})
+
+
+@login_required
+@require_POST
+def favorite_date_add_api(request):
+    """즐겨찾기 날짜 추가"""
+    from .models import FavoriteDate
+    from datetime import datetime
+
+    try:
+        data = json.loads(request.body)
+        favorite = FavoriteDate.objects.create(
+            user=request.user,
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            label=data['label'],
+            memo=data.get('memo', ''),
+            color=data.get('color', 'indigo')
+        )
+        return JsonResponse({'success': True, 'favorite_id': favorite.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def favorite_date_delete_api(request, pk):
+    """즐겨찾기 날짜 삭제"""
+    from .models import FavoriteDate
+    favorite = get_object_or_404(FavoriteDate, pk=pk, user=request.user)
+    favorite.delete()
+    return JsonResponse({'success': True})
+
+
+# ============================================
+# 통계 API
+# ============================================
+
+def statistics_api(request):
+    """사용자 통계 조회"""
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'total_analyses': 0,
+            'total_daily_checks': 0,
+            'recent_activity': 0,
+            'top_dates': []
+        })
+
+    from .models import DailyFortuneLog, FortuneResult
+    from django.db.models import Count
+    from datetime import date, timedelta
+
+    # 최근 30일간 조회 기록
+    thirty_days_ago = date.today() - timedelta(days=30)
+    recent_logs = DailyFortuneLog.objects.filter(
+        user=request.user,
+        viewed_at__gte=thirty_days_ago
+    )
+
+    # 가장 많이 본 날짜 (상위 5개)
+    top_dates = recent_logs.values('target_date').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+
+    # 총 사주 분석 횟수
+    total_analyses = FortuneResult.objects.filter(user=request.user).count()
+
+    # 총 일진 조회 횟수
+    total_daily_checks = DailyFortuneLog.objects.filter(user=request.user).count()
+
+    # 최근 7일 활동
+    seven_days_ago = date.today() - timedelta(days=7)
+    recent_activity = recent_logs.filter(viewed_at__gte=seven_days_ago).count()
+
+    return JsonResponse({
+        'total_analyses': total_analyses,
+        'total_daily_checks': total_daily_checks,
+        'recent_activity': recent_activity,
+        'top_dates': [{
+            'date': item['target_date'].strftime('%Y-%m-%d'),
+            'count': item['count']
+        } for item in top_dates]
+    })
 
 
 def saju_history_detail(request, pk):

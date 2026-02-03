@@ -75,6 +75,16 @@
 
     /* Alternative Water */
 
+    .analysis-content h1 {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #1e293b;
+        margin-top: 2rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 3px solid #6366f1;
+    }
+
     .analysis-content h2 {
         font-size: 1.5rem;
         font-weight: 900;
@@ -94,24 +104,32 @@
     }
 
     .analysis-content p {
-        line-height: 1.8;
+        line-height: 1.9;
         color: #475569;
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.5rem;
         word-break: keep-all;
+        white-space: pre-wrap;
     }
 
     .analysis-content ul {
         list-style-type: none;
         padding-left: 0;
+        margin-bottom: 1.5rem;
+    }
+
+    .analysis-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1.5rem;
     }
 
     .analysis-content li {
         margin-bottom: 0.75rem;
         padding-left: 1.5rem;
         position: relative;
+        line-height: 1.8;
     }
 
-    .analysis-content li::before {
+    .analysis-content ul li::before {
         content: "•";
         color: #6366f1;
         font-weight: bold;
@@ -119,11 +137,58 @@
         left: 0.5rem;
     }
 
-    #markdown-output blockquote {
+    .analysis-content strong {
+        color: #7c3aed;
+        font-weight: 800;
+    }
+
+    .analysis-content em {
+        color: #6366f1;
+        font-style: italic;
+    }
+
+    .analysis-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+    }
+
+    .analysis-content th,
+    .analysis-content td {
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem;
+        text-align: left;
+    }
+
+    .analysis-content th {
+        background-color: #f7fafc;
+        font-weight: bold;
+    }
+
+    .analysis-content blockquote {
         border-left: 4px solid #e2e8f0;
         padding-left: 1rem;
         font-style: italic;
         color: #64748b;
+        margin: 1.5rem 0;
+        background: #f8fafc;
+        padding: 1rem 1rem 1rem 1.5rem;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .analysis-content code {
+        background: #f1f5f9;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    .analysis-content pre {
+        background: #f1f5f9;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
         margin: 1.5rem 0;
     }
 
@@ -268,6 +333,7 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <!-- 카카오 SDK -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
 
@@ -342,10 +408,21 @@
         // stemImageContainer.innerHTML = `<img src="/static/fortune/images/stems/${dayStemCharacter}.png" class="w-48 h-48 object-cover rounded-full" alt="${stemKoreanMap[dayStemCharacter]}">`;
     }
 
-    // Render Markdown
+    // Render Markdown with proper settings
     const outputArea = document.getElementById('markdown-output');
-    const rawText = outputArea.innerText;
-    outputArea.innerHTML = marked.parse(rawText);
+    const rawText = outputArea.innerText || outputArea.textContent;
+
+    // Configure marked for better formatting
+    marked.setOptions({
+        breaks: true,        // 줄바꿈 인식
+        gfm: true,          // GitHub Flavored Markdown
+        headerIds: false,
+        mangle: false
+    });
+
+    // Parse and sanitize
+    const parsedMarkdown = marked.parse(rawText);
+    outputArea.innerHTML = DOMPurify.sanitize(parsedMarkdown);
 
     // 카카오 SDK 초기화
     if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {

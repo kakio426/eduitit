@@ -19,6 +19,7 @@
         color: #4a5568;
         word-break: keep-all;
         overflow-wrap: break-word;
+        white-space: pre-wrap; /* 줄바꿈 보존 */
     }
 
     .markdown-body table {
@@ -65,7 +66,8 @@
     }
 
     .markdown-body p {
-        margin-bottom: 1.2rem;
+        margin-bottom: 1.5rem;
+        white-space: pre-wrap; /* 줄바꿈 보존 */
     }
 
     .markdown-body ul,
@@ -488,11 +490,217 @@
     .toast.info {
         background: linear-gradient(135deg, #4f46e5, #6366f1);
     }
+
+    /* ========================================
+       프로필 카드 스타일
+       ======================================== */
+    .profile-card {
+        min-width: 280px;
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .profile-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .profile-card.default {
+        border-color: #8b5cf6;
+        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    }
+
+    .profile-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+
+    .profile-icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .profile-label {
+        font-size: 0.85rem;
+        color: #8b5cf6;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .profile-name {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: #1e293b;
+        margin: 0.25rem 0;
+    }
+
+    .profile-date {
+        font-size: 0.95rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .default-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+
+    .profile-card-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .profile-btn {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex: 1;
+    }
+
+    .profile-btn.primary {
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: white;
+    }
+
+    .profile-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
+    .profile-btn:not(.primary):not(.danger) {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .profile-btn:not(.primary):not(.danger):hover {
+        background: #e2e8f0;
+    }
+
+    .profile-btn.danger {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .profile-btn.danger:hover {
+        background: #fecaca;
+    }
+
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+        .profile-card {
+            min-width: 260px;
+        }
+
+        #profileCardsContainer {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #profileCardsContainer::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        #profileCardsContainer::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    }
+
+    /* ========================================
+       즐겨찾기 날짜 스타일
+       ======================================== */
+    .favorite-date-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        background: white;
+        border-radius: 12px;
+        border: 2px solid #f1f5f9;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .favorite-date-item:hover {
+        border-color: #fbbf24;
+        background: #fffbeb;
+        transform: translateX(4px);
+    }
+
+    .favorite-date-item.past {
+        opacity: 0.6;
+    }
+
+    .favorite-date-item.past:hover {
+        opacity: 0.8;
+        border-color: #cbd5e1;
+        background: #f8fafc;
+    }
+
+    #favoriteDatesContainer::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #favoriteDatesContainer::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-4xl mx-auto">
+
+    <!-- 리마인더 알림 배너 -->
+    <div id="reminderBanner" class="hidden mb-6 animate-in slide-in-from-top duration-500">
+        <div class="clay-card p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center text-white text-2xl animate-bounce">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-gray-800">오늘의 운세를 확인해보세요! ✨</h3>
+                        <p class="text-gray-600 font-medium">어제 설정한 알림입니다</p>
+                    </div>
+                </div>
+                <button onclick="dismissReminder()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 헤더 -->
     <div class="text-center mb-12" data-aos="fade-down">
@@ -529,6 +737,130 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- 프로필 관리 섹션 (로그인 사용자만) -->
+    {% if user.is_authenticated %}
+    <div id="profileManagerSection" class="mb-8">
+        <div class="clay-card p-6 md:p-8" data-aos="fade-up">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-2xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-800">내 프로필</h3>
+                        <p class="text-gray-600 font-medium text-base">여러 사람의 사주를 저장하고 관리하세요</p>
+                    </div>
+                </div>
+                <button onclick="showProfileModal()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-plus mr-2"></i>프로필 추가
+                </button>
+            </div>
+
+            <!-- 프로필 카드 목록 (가로 스크롤) -->
+            <div id="profileCardsContainer" class="overflow-x-auto pb-4 -mx-4 px-4">
+                <div id="profileCards" class="flex gap-4 min-w-max">
+                    <!-- 프로필 카드가 여기에 동적으로 추가됩니다 -->
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-2"></i>
+                        <p>프로필 로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 즐겨찾기 날짜 & 통계 (로그인 사용자만) -->
+    {% if user.is_authenticated %}
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <!-- 즐겨찾기 날짜 -->
+        <div class="clay-card p-6" data-aos="fade-up">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-black text-gray-800">
+                    <i class="fa-solid fa-star text-amber-500 mr-2"></i>
+                    즐겨찾기 날짜
+                </h3>
+                <button onclick="showFavoriteDateModal()" class="text-amber-500 hover:text-amber-600">
+                    <i class="fa-solid fa-plus text-2xl"></i>
+                </button>
+            </div>
+            <div id="favoriteDatesContainer" class="space-y-2 max-h-60 overflow-y-auto">
+                <p class="text-gray-400 text-center py-4">로딩 중...</p>
+            </div>
+        </div>
+
+        <!-- 통계 대시보드 -->
+        <div class="clay-card p-6" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="text-xl font-black text-gray-800 mb-4">
+                <i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>
+                활동 통계
+            </h3>
+            <div id="statisticsContainer" class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">총 사주 분석</span>
+                    <span id="statTotalAnalyses" class="text-2xl font-black text-indigo-600">-</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">일진 조회</span>
+                    <span id="statTotalDaily" class="text-2xl font-black text-purple-600">-</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">최근 7일 활동</span>
+                    <span id="statRecentActivity" class="text-2xl font-black text-green-600">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
+    <div id="quickAccessContainer" class="hidden mb-8">
+        <div class="clay-card p-8 md:p-10 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 border-2 border-purple-200" data-aos="fade-up">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center text-4xl" id="quickAccessIcon">
+                    🔮
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-gray-800">마지막으로 본 사주</h3>
+                    <p class="text-gray-600 font-medium">저장된 정보로 빠르게 다시 확인하세요</p>
+                </div>
+            </div>
+
+            <div class="bg-white/70 rounded-2xl p-6 mb-6">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">이름</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessName">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">성별</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessGender">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">생년월일</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessBirthDate">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">상담 모드</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessMode">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4">
+                <button onclick="useLastSajuInfo()" class="flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
+                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
+                    shadow-lg hover:shadow-xl hover:-translate-y-1">
+                    <i class="fa-solid fa-bolt mr-2"></i>이 정보로 다시 보기
+                </button>
+                <button onclick="showNewSajuForm()" class="flex-1 py-5 rounded-2xl font-bold text-2xl transition-all
+                    bg-white text-gray-700 border-2 border-gray-300
+                    hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1">
+                    <i class="fa-solid fa-user-plus mr-2"></i>새로운 사주 입력
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 입력 폼 섹션 -->
     <div id="formContainer" class="{% if result %}hidden{% endif %}">
@@ -701,6 +1033,26 @@
                     </div>
                 </div>
 
+                <!-- 빠른 날짜 선택 버튼 -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button type="button" onclick="setQuickDate(0)"
+                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                        오늘
+                    </button>
+                    <button type="button" onclick="setQuickDate(1)"
+                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                        내일
+                    </button>
+                    <button type="button" onclick="setQuickDate(2)"
+                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                        모레
+                    </button>
+                    <button type="button" onclick="setQuickDate('weekend')"
+                        class="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold text-base transition-all">
+                        이번 주말
+                    </button>
+                </div>
+
                 <div class="flex flex-col md:flex-row gap-4 items-center">
                     <input type="date" id="targetDateInput" value="{% now 'Y-m-d' %}"
                         class="flex-1 w-full bg-white border-2 border-indigo-100 rounded-2xl p-4 text-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
@@ -708,6 +1060,12 @@
                         class="w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
                         운세 보기
                     </button>
+                    {% if user.is_authenticated %}
+                    <button onclick="addFavoriteDate()" id="favoriteDateBtn"
+                        class="w-full md:w-auto px-6 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                        <i class="fa-solid fa-star"></i>
+                    </button>
+                    {% endif %}
                 </div>
 
                 <div id="dailyFortuneResult" class="mt-8 hidden animate-in fade-in slide-in-from-top duration-500">
@@ -721,22 +1079,43 @@
             <!-- 저장/가입 유도 섹션 -->
             <div id="saveSection" class="{% if not result %}hidden{% endif %}">
                 {% if user.is_authenticated %}
-                <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
-                                <i class="fa-solid fa-bookmark"></i>
+                <div class="space-y-4">
+                    <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
+                        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
+                                    <i class="fa-solid fa-bookmark"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
+                                    <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
+                                </div>
                             </div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
-                                <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
-                            </div>
+                            <button onclick="saveToLibrary()"
+                                class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                                보관함에 저장
+                            </button>
                         </div>
-                        <button onclick="saveToLibrary()"
-                            class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                            보관함에 저장
-                        </button>
+                    </div>
+
+                    <div class="bg-amber-50/50 rounded-3xl p-8 border border-amber-100">
+                        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-12 h-12 bg-amber-600/10 text-amber-600 rounded-2xl flex items-center justify-center text-2xl">
+                                    <i class="fa-solid fa-bell"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h4 class="text-xl font-black text-slate-700">내일 운세 알림 받기</h4>
+                                    <p class="text-slate-500 font-medium">내일 다시 방문하면 리마인더를 표시해드릴게요.</p>
+                                </div>
+                            </div>
+                            <button onclick="setTomorrowReminder()"
+                                class="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                                알림 설정
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% else %}
@@ -768,6 +1147,130 @@
                     <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
                 </a>
             </div>
+        </div>
+    </div>
+
+    <!-- 즐겨찾기 날짜 추가 모달 -->
+    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeFavoriteDateModalOnBackdrop(event)">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-black text-gray-800">
+                    <i class="fa-solid fa-star text-amber-500 mr-2"></i>
+                    즐겨찾기 날짜 추가
+                </h3>
+                <button onclick="closeFavoriteDateModal()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <form id="favoriteDateForm" class="space-y-4">
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">날짜</label>
+                    <input type="date" id="favoriteDate" class="saju-input" required>
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">라벨</label>
+                    <input type="text" id="favoriteLabel" class="saju-input" placeholder="예: 시험일, 생일, 기념일" required maxlength="50">
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">메모 (선택)</label>
+                    <textarea id="favoriteMemo" class="saju-input" placeholder="간단한 메모를 남겨보세요" rows="3"></textarea>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeFavoriteDateModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                        취소
+                    </button>
+                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                        저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 프로필 추가/수정 모달 -->
+    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeProfileModalOnBackdrop(event)">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-black text-gray-800">
+                    <i class="fa-solid fa-user-plus text-purple-500 mr-2"></i>
+                    <span id="modalTitle">프로필 추가</span>
+                </h3>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <form id="profileForm" class="space-y-4">
+                <input type="hidden" id="profileId" value="">
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">프로필 이름</label>
+                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required maxlength="20">
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">실제 이름</label>
+                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required maxlength="20">
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">성별</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="profileGender" value="male" required>
+                            <span>남자</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="profileGender" value="female">
+                            <span>여자</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">생년월일</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required min="1940" max="2025">
+                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1" max="12">
+                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1" max="31">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">태어난 시간 (선택)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0" max="23">
+                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0" max="59">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">양력/음력</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="profileCalendarType" value="solar" checked>
+                            <span>양력</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="profileCalendarType" value="lunar">
+                            <span>음력</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeProfileModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                        취소
+                    </button>
+                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                        저장
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -846,7 +1349,591 @@
 
         // 로컬 스토리지에서 이전 결과 복원 (가입 후 돌아온 경우)
         restorePendingSajuResult();
+
+        // 마지막 사주 정보 로드 및 빠른 접근 카드 표시
+        loadLastSajuInfo();
     });
+
+    // 마지막 사주 정보 로드
+    function loadLastSajuInfo() {
+        const lastSajuInput = localStorage.getItem('lastSajuInput');
+        const quickAccessContainer = document.getElementById('quickAccessContainer');
+        const formContainer = document.getElementById('formContainer');
+
+        // 결과가 이미 있으면 빠른 접근 카드 표시하지 않음
+        const hasResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
+        if (hasResult) return;
+
+        if (lastSajuInput) {
+            try {
+                const data = JSON.parse(lastSajuInput);
+
+                // 7일 이내 데이터만 표시
+                const age = Date.now() - data.timestamp;
+                if (age > 7 * 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem('lastSajuInput');
+                    formContainer.classList.remove('hidden');
+                    return;
+                }
+
+                // 빠른 접근 카드 정보 채우기
+                const genderMap = { 'male': '남자', 'female': '여자' };
+                const modeMap = { 'teacher': '교사 모드', 'general': '일반 모드' };
+
+                document.getElementById('quickAccessName').textContent = data.name || '-';
+                document.getElementById('quickAccessGender').textContent = genderMap[data.gender] || '-';
+                document.getElementById('quickAccessBirthDate').textContent =
+                    `${data.birth_year}.${String(data.birth_month).padStart(2, '0')}.${String(data.birth_day).padStart(2, '0')}`;
+                document.getElementById('quickAccessMode').textContent = modeMap[data.mode] || '-';
+
+                // 일간 아이콘 표시 (이전 결과가 있으면)
+                if (data.daystem) {
+                    const stemEmojiMap = {
+                        '갑': '🌳', '을': '🌿',
+                        '병': '☀️', '정': '🕯️',
+                        '무': '⛰️', '기': '🏔️',
+                        '경': '⚔️', '신': '💎',
+                        '임': '🌊', '계': '💧'
+                    };
+                    const icon = stemEmojiMap[data.daystem] || '🔮';
+                    document.getElementById('quickAccessIcon').textContent = icon;
+                }
+
+                // UI 전환
+                quickAccessContainer.classList.remove('hidden');
+                formContainer.classList.add('hidden');
+            } catch (e) {
+                console.error('Failed to load last saju info:', e);
+                localStorage.removeItem('lastSajuInput');
+                formContainer.classList.remove('hidden');
+            }
+        } else {
+            formContainer.classList.remove('hidden');
+        }
+    }
+
+    // 저장된 정보로 다시 보기
+    function useLastSajuInfo() {
+        const lastSajuInput = localStorage.getItem('lastSajuInput');
+        if (!lastSajuInput) {
+            showToast('저장된 정보가 없습니다.', 'error');
+            return;
+        }
+
+        try {
+            const data = JSON.parse(lastSajuInput);
+
+            // 폼 필드 채우기
+            document.querySelector('[name="name"]').value = data.name || '';
+            document.querySelector(`[name="gender"][value="${data.gender}"]`).checked = true;
+            document.querySelector('[name="birth_year"]').value = data.birth_year || '';
+            document.querySelector('[name="birth_month"]').value = data.birth_month || '';
+            document.querySelector('[name="birth_day"]').value = data.birth_day || '';
+            document.querySelector('[name="birth_hour"]').value = data.birth_hour || '';
+            document.querySelector('[name="birth_minute"]').value = data.birth_minute || '';
+            document.querySelector(`[name="calendar_type"][value="${data.calendar_type}"]`).checked = true;
+
+            // 모드 설정
+            setMode(data.mode || 'teacher');
+
+            // 빠른 접근 카드 숨기고 결과로 이동
+            document.getElementById('quickAccessContainer').classList.add('hidden');
+
+            // 폼 자동 제출
+            document.getElementById('sajuForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } catch (e) {
+            console.error('Failed to use last saju info:', e);
+            showToast('정보를 불러오는 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    // 새로운 사주 입력
+    function showNewSajuForm() {
+        // 빠른 접근 카드 숨기기
+        document.getElementById('quickAccessContainer').classList.add('hidden');
+        // 폼 표시
+        document.getElementById('formContainer').classList.remove('hidden');
+        // 폼 초기화
+        document.getElementById('sajuForm').reset();
+        setMode('teacher');
+    }
+
+    // ============================================
+    // 프로필 관리 함수
+    // ============================================
+
+    let currentProfiles = [];
+
+    // 프로필 목록 로드
+    async function loadProfiles() {
+        const isAuthenticated = "{{ user.is_authenticated }}" === "True";
+        if (!isAuthenticated) return;
+
+        try {
+            const response = await fetch('{% url "fortune:profile_list_api" %}');
+            const data = await response.json();
+            currentProfiles = data.profiles;
+            renderProfileCards();
+        } catch (e) {
+            console.error('Failed to load profiles:', e);
+        }
+    }
+
+    // 프로필 카드 렌더링
+    function renderProfileCards() {
+        const container = document.getElementById('profileCards');
+        if (!container) return;
+
+        if (currentProfiles.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-400 py-8 w-full">
+                    <i class="fa-solid fa-user-plus text-5xl mb-4 opacity-50"></i>
+                    <p class="text-lg">프로필을 추가하여 여러 사람의 사주를 관리하세요</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = currentProfiles.map(profile => `
+            <div class="profile-card ${profile.is_default ? 'default' : ''}" data-profile-id="${profile.id}">
+                <div class="profile-card-header">
+                    <div class="profile-icon">
+                        ${profile.gender === 'male' ? '👨' : '👩'}
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-label">${profile.profile_name}</div>
+                        <div class="profile-name">${profile.person_name}</div>
+                        <div class="profile-date">${profile.birth_date}</div>
+                    </div>
+                    ${profile.is_default ? '<div class="default-badge">기본</div>' : ''}
+                </div>
+                <div class="profile-card-actions">
+                    <button onclick="selectProfile(${profile.id})" class="profile-btn primary">
+                        <i class="fa-solid fa-bolt"></i> 사주 보기
+                    </button>
+                    <button onclick="editProfile(${profile.id})" class="profile-btn">
+                        <i class="fa-solid fa-edit"></i>
+                    </button>
+                    <button onclick="deleteProfile(${profile.id})" class="profile-btn danger">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 프로필 선택 (폼 자동 채우기)
+    function selectProfile(profileId) {
+        const profile = currentProfiles.find(p => p.id === profileId);
+        if (!profile) return;
+
+        // 폼 필드 채우기
+        document.querySelector('[name="name"]').value = profile.person_name;
+        document.querySelector(`[name="gender"][value="${profile.gender}"]`).checked = true;
+        document.querySelector('[name="birth_year"]').value = profile.birth_year;
+        document.querySelector('[name="birth_month"]').value = profile.birth_month;
+        document.querySelector('[name="birth_day"]').value = profile.birth_day;
+        document.querySelector('[name="birth_hour"]').value = profile.birth_hour || '';
+        document.querySelector('[name="birth_minute"]').value = profile.birth_minute || '';
+        document.querySelector(`[name="calendar_type"][value="${profile.calendar_type}"]`).checked = true;
+
+        // 빠른 접근 카드와 프로필 섹션 숨기기
+        document.getElementById('quickAccessContainer')?.classList.add('hidden');
+        document.getElementById('profileManagerSection')?.classList.add('hidden');
+
+        // 폼 표시 및 스크롤
+        const formContainer = document.getElementById('formContainer');
+        formContainer.classList.remove('hidden');
+        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        showToast(`${profile.person_name} 프로필을 불러왔습니다`, 'success');
+    }
+
+    // 프로필 모달 열기
+    function showProfileModal(profileId = null) {
+        const modal = document.getElementById('profileModal');
+        const form = document.getElementById('profileForm');
+        const modalTitle = document.getElementById('modalTitle');
+
+        form.reset();
+
+        if (profileId) {
+            const profile = currentProfiles.find(p => p.id === profileId);
+            if (profile) {
+                modalTitle.textContent = '프로필 수정';
+                document.getElementById('profileId').value = profile.id;
+                document.getElementById('profileName').value = profile.profile_name;
+                document.getElementById('personName').value = profile.person_name;
+                document.querySelector(`[name="profileGender"][value="${profile.gender}"]`).checked = true;
+                document.getElementById('profileBirthYear').value = profile.birth_year;
+                document.getElementById('profileBirthMonth').value = profile.birth_month;
+                document.getElementById('profileBirthDay').value = profile.birth_day;
+                document.getElementById('profileBirthHour').value = profile.birth_hour || '';
+                document.getElementById('profileBirthMinute').value = profile.birth_minute || '';
+                document.querySelector(`[name="profileCalendarType"][value="${profile.calendar_type}"]`).checked = true;
+            }
+        } else {
+            modalTitle.textContent = '프로필 추가';
+            document.getElementById('profileId').value = '';
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function editProfile(profileId) {
+        showProfileModal(profileId);
+    }
+
+    // 프로필 모달 닫기
+    function closeProfileModal() {
+        document.getElementById('profileModal').classList.add('hidden');
+    }
+
+    function closeProfileModalOnBackdrop(event) {
+        if (event.target.id === 'profileModal') {
+            closeProfileModal();
+        }
+    }
+
+    // 프로필 폼 제출
+    document.getElementById('profileForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
+            return;
+        }
+
+        const profileId = document.getElementById('profileId').value;
+        const genderChecked = document.querySelector('[name="profileGender"]:checked');
+        const calendarChecked = document.querySelector('[name="profileCalendarType"]:checked');
+
+        if (!genderChecked || !calendarChecked) {
+            showToast('모든 항목을 입력해주세요', 'error');
+            return;
+        }
+
+        const profileData = {
+            profile_name: document.getElementById('profileName').value,
+            person_name: document.getElementById('personName').value,
+            gender: genderChecked.value,
+            birth_year: parseInt(document.getElementById('profileBirthYear').value),
+            birth_month: parseInt(document.getElementById('profileBirthMonth').value),
+            birth_day: parseInt(document.getElementById('profileBirthDay').value),
+            birth_hour: document.getElementById('profileBirthHour').value ? parseInt(document.getElementById('profileBirthHour').value) : null,
+            birth_minute: document.getElementById('profileBirthMinute').value ? parseInt(document.getElementById('profileBirthMinute').value) : null,
+            calendar_type: calendarChecked.value,
+            is_default: currentProfiles.length === 0 // 첫 프로필이면 기본으로 설정
+        };
+
+        try {
+            const url = profileId
+                ? `{% url "fortune:profile_update_api" 0 %}`.replace('0', profileId)
+                : '{% url "fortune:profile_create_api" %}';
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken.value
+                },
+                body: JSON.stringify(profileData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeProfileModal();
+                await loadProfiles();
+                showToast(profileId ? '프로필이 수정되었습니다' : '프로필이 추가되었습니다', 'success');
+            } else {
+                showToast('오류: ' + data.error, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('서버 통신 오류가 발생했습니다', 'error');
+        }
+    });
+
+    // 프로필 삭제
+    async function deleteProfile(profileId) {
+        if (!confirm('이 프로필을 삭제하시겠습니까?')) return;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`{% url "fortune:profile_delete_api" 0 %}`.replace('0', profileId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken.value
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                await loadProfiles();
+                showToast('프로필이 삭제되었습니다', 'success');
+            }
+        } catch (e) {
+            showToast('삭제 중 오류가 발생했습니다', 'error');
+        }
+    }
+
+    // 페이지 로드 시 프로필 로드
+    if ("{{ user.is_authenticated }}" === "True") {
+        loadProfiles();
+        loadFavoriteDates();
+        loadStatistics();
+    }
+
+    // 리마인더 확인 (모든 사용자)
+    checkReminder();
+
+    // ============================================
+    // 즐겨찾기 날짜 함수
+    // ============================================
+
+    let currentFavorites = [];
+
+    // 즐겨찾기 날짜 로드
+    async function loadFavoriteDates() {
+        try {
+            const response = await fetch('{% url "fortune:favorite_dates_api" %}');
+            const data = await response.json();
+            currentFavorites = data.favorites;
+            renderFavoriteDates();
+        } catch (e) {
+            console.error('Failed to load favorites:', e);
+        }
+    }
+
+    // 즐겨찾기 날짜 렌더링
+    function renderFavoriteDates() {
+        const container = document.getElementById('favoriteDatesContainer');
+        if (!container) return;
+
+        if (currentFavorites.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-4">즐겨찾기한 날짜가 없습니다</p>';
+            return;
+        }
+
+        container.innerHTML = currentFavorites.map(fav => {
+            const isPast = fav.is_past;
+            const daysText = isPast
+                ? `${Math.abs(fav.days_until)}일 전`
+                : fav.days_until === 0
+                ? '오늘'
+                : `D-${fav.days_until}`;
+
+            return `
+                <div class="favorite-date-item ${isPast ? 'past' : ''}" onclick="selectFavoriteDate('${fav.date}')">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-star text-amber-500"></i>
+                            <span class="font-bold text-gray-800">${fav.label}</span>
+                            <span class="text-sm ${isPast ? 'text-gray-400' : 'text-indigo-600'} font-bold">${daysText}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-1">${fav.date}</div>
+                        ${fav.memo ? `<div class="text-sm text-gray-500 mt-1">${fav.memo}</div>` : ''}
+                    </div>
+                    <button onclick="deleteFavoriteDate(${fav.id}); event.stopPropagation();" class="text-red-400 hover:text-red-600">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 즐겨찾기 날짜 선택
+    function selectFavoriteDate(dateStr) {
+        document.getElementById('targetDateInput').value = dateStr;
+        document.getElementById('targetDateInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('날짜가 선택되었습니다', 'success');
+    }
+
+    // 즐겨찾기 모달 열기
+    function showFavoriteDateModal() {
+        const modal = document.getElementById('favoriteDateModal');
+        document.getElementById('favoriteDateForm').reset();
+        modal.classList.remove('hidden');
+    }
+
+    // 즐겨찾기 모달 닫기
+    function closeFavoriteDateModal() {
+        document.getElementById('favoriteDateModal').classList.add('hidden');
+    }
+
+    function closeFavoriteDateModalOnBackdrop(event) {
+        if (event.target.id === 'favoriteDateModal') {
+            closeFavoriteDateModal();
+        }
+    }
+
+    // 즐겨찾기 추가 (일진 확인 화면에서)
+    async function addFavoriteDate() {
+        const targetDateInput = document.getElementById('targetDateInput');
+        if (!targetDateInput || !targetDateInput.value) {
+            showToast('날짜를 선택해주세요', 'error');
+            return;
+        }
+
+        const label = prompt('이 날짜의 라벨을 입력하세요 (예: 시험일, 생일)');
+        if (!label) return;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('{% url "fortune:favorite_date_add_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken.value
+                },
+                body: JSON.stringify({
+                    date: targetDateInput.value,
+                    label: label
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                await loadFavoriteDates();
+                showToast('즐겨찾기에 추가되었습니다', 'success');
+            }
+        } catch (e) {
+            showToast('추가 중 오류가 발생했습니다', 'error');
+        }
+    }
+
+    // 즐겨찾기 폼 제출
+    document.getElementById('favoriteDateForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
+            return;
+        }
+
+        const favoriteData = {
+            date: document.getElementById('favoriteDate').value,
+            label: document.getElementById('favoriteLabel').value,
+            memo: document.getElementById('favoriteMemo').value
+        };
+
+        try {
+            const response = await fetch('{% url "fortune:favorite_date_add_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken.value
+                },
+                body: JSON.stringify(favoriteData)
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                closeFavoriteDateModal();
+                await loadFavoriteDates();
+                showToast('즐겨찾기에 추가되었습니다', 'success');
+            }
+        } catch (e) {
+            showToast('추가 중 오류가 발생했습니다', 'error');
+        }
+    });
+
+    // 즐겨찾기 삭제
+    async function deleteFavoriteDate(favoriteId) {
+        if (!confirm('이 즐겨찾기를 삭제하시겠습니까?')) return;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`{% url "fortune:favorite_date_delete_api" 0 %}`.replace('0', favoriteId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken.value
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                await loadFavoriteDates();
+                showToast('삭제되었습니다', 'success');
+            }
+        } catch (e) {
+            showToast('삭제 중 오류가 발생했습니다', 'error');
+        }
+    }
+
+    // ============================================
+    // 통계 함수
+    // ============================================
+
+    // 통계 로드
+    async function loadStatistics() {
+        try {
+            const response = await fetch('{% url "fortune:statistics_api" %}');
+            const data = await response.json();
+
+            document.getElementById('statTotalAnalyses').textContent = data.total_analyses;
+            document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
+            document.getElementById('statRecentActivity').textContent = data.recent_activity;
+        } catch (e) {
+            console.error('Failed to load statistics:', e);
+        }
+    }
+
+    // ============================================
+    // 알림/리마인더 함수
+    // ============================================
+
+    // 내일 운세 리마인더 설정
+    function setTomorrowReminder() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+
+        localStorage.setItem('fortuneReminder', tomorrow.getTime());
+        showToast('내일 알림이 설정되었습니다! 🔔', 'success');
+    }
+
+    // 리마인더 확인
+    function checkReminder() {
+        const reminderTime = localStorage.getItem('fortuneReminder');
+        if (!reminderTime) return;
+
+        const now = new Date().getTime();
+        const reminderDate = parseInt(reminderTime);
+
+        // 리마인더 날짜가 지났으면 배너 표시
+        if (now >= reminderDate) {
+            const banner = document.getElementById('reminderBanner');
+            if (banner) {
+                banner.classList.remove('hidden');
+            }
+        }
+    }
+
+    // 리마인더 배너 닫기
+    function dismissReminder() {
+        document.getElementById('reminderBanner').classList.add('hidden');
+        localStorage.removeItem('fortuneReminder');
+    }
 
     // 이전 사주 결과 복원 함수
     function restorePendingSajuResult() {
@@ -952,6 +2039,21 @@
         const form = e.target;
         const formData = new FormData(form);
 
+        // localStorage에 입력 정보 저장
+        const inputData = {
+            name: formData.get('name'),
+            gender: formData.get('gender'),
+            birth_year: parseInt(formData.get('birth_year')),
+            birth_month: parseInt(formData.get('birth_month')),
+            birth_day: parseInt(formData.get('birth_day')),
+            birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
+            birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
+            calendar_type: formData.get('calendar_type'),
+            mode: formData.get('mode'),
+            timestamp: Date.now()
+        };
+        localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
+
         // UI 전환
         document.getElementById('formContainer').classList.add('hidden');
         document.getElementById('resultContainer').classList.remove('hidden');
@@ -1021,6 +2123,17 @@
             // 완료 후 추가 처리
             detectAndShowElement(accumulatedText);
             updateShareCard(accumulatedText);
+
+            // 일간 정보 추출 및 localStorage 업데이트
+            const daystemMatch = accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/);
+            if (daystemMatch) {
+                const savedInput = localStorage.getItem('lastSajuInput');
+                if (savedInput) {
+                    const data = JSON.parse(savedInput);
+                    data.daystem = daystemMatch[1];
+                    localStorage.setItem('lastSajuInput', JSON.stringify(data));
+                }
+            }
 
             // 비회원 결과 보존: 로컬 스토리지에 저장
             const chartDataElem = document.getElementById('saju-chart-data');
@@ -1273,6 +2386,34 @@
             noPrintElements.forEach(el => el.style.display = '');
             showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
         });
+    }
+
+    // 빠른 날짜 선택
+    function setQuickDate(type) {
+        const today = new Date();
+        let targetDate = new Date(today);
+
+        if (type === 'weekend') {
+            // 이번 주 토요일 찾기
+            const dayOfWeek = today.getDay(); // 0(일) ~ 6(토)
+            const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+            targetDate.setDate(today.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
+        } else {
+            // 숫자면 일수 더하기
+            targetDate.setDate(today.getDate() + type);
+        }
+
+        // YYYY-MM-DD 포맷으로 변환
+        const year = targetDate.getFullYear();
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const day = String(targetDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
+        // 날짜 입력 필드 업데이트
+        document.getElementById('targetDateInput').value = dateString;
+
+        // 바로 운세 확인 (선택적)
+        // checkDailyFortune();
     }
 
     // 일진 확인
