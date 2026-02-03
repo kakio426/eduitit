@@ -527,10 +527,23 @@
         const p = data.pillars;
         const dm = data.day_master;
 
+        // 1. Dynamic Background based on Day Master Element
+        const card = document.getElementById('sajuCard');
+        const bgMap = {
+            'wood': 'linear-gradient(135deg, #064e3b 0%, #10b981 100%)', // Emerald
+            'fire': 'linear-gradient(135deg, #7f1d1d 0%, #f87171 100%)', // Red
+            'earth': 'linear-gradient(135deg, #713f12 0%, #facc15 100%)', // Yellow
+            'metal': 'linear-gradient(135deg, #334155 0%, #94a3b8 100%)', // Slate
+            'water': 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'  // Blue
+        };
+        // Apply with transition
+        card.style.background = bgMap[dm.element] || 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)';
+        card.style.transition = 'background 1s ease';
+
         // Helper to create Pillar HTML
         const createPillarHTML = (colData) => `
-            <div class="text-3xl md:text-5xl font-bold pillar-char text-${colData.stem.element}">${colData.stem.char}</div>
-            <div class="text-3xl md:text-5xl font-bold pillar-char text-${colData.branch.element}">${colData.branch.char}</div>
+            <div class="text-2xl md:text-4xl font-black pillar-char text-white/90 drop-shadow-md">${colData.stem.char}</div>
+            <div class="text-2xl md:text-4xl font-black pillar-char text-white/90 drop-shadow-md">${colData.branch.char}</div>
         `;
 
         document.getElementById('colYear').innerHTML = createPillarHTML(p.year);
@@ -556,13 +569,39 @@
         document.getElementById('dayMasterLabel').textContent = fullDmLabel;
 
         // Summary Text
-        document.getElementById('userNameDisplay').textContent = `${currentUser.name}님`;
-        const summary = `당신은 ${fullDmLabel.split(' ')[1]}의 기질을 타고난 분입니다.`;
-        document.getElementById('userSummary').textContent = summary;
+        document.getElementById('userNameDisplay').textContent = `${currentUser.name}님의 사주 명함`;
+
+        let summaryText = `당신은 ${fullDmLabel.split(' ')[1]}의 기질을 타고났습니다.`;
+        if (currentUser.mode === 'teacher') {
+            summaryText = `학생들을 이끄는 ${fullDmLabel.split(' ')[1]}의 기운을 가지셨군요.`;
+        }
+        document.getElementById('userSummary').textContent = summaryText;
         document.getElementById('shareDescription').textContent = `${currentUser.name}님: ${fullDmLabel}`;
 
         // Element Distribution Visualization
         renderElementGraph(data.element_counts);
+
+        // 2. Teacher Mode Logic: Highlight & Scroll
+        if (currentUser.mode === 'teacher') {
+            const teacherBtn = document.querySelector('button[onclick*="teacher"]');
+            if (teacherBtn) {
+                // Remove generic glass style and apply premium highlight
+                teacherBtn.classList.remove('ring-purple-500/50');
+                teacherBtn.classList.add('ring-4', 'ring-yellow-400', 'bg-white/10', 'animate-pulse-slow');
+
+                // Add a "Recommended" badge
+                const badge = document.createElement('div');
+                badge.className = 'absolute -top-2 -right-2 bg-yellow-400 text-black font-bold text-xs px-2 py-1 rounded-full shadow-lg z-20';
+                badge.textContent = '추천';
+                teacherBtn.parentElement.style.position = 'relative';
+                teacherBtn.parentElement.appendChild(badge); // Note: Simple append might need adjustment depending on parent layout
+
+                // Auto scroll hint
+                setTimeout(() => {
+                    teacherBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800);
+            }
+        }
     }
 
     function renderElementGraph(counts) {

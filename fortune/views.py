@@ -42,7 +42,7 @@ def fortune_rate_h(group, request):
     return '5/h'
 
 def fortune_rate_d(group, request):
-    """1일당 10회 제한 (관리자 무제한)"""
+    """1일당 20회 제한 (관리자 무제한)"""
     if request.user and request.user.is_authenticated and request.user.is_superuser:
         return None
     return '20/d'
