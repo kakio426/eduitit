@@ -1,11 +1,174 @@
 # 작업 인계 문서
 
-> 최근 업데이트: 2026-02-02
-> 최근 세션: 방문자 카운터 기능 디버깅 (진행 중)
+> 최근 업데이트: 2026-02-03
+> 최근 세션: 체스 게임 구현 완료 ✅
 
 ---
 
-## 🆕 최신 작업 (2026-02-02)
+## 🆕 최신 작업 (2026-02-03)
+
+### 체스 게임 구현 완료 ✅
+
+**목표**: eduitit.site에 체스 게임 추가 (무료 AI 대전 포함)
+
+#### 구현된 기능:
+
+1. **메인 로비 페이지** (`/chess/`) ✅
+   - 체스 게임 소개 및 설명
+   - 게임 모드 선택 (1대1 로컬 대전 / AI 대전)
+   - AI 난이도 선택 버튼 (초급/중급/고급/최강)
+   - 체스 규칙 가이드 링크
+   - Eduitit 디자인 시스템 통합 (Clay UI)
+
+2. **체스 규칙 가이드 페이지** (`/chess/rules/`) ✅
+   - 각 말의 움직임 상세 설명 (킹, 퀸, 룩, 비숍, 나이트, 폰)
+   - 특수 규칙 설명 (캐슬링, 앙파상, 프로모션)
+   - 게임 종료 조건 (체크메이트, 스테일메이트, 드로우)
+   - 초보자를 위한 팁 6가지
+   - 이모지와 카드 UI로 가독성 향상
+
+3. **게임 플레이 페이지** (`/chess/play/`) ✅
+   - **체스판 렌더링**: chessboard.js (CDN)
+   - **게임 규칙 엔진**: chess.js (합법적인 수 검증)
+   - **AI 엔진**: Stockfish.js (완전 무료, 클라이언트 실행)
+   - **드래그 앤 드롭**: 말 이동
+   - **이동 기록**: 모든 수를 기록하고 표시
+   - **되돌리기**: AI 모드는 2수, 로컬 모드는 1수 되돌리기
+   - **게임 상태 표시**: 현재 턴, 체크, 체크메이트, 스테일메이트
+   - **게임 종료 모달**: 승자 표시 및 재시작 옵션
+   - **반응형 디자인**: 모바일 완벽 대응
+
+4. **AI 대전 기능** (Stockfish.js) ✅
+   - **4단계 난이도**:
+     - 🌱 초급 (Skill Level 2)
+     - 🌿 중급 (Skill Level 8)
+     - 🌳 고급 (Skill Level 13)
+     - 🔥 최강 (Skill Level 18)
+   - AI 계산 중 표시 (스피너 애니메이션)
+   - 클라이언트 사이드 실행 (서버 부하 0)
+   - 완전 무료 (API 비용 0원)
+
+#### 기술 스택:
+
+**프론트엔드 (모두 CDN)**:
+- `chessboard.js@1.0.0`: 체스판 UI 렌더링 + 말 이미지 (Wikipedia)
+- `chess.js@0.10.3`: 체스 게임 로직 및 규칙 검증
+- `stockfish.js@10.0.2`: AI 체스 엔진 (세계 최강급)
+- jQuery 3.6.0: chessboard.js 의존성
+
+**백엔드**:
+- Django 6.0: chess 앱 생성
+- 3개의 뷰 (index, rules, play)
+- 템플릿 상속 (base.html)
+- URL 라우팅 (`/chess/`)
+
+#### 생성된 파일:
+
+**Django 앱 (14개 파일)**:
+```
+chess/
+├── __init__.py
+├── admin.py
+├── apps.py
+├── models.py
+├── views.py              # 3개 뷰 함수
+├── urls.py               # URL 라우팅
+├── tests.py
+├── migrations/
+│   └── __init__.py
+└── templates/chess/
+    ├── index.html        # 메인 로비 (122줄)
+    ├── rules.html        # 규칙 가이드 (254줄)
+    └── play.html         # 게임 플레이 (487줄)
+```
+
+**수정된 파일 (3개)**:
+1. `config/urls.py` - chess 앱 라우팅 추가
+2. `config/settings.py` - INSTALLED_APPS에 chess 추가
+3. `config/settings_production.py` - INSTALLED_APPS에 chess 추가 (프로덕션 동기화)
+
+#### 배포 정보:
+
+- **커밋 해시**: `dbdb1cb`
+- **커밋 메시지**: "feat: 체스 게임 구현 추가"
+- **변경 사항**: 14 files changed, 891 insertions(+)
+- **푸시 완료**: 2026-02-03
+- **Railway 자동 배포**: 진행 중
+
+#### 접속 URL:
+
+**프로덕션 (eduitit.site)**:
+- 메인 로비: `https://eduitit.site/chess/`
+- 규칙 가이드: `https://eduitit.site/chess/rules/`
+- 게임 플레이 (로컬): `https://eduitit.site/chess/play/?mode=local`
+- 게임 플레이 (AI): `https://eduitit.site/chess/play/?mode=ai&difficulty=medium`
+
+#### 비용 분석:
+
+| 항목 | 비용 | 비고 |
+|------|------|------|
+| 개발 비용 | 0원 | 모든 라이브러리 오픈소스 |
+| 운영 비용 | 0원 | API 호출 없음 |
+| 서버 부하 | 0% | 브라우저에서 실행 |
+| AI 엔진 | 0원 | Stockfish.js (클라이언트) |
+
+**총 비용: 0원** ✅
+
+#### 테스트 체크리스트:
+
+**로컬 테스트** (완료):
+- [x] 서버 실행 확인 (http://localhost:8000/chess/)
+- [x] 메인 로비 페이지 로드 (HTTP 200)
+- [x] 규칙 가이드 페이지 접근
+- [x] 게임 플레이 페이지 접근
+- [x] 체스판 렌더링 확인
+
+**프로덕션 테스트** (배포 후 확인 필요):
+- [ ] https://eduitit.site/chess/ 접속
+- [ ] 1대1 로컬 대전 동작 확인
+- [ ] AI 대전 (4단계 난이도) 동작 확인
+- [ ] 드래그 앤 드롭 조작 확인
+- [ ] 이동 기록 표시 확인
+- [ ] 되돌리기 기능 확인
+- [ ] 체크메이트 감지 확인
+- [ ] 게임 종료 모달 확인
+- [ ] 모바일 반응형 확인
+
+#### 주의사항:
+
+1. **CDN 의존성**: 모든 라이브러리가 CDN으로 로드되므로 인터넷 연결 필요
+2. **브라우저 호환성**: 최신 브라우저 권장 (Chrome, Firefox, Safari, Edge)
+3. **Stockfish.js 로딩 시간**: 초기 AI 계산 시 3-5초 소요 가능
+4. **정적 파일**: 별도 static 파일 없음 (모두 CDN)
+
+#### 향후 개선 제안:
+
+**Phase 2 (선택사항)**:
+- [ ] 게임 기록 DB 저장 (회원별 전적)
+- [ ] 온라인 멀티플레이어 (Django Channels + WebSocket)
+- [ ] 타이머 기능 (블리츠/래피드 모드)
+- [ ] 오프닝 북 (Opening Book)
+- [ ] 포지션 분석 (Stockfish 평가)
+- [ ] 랭킹 시스템
+- [ ] 친구 초대 기능
+- [ ] 리플레이 기능 (저장된 게임 재생)
+
+**Phase 3 (고급)**:
+- [ ] 체스 퍼즐/전술 훈련
+- [ ] 오프닝 연습 모드
+- [ ] 엔드게임 훈련
+- [ ] 토너먼트 시스템
+
+#### 참고 자료:
+
+- **chessboard.js 문서**: https://chessboardjs.com/
+- **chess.js GitHub**: https://github.com/jhlywa/chess.js
+- **Stockfish 공식**: https://stockfishchess.org/
+- **체스 규칙**: https://www.fide.com/
+
+---
+
+## 🆕 이전 작업 (2026-02-02)
 
 ### 방문자 카운터 기능 구현 및 디버깅 (진행 중) ⚠️
 
