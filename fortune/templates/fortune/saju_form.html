@@ -2090,7 +2090,28 @@
         }
 
         const resultTarget = document.getElementById('markdownResult');
-        resultTarget.innerHTML = '<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> 주역을 풀이하고 있습니다...</div>';
+
+        // 재치있는 로딩 멘트 랜덤 선택
+        const loadingMessages = [
+            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
+            '🔮 천간지지의 비밀을 해독하는 중...',
+            '⚡ 음양오행의 조화를 계산하는 중...',
+            '🌟 하늘의 별자리에 질문을 던지는 중...',
+            '📿 육십갑자의 숨은 의미를 찾는 중...',
+            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
+            '✨ 당신의 운명 코드를 분석하는 중...',
+            '🧙 30년 경력 명리학자가 사주를 보는 중...',
+            '📖 주역 64괘를 펼쳐보는 중...',
+            '🎴 천기누설! 운명의 실타래를 푸는 중...',
+            '🔥 오행의 균형을 측정하는 중...',
+            '💫 우주의 기운과 교신하는 중...',
+            '🎯 당신만의 행운 포인트를 찾는 중...',
+            '🌙 달의 위상과 당신의 운을 대조하는 중...',
+            '🎐 바람의 방향으로 길흉을 점치는 중...'
+        ];
+
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        resultTarget.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
 
         try {
             const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
