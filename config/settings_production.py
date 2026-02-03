@@ -363,6 +363,16 @@ if not DEBUG:
 
 # CSP 설정 (django-csp)
 CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # 인라인 스크립트 허용 (템플릿 내 스크립트)
+    "'unsafe-eval'",    # marked.js 등 라이브러리용
+    "https://cdn.tailwindcss.com",  # Tailwind CSS CDN
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://unpkg.com",
+    "https://t1.kakaocdn.net",
+    "https://developers.kakao.com",
     "https://html2canvas.hertzen.com",
     "blob:", # Web Worker용
 )
@@ -395,6 +405,13 @@ CSP_IMG_SRC = (
     "https://k.kakaocdn.net", # Kakao profile/assets
     "https://*.kakaocdn.net",
 )
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://api.padlet.com",
+    "https://generativelanguage.googleapis.com",
+    "https://assetsconfigcdn.org",      # Statsig (Loom extension)
+    "https://beyondwickedmapping.org", # Statsig (Loom extension)
+    "https://cloudflare-dns.com",      # DNS fallback
     "https://cdn.jsdelivr.net",        # JS source maps
     "https://*.kakao.com",             # Kakao APIs
     "blob:",                           # Stockfish Worker
