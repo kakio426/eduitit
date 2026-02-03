@@ -276,8 +276,8 @@
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 {% if mode == 'ai' %}
-<!-- 로컬 Stockfish 파일 로드 -->
-<script src="{% static 'js/stockfish.js' %}"></script>
+<!-- 로컬 Stockfish 파일 로드 (유저 경로) -->
+<script src="{% static 'chess/js/stockfish.js' %}"></script>
 {% endif %}
 
 <script>
@@ -293,8 +293,8 @@
     // AI 엔진 초기화
     if (isAIMode) {
         try {
-            // 로컬 파일 경로를 사용하여 Worker 생성 (가장 확실한 방법)
-            var stockfishPath = "{% static 'js/stockfish.js' %}";
+            // 로컬 파일 경로를 사용하여 Worker 생성 (유저 경로)
+            var stockfishPath = "{% static 'chess/js/stockfish.js' %}";
             stockfish = new Worker(stockfishPath);
             stockfish.onmessage = onStockfishMessage;
 
