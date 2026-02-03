@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
+    'chess.apps.ChessConfig',
     'django_htmx',
     'django.contrib.humanize',
 

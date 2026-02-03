@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}체스 게임 - Eduitit{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-32 pb-20 px-6">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Hero Section -->
+        <div class="text-center mb-16" data-aos="fade-up">
+            <div class="inline-flex items-center gap-4 mb-6">
+                <div class="text-6xl">♔</div>
+                <h1 class="text-5xl md:text-6xl font-black text-gray-700">체스 게임</h1>
+                <div class="text-6xl">♚</div>
+            </div>
+            <p class="text-2xl text-gray-500 font-hand">전략과 지혜의 게임, 체스를 즐겨보세요!</p>
+        </div>
+
+        <!-- Game Modes Grid -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+
+            <!-- Local Play Card -->
+            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="100">
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 mx-auto mb-4 rounded-full shadow-clay-inner bg-white flex items-center justify-center text-4xl">
+                        👥
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-700 mb-2">1대1 로컬 대전</h2>
+                    <p class="text-gray-500 text-lg">친구와 함께 한 화면에서 즐기세요</p>
+                </div>
+
+                <div class="space-y-3 mb-6 text-gray-600">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-green-500"></i>
+                        <span>두 사람이 번갈아가며 플레이</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-green-500"></i>
+                        <span>간편한 드래그 앤 드롭 조작</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-green-500"></i>
+                        <span>이동 기록 및 되돌리기 기능</span>
+                    </div>
+                </div>
+
+                <a href="{% url 'chess:play' %}?mode=local"
+                   class="block w-full py-4 text-center bg-purple-600 text-white rounded-2xl font-bold shadow-clay hover:bg-purple-700 transition transform hover:scale-[1.02]">
+                    게임 시작하기
+                </a>
+            </div>
+
+            <!-- AI Play Card -->
+            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="200">
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 mx-auto mb-4 rounded-full shadow-clay-inner bg-white flex items-center justify-center text-4xl">
+                        🤖
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-700 mb-2">AI와 대전</h2>
+                    <p class="text-gray-500 text-lg">컴퓨터와 실력을 겨뤄보세요</p>
+                </div>
+
+                <div class="space-y-3 mb-6 text-gray-600">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-blue-500"></i>
+                        <span>4단계 난이도 선택 가능</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-blue-500"></i>
+                        <span>세계 최강 체스 엔진 Stockfish</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-blue-500"></i>
+                        <span>혼자서도 연습 가능</span>
+                    </div>
+                </div>
+
+                <!-- AI Difficulty Selection -->
+                <div class="space-y-3">
+                    <a href="{% url 'chess:play' %}?mode=ai&difficulty=easy"
+                       class="block w-full py-3 text-center bg-green-500 text-white rounded-xl font-bold shadow-clay hover:bg-green-600 transition">
+                        🌱 초급 (Level 1-5)
+                    </a>
+                    <a href="{% url 'chess:play' %}?mode=ai&difficulty=medium"
+                       class="block w-full py-3 text-center bg-blue-500 text-white rounded-xl font-bold shadow-clay hover:bg-blue-600 transition">
+                        🌿 중급 (Level 6-10)
+                    </a>
+                    <a href="{% url 'chess:play' %}?mode=ai&difficulty=hard"
+                       class="block w-full py-3 text-center bg-orange-500 text-white rounded-xl font-bold shadow-clay hover:bg-orange-600 transition">
+                        🌳 고급 (Level 11-15)
+                    </a>
+                    <a href="{% url 'chess:play' %}?mode=ai&difficulty=expert"
+                       class="block w-full py-3 text-center bg-red-500 text-white rounded-xl font-bold shadow-clay hover:bg-red-600 transition">
+                        🔥 최강 (Level 16-20)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chess Introduction -->
+        <div class="clay-card p-8 mb-8" data-aos="fade-up" data-aos-delay="300">
+            <h2 class="text-3xl font-bold text-gray-700 mb-6 flex items-center gap-3">
+                <i class="fa-solid fa-book text-purple-500"></i>
+                체스란?
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6 text-gray-600 text-lg">
+                <div>
+                    <p class="mb-4">체스는 8×8 크기의 체스판에서 두 명의 플레이어가 각각 16개의 말을 움직여 상대방의 킹을 잡는 전략 보드게임입니다.</p>
+                    <p class="mb-4">각 말은 고유한 움직임 규칙을 가지고 있으며, 전략적 사고와 계획이 필요합니다.</p>
+                </div>
+                <div>
+                    <p class="mb-4">체스는 논리적 사고력, 문제 해결 능력, 집중력을 향상시키는 데 도움을 줍니다.</p>
+                    <p class="mb-4">전 세계에서 가장 인기 있는 보드게임 중 하나이며, 온라인과 오프라인에서 활발히 즐겨지고 있습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rules Link -->
+        <div class="text-center" data-aos="fade-up" data-aos-delay="400">
+            <a href="{% url 'chess:rules' %}"
+               class="inline-flex items-center gap-3 px-8 py-4 clay-card text-gray-700 font-bold text-lg hover:scale-105 transition">
+                <i class="fa-solid fa-graduation-cap text-purple-500 text-2xl"></i>
+                체스 규칙 자세히 보기
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -35,6 +35,7 @@ urlpatterns = [
     path('school-violence/', include('school_violence.urls', namespace='school_violence')),
     path('school_violence/', RedirectView.as_view(url='/school-violence/', permanent=True)),
     path('padlet/', include('padlet_bot.urls', namespace='padlet_bot')),
+    path('chess/', include('chess.urls', namespace='chess')),
 ]
 
 if settings.DEBUG:

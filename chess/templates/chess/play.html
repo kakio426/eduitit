@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}체스 플레이 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<style>
+    .board-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    #myBoard {
+        width: 100%;
+    }
+
+    .game-info {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 8px 8px 16px rgb(163, 177, 198, 0.5), -8px -8px 16px rgba(255, 255, 255, 0.6);
+    }
+
+    .move-history {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .move-item {
+        padding: 0.5rem;
+        border-radius: 10px;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s;
+    }
+
+    .move-item:hover {
+        background: #f3f4f6;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .status-white {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        color: #374151;
+    }
+
+    .status-black {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        color: white;
+    }
+
+    .status-check {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .btn-game {
+        padding: 0.75rem 1.5rem;
+        border-radius: 15px;
+        font-weight: bold;
+        transition: all 0.3s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: white;
+        box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(124, 58, 237, 0.4);
+    }
+
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #d1d5db;
+    }
+
+    .ai-thinking {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-radius: 15px;
+        color: #1e40af;
+        font-weight: bold;
+    }
+
+    .ai-thinking.active {
+        display: flex;
+    }
+
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #93c5fd;
+        border-top-color: #1e40af;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-32 pb-20 px-6">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Game Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">
+                {% if mode == 'ai' %}
+                    🤖 AI와 대전
+                {% else %}
+                    👥 1대1 로컬 대전
+                {% endif %}
+            </h1>
+            {% if mode == 'ai' %}
+            <p class="text-xl text-gray-500">
+                난이도:
+                {% if difficulty == 'easy' %}🌱 초급
+                {% elif difficulty == 'medium' %}🌿 중급
+                {% elif difficulty == 'hard' %}🌳 고급
+                {% else %}🔥 최강{% endif %}
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+
+            <!-- Chessboard -->
+            <div class="lg:col-span-2">
+                <div class="clay-card p-6">
+                    <div class="board-container">
+                        <div id="myBoard"></div>
+                    </div>
+
+                    <!-- AI Thinking Indicator -->
+                    <div id="aiThinking" class="ai-thinking mt-4">
+                        <div class="spinner"></div>
+                        <span>AI가 수를 계산하는 중...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Info Panel -->
+            <div class="lg:col-span-1">
+                <div class="game-info mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">게임 정보</h2>
+
+                    <!-- Status -->
+                    <div class="mb-4">
+                        <div id="status" class="status-badge status-white">백의 차례</div>
+                    </div>
+
+                    <!-- Game Controls -->
+                    <div class="flex flex-col gap-3">
+                        <button onclick="resetGame()" class="btn-game btn-primary">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>
+                            새 게임
+                        </button>
+                        <button onclick="undoMove()" class="btn-game btn-secondary" id="undoBtn">
+                            <i class="fa-solid fa-rotate-left mr-2"></i>
+                            되돌리기
+                        </button>
+                        <a href="{% url 'chess:index' %}" class="btn-game btn-secondary text-center">
+                            <i class="fa-solid fa-home mr-2"></i>
+                            메인으로
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Move History -->
+                <div class="game-info">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-history text-purple-500"></i>
+                        이동 기록
+                    </h2>
+                    <div id="moveHistory" class="move-history">
+                        <p class="text-gray-400 italic">게임이 시작되지 않았습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Game Over Modal -->
+<div id="gameOverModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-center shadow-2xl p-10 max-w-md w-full">
+                <div class="text-6xl mb-4" id="gameOverIcon">🏆</div>
+                <h3 class="text-3xl font-bold text-gray-800 mb-3" id="gameOverTitle">체크메이트!</h3>
+                <p class="text-xl text-gray-600 mb-6" id="gameOverMessage">백 승리!</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="resetGame()" class="btn-game btn-primary w-full">
+                        <i class="fa-solid fa-rotate-right mr-2"></i>
+                        다시 시작하기
+                    </button>
+                    <button onclick="closeGameOverModal()" class="btn-game btn-secondary w-full">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+{% if mode == 'ai' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
+{% endif %}
+
+<script>
+    var board = null;
+    var game = new Chess();
+    var moveHistory = [];
+    var isAIMode = {{ mode == 'ai'|yesno:'true,false' }};
+    var aiDifficulty = '{{ difficulty }}';
+    var stockfish = null;
+    var isAIThinking = false;
+
+    // AI 엔진 초기화
+    {% if mode == 'ai' %}
+    if (typeof STOCKFISH === 'function') {
+        stockfish = STOCKFISH();
+        stockfish.onmessage = onStockfishMessage;
+
+        // AI 난이도 설정
+        var skillLevel = 10; // 기본 중급
+        if (aiDifficulty === 'easy') skillLevel = 2;
+        else if (aiDifficulty === 'medium') skillLevel = 8;
+        else if (aiDifficulty === 'hard') skillLevel = 13;
+        else if (aiDifficulty === 'expert') skillLevel = 18;
+
+        stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+        stockfish.postMessage('uci');
+    }
+    {% endif %}
+
+    function onDragStart(source, piece, position, orientation) {
+        // 게임이 끝났으면 이동 불가
+        if (game.game_over()) return false;
+
+        // AI 모드에서 흑의 차례면 이동 불가
+        if (isAIMode && game.turn() === 'b') return false;
+
+        // 자기 말만 이동 가능
+        if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+            (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+            return false;
+        }
+    }
+
+    function onDrop(source, target) {
+        // 이동 시도
+        var move = game.move({
+            from: source,
+            to: target,
+            promotion: 'q' // 항상 퀸으로 프로모션
+        });
+
+        // 불법 수면 원위치
+        if (move === null) return 'snapback';
+
+        // 이동 기록 추가
+        moveHistory.push(move);
+        updateMoveHistory();
+        updateStatus();
+
+        // AI 차례
+        if (isAIMode && !game.game_over()) {
+            window.setTimeout(makeAIMove, 250);
+        }
+    }
+
+    function onSnapEnd() {
+        board.position(game.fen());
+    }
+
+    function updateStatus() {
+        var status = '';
+        var statusEl = document.getElementById('status');
+        var moveColor = game.turn() === 'w' ? '백' : '흑';
+
+        // 체크메이트
+        if (game.in_checkmate()) {
+            status = '게임 종료 - ' + (game.turn() === 'w' ? '흑' : '백') + ' 승리!';
+            statusEl.className = 'status-badge status-check';
+            showGameOver(game.turn() === 'w' ? '흑 승리!' : '백 승리!', '체크메이트!');
+        }
+        // 드로우
+        else if (game.in_draw()) {
+            status = '게임 종료 - 무승부';
+            statusEl.className = 'status-badge status-white';
+            showGameOver('무승부', '스테일메이트 또는 드로우');
+        }
+        // 스테일메이트
+        else if (game.in_stalemate()) {
+            status = '게임 종료 - 스테일메이트';
+            statusEl.className = 'status-badge status-white';
+            showGameOver('무승부', '스테일메이트');
+        }
+        // 3회 반복
+        else if (game.in_threefold_repetition()) {
+            status = '게임 종료 - 3회 반복 무승부';
+            statusEl.className = 'status-badge status-white';
+            showGameOver('무승부', '3회 반복');
+        }
+        // 체크
+        else if (game.in_check()) {
+            status = moveColor + '의 차례 - 체크!';
+            statusEl.className = 'status-badge status-check';
+        }
+        // 일반
+        else {
+            status = moveColor + '의 차례';
+            statusEl.className = game.turn() === 'w' ? 'status-badge status-white' : 'status-badge status-black';
+        }
+
+        statusEl.textContent = status;
+    }
+
+    function updateMoveHistory() {
+        var historyEl = document.getElementById('moveHistory');
+        historyEl.innerHTML = '';
+
+        if (moveHistory.length === 0) {
+            historyEl.innerHTML = '<p class="text-gray-400 italic">아직 이동이 없습니다</p>';
+            return;
+        }
+
+        for (var i = 0; i < moveHistory.length; i += 2) {
+            var moveNum = Math.floor(i / 2) + 1;
+            var whiteMove = moveHistory[i].san;
+            var blackMove = moveHistory[i + 1] ? moveHistory[i + 1].san : '...';
+
+            var moveDiv = document.createElement('div');
+            moveDiv.className = 'move-item flex items-center gap-3 text-sm';
+            moveDiv.innerHTML = `
+                <span class="font-bold text-gray-400 w-8">${moveNum}.</span>
+                <span class="flex-1 text-gray-700">${whiteMove}</span>
+                ${blackMove !== '...' ? `<span class="flex-1 text-gray-700">${blackMove}</span>` : ''}
+            `;
+            historyEl.appendChild(moveDiv);
+        }
+
+        historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function makeAIMove() {
+        if (game.game_over() || !stockfish || isAIThinking) return;
+
+        isAIThinking = true;
+        document.getElementById('aiThinking').classList.add('active');
+
+        var fen = game.fen();
+        stockfish.postMessage('position fen ' + fen);
+        stockfish.postMessage('go depth 10');
+    }
+
+    function onStockfishMessage(event) {
+        var line = event.data;
+
+        if (line.indexOf('bestmove') !== -1) {
+            var match = line.match(/bestmove\s+(\w+)/);
+            if (match) {
+                var move = game.move({
+                    from: match[1].substring(0, 2),
+                    to: match[1].substring(2, 4),
+                    promotion: match[1].length > 4 ? match[1][4] : 'q'
+                });
+
+                if (move) {
+                    board.position(game.fen());
+                    moveHistory.push(move);
+                    updateMoveHistory();
+                    updateStatus();
+                }
+
+                isAIThinking = false;
+                document.getElementById('aiThinking').classList.remove('active');
+            }
+        }
+    }
+
+    function resetGame() {
+        game.reset();
+        board.start();
+        moveHistory = [];
+        updateMoveHistory();
+        updateStatus();
+        closeGameOverModal();
+    }
+
+    function undoMove() {
+        if (moveHistory.length === 0) return;
+
+        // AI 모드에서는 2수 되돌리기 (플레이어 + AI)
+        if (isAIMode && moveHistory.length >= 2) {
+            game.undo();
+            game.undo();
+            moveHistory.pop();
+            moveHistory.pop();
+        } else if (!isAIMode) {
+            game.undo();
+            moveHistory.pop();
+        }
+
+        board.position(game.fen());
+        updateMoveHistory();
+        updateStatus();
+    }
+
+    function showGameOver(title, message) {
+        document.getElementById('gameOverTitle').textContent = title;
+        document.getElementById('gameOverMessage').textContent = message;
+
+        var icon = '🏆';
+        if (message.includes('무승부') || message.includes('스테일메이트')) {
+            icon = '🤝';
+        } else if (title.includes('흑')) {
+            icon = '♚';
+        } else {
+            icon = '♔';
+        }
+        document.getElementById('gameOverIcon').textContent = icon;
+
+        setTimeout(function() {
+            document.getElementById('gameOverModal').classList.remove('hidden');
+        }, 500);
+    }
+
+    function closeGameOverModal() {
+        document.getElementById('gameOverModal').classList.add('hidden');
+    }
+
+    // 체스판 설정
+    var config = {
+        draggable: true,
+        position: 'start',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd
+    };
+
+    board = Chessboard('myBoard', config);
+    updateStatus();
+
+    // 반응형 대응
+    window.addEventListener('resize', function() {
+        board.resize();
+    });
+</script>
+{% endblock %}
