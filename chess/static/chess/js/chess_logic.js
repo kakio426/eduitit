@@ -226,22 +226,50 @@ function makeAIMove() {
 
     isAIThinking = true;
     updateStatus(); // Show "AI Thinking..."
-    document.getElementById('aiThinking').classList.add('active');
+
+    var statusEl = document.getElementById('aiStatus');
+    if (statusEl) {
+        statusEl.classList.add('active');
+    }
 
     var fen = game.fen();
+
+    // 난이도별 파라미터 설정 (학생용 최적화)
+    var params = getAIParams();
 
     // 엔진이 준비되지 않았으면 대기열에 추가
     if (!isEngineReady) {
         console.log("Engine not ready yet, queuing commands...");
         pendingCommands.push('position fen ' + fen);
-        pendingCommands.push('go depth 10');
+        pendingCommands.push('go depth ' + params.depth + ' movetime ' + params.movetime);
         return;
     }
 
-    // 브라우저 성능 고려 - 깊이 제한 (학생용이므로 가볍게)
-    var depth = 10;
+    // 브라우저 성능 및 난이도 고려
     sendCommand('position fen ' + fen);
-    sendCommand('go depth ' + depth);
+    sendCommand('go depth ' + params.depth + ' movetime ' + params.movetime);
+}
+
+function getAIParams() {
+    var depth = 10;
+    var movetime = 2000; // 기본 2초
+
+    if (typeof AI_DIFFICULTY !== 'undefined') {
+        if (AI_DIFFICULTY === 'easy') {
+            depth = 3;       // 매우 얕게 (즉시 응답)
+            movetime = 300;  // 최대 0.3초
+        } else if (AI_DIFFICULTY === 'medium') {
+            depth = 6;       // 적당히 (빠름)
+            movetime = 800;  // 최대 0.8초
+        } else if (AI_DIFFICULTY === 'hard') {
+            depth = 10;      // 정밀하게
+            movetime = 2000; // 최대 2초
+        } else if (AI_DIFFICULTY === 'expert') {
+            depth = 15;      // 최장 계산
+            movetime = 5000; // 최대 5초
+        }
+    }
+    return { depth: depth, movetime: movetime };
 }
 
 function onBestMove(line) {
@@ -265,8 +293,14 @@ function onBestMove(line) {
             updateStatus();
         }
 
+        // 상태 초기화
         isAIThinking = false;
-        document.getElementById('aiThinking').classList.remove('active');
+
+        // UI 업데이트 (ID 수정: aiStatus)
+        var statusEl = document.getElementById('aiStatus');
+        if (statusEl) {
+            statusEl.classList.remove('active');
+        }
     }
 }
 
