@@ -276,7 +276,8 @@
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 {% if mode == 'ai' %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
+<!-- 로컬 Stockfish 파일 로드 -->
+<script src="{% static 'js/stockfish.js' %}"></script>
 {% endif %}
 
 <script>
@@ -290,9 +291,11 @@
     var selectedSquare = null;
 
     // AI 엔진 초기화
-    if (isAIMode && typeof STOCKFISH === 'function') {
+    if (isAIMode) {
         try {
-            stockfish = STOCKFISH();
+            // 로컬 파일 경로를 사용하여 Worker 생성 (가장 확실한 방법)
+            var stockfishPath = "{% static 'js/stockfish.js' %}";
+            stockfish = new Worker(stockfishPath);
             stockfish.onmessage = onStockfishMessage;
 
             // UCI 초기화
@@ -547,13 +550,12 @@
     }
 
     var config = {
-        draggable: true,
+        draggable: false, /* 클릭 이동만 허용 */
         position: 'start',
         pieceTheme: function (piece) {
             return 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/' + piece + '.png';
         },
-        onDragStart: onDragStart,
-        onDrop: onDrop,
+        /* onDragStart, onDrop -> 더 이상 필요 없음 (클릭으로 처리) */
         onSnapEnd: onSnapEnd
     };
 
