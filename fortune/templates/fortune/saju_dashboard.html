@@ -148,72 +148,105 @@
             </button>
         </header>
 
-        <!-- STEP 1: Input Form (Initially Visible) -->
-        <div id="inputSection" class="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold mb-2">내 사주 명함 만들기</h2>
-                <p class="text-gray-300">생년월일을 입력하면 평생 변치 않는 사주를 분석해드립니다.</p>
+        <!-- STEP 1: Input Form (Tabbed Interface) -->
+        <div id="inputSection" class="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-lg mx-auto">
+
+            <!-- Tab Navigation -->
+            <div class="flex justify-center mb-6 gap-3 px-2">
+                <button type="button" onclick="switchInputMode('general')" id="tabGeneral"
+                    class="flex-1 py-3 rounded-2xl font-bold transition-all text-white bg-white/20 hover:bg-white/30 ring-2 ring-white/50 shadow-lg backdrop-blur-md flex flex-col items-center gap-1 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">🙂</span>
+                    <span class="text-sm">일반 사주</span>
+                </button>
+                <button type="button" onclick="switchInputMode('teacher')" id="tabTeacher"
+                    class="flex-1 py-3 rounded-2xl font-bold transition-all text-purple-200 bg-white/5 hover:bg-white/10 ring-1 ring-white/10 backdrop-blur-md flex flex-col items-center gap-1 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">👨‍🏫</span>
+                    <span class="text-sm">교직 운세</span>
+                </button>
             </div>
 
-            <form id="sajuForm" onsubmit="handleCalculate(event)" class="space-y-6">
-                <!-- Name & Gender -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-gray-400 mb-2">이름</label>
-                        <input type="text" name="name" class="glass-input w-full p-4 rounded-xl text-lg"
-                            placeholder="이름을 입력하세요" required>
-                    </div>
-                    <div>
-                        <label class="block text-gray-400 mb-2">성별</label>
-                        <div class="flex gap-4">
-                            <label class="flex-1 cursor-pointer">
-                                <input type="radio" name="gender" value="male" class="peer hidden" required>
-                                <div
-                                    class="glass-input p-4 rounded-xl text-center peer-checked:bg-blue-600/50 peer-checked:border-blue-400 transition">
-                                    남성
-                                </div>
-                            </label>
-                            <label class="flex-1 cursor-pointer">
-                                <input type="radio" name="gender" value="female" class="peer hidden">
-                                <div
-                                    class="glass-input p-4 rounded-xl text-center peer-checked:bg-pink-600/50 peer-checked:border-pink-400 transition">
-                                    여성
-                                </div>
-                            </label>
+            <div class="glass-card p-8 relative overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(139,92,246,0.3)]"
+                style="backdrop-filter: blur(20px);">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold mb-2 text-white" id="formTitle">나의 사주 명함 만들기</h2>
+                    <p class="text-purple-200 text-sm font-medium" id="formSubtitle">생년월일을 입력하면 평생 변치 않는 사주를 분석해드립니다.
+                    </p>
+                </div>
+
+                <form id="sajuForm" onsubmit="handleCalculate(event)" class="space-y-6 relative z-10">
+                    <input type="hidden" name="mode" id="serviceMode" value="general">
+
+                    <!-- Name & Gender -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">이름</label>
+                            <input type="text" name="name"
+                                class="glass-input w-full p-4 rounded-2xl text-lg text-center font-bold placeholder-white/30"
+                                placeholder="이름" required maxlength="10">
+                        </div>
+                        <div>
+                            <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">성별</label>
+                            <div class="flex gap-3">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="gender" value="male" class="peer hidden" required>
+                                    <div
+                                        class="glass-input p-4 rounded-2xl text-center peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-transparent transition-all hover:bg-white/10 text-gray-300 font-bold">
+                                        남성
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="gender" value="female" class="peer hidden">
+                                    <div
+                                        class="glass-input p-4 rounded-2xl text-center peer-checked:bg-pink-500 peer-checked:text-white peer-checked:border-transparent transition-all hover:bg-white/10 text-gray-300 font-bold">
+                                        여성
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Birth Date -->
-                <div>
-                    <label class="block text-gray-400 mb-2">양력 생년월일</label>
-                    <div class="grid grid-cols-3 gap-4">
-                        <input type="number" name="birth_year" class="glass-input p-4 rounded-xl text-center"
-                            placeholder="년(YYYY)" required min="1900" max="2026">
-                        <input type="number" name="birth_month" class="glass-input p-4 rounded-xl text-center"
-                            placeholder="월" required min="1" max="12">
-                        <input type="number" name="birth_day" class="glass-input p-4 rounded-xl text-center"
-                            placeholder="일" required min="1" max="31">
+                    <!-- Birth Date -->
+                    <div>
+                        <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">양력 생년월일</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="number" name="birth_year"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="YYYY" required min="1900" max="2026">
+                            <input type="number" name="birth_month"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="MM" required min="1" max="12">
+                            <input type="number" name="birth_day"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="DD" required min="1" max="31">
+                        </div>
                     </div>
-                </div>
 
-                <!-- Birth Time -->
-                <div>
-                    <label class="block text-gray-400 mb-2">태어난 시간 (선택)</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" name="birth_hour" class="glass-input p-4 rounded-xl text-center"
-                            placeholder="시 (0-23)" min="0" max="23">
-                        <input type="number" name="birth_minute" class="glass-input p-4 rounded-xl text-center"
-                            placeholder="분 (0-59)" min="0" max="59">
+                    <!-- Birth Time -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2 ml-1">
+                            <label class="text-purple-200 text-sm font-bold">태어난 시간 <span
+                                    class="text-purple-300/70 font-normal">(선택)</span></label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" name="birth_hour"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="시 (0-23)" min="0" max="23">
+                            <input type="number" name="birth_minute"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="분 (0-59)" min="0" max="59">
+                        </div>
+                        <p class="text-xs text-purple-300/50 mt-2 text-center">* 시간을 모르면 삼주(三柱)로 분석합니다</p>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">* 시간을 모르면 비워두세요 (삼주로 분석합니다)</p>
-                </div>
 
-                <button type="submit" id="calculateBtn"
-                    class="w-full py-5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold text-xl shadow-lg hover:shadow-purple-500/30 transition transform hover:-translate-y-1">
-                    사주 명함 발급받기 ✨
-                </button>
-            </form>
+                    <button type="submit" id="calculateBtn"
+                        class="w-full py-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl font-bold text-xl text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:from-violet-500 hover:to-indigo-500 transition-all transform hover:-translate-y-1 relative overflow-hidden group border border-white/10">
+                        <span class="relative z-10">사주 명함 발급받기 ✨</span>
+                        <div
+                            class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        </div>
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- STEP 2: Dashboard (Hidden Initially) -->
@@ -393,7 +426,7 @@
 <script>
     // Constants & Global State
     let currentPillars = null;
-    let currentUser = { name: '', gender: '' };
+    let currentUser = { name: '', gender: '', mode: 'general' };
     const KAKAO_KEY = "{{ kakao_js_key }}";
 
     // Cache for analysis results { 'personality': 'Markdown...', ... }
@@ -402,6 +435,32 @@
     // Initialize Kakao
     if (KAKAO_KEY) {
         Kakao.init(KAKAO_KEY);
+    }
+
+    // --- Mode Switching ---
+    function switchInputMode(mode) {
+        const modeInput = document.getElementById('serviceMode');
+        if (modeInput) modeInput.value = mode;
+
+        const tabGen = document.getElementById('tabGeneral');
+        const tabTea = document.getElementById('tabTeacher');
+
+        // Base classes
+        const baseClass = "flex-1 py-3 rounded-2xl font-bold transition-all flex flex-col items-center gap-1 group backdrop-blur-md";
+        const activeClass = "text-white bg-white/20 hover:bg-white/30 ring-2 ring-white/50 shadow-lg";
+        const inactiveClass = "text-purple-200 bg-white/5 hover:bg-white/10 ring-1 ring-white/10";
+
+        if (mode === 'teacher') {
+            tabGen.className = `${baseClass} ${inactiveClass}`;
+            tabTea.className = `${baseClass} ${activeClass}`;
+            document.getElementById('formTitle').textContent = "교직 운세 명함 만들기";
+            document.getElementById('formSubtitle').textContent = "선생님을 위한 특별한 사주 분석과 명함을 제공합니다.";
+        } else {
+            tabGen.className = `${baseClass} ${activeClass}`;
+            tabTea.className = `${baseClass} ${inactiveClass}`;
+            document.getElementById('formTitle').textContent = "나의 사주 명함 만들기";
+            document.getElementById('formSubtitle').textContent = "생년월일을 입력하면 평생 변치 않는 사주를 분석해드립니다.";
+        }
     }
 
     // --- Step 1: Calculate Pillars (Backend API) ---
@@ -440,7 +499,7 @@
 
             // Success: Update State & UI
             currentPillars = result.pillars;
-            currentUser = { name: data.name, gender: data.gender };
+            currentUser = { name: data.name, gender: data.gender, mode: data.mode };
 
             renderHeroCard(result);
 
