@@ -72,22 +72,25 @@ function initStockfish() {
 
         stockfish.onmessage = function (event) {
             var line = event.data;
+            if (typeof line !== 'string') return;
+
             console.log("Engine:", line);
+            var trimmedLine = line.trim();
 
             // UCI 준비 완료
-            if (line === 'uciok') {
+            if (trimmedLine === 'uciok' || trimmedLine.startsWith('uciok')) {
                 console.log("UCI mode ready, setting options...");
                 setEngineOptions();
             }
             // 엔진 완전히 준비됨
-            else if (line === 'readyok') {
+            else if (trimmedLine === 'readyok' || trimmedLine.startsWith('readyok')) {
                 console.log("Engine ready!");
                 isEngineReady = true;
                 flushPendingCommands();
             }
             // 최선의 수 응답
-            else if (line.indexOf('bestmove') !== -1) {
-                onBestMove(line);
+            else if (trimmedLine.indexOf('bestmove') !== -1) {
+                onBestMove(trimmedLine);
             }
         };
 
