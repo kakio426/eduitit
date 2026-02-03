@@ -1,6 +1,6 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from . import views, views_zoo
+from . import views, views_zoo, api_views
 
 app_name = 'fortune'
 
