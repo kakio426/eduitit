@@ -303,3 +303,31 @@ def sso_to_schoolit(request):
 def policy_view(request):
     """이용약관 및 개인정보처리방침 페이지"""
     return render(request, 'core/policy.html')
+
+@login_required
+def update_email(request):
+    """
+    기존 사용자 이메일 업데이트
+    - 이메일이 없는 기존 가입자에게 이메일 입력 요구
+    - 필수 입력 후 원래 가려던 페이지로 리다이렉트
+    """
+    # 이미 이메일이 있으면 홈으로
+    if request.user.email:
+        return redirect('home')
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+
+        # 간단한 이메일 검증
+        if email and '@' in email and '.' in email:
+            request.user.email = email
+            request.user.save()
+            messages.success(request, '이메일이 성공적으로 등록되었습니다! 🎉')
+
+            # 원래 가려던 곳으로 리다이렉트
+            next_url = request.GET.get('next', 'home')
+            return redirect(next_url)
+        else:
+            messages.error(request, '올바른 이메일 주소를 입력해주세요.')
+
+    return render(request, 'core/update_email.html')

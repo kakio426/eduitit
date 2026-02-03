@@ -102,7 +102,8 @@ MIDDLEWARE = [
     # Allauth middleware
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
-    # Visitor tracking middleware
+    # Custom Middleware
+    'core.middleware.EmailRequiredMiddleware',  # 기존 사용자 이메일 필수
     'core.middleware.VisitorTrackingMiddleware',
 ]
 
