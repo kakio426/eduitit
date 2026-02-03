@@ -227,9 +227,10 @@ function makeAIMove() {
     isAIThinking = true;
     updateStatus(); // Show "AI Thinking..."
 
+    // UI 표시 (d-none 제거)
     var statusEl = document.getElementById('aiStatus');
     if (statusEl) {
-        statusEl.classList.add('active');
+        statusEl.classList.remove('d-none');
     }
 
     var fen = game.fen();
@@ -291,15 +292,15 @@ function onBestMove(line) {
             moveHistory.push(move);
             updateMoveHistory();
             updateStatus();
+        } else {
+            console.warn("AI attempted invalid move:", moveStr);
         }
 
-        // 상태 초기화
+        // 상태 초기화 및 UI 숨기기 (d-none 추가)
         isAIThinking = false;
-
-        // UI 업데이트 (ID 수정: aiStatus)
         var statusEl = document.getElementById('aiStatus');
         if (statusEl) {
-            statusEl.classList.remove('active');
+            statusEl.classList.add('d-none');
         }
     }
 }
