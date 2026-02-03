@@ -995,7 +995,7 @@
 
     <!-- 결과 화면 섹션 -->
     <div id="resultContainer" class="{% if not result %}hidden{% endif %}">
-        <div class="clay-card p-8 md:p-12" data-aos="fade-up" id="resultCard">
+        <div class="clay-card p-6 md:p-8" data-aos="fade-up" id="resultCard">
 
             <!-- 오행 배지 (JavaScript로 동적 생성) -->
             <div id="elementBadge" class="text-center mb-6"></div>
@@ -2131,7 +2131,7 @@
             const decoder = new TextDecoder();
             let accumulatedText = '';
 
-            resultTarget.innerHTML = ''; // 초기 로딩 메시지 제거
+            // 로딩 메시지는 계속 유지 (스트리밍 제거)
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -2147,12 +2147,19 @@
                     throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
                 }
 
-                // 마크다운 실시간 렌더링
-                resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-
-                // 스크롤 조절 (필요 시)
-                // window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                // 실시간 렌더링 제거 - 완료 후 한번에 표시
+                // resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
             }
+
+            // 완료 후 한번에 렌더링 (부드러운 페이드 인)
+            resultTarget.style.opacity = '0';
+            resultTarget.style.transition = 'opacity 0.5s ease-in-out';
+            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+
+            // 약간의 딜레이 후 페이드 인
+            setTimeout(() => {
+                resultTarget.style.opacity = '1';
+            }, 100);
 
             // 완료 후 추가 처리
             detectAndShowElement(accumulatedText);
