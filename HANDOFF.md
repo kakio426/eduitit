@@ -36,12 +36,33 @@ expected 'elif', 'else' or 'endif'. Did you forget to register or load this tag?
 
 **파일**: `fortune/templates/fortune/saju_form.html`
 
-**수정 위치**: 814번 라인 이후 (815번 라인 앞)
+**수정 1 - Django 템플릿 블록 닫기**:
+- **위치**: 814번 라인 이후 (815번 라인 앞)
+- **추가 코드**:
+  ```django
+  {% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+  ```
 
-**추가 코드**:
-```django
-{% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
-```
+**수정 2 - JavaScript 구문 에러 수정**:
+- **위치**: 2288-2292번 라인, 2333-2337번 라인
+- **문제**: Django 템플릿 태그가 JavaScript 코드 블록 안에 있어서 JavaScript 파서 에러 (총 12개 에러)
+- **수정 전**:
+  ```javascript
+  let shareUrl = window.location.origin + '/fortune/saju/';
+  {% if user.is_authenticated %}  // ❌ Django 태그가 JS 안에
+  if (savedResultId) {
+      shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
+  }
+  {% endif %}
+  ```
+- **수정 후**:
+  ```javascript
+  let shareUrl = window.location.origin + '/fortune/saju/';
+  if (typeof savedResultId !== 'undefined' && savedResultId) {  // ✅ 순수 JavaScript
+      shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
+  }
+  ```
+- **해결된 에러**: 12개의 "Expression expected" 및 "'(' expected" JavaScript 구문 에러 모두 해결
 
 #### 영향 범위:
 

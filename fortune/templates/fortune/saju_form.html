@@ -2285,11 +2285,9 @@
 
             // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
             let shareUrl = window.location.origin + '/fortune/saju/';
-            {% if user.is_authenticated %}
-            if (savedResultId) {
+            if (typeof savedResultId !== 'undefined' && savedResultId) {
                 shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
             }
-            {% endif %}
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
@@ -2330,11 +2328,9 @@
     function copyLink() {
         // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
         let shareUrl = window.location.origin + '/fortune/saju/';
-        {% if user.is_authenticated %}
-        if (savedResultId) {
+        if (typeof savedResultId !== 'undefined' && savedResultId) {
             shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
         }
-        {% endif %}
 
         navigator.clipboard.writeText(shareUrl).then(() => {
             showToast('링크가 복사되었습니다!');
