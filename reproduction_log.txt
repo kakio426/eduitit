@@ -1,0 +1,12 @@
+﻿[DATABASE] Using SQLite (development)
+================================================================================
+[CLOUDINARY] Environment variable check
+================================================================================
+CLOUDINARY_URL: [X] NOT SET
+CLOUDINARY_CLOUD_NAME: dl5pq1o6o
+CLOUDINARY_API_KEY: [X] NOT SET
+CLOUDINARY_API_SECRET: SET
+[CLOUDINARY] Using individual environment variables
+[CLOUDINARY] USE_CLOUDINARY = False
+[INFO] Cloudinary disabled - using local file system
+================================================================================
