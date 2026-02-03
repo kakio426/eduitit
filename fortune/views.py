@@ -11,6 +11,7 @@ from core.utils import ratelimit_key_for_master_only
 from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
+from .utils.caching import get_natal_hash, get_cached_result, save_cached_result
 from datetime import datetime
 import pytz
 import json
@@ -171,13 +172,14 @@ def get_chart_context(data):
         return None
 
 
+@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_view(request):
-    """사주 분석 메인 뷰 (5회/h, 10회/d)"""
+    """사주 분석 메인 뷰 (5회/h, 10회/d) - 회원 전용"""
     if getattr(request, 'limited', False):
         error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
-        
+
         return render(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
             'error': error_message
@@ -185,6 +187,7 @@ def saju_view(request):
     result_html = None
     error_message = None
     chart_context = None
+    cached = False  # 캐시 사용 여부
 
     if request.method == 'POST':
         form = SajuForm(request.POST)
@@ -194,46 +197,74 @@ def saju_view(request):
 
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
-            
+
             # [DEBUG] 로그: 입력 데이터와 계산된 사주 명식 확인
             logger.info(f"User Input: {data}")
             logger.info(f"Calculated Chart: {chart_context}")
-            
-            # Form Prompt with SSOT data
-            prompt = get_prompt(mode, data, chart_context=chart_context)
 
-            try:
-                # Wrap generator to maintain current sync behavior until Phase 4
-                generated_text = "".join(generate_ai_response(prompt, request))
-                
-                # Validation: If result is empty/whitespace, treat as None/Error
-                if generated_text and generated_text.strip():
-                    result_html = generated_text
-                else:
-                    logger.warning("AI returned empty response")
-                    result_html = None
-                    error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
-            except Exception as e:
-                logger.exception("사주 분석 오류")
-                error_str = str(e)
-                if "API_KEY_MISSING" in error_str:
-                     error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
-                elif "matching query does not exist" in error_str:
-                    error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
-                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
-                    if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
+            # 캐싱 로직: natal_hash 생성 및 DB 조회
+            natal_hash = get_natal_hash(chart_context)
+            cached_result = get_cached_result(
+                user=request.user,
+                natal_hash=natal_hash,
+                mode=mode,
+                topic=None  # saju_view는 전체 분석 (topic=None)
+            )
+
+            if cached_result:
+                # 캐시 히트: DB에서 기존 결과 로드
+                logger.info(f"Cache HIT for natal_hash={natal_hash}, mode={mode}")
+                result_html = cached_result.result_text
+                cached = True
+            else:
+                # 캐시 미스: AI 호출 및 결과 저장
+                logger.info(f"Cache MISS for natal_hash={natal_hash}, mode={mode}")
+
+                # Form Prompt with SSOT data
+                prompt = get_prompt(mode, data, chart_context=chart_context)
+
+                try:
+                    # Wrap generator to maintain current sync behavior until Phase 4
+                    generated_text = "".join(generate_ai_response(prompt, request))
+
+                    # Validation: If result is empty/whitespace, treat as None/Error
+                    if generated_text and generated_text.strip():
+                        result_html = generated_text
+
+                        # 결과를 DB에 저장 (캐싱)
+                        save_cached_result(
+                            user=request.user,
+                            natal_hash=natal_hash,
+                            result_text=result_html,
+                            chart_context=chart_context,
+                            mode=mode,
+                            topic=None
+                        )
                     else:
-                        error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
-                elif "503" in error_str:
-                    error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
-                elif "Insufficient Balance" in error_str: # DeepSeek specific
-                     if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
-                     else:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
-                else:
-                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
+                        logger.warning("AI returned empty response")
+                        result_html = None
+                        error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
+                except Exception as e:
+                    logger.exception("사주 분석 오류")
+                    error_str = str(e)
+                    if "API_KEY_MISSING" in error_str:
+                         error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
+                    elif "matching query does not exist" in error_str:
+                        error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
+                    elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
+                        if request.user.is_authenticated:
+                            error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
+                        else:
+                            error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
+                    elif "503" in error_str:
+                        error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
+                    elif "Insufficient Balance" in error_str: # DeepSeek specific
+                         if request.user.is_authenticated:
+                            error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
+                         else:
+                            error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
+                    else:
+                        error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
     else:
         form = SajuForm()
 
@@ -241,6 +272,7 @@ def saju_view(request):
         'form': form,
         'result': result_html,
         'error': error_message,
+        'cached': cached,  # 캐시 사용 여부 전달
         'name': request.POST.get('name') if request.method == 'POST' else None,
         'gender': request.POST.get('gender') if request.method == 'POST' else None,
         'chart': {
