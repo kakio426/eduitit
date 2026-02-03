@@ -1,3 +1,4 @@
+// Chess AI Logic - Last Updated: 2026-02-04 (Railway Sync Trigger)
 var board = null;
 var game = new Chess();
 var moveHistory = [];
