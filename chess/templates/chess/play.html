@@ -559,13 +559,19 @@
 
     board = Chessboard('myBoard', config);
 
-    // 클릭 이벤트 연결
-    $('#myBoard').on('click', '.square-55d63', function () {
+    // 클릭 이벤트 연결 (문서 레벨에서 위임)
+    $(document).on('click', '.square-55d63', function (e) {
         var square = $(this).attr('data-square');
-        onSquareClick(square);
+        if (square) {
+            onSquareClick(square);
+        }
     });
 
     updateStatus();
-    window.addEventListener('resize', function () { board.resize(); });
+
+    // 반응형 대응
+    window.addEventListener('resize', function () {
+        if (board) board.resize();
+    });
 </script>
 {% endblock %}
