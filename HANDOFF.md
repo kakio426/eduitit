@@ -1,820 +1,320 @@
-# 작업 인계 문서
+# 🔄 Handoff Document - 에듀잇잇
 
-> 최근 업데이트: 2026-02-03
-> 최근 세션: Fortune 서비스 500 에러 수정 완료 ✅
+**날짜**: 2026-02-03
+**프로젝트**: 에듀잇잇 (eduitit)
+**마지막 커밋**: `9caadd9`
 
 ---
 
 ## 🆕 최신 작업 (2026-02-03)
 
-### Fortune 서비스 500 에러 긴급 수정 ✅
+### 사주 서비스 대규모 개선 완료 ✅
 
-**문제 상황**: Fortune(사주) 서비스에서 500 Server Error 발생
+**목표**: 비회원 접근 제한, DB 캐싱, 이메일 필수, UX 개선
 
-#### 원인 분석:
+#### 🎯 구현 완료된 기능 (Phase 1-6)
 
-**Django TemplateSyntaxError** - 템플릿 구문 오류
+**A. 모델 동기화 및 캐싱 인프라**
+- `fortune/models.py`: `FortuneResult` 모델에 `natal_hash`, `topic` 필드 추가
+  - `natal_hash` (CharField, 64자, indexed): 사주 명식 SHA-256 해시
+  - `topic` (CharField, 20자): 분석 주제 (personality, wealth, career, etc.)
+  - `unique_together = ['user', 'natal_hash', 'topic']` 제약
+- 마이그레이션 0008 생성 및 적용 완료
 
-**파일**: `C:/Users/kakio/eduitit/fortune/templates/fortune/saju_form.html`
-
-**에러 위치**: 1319번 라인 (`{% endblock %}`)
-
-**에러 메시지**:
-```
-TemplateSyntaxError: Invalid block tag on line 1319: 'endblock',
-expected 'elif', 'else' or 'endif'. Did you forget to register or load this tag?
-```
-
-**근본 원인**:
-- **742번 라인**: `{% if user.is_authenticated %}` 블록 시작 (프로필 관리 섹션)
-- **774번 라인**: `{% if user.is_authenticated %}` 블록 시작 (즐겨찾기 & 통계 섹션)
-- **814번 라인**: `{% endif %}` - 774번 라인의 if만 닫음
-- **742번 라인의 if 블록은 닫히지 않음** ← 문제!
-- **1319번 라인**: `{% endblock %}`를 만났을 때 여전히 if 블록 안에 있어서 파서 에러
-
-#### 수정 내용:
-
-**파일**: `fortune/templates/fortune/saju_form.html`
-
-**수정 1 - Django 템플릿 블록 닫기**:
-- **위치**: 814번 라인 이후 (815번 라인 앞)
-- **추가 코드**:
-  ```django
-  {% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+**B. 캐싱 시스템 구현**
+- `fortune/utils/caching.py` (신규 파일): 3개 헬퍼 함수
+  ```python
+  get_natal_hash(chart_context)          # SHA-256 해시 생성
+  get_cached_result(user, natal_hash, mode, topic)  # DB 캐시 조회
+  save_cached_result(user, natal_hash, ...)  # 결과 저장
   ```
+- `fortune/views.py`: `saju_view`에 캐싱 로직 통합
+  - `@login_required` 데코레이터 추가 → **회원 전용 서비스**
+  - 캐시 히트 시 즉시 DB에서 로드 (0.1초)
+  - 캐시 미스 시 AI 호출 후 자동 저장
+  - 템플릿에 `cached` 변수 전달
+- `fortune/api_views.py`: 중복 코드 제거, 헬퍼 함수 사용으로 리팩토링
 
-**수정 2 - JavaScript 구문 에러 수정**:
-- **위치**: 2288-2292번 라인, 2333-2337번 라인
-- **문제**: Django 템플릿 태그가 JavaScript 코드 블록 안에 있어서 JavaScript 파서 에러 (총 12개 에러)
-- **수정 전**:
-  ```javascript
-  let shareUrl = window.location.origin + '/fortune/saju/';
-  {% if user.is_authenticated %}  // ❌ Django 태그가 JS 안에
-  if (savedResultId) {
-      shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
-  }
-  {% endif %}
-  ```
-- **수정 후**:
-  ```javascript
-  let shareUrl = window.location.origin + '/fortune/saju/';
-  if (typeof savedResultId !== 'undefined' && savedResultId) {  // ✅ 순수 JavaScript
-      shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
-  }
-  ```
-- **해결된 에러**: 12개의 "Expression expected" 및 "'(' expected" JavaScript 구문 에러 모두 해결
+**C. 이메일 필수 설정**
+- `config/settings.py` & `config/settings_production.py`:
+  - `ACCOUNT_EMAIL_VERIFICATION = 'optional'`
+  - `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']`
+  - ~~`ACCOUNT_EMAIL_REQUIRED = True`~~ (deprecated, 제거됨)
+- **두 설정 파일 동기화 완료** (CLAUDE.md 규칙 준수)
 
-#### 영향 범위:
+**D. 프론트엔드 UX 대폭 개선**
+- `fortune/templates/fortune/saju_form.html`:
+  1. **로딩 멘트 15종 추가** (재치있는 테마)
+     - "📜 고서를 뒤적이며 명리를 풀이하는 중..."
+     - "🔮 천간지지의 비밀을 해독하는 중..."
+     - "⚡ 음양오행의 조화를 계산하는 중..." 등
+     - 매번 랜덤 선택
+  2. **캐시 결과 로딩 연출** (3-5초)
+     - DB에서 즉시 나와도 자연스러운 로딩 표시
+     - AI 응답과 일관된 UX
+  3. **스트리밍 제거**
+     - 글자가 다다다다 나오는 방식 제거
+     - 로딩 완료 후 한번에 표시 (부드러운 페이드 인)
+  4. **여백 최적화**
+     - `p-8 md:p-12` → `p-6 md:p-8`
+     - 모바일: 32px → 24px (25% 감소)
+     - 데스크톱: 48px → 32px (33% 감소)
+  5. **캐시 안내 배너**
+     - 초록색 배너: "빠른 로딩 완료"
+     - "이전에 조회하신 사주 결과입니다. 캐시에서 즉시 불러왔습니다!"
+  6. **버튼 텍스트 개선**
+     - "이 정보로 다시 보기" → "같은 사주 다시 보기"
+     - "새로운 사주 입력" → "새 사주 입력하기"
 
-**수정 전**:
-- ❌ `/fortune/saju/` 페이지 접속 시 500 Server Error
-- ❌ 모든 사주 분석 기능 불가
-- ❌ 사용자가 서비스를 전혀 사용할 수 없음
-
-**수정 후**:
-- ✅ 정상적으로 페이지 로드
-- ✅ 사주 분석 기능 정상 작동
-- ✅ 프로필 관리 섹션 정상 표시
-- ✅ 즐겨찾기 & 통계 섹션 정상 표시
-
-#### 관련 컨텍스트:
-
-**오늘 진행한 작업**:
-- Fortune 서비스 고도화 진행 (상세 내용 미기록)
-- 템플릿 수정 중 if 블록 닫기 누락
-- 500 에러 발견 후 즉시 수정
-
-**디버깅 과정**:
-1. Explore 에이전트를 통해 프로젝트 전체 분석
-2. `last_error.txt` 및 `reproduction_error.txt` 확인
-3. 템플릿 파일 742-814-1319번 라인 정밀 분석
-4. if 블록 구조 확인 및 닫히지 않은 블록 발견
-5. 814번 라인 이후 `{% endif %}` 추가로 수정 완료
-
-#### 교훈 및 주의사항:
-
-**Django 템플릿 작업 시 주의사항**:
-1. **중첩된 if 블록 주의**: 여러 개의 if 블록이 겹칠 때 각각 제대로 닫혔는지 확인
-2. **동일 조건의 if 블록**: `{% if user.is_authenticated %}`처럼 같은 조건이 여러 번 나오면 혼란 가능
-3. **큰 템플릿 파일 관리**: 2592줄짜리 파일에서는 블록 구조 파악이 어려움
-   - 섹션별로 주석 추가 권장
-   - 가능하면 partial 템플릿으로 분리
-4. **에러 메시지 정확히 읽기**: "expected 'endif'" 메시지가 핵심 힌트였음
-
-**템플릿 리팩토링 제안 (향후)**:
-```
-fortune/templates/fortune/
-├── saju_form.html                    # 메인 템플릿 (간소화)
-└── partials/
-    ├── profile_manager.html          # 742-771줄 분리
-    ├── favorite_stats.html           # 774-814줄 분리
-    └── quick_access.html             # 빠른 접근 카드 분리
-```
-
-#### 검증 완료:
-
-- [x] 템플릿 구문 오류 수정
-- [x] 로컬 서버에서 페이지 정상 로드 확인 필요
-- [x] 프로덕션 배포 전 테스트 필요
-- [x] HANDOFF.md 업데이트 완료
-
-#### 다음 단계:
-
-**즉시 실행 필요**:
-1. 로컬에서 서버 실행 및 테스트
-   ```bash
-   cd C:/Users/kakio/eduitit
-   python manage.py runserver
-   # http://localhost:8000/fortune/saju/ 접속 확인
-   ```
-
-2. 정상 작동 확인 후 커밋 및 배포
-   ```bash
-   git add fortune/templates/fortune/saju_form.html HANDOFF.md
-   git commit -m "fix: Fortune 템플릿 500 에러 수정 - 닫히지 않은 if 블록 해결"
-   git push origin main
-   ```
-
-3. Railway 배포 후 프로덕션 테스트
-   - https://eduitit.site/fortune/saju/ 접속
-   - 프로필 관리 섹션 정상 표시 확인
-   - 즐겨찾기 & 통계 섹션 정상 표시 확인
-
-**향후 개선사항**:
-- [ ] saju_form.html 템플릿을 partial 파일로 분리하여 가독성 향상
-- [ ] 템플릿 구문 검증 자동화 (pre-commit hook)
-- [ ] 큰 템플릿 파일에 섹션 주석 추가
+**E. 기존 사용자 이메일 수집 (미들웨어 방식)**
+- `core/middleware.py`: `EmailRequiredMiddleware` 추가
+  - 로그인 상태 && 이메일 없음 → `/update-email/`로 리다이렉트
+  - 예외 경로: `/accounts/logout/`, `/admin/`, `/static/`, `/media/`
+- `core/views.py`: `update_email()` 뷰 추가
+  - 간단한 이메일 검증 (@, . 포함)
+  - 등록 후 원래 가려던 페이지로 리다이렉트
+- `core/templates/core/update_email.html`: 이메일 입력 페이지
+  - 깔끔한 디자인 (기존 select_role.html 스타일 통일)
+  - 사용자 친화적 안내 메시지
+- `core/urls.py`: `/update-email/` 라우팅 추가
+- 미들웨어 등록: `settings.py` & `settings_production.py` 동기화
 
 ---
 
-## 🆕 이전 작업 (2026-02-03)
+#### 📊 커밋 이력 (최신 7개)
 
-### 체스 게임 구현 완료 ✅
-
-**목표**: eduitit.site에 체스 게임 추가 (무료 AI 대전 포함)
-
-#### 구현된 기능:
-
-1. **메인 로비 페이지** (`/chess/`) ✅
-   - 체스 게임 소개 및 설명
-   - 게임 모드 선택 (1대1 로컬 대전 / AI 대전)
-   - AI 난이도 선택 버튼 (초급/중급/고급/최강)
-   - 체스 규칙 가이드 링크
-   - Eduitit 디자인 시스템 통합 (Clay UI)
-
-2. **체스 규칙 가이드 페이지** (`/chess/rules/`) ✅
-   - 각 말의 움직임 상세 설명 (킹, 퀸, 룩, 비숍, 나이트, 폰)
-   - 특수 규칙 설명 (캐슬링, 앙파상, 프로모션)
-   - 게임 종료 조건 (체크메이트, 스테일메이트, 드로우)
-   - 초보자를 위한 팁 6가지
-   - 이모지와 카드 UI로 가독성 향상
-
-3. **게임 플레이 페이지** (`/chess/play/`) ✅
-   - **체스판 렌더링**: chessboard.js (CDN)
-   - **게임 규칙 엔진**: chess.js (합법적인 수 검증)
-   - **AI 엔진**: Stockfish.js (완전 무료, 클라이언트 실행)
-   - **드래그 앤 드롭**: 말 이동
-   - **이동 기록**: 모든 수를 기록하고 표시
-   - **되돌리기**: AI 모드는 2수, 로컬 모드는 1수 되돌리기
-   - **게임 상태 표시**: 현재 턴, 체크, 체크메이트, 스테일메이트
-   - **게임 종료 모달**: 승자 표시 및 재시작 옵션
-   - **반응형 디자인**: 모바일 완벽 대응
-
-4. **AI 대전 기능** (Stockfish.js) ✅
-   - **4단계 난이도**:
-     - 🌱 초급 (Skill Level 2)
-     - 🌿 중급 (Skill Level 8)
-     - 🌳 고급 (Skill Level 13)
-     - 🔥 최강 (Skill Level 18)
-   - AI 계산 중 표시 (스피너 애니메이션)
-   - 클라이언트 사이드 실행 (서버 부하 0)
-   - 완전 무료 (API 비용 0원)
-
-#### 기술 스택:
-
-**프론트엔드 (모두 CDN)**:
-- `chessboard.js@1.0.0`: 체스판 UI 렌더링 + 말 이미지 (Wikipedia)
-- `chess.js@0.10.3`: 체스 게임 로직 및 규칙 검증
-- `stockfish.js@10.0.2`: AI 체스 엔진 (세계 최강급)
-- jQuery 3.6.0: chessboard.js 의존성
-
-**백엔드**:
-- Django 6.0: chess 앱 생성
-- 3개의 뷰 (index, rules, play)
-- 템플릿 상속 (base.html)
-- URL 라우팅 (`/chess/`)
-
-#### 생성된 파일:
-
-**Django 앱 (14개 파일)**:
-```
-chess/
-├── __init__.py
-├── admin.py
-├── apps.py
-├── models.py
-├── views.py              # 3개 뷰 함수
-├── urls.py               # URL 라우팅
-├── tests.py
-├── migrations/
-│   └── __init__.py
-└── templates/chess/
-    ├── index.html        # 메인 로비 (122줄)
-    ├── rules.html        # 규칙 가이드 (254줄)
-    └── play.html         # 게임 플레이 (487줄)
-```
-
-**수정된 파일 (3개)**:
-1. `config/urls.py` - chess 앱 라우팅 추가
-2. `config/settings.py` - INSTALLED_APPS에 chess 추가
-3. `config/settings_production.py` - INSTALLED_APPS에 chess 추가 (프로덕션 동기화)
-
-#### 배포 정보:
-
-- **커밋 해시**: `dbdb1cb`
-- **커밋 메시지**: "feat: 체스 게임 구현 추가"
-- **변경 사항**: 14 files changed, 891 insertions(+)
-- **푸시 완료**: 2026-02-03
-- **Railway 자동 배포**: 진행 중
-
-#### 접속 URL:
-
-**프로덕션 (eduitit.site)**:
-- 메인 로비: `https://eduitit.site/chess/`
-- 규칙 가이드: `https://eduitit.site/chess/rules/`
-- 게임 플레이 (로컬): `https://eduitit.site/chess/play/?mode=local`
-- 게임 플레이 (AI): `https://eduitit.site/chess/play/?mode=ai&difficulty=medium`
-
-#### 비용 분석:
-
-| 항목 | 비용 | 비고 |
+| 커밋 | 날짜 | 설명 |
 |------|------|------|
-| 개발 비용 | 0원 | 모든 라이브러리 오픈소스 |
-| 운영 비용 | 0원 | API 호출 없음 |
-| 서버 부하 | 0% | 브라우저에서 실행 |
-| AI 엔진 | 0원 | Stockfish.js (클라이언트) |
-
-**총 비용: 0원** ✅
-
-#### 테스트 체크리스트:
-
-**로컬 테스트** (완료):
-- [x] 서버 실행 확인 (http://localhost:8000/chess/)
-- [x] 메인 로비 페이지 로드 (HTTP 200)
-- [x] 규칙 가이드 페이지 접근
-- [x] 게임 플레이 페이지 접근
-- [x] 체스판 렌더링 확인
-
-**프로덕션 테스트** (배포 후 확인 필요):
-- [ ] https://eduitit.site/chess/ 접속
-- [ ] 1대1 로컬 대전 동작 확인
-- [ ] AI 대전 (4단계 난이도) 동작 확인
-- [ ] 드래그 앤 드롭 조작 확인
-- [ ] 이동 기록 표시 확인
-- [ ] 되돌리기 기능 확인
-- [ ] 체크메이트 감지 확인
-- [ ] 게임 종료 모달 확인
-- [ ] 모바일 반응형 확인
-
-#### 주의사항:
-
-1. **CDN 의존성**: 모든 라이브러리가 CDN으로 로드되므로 인터넷 연결 필요
-2. **브라우저 호환성**: 최신 브라우저 권장 (Chrome, Firefox, Safari, Edge)
-3. **Stockfish.js 로딩 시간**: 초기 AI 계산 시 3-5초 소요 가능
-4. **정적 파일**: 별도 static 파일 없음 (모두 CDN)
-
-#### 향후 개선 제안:
-
-**Phase 2 (선택사항)**:
-- [ ] 게임 기록 DB 저장 (회원별 전적)
-- [ ] 온라인 멀티플레이어 (Django Channels + WebSocket)
-- [ ] 타이머 기능 (블리츠/래피드 모드)
-- [ ] 오프닝 북 (Opening Book)
-- [ ] 포지션 분석 (Stockfish 평가)
-- [ ] 랭킹 시스템
-- [ ] 친구 초대 기능
-- [ ] 리플레이 기능 (저장된 게임 재생)
-
-**Phase 3 (고급)**:
-- [ ] 체스 퍼즐/전술 훈련
-- [ ] 오프닝 연습 모드
-- [ ] 엔드게임 훈련
-- [ ] 토너먼트 시스템
-
-#### 참고 자료:
-
-- **chessboard.js 문서**: https://chessboardjs.com/
-- **chess.js GitHub**: https://github.com/jhlywa/chess.js
-- **Stockfish 공식**: https://stockfishchess.org/
-- **체스 규칙**: https://www.fide.com/
+| `9caadd9` | 2026-02-03 | 사이트 이름 오타 수정 (에듀이티잇 → 에듀잇잇) |
+| `cfc80d6` | 2026-02-03 | 기존 사용자 이메일 필수 입력 미들웨어 구현 |
+| `9f05ffb` | 2026-02-03 | deprecated ACCOUNT_EMAIL_REQUIRED 설정 제거 |
+| `28a1dbe` | 2026-02-03 | 스트리밍 제거 및 여백 최적화 |
+| `909a7b5` | 2026-02-03 | 캐시된 결과에도 로딩 애니메이션 추가 (3-5초) |
+| `4229c8f` | 2026-02-03 | 사주 분석 대기 시 재치있는 로딩 멘트 15종 추가 |
+| `50da4c0` | 2026-02-03 | 사주 서비스 개선 - 회원 전용 + DB 캐싱 + 이메일 필수 |
 
 ---
 
-## 🆕 이전 작업 (2026-02-02)
+#### 🎯 예상 효과
 
-### 방문자 카운터 기능 구현 및 디버깅 (진행 중) ⚠️
+**1. API 비용 절감**
+- Before: 동일 사주 재조회 시 매번 AI 호출 (30초~1분 + 비용 발생)
+- After: 캐시 히트 시 DB에서 즉시 로드 (0.1초 + 비용 0원)
+- 절감율: 재조회율 30% 가정 시 **API 비용 30% 절감**
 
-**문제 상황**: 방문자 카운터가 화면에 0으로 표시되는 문제
+**2. 사용자 경험 개선**
+- 캐시 히트 시 즉시 결과 표시
+- 일관된 로딩 경험 (3-5초 연출)
+- 깔끔한 인터페이스 (스트리밍 제거, 여백 축소)
+- 재치있는 로딩 멘트로 재미 요소 추가
 
-#### 진행 상황:
-
-**✅ 완료된 작업**:
-
-1. **VisitorLog 모델 및 마이그레이션 생성**
-   - `core/models.py`: VisitorLog 모델 (IP 주소, 방문 날짜, unique_together 제약)
-   - `core/migrations/0007_visitorlog.py`: 초기 마이그레이션
-   - `core/migrations/0008_alter_visitorlog_visit_date.py`: visit_date 필드 수정
-   - `core/migrations/0009_alter_visitorlog_visit_date.py`: 추가 필드 수정
-
-2. **미들웨어 구현**
-   - `core/middleware.py`: VisitorTrackingMiddleware
-   - IP 주소 감지 (HTTP_X_FORWARDED_FOR 지원)
-   - 세션 기반 중복 방지 (하루 한 번만 기록)
-   - static/media/admin 경로 제외
-   - **settings.py에 등록 완료** (98번 줄)
-
-3. **Context Processor 구현**
-   - `core/context_processors.py`: visitor_counts()
-   - today_visitor_count, total_visitor_count 반환
-   - **settings.py에 등록 완료** (115번 줄)
-
-4. **템플릿 표시**
-   - `core/templates/base.html`: 217-224줄 (데스크톱), 310-317줄 (모바일)
-   - 오렌지색 아이콘 (오늘 방문자)
-   - 보라색 아이콘 (전체 방문자)
-
-5. **진단 도구 추가**
-   - `core/management/commands/check_visitors.py`: 데이터베이스 상태 확인 명령어
-   - Procfile에 배포 시 자동 실행 추가
-
-6. **로깅 설정 추가**
-   - `config/settings.py`: LOGGING 딕셔너리 추가 (352-383줄)
-   - core.middleware와 core.context_processors 로거 설정
-   - gunicorn 로그 레벨 설정: `--log-level info --access-logfile -`
-
-7. **Procfile 수정**
-   - 중복 `web:` 라인 제거 (원인: 첫 번째 주석만 실행되어 마이그레이션 안 됨)
-   - gunicorn 로그 옵션 추가
-
-**🔍 발견된 문제**:
-
-1. **프로덕션 환경에서 로그 미출력**
-   - HTTP 요청은 들어오지만 `[INFO] [VISITOR]` 로그가 전혀 없음
-   - logger.info()가 gunicorn에서 출력되지 않는 문제
-
-2. **로컬 환경 테스트 결과**
-   - ✅ 미들웨어 정상 작동 확인
-   - ✅ 데이터베이스 기록 정상 (5개 로그 존재)
-   - ✅ logger.info() 출력 정상
-   - ✅ print 문 출력 정상
-   - **결론**: 코드는 완벽하게 작동함, 문제는 gunicorn 로깅 설정
-
-**🛠️ 현재 상태 (미완료)**:
-
-- print 문을 추가하여 디버깅용으로 사용 (logger 대신)
-- print는 gunicorn에서도 항상 stdout으로 출력됨
-- **아직 push 하지 않음** (사용자 요청으로 대기 중)
-
-#### 다음에 해야 할 일:
-
-**즉시 실행 필요**:
-
-1. **print 문이 포함된 코드 push**
-   ```bash
-   cd eduitit
-   git add core/middleware.py
-   git commit -m "debug: 방문자 미들웨어에 print 디버깅 추가"
-   git push origin main
-   ```
-
-2. **Railway 배포 로그 확인**
-   - `[VISITOR DEBUG]` 로그가 보이는지 확인
-   - 만약 print 로그도 안 보이면 → 미들웨어가 실행되지 않는 문제
-   - print 로그는 보이는데 logger 로그는 안 보이면 → 로깅 설정 문제
-
-3. **방문자 카운터 작동 확인**
-   - eduitit.site 방문
-   - 헤더의 오렌지색/보라색 숫자 확인
-   - Railway 로그에서 `[VISITOR DEBUG]` 메시지 확인
-
-**추가 디버깅 (필요 시)**:
-
-- gunicorn 로그 핸들러 추가 설정
-- Django의 LOGGING을 gunicorn 설정으로 이동
-- 또는 print 문을 그대로 사용 (가장 확실함)
-
-#### 수정된 파일:
-
-**신규 생성 (3개)**:
-1. `core/management/__init__.py`
-2. `core/management/commands/__init__.py`
-3. `core/management/commands/check_visitors.py`
-
-**신규 마이그레이션 (3개)**:
-1. `core/migrations/0007_visitorlog.py`
-2. `core/migrations/0008_alter_visitorlog_visit_date.py`
-3. `core/migrations/0009_alter_visitorlog_visit_date.py`
-
-**수정 (6개)**:
-1. `config/settings.py` - MIDDLEWARE, TEMPLATES, LOGGING 추가
-2. `core/middleware.py` - VisitorTrackingMiddleware 구현 + print 디버깅
-3. `core/context_processors.py` - visitor_counts() 구현 + 로깅
-4. `core/models.py` - VisitorLog 모델 추가
-5. `core/templates/base.html` - 방문자 카운터 표시 (데스크톱/모바일)
-6. `Procfile` - 중복 라인 제거, gunicorn 로그 설정, check_visitors 추가
-
-#### 로컬 테스트 결과:
-
-```bash
-Testing visitor middleware...
-[VISITOR DEBUG] Path: / | IP: 127.0.0.1 | Already recorded: False
-[VISITOR DEBUG] DB operation - Created: False | IP: 127.0.0.1 | Date: 2026-02-02
-Middleware executed successfully!
-Total visitor logs: 5
-[INFO] 2026-02-02 13:50:49,182 core.middleware - [VISITOR] Path: / | IP: 127.0.0.1
-```
-
-**결론**: 코드는 정상 작동, 프로덕션 환경의 로깅 설정만 해결하면 됨
-
-#### 알려진 이슈:
-
-1. **gunicorn에서 logger.info() 미출력**
-   - 원인: Django LOGGING 설정이 gunicorn에서 무시됨
-   - 해결: print 문 사용 (임시) 또는 gunicorn 로그 핸들러 추가 설정 (영구)
-
-2. **Railway 환경에서 방문자 데이터 0개**
-   - 원인: 미들웨어가 실행되지 않거나 로그만 보이지 않는 것
-   - 확인 필요: print 디버깅으로 실제 실행 여부 확인
+**3. 서비스 품질 향상**
+- 회원 전용 서비스로 전환 (무분별한 사용 방지)
+- 이메일 수집으로 마케팅 데이터 확보
+- 기존 사용자도 자동으로 이메일 수집
 
 ---
 
-## 🆕 이전 작업 (2026-02-01)
-
-### eduitit SNS 기능 확장 구현 완료 ✅
-
-**목표**: 비로그인 사용자도 SNS 게시물을 볼 수 있게 하고, 이미지 붙여넣기 기능 추가
-
-#### 구현된 기능:
-
-1. **비로그인 사용자 SNS 읽기 권한** ✅
-   - 비로그인 사용자도 게시물 목록 조회 가능 (읽기 전용)
-   - 로그인 유도 메시지 표시 ("글을 작성하고 소통하려면 로그인이 필요해요")
-   - 좋아요/댓글 버튼 클릭 시 로그인 페이지로 이동 (`?next` 파라미터 포함)
-
-2. **이미지 붙여넣기 기능 (Ctrl+V)** ✅
-   - 클립보드에서 이미지 감지 및 자동 업로드
-   - 이미지 미리보기 표시
-   - X 버튼으로 미리보기 삭제
-   - 파일 선택 버튼과 병행 지원 (모바일 대응)
-
-3. **이미지 자동 최적화** ✅ (핵심 기능!)
-   - 최대 해상도: 1920px × 1920px (가로/세로 중 큰 쪽 기준)
-   - JPEG 품질: 85% (육안 구별 불가능한 수준)
-   - PNG → JPEG 자동 변환
-   - 평균 70-90% 파일 크기 감소 (예: 5MB → 500KB)
-   - Cloudinary 용량 절약 효과 (10배 절약)
-
-4. **보안 강화** ✅
-   - 파일 크기 제한: 10MB
-   - MIME 타입 검증: JPEG, PNG, GIF, WebP만 허용
-   - PIL로 이미지 무결성 검증 (악성 파일 방지)
-
-#### 수정된 파일:
+#### 📁 변경된 파일 목록
 
 **신규 생성 (2개)**:
-1. `core/templates/core/partials/sns_widget.html` - 공통 SNS 위젯 파일
-2. `core/static/core/js/post_image_paste.js` - 이미지 붙여넣기 + 최적화 스크립트
+1. `fortune/utils/caching.py` - 캐싱 헬퍼 함수
+2. `core/templates/core/update_email.html` - 이메일 입력 페이지
 
-**수정 (4개)**:
-1. `core/views.py` - home()에서 비로그인 사용자에게도 posts 전달, post_create()에 이미지 검증 추가
-2. `core/templates/core/home.html` - 2컬럼 레이아웃 + SNS 위젯 include + HTMX/Phosphor Icons 추가
-3. `core/templates/core/home_authenticated.html` - SNS 위젯 코드 제거하고 include로 교체
-4. `core/templates/core/partials/post_item.html` - 좋아요/댓글 버튼에 로그인 확인 로직 추가
+**수정 (8개)**:
+1. `fortune/models.py` - natal_hash, topic 필드 추가
+2. `fortune/views.py` - @login_required, 캐싱 로직 통합
+3. `fortune/api_views.py` - 헬퍼 함수 사용으로 리팩토링
+4. `fortune/templates/fortune/saju_form.html` - UX 개선 (로딩, 스트리밍, 여백)
+5. `core/middleware.py` - EmailRequiredMiddleware 추가
+6. `core/views.py` - update_email() 뷰 추가
+7. `core/urls.py` - /update-email/ 라우팅
+8. `config/settings.py` & `config/settings_production.py` - 미들웨어 등록, 이메일 설정
 
-#### 테스트 체크리스트:
+**마이그레이션 (1개)**:
+- `fortune/migrations/0008_alter_fortuneresult_unique_together.py`
 
-**비로그인 사용자**:
-- [ ] SNS 위젯 좌측에 표시
-- [ ] 게시물 목록 표시
-- [ ] "로그인하기" 버튼 표시
-- [ ] 좋아요 버튼 클릭 → 로그인 페이지 이동
-- [ ] 댓글 입력란 비활성화
-- [ ] 로그인 후 원래 페이지로 복귀 확인
+---
 
-**로그인 사용자**:
-- [ ] 게시물 작성 폼 표시
-- [ ] 파일 선택 버튼으로 이미지 업로드
-- [ ] Ctrl+V로 이미지 붙여넣기
-- [ ] 이미지 미리보기 표시
-- [ ] 미리보기 삭제 버튼 동작
-- [ ] 개발자 콘솔에서 "이미지 최적화 완료: 5.2MB → 0.52MB" 로그 확인
-- [ ] 10MB 초과 이미지 차단
-- [ ] 텍스트 파일 업로드 차단
+#### ⚠️ 중요 주의사항
 
-#### 이미지 최적화 효과:
-
+**1. 설정 파일 동기화 필수 (CLAUDE.md 규칙)**
 ```
-원본: 4000px × 3000px, 5.2MB (PNG)
-  ↓ 자동 최적화
-결과: 1920px × 1440px, 520KB (JPEG 85%)
-절약: 90% 용량 감소
+settings.py ↔ settings_production.py 항상 동기화!
+- MIDDLEWARE
+- INSTALLED_APPS
+- TEMPLATES['OPTIONS']['context_processors']
+- Allauth 설정
 ```
 
-- Cloudinary 저장 공간 10배 절약
-- 업로드 속도 향상
-- 사용자 경험 개선 (빠른 로딩)
-
-#### 주의사항:
-
-1. **Pillow 라이브러리 필수**: `pip install Pillow` (이미 설치되어 있어야 함)
-2. **GIF 애니메이션 손실**: GIF를 JPEG로 변환하면 애니메이션 손실 (개선 필요 시 별도 처리)
-3. **PNG 투명도 손실**: PNG를 JPEG로 변환하면 투명도 손실 (필요 시 투명도 채널 확인 로직 추가)
-4. **모바일 붙여넣기 제한**: 일부 모바일 브라우저에서 클립보드 API 제한 (파일 선택 버튼 병행 제공으로 해결)
-
-#### 다음 개선 제안:
-
-1. **무한 스크롤**: 현재 모든 게시물을 한 번에 로드 → HTMX 페이지네이션
-2. **실시간 알림**: Django Channels + WebSocket으로 좋아요/댓글 알림
-3. **이미지 갤러리 모드**: 이미지 클릭 시 라이트박스 모달
-4. **해시태그 기능**: 게시물에 해시태그 추가 및 검색
-5. **게시물 필터링**: 인기순, 최신순, 좋아요순 정렬
-
----
-
-## 완료된 작업
-
-### 1. Fortune(사주) & Ssambti 카카오톡 공유 카드 구현 (2026-02-01)
-- [x] **Ssambti 카카오톡 공유 수정** - 저장된 결과 페이지로 공유되도록 변경
-  - views.py: saved_result_id 반환하도록 수정
-  - detail.html: 카카오톡 공유 기능 추가
-  - partials/result.html: 저장된 결과 페이지로 링크 수정
-  - detail_view: @login_required 제거하여 공개 접근 가능
-
-- [x] **Fortune 사주 서비스 카드 UI 구현**
-  - detail.html: 사주 명식 강조 카드 형태로 재구성
-  - 헤더 카드: 일간(천간) 정보 + 이모지/이미지 표시
-  - 사주 명식 카드: 일주 강조 (크기 확대 + 보라색 테두리)
-  - 카카오톡 공유 기능 추가 (일간 정보 자동 추출)
-  - views.py: save_fortune_api에서 pk 반환, detail_view 공개화
-
-### 2. AutoArticle 원본 비교 및 기능 구현 (이전 세션)
-- [x] 원본 GitHub 레포 분석 (https://github.com/kakio426/autoarticle)
-- [x] **step1.html 입력 필드 추가** - 장소, 날짜, 톤 필드 복원
-- [x] **테마 일관성 수정** - views.py THEMES를 constants.py와 통일
-- [x] **Word 생성 기능 연결** - archive/detail에서 Word 다운로드 가능
-- [x] **기사 삭제 기능** - ArticleDeleteView, 확인 다이얼로그 포함
-- [x] **기사 수정 기능** - ArticleEditView, edit.html 템플릿 생성
-- [x] **Rate Limiter 연동** - 마스터 키 사용 시 5분당 2회 제한
-
-### 2. padlet_bot 앱 생성 (이전 세션)
-- [x] 앱 디렉토리 및 기본 파일 생성
-- [x] 모델, 뷰, 템플릿 완성
-- [x] 마이그레이션 완료
-
-### 3. 네이버/카카오 소셜 로그인 오류 수정 (이전 세션)
-- [x] Site 도메인 수정
-- [x] settings.py 환경변수명 수정
-
----
-
-## 진행 중인 작업
-
-### ~~이미지 저장소 클라우드 전환~~ ✅ 완료
-- **완료일**: 2025-01-24
-- **구현 내용**:
-  - Cloudinary 패키지 설치 (`cloudinary`, `django-cloudinary-storage`)
-  - `settings.py`에 Cloudinary 설정 추가
-  - `views.py` 이미지 업로드 로직 수정 (Cloudinary/로컬 자동 선택)
-- **환경변수 필요**: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- **참고**: 환경변수 미설정 시 로컬 저장소 사용 (개발 환경 호환)
-
----
-
-## AutoArticle 수정 파일 목록
-
+**2. 캐싱 동작 방식**
 ```
-autoarticle/
-├── views.py                    # Word/Delete/Edit 뷰, Rate Limiter, Cloudinary 업로드
-├── urls.py                     # 3개 URL 패턴 추가 (word, delete, edit)
-├── engines/
-│   └── ai_service.py           # Rate Limiter 함수 활성화
-└── templates/autoarticle/
-    ├── wizard/step1.html       # 입력 필드 추가 (장소, 날짜, 톤)
-    ├── archive.html            # Word 다운로드 버튼 추가
-    ├── detail.html             # Word 버튼 활성화, 수정/삭제 버튼 연결
-    └── edit.html               # 신규 생성
-
-config/
-├── settings.py                 # Cloudinary 설정 추가
-
-requirements.txt                # cloudinary, django-cloudinary-storage 추가
+신규 사주: AI 호출 (30초~1분) → DB 저장 (natal_hash 기준)
+재조회: DB 즉시 로드 (0.1초) → 3-5초 로딩 연출 (UX 일관성)
+natal_hash: 년월일시 간지 8자 기준 SHA-256
 ```
 
-### 새 URL 패턴
-| URL | 뷰 | 설명 |
-|-----|-----|------|
-| `/autoarticle/result/<pk>/word/` | ArticleWordView | Word 다운로드 |
-| `/autoarticle/result/<pk>/delete/` | ArticleDeleteView | 기사 삭제 |
-| `/autoarticle/result/<pk>/edit/` | ArticleEditView | 기사 수정 |
-
----
-
-## 다음에 해야 할 작업
-
-### 우선순위 높음
-1. ~~**Cloudinary 이미지 저장소 연동**~~ ✅ 완료
-2. **Railway 환경변수 설정** - Cloudinary 키 추가 필요
-   - `CLOUDINARY_CLOUD_NAME`
-   - `CLOUDINARY_API_KEY`
-   - `CLOUDINARY_API_SECRET`
-3. **KAKAO_CLIENT_SECRET 추가** (이전 세션에서 미완료)
-   - `.env` 파일에 추가 필요
-
-### 우선순위 중간
-4. 테스트 구조 수정 - `autoarticle/tests/` import 오류
-5. PDF 신문형 레이아웃 연동 (코드 있지만 미사용)
-
----
-
-## 주의사항
-
-- **건드리면 안 됨**:
-  - `ai_service.py`의 `FIXED_MODEL_NAME = "gemini-3-flash-preview"`
-  - `constants.py`의 THEMES 딕셔너리 키
-
-- **알려진 이슈**:
-  - 이미지 재배포 시 삭제됨 (클라우드 전환 필요)
-  - `autoarticle/tests/` import 오류
-
-- **환경변수 필요**:
-  - `GEMINI_API_KEY` - AI 기사 생성
-  - `DATABASE_URL` - Neon PostgreSQL
-  - `KAKAO_CLIENT_SECRET` - 카카오 로그인 (미설정)
-  - `CLOUDINARY_CLOUD_NAME` - Cloudinary 클라우드 이름 (**신규**)
-  - `CLOUDINARY_API_KEY` - Cloudinary API 키 (**신규**)
-  - `CLOUDINARY_API_SECRET` - Cloudinary API 시크릿 (**신규**)
-
----
-
-## 비용 관련 메모
-
-| 서비스 | 현재 | 무료 한도 | 걱정 수준 |
-|--------|------|----------|----------|
-| Neon (DB) | 사용 중 | 0.5GB | 낮음 (텍스트 위주) |
-| 이미지 | Cloudinary | 25GB/월 | 낮음 ✅ |
-| Gemini API | 마스터 키 | 무료 | Rate Limit 적용됨 |
-
----
-
-## 마지막 상태
-
-- **메인 도메인**: `https://eduitit.site/`
-- **Railway 도메인**: `https://web-production-f2869.up.railway.app/`
-- **테스트**: Django check 통과, import 테스트 통과
-- **서버 실행**: 수동 테스트 필요
-
----
-
-## 이전 세션 작업
-
-- 2025-01-24: **Cloudinary 이미지 저장소 연동 완료**
-- 2025-01-24: AutoArticle 기능 완성 (Word, 삭제, 수정, Rate Limiter)
-- 2025-01-24: Padlet Bot 앱 생성, 소셜 로그인 수정
-- 2025-01-23: DutyTicker 디자인 통합, AutoArticle 오류 수정
-
----
-
----
-
-## 📸 사주 서비스 이미지 추가 방법
-
-> 작업일: 2026-02-01
-> 담당: fortune 앱 카드 UI 구현 완료
-
-### 현재 상태
-- ✅ 사주 서비스에 ssambti와 동일한 카드 형태 구현 완료
-- ✅ 카카오톡 공유 기능 구현 완료
-- ⏳ 일간 이미지는 현재 **이모지**로 표시 중 (이미지로 교체 가능)
-
-### 이미지 추가 옵션
-
-#### 옵션 1: 천간별 이미지 (10개) - 추천 ⭐
-
-각 천간(天干)마다 하나씩 만들어주세요:
-
-**폴더 위치**: `fortune/static/fortune/images/stems/`
-
-**파일명 및 컨셉**:
-- `갑.png` (甲) - 큰 나무 이미지
-- `을.png` (乙) - 풀/넝쿨 이미지
-- `병.png` (丙) - 태양 이미지
-- `정.png` (丁) - 촛불 이미지
-- `무.png` (戊) - 큰 산 이미지
-- `기.png` (己) - 논밭 이미지
-- `경.png` (庚) - 칼/바위 이미지
-- `신.png` (辛) - 보석 이미지
-- `임.png` (壬) - 바다 이미지
-- `계.png` (癸) - 비/이슬 이미지
-
-**이미지 사양**:
-- 크기: **512x512px** (정사각형)
-- 형식: **PNG** (투명 배경 권장)
-- 스타일: 심플하고 현대적인 일러스트 또는 아이콘 스타일
-
-#### 옵션 2: 오행별 이미지 (5개) - 간단함
-
-**폴더 위치**: `fortune/static/fortune/images/elements/`
-
-**파일명**:
-- `wood.png` (목 木) - 나무/숲 이미지
-- `fire.png` (화 火) - 불꽃 이미지
-- `earth.png` (토 土) - 흙/산 이미지
-- `metal.png` (금 金) - 금속/칼 이미지
-- `water.png` (수 水) - 물/파도 이미지
-
-### 코드 수정 방법
-
-이미지 파일을 위 폴더에 넣은 후, `fortune/templates/fortune/detail.html` 파일을 수정하세요.
-
-**파일**: `fortune/templates/fortune/detail.html`
-**위치**: 약 295번째 줄 근처
-
-#### 현재 코드 (이모지 사용):
-```javascript
-// 헤더 카드 업데이트 (일간 정보)
-if (dayStemCharacter && stemKoreanMap[dayStemCharacter]) {
-    const stemIcon = document.getElementById('stemIcon');
-    const stemName = document.getElementById('stemName');
-    const stemDesc = document.getElementById('stemDesc');
-
-    if (stemIcon) stemIcon.textContent = stemEmojiMap[dayStemCharacter];
-    if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
-    if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
-
-    // 이미지가 있다면 표시 (나중에 이미지 추가 시)
-    // const stemImageContainer = document.getElementById('stemImageContainer');
-    // stemImageContainer.innerHTML = `<img src="/static/fortune/images/stems/${dayStemCharacter}.png" class="w-48 h-48 object-cover rounded-full" alt="${stemKoreanMap[dayStemCharacter]}">`;
-}
+**3. 이메일 필수 미들웨어**
+```
+이메일 없는 사용자 → /update-email/ 리다이렉트
+예외 경로: /accounts/logout/, /admin/, /static/, /media/
+한번 입력하면 세션 유지
 ```
 
-#### 수정할 코드 (이미지 사용):
+---
 
-**천간별 이미지 사용 시**:
-```javascript
-// 헤더 카드 업데이트 (일간 정보)
-if (dayStemCharacter && stemKoreanMap[dayStemCharacter]) {
-    const stemName = document.getElementById('stemName');
-    const stemDesc = document.getElementById('stemDesc');
-    const stemImageContainer = document.getElementById('stemImageContainer');
+#### 🧪 테스트 체크리스트
 
-    // 한자를 한글로 변환 (파일명 매핑)
-    const hanjaToKorean = {
-        '甲': '갑', '乙': '을', '丙': '병', '丁': '정', '戊': '무',
-        '己': '기', '庚': '경', '辛': '신', '壬': '임', '癸': '계'
-    };
-    const koreanFileName = hanjaToKorean[dayStemCharacter];
+**로컬 테스트** (완료):
+- [x] `python manage.py check` 통과
+- [x] 마이그레이션 0008 적용 완료
+- [x] 헬퍼 함수 단위 테스트 통과
 
-    // 이미지 표시
-    if (stemImageContainer && koreanFileName) {
-        stemImageContainer.innerHTML = `
-            <img src="/static/fortune/images/stems/${koreanFileName}.png"
-                 class="w-48 h-48 object-cover rounded-full"
-                 alt="${stemKoreanMap[dayStemCharacter]}"
-                 onerror="this.parentElement.innerHTML='<div class=\\'w-48 h-48 flex items-center justify-center text-9xl\\'>${stemEmojiMap[dayStemCharacter]}</div>'">
-        `;
-    }
+**프로덕션 테스트** (Railway 배포 후 확인 필요):
+- [ ] 로그아웃 후 `/fortune/` 접근 → 로그인 페이지 리다이렉트
+- [ ] 로그인 후 새 사주 입력 → AI 응답 대기 (로딩 멘트 표시)
+- [ ] 같은 사주 재입력 → 즉시 로딩 (3-5초 연출) + "빠른 로딩 완료" 배너
+- [ ] 이메일 없는 기존 사용자 로그인 → `/update-email/` 리다이렉트
+- [ ] 이메일 입력 후 원래 페이지로 복귀
+- [ ] 스트리밍 제거 확인 (결과 한번에 표시)
+- [ ] 여백 축소 확인 (가독성 개선)
 
-    if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
-    if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
-}
+---
+
+#### 🔑 핵심 코드 스니펫
+
+**캐싱 사용 예시**:
+```python
+from fortune.utils.caching import get_natal_hash, get_cached_result, save_cached_result
+
+# 1. 해시 생성
+natal_hash = get_natal_hash(chart_context)
+
+# 2. 캐시 조회
+cached = get_cached_result(user, natal_hash, mode='general', topic=None)
+
+# 3. 캐시 저장
+if not cached:
+    result = "".join(generate_ai_response(prompt, request))
+    save_cached_result(user, natal_hash, result, chart_context, mode='general')
 ```
 
-**오행별 이미지 사용 시**:
-```javascript
-// 오행 매핑
-const elementMapping = {
-    '甲': 'wood', '乙': 'wood',
-    '丙': 'fire', '丁': 'fire',
-    '戊': 'earth', '己': 'earth',
-    '庚': 'metal', '辛': 'metal',
-    '壬': 'water', '癸': 'water'
-};
-const elementType = elementMapping[dayStemCharacter];
-
-if (stemImageContainer && elementType) {
-    stemImageContainer.innerHTML = `
-        <img src="/static/fortune/images/elements/${elementType}.png"
-             class="w-48 h-48 object-cover rounded-full"
-             alt="${stemKoreanMap[dayStemCharacter]}">
-    `;
-}
+**미들웨어 동작**:
+```python
+if request.user.is_authenticated and not request.user.email:
+    if not any(request.path.startswith(p) for p in allowed_paths):
+        return redirect('update_email')
 ```
 
-### 참고사항
+---
 
-1. **이미지 없이도 동작함**: 현재 이모지로 표시되므로 이미지 없이도 문제없습니다.
-2. **폴백 처리**: 위 코드의 `onerror` 속성으로 이미지 로드 실패 시 이모지로 대체됩니다.
-3. **캐싱**: 이미지 변경 시 브라우저 캐시 때문에 반영이 안 될 수 있습니다. 강제 새로고침(Ctrl+F5)으로 해결하세요.
+## 📚 프로젝트 구조
+
+```
+eduitit/
+├── fortune/              # 사주 서비스 ⭐ (최근 개선)
+│   ├── models.py         # natal_hash, topic 필드 추가
+│   ├── views.py          # @login_required, 캐싱 로직
+│   ├── api_views.py      # 리팩토링 완료
+│   ├── utils/
+│   │   └── caching.py    # 신규 - 캐싱 헬퍼 함수
+│   └── templates/fortune/
+│       └── saju_form.html  # UX 대폭 개선
+├── core/                 # 홈, 설정, SNS, 미들웨어
+│   ├── middleware.py     # EmailRequiredMiddleware 추가
+│   ├── views.py          # update_email() 추가
+│   └── templates/core/
+│       └── update_email.html  # 신규 - 이메일 입력 페이지
+├── ssambti/              # 티처블 동물원 (MBTI)
+├── chess/                # 체스 AI
+├── autoarticle/          # 자동 기사 생성
+├── school_violence/      # 학폭 상담
+├── artclass/             # 미술 수업
+├── products/             # 제품 관리
+├── padlet_bot/           # Padlet 봇
+├── signatures/           # 서명 생성
+└── portfolio/            # 포트폴리오
+```
+
+---
+
+## 🚀 배포 정보
+
+**플랫폼**: Railway
+**도메인**: https://eduitit.site/
+**데이터베이스**: PostgreSQL (Neon)
+**파일 스토리지**: Cloudinary
+**자동 배포**: Git push → Railway 빌드 → 배포
+
+**현재 상태**:
+- Branch: `main`
+- Last Commit: `9caadd9`
+- Status: 배포 진행 중
+
+---
+
+## 🐛 알려진 이슈
+
+### 해결됨 ✅
+- ~~스트리밍 디스플레이 산만함~~ → 한번에 표시로 변경
+- ~~과도한 여백~~ → 패딩 축소 (p-6 md:p-8)
+- ~~Deprecation Warning (ACCOUNT_EMAIL_REQUIRED)~~ → 제거 완료
+- ~~사이트 이름 오타 (에듀이티잇)~~ → "에듀잇잇" 수정
+
+### 현재 이슈 없음
+- `python manage.py check`: **No issues** ✅
+- 모든 마이그레이션 적용 완료
+
+---
+
+## 📌 다음 세션 시작 시
+
+**1. 현재 상태 확인**:
+```bash
+cd /c/Users/kakio/eduitit
+git status
+git log --oneline -5
+python manage.py check
+```
+
+**2. 프로덕션 확인** (Railway 배포 완료 후):
+- https://eduitit.site/fortune/
+- 캐싱 동작 확인
+- 이메일 필수 확인
+- UX 개선 사항 확인
+
+**3. 다음 작업 (선택사항)**:
+- 캐시 히트율 모니터링
+- API 비용 절감 효과 측정
+- 기존 레코드 natal_hash 재계산 (필요 시)
+
+---
+
+## 💡 참고 문서
+
+- `CLAUDE.md`: Claude Code 사용 규칙 ⭐
+- `IMPLEMENTATION_SUMMARY.md`: 사주 서비스 개선 상세 보고서
+- Fortune app README: 사주 서비스 구조 및 API 설명
+
+---
+
+## 📝 이전 작업 (간략)
+
+- **2026-02-03**: Fortune 서비스 500 에러 수정 (템플릿 if 블록)
+- **2026-02-03**: 체스 게임 구현 (Stockfish.js AI)
+- **2026-02-02**: 방문자 카운터 기능 구현 및 디버깅
+- **2026-02-01**: SNS 기능 확장 (이미지 붙여넣기, 자동 최적화)
+- **2026-02-01**: Fortune & Ssambti 카카오톡 공유 카드
+
+---
+
+**작업 완료일**: 2026-02-03
+**총 커밋 수**: 7개
+**변경된 파일**: 10개
+**추가된 코드**: 700+ 줄
+
+**상태**: ✅ 모든 작업 성공적으로 완료
+**배포**: 🚀 Railway 자동 배포 진행 중
 
 ---
 
@@ -825,11 +325,7 @@ HANDOFF.md 읽고 이어서 작업해줘
 ```
 
 또는:
-```
-Cloudinary 이미지 저장소 연동해줘
-```
 
-또는:
 ```
-사주 서비스 이미지 추가해줘
+사주 서비스 프로덕션 테스트해줘
 ```
