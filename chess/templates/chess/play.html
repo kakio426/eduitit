@@ -478,7 +478,11 @@
     var config = {
         draggable: true,
         position: 'start',
-        pieceTheme: 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/{piece}.png',
+        pieceTheme: function (piece) {
+            var url = 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/' + piece + '.png';
+            console.log('Chess Piece URL:', url); // 디버깅용 로그
+            return url;
+        },
         onDragStart: onDragStart,
         onDrop: onDrop,
         onSnapEnd: onSnapEnd
