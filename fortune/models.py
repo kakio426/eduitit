@@ -264,30 +264,3 @@ class DailyFortuneCache(models.Model):
         return f"[{self.get_mode_display()}] {self.user.username} - {self.target_date}"
 
 
-class DailyFortuneCache(models.Model):
-    """일진 캐시 - 날짜별 사주 분석 결과 영구 저장"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_fortune_caches')
-    natal_hash = models.CharField(
-        max_length=64,
-        db_index=True,
-        help_text='사주 명식 고유 해시'
-    )
-    mode = models.CharField(
-        max_length=20,
-        db_index=True,
-        choices=[('teacher', '교사 모드'), ('general', '일반 모드')],
-        help_text='모드별로 다른 일진 프롬프트 사용'
-    )
-    target_date = models.DateField(db_index=True, help_text='해당 날짜')
-    result_text = models.TextField(help_text='AI 생성 일진 분석 내용')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ['user', 'natal_hash', 'mode', 'target_date']
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', 'natal_hash', 'mode', 'target_date'])
-        ]
-
-    def __str__(self):
-        return f"[{self.get_mode_display()}] {self.user.username} - {self.target_date}"

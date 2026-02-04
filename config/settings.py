@@ -188,7 +188,7 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스 진입 장벽 낮춤)
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username']  # email* = 필수 (username은 allauth 기본 동작으로 처리됨, 폼에서 제어)
-ACCOUNT_EMAIL_REQUIRED = True # 이메일 필수
+
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm' # 커스텀 가입 폼 (별명 필수)
 SOCIALACCOUNT_FORMS = {
     'signup': 'core.signup_forms.CustomSignupForm',
