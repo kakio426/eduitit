@@ -4,11 +4,11 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from .libs import calculator
 from .models import FortuneResult, Stem, Branch
-from .utils.caching import get_natal_hash as get_hash_from_context, get_cached_result, save_cached_result
 import json
 import logging
 from datetime import datetime
 import pytz
+import hashlib
 
 # Re-use existing AI response logic if possible
 from .views import generate_ai_response, get_chart_context
@@ -16,10 +16,7 @@ from .views import generate_ai_response, get_chart_context
 logger = logging.getLogger(__name__)
 
 def get_natal_hash(pillars):
-    """
-    사주 명식의 8글자를 기반으로 고유 해시 생성
-    API 응답 형식용 (pillars dict with stem/branch nested structure)
-    """
+    """사주 명식의 8글자를 기반으로 고유 해시 생성"""
     # pillars: {year: {stem: char, branch: char}, ...}
     # We sort to ensure consistency
     text = ""
@@ -27,7 +24,6 @@ def get_natal_hash(pillars):
         s = pillars[col]['stem']['char']
         b = pillars[col]['branch']['char']
         text += f"{s}{b}"
-    import hashlib
     return hashlib.sha256(text.encode()).hexdigest()
 
 def calculate_pillars_only(request):
@@ -100,7 +96,6 @@ def analyze_topic(request):
     """
     Step 2: 주제별 AI 분석 (DB 캐싱 적용)
     - 로그인 유저는 한 번 본 내용을 자동으로 DB에 저장/로드
-    - 리팩토링: caching.py 헬퍼 함수 사용
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
@@ -116,23 +111,23 @@ def analyze_topic(request):
         name = data.get('name', '가입자')
         gender = data.get('gender', 'female')
         natal_hash = data.get('natal_hash') or get_natal_hash(pillars)
-
-        # 1. DB Cache Check (헬퍼 함수 사용)
-        cached_result = get_cached_result(
-            user=request.user,
-            natal_hash=natal_hash,
-            mode=None,  # analyze_topic은 mode를 따로 체크하지 않음
-            topic=topic
-        )
-
-        if cached_result:
-            logger.info(f"Cache Hit: {request.user.username if request.user.is_authenticated else 'Anonymous'} - {topic}")
-            return JsonResponse({
-                'success': True,
-                'topic': topic,
-                'result': cached_result.result_text,
-                'cached': True
-            })
+        
+        # 1. DB Cache Check (For Authenticated Users)
+        if request.user.is_authenticated:
+            cached_result = FortuneResult.objects.filter(
+                user=request.user,
+                natal_hash=natal_hash,
+                topic=topic
+            ).first()
+            
+            if cached_result:
+                logger.info(f"Cache Hit: {request.user.username} - {topic}")
+                return JsonResponse({
+                    'success': True,
+                    'topic': topic,
+                    'result': cached_result.result_text,
+                    'cached': True
+                })
 
         # 2. Build Prompt
         prompt = build_focused_prompt(topic, pillars, name, gender)
@@ -140,15 +135,15 @@ def analyze_topic(request):
         # 3. Call AI
         response_text = "".join(generate_ai_response(prompt, request))
 
-        # 4. Auto Save (Cache) - 헬퍼 함수 사용
-        if response_text.strip():
-            save_cached_result(
+        # 4. Auto Save (Cache)
+        if request.user.is_authenticated and response_text.strip():
+            FortuneResult.objects.create(
                 user=request.user,
+                topic=topic,
                 natal_hash=natal_hash,
+                natal_chart=pillars,
                 result_text=response_text,
-                chart_context=pillars,  # API 형식의 pillars를 그대로 저장
-                mode='general',
-                topic=topic
+                mode='general'
             )
 
         return JsonResponse({

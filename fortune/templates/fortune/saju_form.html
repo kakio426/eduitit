@@ -703,7 +703,6 @@
     </div>
 
     <!-- 헤더 -->
-    {% block page_header %}
     <div class="text-center mb-12" data-aos="fade-down">
         <div class="w-28 h-28 mx-auto mb-6 rounded-full shadow-clay-inner flex items-center justify-center">
             <span class="text-6xl">🔮</span>
@@ -715,7 +714,6 @@
             AI가 분석하는 나만의 사주팔자와 운세
         </p>
     </div>
-    {% endblock %}
 
     {% if error %}
     <div class="clay-card p-6 mb-8 border-2 border-red-200 bg-red-50/50" data-aos="fade-up">
@@ -735,18 +733,6 @@
                     로그인/가입하기
                 </a>
                 {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if cached %}
-    <div class="clay-card p-6 mb-8 border-2 border-green-200 bg-green-50/50" data-aos="fade-up">
-        <div class="flex items-start gap-4 text-green-700">
-            <i class="fa-solid fa-bolt text-3xl mt-1"></i>
-            <div>
-                <h3 class="text-2xl font-bold mb-2">빠른 로딩 완료</h3>
-                <p class="text-lg leading-relaxed">이전에 조회하신 사주 결과입니다. 캐시에서 즉시 불러왔습니다!</p>
             </div>
         </div>
     </div>
@@ -866,12 +852,12 @@
                 <button onclick="useLastSajuInfo()" class="flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
                     bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                     shadow-lg hover:shadow-xl hover:-translate-y-1">
-                    <i class="fa-solid fa-bolt mr-2"></i>같은 사주 다시 보기
+                    <i class="fa-solid fa-bolt mr-2"></i>이 정보로 다시 보기
                 </button>
                 <button onclick="showNewSajuForm()" class="flex-1 py-5 rounded-2xl font-bold text-2xl transition-all
                     bg-white text-gray-700 border-2 border-gray-300
                     hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1">
-                    <i class="fa-solid fa-user-plus mr-2"></i>새 사주 입력하기
+                    <i class="fa-solid fa-user-plus mr-2"></i>새로운 사주 입력
                 </button>
             </div>
         </div>
@@ -997,7 +983,7 @@
 
     <!-- 결과 화면 섹션 -->
     <div id="resultContainer" class="{% if not result %}hidden{% endif %}">
-        <div class="clay-card p-6 md:p-8" data-aos="fade-up" id="resultCard">
+        <div class="clay-card p-8 md:p-12" data-aos="fade-up" id="resultCard">
 
             <!-- 오행 배지 (JavaScript로 동적 생성) -->
             <div id="elementBadge" class="text-center mb-6"></div>
@@ -1159,7 +1145,7 @@
                 <a href="{% url 'fortune:saju' %}" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
                     bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                     shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <i class="fa-solid fa-rotate-left mr-2"></i>새 사주 입력하기
+                    <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
                 </a>
             </div>
         </div>
@@ -2092,28 +2078,7 @@
         }
 
         const resultTarget = document.getElementById('markdownResult');
-
-        // 재치있는 로딩 멘트 랜덤 선택
-        const loadingMessages = [
-            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-            '🔮 천간지지의 비밀을 해독하는 중...',
-            '⚡ 음양오행의 조화를 계산하는 중...',
-            '🌟 하늘의 별자리에 질문을 던지는 중...',
-            '📿 육십갑자의 숨은 의미를 찾는 중...',
-            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
-            '✨ 당신의 운명 코드를 분석하는 중...',
-            '🧙 30년 경력 명리학자가 사주를 보는 중...',
-            '📖 주역 64괘를 펼쳐보는 중...',
-            '🎴 천기누설! 운명의 실타래를 푸는 중...',
-            '🔥 오행의 균형을 측정하는 중...',
-            '💫 우주의 기운과 교신하는 중...',
-            '🎯 당신만의 행운 포인트를 찾는 중...',
-            '🌙 달의 위상과 당신의 운을 대조하는 중...',
-            '🎐 바람의 방향으로 길흉을 점치는 중...'
-        ];
-
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-        resultTarget.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
+        resultTarget.innerHTML = '<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> 주역을 풀이하고 있습니다...</div>';
 
         try {
             const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
@@ -2133,7 +2098,7 @@
             const decoder = new TextDecoder();
             let accumulatedText = '';
 
-            // 로딩 메시지는 계속 유지 (스트리밍 제거)
+            resultTarget.innerHTML = ''; // 초기 로딩 메시지 제거
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -2149,19 +2114,12 @@
                     throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
                 }
 
-                // 실시간 렌더링 제거 - 완료 후 한번에 표시
-                // resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+                // 마크다운 실시간 렌더링
+                resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+
+                // 스크롤 조절 (필요 시)
+                // window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }
-
-            // 완료 후 한번에 렌더링 (부드러운 페이드 인)
-            resultTarget.style.opacity = '0';
-            resultTarget.style.transition = 'opacity 0.5s ease-in-out';
-            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-
-            // 약간의 딜레이 후 페이드 인
-            setTimeout(() => {
-                resultTarget.style.opacity = '1';
-            }, 100);
 
             // 완료 후 추가 처리
             detectAndShowElement(accumulatedText);
@@ -2495,35 +2453,7 @@
             return;
         }
 
-        // 특별한 로딩 메시지 배열
-        const loadingMessages = [
-            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-            '🔮 천간지지의 비밀을 해독하는 중...',
-            '⚡ 음양오행의 조화를 계산하는 중...',
-            '🌟 하늘의 별자리에 질문을 던지는 중...',
-            '📿 육십갑자의 숨은 의미를 찾는 중...',
-            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
-            '✨ 당신의 운명 코드를 분석하는 중...',
-            '🧙 30년 경력 명리학자가 사주를 보는 중...',
-            '📖 주역 64괘를 펼쳐보는 중...',
-            '🎴 천기누설! 운명의 실타래를 푸는 중...',
-            '🔥 오행의 균형을 측정하는 중...',
-            '💫 우주의 기운과 교신하는 중...',
-            '🎯 당신만의 행운 포인트를 찾는 중...',
-            '🌙 달의 위상과 당신의 운을 대조하는 중...',
-            '🎐 바람의 방향으로 길흉을 점치는 중...'
-        ];
-
-        // 랜덤 메시지 선택
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-
-        // 로딩 오버레이 메시지 업데이트
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay.querySelector('.text-2xl');
-        if (loadingText) {
-            loadingText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-3"></i>${randomMessage}`;
-        }
-        loadingOverlay.classList.add('show');
+        document.getElementById('loadingOverlay').classList.add('show');
 
         try {
             const response = await fetch('{% url "fortune:daily_fortune_api" %}', {
@@ -2536,48 +2466,17 @@
                     target_date: targetDate,
                     natal_chart: natalChart,
                     name: "{{ name|default:'선생님' }}",
-                    gender: "{{ gender|default:'female' }}",
-                    mode: typeof CURRENT_MODE !== 'undefined' ? CURRENT_MODE : 'general'  // 모드 전달
+                    gender: "{{ gender|default:'female' }}"
                 })
             });
 
             const data = await response.json();
-
-            // 캐시된 결과일 경우 잠깐 더 보여주기 (UX 개선)
-            if (data.cached) {
-                await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5초 대기
-            }
-
             document.getElementById('loadingOverlay').classList.remove('show');
 
             if (data.success) {
                 const dailyResultDiv = document.getElementById('dailyFortuneResult');
                 const dailyContentDiv = document.getElementById('dailyFortuneContent');
-
-                // 캐시 사용 표시
-                let cachedBadge = '';
-                if (data.cached) {
-                    cachedBadge = '<div class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold mb-4"><i class="fa-solid fa-bolt mr-2"></i>저장된 결과입니다 (빠른 로딩)</div>';
-                }
-
-                // 일진 결과와 사주 데이터를 전역 변수에 저장
-                window.currentDailyFortune = {
-                    targetDate: targetDate,
-                    resultText: data.result,
-                    natalChart: natalChart
-                };
-
-                // 보관함 저장 버튼 추가
-                const saveButton = `
-                    <div class="mt-4 text-center">
-                        <button onclick="saveDailyFortuneToLibrary(window.currentDailyFortune.targetDate, window.currentDailyFortune.resultText, window.currentDailyFortune.natalChart)"
-                                class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold hover:from-purple-600 hover:to-indigo-600 transition-all shadow-lg hover:shadow-xl">
-                            <i class="fa-solid fa-bookmark mr-2"></i>보관함에 저장
-                        </button>
-                    </div>
-                `;
-
-                dailyContentDiv.innerHTML = cachedBadge + DOMPurify.sanitize(marked.parse(data.result)) + saveButton;
+                dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
                 dailyResultDiv.classList.remove('hidden');
                 dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
@@ -2586,41 +2485,6 @@
         } catch (e) {
             document.getElementById('loadingOverlay').classList.remove('show');
             showToast('서버 통신 오류가 발생했습니다.');
-        }
-    }
-
-    // 일진 결과를 보관함에 저장
-    async function saveDailyFortuneToLibrary(targetDate, resultText, natalChart) {
-        if ("{{ user.is_authenticated }}" === "False") {
-            showToast('로그인 후 이용 가능합니다. 😊', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({
-                    mode: typeof CURRENT_MODE !== 'undefined' ? CURRENT_MODE : 'general',
-                    natal_chart: natalChart,
-                    result_text: resultText,
-                    target_date: targetDate,
-                    topic: 'daily'
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                showToast('✅ 일진이 보관함에 저장되었습니다!', 'success');
-            } else {
-                showToast('저장 중 오류가 발생했습니다.', 'error');
-            }
-        } catch (e) {
-            console.error('Save error:', e);
-            showToast('서버 통신 오류가 발생했습니다.', 'error');
         }
     }
 
@@ -2702,73 +2566,11 @@
             showToast(e.message || '서버 통신 오류가 발생했습니다.');
         }
     }
-
-    // 캐시된 결과 로딩 애니메이션 (자연스러운 UX를 위한 인위적 딜레이)
-    {% if cached %}
-    document.addEventListener('DOMContentLoaded', function() {
-        const resultContainer = document.getElementById('markdownResult');
-        const loadingMessages = [
-            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-            '🔮 천간지지의 비밀을 해독하는 중...',
-            '⚡ 음양오행의 조화를 계산하는 중...',
-            '🌟 하늘의 별자리에 질문을 던지는 중...',
-            '📿 육십갑자의 숨은 의미를 찾는 중...',
-            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
-            '✨ 당신의 운명 코드를 분석하는 중...',
-            '🧙 30년 경력 명리학자가 사주를 보는 중...',
-            '📖 주역 64괘를 펼쳐보는 중...',
-            '🎴 천기누설! 운명의 실타래를 푸는 중...',
-            '🔥 오행의 균형을 측정하는 중...',
-            '💫 우주의 기운과 교신하는 중...',
-            '🎯 당신만의 행운 포인트를 찾는 중...',
-            '🌙 달의 위상과 당신의 운을 대조하는 중...',
-            '🎐 바람의 방향으로 길흉을 점치는 중...'
-        ];
-
-        // 실제 결과를 임시 저장
-        const actualResult = resultContainer.innerHTML;
-
-        // 랜덤 로딩 메시지 선택
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-
-        // 로딩 화면으로 교체
-        resultContainer.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
-
-        // 3-5초 랜덤 딜레이 후 실제 결과 표시
-        const delay = 3000 + Math.random() * 2000; // 3000ms ~ 5000ms
-        setTimeout(() => {
-            // 부드러운 페이드 효과
-            resultContainer.style.opacity = '0';
-            resultContainer.style.transition = 'opacity 0.3s ease-in-out';
-
-            setTimeout(() => {
-                resultContainer.innerHTML = actualResult;
-                resultContainer.style.opacity = '1';
-
-                // 결과 표시 후 오행 배지 등 업데이트
-                if (typeof detectAndShowElement === 'function') {
-                    detectAndShowElement(actualResult);
-                }
-                if (typeof updateShareCard === 'function') {
-                    updateShareCard(actualResult);
-                }
-            }, 300);
-        }, delay);
-    });
-    {% endif %}
 </script>
-
-{% block mode_script %}
-<script>
-    // 기본 모드 (자식 템플릿에서 오버라이드 가능)
-    const CURRENT_MODE = 'general';
-</script>
-{% endblock %}
 
 {% if result %}
 {{ result|json_script:"saju-result-data" }}
 {{ chart|json_script:"saju-chart-data" }}
-
 <script>
     // SSR 결과 렌더링
     document.addEventListener('DOMContentLoaded', function () {

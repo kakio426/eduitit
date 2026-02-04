@@ -11,7 +11,6 @@ from core.utils import ratelimit_key_for_master_only
 from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
-from .utils.caching import get_natal_hash, get_cached_result, save_cached_result
 from datetime import datetime
 import pytz
 import json
@@ -172,14 +171,13 @@ def get_chart_context(data):
         return None
 
 
-@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_view(request):
-    """사주 분석 메인 뷰 (5회/h, 10회/d) - 회원 전용"""
+    """사주 분석 메인 뷰 (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
         error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
-
+        
         return render(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
             'error': error_message
@@ -187,7 +185,6 @@ def saju_view(request):
     result_html = None
     error_message = None
     chart_context = None
-    cached = False  # 캐시 사용 여부
 
     if request.method == 'POST':
         form = SajuForm(request.POST)
@@ -197,74 +194,46 @@ def saju_view(request):
 
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
-
+            
             # [DEBUG] 로그: 입력 데이터와 계산된 사주 명식 확인
             logger.info(f"User Input: {data}")
             logger.info(f"Calculated Chart: {chart_context}")
+            
+            # Form Prompt with SSOT data
+            prompt = get_prompt(mode, data, chart_context=chart_context)
 
-            # 캐싱 로직: natal_hash 생성 및 DB 조회
-            natal_hash = get_natal_hash(chart_context)
-            cached_result = get_cached_result(
-                user=request.user,
-                natal_hash=natal_hash,
-                mode=mode,
-                topic=None  # saju_view는 전체 분석 (topic=None)
-            )
-
-            if cached_result:
-                # 캐시 히트: DB에서 기존 결과 로드
-                logger.info(f"Cache HIT for natal_hash={natal_hash}, mode={mode}")
-                result_html = cached_result.result_text
-                cached = True
-            else:
-                # 캐시 미스: AI 호출 및 결과 저장
-                logger.info(f"Cache MISS for natal_hash={natal_hash}, mode={mode}")
-
-                # Form Prompt with SSOT data
-                prompt = get_prompt(mode, data, chart_context=chart_context)
-
-                try:
-                    # Wrap generator to maintain current sync behavior until Phase 4
-                    generated_text = "".join(generate_ai_response(prompt, request))
-
-                    # Validation: If result is empty/whitespace, treat as None/Error
-                    if generated_text and generated_text.strip():
-                        result_html = generated_text
-
-                        # 결과를 DB에 저장 (캐싱)
-                        save_cached_result(
-                            user=request.user,
-                            natal_hash=natal_hash,
-                            result_text=result_html,
-                            chart_context=chart_context,
-                            mode=mode,
-                            topic=None
-                        )
+            try:
+                # Wrap generator to maintain current sync behavior until Phase 4
+                generated_text = "".join(generate_ai_response(prompt, request))
+                
+                # Validation: If result is empty/whitespace, treat as None/Error
+                if generated_text and generated_text.strip():
+                    result_html = generated_text
+                else:
+                    logger.warning("AI returned empty response")
+                    result_html = None
+                    error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
+            except Exception as e:
+                logger.exception("사주 분석 오류")
+                error_str = str(e)
+                if "API_KEY_MISSING" in error_str:
+                     error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
+                elif "matching query does not exist" in error_str:
+                    error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
+                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
+                    if request.user.is_authenticated:
+                        error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
                     else:
-                        logger.warning("AI returned empty response")
-                        result_html = None
-                        error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
-                except Exception as e:
-                    logger.exception("사주 분석 오류")
-                    error_str = str(e)
-                    if "API_KEY_MISSING" in error_str:
-                         error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
-                    elif "matching query does not exist" in error_str:
-                        error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
-                    elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
-                        if request.user.is_authenticated:
-                            error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
-                        else:
-                            error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
-                    elif "503" in error_str:
-                        error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
-                    elif "Insufficient Balance" in error_str: # DeepSeek specific
-                         if request.user.is_authenticated:
-                            error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
-                         else:
-                            error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
-                    else:
-                        error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
+                        error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
+                elif "503" in error_str:
+                    error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
+                elif "Insufficient Balance" in error_str: # DeepSeek specific
+                     if request.user.is_authenticated:
+                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
+                     else:
+                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
+                else:
+                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
     else:
         form = SajuForm()
 
@@ -272,7 +241,6 @@ def saju_view(request):
         'form': form,
         'result': result_html,
         'error': error_message,
-        'cached': cached,  # 캐시 사용 여부 전달
         'name': request.POST.get('name') if request.method == 'POST' else None,
         'gender': request.POST.get('gender') if request.method == 'POST' else None,
         'chart': {
@@ -288,7 +256,7 @@ def saju_view(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_streaming_api(request):
-    """실시간 스트리밍 사주 분석 API (캐싱 지원)"""
+    """실시간 스트리밍 사주 분석 API"""
     if getattr(request, 'limited', False):
         return JsonResponse({'error': 'LIMIT_EXCEEDED'}, status=429)
 
@@ -300,55 +268,20 @@ def saju_streaming_api(request):
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
     data = form.cleaned_data
-    mode = data['mode']
     chart_context = get_chart_context(data)
-
-    # 캐싱 로직: natal_hash 생성 및 DB 조회
-    natal_hash = get_natal_hash(chart_context)
-    cached_result = get_cached_result(
-        user=request.user,
-        natal_hash=natal_hash,
-        mode=mode,
-        topic=None
-    )
+    prompt = get_prompt(data['mode'], data, chart_context=chart_context)
 
     def stream_response():
         try:
-            # 캐시 히트: 저장된 결과를 빠르게 스트리밍
-            if cached_result:
-                logger.info(f"Cache HIT (streaming) for natal_hash={natal_hash}, mode={mode}")
-                yield cached_result.result_text
-                return
-
-            # 캐시 미스: AI 호출 및 결과 수집
-            logger.info(f"Cache MISS (streaming) for natal_hash={natal_hash}, mode={mode}")
-            prompt = get_prompt(mode, data, chart_context=chart_context)
-            full_response = []
-
+            # Yield initial metadata if needed (or just start spawning text)
             for chunk in generate_ai_response(prompt, request):
-                full_response.append(chunk)
                 yield chunk
-
-            # 스트리밍 완료 후 캐시 저장
-            complete_text = "".join(full_response)
-            if request.user.is_authenticated and complete_text:
-                save_cached_result(
-                    user=request.user,
-                    natal_hash=natal_hash,
-                    result_text=complete_text,
-                    chart_context=chart_context,
-                    mode=mode,
-                    topic=None
-                )
-                logger.info(f"Cached streaming result for natal_hash={natal_hash}")
-
         except Exception as e:
             logger.exception("Streaming error")
             yield f"\n\n[오류 발생: {str(e)}]"
 
     response = StreamingHttpResponse(stream_response(), content_type='text/plain; charset=utf-8')
     response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx/Gunicorn
-    response['X-Cache-Hit'] = 'true' if cached_result else 'false'  # 캐시 히트 표시
     return response
 
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
@@ -410,7 +343,7 @@ def saju_api_view(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def daily_fortune_api(request):
-    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d) - 캐싱 지원"""
+    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d)"""
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
@@ -423,7 +356,6 @@ def daily_fortune_api(request):
         natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
         name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
-        mode = data.get('mode', request.session.get('saju_mode', 'general'))  # 모드 파라미터 추가
 
         if not target_date_str:
             return JsonResponse({'error': 'Target date required'}, status=400)
@@ -434,30 +366,6 @@ def daily_fortune_api(request):
         target_dt = tz.localize(target_dt).replace(hour=12) # Noon check
         target_context = calculator.get_pillars(target_dt)
 
-        # natal_hash 생성 (캐싱용)
-        natal_hash = get_natal_hash({'pillars': natal_data})
-
-        # 캐시 조회 (로그인 사용자만)
-        cached_result = None
-        if request.user.is_authenticated:
-            from .utils.caching import get_cached_daily_fortune
-            cached_result = get_cached_daily_fortune(
-                request.user,
-                natal_hash,
-                mode,
-                target_dt.date()
-            )
-
-        # 캐시 히트
-        if cached_result:
-            return JsonResponse({
-                'success': True,
-                'result': cached_result.result_text,
-                'target_date': target_date_str,
-                'cached': True  # 캐시 사용 표시
-            })
-
-        # 캐시 미스 → AI 호출
         # Build Natal Context with objects to include element info
         from .models import Stem, Branch
         def get_pillar_obj(ganji_str):
@@ -465,21 +373,9 @@ def daily_fortune_api(request):
                 return {'stem': None, 'branch': None}
             s_char = ganji_str[:1]
             b_char = ganji_str[1:]
-            stem_obj = Stem.objects.filter(character=s_char).first()
-            branch_obj = Branch.objects.filter(character=b_char).first()
             return {
-                'stem': {
-                    'character': stem_obj.character,
-                    'name': stem_obj.name,
-                    'element': stem_obj.element,
-                    'polarity': stem_obj.polarity
-                } if stem_obj else None,
-                'branch': {
-                    'character': branch_obj.character,
-                    'name': branch_obj.name,
-                    'element': branch_obj.element,
-                    'polarity': branch_obj.polarity
-                } if branch_obj else None
+                'stem': Stem.objects.filter(character=s_char).first(),
+                'branch': Branch.objects.filter(character=b_char).first()
             }
 
         natal_context = {
@@ -489,25 +385,15 @@ def daily_fortune_api(request):
             'hour': get_pillar_obj(natal_data.get('hour'))
         }
 
-        # Prompt (모드 포함)
+        # Prompt
         from .prompts import get_daily_fortune_prompt
-        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
+        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
 
         # Wrap generator to maintain current sync behavior
         response_text = "".join(generate_ai_response(prompt, request))
 
-        # 결과 캐싱 (로그인 사용자만)
+        # 통계용 로그 저장
         if request.user.is_authenticated:
-            from .utils.caching import save_daily_fortune_cache
-            save_daily_fortune_cache(
-                request.user,
-                natal_hash,
-                mode,
-                target_dt.date(),
-                response_text
-            )
-
-            # 통계용 로그 저장
             from .models import DailyFortuneLog
             DailyFortuneLog.objects.create(
                 user=request.user,
@@ -517,8 +403,7 @@ def daily_fortune_api(request):
         return JsonResponse({
             'success': True,
             'result': response_text,
-            'target_date': target_date_str,
-            'cached': False  # 새로 생성
+            'target_date': target_date_str
         })
 
     except Exception as e:
@@ -547,21 +432,11 @@ def save_fortune_api(request):
 
 
 @login_required
-def saju_history(request, mode=None):
-    """내 사주 보관함 목록 (모드 필터링 지원)"""
+def saju_history(request):
+    """내 사주 보관함 목록"""
     from .models import FortuneResult
     history = FortuneResult.objects.filter(user=request.user)
-
-    # 모드 필터링
-    if mode in ['teacher', 'general', 'daily']:
-        history = history.filter(mode=mode)
-
-    context = {
-        'history': history,
-        'current_mode': mode,
-    }
-
-    return render(request, 'fortune/history.html', context)
+    return render(request, 'fortune/history.html', {'history': history})
 
 
 @login_required
