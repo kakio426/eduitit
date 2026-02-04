@@ -155,10 +155,7 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="container mx-auto max-w-[1400px]">
-        <div class="flex gap-6">
-            <!-- 메인 콘텐츠 영역 -->
-            <div class="flex-1 min-w-0" id="results-wrapper">
+    <div class="max-w-3xl mx-auto" id="results-wrapper">
 
         <!-- Everything inside this div will be replaced by the result -->
         <div id="quiz-ui-container">
@@ -192,7 +189,7 @@
             </div>
 
             <!-- Quiz Container -->
-            <div class="clay-card p-8 md:p-12 relative min-h-[350px] flex flex-col justify-center" data-aos="zoom-in">
+            <div class="clay-card p-8 md:p-12 relative min-h-[300px] flex flex-col justify-center" data-aos="zoom-in">
                 <form id="quizForm" hx-post="{% url 'ssambti:analyze' %}" hx-target="#results-wrapper"
                     hx-indicator="#zoo-loader" hx-swap="innerHTML" onsubmit="return validateQuiz()">
                     {% csrf_token %}
@@ -279,19 +276,11 @@
         </div>
     </div>
 
-            <!-- Loader -->
-            <div id="zoo-loader"
-                class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
-                <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
-                    <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
-                </div>
-            </div>
-            </div>
-
-            <!-- SNS 사이드바 (우측 고정) -->
-            <aside class="hidden xl:block w-[400px] flex-shrink-0">
-                {% include 'core/partials/sns_widget.html' %}
-            </aside>
+    <!-- Loader -->
+    <div id="zoo-loader"
+        class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
+        <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
+            <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
         </div>
     </div>
 </section>

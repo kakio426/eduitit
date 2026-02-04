@@ -4,7 +4,6 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 from django.db.models import Count
 from products.models import Product
-from core.models import Post
 from .models import SsambtiResult
 from .mbti_data import MBTI_RESULTS, MBTI_TAGLINES
 
@@ -82,16 +81,6 @@ def main_view(request):
         .annotate(count=Count('id')) \
         .order_by('-count')
 
-    # SNS posts for sidebar
-    try:
-        posts = Post.objects.select_related(
-            'author'
-        ).prefetch_related(
-            'comments__author',
-            'likes'
-        ).order_by('-created_at')[:20]
-    except Exception as e:
-        posts = []  # 에러 시 빈 리스트
     
     stats = []
     if total_count > 0:
@@ -114,8 +103,7 @@ def main_view(request):
         'is_premium': is_premium,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
         'stats': stats,
-        'total_participants': total_count,
-        'posts': posts  # SNS 게시글 추가
+        'total_participants': total_count
     }
     return render(request, 'ssambti/main.html', context)
 
@@ -319,23 +307,12 @@ def detail_view(request, pk):
     # 공유용 요약 문구 생성
     summary = MBTI_TAGLINES.get(result.mbti_type, '교실 속 특별한 영혼을 가진 선생님')
 
-    # SNS posts for sidebar
-    try:
-        posts = Post.objects.select_related(
-            'author'
-        ).prefetch_related(
-            'comments__author',
-            'likes'
-        ).order_by('-created_at')[:20]
-    except Exception as e:
-        posts = []  # 에러 시 빈 리스트
 
     return render(request, 'ssambti/detail.html', {
         'result': result,
         'animal_image': animal_image,
         'summary': summary,
-        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
-        'posts': posts  # SNS 게시글 추가
+        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY
     })
 
 def animal_detail_view(request, mbti_type):
