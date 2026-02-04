@@ -2144,7 +2144,7 @@
         const chartData = JSON.parse(chartDataElem.textContent);
 
         try {
-            const response = await fetch('{% url "fortune:save_to_library_api" %}', {
+            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
