@@ -1,0 +1,119 @@
+{% load static %}
+<div class="relative w-full max-w-2xl mx-auto bg-[#E0E5EC] rounded-[2.5rem] shadow-clay overflow-hidden animate-fade-in-up dyn-style-root"
+    data-bg="{{ theme.bg }}">
+    <!-- Header (Animal Card style) -->
+    <div class="p-8 md:p-10 text-center relative">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r dyn-style-banner" data-from="{{ theme.bg }}"
+            data-to="{{ theme.primary }}"></div>
+
+        <button type="button" onclick="closeModal()"
+            class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/50 text-gray-500 hover:text-gray-800 transition flex items-center justify-center shadow-sm z-20">
+            <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+
+        <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10 mt-4">
+            <img src="{% static 'ssambti/images/animals/' %}{{ animal_image }}" alt="{{ animal_name }}"
+                class="w-48 h-48 md:w-64 md:h-64 object-contain">
+        </div>
+
+        <div class="space-y-2">
+            <span
+                class="inline-block px-4 py-1 rounded-full text-white font-bold text-sm md:text-base shadow-sm dyn-style-badge"
+                data-bg="{{ theme.primary }}">
+                {{ mbti_type }} / {{ animal_name }}
+            </span>
+            <h2 class="text-2xl md:text-4xl font-bold text-gray-800 font-title break-keep">
+                "{{ summary }}"
+            </h2>
+        </div>
+    </div>
+
+    <!-- Analysis Content -->
+    <div class="p-8 md:p-10 bg-white/40 backdrop-blur-sm space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <!-- Spirit Message -->
+        <div class="clay-card p-6 bg-white/80 border-l-8 dyn-style-border" data-color="{{ theme.primary }}">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 font-title flex items-center gap-2">
+                <span class="text-2xl">{{ theme.emoji }}</span> 선생님을 위한 영혼의 메시지
+            </h3>
+            <p class="text-lg text-gray-600 leading-relaxed whitespace-pre-line">
+                "{{ result_data.soul_message }}"
+            </p>
+        </div>
+
+        <!-- Personalities -->
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="clay-card p-5 bg-orange-50/50">
+                <h4 class="font-bold text-orange-800 mb-2 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">🏫</span> 평소 모습
+                </h4>
+                <p class="text-gray-700 text-sm leading-relaxed">{{ result_data.normal }}</p>
+            </div>
+            <div class="clay-card p-5 bg-red-50/50">
+                <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">⚡</span> 스트레스 상황
+                </h4>
+                <p class="text-gray-700 text-sm leading-relaxed">{{ result_data.stress }}</p>
+            </div>
+        </div>
+
+        <!-- Prescription -->
+        <div class="clay-card p-6 text-center dyn-style-presc" data-bg="{{ theme.bg }}">
+            <h3 class="text-lg font-bold mb-3 font-title dyn-style-text" data-color="{{ theme.accent }}">
+                {{ theme.emoji }} {{ animal_name }} 선생님을 위한 힐링 처방전
+            </h3>
+            <p class="text-base text-gray-600 leading-relaxed italic">
+                "{{ result_data.prescription }}"
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer CTA -->
+    <div class="p-6 bg-[#E0E5EC] text-center">
+        <a href="{% url 'ssambti:main' %}"
+            class="inline-flex items-center gap-2 text-gray-500 hover:text-orange-500 font-bold transition">
+            나도 이 동물인지 확인하러 가기 <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const root = document.querySelector('.dyn-style-root');
+        if (!root) return;
+
+        // Apply styles from data attributes
+        const banner = root.querySelector('.dyn-style-banner');
+        if (banner) banner.style.backgroundImage = `linear-gradient(to right, ${banner.dataset.from}, ${banner.dataset.to})`;
+
+        const badge = root.querySelector('.dyn-style-badge');
+        if (badge) badge.style.backgroundColor = badge.dataset.bg;
+
+        const border = root.querySelector('.dyn-style-border');
+        if (border) border.style.borderColor = border.dataset.color;
+
+        const presc = root.querySelector('.dyn-style-presc');
+        if (presc) presc.style.background = presc.dataset.bg;
+
+        const text = root.querySelector('.dyn-style-text');
+        if (text) text.style.color = text.dataset.color;
+    })();
+</script>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>

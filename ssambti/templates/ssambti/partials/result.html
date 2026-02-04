@@ -80,7 +80,8 @@
         <div class="space-y-4">
             {% if total_participants > 0 %}
             {% for item in stats %}
-            <div class="group">
+            <div class="group cursor-pointer hover:scale-[1.01] transition-transform"
+                hx-get="{% url 'ssambti:preview' item.mbti_type %}" hx-target="#modal-content" onclick="openModal()">
                 <div class="flex justify-between items-end mb-1">
                     <span class="text-lg font-bold text-gray-700 flex items-center gap-2">
                         <span class="text-xl inline-block w-8 text-center">{{ forloop.counter }}</span>
@@ -92,15 +93,10 @@
                     </span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden shadow-inner">
-                    <div class="bg-gradient-to-r h-3 md:h-4 rounded-full transition-all duration-1000 ease-out transform -translate-x-full group-hover:translate-x-0"
-                        style="
-                            width: {{ item.percentage }}%;
-                            background-color: {{ item.theme.primary }};
-                            --tw-gradient-from: {{ item.theme.primary }};
-                            --tw-gradient-to: {{ item.theme.accent }};
-                            animation: slideRight 1s ease-out forwards;
-                            animation-delay: 0.{{ forloop.counter }}s;
-                        ">
+                    <div class="bg-gradient-to-r h-3 md:h-4 rounded-full transition-all duration-1000 ease-out transform -translate-x-full group-hover:translate-x-0 stats-bar-fill"
+                        data-w="{{ item.percentage }}%" data-bg="{{ item.theme.primary }}"
+                        data-from="{{ item.theme.primary }}" data-to="{{ item.theme.accent }}"
+                        data-delay="0.{{ forloop.counter }}s">
                     </div>
                 </div>
             </div>
@@ -112,6 +108,18 @@
             </div>
             {% endif %}
         </div>
+        <script>
+            (function () {
+                document.querySelectorAll('.stats-bar-fill').forEach(el => {
+                    if (el.dataset.w) el.style.width = el.dataset.w;
+                    if (el.dataset.bg) el.style.backgroundColor = el.dataset.bg;
+                    if (el.dataset.from) el.style.setProperty('--tw-gradient-from', el.dataset.from);
+                    if (el.dataset.to) el.style.setProperty('--tw-gradient-to', el.dataset.to);
+                    if (el.dataset.delay) el.style.animationDelay = el.dataset.delay;
+                    el.style.animation = 'slideRight 1s ease-out forwards';
+                });
+            })();
+        </script>
         <div class="mt-6 text-right text-xs text-gray-400">
             * 모든 참여자의 결과를 바탕으로 집계된 데이터입니다.
         </div>

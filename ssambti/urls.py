@@ -8,4 +8,5 @@ urlpatterns = [
     path('analyze/', views.analyze_view, name='analyze'),
     path('history/', views.history_view, name='history'),
     path('result/<int:pk>/', views.detail_view, name='detail'),
+    path('preview/<str:mbti_type>/', views.animal_detail_view, name='preview'),
 ]

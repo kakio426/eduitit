@@ -3,11 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from products.models import Product
 from .models import SsambtiResult
-from .mbti_data import MBTI_RESULTS
-
-from django.conf import settings
-
-from .mbti_data import MBTI_RESULTS
+from .mbti_data import MBTI_RESULTS, MBTI_TAGLINES
 
 def card_generator_view(request, mbti_type):
     if mbti_type not in MBTI_RESULTS:
@@ -305,30 +301,32 @@ def detail_view(request, pk):
     animal_image = MBTI_ANIMAL_MAP.get(result.mbti_type, 'lion.png')
     
     # 공유용 요약 문구 생성
-    taglines = {
-        'ISTJ': '철저한 준비와 원칙으로 신뢰를 주는 기둥',
-        'ISFJ': '따뜻한 미소와 세심함으로 교실을 보듬는 쿼카',
-        'INFJ': '아이들의 잠재력을 꿰뚫어 보는 통찰력 가득 멘토',
-        'INTJ': '본질을 뚫어보는 날카롭고 전략적인 설계자',
-        'ISTP': '어떤 위기에도 침착하게 해답을 찾아내는 해결사',
-        'ISFP': '아이들의 개성을 존중하는 온화한 예술가',
-        'INFP': '진심 어린 공감으로 아이들의 마음을 여는 영혼',
-        'INTP': '지적 호기심으로 아이들의 생각을 깨우는 학자',
-        'ESTP': '에너지 넘치는 순발력으로 교실을 사로잡는 치타',
-        'ESFP': '긍정 에너지로 교실을 축제로 만드는 돌고래',
-        'ENFP': '무한한 상상력으로 아이들에게 영감을 주는 마법사',
-        'ENTP': '비판적 사고와 재치로 배움의 즐거움을 깨우는 미어캣',
-        'ESTJ': '확고한 리더십으로 올바른 길을 안내하는 나침반',
-        'ESFJ': '세심한 배려로 모두를 하나로 묶는 교실의 엄마/아빠',
-        'ENFJ': '헌신적인 열정으로 아이들의 인생을 바꾸는 멘토',
-        'ENTJ': '강력한 비전으로 더 높은 곳을 바라보게 하는 리더'
-    }
-    summary = taglines.get(result.mbti_type, '교실 속 특별한 영혼을 가진 선생님')
+    summary = MBTI_TAGLINES.get(result.mbti_type, '교실 속 특별한 영혼을 가진 선생님')
     
     return render(request, 'ssambti/detail.html', {
         'result': result,
         'animal_image': animal_image,
         'summary': summary,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY
+    })
+
+def animal_detail_view(request, mbti_type):
+    """통계에서 동물을 클릭했을 때 보여줄 팝업용 데이터"""
+    if mbti_type not in MBTI_RESULTS:
+        from django.http import HttpResponse
+        return HttpResponse("Invalid MBTI", status=404)
+        
+    result_data = MBTI_RESULTS[mbti_type]
+    theme = MBTI_COLOR_THEMES.get(mbti_type, MBTI_COLOR_THEMES['ENFP'])
+    animal_image = MBTI_ANIMAL_MAP.get(mbti_type, 'lion.png')
+    summary = MBTI_TAGLINES.get(mbti_type, '교실 속 특별한 영혼을 가진 선생님')
+    
+    return render(request, 'ssambti/partials/animal_preview.html', {
+        'mbti_type': mbti_type,
+        'animal_name': result_data['animal_name'],
+        'animal_image': animal_image,
+        'result_data': result_data,
+        'theme': theme,
+        'summary': summary,
     })
 
