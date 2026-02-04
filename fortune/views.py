@@ -465,9 +465,21 @@ def daily_fortune_api(request):
                 return {'stem': None, 'branch': None}
             s_char = ganji_str[:1]
             b_char = ganji_str[1:]
+            stem_obj = Stem.objects.filter(character=s_char).first()
+            branch_obj = Branch.objects.filter(character=b_char).first()
             return {
-                'stem': Stem.objects.filter(character=s_char).first(),
-                'branch': Branch.objects.filter(character=b_char).first()
+                'stem': {
+                    'character': stem_obj.character,
+                    'name': stem_obj.name,
+                    'element': stem_obj.element,
+                    'polarity': stem_obj.polarity
+                } if stem_obj else None,
+                'branch': {
+                    'character': branch_obj.character,
+                    'name': branch_obj.name,
+                    'element': branch_obj.element,
+                    'polarity': branch_obj.polarity
+                } if branch_obj else None
             }
 
         natal_context = {

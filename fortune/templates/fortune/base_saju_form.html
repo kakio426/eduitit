@@ -47,8 +47,8 @@
     .markdown-body h3 {
         color: #2d3748;
         font-weight: bold;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
         border-bottom: 2px solid #edf2f7;
         padding-bottom: 0.5rem;
     }
@@ -66,18 +66,18 @@
     }
 
     .markdown-body p {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.875rem;
         white-space: pre-wrap; /* 줄바꿈 보존 */
     }
 
     .markdown-body ul,
     .markdown-body ol {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.875rem;
         padding-left: 2rem;
     }
 
     .markdown-body li {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.375rem;
     }
 
     .markdown-body blockquote {
@@ -85,7 +85,7 @@
         background: #f3f4f6;
         padding: 1rem 1.5rem;
         border-radius: 0 16px 16px 0;
-        margin: 1.5rem 0;
+        margin: 1rem 0;
         font-style: italic;
     }
 
@@ -2373,29 +2373,6 @@
         };
         localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
 
-        // UI 전환
-        document.getElementById('formContainer').classList.add('hidden');
-        document.getElementById('resultContainer').classList.remove('hidden');
-
-        // 결과 섹션 노출
-        document.getElementById('shareSection')?.classList.remove('hidden');
-        document.getElementById('dailyFortuneSection')?.classList.remove('hidden');
-        document.getElementById('saveSection')?.classList.remove('hidden');
-        document.getElementById('resultDivider')?.classList.remove('hidden');
-
-        // 결과 영역 상단으로 스크롤
-        const resultContainer = document.getElementById('resultContainer');
-        if (resultContainer) {
-            setTimeout(() => {
-                resultContainer.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 100);
-        }
-
-        const resultTarget = document.getElementById('markdownResult');
-
         // 로딩 멘트
         const loadingMessages = [
             '📜 고서를 뒤적이며 명리를 풀이하는 중...',
@@ -2416,7 +2393,14 @@
         ];
 
         const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-        resultTarget.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
+
+        // 로딩 오버레이 표시 (즉각 피드백)
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = loadingOverlay.querySelector('.loading-text');
+        loadingText.innerHTML = `${randomMessage}<br><span class="text-xl opacity-70">잠시만 기다려주세요</span>`;
+        loadingOverlay.classList.add('show');
+
+        const resultTarget = document.getElementById('markdownResult');
 
         try {
             const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
@@ -2450,10 +2434,29 @@
                 }
             }
 
+            // 로딩 완료 - 오버레이 숨기기
+            loadingOverlay.classList.remove('show');
+
+            // UI 전환 (폼 숨기기, 결과 표시)
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+
+            // 결과 섹션 노출
+            document.getElementById('shareSection')?.classList.remove('hidden');
+            document.getElementById('dailyFortuneSection')?.classList.remove('hidden');
+            document.getElementById('saveSection')?.classList.remove('hidden');
+            document.getElementById('resultDivider')?.classList.remove('hidden');
+
             // 완료 후 렌더링
             resultTarget.style.opacity = '0';
             resultTarget.style.transition = 'opacity 0.5s ease-in-out';
             resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+
+            // 결과 영역 맨 위로 스크롤
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
 
             setTimeout(() => {
                 resultTarget.style.opacity = '1';
@@ -2489,6 +2492,14 @@
 
         } catch (err) {
             console.error(err);
+
+            // 로딩 오버레이 숨기기
+            loadingOverlay.classList.remove('show');
+
+            // UI 전환 (에러 메시지 표시를 위해)
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+
             let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
 
             if (err.message && !err.message.includes('fetch')) {
