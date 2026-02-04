@@ -83,15 +83,18 @@ def main_view(request):
         .order_by('-count')
 
     # SNS posts for sidebar
-    posts = Post.objects.select_related(
-        'author', 'author__userprofile'
-    ).prefetch_related(
-        'comments__author__userprofile',
-        'likes'
-    ).annotate(
-        like_count=Count('likes', distinct=True),
-        comment_count=Count('comments', distinct=True)
-    ).order_by('-created_at')[:20]
+    try:
+        posts = Post.objects.select_related(
+            'author'
+        ).prefetch_related(
+            'comments__author',
+            'likes'
+        ).annotate(
+            like_count=Count('likes', distinct=True),
+            comment_count=Count('comments', distinct=True)
+        ).order_by('-created_at')[:20]
+    except Exception as e:
+        posts = []  # 에러 시 빈 리스트
     
     stats = []
     if total_count > 0:
@@ -320,15 +323,18 @@ def detail_view(request, pk):
     summary = MBTI_TAGLINES.get(result.mbti_type, '교실 속 특별한 영혼을 가진 선생님')
 
     # SNS posts for sidebar
-    posts = Post.objects.select_related(
-        'author', 'author__userprofile'
-    ).prefetch_related(
-        'comments__author__userprofile',
-        'likes'
-    ).annotate(
-        like_count=Count('likes', distinct=True),
-        comment_count=Count('comments', distinct=True)
-    ).order_by('-created_at')[:20]
+    try:
+        posts = Post.objects.select_related(
+            'author'
+        ).prefetch_related(
+            'comments__author',
+            'likes'
+        ).annotate(
+            like_count=Count('likes', distinct=True),
+            comment_count=Count('comments', distinct=True)
+        ).order_by('-created_at')[:20]
+    except Exception as e:
+        posts = []  # 에러 시 빈 리스트
 
     return render(request, 'ssambti/detail.html', {
         'result': result,
