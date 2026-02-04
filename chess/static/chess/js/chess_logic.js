@@ -227,10 +227,10 @@ function makeAIMove() {
     isAIThinking = true;
     updateStatus(); // Show "AI Thinking..."
 
-    // UI 표시 (d-none 제거)
-    var statusEl = document.getElementById('aiStatus');
+    // UI 표시 (올바른 ID 사용)
+    var statusEl = document.getElementById('aiThinking');
     if (statusEl) {
-        statusEl.classList.remove('d-none');
+        statusEl.classList.add('active');
     }
 
     var fen = game.fen();
@@ -238,11 +238,15 @@ function makeAIMove() {
     // 난이도별 파라미터 설정 (학생용 최적화)
     var params = getAIParams();
 
-    // 엔진이 준비되지 않았으면 대기열에 추가
+    // 엔진이 준비되지 않았으면 잠시 후 재시도
     if (!isEngineReady) {
-        console.log("Engine not ready yet, queuing commands...");
-        pendingCommands.push('position fen ' + fen);
-        pendingCommands.push('go depth ' + params.depth + ' movetime ' + params.movetime);
+        console.log("Engine not ready yet, retrying in 500ms...");
+        isAIThinking = false;
+        if (statusEl) {
+            statusEl.classList.remove('active');
+        }
+        // 500ms 후 자동으로 재시도
+        window.setTimeout(makeAIMove, 500);
         return;
     }
 
@@ -294,13 +298,22 @@ function onBestMove(line) {
             updateStatus();
         } else {
             console.warn("AI attempted invalid move:", moveStr);
+            // 잘못된 수일 경우 AI를 다시 시도하도록 허용
+            isAIThinking = false;
+            var statusEl = document.getElementById('aiThinking');
+            if (statusEl) {
+                statusEl.classList.remove('active');
+            }
+            // 재시도
+            window.setTimeout(makeAIMove, 500);
+            return;
         }
 
-        // 상태 초기화 및 UI 숨기기 (d-none 추가)
+        // 상태 초기화 및 UI 숨기기 (올바른 ID 사용)
         isAIThinking = false;
-        var statusEl = document.getElementById('aiStatus');
+        var statusEl = document.getElementById('aiThinking');
         if (statusEl) {
-            statusEl.classList.add('d-none');
+            statusEl.classList.remove('active');
         }
     }
 }
