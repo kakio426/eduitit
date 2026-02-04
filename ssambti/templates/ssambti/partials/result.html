@@ -81,7 +81,8 @@
             {% if total_participants > 0 %}
             {% for item in stats %}
             <div class="group cursor-pointer hover:scale-[1.01] transition-transform"
-                hx-get="{% url 'ssambti:preview' item.mbti_type %}" hx-target="#modal-content" onclick="openModal()">
+                hx-get="{% url 'ssambti:preview' item.mbti_type %}" hx-target="#modalContent"
+                onclick="openUnifiedModal()">
                 <div class="flex justify-between items-end mb-1">
                     <span class="text-lg font-bold text-gray-700 flex items-center gap-2">
                         <span class="text-xl inline-block w-8 text-center">{{ forloop.counter }}</span>

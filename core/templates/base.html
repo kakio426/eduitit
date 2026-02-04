@@ -505,12 +505,10 @@
             }
         });
 
-        function openModal(productId) {
+        function openUnifiedModal() {
             const modal = document.getElementById('unifiedModal');
             const backdrop = document.getElementById('modalBackdrop');
             const panel = document.getElementById('modalPanel');
-            const content = document.getElementById('modalContent');
-            const loading = document.getElementById('modalLoading');
             const body = document.body;
 
             // Show modal and prevent scroll
@@ -526,6 +524,13 @@
                 panel.classList.remove('scale-95', 'opacity-0');
                 panel.classList.add('scale-100', 'opacity-100');
             });
+        }
+
+        function openModal(productId) {
+            openUnifiedModal();
+
+            const content = document.getElementById('modalContent');
+            const loading = document.getElementById('modalLoading');
 
             // Show loading
             loading.classList.remove('hidden');
