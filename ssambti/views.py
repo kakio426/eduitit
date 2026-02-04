@@ -89,9 +89,6 @@ def main_view(request):
         ).prefetch_related(
             'comments__author',
             'likes'
-        ).annotate(
-            like_count=Count('likes', distinct=True),
-            comment_count=Count('comments', distinct=True)
         ).order_by('-created_at')[:20]
     except Exception as e:
         posts = []  # 에러 시 빈 리스트
@@ -329,9 +326,6 @@ def detail_view(request, pk):
         ).prefetch_related(
             'comments__author',
             'likes'
-        ).annotate(
-            like_count=Count('likes', distinct=True),
-            comment_count=Count('comments', distinct=True)
         ).order_by('-created_at')[:20]
     except Exception as e:
         posts = []  # 에러 시 빈 리스트
