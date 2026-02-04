@@ -196,3 +196,73 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 공통 설정은 `settings_base.py`로 분리
 - 환경별 차이만 각 설정 파일에 작성
 - 또는 settings.py 하나만 사용하고 환경변수로 분기
+
+---
+
+### ⚠️ Django views.py 필수 체크리스트 (2026-02-04)
+
+**증상**: 500 Internal Server Error (로컬/프로덕션 모두)
+
+**흔한 실수 3가지**:
+
+1. **settings import 누락**
+   ```python
+   # ❌ 잘못된 코드
+   def my_view(request):
+       return render(request, 'template.html', {
+           'KAKAO_KEY': settings.KAKAO_JS_KEY  # NameError!
+       })
+
+   # ✅ 올바른 코드
+   from django.conf import settings  # 반드시 추가!
+
+   def my_view(request):
+       return render(request, 'template.html', {
+           'KAKAO_KEY': settings.KAKAO_JS_KEY
+       })
+   ```
+
+2. **변수 정의 순서 문제**
+   ```python
+   # ❌ 잘못된 코드
+   def my_view(request):
+       theme = MBTI_COLORS.get('ISTJ')  # NameError: MBTI_COLORS not defined
+
+   MBTI_COLORS = {  # 함수보다 아래에 정의
+       'ISTJ': '#3B82F6',
+   }
+
+   # ✅ 올바른 코드
+   MBTI_COLORS = {  # 상수는 파일 상단에 먼저 정의
+       'ISTJ': '#3B82F6',
+   }
+
+   def my_view(request):
+       theme = MBTI_COLORS.get('ISTJ')
+   ```
+
+3. **함수에서 return 문 누락**
+   ```python
+   # ❌ 잘못된 코드
+   def my_view(request):
+       context = {'data': 'test'}
+       # return 없음! → None 반환 → 500 에러
+
+   # ✅ 올바른 코드
+   def my_view(request):
+       context = {'data': 'test'}
+       return render(request, 'template.html', context)
+   ```
+
+**실제 사례 (ssambti 앱)**:
+- 증상: ssambti 페이지 접속 시 500 에러
+- 원인 1: `from django.conf import settings` 누락
+- 원인 2: `card_generator_view()`가 `MBTI_COLOR_THEMES` 정의 전에 위치
+- 원인 3: `card_generator_view()`에 return 문 없음
+- 해결: import 추가 + 함수 순서 재배치 + return 문 추가
+
+**체크리스트**:
+- [ ] 필요한 모든 import 확인 (`settings`, `models`, 외부 라이브러리)
+- [ ] 상수/딕셔너리는 파일 상단에 정의
+- [ ] 모든 view 함수에 `return` 문 있는지 확인
+- [ ] `python manage.py check <앱이름>` 실행하여 검증

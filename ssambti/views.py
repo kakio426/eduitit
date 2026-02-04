@@ -1,25 +1,11 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.conf import settings
 from products.models import Product
 from .models import SsambtiResult
 from .mbti_data import MBTI_RESULTS, MBTI_TAGLINES
 
-def card_generator_view(request, mbti_type):
-    if mbti_type not in MBTI_RESULTS:
-        from django.http import HttpResponse
-        return HttpResponse("Invalid MBTI", status=404)
-        
-    theme = MBTI_COLOR_THEMES.get(mbti_type, MBTI_COLOR_THEMES['ISTJ'])
-    result_data = MBTI_RESULTS[mbti_type]
-    
-    context = {
-        'mbti_type': mbti_type,
-        'animal_name': result_data['animal_name'],
-        'animal_image': MBTI_ANIMAL_MAP.get(mbti_type),
-        'summary': result_data['soul_message'].replace('"', '').split('!')[0] + '!',
-        'theme_color': theme['primary'],
-    }
 MBTI_ANIMAL_MAP = {
     'ISTJ': 'penguin.png',
     'ISFJ': 'quokka.png',
@@ -57,6 +43,23 @@ MBTI_COLOR_THEMES = {
     'ENFJ': {'primary': '#FBBF24', 'bg': '#FEF3C7', 'accent': '#F59E0B', 'emoji': '🐕'},
     'ENTJ': {'primary': '#B45309', 'bg': '#FED7AA', 'accent': '#92400E', 'emoji': '🦁'},
 }
+
+def card_generator_view(request, mbti_type):
+    if mbti_type not in MBTI_RESULTS:
+        from django.http import HttpResponse
+        return HttpResponse("Invalid MBTI", status=404)
+
+    theme = MBTI_COLOR_THEMES.get(mbti_type, MBTI_COLOR_THEMES['ISTJ'])
+    result_data = MBTI_RESULTS[mbti_type]
+
+    context = {
+        'mbti_type': mbti_type,
+        'animal_name': result_data['animal_name'],
+        'animal_image': MBTI_ANIMAL_MAP.get(mbti_type),
+        'summary': result_data['soul_message'].replace('"', '').split('!')[0] + '!',
+        'theme_color': theme['primary'],
+    }
+    return render(request, 'ssambti/card_generator.html', context)
 
 def main_view(request):
     """
