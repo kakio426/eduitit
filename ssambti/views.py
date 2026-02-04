@@ -2,7 +2,9 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.db.models import Count
 from products.models import Product
+from core.models import Post
 from .models import SsambtiResult
 from .mbti_data import MBTI_RESULTS, MBTI_TAGLINES
 
@@ -74,12 +76,22 @@ def main_view(request):
         is_premium = request.user.owned_products.filter(product=service).exists()
 
     # Statistics for main page
-    from django.db.models import Count
     total_count = SsambtiResult.objects.count()
-    
+
     stats_qs = SsambtiResult.objects.values('mbti_type', 'animal_name') \
         .annotate(count=Count('id')) \
         .order_by('-count')
+
+    # SNS posts for sidebar
+    posts = Post.objects.select_related(
+        'author', 'author__userprofile'
+    ).prefetch_related(
+        'comments__author__userprofile',
+        'likes'
+    ).annotate(
+        like_count=Count('likes', distinct=True),
+        comment_count=Count('comments', distinct=True)
+    ).order_by('-created_at')[:20]
     
     stats = []
     if total_count > 0:
@@ -97,12 +109,13 @@ def main_view(request):
     context = {
         'service': service,
         'title': service.title if service else "쌤BTI",
-        'icon': "🦁", 
+        'icon': "🦁",
         'description': "12가지 질문으로 알아보는 디테일한 교실 속 자아 찾기!",
         'is_premium': is_premium,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
         'stats': stats,
-        'total_participants': total_count
+        'total_participants': total_count,
+        'posts': posts  # SNS 게시글 추가
     }
     return render(request, 'ssambti/main.html', context)
 
@@ -302,15 +315,27 @@ def detail_view(request, pk):
     """특정 결과 상세보기 (공유 페이지로도 활용 가능 - 공개 접근 가능)"""
     result = get_object_or_404(SsambtiResult, pk=pk)
     animal_image = MBTI_ANIMAL_MAP.get(result.mbti_type, 'lion.png')
-    
+
     # 공유용 요약 문구 생성
     summary = MBTI_TAGLINES.get(result.mbti_type, '교실 속 특별한 영혼을 가진 선생님')
-    
+
+    # SNS posts for sidebar
+    posts = Post.objects.select_related(
+        'author', 'author__userprofile'
+    ).prefetch_related(
+        'comments__author__userprofile',
+        'likes'
+    ).annotate(
+        like_count=Count('likes', distinct=True),
+        comment_count=Count('comments', distinct=True)
+    ).order_by('-created_at')[:20]
+
     return render(request, 'ssambti/detail.html', {
         'result': result,
         'animal_image': animal_image,
         'summary': summary,
-        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY
+        'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
+        'posts': posts  # SNS 게시글 추가
     })
 
 def animal_detail_view(request, mbti_type):

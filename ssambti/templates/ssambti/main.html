@@ -155,9 +155,10 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col lg:flex-row gap-6 items-start">
         <!-- 메인 콘텐츠 -->
-        <div class="flex-1 max-w-3xl" id="results-wrapper">
+        <div class="flex-1 w-full lg:max-w-3xl" id="results-wrapper">
 
         <!-- Everything inside this div will be replaced by the result -->
         <div id="quiz-ui-container">
@@ -288,8 +289,11 @@
         </div>
 
         <!-- SNS 사이드바 -->
-        <div class="hidden lg:block">
-            {% include 'core/partials/sns_widget.html' %}
+        <div class="hidden lg:block w-[380px] flex-shrink-0">
+            <div class="relative">
+                {% include 'core/partials/sns_widget.html' %}
+            </div>
+        </div>
         </div>
     </div>
 </section>
