@@ -1170,8 +1170,8 @@
     </div>
 
     <!-- 즐겨찾기 날짜 추가 모달 -->
-    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeFavoriteDateModalOnBackdrop(event)">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
+    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="closeFavoriteDateModalOnBackdrop(event)">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl my-8" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
                     <i class="fa-solid fa-star text-amber-500 mr-2"></i>
@@ -1211,8 +1211,8 @@
     </div>
 
     <!-- 프로필 추가/수정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeProfileModalOnBackdrop(event)">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
+    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="closeProfileModalOnBackdrop(event)">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl my-8" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
                     <i class="fa-solid fa-user-plus text-purple-500 mr-2"></i>
