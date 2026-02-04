@@ -239,8 +239,7 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span class="text-xl">
-                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
-                            }}{% endif %}님
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{ user.username }}{% else %}사용자{% endif %}님
                         </span>
                         <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
@@ -321,8 +320,7 @@
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>
-                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% else %}{{ user.username
-                        }}{% endif %}님</span>
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{ user.username }}{% else %}사용자{% endif %}님</span>
                 </div>
                 <a href="{% url 'sso_schoolit' %}"
                     class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">

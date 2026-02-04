@@ -103,7 +103,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     # Custom Middleware
-    'core.middleware.EmailRequiredMiddleware',  # 기존 사용자 이메일 필수
+    'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
     'core.middleware.VisitorTrackingMiddleware',
 ]
 
@@ -291,11 +291,14 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username']  # email = 필수 (별명은 CustomSignupForm에서 처리)
 ACCOUNT_EMAIL_REQUIRED = True  # ✅ 이메일 필수
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'  # ✅ 커스텀 가입 폼 (별명 필수)
+SOCIALACCOUNT_FORMS = {
+    'signup': 'core.signup_forms.CustomSignupForm',  # ✅ 소셜 로그인 가입 시에도 커스텀 폼 적용
+}
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
 SESSION_COOKIE_AGE = 3600  # 1시간 동안 활동이 없으면 로그아웃
 SESSION_SAVE_EVERY_REQUEST = True  # 활동할 때마다 세션 만료 시간 연장
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 브라우저 닫으면 로그아웃
-SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_AUTO_SIGNUP = False  # ✅ 소셜 로그인 후 추가 정보(별명) 입력 화면 표시
 SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동
 
 # SSO Settings
