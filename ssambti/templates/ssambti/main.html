@@ -155,7 +155,9 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-3xl mx-auto" id="results-wrapper">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+        <!-- 메인 콘텐츠 -->
+        <div class="flex-1 max-w-3xl" id="results-wrapper">
 
         <!-- Everything inside this div will be replaced by the result -->
         <div id="quiz-ui-container">
@@ -276,11 +278,18 @@
         </div>
     </div>
 
-    <!-- Loader -->
-    <div id="zoo-loader"
-        class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
-        <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
-            <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
+        <!-- Loader -->
+        <div id="zoo-loader"
+            class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
+            <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
+                <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
+            </div>
+        </div>
+        </div>
+
+        <!-- SNS 사이드바 -->
+        <div class="hidden lg:block">
+            {% include 'core/partials/sns_widget.html' %}
         </div>
     </div>
 </section>
