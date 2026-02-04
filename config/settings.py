@@ -189,15 +189,16 @@ ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스 진입 장벽 낮춤)
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username']  # email* = 필수 (username은 allauth 기본 동작으로 처리됨, 폼에서 제어)
 
+ACCOUNT_EMAIL_REQUIRED = True  # ✅ 이메일 필수
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm' # 커스텀 가입 폼 (별명 필수)
-SOCIALACCOUNT_FORMS = {
-    'signup': 'core.signup_forms.CustomSignupForm',
-}
+# SOCIALACCOUNT_FORMS = {
+#     'signup': 'core.signup_forms.CustomSignupForm',
+# }
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
 SESSION_COOKIE_AGE = 3600  # 1시간 동안 활동이 없으면 로그아웃
 SESSION_SAVE_EVERY_REQUEST = True  # 활동할 때마다 세션 만료 시간 연장
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 브라우저 닫으면 로그아웃
-SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동
 
 # HTTPS 설정 (Railway 프록시 뒤에서 HTTPS 강제)
