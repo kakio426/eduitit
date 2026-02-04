@@ -42,10 +42,10 @@ def fortune_rate_h(group, request):
     return '5/h'
 
 def fortune_rate_d(group, request):
-    """1일당 10회 제한 (관리자 무제한)"""
+    """1일당 20회 제한 (관리자 무제한)"""
     if request.user and request.user.is_authenticated and request.user.is_superuser:
         return None
-    return '10/d'
+    return '20/d'
 
 def generate_ai_response(prompt, request):
     """
@@ -174,82 +174,20 @@ def get_chart_context(data):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_view(request):
-    """사주 분석 메인 뷰 (5회/h, 10회/d)"""
-    if getattr(request, 'limited', False):
-        error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
-        
-        return render(request, 'fortune/saju_form.html', {
-            'form': SajuForm(request.POST),
-            'error': error_message
-        })
-    result_html = None
+    """
+    사주 분석 메인 뷰 (Dashboard Version)
+    - 기존의 Form Submit 방식에서 API 기반 대시보드로 변경됨.
+    - 초기 진입 시 빈 대시보드(입력 폼)를 렌더링함.
+    """
     error_message = None
-    chart_context = None
+    
+    # Rate Limit Check (Legacy logic kept for safety, though API has its own limits)
+    if getattr(request, 'limited', False):
+         error_message = '공용 AI 한도가 초과되었습니다. 잠시 후 다시 시도해주세요.'
 
-    if request.method == 'POST':
-        form = SajuForm(request.POST)
-        if form.is_valid():
-            data = form.cleaned_data
-            mode = data['mode']
-
-            # Logic Engine: Calculate Pillars
-            chart_context = get_chart_context(data)
-            
-            # [DEBUG] 로그: 입력 데이터와 계산된 사주 명식 확인
-            logger.info(f"User Input: {data}")
-            logger.info(f"Calculated Chart: {chart_context}")
-            
-            # Form Prompt with SSOT data
-            prompt = get_prompt(mode, data, chart_context=chart_context)
-
-            try:
-                # Wrap generator to maintain current sync behavior until Phase 4
-                generated_text = "".join(generate_ai_response(prompt, request))
-                
-                # Validation: If result is empty/whitespace, treat as None/Error
-                if generated_text and generated_text.strip():
-                    result_html = generated_text
-                else:
-                    logger.warning("AI returned empty response")
-                    result_html = None
-                    error_message = "AI가 답변을 생성하지 못했습니다. (내용 없음) 잠시 후 다시 시도해주세요."
-            except Exception as e:
-                logger.exception("사주 분석 오류")
-                error_str = str(e)
-                if "API_KEY_MISSING" in error_str:
-                     error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
-                elif "matching query does not exist" in error_str:
-                    error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
-                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
-                    if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
-                    else:
-                        error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
-                elif "503" in error_str:
-                    error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
-                elif "Insufficient Balance" in error_str: # DeepSeek specific
-                     if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
-                     else:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
-                else:
-                    error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
-    else:
-        form = SajuForm()
-
-    return render(request, 'fortune/saju_form.html', {
-        'form': form,
-        'result': result_html,
-        'error': error_message,
-        'name': request.POST.get('name') if request.method == 'POST' else None,
-        'gender': request.POST.get('gender') if request.method == 'POST' else None,
-        'chart': {
-            'year': str(chart_context['year']['stem']) + str(chart_context['year']['branch']),
-            'month': str(chart_context['month']['stem']) + str(chart_context['month']['branch']),
-            'day': str(chart_context['day']['stem']) + str(chart_context['day']['branch']),
-            'hour': str(chart_context['hour']['stem']) + str(chart_context['hour']['branch']),
-        } if chart_context else None,
+    return render(request, 'fortune/saju_dashboard.html', {
         'kakao_js_key': settings.KAKAO_JS_KEY,
+        'error': error_message
     })
 
 
@@ -389,21 +327,47 @@ def daily_fortune_api(request):
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
 
+        # 1. DB Cache Check (For Authenticated Users)
+        if request.user.is_authenticated:
+            from .models import FortuneResult
+            cached = FortuneResult.objects.filter(
+                user=request.user,
+                topic='daily',
+                target_date=target_dt.date()
+            ).first()
+            if cached:
+                return JsonResponse({
+                    'success': True,
+                    'result': cached.result_text,
+                    'target_date': target_date_str,
+                    'cached': True
+                })
+
         # Wrap generator to maintain current sync behavior
         response_text = "".join(generate_ai_response(prompt, request))
 
-        # 통계용 로그 저장
-        if request.user.is_authenticated:
-            from .models import DailyFortuneLog
+        # 통계용 로그 저장 및 결과 캐싱
+        if request.user.is_authenticated and response_text.strip():
+            from .models import DailyFortuneLog, FortuneResult
             DailyFortuneLog.objects.create(
                 user=request.user,
                 target_date=target_dt.date()
+            )
+            # Cache the result text as well
+            FortuneResult.objects.create(
+                user=request.user,
+                topic='daily',
+                target_date=target_dt.date(),
+                result_text=response_text,
+                natal_chart=natal_data,
+                mode='daily'
             )
 
         return JsonResponse({
             'success': True,
             'result': response_text,
-            'target_date': target_date_str
+            'target_date': target_date_str,
+            'cached': False
         })
 
     except Exception as e:

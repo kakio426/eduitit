@@ -112,10 +112,20 @@ class InterpretationRule(models.Model):
 class FortuneResult(models.Model):
     """사용자가 저장한 사주/운세 결과"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_fortunes')
-    mode = models.CharField(max_length=20, choices=[('teacher', '교사 모드'), ('general', '일반 모드'), ('daily', '일진 모드')])
+    mode = models.CharField(max_length=20, default='general', choices=[('teacher', '교사 모드'), ('general', '일반 모드'), ('daily', '일진 모드')])
+    topic = models.CharField(max_length=20, null=True, blank=True, choices=[
+        ('total', '전체'),
+        ('personality', '성격'),
+        ('wealth', '재물'),
+        ('career', '직업'),
+        ('teacher', '교직 운세'),
+        ('compatibility', '연애/인연'),
+        ('daily', '일진')
+    ], help_text="분석 주제")
     natal_chart = models.JSONField(help_text="저장 당시의 사주 원국 간지")
     result_text = models.TextField(help_text="AI가 생성한 분석 결과 내용")
     target_date = models.DateField(null=True, blank=True, help_text="일진 모드인 경우 해당 날짜")
+    natal_hash = models.CharField(max_length=64, null=True, blank=True, db_index=True, help_text="사주 명식 고유 해시 (캐싱용)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -123,7 +133,8 @@ class FortuneResult(models.Model):
 
     def __str__(self):
         date_str = self.target_date.strftime('%Y-%m-%d') if self.target_date else "원국"
-        return f"[{self.get_mode_display()}] {self.user.username} - {date_str}"
+        topic_str = self.get_topic_display() if self.topic else self.get_mode_display()
+        return f"[{topic_str}] {self.user.username} - {date_str}"
 
 class ZooResult(models.Model):
     """사용자가 저장한 티처블 동물원(MBTI) 결과"""

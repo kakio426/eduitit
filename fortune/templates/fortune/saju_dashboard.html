@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Modern Mystique & Glassmorphism Theme */
+    :root {
+        --mystic-bg: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        --accent-gradient: linear-gradient(90deg, #FFD700 0%, #FDB931 100%);
+        /* Golden for Fortune */
+    }
+
+    body {
+        background: #f8fafc;
+        /* Fallback for light mode base */
+    }
+
+    /* Dark Mode Override for this page if global dark mode isn't set */
+    .saju-dashboard {
+        background: radial-gradient(circle at 50% -20%, #2E1065, #0F172A);
+        min-height: 100vh;
+        color: white;
+        font-family: 'NanumSquareRound', sans-serif;
+    }
+
+    /* Glass Card */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-radius: 24px;
+    }
+
+    /* Input Field Style */
+    .glass-input {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .glass-input:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: #A78BFA;
+        outline: none;
+    }
+
+    /* Pillar Character Styling */
+    .pillar-char {
+        font-family: 'Noto Serif KR', serif;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Element Colors */
+    .text-wood {
+        color: #4ADE80;
+    }
+
+    .text-fire {
+        color: #F87171;
+    }
+
+    .text-earth {
+        color: #FBBF24;
+    }
+
+    .text-metal {
+        color: #E2E8F0;
+    }
+
+    .text-water {
+        color: #60A5FA;
+    }
+
+    /* Button Safety & Loading */
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    .btn-loading::after {
+        content: "";
+        position: absolute;
+        width: 1.2em;
+        height: 1.2em;
+        top: 50%;
+        left: 50%;
+        margin-top: -0.6em;
+        margin-left: -0.6em;
+        border: 2px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Markdown Content */
+    .markdown-result h2 {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-top: 1.5rem;
+        margin-bottom: 0.8rem;
+        color: #ddd6fe;
+        /* violet-200 */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0.5rem;
+    }
+
+    .markdown-result strong {
+        color: #FDB931;
+        /* Gold */
+    }
+
+    .markdown-result ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-result li {
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="saju-dashboard pt-40 pb-20 px-4">
+    <div class="max-w-4xl mx-auto">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                <i class="fa-solid fa-moon mr-2"></i>운세 연구소
+            </h1>
+            <button onclick="toggleMyMenu()" class="text-white text-2xl p-2 hover:bg-white/10 rounded-full transition">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </header>
+
+        <!-- STEP 1: Input Form (Tabbed Interface) -->
+        <div id="inputSection" class="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-lg mx-auto">
+
+            <!-- Tab Navigation -->
+            <div class="flex justify-center mb-6 gap-3 px-2">
+                <button type="button" onclick="switchInputMode('general')" id="tabGeneral"
+                    class="flex-1 py-3 rounded-2xl font-bold transition-all text-white bg-white/20 hover:bg-white/30 ring-2 ring-white/50 shadow-lg backdrop-blur-md flex flex-col items-center gap-1 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">🙂</span>
+                    <span class="text-sm">일반 사주</span>
+                </button>
+                <button type="button" onclick="switchInputMode('teacher')" id="tabTeacher"
+                    class="flex-1 py-3 rounded-2xl font-bold transition-all text-purple-200 bg-white/5 hover:bg-white/10 ring-1 ring-white/10 backdrop-blur-md flex flex-col items-center gap-1 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">👨‍🏫</span>
+                    <span class="text-sm">교직 운세</span>
+                </button>
+            </div>
+
+            <div class="glass-card p-8 relative overflow-hidden transition-all duration-300 hover:shadow-[0_0_40px_rgba(139,92,246,0.3)]"
+                style="backdrop-filter: blur(20px);">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold mb-2 text-white" id="formTitle">나의 사주 명함 만들기</h2>
+                    <p class="text-purple-200 text-sm font-medium" id="formSubtitle">생년월일을 입력하면 평생 변치 않는 사주를 분석해드립니다.
+                    </p>
+                </div>
+
+                <form id="sajuForm" onsubmit="handleCalculate(event)" class="space-y-6 relative z-10">
+                    <input type="hidden" name="mode" id="serviceMode" value="general">
+
+                    <!-- Name & Gender -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">이름</label>
+                            <input type="text" name="name"
+                                class="glass-input w-full p-4 rounded-2xl text-lg text-center font-bold placeholder-white/30"
+                                placeholder="이름" required maxlength="10">
+                        </div>
+                        <div>
+                            <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">성별</label>
+                            <div class="flex gap-3">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="gender" value="male" class="peer hidden" required>
+                                    <div
+                                        class="glass-input p-4 rounded-2xl text-center peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-transparent transition-all hover:bg-white/10 text-gray-300 font-bold">
+                                        남성
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="gender" value="female" class="peer hidden">
+                                    <div
+                                        class="glass-input p-4 rounded-2xl text-center peer-checked:bg-pink-500 peer-checked:text-white peer-checked:border-transparent transition-all hover:bg-white/10 text-gray-300 font-bold">
+                                        여성
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Birth Date -->
+                    <div>
+                        <label class="block text-purple-200 text-sm font-bold mb-2 ml-1">양력 생년월일</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="number" name="birth_year"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="YYYY" required min="1900" max="2026">
+                            <input type="number" name="birth_month"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="MM" required min="1" max="12">
+                            <input type="number" name="birth_day"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="DD" required min="1" max="31">
+                        </div>
+                    </div>
+
+                    <!-- Birth Time -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2 ml-1">
+                            <label class="text-purple-200 text-sm font-bold">태어난 시간 <span
+                                    class="text-purple-300/70 font-normal">(선택)</span></label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" name="birth_hour"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="시 (0-23)" min="0" max="23">
+                            <input type="number" name="birth_minute"
+                                class="glass-input p-4 rounded-2xl text-center font-bold text-lg placeholder-white/30"
+                                placeholder="분 (0-59)" min="0" max="59">
+                        </div>
+                        <p class="text-xs text-purple-300/50 mt-2 text-center">* 시간을 모르면 삼주(三柱)로 분석합니다</p>
+                    </div>
+
+                    <button type="submit" id="calculateBtn"
+                        class="w-full py-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl font-bold text-xl text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:from-violet-500 hover:to-indigo-500 transition-all transform hover:-translate-y-1 relative overflow-hidden group border border-white/10">
+                        <span class="relative z-10">사주 명함 발급받기 ✨</span>
+                        <div
+                            class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        </div>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- STEP 2: Dashboard (Hidden Initially) -->
+        <div id="dashboardSection" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+
+            <!-- Hero: Identity Card -->
+            <div id="sajuCard" class="glass-card p-0 overflow-hidden relative group">
+                <!-- Background Pattern -->
+                <div
+                    class="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay">
+                </div>
+
+                <div class="relative p-8 flex flex-col items-center">
+                    <div class="flex justify-between w-full mb-4">
+                        <span class="text-sm text-gray-400 tracking-widest">SAJU IDENTITY</span>
+                        <div class="flex gap-2">
+                            <button onclick="shareToKakao()" class="text-yellow-400 hover:text-yellow-300 transition"
+                                title="카카오톡 공유">
+                                <i class="fa-solid fa-comment"></i>
+                            </button>
+                            <button onclick="saveAsImage()" class="text-blue-400 hover:text-blue-300 transition"
+                                title="이미지 저장">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Day Master Icon (Center) -->
+                    <div class="mb-6 relative">
+                        <div
+                            class="w-24 h-24 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/20 flex items-center justify-center text-5xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                            <span id="dayMasterIcon">🌲</span>
+                        </div>
+                        <div class="absolute -bottom-2 w-full text-center">
+                            <span id="dayMasterLabel"
+                                class="text-xs bg-black/50 px-2 py-1 rounded-full border border-white/10">갑목 (큰
+                                나무)</span>
+                        </div>
+                    </div>
+
+                    <!-- 8 Characters Grid -->
+                    <div class="grid grid-cols-4 gap-2 md:gap-6 mb-8 w-full max-w-lg">
+                        <!-- Labels -->
+                        <div class="text-center text-xs text-gray-500">시주</div>
+                        <div class="text-center text-xs text-gray-500">일주(나)</div>
+                        <div class="text-center text-xs text-gray-500">월주</div>
+                        <div class="text-center text-xs text-gray-500">년주</div>
+
+                        <!-- Pillars (Injected via JS) -->
+                        <div class="pillar-box flex flex-col gap-2 items-center" id="colHour"></div>
+                        <div class="pillar-box flex flex-col gap-2 items-center" id="colDay"></div>
+                        <div class="pillar-box flex flex-col gap-2 items-center" id="colMonth"></div>
+                        <div class="pillar-box flex flex-col gap-2 items-center" id="colYear"></div>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold mb-1" id="userNameDisplay">홍길동님</h2>
+                        <p class="text-purple-200" id="userSummary">"당신은 곧게 뻗은 푸른 소나무입니다"</p>
+                    </div>
+
+                    <!-- Element Distribution -->
+                    <div class="w-full max-w-sm bg-black/20 rounded-2xl p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-gray-500 uppercase tracking-widest">오행 분포 (8)</span>
+                        </div>
+                        <div class="flex gap-1 h-3 rounded-full overflow-hidden mb-2" id="elementBar">
+                            <!-- Injected via JS -->
+                        </div>
+                        <div class="flex justify-between text-[10px] text-gray-400" id="elementCounts">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 0. Teacher Mode (New) -->
+                <button onclick="requestAnalysis(this, 'teacher')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden ring-2 ring-purple-500/50">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-chalkboard-user text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-purple-200 mb-2"><i
+                                class="fa-solid fa-chalkboard-user mr-2"></i>교직 운세</h3>
+                        <p class="text-gray-400 text-sm">학생, 학부모, 승진 등<br>선생님만을 위한 특별 분석.</p>
+                    </div>
+                </button>
+
+                <!-- 1. Personality -->
+                <button onclick="requestAnalysis(this, 'personality')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-fingerprint text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-purple-300 mb-2"><i
+                                class="fa-solid fa-fingerprint mr-2"></i>타고난 기질</h3>
+                        <p class="text-gray-400 text-sm">나의 숨겨진 성격과 장점을<br>확인해보세요.</p>
+                    </div>
+                </button>
+
+                <!-- 2. Wealth -->
+                <button onclick="requestAnalysis(this, 'wealth')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-sack-dollar text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-yellow-400 mb-2"><i class="fa-solid fa-coins mr-2"></i>재물운 분석
+                        </h3>
+                        <p class="text-gray-400 text-sm">돈을 버는 스타일과<br>재물을 지키는 팁.</p>
+                    </div>
+                </button>
+
+                <!-- 3. Career -->
+                <button onclick="requestAnalysis(this, 'career')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-briefcase text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-blue-400 mb-2"><i class="fa-solid fa-briefcase mr-2"></i>직업과
+                            적성</h3>
+                        <p class="text-gray-400 text-sm">나에게 딱 맞는 직업과<br>일하는 방식.</p>
+                    </div>
+                </button>
+
+                <!-- 4. Compatibility -->
+                <button onclick="requestAnalysis(this, 'compatibility')"
+                    class="glass-card p-6 text-left hover:bg-white/10 transition group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <i class="fa-solid fa-heart text-6xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-pink-400 mb-2"><i class="fa-solid fa-heart mr-2"></i>연애와 인연
+                        </h3>
+                        <p class="text-gray-400 text-sm">나의 사랑 스타일과<br>잘 맞는 인연 찾기.</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Result Area (Appears below grid when clicked) -->
+            <div id="resultArea"
+                class="hidden glass-card p-8 animate-in fade-in zoom-in duration-300 border-t-4 border-purple-500">
+                <div class="flex justify-between items-start mb-6">
+                    <h3 id="resultTitle" class="text-2xl font-bold text-white">분석 결과</h3>
+                    <button onclick="closeResult()" class="text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div id="resultContent" class="markdown-result text-gray-200 leading-relaxed space-y-4">
+                    <!-- Markdown content goes here -->
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="text-center pt-8">
+                <button onclick="resetDashboard()" class="text-gray-500 hover:text-gray-300 text-sm underline">
+                    다른 사주 보기
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Hidden Elements for Logic -->
+<div id="shareDescription" class="hidden"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script>
+<script>
+    // Constants & Global State
+    let currentPillars = null;
+    let currentUser = { name: '', gender: '', mode: 'general' };
+    const KAKAO_KEY = "{{ kakao_js_key }}";
+
+    // Cache for analysis results { 'personality': 'Markdown...', ... }
+    const analysisCache = {};
+
+    // Initialize Kakao
+    if (KAKAO_KEY) {
+        Kakao.init(KAKAO_KEY);
+    }
+
+    // --- Mode Switching ---
+    function switchInputMode(mode) {
+        const modeInput = document.getElementById('serviceMode');
+        if (modeInput) modeInput.value = mode;
+
+        const tabGen = document.getElementById('tabGeneral');
+        const tabTea = document.getElementById('tabTeacher');
+
+        // Base classes
+        const baseClass = "flex-1 py-3 rounded-2xl font-bold transition-all flex flex-col items-center gap-1 group backdrop-blur-md";
+        const activeClass = "text-white bg-white/20 hover:bg-white/30 ring-2 ring-white/50 shadow-lg";
+        const inactiveClass = "text-purple-200 bg-white/5 hover:bg-white/10 ring-1 ring-white/10";
+
+        if (mode === 'teacher') {
+            tabGen.className = `${baseClass} ${inactiveClass}`;
+            tabTea.className = `${baseClass} ${activeClass}`;
+            document.getElementById('formTitle').textContent = "교직 운세 명함 만들기";
+            document.getElementById('formSubtitle').textContent = "선생님을 위한 특별한 사주 분석과 명함을 제공합니다.";
+        } else {
+            tabGen.className = `${baseClass} ${activeClass}`;
+            tabTea.className = `${baseClass} ${inactiveClass}`;
+            document.getElementById('formTitle').textContent = "나의 사주 명함 만들기";
+            document.getElementById('formSubtitle').textContent = "생년월일을 입력하면 평생 변치 않는 사주를 분석해드립니다.";
+        }
+    }
+
+    // --- Step 1: Calculate Pillars (Backend API) ---
+    async function handleCalculate(event) {
+        event.preventDefault();
+        const btn = document.getElementById('calculateBtn');
+        const form = event.target;
+
+        // Safety: Prevent Double Click
+        if (btn.classList.contains('btn-loading')) return;
+
+        try {
+            // UI Loading State
+            btn.classList.add('btn-loading');
+            btn.textContent = '운명의 별을 읽는 중...';
+
+            // Gather Data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Call API
+            const response = await fetch('/fortune/api/v2/calculate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || '계산에 실패했습니다.');
+            }
+
+            // Success: Update State & UI
+            currentPillars = result.pillars;
+            currentUser = { name: data.name, gender: data.gender, mode: data.mode };
+
+            renderHeroCard(result);
+
+            // Transition UI
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+
+            // Save to LocalStorage for persistence check (optional)
+            localStorage.setItem('saju_dashboard_cache', JSON.stringify({
+                pillars: result.pillars,
+                user: currentUser,
+                timestamp: Date.now()
+            }));
+
+        } catch (e) {
+            alert('오류가 발생했습니다: ' + e.message);
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.textContent = '사주 명함 발급받기 ✨';
+        }
+    }
+
+    // --- Step 2: Render Hero Card ---
+    function renderHeroCard(data) {
+        const p = data.pillars;
+        const dm = data.day_master;
+
+        // 1. Dynamic Background based on Day Master Element
+        const card = document.getElementById('sajuCard');
+        const bgMap = {
+            'wood': 'linear-gradient(135deg, #064e3b 0%, #10b981 100%)', // Emerald
+            'fire': 'linear-gradient(135deg, #7f1d1d 0%, #f87171 100%)', // Red
+            'earth': 'linear-gradient(135deg, #713f12 0%, #facc15 100%)', // Yellow
+            'metal': 'linear-gradient(135deg, #334155 0%, #94a3b8 100%)', // Slate
+            'water': 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'  // Blue
+        };
+        // Apply with transition
+        card.style.background = bgMap[dm.element] || 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)';
+        card.style.transition = 'background 1s ease';
+
+        // Helper to create Pillar HTML
+        const createPillarHTML = (colData) => `
+            <div class="text-2xl md:text-4xl font-black pillar-char text-white/90 drop-shadow-md">${colData.stem.char}</div>
+            <div class="text-2xl md:text-4xl font-black pillar-char text-white/90 drop-shadow-md">${colData.branch.char}</div>
+        `;
+
+        document.getElementById('colYear').innerHTML = createPillarHTML(p.year);
+        document.getElementById('colMonth').innerHTML = createPillarHTML(p.month);
+        document.getElementById('colDay').innerHTML = createPillarHTML(p.day);
+        document.getElementById('colHour').innerHTML = createPillarHTML(p.hour);
+
+        // Day Master Detailed Label
+        const dmLabels = {
+            '甲': '갑목 (곧게 뻗은 거목)', '乙': '을목 (유연한 넝쿨풀)',
+            '丙': '병화 (강렬한 태양)', '丁': '정화 (따뜻한 등불)',
+            '戊': '무토 (광활한 대지)', '己': '기토 (비옥한 논밭)',
+            '庚': '경금 (단단한 원석)', '辛': '신금 (정교한 보석)',
+            '壬': '임수 (깊은 바다/호수)', '癸': '계수 (맑은 이슬비)'
+        };
+
+        const iconMap = {
+            'wood': '🌲', 'fire': '🔥', 'earth': '⛰️', 'metal': '💎', 'water': '💧'
+        };
+
+        document.getElementById('dayMasterIcon').textContent = iconMap[dm.element] || '🔮';
+        const fullDmLabel = dmLabels[dm.char] || `${dm.char}의 기운`;
+        document.getElementById('dayMasterLabel').textContent = fullDmLabel;
+
+        // Summary Text
+        document.getElementById('userNameDisplay').textContent = `${currentUser.name}님의 사주 명함`;
+
+        let summaryText = `당신은 ${fullDmLabel.split(' ')[1]}의 기질을 타고났습니다.`;
+        if (currentUser.mode === 'teacher') {
+            summaryText = `학생들을 이끄는 ${fullDmLabel.split(' ')[1]}의 기운을 가지셨군요.`;
+        }
+        document.getElementById('userSummary').textContent = summaryText;
+        document.getElementById('shareDescription').textContent = `${currentUser.name}님: ${fullDmLabel}`;
+
+        // Element Distribution Visualization
+        renderElementGraph(data.element_counts);
+
+        // 2. Teacher Mode Logic: Highlight & Scroll
+        if (currentUser.mode === 'teacher') {
+            const teacherBtn = document.querySelector('button[onclick*="teacher"]');
+            if (teacherBtn) {
+                // Remove generic glass style and apply premium highlight
+                teacherBtn.classList.remove('ring-purple-500/50');
+                teacherBtn.classList.add('ring-4', 'ring-yellow-400', 'bg-white/10', 'animate-pulse-slow');
+
+                // Add a "Recommended" badge
+                const badge = document.createElement('div');
+                badge.className = 'absolute -top-2 -right-2 bg-yellow-400 text-black font-bold text-xs px-2 py-1 rounded-full shadow-lg z-20';
+                badge.textContent = '추천';
+                teacherBtn.parentElement.style.position = 'relative';
+                teacherBtn.parentElement.appendChild(badge); // Note: Simple append might need adjustment depending on parent layout
+
+                // Auto scroll hint
+                setTimeout(() => {
+                    teacherBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800);
+            }
+        }
+    }
+
+    function renderElementGraph(counts) {
+        const bar = document.getElementById('elementBar');
+        const countsDiv = document.getElementById('elementCounts');
+
+        const colors = {
+            wood: '#4ADE80', fire: '#F87171', earth: '#FBBF24', metal: '#E2E8F0', water: '#60A5FA'
+        };
+        const labels = {
+            wood: '목', fire: '화', earth: '토', metal: '금', water: '수'
+        };
+
+        bar.innerHTML = '';
+        countsDiv.innerHTML = '';
+
+        Object.entries(counts).forEach(([el, count]) => {
+            if (count > 0) {
+                const segment = document.createElement('div');
+                segment.style.width = `${(count / 8) * 100}%`;
+                segment.style.backgroundColor = colors[el];
+                bar.appendChild(segment);
+            }
+
+            const labelSpan = document.createElement('span');
+            labelSpan.innerHTML = `<span style="color:${colors[el]}">${labels[el]}</span> ${count}`;
+            countsDiv.appendChild(labelSpan);
+        });
+    }
+
+    function translateElement(el) {
+        const map = { 'wood': '목(木)', 'fire': '화(火)', 'earth': '토(土)', 'metal': '금(金)', 'water': '수(水)' };
+        return map[el] || '미지';
+    }
+
+    // --- Step 3: Request AI Analysis ---
+    async function requestAnalysis(btn, topic) {
+        // Safety: Check if already loading
+        if (btn.disabled) return;
+
+        const resultContent = document.getElementById('resultContent');
+        const resultArea = document.getElementById('resultArea');
+        const originalIcon = btn.querySelector('.fa-solid').className; // Backup icon
+
+        try {
+            // Check Cache
+            if (analysisCache[topic]) {
+                showResult(topic, analysisCache[topic]);
+                return;
+            }
+
+            // UI Loading
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            const iconEl = btn.querySelector('i.mb-2') || btn.querySelector('i'); // Adjust selector as needed
+            // Simple spinner inside button
+            // Actually, let's just create a toast or change cursor. 
+            // For better UX, let's open the output area with a loader.
+
+            resultArea.classList.remove('hidden');
+            resultContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="text-4xl animate-bounce mb-4">🔮</div>
+                    <p class="text-purple-300">운명의 메시지를 해석하고 있습니다...</p>
+                </div>
+            `;
+            // Scroll to result
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Call API
+            const response = await fetch('/fortune/api/v2/analyze/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    pillars: currentPillars,
+                    topic: topic,
+                    name: currentUser.name,
+                    gender: currentUser.gender
+                })
+            });
+
+            const result = await response.json();
+
+            if (!result.success) throw new Error(result.error);
+
+            // Cache & Show
+            analysisCache[topic] = result.result;
+            showResult(topic, result.result);
+
+        } catch (e) {
+            alert('분석 중 오류가 발생했습니다: ' + e.message);
+            resultArea.classList.add('hidden'); // Hide if error
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70');
+        }
+    }
+
+    function showResult(topic, markdownText) {
+        const titleMap = {
+            'teacher': '👨‍🏫 교직 운세 및 학교 생활',
+            'personality': '타고난 기질 분석',
+            'wealth': '재물운 심층 분석',
+            'career': '직업과 적성 분석',
+            'compatibility': '연애와 인연 분석'
+        };
+
+        document.getElementById('resultTitle').textContent = titleMap[topic] || '분석 결과';
+        document.getElementById('resultContent').innerHTML = marked.parse(markdownText);
+
+        const resultArea = document.getElementById('resultArea');
+        resultArea.classList.remove('hidden');
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeResult() {
+        document.getElementById('resultArea').classList.add('hidden');
+    }
+
+    function resetDashboard() {
+        if (confirm('새로운 사주를 입력하시겠습니까?')) {
+            window.location.reload();
+        }
+    }
+
+    // --- Sharing Logic ---
+    function shareToKakao() {
+        const desc = document.getElementById('shareDescription').textContent;
+        // Construct Link
+        const link = window.location.href;
+
+        Kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+                title: '🔮 나의 사주 명함',
+                description: desc,
+                imageUrl: 'https://eduitit.up.railway.app/static/images/saju_og_thumb.png', // Replace with generic or dynamic
+                link: {
+                    mobileWebUrl: link,
+                    webUrl: link,
+                },
+            },
+            buttons: [
+                {
+                    title: '나도 확인하기',
+                    link: {
+                        mobileWebUrl: link,
+                        webUrl: link,
+                    },
+                },
+            ],
+        });
+    }
+
+    async function saveAsImage() {
+        const card = document.getElementById('sajuCard');
+        if (!card) return;
+
+        try {
+            const canvas = await html2canvas(card, {
+                scale: 2,
+                backgroundColor: null, // Transparent bg if possible, or force dark
+                ignoreElements: (el) => el.tagName === 'BUTTON' // Hide buttons
+            });
+
+            const link = document.createElement('a');
+            link.download = `saju_card_${currentUser.name}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        } catch (e) {
+            console.error('Image save failed:', e);
+            alert('이미지 저장에 실패했습니다.');
+        }
+    }
+</script>
+{% endblock %}
