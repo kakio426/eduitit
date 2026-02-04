@@ -8,7 +8,8 @@ class CustomSignupForm(forms.Form):
         label="별명",
         widget=forms.TextInput(attrs={
             'placeholder': '별명을 입력해주세요 (필수)',
-            'autocomplete': 'nickname'
+            'autocomplete': 'nickname',
+            'class': 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition bg-white/50 backdrop-blur-sm placeholder-gray-400'
         })
     )
 
