@@ -112,7 +112,12 @@ class InterpretationRule(models.Model):
 class FortuneResult(models.Model):
     """사용자가 저장한 사주/운세 결과"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_fortunes')
-    mode = models.CharField(max_length=20, choices=[('teacher', '교사 모드'), ('general', '일반 모드'), ('daily', '일진 모드')], default='general')
+    mode = models.CharField(
+        max_length=20,
+        choices=[('teacher', '교사 모드'), ('general', '일반 모드'), ('daily', '일진 모드')],
+        default='general',
+        db_index=True  # 모드별 필터링 성능 향상
+    )
     natal_chart = models.JSONField(help_text="저장 당시의 사주 원국 간지")
     result_text = models.TextField(help_text="AI가 생성한 분석 결과 내용")
     target_date = models.DateField(null=True, blank=True, help_text="일진 모드인 경우 해당 날짜")
@@ -120,6 +125,13 @@ class FortuneResult(models.Model):
         max_length=64,
         db_index=True,
         help_text='사주 명식 고유 해시 (캐싱용)',
+        null=True,
+        blank=True
+    )
+    user_context_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text='이름+성별+생년월일시 포함 해시 (개인화 캐싱용)',
         null=True,
         blank=True
     )
@@ -222,3 +234,60 @@ class DailyFortuneLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.target_date}"
+
+class DailyFortuneCache(models.Model):
+    """일진 결과 캐시 (영구 보관)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_fortune_caches')
+    natal_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text='사주 명식 고유 해시'
+    )
+    mode = models.CharField(
+        max_length=20,
+        db_index=True,
+        choices=[('teacher', '교사 모드'), ('general', '일반 모드')],
+        help_text='분석 모드 (교사/일반)'
+    )
+    target_date = models.DateField(db_index=True, help_text='일진 날짜')
+    result_text = models.TextField(help_text='AI 생성 일진 결과')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['user', 'natal_hash', 'mode', 'target_date']
+        indexes = [
+            models.Index(fields=['user', 'natal_hash', 'mode', 'target_date']),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_mode_display()}] {self.user.username} - {self.target_date}"
+
+
+class DailyFortuneCache(models.Model):
+    """일진 캐시 - 날짜별 사주 분석 결과 영구 저장"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_fortune_caches')
+    natal_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text='사주 명식 고유 해시'
+    )
+    mode = models.CharField(
+        max_length=20,
+        db_index=True,
+        choices=[('teacher', '교사 모드'), ('general', '일반 모드')],
+        help_text='모드별로 다른 일진 프롬프트 사용'
+    )
+    target_date = models.DateField(db_index=True, help_text='해당 날짜')
+    result_text = models.TextField(help_text='AI 생성 일진 분석 내용')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'natal_hash', 'mode', 'target_date']
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'natal_hash', 'mode', 'target_date'])
+        ]
+
+    def __str__(self):
+        return f"[{self.get_mode_display()}] {self.user.username} - {self.target_date}"

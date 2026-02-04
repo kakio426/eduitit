@@ -1,17 +1,27 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from . import views, views_zoo
+from . import views, views_zoo, views_teacher, views_general
 
 app_name = 'fortune'
 
 urlpatterns = [
-    path('', views.saju_view, name='saju'),
-    path('saju/', views.saju_view, name='saju_alt'),
+    # 모드별 진입점
+    path('teacher/', views_teacher.teacher_saju_view, name='teacher_saju'),
+    path('general/', views_general.general_saju_view, name='general_saju'),
+
+    # 기본 경로는 교사 모드로 리다이렉트 (기존 사용자 대부분 교사)
+    path('', RedirectView.as_view(pattern_name='fortune:teacher_saju', permanent=False), name='saju'),
+    path('saju/', RedirectView.as_view(pattern_name='fortune:teacher_saju', permanent=False), name='saju_alt'),
+
+    # API (모드 인식)
     path('api/', views.saju_api_view, name='saju_api'),
     path('api/streaming/', views.saju_streaming_api, name='saju_streaming_api'),
     path('api/daily/', views.daily_fortune_api, name='daily_fortune_api'),
     path('api/save/', views.save_fortune_api, name='save_fortune_api'),
+
+    # 히스토리 (모드 필터링)
     path('history/', views.saju_history, name='history'),
+    path('history/<str:mode>/', views.saju_history, name='history_filtered'),
     path('history/<int:pk>/', views.saju_history_detail, name='history_detail'),
     path('history/<int:pk>/delete/', views.delete_history_api, name='delete_history_api'),
 

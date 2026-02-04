@@ -4,7 +4,7 @@ natal_hash 기반으로 DB에서 캐시된 결과를 조회하고 저장합니�
 """
 import hashlib
 from django.db.models import Q
-from fortune.models import FortuneResult
+from fortune.models import FortuneResult, DailyFortuneCache, DailyFortuneCache
 
 
 def get_natal_hash(chart_context):
@@ -64,7 +64,7 @@ def get_cached_result(user, natal_hash, mode=None, topic=None):
         return None
 
 
-def save_cached_result(user, natal_hash, result_text, chart_context, mode='general', topic=None):
+def save_cached_result(user, natal_hash, result_text, chart_context, mode='general', topic=None, user_context_hash=None):
     """
     사주 분석 결과를 DB에 저장합니다 (캐싱).
 
@@ -75,12 +75,17 @@ def save_cached_result(user, natal_hash, result_text, chart_context, mode='gener
         chart_context (dict): 전체 사주 데이터 (JSON 저장용)
         mode (str): 분석 모드 ('teacher', 'general', 'daily')
         topic (str, optional): 분석 주제
+        user_context_hash (str, optional): 이름+성별+생년월일시 해시
 
     Returns:
         FortuneResult: 저장된 객체
     """
     if not user or not user.is_authenticated:
         return None
+
+    # user_context_hash가 없으면 natal_hash 사용 (하위 호환성)
+    if user_context_hash is None:
+        user_context_hash = natal_hash
 
     # unique_together 제약 조건으로 인해 중복 방지됨
     result, created = FortuneResult.objects.update_or_create(
@@ -91,7 +96,150 @@ def save_cached_result(user, natal_hash, result_text, chart_context, mode='gener
             'mode': mode,
             'natal_chart': chart_context,
             'result_text': result_text,
+            'user_context_hash': user_context_hash,
         }
     )
 
     return result
+
+
+def get_user_context_hash(name, gender, natal_hash):
+    """
+    이름 + 성별 + 생년월일시를 모두 포함한 해시 생성
+
+    Args:
+        name (str): 사용자 이름
+        gender (str): 성별 ('male' or 'female')
+        natal_hash (str): 사주 명식 해시
+
+    Returns:
+        str: 64자리 16진수 해시
+    """
+    context_str = f"{name}:{gender}:{natal_hash}"
+    return hashlib.sha256(context_str.encode('utf-8')).hexdigest()
+
+
+def get_cached_daily_fortune(user, natal_hash, mode, target_date):
+    """
+    일진 캐시 조회 (영구 보관)
+
+    Args:
+        user (User): 사용자 객체
+        natal_hash (str): 사주 명식 해시
+        mode (str): 분석 모드 ('teacher' or 'general')
+        target_date (date): 일진 날짜
+
+    Returns:
+        DailyFortuneCache or None: 캐시 히트 시 객체, 미스 시 None
+    """
+    if not user or not user.is_authenticated:
+        return None
+
+    try:
+        return DailyFortuneCache.objects.get(
+            user=user,
+            natal_hash=natal_hash,
+            mode=mode,
+            target_date=target_date
+        )
+    except DailyFortuneCache.DoesNotExist:
+        return None
+
+
+def save_daily_fortune_cache(user, natal_hash, mode, target_date, result_text):
+    """
+    일진 결과 저장 (만료 없음)
+
+    Args:
+        user (User): 사용자 객체
+        natal_hash (str): 사주 명식 해시
+        mode (str): 분석 모드 ('teacher' or 'general')
+        target_date (date): 일진 날짜
+        result_text (str): AI 생성 결과 텍스트
+
+    Returns:
+        DailyFortuneCache: 저장된 객체
+    """
+    if not user or not user.is_authenticated:
+        return None
+
+    cache, created = DailyFortuneCache.objects.update_or_create(
+        user=user,
+        natal_hash=natal_hash,
+        mode=mode,
+        target_date=target_date,
+        defaults={'result_text': result_text}
+    )
+
+    return cache
+
+
+def get_user_context_hash(name, gender, natal_hash):
+    """
+    이름+성별+생년월일시를 모두 포함한 해시 생성
+
+    Args:
+        name (str): 사용자 이름
+        gender (str): 성별 ('male' or 'female')
+        natal_hash (str): 사주 명식 해시
+
+    Returns:
+        str: 64자리 16진수 해시
+    """
+    context_str = f"{name}:{gender}:{natal_hash}"
+    return hashlib.sha256(context_str.encode('utf-8')).hexdigest()
+
+
+def get_cached_daily_fortune(user, natal_hash, mode, target_date):
+    """
+    일진 캐시 조회 (영구 보관)
+
+    Args:
+        user (User): 사용자 객체
+        natal_hash (str): 사주 명식 해시
+        mode (str): 'teacher' or 'general'
+        target_date (date): 조회할 날짜
+
+    Returns:
+        DailyFortuneCache or None: 캐시 히트 시 객체 반환
+    """
+    if not user or not user.is_authenticated:
+        return None
+
+    try:
+        return DailyFortuneCache.objects.get(
+            user=user,
+            natal_hash=natal_hash,
+            mode=mode,
+            target_date=target_date
+        )
+    except DailyFortuneCache.DoesNotExist:
+        return None
+
+
+def save_daily_fortune_cache(user, natal_hash, mode, target_date, result_text):
+    """
+    일진 결과 저장 (만료 없음)
+
+    Args:
+        user (User): 사용자 객체
+        natal_hash (str): 사주 명식 해시
+        mode (str): 'teacher' or 'general'
+        target_date (date): 해당 날짜
+        result_text (str): AI 생성 결과
+
+    Returns:
+        DailyFortuneCache: 저장된 객체
+    """
+    if not user or not user.is_authenticated:
+        return None
+
+    cache, created = DailyFortuneCache.objects.update_or_create(
+        user=user,
+        natal_hash=natal_hash,
+        mode=mode,
+        target_date=target_date,
+        defaults={'result_text': result_text}
+    )
+
+    return cache

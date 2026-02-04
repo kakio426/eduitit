@@ -1,4 +1,5 @@
 from django import forms
+from allauth.account.forms import SignupForm
 from .models import UserProfile
 
 class APIKeyForm(forms.ModelForm):
@@ -51,3 +52,5 @@ class UserProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ['nickname', 'role', 'gemini_api_key', 'padlet_api_key']
+
+# CustomSignupForm moved to core/signup_forms.py

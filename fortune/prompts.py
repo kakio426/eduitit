@@ -149,13 +149,14 @@ def get_general_prompt(data, chart_context=None):
 💫 {data['name']}님의 행복한 미래를 응원합니다!
 """
 
-def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context):
+def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context, mode='general'):
     """특정 날짜의 일진(운세) 분석 프롬프트 (Lite 최적화)"""
     gender_str = get_gender_korean(gender)
     natal_info = get_chart_info(natal_context)
     target_info = get_chart_info(target_context)
-    
-    return f"""
+
+    # 공통 프롬프트 기반
+    base_prompt = f"""
 [Role] 30년 경력 명리 전문가 (다정하고 긍정적인 말투)
 [System Logic] **데이터 절대 준수 및 서식 규칙 엄수.**
 1. **계산 금지**: 제공된 원국 데이터를 그대로 쓰십시오.
@@ -173,13 +174,37 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 
 ## 🌟 오늘의 주요 기운 (십신)
 - 주요 십신 의미와 오늘 흐르는 에너지 설명
+"""
 
-## 💡 선생님을 위한 조언
-- 행동 지침 및 주의사항 (짧게)
+    # 모드별 맞춤 조언 추가
+    if mode == 'teacher':
+        return base_prompt + """
+## 🏫 교사 맞춤 조언
+- 오늘의 학급 경영 팁
+- 학생/학부모 관계 주의사항
+- 업무 진행 시 유의점
+- 교실에서 활용할 수 있는 행운 아이템
 
 ## 🍀 행운 코드
-- 행운의 시간: 
-- 행운의 색상: 
+- 행운의 시간:
+- 행운의 색상:
+- 행운의 방향:
+
+💫 오늘도 학생들과 함께 빛나는 하루 되세요!
+"""
+    else:
+        return base_prompt + """
+## 💼 오늘의 활동 조언
+- 업무/학업 진행 방향
+- 인간관계 주의사항
+- 재물운 활용 팁
+
+## 🍀 행운 코드
+- 행운의 시간:
+- 행운의 색상:
+- 행운의 방향:
+
+💫 행복한 하루 보내세요!
 """
 
 def get_prompt(mode, data, chart_context=None):

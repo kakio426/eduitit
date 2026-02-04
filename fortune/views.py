@@ -288,7 +288,7 @@ def saju_view(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_streaming_api(request):
-    """실시간 스트리밍 사주 분석 API"""
+    """실시간 스트리밍 사주 분석 API (캐싱 지원)"""
     if getattr(request, 'limited', False):
         return JsonResponse({'error': 'LIMIT_EXCEEDED'}, status=429)
 
@@ -300,20 +300,55 @@ def saju_streaming_api(request):
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
     data = form.cleaned_data
+    mode = data['mode']
     chart_context = get_chart_context(data)
-    prompt = get_prompt(data['mode'], data, chart_context=chart_context)
+
+    # 캐싱 로직: natal_hash 생성 및 DB 조회
+    natal_hash = get_natal_hash(chart_context)
+    cached_result = get_cached_result(
+        user=request.user,
+        natal_hash=natal_hash,
+        mode=mode,
+        topic=None
+    )
 
     def stream_response():
         try:
-            # Yield initial metadata if needed (or just start spawning text)
+            # 캐시 히트: 저장된 결과를 빠르게 스트리밍
+            if cached_result:
+                logger.info(f"Cache HIT (streaming) for natal_hash={natal_hash}, mode={mode}")
+                yield cached_result.result_text
+                return
+
+            # 캐시 미스: AI 호출 및 결과 수집
+            logger.info(f"Cache MISS (streaming) for natal_hash={natal_hash}, mode={mode}")
+            prompt = get_prompt(mode, data, chart_context=chart_context)
+            full_response = []
+
             for chunk in generate_ai_response(prompt, request):
+                full_response.append(chunk)
                 yield chunk
+
+            # 스트리밍 완료 후 캐시 저장
+            complete_text = "".join(full_response)
+            if request.user.is_authenticated and complete_text:
+                save_cached_result(
+                    user=request.user,
+                    natal_hash=natal_hash,
+                    result_text=complete_text,
+                    chart_context=chart_context,
+                    mode=mode,
+                    topic=None
+                )
+                logger.info(f"Cached streaming result for natal_hash={natal_hash}")
+
         except Exception as e:
             logger.exception("Streaming error")
             yield f"\n\n[오류 발생: {str(e)}]"
 
     response = StreamingHttpResponse(stream_response(), content_type='text/plain; charset=utf-8')
     response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx/Gunicorn
+    response['X-Cache-Hit'] = 'true' if cached_result else 'false'  # 캐시 히트 표시
     return response
 
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
@@ -375,7 +410,7 @@ def saju_api_view(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def daily_fortune_api(request):
-    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d)"""
+    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d) - 캐싱 지원"""
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
@@ -388,6 +423,7 @@ def daily_fortune_api(request):
         natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
         name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
+        mode = data.get('mode', request.session.get('saju_mode', 'general'))  # 모드 파라미터 추가
 
         if not target_date_str:
             return JsonResponse({'error': 'Target date required'}, status=400)
@@ -398,6 +434,30 @@ def daily_fortune_api(request):
         target_dt = tz.localize(target_dt).replace(hour=12) # Noon check
         target_context = calculator.get_pillars(target_dt)
 
+        # natal_hash 생성 (캐싱용)
+        natal_hash = get_natal_hash({'pillars': natal_data})
+
+        # 캐시 조회 (로그인 사용자만)
+        cached_result = None
+        if request.user.is_authenticated:
+            from .utils.caching import get_cached_daily_fortune
+            cached_result = get_cached_daily_fortune(
+                request.user,
+                natal_hash,
+                mode,
+                target_dt.date()
+            )
+
+        # 캐시 히트
+        if cached_result:
+            return JsonResponse({
+                'success': True,
+                'result': cached_result.result_text,
+                'target_date': target_date_str,
+                'cached': True  # 캐시 사용 표시
+            })
+
+        # 캐시 미스 → AI 호출
         # Build Natal Context with objects to include element info
         from .models import Stem, Branch
         def get_pillar_obj(ganji_str):
@@ -417,15 +477,25 @@ def daily_fortune_api(request):
             'hour': get_pillar_obj(natal_data.get('hour'))
         }
 
-        # Prompt
+        # Prompt (모드 포함)
         from .prompts import get_daily_fortune_prompt
-        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
+        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
 
         # Wrap generator to maintain current sync behavior
         response_text = "".join(generate_ai_response(prompt, request))
 
-        # 통계용 로그 저장
+        # 결과 캐싱 (로그인 사용자만)
         if request.user.is_authenticated:
+            from .utils.caching import save_daily_fortune_cache
+            save_daily_fortune_cache(
+                request.user,
+                natal_hash,
+                mode,
+                target_dt.date(),
+                response_text
+            )
+
+            # 통계용 로그 저장
             from .models import DailyFortuneLog
             DailyFortuneLog.objects.create(
                 user=request.user,
@@ -435,7 +505,8 @@ def daily_fortune_api(request):
         return JsonResponse({
             'success': True,
             'result': response_text,
-            'target_date': target_date_str
+            'target_date': target_date_str,
+            'cached': False  # 새로 생성
         })
 
     except Exception as e:
@@ -464,11 +535,21 @@ def save_fortune_api(request):
 
 
 @login_required
-def saju_history(request):
-    """내 사주 보관함 목록"""
+def saju_history(request, mode=None):
+    """내 사주 보관함 목록 (모드 필터링 지원)"""
     from .models import FortuneResult
     history = FortuneResult.objects.filter(user=request.user)
-    return render(request, 'fortune/history.html', {'history': history})
+
+    # 모드 필터링
+    if mode in ['teacher', 'general', 'daily']:
+        history = history.filter(mode=mode)
+
+    context = {
+        'history': history,
+        'current_mode': mode,
+    }
+
+    return render(request, 'fortune/history.html', context)
 
 
 @login_required

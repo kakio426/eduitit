@@ -676,6 +676,8 @@
         background: #cbd5e1;
         border-radius: 10px;
     }
+
+    {% block mode_specific_css %}{% endblock %}
 </style>
 {% endblock %}
 
@@ -703,7 +705,7 @@
     </div>
 
     <!-- 헤더 -->
-    {% block page_header %}
+    {% block mode_header %}
     <div class="text-center mb-12" data-aos="fade-down">
         <div class="w-28 h-28 mx-auto mb-6 rounded-full shadow-clay-inner flex items-center justify-center">
             <span class="text-6xl">🔮</span>
@@ -826,7 +828,7 @@
         </div>
     </div>
     {% endif %}
-    {% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+    {% endif %}
 
     <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
     <div id="quickAccessContainer" class="hidden mb-8">
@@ -885,6 +887,7 @@
                 {% csrf_token %}
 
                 <!-- 모드 선택 -->
+                {% block mode_selector %}
                 <div class="mb-8">
                     <label class="block text-2xl font-bold text-gray-600 mb-4">
                         <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>상담 모드
@@ -901,6 +904,7 @@
                     </div>
                     <input type="hidden" name="mode" id="modeInput" value="teacher">
                 </div>
+                {% endblock %}
 
                 <!-- 이름 -->
                 <div class="mb-6">
@@ -1840,11 +1844,14 @@
             return;
         }
 
-        const favoriteData = {
-            date: document.getElementById('favoriteDate').value,
-            label: document.getElementById('favoriteLabel').value,
-            memo: document.getElementById('favoriteMemo').value
-        };
+        const dateValue = document.getElementById('favoriteDate').value;
+        const labelValue = document.getElementById('favoriteLabel').value;
+        const memoValue = document.getElementById('favoriteMemo').value;
+
+        if (!dateValue || !labelValue) {
+            showToast('날짜와 라벨을 입력해주세요', 'error');
+            return;
+        }
 
         try {
             const response = await fetch('{% url "fortune:favorite_date_add_api" %}', {
@@ -1853,14 +1860,20 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken.value
                 },
-                body: JSON.stringify(favoriteData)
+                body: JSON.stringify({
+                    date: dateValue,
+                    label: labelValue,
+                    memo: memoValue
+                })
             });
 
             const data = await response.json();
             if (data.success) {
                 closeFavoriteDateModal();
                 await loadFavoriteDates();
-                showToast('즐겨찾기에 추가되었습니다', 'success');
+                showToast('즐겨찾기가 추가되었습니다', 'success');
+            } else {
+                showToast('오류: ' + data.error, 'error');
             }
         } catch (e) {
             showToast('추가 중 오류가 발생했습니다', 'error');
@@ -1888,7 +1901,7 @@
             const data = await response.json();
             if (data.success) {
                 await loadFavoriteDates();
-                showToast('삭제되었습니다', 'success');
+                showToast('즐겨찾기가 삭제되었습니다', 'success');
             }
         } catch (e) {
             showToast('삭제 중 오류가 발생했습니다', 'error');
@@ -1896,602 +1909,92 @@
     }
 
     // ============================================
-    // 통계 함수
-    // ============================================
-
     // 통계 로드
+    // ============================================
     async function loadStatistics() {
         try {
             const response = await fetch('{% url "fortune:statistics_api" %}');
             const data = await response.json();
-
-            document.getElementById('statTotalAnalyses').textContent = data.total_analyses;
-            document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
-            document.getElementById('statRecentActivity').textContent = data.recent_activity;
+            document.getElementById('statTotalAnalyses').textContent = data.total_analyses || 0;
+            document.getElementById('statTotalDaily').textContent = data.total_daily || 0;
+            document.getElementById('statRecentActivity').textContent = data.recent_activity || 0;
         } catch (e) {
             console.error('Failed to load statistics:', e);
         }
     }
 
     // ============================================
-    // 알림/리마인더 함수
+    // 리마인더 관련
     // ============================================
+    function checkReminder() {
+        const reminderDate = localStorage.getItem('sajuReminder');
+        if (!reminderDate) return;
 
-    // 내일 운세 리마인더 설정
+        const today = new Date().toDateString();
+        if (reminderDate === today) {
+            document.getElementById('reminderBanner').classList.remove('hidden');
+        }
+    }
+
     function setTomorrowReminder() {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-
-        localStorage.setItem('fortuneReminder', tomorrow.getTime());
-        showToast('내일 알림이 설정되었습니다! 🔔', 'success');
+        localStorage.setItem('sajuReminder', tomorrow.toDateString());
+        showToast('내일 알림이 설정되었습니다', 'success');
     }
 
-    // 리마인더 확인
-    function checkReminder() {
-        const reminderTime = localStorage.getItem('fortuneReminder');
-        if (!reminderTime) return;
-
-        const now = new Date().getTime();
-        const reminderDate = parseInt(reminderTime);
-
-        // 리마인더 날짜가 지났으면 배너 표시
-        if (now >= reminderDate) {
-            const banner = document.getElementById('reminderBanner');
-            if (banner) {
-                banner.classList.remove('hidden');
-            }
-        }
-    }
-
-    // 리마인더 배너 닫기
     function dismissReminder() {
+        localStorage.removeItem('sajuReminder');
         document.getElementById('reminderBanner').classList.add('hidden');
-        localStorage.removeItem('fortuneReminder');
     }
 
-    // 이전 사주 결과 복원 함수
-    function restorePendingSajuResult() {
-        const isAuthenticated = "{{ user.is_authenticated }}" === "True";
-        const pendingData = localStorage.getItem('pendingSajuResult');
-
-        if (!pendingData) return;
-
-        try {
-            const data = JSON.parse(pendingData);
-            const age = Date.now() - data.timestamp;
-
-            // 24시간 이내 데이터만 복원
-            if (age > 24 * 60 * 60 * 1000) {
-                localStorage.removeItem('pendingSajuResult');
-                return;
-            }
-
-            // 결과가 이미 있으면 복원하지 않음
-            const hasCurrentResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
-            if (hasCurrentResult) return;
-
-            // UI 전환
-            document.getElementById('formContainer').classList.add('hidden');
-            document.getElementById('resultContainer').classList.remove('hidden');
-            document.getElementById('shareSection').classList.remove('hidden');
-            document.getElementById('dailyFortuneSection').classList.remove('hidden');
-            document.getElementById('saveSection').classList.remove('hidden');
-            document.getElementById('resultDivider').classList.remove('hidden');
-
-            // 결과 복원
-            const resultTarget = document.getElementById('markdownResult');
-            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
-
-            detectAndShowElement(data.result);
-            updateShareCard(data.result);
-
-            // 스크롤
-            setTimeout(() => {
-                document.getElementById('resultContainer').scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 100);
-
-            // 로그인한 경우 자동 저장 제안
-            if (isAuthenticated) {
-                showToast('이전 사주 결과를 복원했습니다!');
-
-                // 자동으로 보관함에 저장 제안
-                setTimeout(() => {
-                    if (confirm('복원된 사주 결과를 보관함에 저장하시겠습니까?')) {
-                        // 임시로 chart 데이터 저장
-                        const chartDataContainer = document.createElement('script');
-                        chartDataContainer.id = 'saju-chart-data';
-                        chartDataContainer.type = 'application/json';
-                        chartDataContainer.textContent = JSON.stringify(data.chart);
-                        document.body.appendChild(chartDataContainer);
-
-                        saveToLibrary();
-                        localStorage.removeItem('pendingSajuResult');
-                    }
-                }, 1000);
-            } else {
-                showToast('이전 사주 결과를 복원했습니다! 회원가입하면 영구 보관할 수 있어요.');
-            }
-
-        } catch (e) {
-            console.error('Failed to restore pending result:', e);
-            localStorage.removeItem('pendingSajuResult');
-        }
-    }
-
-    // 오행별 이모티콘 매핑
-    const ELEMENT_MAP = {
-        '갑': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무' },
-        '을': { element: 'wood', icon: '🌿', name: '을목(乙木)', desc: '풀, 넝쿨' },
-        '병': { element: 'fire', icon: '☀️', name: '병화(丙火)', desc: '태양' },
-        '정': { element: 'fire', icon: '🕯️', name: '정화(丁火)', desc: '촛불' },
-        '무': { element: 'earth', icon: '⛰️', name: '무토(戊토)', desc: '큰 산' },
-        '기': { element: 'earth', icon: '🏔️', name: '기토(己土)', desc: '논밭' },
-        '경': { element: 'metal', icon: '⚔️', name: '경금(庚金)', desc: '칼, 바위' },
-        '신': { element: 'metal', icon: '💎', name: '신금(辛金)', desc: '보석' },
-        '임': { element: 'water', icon: '🌊', name: '임수(壬水)', desc: '바다' },
-        '계': { element: 'water', icon: '💧', name: '계수(癸水)', desc: '비, 이슬' }
-    };
-
-    // 모드 토글
-    function setMode(mode) {
-        document.getElementById('modeInput').value = mode;
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.mode === mode) {
-                btn.classList.add('active');
-            }
-        });
-    }
-
-    // 폼 제출 핸들러 (Streaming 적용)
-    document.getElementById('sajuForm')?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const form = e.target;
-        const formData = new FormData(form);
-
-        // localStorage에 입력 정보 저장
-        const inputData = {
-            name: formData.get('name'),
-            gender: formData.get('gender'),
-            birth_year: parseInt(formData.get('birth_year')),
-            birth_month: parseInt(formData.get('birth_month')),
-            birth_day: parseInt(formData.get('birth_day')),
-            birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
-            birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
-            calendar_type: formData.get('calendar_type'),
-            mode: formData.get('mode'),
-            timestamp: Date.now()
-        };
-        localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
-
-        // UI 전환
-        document.getElementById('formContainer').classList.add('hidden');
-        document.getElementById('resultContainer').classList.remove('hidden');
-
-        // 결과 섹션 노출 (초기엔 숨겨져 있을 수 있음)
-        document.getElementById('shareSection').classList.remove('hidden');
-        document.getElementById('dailyFortuneSection').classList.remove('hidden');
-        document.getElementById('saveSection').classList.remove('hidden');
-        document.getElementById('resultDivider').classList.remove('hidden');
-
-        // 결과 영역 상단으로 부드럽게 스크롤
-        const resultContainer = document.getElementById('resultContainer');
-        if (resultContainer) {
-            // 약간의 지연 후 스크롤 (UI 전환이 완료된 후)
-            setTimeout(() => {
-                resultContainer.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 100);
-        }
-
-        const resultTarget = document.getElementById('markdownResult');
-
-        // 재치있는 로딩 멘트 랜덤 선택
-        const loadingMessages = [
-            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-            '🔮 천간지지의 비밀을 해독하는 중...',
-            '⚡ 음양오행의 조화를 계산하는 중...',
-            '🌟 하늘의 별자리에 질문을 던지는 중...',
-            '📿 육십갑자의 숨은 의미를 찾는 중...',
-            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
-            '✨ 당신의 운명 코드를 분석하는 중...',
-            '🧙 30년 경력 명리학자가 사주를 보는 중...',
-            '📖 주역 64괘를 펼쳐보는 중...',
-            '🎴 천기누설! 운명의 실타래를 푸는 중...',
-            '🔥 오행의 균형을 측정하는 중...',
-            '💫 우주의 기운과 교신하는 중...',
-            '🎯 당신만의 행운 포인트를 찾는 중...',
-            '🌙 달의 위상과 당신의 운을 대조하는 중...',
-            '🎐 바람의 방향으로 길흉을 점치는 중...'
-        ];
-
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-        resultTarget.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
-
-        try {
-            const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || '분석 중 오류가 발생했습니다.');
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let accumulatedText = '';
-
-            // 로딩 메시지는 계속 유지 (스트리밍 제거)
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                accumulatedText += chunk;
-
-                // [Error Detection] Check for error signatures in the stream
-                // Sometimes backend streams an error message instead of failing the request
-                if (accumulatedText.startsWith('[오류 발생:') || accumulatedText.startsWith('{"error":')) {
-                    const errorMsg = accumulatedText.replace('[오류 발생:', '').replace(']', '').trim();
-                    throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
-                }
-
-                // 실시간 렌더링 제거 - 완료 후 한번에 표시
-                // resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-            }
-
-            // 완료 후 한번에 렌더링 (부드러운 페이드 인)
-            resultTarget.style.opacity = '0';
-            resultTarget.style.transition = 'opacity 0.5s ease-in-out';
-            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-
-            // 약간의 딜레이 후 페이드 인
-            setTimeout(() => {
-                resultTarget.style.opacity = '1';
-            }, 100);
-
-            // 완료 후 추가 처리
-            detectAndShowElement(accumulatedText);
-            updateShareCard(accumulatedText);
-
-            // 일간 정보 추출 및 localStorage 업데이트
-            const daystemMatch = accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/);
-            if (daystemMatch) {
-                const savedInput = localStorage.getItem('lastSajuInput');
-                if (savedInput) {
-                    const data = JSON.parse(savedInput);
-                    data.daystem = daystemMatch[1];
-                    localStorage.setItem('lastSajuInput', JSON.stringify(data));
-                }
-            }
-
-            // 비회원 결과 보존: 로컬 스토리지에 저장
-            const chartDataElem = document.getElementById('saju-chart-data');
-            const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
-
-            localStorage.setItem('pendingSajuResult', JSON.stringify({
-                result: accumulatedText,
-                chart: chartData,
-                name: "{{ name|default:'' }}",
-                gender: "{{ gender|default:'' }}",
-                mode: formData.get('mode'),
-                timestamp: Date.now()
-            }));
-
-        } catch (err) {
-            console.error(err);
-            let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
-
-            // 힌트 제공 (선택적)
-            if (err.message && !err.message.includes('fetch')) {
-                userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
-            }
-
-            resultTarget.innerHTML = `
-                <div class="p-6 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-center shadow-sm">
-                    <div class="text-4xl mb-3">🌪️</div>
-                    <div class="font-bold text-lg whitespace-pre-line">${userMessage}</div>
-                    <button onclick="window.location.reload()" class="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">
-                        <i class="fa-solid fa-rotate-right mr-2"></i>다시 시도하기
-                    </button>
-                </div>
-            `;
-        }
-    });
-
-    // 토스트 메시지
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const toastMsg = document.getElementById('toastMessage');
-        if (toast && toastMsg) {
-            toastMsg.textContent = message;
-
-            // 기존 타입 클래스 제거
-            toast.classList.remove('success', 'error', 'info');
-            toast.classList.add(type);
-
-            toast.classList.add('show');
-
-            // 이전 타이머 있으면 제거
-            if (window.toastTimer) clearTimeout(window.toastTimer);
-
-            window.toastTimer = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-    }
-
-    // --- Core UI & Analysis Functions ---
-
-    // 일간 감지 및 오행 배지 표시
-    function detectAndShowElement(markdown) {
-        const badgeContainer = document.getElementById('elementBadge');
-        if (!badgeContainer) return;
-
-        // "일주(나): OO" 또는 "일간: O" 패턴에서 첫 글자(천간) 추출
-        const patterns = [
-            /일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일간[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일주[^:]*:[^가-힣]*([갑을병정무기경신임계])/
-        ];
-
-        let detected = null;
-        for (const pattern of patterns) {
-            const match = markdown.match(pattern);
-            if (match) {
-                detected = match[1];
-                break;
-            }
-        }
-
-        if (detected && ELEMENT_MAP[detected]) {
-            const info = ELEMENT_MAP[detected];
-            badgeContainer.innerHTML = `
-                <div class="element-badge ${info.element}">
-                    <span class="element-icon">${info.icon}</span>
-                    <span>${info.name}</span>
-                    <span style="opacity: 0.8; font-weight: normal;">- ${info.desc}</span>
-                </div>
-            `;
-        }
-    }
-
-    // 공유카드 업데이트 (이미지 저장용)
-    function updateShareCard(markdown) {
-        const nameContext = "{{ name|default:'선생님' }}";
-        const titleElem = document.getElementById('shareCardTitle');
-        if (titleElem) titleElem.textContent = `🔮 ${nameContext} 선생님의 사주`;
-
-        for (const [char, info] of Object.entries(ELEMENT_MAP)) {
-            if (markdown.includes(char)) {
-                const iconElem = document.getElementById('shareCardElement')?.querySelector('.icon');
-                const textElem = document.getElementById('shareCardElementText');
-                if (iconElem) iconElem.textContent = info.icon;
-                if (textElem) textElem.textContent = info.name;
-                break;
-            }
-        }
-
-        const keywordMatch = markdown.match(/키워드[^"]*"([^"]+)"[^"]*"([^"]+)"[^"]*"([^"]+)"/);
-        if (keywordMatch) {
-            const keywordsContainer = document.getElementById('shareCardKeywords');
-            if (keywordsContainer) {
-                keywordsContainer.innerHTML = `
-                    <span class="share-card-keyword">"${keywordMatch[1]}"</span>
-                    <span class="share-card-keyword">"${keywordMatch[2]}"</span>
-                    <span class="share-card-keyword">"${keywordMatch[3]}"</span>
-                `;
-            }
-        }
-        const colorMatch = markdown.match(/행운[^:]*색[^:]*[:：]\s*([가-힣]+색?)/);
-        if (colorMatch) {
-            const colorElem = document.getElementById('shareCardLuckyColor');
-            if (colorElem) colorElem.textContent = colorMatch[1];
-        }
-    }
-
-    // 카카오톡 공유 (카드 형태)
-    function shareToKakao() {
-        try {
-            if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
-                showToast('카카오톡 연결 중입니다. 잠시 후 다시 시도해주세요.');
-                return;
-            }
-
-            const nameContext = "{{ name|default:'선생님' }}";
-            const resultText = document.getElementById('markdownResult')?.innerText || '';
-
-            // 일간 정보에 따른 아이콘/이름 추출
-            let elementIcon = '🔮';
-            let elementName = '사주 분석';
-            for (const [char, info] of Object.entries(ELEMENT_MAP)) {
-                if (resultText.includes(char)) {
-                    elementIcon = info.icon;
-                    elementName = info.name;
-                    break;
-                }
-            }
-
-            // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
-            let shareUrl = window.location.origin + '/fortune/saju/';
-            if (typeof savedResultId !== 'undefined' && savedResultId) {
-                shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
-            }
-
-            Kakao.Share.sendDefault({
-                objectType: 'feed',
-                content: {
-                    title: `${elementIcon} ${nameContext} 선생님의 사주 결과`,
-                    description: `${elementName} 기운을 가진 선생님을 위한 분석입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
-                    imageUrl: 'https://images.unsplash.com/photo-1515940175183-6798529cb860?q=80&w=800&auto=format&fit=crop',
-                    link: {
-                        mobileWebUrl: shareUrl,
-                        webUrl: shareUrl,
-                    },
-                },
-                buttons: [
-                    {
-                        title: '나도 사주보기 🔮',
-                        link: {
-                            mobileWebUrl: window.location.origin + '/fortune/saju/',
-                            webUrl: window.location.origin + '/fortune/saju/',
-                        },
-                    },
-                ],
-            });
-        } catch (e) {
-            console.error('Kakao Share Error:', e);
-            if (navigator.share) {
-                navigator.share({
-                    title: '🔮 AI 사주 분석 결과',
-                    text: 'Eduitit에서 내 사주를 분석해봤어요!',
-                    url: window.location.origin + '/fortune/saju/'
-                });
-            } else {
-                copyLink();
-            }
-        }
-    }
-
-    // 링크 복사 (카카오톡 공유와 동일한 로직)
-    function copyLink() {
-        // 저장된 결과가 있으면 detail 페이지로, 없으면 메인 페이지로
-        let shareUrl = window.location.origin + '/fortune/saju/';
-        if (typeof savedResultId !== 'undefined' && savedResultId) {
-            shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
-        }
-
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            showToast('링크가 복사되었습니다!');
-        }).catch(() => {
-            const textarea = document.createElement('textarea');
-            textarea.value = shareUrl;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('링크가 복사되었습니다!');
-        });
-    }
-
-    // 이미지 저장 (현재 결과 화면 전체 캡처)
-    function saveAsImage() {
-        const resultCard = document.getElementById('resultCard');
-        if (!resultCard) {
-            showToast('저장할 결과가 없습니다.');
-            return;
-        }
-
-        // 로딩 표시
-        showToast('이미지를 생성하고 있습니다...');
-
-        // 캡처할 요소 준비 (no-print 요소들 임시 숨김)
-        const noPrintElements = document.querySelectorAll('.no-print');
-        noPrintElements.forEach(el => el.style.display = 'none');
-
-        html2canvas(resultCard, {
-            backgroundColor: '#E0E5EC',  // 배경색
-            scale: 2,  // 고해상도
-            useCORS: true,
-            logging: false,
-            windowWidth: resultCard.scrollWidth,
-            windowHeight: resultCard.scrollHeight
-        }).then(canvas => {
-            // no-print 요소들 복원
-            noPrintElements.forEach(el => el.style.display = '');
-
-            const link = document.createElement('a');
-            const nameContext = "{{ name|default:'사주결과' }}";
-            link.download = `${nameContext}_사주분석_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            showToast('이미지가 저장되었습니다!');
-        }).catch(err => {
-            console.error(err);
-            // no-print 요소들 복원
-            noPrintElements.forEach(el => el.style.display = '');
-            showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
-        });
-    }
-
+    // ============================================
     // 빠른 날짜 선택
-    function setQuickDate(type) {
+    // ============================================
+    function setQuickDate(offset) {
         const today = new Date();
-        let targetDate = new Date(today);
+        let targetDate;
 
-        if (type === 'weekend') {
-            // 이번 주 토요일 찾기
-            const dayOfWeek = today.getDay(); // 0(일) ~ 6(토)
+        if (offset === 'weekend') {
+            // 이번 주말 (토요일)
+            const dayOfWeek = today.getDay();
             const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+            targetDate = new Date(today);
             targetDate.setDate(today.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
         } else {
-            // 숫자면 일수 더하기
-            targetDate.setDate(today.getDate() + type);
+            targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + offset);
         }
 
-        // YYYY-MM-DD 포맷으로 변환
         const year = targetDate.getFullYear();
         const month = String(targetDate.getMonth() + 1).padStart(2, '0');
         const day = String(targetDate.getDate()).padStart(2, '0');
-        const dateString = `${year}-${month}-${day}`;
-
-        // 날짜 입력 필드 업데이트
-        document.getElementById('targetDateInput').value = dateString;
-
-        // 바로 운세 확인 (선택적)
-        // checkDailyFortune();
+        document.getElementById('targetDateInput').value = `${year}-${month}-${day}`;
     }
 
+    // ============================================
     // 일진 확인
+    // ============================================
     async function checkDailyFortune() {
         const targetDate = document.getElementById('targetDateInput').value;
-        if (!targetDate) return;
-
-        const chartDataElem = document.getElementById('saju-chart-data');
-        let natalChart = {};
-
-        if (chartDataElem) {
-            natalChart = JSON.parse(chartDataElem.textContent);
-        } else {
-            const resultText = document.getElementById('markdownResult').innerText;
-            // 더 유연한 정규표현식: 괄호 내 한자 포함 지원 및 불필요한 공백/별표 무시
-            const extractPillar = (type) => {
-                const regex = new RegExp(type + '[^가-힣]*[:：]?\\s*([가-힣]{1,2}|[\\u4E00-\\u9FFF]{1,2})');
-                const match = resultText.match(regex);
-                return match ? match[1].substring(0, 2) : null;
-            };
-
-            natalChart.year = extractPillar('년주');
-            natalChart.month = extractPillar('월주');
-            natalChart.day = extractPillar('일주') || extractPillar('일간');
-            natalChart.hour = extractPillar('시주');
-        }
-
-        if (!natalChart.day) {
-            showToast('분석 결과를 찾을 수 없습니다. 먼저 사주 분석을 완료해주세요.', 'error');
+        if (!targetDate) {
+            showToast('날짜를 선택해주세요', 'error');
             return;
         }
 
-        const isGuest = "{{ user.is_authenticated }}" === "False";
-        const selectedDate = new Date(targetDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const resultDataElem = document.getElementById('saju-result-data');
+        if (!resultDataElem) {
+            showToast('먼저 사주를 조회해주세요', 'error');
+            return;
+        }
 
-        if (isGuest && selectedDate > today) {
-            alert('선생님, 미래의 운세는 회원가입 후에 확인하실 수 있어요! 😊');
+        const sajuData = JSON.parse(resultDataElem.textContent);
+        const chartDataElem = document.getElementById('saju-chart-data');
+        const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
             return;
         }
 
@@ -2517,27 +2020,25 @@
         // 랜덤 메시지 선택
         const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
 
-        // 로딩 오버레이 메시지 업데이트
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay.querySelector('.text-2xl');
-        if (loadingText) {
-            loadingText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-3"></i>${randomMessage}`;
-        }
-        loadingOverlay.classList.add('show');
+        // 로딩 표시 (특별한 메시지와 함께)
+        const resultDiv = document.getElementById('dailyFortuneResult');
+        const contentDiv = document.getElementById('dailyFortuneContent');
+        resultDiv.classList.remove('hidden');
+        contentDiv.innerHTML = `<div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500"></i><p class="mt-4 text-lg font-bold text-gray-700">${randomMessage}</p></div>`;
 
         try {
             const response = await fetch('{% url "fortune:daily_fortune_api" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': csrfToken.value
                 },
                 body: JSON.stringify({
                     target_date: targetDate,
-                    natal_chart: natalChart,
+                    natal_chart: chartData,
                     name: "{{ name|default:'선생님' }}",
                     gender: "{{ gender|default:'female' }}",
-                    mode: typeof CURRENT_MODE !== 'undefined' ? CURRENT_MODE : 'general'  // 모드 전달
+                    mode: typeof CURRENT_MODE !== 'undefined' ? CURRENT_MODE : 'general'
                 })
             });
 
@@ -2548,13 +2049,11 @@
                 await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5초 대기
             }
 
-            document.getElementById('loadingOverlay').classList.remove('show');
-
             if (data.success) {
-                const dailyResultDiv = document.getElementById('dailyFortuneResult');
-                const dailyContentDiv = document.getElementById('dailyFortuneContent');
+                marked.setOptions({ breaks: true, gfm: true });
+                const htmlContent = DOMPurify.sanitize(marked.parse(data.result));
 
-                // 캐시 사용 표시
+                // 캐시 배지
                 let cachedBadge = '';
                 if (data.cached) {
                     cachedBadge = '<div class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold mb-4"><i class="fa-solid fa-bolt mr-2"></i>저장된 결과입니다 (빠른 로딩)</div>';
@@ -2564,10 +2063,10 @@
                 window.currentDailyFortune = {
                     targetDate: targetDate,
                     resultText: data.result,
-                    natalChart: natalChart
+                    natalChart: chartData
                 };
 
-                // 보관함 저장 버튼 추가
+                // 보관함 저장 버튼
                 const saveButton = `
                     <div class="mt-4 text-center">
                         <button onclick="saveDailyFortuneToLibrary(window.currentDailyFortune.targetDate, window.currentDailyFortune.resultText, window.currentDailyFortune.natalChart)"
@@ -2577,15 +2076,14 @@
                     </div>
                 `;
 
-                dailyContentDiv.innerHTML = cachedBadge + DOMPurify.sanitize(marked.parse(data.result)) + saveButton;
-                dailyResultDiv.classList.remove('hidden');
-                dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                contentDiv.innerHTML = cachedBadge + htmlContent + saveButton;
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
-                showToast(data.error || '분석 중 오류가 발생했습니다.');
+                contentDiv.innerHTML = `<div class="text-red-600"><strong>오류:</strong> ${data.error}</div>`;
             }
         } catch (e) {
-            document.getElementById('loadingOverlay').classList.remove('show');
-            showToast('서버 통신 오류가 발생했습니다.');
+            console.error(e);
+            contentDiv.innerHTML = '<div class="text-red-600">일진 조회 중 오류가 발생했습니다.</div>';
         }
     }
 
@@ -2624,150 +2122,239 @@
         }
     }
 
-    // 저장된 결과 ID를 저장할 변수
-    let savedResultId = null;
-
-    // 보관함 저장
+    // ============================================
+    // 보관함에 저장
+    // ============================================
     async function saveToLibrary() {
-        console.log("Saving to library...");
-
-        if ("{{ user.is_authenticated }}" === "False") {
-            alert('로그인 후 이용 가능합니다. 😊');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            showToast('페이지를 새로고침해주세요', 'error');
             return;
         }
 
-        const resultElem = document.getElementById('markdownResult');
-        if (!resultElem) {
-            console.error("Result element not found");
-            return;
-        }
-
-        const resultText = resultElem.innerText;
+        const resultDataElem = document.getElementById('saju-result-data');
         const chartDataElem = document.getElementById('saju-chart-data');
-        let natalChart = {};
 
-        if (chartDataElem) {
-            try {
-                natalChart = JSON.parse(chartDataElem.textContent);
-            } catch (e) {
-                console.error("Chart JSON parse error", e);
-            }
-        } else {
-            // 스트리밍 모드인 경우 텍스트에서 간단히 일주 보존
-            const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            if (dayMatch) natalChart.day = dayMatch[1];
+        if (!resultDataElem || !chartDataElem) {
+            showToast('저장할 결과가 없습니다', 'error');
+            return;
         }
 
-        const dailyResultDiv = document.getElementById('dailyFortuneResult');
-        const dailyContentDiv = document.getElementById('dailyFortuneContent');
-        const dailyText = (dailyResultDiv && !dailyResultDiv.classList.contains('hidden') && dailyContentDiv) ? dailyContentDiv.innerText : null;
+        const sajuData = JSON.parse(resultDataElem.textContent);
+        const chartData = JSON.parse(chartDataElem.textContent);
 
         try {
-            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-            if (!csrfInput) {
-                throw new Error("보안 토큰(CSRF)을 찾을 수 없습니다. 페이지를 새로고침해주세요.");
-            }
-
-            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
+            const response = await fetch('{% url "fortune:save_to_library_api" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfInput.value
+                    'X-CSRFToken': csrfToken.value
                 },
                 body: JSON.stringify({
-                    mode: dailyText ? 'daily' : 'teacher',
-                    natal_chart: natalChart,
-                    result_text: dailyText ? dailyText : resultText,
-                    target_date: dailyText ? document.getElementById('targetDateInput')?.value : null
+                    saju_result: sajuData,
+                    chart_data: chartData
                 })
             });
 
             const data = await response.json();
+
             if (data.success) {
-                savedResultId = data.result_id; // 저장된 ID 저장
-                showToast('보관함에 저장되었습니다! 🎁');
-                // 버튼 상태 변경 (중복 저장 방지)
-                const saveBtn = document.querySelector('#saveSection button');
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>저장 완료';
-                    saveBtn.classList.remove('bg-purple-600');
-                    saveBtn.classList.add('bg-gray-400');
-                }
+                showToast('보관함에 저장되었습니다', 'success');
             } else {
-                showToast('저장 실패: ' + (data.error || '알 수 없는 오류'));
+                showToast('저장 중 오류가 발생했습니다: ' + data.error, 'error');
             }
         } catch (e) {
             console.error(e);
-            showToast(e.message || '서버 통신 오류가 발생했습니다.');
+            showToast('서버 통신 오류가 발생했습니다', 'error');
         }
     }
 
-    // 캐시된 결과 로딩 애니메이션 (자연스러운 UX를 위한 인위적 딜레이)
-    {% if cached %}
-    document.addEventListener('DOMContentLoaded', function() {
-        const resultContainer = document.getElementById('markdownResult');
-        const loadingMessages = [
-            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-            '🔮 천간지지의 비밀을 해독하는 중...',
-            '⚡ 음양오행의 조화를 계산하는 중...',
-            '🌟 하늘의 별자리에 질문을 던지는 중...',
-            '📿 육십갑자의 숨은 의미를 찾는 중...',
-            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
-            '✨ 당신의 운명 코드를 분석하는 중...',
-            '🧙 30년 경력 명리학자가 사주를 보는 중...',
-            '📖 주역 64괘를 펼쳐보는 중...',
-            '🎴 천기누설! 운명의 실타래를 푸는 중...',
-            '🔥 오행의 균형을 측정하는 중...',
-            '💫 우주의 기운과 교신하는 중...',
-            '🎯 당신만의 행운 포인트를 찾는 중...',
-            '🌙 달의 위상과 당신의 운을 대조하는 중...',
-            '🎐 바람의 방향으로 길흉을 점치는 중...'
-        ];
+    // ============================================
+    // 공유 기능
+    // ============================================
+    function shareToKakao() {
+        if (!Kakao.isInitialized()) {
+            showToast('카카오 SDK 초기화 실패', 'error');
+            return;
+        }
 
-        // 실제 결과를 임시 저장
-        const actualResult = resultContainer.innerHTML;
+        const resultDataElem = document.getElementById('saju-result-data');
+        if (!resultDataElem) {
+            showToast('공유할 결과가 없습니다', 'error');
+            return;
+        }
 
-        // 랜덤 로딩 메시지 선택
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        const sajuData = JSON.parse(resultDataElem.textContent);
+        const chartDataElem = document.getElementById('saju-chart-data');
+        const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
 
-        // 로딩 화면으로 교체
-        resultContainer.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
+        const elementName = chartData.daystem_element || '사주';
+        const description = sajuData.substring(0, 100) + '...';
 
-        // 3-5초 랜덤 딜레이 후 실제 결과 표시
-        const delay = 3000 + Math.random() * 2000; // 3000ms ~ 5000ms
+        Kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+                title: `🔮 ${elementName} 사주 분석 결과`,
+                description: description,
+                imageUrl: 'https://eduitit.up.railway.app/static/images/saju_share.png',
+                link: {
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
+                },
+            },
+            buttons: [
+                {
+                    title: '내 사주 보기',
+                    link: {
+                        mobileWebUrl: window.location.origin + '{% url "fortune:saju" %}',
+                        webUrl: window.location.origin + '{% url "fortune:saju" %}',
+                    },
+                },
+            ],
+        });
+    }
+
+    function copyLink() {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showToast('링크가 복사되었습니다!', 'success');
+        }).catch(() => {
+            showToast('링크 복사에 실패했습니다', 'error');
+        });
+    }
+
+    async function saveAsImage() {
+        const shareCard = document.getElementById('shareCardContainer');
+        if (!shareCard) {
+            showToast('이미지 생성 실패', 'error');
+            return;
+        }
+
+        try {
+            shareCard.style.left = '0';
+            shareCard.style.top = '0';
+
+            const canvas = await html2canvas(shareCard, {
+                backgroundColor: null,
+                scale: 2
+            });
+
+            shareCard.style.left = '-9999px';
+
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'saju_result.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('이미지가 저장되었습니다', 'success');
+            });
+        } catch (e) {
+            console.error(e);
+            shareCard.style.left = '-9999px';
+            showToast('이미지 저장에 실패했습니다', 'error');
+        }
+    }
+
+    // ============================================
+    // 오행 배지 및 공유 카드 업데이트
+    // ============================================
+    function detectAndShowElement(markdown) {
+        const elementMap = {
+            '갑목': { name: '갑목(甲木)', class: 'wood', icon: '🌳' },
+            '을목': { name: '을목(乙木)', class: 'wood', icon: '🌿' },
+            '병화': { name: '병화(丙火)', class: 'fire', icon: '☀️' },
+            '정화': { name: '정화(丁火)', class: 'fire', icon: '🕯️' },
+            '무토': { name: '무토(戊土)', class: 'earth', icon: '⛰️' },
+            '기토': { name: '기토(己土)', class: 'earth', icon: '🏔️' },
+            '경금': { name: '경금(庚金)', class: 'metal', icon: '⚔️' },
+            '신금': { name: '신금(辛金)', class: 'metal', icon: '💎' },
+            '임수': { name: '임수(壬水)', class: 'water', icon: '🌊' },
+            '계수': { name: '계수(癸水)', class: 'water', icon: '💧' }
+        };
+
+        for (const [key, value] of Object.entries(elementMap)) {
+            if (markdown.includes(key)) {
+                const badge = document.getElementById('elementBadge');
+                badge.innerHTML = `
+                    <div class="element-badge ${value.class}">
+                        <span class="element-icon">${value.icon}</span>
+                        <span>${value.name}</span>
+                    </div>
+                `;
+                return value;
+            }
+        }
+        return null;
+    }
+
+    function updateShareCard(markdown) {
+        const element = detectAndShowElement(markdown);
+        if (!element) return;
+
+        document.getElementById('shareCardElementText').textContent = element.name;
+        document.querySelector('#shareCardElement .icon').textContent = element.icon;
+
+        // 키워드 추출 (간단한 예시)
+        const keywords = ['새로운 시작', '도전', '성장'];
+        const keywordsHtml = keywords.map(k => `<span class="share-card-keyword">"${k}"</span>`).join('');
+        document.getElementById('shareCardKeywords').innerHTML = keywordsHtml;
+    }
+
+    // ============================================
+    // 토스트 메시지
+    // ============================================
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+
+        toastMessage.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.classList.add('show');
+
         setTimeout(() => {
-            // 부드러운 페이드 효과
-            resultContainer.style.opacity = '0';
-            resultContainer.style.transition = 'opacity 0.3s ease-in-out';
+            toast.classList.remove('show');
+        }, 3000);
+    }
 
-            setTimeout(() => {
-                resultContainer.innerHTML = actualResult;
-                resultContainer.style.opacity = '1';
+    // ============================================
+    // 모드 토글
+    // ============================================
+    function setMode(mode) {
+        document.getElementById('modeInput').value = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active');
+            }
+        });
+    }
 
-                // 결과 표시 후 오행 배지 등 업데이트
-                if (typeof detectAndShowElement === 'function') {
-                    detectAndShowElement(actualResult);
+    // ============================================
+    // 가입 후 복원 (localStorage 사용)
+    // ============================================
+    function restorePendingSajuResult() {
+        const pendingResult = localStorage.getItem('pendingSajuResult');
+        if (pendingResult && "{{ user.is_authenticated }}" === "True") {
+            try {
+                const data = JSON.parse(pendingResult);
+                if (data.timestamp && (Date.now() - data.timestamp < 10 * 60 * 1000)) {
+                    showToast('가입 후 사주 결과를 복원 중...', 'info');
+                    // 폼 제출 로직 실행 (필요시)
                 }
-                if (typeof updateShareCard === 'function') {
-                    updateShareCard(actualResult);
-                }
-            }, 300);
-        }, delay);
-    });
-    {% endif %}
+                localStorage.removeItem('pendingSajuResult');
+            } catch (e) {
+                console.error('Failed to restore pending result:', e);
+            }
+        }
+    }
+
+    {% block mode_specific_js %}{% endblock %}
 </script>
 
 {% if result %}
 {{ result|json_script:"saju-result-data" }}
 {{ chart|json_script:"saju-chart-data" }}
-{% block mode_script %}
-<script>
-    // 기본 모드 (자식 템플릿에서 오버라이드 가능)
-    const CURRENT_MODE = 'general';
-</script>
-{% endblock %}
-
 <script>
     // SSR 결과 렌더링
     document.addEventListener('DOMContentLoaded', function () {
