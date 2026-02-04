@@ -2349,6 +2349,164 @@
         }
     }
 
+    // ============================================
+    // 사주 폼 제출 핸들러
+    // ============================================
+    document.getElementById('sajuForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        // localStorage에 입력 정보 저장
+        const inputData = {
+            name: formData.get('name'),
+            gender: formData.get('gender'),
+            birth_year: parseInt(formData.get('birth_year')),
+            birth_month: parseInt(formData.get('birth_month')),
+            birth_day: parseInt(formData.get('birth_day')),
+            birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
+            birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
+            calendar_type: formData.get('calendar_type'),
+            mode: formData.get('mode'),
+            timestamp: Date.now()
+        };
+        localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
+
+        // UI 전환
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('resultContainer').classList.remove('hidden');
+
+        // 결과 섹션 노출
+        document.getElementById('shareSection')?.classList.remove('hidden');
+        document.getElementById('dailyFortuneSection')?.classList.remove('hidden');
+        document.getElementById('saveSection')?.classList.remove('hidden');
+        document.getElementById('resultDivider')?.classList.remove('hidden');
+
+        // 결과 영역 상단으로 스크롤
+        const resultContainer = document.getElementById('resultContainer');
+        if (resultContainer) {
+            setTimeout(() => {
+                resultContainer.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 100);
+        }
+
+        const resultTarget = document.getElementById('markdownResult');
+
+        // 로딩 멘트
+        const loadingMessages = [
+            '📜 고서를 뒤적이며 명리를 풀이하는 중...',
+            '🔮 천간지지의 비밀을 해독하는 중...',
+            '⚡ 음양오행의 조화를 계산하는 중...',
+            '🌟 하늘의 별자리에 질문을 던지는 중...',
+            '📿 육십갑자의 숨은 의미를 찾는 중...',
+            '🎋 사주 팔자를 한 글자씩 음미하는 중...',
+            '✨ 당신의 운명 코드를 분석하는 중...',
+            '🧙 30년 경력 명리학자가 사주를 보는 중...',
+            '📖 주역 64괘를 펼쳐보는 중...',
+            '🎴 천기누설! 운명의 실타래를 푸는 중...',
+            '🔥 오행의 균형을 측정하는 중...',
+            '💫 우주의 기운과 교신하는 중...',
+            '🎯 당신만의 행운 포인트를 찾는 중...',
+            '🌙 달의 위상과 당신의 운을 대조하는 중...',
+            '🎐 바람의 방향으로 길흉을 점치는 중...'
+        ];
+
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        resultTarget.innerHTML = `<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> ${randomMessage}</div>`;
+
+        try {
+            const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || '분석 중 오류가 발생했습니다.');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedText = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                accumulatedText += chunk;
+
+                // 에러 감지
+                if (accumulatedText.startsWith('[오류 발생:') || accumulatedText.startsWith('{"error":')) {
+                    const errorMsg = accumulatedText.replace('[오류 발생:', '').replace(']', '').trim();
+                    throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
+                }
+            }
+
+            // 완료 후 렌더링
+            resultTarget.style.opacity = '0';
+            resultTarget.style.transition = 'opacity 0.5s ease-in-out';
+            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+
+            setTimeout(() => {
+                resultTarget.style.opacity = '1';
+            }, 100);
+
+            // 추가 처리
+            detectAndShowElement(accumulatedText);
+            updateShareCard(accumulatedText);
+
+            // 일간 정보 추출
+            const daystemMatch = accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/);
+            if (daystemMatch) {
+                const savedInput = localStorage.getItem('lastSajuInput');
+                if (savedInput) {
+                    const data = JSON.parse(savedInput);
+                    data.daystem = daystemMatch[1];
+                    localStorage.setItem('lastSajuInput', JSON.stringify(data));
+                }
+            }
+
+            // 비회원 결과 보존
+            const chartDataElem = document.getElementById('saju-chart-data');
+            const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
+
+            localStorage.setItem('pendingSajuResult', JSON.stringify({
+                result: accumulatedText,
+                chart: chartData,
+                name: formData.get('name'),
+                gender: formData.get('gender'),
+                mode: formData.get('mode'),
+                timestamp: Date.now()
+            }));
+
+        } catch (err) {
+            console.error(err);
+            let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
+
+            if (err.message && !err.message.includes('fetch')) {
+                userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
+            }
+
+            resultTarget.innerHTML = `
+                <div class="p-6 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-center shadow-sm">
+                    <div class="text-4xl mb-3">🌪️</div>
+                    <div class="font-bold text-lg whitespace-pre-line">${userMessage}</div>
+                    <button onclick="window.location.reload()" class="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">
+                        <i class="fa-solid fa-rotate-right mr-2"></i>다시 시도하기
+                    </button>
+                </div>
+            `;
+        }
+    });
+
     {% block mode_specific_js %}{% endblock %}
 </script>
 
