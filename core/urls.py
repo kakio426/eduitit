@@ -21,4 +21,5 @@ urlpatterns = [
     path('sso/schoolit/', views.sso_to_schoolit, name='sso_schoolit'),
     path('policy/', views.policy_view, name='policy'),
     path('update-email/', views.update_email, name='update_email'),
+    path('delete-account/', views.delete_account, name='delete_account'),
 ]

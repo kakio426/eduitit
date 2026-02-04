@@ -2,6 +2,7 @@ from .models import VisitorLog
 from django.utils import timezone
 from django.shortcuts import redirect
 from django.urls import reverse
+from urllib.parse import quote
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,31 +51,41 @@ class VisitorTrackingMiddleware:
         return response
 
 
-class EmailRequiredMiddleware:
+class OnboardingMiddleware:
     """
-    기존 가입자 중 이메일이 없는 사용자에게 이메일 입력 요구
-    - 로그인 상태 && 이메일 없음 → 이메일 입력 페이지로 리다이렉트
-    - 특정 경로는 예외 처리 (무한 루프 방지)
+    모든 가입자(소셜 로그인 포함)가 이메일과 닉네임을 반드시 갖도록 강제하는 미들웨어.
+    - 로그인 상태인데 이메일이 없거나, 닉네임이 기본값(userXX)인 경우 
+    - 정보 입력 페이지로 리다이렉트합니다.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # 로그인한 사용자이면서 이메일이 없는 경우
-        if request.user.is_authenticated and not request.user.email:
-            # 예외 경로 (이 경로들은 이메일 없이도 접근 가능)
-            allowed_paths = [
-                '/accounts/logout/',
-                '/update-email/',  # 이메일 업데이트 페이지 자체
-                '/admin/',  # 관리자 페이지
-                '/static/',  # 정적 파일
-                '/media/',   # 미디어 파일
-            ]
+        if request.user.is_authenticated:
+            profile = getattr(request.user, 'userprofile', None)
+            
+            # 이메일이 없거나, 닉네임이 없거나, 닉네임이 여전히 'user'로 시작하는 자동생성된 것이라면
+            needs_onboarding = (
+                not request.user.email or 
+                not profile or 
+                not profile.nickname or 
+                profile.nickname.startswith('user')
+            )
 
-            # 현재 경로가 예외 경로가 아니면 이메일 입력 페이지로 리다이렉트
-            if not any(request.path.startswith(path) for path in allowed_paths):
-                return redirect('update_email')
+            if needs_onboarding:
+                allowed_paths = [
+                    '/accounts/logout/',
+                    '/update-email/',
+                    '/delete-account/',
+                    '/admin/',
+                    '/secret-admin-kakio/',
+                    '/static/',
+                    '/media/',
+                ]
+
+                if not any(request.path.startswith(path) for path in allowed_paths):
+                    return redirect(f"{reverse('update_email')}?next={quote(request.get_full_path())}")
 
         response = self.get_response(request)
         return response

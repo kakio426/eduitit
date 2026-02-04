@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}회원 탈퇴 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full" data-aos="zoom-in">
+        <div class="clay-card p-10 bg-white/60 space-y-8 text-center">
+            <div
+                class="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center text-red-500 text-4xl mx-auto shadow-clay-inner">
+                <i class="fa-solid fa-user-xmark float-icon"></i>
+            </div>
+
+            <div class="space-y-4">
+                <h1 class="text-4xl font-bold text-gray-700 font-round">정말 떠나시나요?</h1>
+                <p class="text-xl text-gray-400 leading-relaxed">
+                    탈퇴하시면 선생님의 소중한 <span class="text-red-500 font-bold">활동 기록과 설정이 모두 삭제</span>됩니다.<br>
+                    삭제된 데이터는 복구할 수 없습니다.
+                </p>
+            </div>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <button type="submit"
+                    class="w-full py-4 bg-red-500 text-white rounded-2xl font-bold text-xl shadow-clay hover:bg-red-600 transition-all hover:scale-[1.02] active:scale-95">
+                    네, 계정을 삭제하겠습니다
+                </button>
+                <a href="{% url 'settings' %}"
+                    class="block w-full py-4 bg-gray-200 text-gray-600 rounded-2xl font-bold text-xl hover:bg-gray-300 transition-all">
+                    아니오, 계속 이용하겠습니다
+                </a>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

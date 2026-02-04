@@ -307,27 +307,59 @@ def policy_view(request):
 @login_required
 def update_email(request):
     """
-    기존 사용자 이메일 업데이트
-    - 이메일이 없는 기존 가입자에게 이메일 입력 요구
-    - 필수 입력 후 원래 가려던 페이지로 리다이렉트
+    기존 사용자 이메일 및 닉네임 업데이트
+    - 이메일이나 프로필 정보가 부족한 사용자에게 필무 정보 입력 요구
     """
-    # 이미 이메일이 있으면 홈으로
-    if request.user.email:
+    profile = request.user.userprofile
+    
+    # 이미 이메일과 닉네임이 모두 있으면 홈으로
+    if request.user.email and profile.nickname and not profile.nickname.startswith('user'):
         return redirect('home')
 
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
+        nickname = request.POST.get('nickname', '').strip()
 
-        # 간단한 이메일 검증
-        if email and '@' in email and '.' in email:
-            request.user.email = email
-            request.user.save()
-            messages.success(request, '이메일이 성공적으로 등록되었습니다! 🎉')
-
-            # 원래 가려던 곳으로 리다이렉트
-            next_url = request.GET.get('next', 'home')
-            return redirect(next_url)
-        else:
+        # 이메일 검증
+        if not (email and '@' in email and '.' in email):
             messages.error(request, '올바른 이메일 주소를 입력해주세요.')
+            return render(request, 'core/update_email.html', {'nickname': nickname, 'email': email})
 
-    return render(request, 'core/update_email.html')
+        # 닉네임 검증
+        if not nickname:
+            messages.error(request, '사용하실 별명을 입력해주세요.')
+            return render(request, 'core/update_email.html', {'nickname': nickname, 'email': email})
+
+        # 정보 저장
+        request.user.email = email
+        request.user.first_name = nickname # SIS 표준: 이름 필드 채움
+        request.user.save()
+        
+        profile.nickname = nickname
+        profile.save()
+        
+        messages.success(request, f'{nickname}님, 환영합니다! 정보가 성공적으로 등록되었습니다. 🎉')
+
+        # 원래 가려던 곳(next)이 있으면 그리로, 없으면 역할 선택 페이지(첫 가입 시)로
+        next_url = request.GET.get('next')
+        if not next_url or next_url == 'home':
+            if not profile.role:
+                return redirect('select_role')
+            return redirect('home')
+        return redirect(next_url)
+
+    return render(request, 'core/update_email.html', {
+        'nickname': profile.nickname if profile.nickname and not profile.nickname.startswith('user') else "",
+        'email': request.user.email
+    })
+
+@login_required
+def delete_account(request):
+    """사용자 계정 탈퇴 처리"""
+    if request.method == 'POST':
+        user = request.user
+        user.delete()
+        messages.success(request, '그동안 이용해주셔서 감사합니다. 계정이 안전하게 삭제되었습니다.')
+        return redirect('home')
+    
+    return render(request, 'core/delete_account.html')
