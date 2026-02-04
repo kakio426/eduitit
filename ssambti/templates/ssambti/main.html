@@ -155,10 +155,10 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col lg:flex-row gap-6 items-start">
-        <!-- 메인 콘텐츠 -->
-        <div class="flex-1 w-full lg:max-w-3xl" id="results-wrapper">
+    <div class="container mx-auto max-w-[1400px]">
+        <div class="flex gap-6">
+            <!-- 메인 콘텐츠 영역 -->
+            <div class="flex-1 min-w-0" id="results-wrapper">
 
         <!-- Everything inside this div will be replaced by the result -->
         <div id="quiz-ui-container">
@@ -279,21 +279,19 @@
         </div>
     </div>
 
-        <!-- Loader -->
-        <div id="zoo-loader"
-            class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
-            <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
-                <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
+            <!-- Loader -->
+            <div id="zoo-loader"
+                class="htmx-indicator fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md">
+                <div class="w-32 h-32 rounded-full shadow-clay flex items-center justify-center bg-white mb-6">
+                    <i class="fa-solid fa-calculator fa-bounce text-5xl text-orange-500"></i>
+                </div>
             </div>
-        </div>
-        </div>
+            </div>
 
-        <!-- SNS 사이드바 -->
-        <div class="hidden lg:block w-[380px] flex-shrink-0">
-            <div class="relative">
+            <!-- SNS 사이드바 (우측 고정) -->
+            <aside class="hidden xl:block w-[400px] flex-shrink-0">
                 {% include 'core/partials/sns_widget.html' %}
-            </div>
-        </div>
+            </aside>
         </div>
     </div>
 </section>

@@ -108,10 +108,10 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col lg:flex-row gap-6 items-start">
-        <!-- 메인 콘텐츠 -->
-        <div class="flex-1 w-full lg:max-w-4xl space-y-8 animate-fade-in-up">
+    <div class="container mx-auto max-w-[1400px]">
+        <div class="flex gap-6">
+            <!-- 메인 콘텐츠 영역 -->
+            <div class="flex-1 min-w-0 space-y-8 animate-fade-in-up">
 
         <!-- Navigation -->
         <div class="flex justify-between items-center px-2">
@@ -171,12 +171,10 @@
         </div>
         </div>
 
-        <!-- SNS 사이드바 -->
-        <div class="hidden lg:block w-[380px] flex-shrink-0">
-            <div class="relative">
-                {% include 'core/partials/sns_widget.html' %}
-            </div>
-        </div>
+        <!-- SNS 사이드바 (우측 고정) -->
+        <aside class="hidden xl:block w-[400px] flex-shrink-0">
+            {% include 'core/partials/sns_widget.html' %}
+        </aside>
         </div>
     </div>
 </section>
