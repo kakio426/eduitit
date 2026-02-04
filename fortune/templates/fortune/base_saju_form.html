@@ -47,45 +47,47 @@
     .markdown-body h3 {
         color: #2d3748;
         font-weight: bold;
-        margin-top: 1.25rem;
-        margin-bottom: 0.75rem;
+        margin-top: 0.875rem;
+        margin-bottom: 0.5rem;
         border-bottom: 2px solid #edf2f7;
-        padding-bottom: 0.5rem;
+        padding-bottom: 0.375rem;
     }
 
     .markdown-body h1 {
-        font-size: 1.75rem;
+        font-size: 1.625rem;
     }
 
     .markdown-body h2 {
-        font-size: 1.5rem;
+        font-size: 1.375rem;
     }
 
     .markdown-body h3 {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
     }
 
     .markdown-body p {
-        margin-bottom: 0.875rem;
+        margin-bottom: 0.625rem;
         white-space: pre-wrap; /* 줄바꿈 보존 */
+        line-height: 1.6;
     }
 
     .markdown-body ul,
     .markdown-body ol {
-        margin-bottom: 0.875rem;
-        padding-left: 2rem;
+        margin-bottom: 0.625rem;
+        padding-left: 1.75rem;
     }
 
     .markdown-body li {
-        margin-bottom: 0.375rem;
+        margin-bottom: 0.25rem;
+        line-height: 1.5;
     }
 
     .markdown-body blockquote {
-        border-left: 6px solid #a78bfa;
+        border-left: 5px solid #a78bfa;
         background: #f3f4f6;
-        padding: 1rem 1.5rem;
-        border-radius: 0 16px 16px 0;
-        margin: 1rem 0;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0 12px 12px 0;
+        margin: 0.75rem 0;
         font-style: italic;
     }
 
@@ -2261,18 +2263,36 @@
     // ============================================
     function detectAndShowElement(markdown) {
         const elementMap = {
-            '갑목': { name: '갑목(甲木)', class: 'wood', icon: '🌳' },
-            '을목': { name: '을목(乙木)', class: 'wood', icon: '🌿' },
-            '병화': { name: '병화(丙火)', class: 'fire', icon: '☀️' },
-            '정화': { name: '정화(丁火)', class: 'fire', icon: '🕯️' },
-            '무토': { name: '무토(戊土)', class: 'earth', icon: '⛰️' },
-            '기토': { name: '기토(己土)', class: 'earth', icon: '🏔️' },
-            '경금': { name: '경금(庚金)', class: 'metal', icon: '⚔️' },
-            '신금': { name: '신금(辛金)', class: 'metal', icon: '💎' },
-            '임수': { name: '임수(壬水)', class: 'water', icon: '🌊' },
-            '계수': { name: '계수(癸水)', class: 'water', icon: '💧' }
+            '갑': { name: '갑목(甲木)', class: 'wood', icon: '🌳' },
+            '을': { name: '을목(乙木)', class: 'wood', icon: '🌿' },
+            '병': { name: '병화(丙火)', class: 'fire', icon: '☀️' },
+            '정': { name: '정화(丁火)', class: 'fire', icon: '🕯️' },
+            '무': { name: '무토(戊土)', class: 'earth', icon: '⛰️' },
+            '기': { name: '기토(己土)', class: 'earth', icon: '🏔️' },
+            '경': { name: '경금(庚金)', class: 'metal', icon: '⚔️' },
+            '신': { name: '신금(辛金)', class: 'metal', icon: '💎' },
+            '임': { name: '임수(壬水)', class: 'water', icon: '🌊' },
+            '계': { name: '계수(癸水)', class: 'water', icon: '💧' }
         };
 
+        // 일주에서 정확하게 추출 (예: "일주: 신유" -> "신")
+        const daystemMatch = markdown.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/);
+        if (daystemMatch) {
+            const daystem = daystemMatch[1];
+            const value = elementMap[daystem];
+            if (value) {
+                const badge = document.getElementById('elementBadge');
+                badge.innerHTML = `
+                    <div class="element-badge ${value.class}">
+                        <span class="element-icon">${value.icon}</span>
+                        <span>${value.name}</span>
+                    </div>
+                `;
+                return value;
+            }
+        }
+
+        // 일주 패턴을 찾지 못한 경우 기존 로직 사용
         for (const [key, value] of Object.entries(elementMap)) {
             if (markdown.includes(key)) {
                 const badge = document.getElementById('elementBadge');
