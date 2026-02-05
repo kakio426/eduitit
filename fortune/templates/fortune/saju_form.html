@@ -11,194 +11,126 @@
         pointer-events: auto;
     }
 
-    /* 마크다운 스타일 커스텀 */
-    .markdown-body {
-        font-family: 'NanumSquareRound', sans-serif;
-        font-size: 1.05rem;
-        line-height: 1.7;
-        color: #4a5568;
-        word-break: keep-all;
-        overflow-wrap: break-word;
-        white-space: pre-wrap; /* 줄바꿈 보존 */
-    }
-
-    .markdown-body table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 1.5rem;
-        display: block;
-        overflow-x: auto;
-    }
-
-    .markdown-body th,
-    .markdown-body td {
-        border: 1px solid #e2e8f0;
-        padding: 0.75rem;
-        text-align: left;
-    }
-
-    .markdown-body th {
-        background-color: #f7fafc;
-        font-weight: bold;
-    }
-
-    .markdown-body h1,
-    .markdown-body h2,
-    .markdown-body h3 {
-        color: #2d3748;
-        font-weight: bold;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-        border-bottom: 2px solid #edf2f7;
-        padding-bottom: 0.5rem;
-    }
-
-    .markdown-body h1 {
-        font-size: 1.75rem;
-    }
-
-    .markdown-body h2 {
-        font-size: 1.5rem;
-    }
-
-    .markdown-body h3 {
-        font-size: 1.25rem;
-    }
-
-    .markdown-body p {
-        margin-bottom: 1.5rem;
-        white-space: pre-wrap; /* 줄바꿈 보존 */
-    }
-
-    .markdown-body ul,
-    .markdown-body ol {
-        margin-bottom: 1.5rem;
-        padding-left: 2rem;
-    }
-
-    .markdown-body li {
-        margin-bottom: 0.5rem;
-    }
-
-    .markdown-body blockquote {
-        border-left: 6px solid #a78bfa;
-        background: #f3f4f6;
-        padding: 1rem 1.5rem;
-        border-radius: 0 16px 16px 0;
-        margin: 1.5rem 0;
-        font-style: italic;
-    }
-
-    .markdown-body strong {
-        color: #7c3aed;
-        background: linear-gradient(120deg, rgba(167, 139, 250, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%);
-        background-repeat: no-repeat;
-        background-size: 100% 40%;
-        background-position: 0 80%;
-    }
-
-    /* 오행 뱃지 스타일 */
-    .element-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 18px;
-        border-radius: 100px;
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: white;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .element-badge.wood {
-        background: linear-gradient(135deg, #10b981, #059669);
-    }
-
-    .element-badge.fire {
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-    }
-
-    .element-badge.earth {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-    }
-
-    .element-badge.metal {
-        background: linear-gradient(135deg, #94a3b8, #64748b);
-    }
-
-    .element-badge.water {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-    }
-
-    .element-icon {
-        font-size: 2rem;
-    }
-
     /* ========================================
-       공유 버튼 스타일
+       Premium Result Design Variables
        ======================================== */
-    .share-section {
-        margin-top: 2rem;
-        padding: 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-radius: 24px;
-        border: 2px solid #e2e8f0;
+    :root {
+        --main-bg: #f8fafc;
+        --premium-purple: #7c3aed;
+        --premium-indigo: #6366f1;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+        --clay-shadow: 8px 8px 16px rgba(160, 170, 190, 0.2), -6px -6px 14px rgba(255, 255, 255, 0.8);
     }
 
-    .share-title {
-        font-size: 1.1rem;
+    /* Result Pillar styling */
+    .pillar-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+        padding: 0.75rem 0.5rem;
+        border-radius: 1rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: var(--clay-shadow);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        border: var(--glass-border);
+        min-width: 65px;
+    }
+
+    .pillar-top {
+        font-size: 0.75rem;
         font-weight: 800;
+        color: #94a3b8;
+    }
+
+    .pillar-main {
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1.1;
+        font-family: 'NanumGothic', serif;
+    }
+
+    .pillar-sub {
+        font-size: 0.75rem;
+        font-weight: 700;
         color: #64748b;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
     }
 
-    .share-buttons {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
+    .color-wood {
+        color: #059669;
     }
 
-    .share-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        padding: 14px 24px;
-        border-radius: 16px;
+    .color-fire {
+        color: #dc2626;
+    }
+
+    .color-earth {
+        color: #d97706;
+    }
+
+    .color-metal {
+        color: #7c3aed;
+    }
+
+    .color-water {
+        color: #2563eb;
+    }
+
+    /* Analysis Content (Compact) */
+    .analysis-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    .analysis-content h2 {
         font-size: 1.4rem;
-        font-weight: bold;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        text-decoration: none;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        font-weight: 800;
+        color: #1e293b;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid rgba(124, 58, 237, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .share-btn:hover {
-        transform: translateY(-5px) scale(1.05);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    .analysis-content p {
+        font-size: 1.05rem;
+        line-height: 1.5;
+        color: #334155;
+        margin-bottom: 1rem;
     }
 
-    .share-btn:active {
-        transform: translateY(0) scale(0.98);
+    .analysis-content strong {
+        color: var(--premium-purple);
+        font-weight: 800;
+        background: linear-gradient(120deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
+        padding: 0 0.2rem;
+        border-radius: 4px;
     }
 
-    .share-btn.kakao {
-        background: #FEE500;
-        color: #3C1E1E;
+    .analysis-content li {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 1.05rem;
+        line-height: 1.5;
     }
 
-    .share-btn.link {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-    }
-
-    .share-btn.image {
-        background: linear-gradient(135deg, #06b6d4, #0891b2);
-        color: white;
+    .analysis-content li::before {
+        content: "✦";
+        position: absolute;
+        left: 0;
+        color: var(--premium-purple);
+        opacity: 0.7;
     }
 
     /* ========================================
@@ -406,46 +338,118 @@
         opacity: 0.85;
     }
 
-    /* 로딩 오버레이 */
-    .loading-overlay {
+    /* 프리미엄 로딩 모달 */
+    .loading-modal {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(224, 229, 236, 0.95);
-        z-index: 1000;
-        justify-content: center;
+        z-index: 9999;
         align-items: center;
-        flex-direction: column;
-        gap: 1.5rem;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
     }
 
-    .loading-overlay.show {
+    .loading-modal.show {
         display: flex;
     }
 
-    .loading-spinner {
-        width: 70px;
-        height: 70px;
-        border: 6px solid #e9d5ff;
-        border-top: 6px solid #7c3aed;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+    .modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
     }
 
-    @keyframes spin {
-        0% {
+    .modal-content {
+        position: relative;
+        background: linear-gradient(145deg, #7c3aed, #4f46e5);
+        border-radius: 32px;
+        padding: 3.5rem 2.5rem;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        color: white;
+    }
+
+    .bagua-spinner {
+        font-size: 5rem;
+        animation: rotate360 4s linear infinite;
+        margin-bottom: 2rem;
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
+    }
+
+    @keyframes rotate360 {
+        from {
             transform: rotate(0deg);
         }
 
-        100% {
+        to {
             transform: rotate(360deg);
         }
     }
 
-    .loading-text {
-        font-size: 2rem;
-        color: #7c3aed;
-        text-align: center;
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .modal-title {
+        font-size: 1.75rem;
+        font-weight: 900;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.025em;
+    }
+
+    .modal-subtitle {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 2.5rem;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+
+    .loading-progress-bar {
+        height: 10px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 100px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .loading-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #fbbf24, #f59e0b);
+        border-radius: 100px;
+        width: 0%;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+    }
+
+    .modal-tip {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-style: normal;
+        font-weight: 500;
     }
 
     /* 토스트 메시지 스타일 개선 */
@@ -687,7 +691,8 @@
         <div class="clay-card p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center text-white text-2xl animate-bounce">
+                    <div
+                        class="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center text-white text-2xl animate-bounce">
                         <i class="fa-solid fa-bell"></i>
                     </div>
                     <div>
@@ -744,7 +749,8 @@
         <div class="clay-card p-6 md:p-8" data-aos="fade-up">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-2xl">
+                    <div
+                        class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-2xl">
                         <i class="fa-solid fa-users"></i>
                     </div>
                     <div>
@@ -752,7 +758,8 @@
                         <p class="text-gray-600 font-medium text-base">여러 사람의 사주를 저장하고 관리하세요</p>
                     </div>
                 </div>
-                <button onclick="showProfileModal()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all">
+                <button onclick="showProfileModal()"
+                    class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all">
                     <i class="fa-solid fa-plus mr-2"></i>프로필 추가
                 </button>
             </div>
@@ -812,13 +819,15 @@
         </div>
     </div>
     {% endif %}
-    {% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+    {% endif %} <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
 
     <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
     <div id="quickAccessContainer" class="hidden mb-8">
-        <div class="clay-card p-8 md:p-10 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 border-2 border-purple-200" data-aos="fade-up">
+        <div class="clay-card p-8 md:p-10 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 border-2 border-purple-200"
+            data-aos="fade-up">
             <div class="flex items-center gap-3 mb-6">
-                <div class="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center text-4xl" id="quickAccessIcon">
+                <div class="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center text-4xl"
+                    id="quickAccessIcon">
                     🔮
                 </div>
                 <div>
@@ -848,16 +857,16 @@
                 </div>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4">
-                <button onclick="useLastSajuInfo()" class="flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
+            <div class="flex flex-col md:flex-row gap-3">
+                <button onclick="manualRestoreResult()" id="quickViewResultBtn" class="hidden flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
                     bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
                     shadow-lg hover:shadow-xl hover:-translate-y-1">
-                    <i class="fa-solid fa-bolt mr-2"></i>이 정보로 다시 보기
+                    <i class="fa-solid fa-eye mr-2"></i>마지막 결과 바로보기
                 </button>
                 <button onclick="showNewSajuForm()" class="flex-1 py-5 rounded-2xl font-bold text-2xl transition-all
                     bg-white text-gray-700 border-2 border-gray-300
                     hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1">
-                    <i class="fa-solid fa-user-plus mr-2"></i>새로운 사주 입력
+                    <i class="fa-solid fa-plus mr-2"></i>새로운 사주 분석하기
                 </button>
             </div>
         </div>
@@ -981,178 +990,227 @@
         </div>
     </div>
 
-    <!-- 결과 화면 섹션 -->
+    <!-- 결과 화면 섹션 (Compact Premium Redesign) -->
     <div id="resultContainer" class="{% if not result %}hidden{% endif %}">
-        <div class="clay-card p-8 md:p-12" data-aos="fade-up" id="resultCard">
 
-            <!-- 오행 배지 (JavaScript로 동적 생성) -->
-            <div id="elementBadge" class="text-center mb-6"></div>
+        <!-- 1. 히어로 통합 카드 (일간 + 사주 명식) -->
+        <div id="capture-area" class="relative z-10 mb-8">
+            <div class="clay-card overflow-hidden transition-transform hover:scale-[1.005]">
+                <div id="hero-bg" class="absolute inset-0 opacity-30 transition-colors duration-1000"></div>
+                <div class="relative p-6 md:p-8 grid md:grid-cols-12 gap-6 md:gap-10 items-center">
+                    <!-- Left: Identity Section -->
+                    <div
+                        class="md:col-span-5 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-slate-200 border-dashed pb-6 md:pb-0 md:pr-6">
+                        <div class="flex items-center justify-between w-full mb-4">
+                            <div class="text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
+                                id="premiumBadge">
+                                <span id="badgeIcon">🔮</span> <span id="badgeText">분석 중...</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-20 h-20 flex items-center justify-center text-4xl bg-white rounded-2xl shadow-clay-inner"
+                                id="stemIconBig">🔮</div>
+                            <div>
+                                <h2 class="text-2xl font-black leading-tight"><span id="stemStaticName"
+                                        class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">...</span>
+                                </h2>
+                                <p class="text-sm text-gray-500 font-medium mt-1 leading-snug break-keep"
+                                    id="stemStaticDesc">분석 결과를 불러오고 있습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Natal Chart -->
+                    <div class="md:col-span-7 w-full">
+                        <div class="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border border-white/50 shadow-inner">
+                            <div id="sajuChartDisplay" class="grid grid-cols-4 gap-2 md:gap-4">
+                                <!-- JS will populate chart here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- 마크다운 결과 -->
-            <div class="markdown-body" id="markdownResult">
+        <!-- 2. 탭 네비게이션 -->
+        <div class="flex overflow-x-auto gap-2 mb-6 scrollbar-hide px-1" id="analysisTabs">
+            <button onclick="switchTab(this, 'summary')"
+                class="tab-btn active px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent shadow-sm bg-white/80">📌
+                핵심요약</button>
+            <button onclick="switchTab(this, 'personality')"
+                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">📜
+                기질/성격</button>
+            <button onclick="switchTab(this, 'wealth')"
+                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💰
+                재물운</button>
+            <button onclick="switchTab(this, 'career')"
+                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💼
+                직업/진로</button>
+            <button onclick="switchTab(this, 'compatibility')"
+                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">❤️
+                애정/인연</button>
+        </div>
+
+        <!-- 3. AI 분석 내용 -->
+        <div class="analysis-card relative overflow-hidden mb-10">
+            <div id="markdownResult" class="analysis-content prose prose-slate max-w-none md:columns-2 md:gap-10">
                 {% if result %}{{ result|safe }}{% endif %}
             </div>
+        </div>
 
-            <!-- 공유 섹션 (JS로 제어하거나 항상 표시) -->
-            <div id="shareSection" class="share-section {% if not result %}hidden{% endif %}">
-                <div class="share-title">
-                    <i class="fa-solid fa-share-nodes"></i>
-                    친구에게 공유하기
+        <!-- 4. 공유 액션 카드 -->
+        <div class="clay-card p-6 bg-white/50 border border-white/60 mb-10 no-print" id="shareSection">
+            <div class="flex flex-wrap gap-4 justify-center">
+                <button onclick="shareToKakao()"
+                    class="px-6 py-3 bg-[#FEE500] rounded-full font-bold flex items-center gap-2 hover:scale-105 transition shadow-sm"><i
+                        class="fa-solid fa-comment"></i> 카카오 공유</button>
+                <button onclick="saveAsImage()"
+                    class="px-6 py-3 bg-rose-500 text-white rounded-full font-bold flex items-center gap-2 hover:scale-105 transition shadow-sm"><i
+                        class="fa-solid fa-image"></i> 이미지 저장</button>
+                <button onclick="copyLink()"
+                    class="px-6 py-3 bg-white rounded-full font-bold flex items-center gap-2 hover:scale-105 transition shadow-sm border border-gray-100"><i
+                        class="fa-solid fa-link"></i> 링크 복사</button>
+                <button onclick="showNewSajuForm()"
+                    class="px-6 py-3 bg-purple-500 text-white rounded-full font-bold flex items-center gap-2 hover:scale-105 transition shadow-sm"><i
+                        class="fa-solid fa-rotate-right"></i> 다시 하기</button>
+            </div>
+        </div>
+
+        <!-- 특정 날짜 운세 (일진) -->
+        <div id="dailyFortuneSection"
+            class="bg-indigo-50/50 rounded-3xl p-8 border border-indigo-100 mb-8 {% if not result %}hidden{% endif %}">
+            <div class="flex items-center gap-3 mb-6">
+                <div
+                    class="w-10 h-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-calendar-check"></i>
                 </div>
-                <div class="share-buttons">
-                    <button class="share-btn kakao" onclick="shareToKakao()">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 3C6.48 3 2 6.48 2 10.5c0 2.53 1.67 4.75 4.17 6.02-.18.65-.66 2.35-.75 2.72-.12.47.17.46.36.34.15-.1 2.38-1.61 3.35-2.27.62.09 1.24.14 1.87.14 5.52 0 10-3.48 10-7.95S17.52 3 12 3z" />
-                        </svg>
-                        카카오톡
-                    </button>
-                    <button class="share-btn link" onclick="copyLink()">
-                        <i class="fa-solid fa-link"></i>
-                        링크 복사
-                    </button>
-                    <button class="share-btn image" onclick="saveAsImage()">
-                        <i class="fa-solid fa-image"></i>
-                        이미지 저장
-                    </button>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-700">날짜별 운세 확인</h3>
+                    <p class="text-slate-500 font-medium">중요한 행사나 모임이 있는 날의 운세를 확인해보세요.</p>
                 </div>
             </div>
 
-            <hr class="my-10 border-slate-200 {% if not result %}hidden{% endif %}" id="resultDivider">
-
-            <!-- 특정 날짜 운세 (일진) -->
-            <div id="dailyFortuneSection"
-                class="bg-indigo-50/50 rounded-3xl p-8 border border-indigo-100 mb-8 {% if not result %}hidden{% endif %}">
-                <div class="flex items-center gap-3 mb-6">
-                    <div
-                        class="w-10 h-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-calendar-check"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-black text-slate-700">날짜별 운세 확인</h3>
-                        <p class="text-slate-500 font-medium">중요한 행사나 모임이 있는 날의 운세를 확인해보세요.</p>
-                    </div>
-                </div>
-
-                <!-- 빠른 날짜 선택 버튼 -->
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <button type="button" onclick="setQuickDate(0)"
-                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
-                        오늘
-                    </button>
-                    <button type="button" onclick="setQuickDate(1)"
-                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
-                        내일
-                    </button>
-                    <button type="button" onclick="setQuickDate(2)"
-                        class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
-                        모레
-                    </button>
-                    <button type="button" onclick="setQuickDate('weekend')"
-                        class="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold text-base transition-all">
-                        이번 주말
-                    </button>
-                </div>
-
-                <div class="flex flex-col md:flex-row gap-4 items-center">
-                    <input type="date" id="targetDateInput" value="{% now 'Y-m-d' %}"
-                        class="flex-1 w-full bg-white border-2 border-indigo-100 rounded-2xl p-4 text-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
-                    <button onclick="checkDailyFortune()"
-                        class="w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                        운세 보기
-                    </button>
-                    {% if user.is_authenticated %}
-                    <button onclick="addFavoriteDate()" id="favoriteDateBtn"
-                        class="w-full md:w-auto px-6 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div id="dailyFortuneResult" class="mt-8 hidden animate-in fade-in slide-in-from-top duration-500">
-                    <div class="bg-white rounded-2xl p-6 border border-indigo-50 shadow-sm markdown-body"
-                        id="dailyFortuneContent">
-                        <!-- JS Populated -->
-                    </div>
-                </div>
+            <!-- 빠른 날짜 선택 버튼 -->
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button type="button" onclick="setQuickDate(0)"
+                    class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                    오늘
+                </button>
+                <button type="button" onclick="setQuickDate(1)"
+                    class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                    내일
+                </button>
+                <button type="button" onclick="setQuickDate(2)"
+                    class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold text-base transition-all">
+                    모레
+                </button>
+                <button type="button" onclick="setQuickDate('weekend')"
+                    class="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold text-base transition-all">
+                    이번 주말
+                </button>
             </div>
 
-            <!-- 저장/가입 유도 섹션 -->
-            <div id="saveSection" class="{% if not result %}hidden{% endif %}">
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <input type="date" id="targetDateInput" value="{% now 'Y-m-d' %}"
+                    class="flex-1 w-full bg-white border-2 border-indigo-100 rounded-2xl p-4 text-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
+                <button onclick="checkDailyFortune()"
+                    class="w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                    운세 보기
+                </button>
                 {% if user.is_authenticated %}
-                <div class="space-y-4">
-                    <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
-                        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
-                                    <i class="fa-solid fa-bookmark"></i>
-                                </div>
-                                <div class="text-left">
-                                    <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
-                                    <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.</p>
-                                </div>
-                            </div>
-                            <button onclick="saveToLibrary()"
-                                class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                                보관함에 저장
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-amber-50/50 rounded-3xl p-8 border border-amber-100">
-                        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-12 h-12 bg-amber-600/10 text-amber-600 rounded-2xl flex items-center justify-center text-2xl">
-                                    <i class="fa-solid fa-bell"></i>
-                                </div>
-                                <div class="text-left">
-                                    <h4 class="text-xl font-black text-slate-700">내일 운세 알림 받기</h4>
-                                    <p class="text-slate-500 font-medium">내일 다시 방문하면 리마인더를 표시해드릴게요.</p>
-                                </div>
-                            </div>
-                            <button onclick="setTomorrowReminder()"
-                                class="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                                알림 설정
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
-                                <i class="fa-solid fa-lock"></i>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
-                                <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리 볼 수 있어요. 😊</p>
-                            </div>
-                        </div>
-                        <a href="{% url 'account_signup' %}?next={% url 'fortune:saju' %}"
-                            class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                            가입하고 혜택 받기
-                        </a>
-                    </div>
-                </div>
+                <button onclick="addFavoriteDate()" id="favoriteDateBtn"
+                    class="w-full md:w-auto px-6 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                    <i class="fa-solid fa-star"></i>
+                </button>
                 {% endif %}
             </div>
 
-            <div class="mt-10 text-center" id="restartSection">
-                <a href="{% url 'fortune:saju' %}" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
-                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
-                    shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <i class="fa-solid fa-rotate-left mr-2"></i>다시 보기
-                </a>
+            <div id="dailyFortuneResult" class="mt-8 hidden animate-in fade-in slide-in-from-top duration-500">
+                <div class="bg-white rounded-2xl p-6 border border-indigo-50 shadow-sm markdown-body"
+                    id="dailyFortuneContent">
+                    <!-- JS Populated -->
+                </div>
             </div>
         </div>
+
+        <!-- 저장/가입 유도 섹션 -->
+        <div id="saveSection" class="{% if not result %}hidden{% endif %}">
+            {% if user.is_authenticated %}
+            <div class="space-y-4">
+                <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-bookmark"></i>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
+                                <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="saveToLibrary()"
+                            class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                            보관함에 저장
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50/50 rounded-3xl p-8 border border-amber-100">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-amber-600/10 text-amber-600 rounded-2xl flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-bell"></i>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-slate-700">내일 운세 알림 받기</h4>
+                                <p class="text-slate-500 font-medium">내일 다시 방문하면 리마인더를 표시해드릴게요.</p>
+                            </div>
+                        </div>
+                        <button onclick="setTomorrowReminder()"
+                            class="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                            알림 설정
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
+                            <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리
+                                볼 수 있어요. 😊</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'account_signup' %}?next={% url 'fortune:saju' %}"
+                        class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                        가입하고 혜택 받기
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-10 text-center" id="restartSection">
+            <button type="button" onclick="resetToForm()" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
+                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
+                    shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
+                <i class="fa-solid fa-rotate-left mr-2"></i>정보 수정 / 다른 사주 보기
+            </button>
+        </div>
+    </div>
     </div>
 
     <!-- 즐겨찾기 날짜 추가 모달 -->
-    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeFavoriteDateModalOnBackdrop(event)">
+    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4"
+        onclick="closeFavoriteDateModalOnBackdrop(event)">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
@@ -1172,7 +1230,8 @@
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">라벨</label>
-                    <input type="text" id="favoriteLabel" class="saju-input" placeholder="예: 시험일, 생일, 기념일" required maxlength="50">
+                    <input type="text" id="favoriteLabel" class="saju-input" placeholder="예: 시험일, 생일, 기념일" required
+                        maxlength="50">
                 </div>
 
                 <div>
@@ -1181,10 +1240,12 @@
                 </div>
 
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeFavoriteDateModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                    <button type="button" onclick="closeFavoriteDateModal()"
+                        class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
                         취소
                     </button>
-                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                    <button type="submit"
+                        class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
                         저장
                     </button>
                 </div>
@@ -1193,7 +1254,8 @@
     </div>
 
     <!-- 프로필 추가/수정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeProfileModalOnBackdrop(event)">
+    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4"
+        onclick="closeProfileModalOnBackdrop(event)">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
@@ -1210,12 +1272,14 @@
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">프로필 이름</label>
-                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required maxlength="20">
+                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required
+                        maxlength="20">
                 </div>
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">실제 이름</label>
-                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required maxlength="20">
+                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required
+                        maxlength="20">
                 </div>
 
                 <div>
@@ -1235,17 +1299,22 @@
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">생년월일</label>
                     <div class="grid grid-cols-3 gap-3">
-                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required min="1940" max="2025">
-                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1" max="12">
-                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1" max="31">
+                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required
+                            min="1940" max="2025">
+                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1"
+                            max="12">
+                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1"
+                            max="31">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">태어난 시간 (선택)</label>
                     <div class="grid grid-cols-2 gap-3">
-                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0" max="23">
-                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0" max="59">
+                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0"
+                            max="23">
+                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0"
+                            max="59">
                     </div>
                 </div>
 
@@ -1264,10 +1333,12 @@
                 </div>
 
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeProfileModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                    <button type="button" onclick="closeProfileModal()"
+                        class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
                         취소
                     </button>
-                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                    <button type="submit"
+                        class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
                         저장
                     </button>
                 </div>
@@ -1296,7 +1367,7 @@
             </div>
             <div class="share-card-footer">
                 <div class="logo">🔮 Eduitit 사주 운세</div>
-                <div style="margin-top: 8px; font-size: 1.2rem;">eduitit.up.railway.app</div>
+                <div style="margin-top: 8px; font-size: 1.2rem;">eduitit.site</div>
             </div>
         </div>
     </div>
@@ -1309,12 +1380,21 @@
     <span id="toastMessage">링크가 복사되었습니다!</span>
 </div>
 
-<!-- 로딩 오버레이 -->
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">
-        사주를 분석하고 있어요...<br>
-        <span class="text-xl opacity-70">잠시만 기다려주세요</span>
+<!-- 프리미엄 로딩 모달 -->
+<div id="loadingModal" class="loading-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="bagua-spinner">🔮</div>
+        <h2 class="modal-title" id="loadingTitle">운명의 실을 풀어내는 중...</h2>
+        <p class="modal-subtitle" id="loadingSubtitle">하늘의 별이 당신의 사주를 계산하고 있습니다.</p>
+
+        <div class="loading-progress-bar">
+            <div id="loadingProgress" class="loading-progress-fill"></div>
+        </div>
+
+        <div class="modal-tip">
+            💡 <b>Tip:</b> <span id="loadingTip">시간을 모를 경우 정오(12시)로 계산돼요</span>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -1348,8 +1428,8 @@
             formContainer.classList.remove('hidden');
         }
 
-        // 로컬 스토리지에서 이전 결과 복원 (가입 후 돌아온 경우)
-        restorePendingSajuResult();
+        // Note: Automatic restoration removed to prevent confusion.
+        // Restoration is now manual via the "Quick View Last Result" button.
 
         // 마지막 사주 정보 로드 및 빠른 접근 카드 표시
         loadLastSajuInfo();
@@ -1358,10 +1438,11 @@
     // 마지막 사주 정보 로드
     function loadLastSajuInfo() {
         const lastSajuInput = localStorage.getItem('lastSajuInput');
+        const pendingResult = localStorage.getItem('pendingSajuResult');
         const quickAccessContainer = document.getElementById('quickAccessContainer');
         const formContainer = document.getElementById('formContainer');
 
-        // 결과가 이미 있으면 빠른 접근 카드 표시하지 않음
+        // 결과가 이미 화면에 있으면 빠른 접근 카드 표시하지 않음
         const hasResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
         if (hasResult) return;
 
@@ -1373,7 +1454,7 @@
                 const age = Date.now() - data.timestamp;
                 if (age > 7 * 24 * 60 * 60 * 1000) {
                     localStorage.removeItem('lastSajuInput');
-                    formContainer.classList.remove('hidden');
+                    formContainer?.classList.remove('hidden');
                     return;
                 }
 
@@ -1381,35 +1462,58 @@
                 const genderMap = { 'male': '남자', 'female': '여자' };
                 const modeMap = { 'teacher': '교사 모드', 'general': '일반 모드' };
 
-                document.getElementById('quickAccessName').textContent = data.name || '-';
-                document.getElementById('quickAccessGender').textContent = genderMap[data.gender] || '-';
-                document.getElementById('quickAccessBirthDate').textContent =
-                    `${data.birth_year}.${String(data.birth_month).padStart(2, '0')}.${String(data.birth_day).padStart(2, '0')}`;
-                document.getElementById('quickAccessMode').textContent = modeMap[data.mode] || '-';
+                const nameEl = document.getElementById('quickAccessName');
+                const genderEl = document.getElementById('quickAccessGender');
+                const birthEl = document.getElementById('quickAccessBirthDate');
+                const modeEl = document.getElementById('quickAccessMode');
 
-                // 일간 아이콘 표시 (이전 결과가 있으면)
-                if (data.daystem) {
-                    const stemEmojiMap = {
-                        '갑': '🌳', '을': '🌿',
-                        '병': '☀️', '정': '🕯️',
-                        '무': '⛰️', '기': '🏔️',
-                        '경': '⚔️', '신': '💎',
-                        '임': '🌊', '계': '💧'
-                    };
-                    const icon = stemEmojiMap[data.daystem] || '🔮';
-                    document.getElementById('quickAccessIcon').textContent = icon;
+                if (nameEl) nameEl.textContent = data.name || '-';
+                if (genderEl) genderEl.textContent = genderMap[data.gender] || '-';
+                if (birthEl) birthEl.textContent = `${data.birth_year}.${String(data.birth_month).padStart(2, '0')}.${String(data.birth_day).padStart(2, '0')}`;
+                if (modeEl) modeEl.textContent = modeMap[data.mode] || '-';
+
+                // 일간 아이콘 표시
+                if (data.daystem && ELEMENT_MAP[data.daystem]) {
+                    const iconEl = document.getElementById('quickAccessIcon');
+                    if (iconEl) iconEl.textContent = ELEMENT_MAP[data.daystem].icon;
+                }
+
+                // 저장된 결과가 있으면 "바로보기" 버튼 활성화
+                if (pendingResult) {
+                    const btn = document.getElementById('quickViewResultBtn');
+                    if (btn) btn.classList.remove('hidden');
                 }
 
                 // UI 전환
-                quickAccessContainer.classList.remove('hidden');
-                formContainer.classList.add('hidden');
+                quickAccessContainer?.classList.remove('hidden');
+                formContainer?.classList.add('hidden');
             } catch (e) {
                 console.error('Failed to load last saju info:', e);
                 localStorage.removeItem('lastSajuInput');
-                formContainer.classList.remove('hidden');
+                formContainer?.classList.remove('hidden');
             }
         } else {
+            formContainer?.classList.remove('hidden');
+        }
+    }
+
+    // 수동 결과 복원 (버튼 클릭 시)
+    function manualRestoreResult() {
+        document.getElementById('quickAccessContainer')?.classList.add('hidden');
+        restorePendingSajuResult();
+        showToast('이전 분석 결과를 성공적으로 불러왔습니다.', 'success');
+    }
+
+    // 폼으로 부드럽게 돌아가기
+    function resetToForm() {
+        const resultContainer = document.getElementById('resultContainer');
+        const formContainer = document.getElementById('formContainer');
+
+        if (resultContainer) resultContainer.classList.add('hidden');
+        if (formContainer) {
             formContainer.classList.remove('hidden');
+            // 부드러운 스크롤
+            formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 
@@ -1597,7 +1701,7 @@
     }
 
     // 프로필 폼 제출
-    document.getElementById('profileForm')?.addEventListener('submit', async function(e) {
+    document.getElementById('profileForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -1729,8 +1833,8 @@
             const daysText = isPast
                 ? `${Math.abs(fav.days_until)}일 전`
                 : fav.days_until === 0
-                ? '오늘'
-                : `D-${fav.days_until}`;
+                    ? '오늘'
+                    : `D-${fav.days_until}`;
 
             return `
                 <div class="favorite-date-item ${isPast ? 'past' : ''}" onclick="selectFavoriteDate('${fav.date}')">
@@ -1817,7 +1921,7 @@
     }
 
     // 즐겨찾기 폼 제출
-    document.getElementById('favoriteDateForm')?.addEventListener('submit', async function(e) {
+    document.getElementById('favoriteDateForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -1963,14 +2067,26 @@
             document.getElementById('shareSection').classList.remove('hidden');
             document.getElementById('dailyFortuneSection').classList.remove('hidden');
             document.getElementById('saveSection').classList.remove('hidden');
-            document.getElementById('resultDivider').classList.remove('hidden');
 
             // 결과 복원
             const resultTarget = document.getElementById('markdownResult');
             resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
 
-            detectAndShowElement(data.result);
-            updateShareCard(data.result);
+            updatePremiumUI(data.result, data.chart, data.mode);
+
+            // Chart Data 복원 (Daily Fortune 등을 위해 필수)
+            // 기존 요소가 있으면 제거 후 재생성
+            const existingChartData = document.getElementById('saju-chart-data');
+            if (existingChartData) existingChartData.remove();
+
+            const chartDataContainer = document.createElement('script');
+            chartDataContainer.id = 'saju-chart-data';
+            chartDataContainer.type = 'application/json';
+            chartDataContainer.textContent = JSON.stringify(data.chart);
+            document.body.appendChild(chartDataContainer);
+
+            // 섹션 그룹화 적용
+            groupMarkdownSections();
 
             // 스크롤
             setTimeout(() => {
@@ -1980,24 +2096,9 @@
                 });
             }, 100);
 
-            // 로그인한 경우 자동 저장 제안
+            // 로그인한 경우 자동 저장 제안 - 가입 유도 메시지 분리
             if (isAuthenticated) {
                 showToast('이전 사주 결과를 복원했습니다!');
-
-                // 자동으로 보관함에 저장 제안
-                setTimeout(() => {
-                    if (confirm('복원된 사주 결과를 보관함에 저장하시겠습니까?')) {
-                        // 임시로 chart 데이터 저장
-                        const chartDataContainer = document.createElement('script');
-                        chartDataContainer.id = 'saju-chart-data';
-                        chartDataContainer.type = 'application/json';
-                        chartDataContainer.textContent = JSON.stringify(data.chart);
-                        document.body.appendChild(chartDataContainer);
-
-                        saveToLibrary();
-                        localStorage.removeItem('pendingSajuResult');
-                    }
-                }, 1000);
             } else {
                 showToast('이전 사주 결과를 복원했습니다! 회원가입하면 영구 보관할 수 있어요.');
             }
@@ -2008,18 +2109,25 @@
         }
     }
 
-    // 오행별 이모티콘 매핑
     const ELEMENT_MAP = {
-        '갑': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무' },
-        '을': { element: 'wood', icon: '🌿', name: '을목(乙木)', desc: '풀, 넝쿨' },
-        '병': { element: 'fire', icon: '☀️', name: '병화(丙火)', desc: '태양' },
-        '정': { element: 'fire', icon: '🕯️', name: '정화(丁火)', desc: '촛불' },
-        '무': { element: 'earth', icon: '⛰️', name: '무토(戊토)', desc: '큰 산' },
-        '기': { element: 'earth', icon: '🏔️', name: '기토(己土)', desc: '논밭' },
-        '경': { element: 'metal', icon: '⚔️', name: '경금(庚金)', desc: '칼, 바위' },
-        '신': { element: 'metal', icon: '💎', name: '신금(辛金)', desc: '보석' },
-        '임': { element: 'water', icon: '🌊', name: '임수(壬水)', desc: '바다' },
-        '계': { element: 'water', icon: '💧', name: '계수(癸水)', desc: '비, 이슬' }
+        '甲': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무처럼 곧고 강한 기운' },
+        '乙': { element: 'wood', icon: '🌿', name: '을목(乙木)', desc: '풀과 넝쿨처럼 부드럽고 유연한 기운' },
+        '丙': { element: 'fire', icon: '☀️', name: '병화(丙火)', desc: '태양처럼 밝고 따뜻한 기운' },
+        '丁': { element: 'fire', icon: '🕯️', name: '정화(丁火)', desc: '촛불처럼 온화하고 섬세한 기운' },
+        '戊': { element: 'earth', icon: '⛰️', name: '무토(戊土)', desc: '큰 산처럼 든든하고 포용력 있는 기운' },
+        '己': { element: 'earth', icon: '🏔️', name: '기토(己土)', desc: '논밭처럼 생산적이고 실용적인 기운' },
+        '庚': { element: 'metal', icon: '⚔️', name: '경금(庚金)', desc: '칼과 바위처럼 강하고 정의로운 기운' },
+        '辛': { element: 'metal', icon: '💎', name: '신금(辛金)', desc: '보석처럼 아름답고 세련된 기운' },
+        '壬': { element: 'water', icon: '🌊', name: '임수(壬水)', desc: '바다처럼 넓고 깊은 기운' },
+        '癸': { element: 'water', icon: '💧', name: '계수(癸水)', desc: '비와 이슬처럼 부드럽고 지혜로운 기운' }
+    };
+
+    const elementBadgeStyles = {
+        'wood': 'bg-emerald-50 text-emerald-600 border-emerald-200',
+        'fire': 'bg-rose-50 text-rose-600 border-rose-200',
+        'earth': 'bg-amber-50 text-amber-600 border-amber-200',
+        'metal': 'bg-purple-50 text-purple-600 border-purple-200',
+        'water': 'bg-blue-50 text-blue-600 border-blue-200'
     };
 
     // 모드 토글
@@ -2033,55 +2141,71 @@
         });
     }
 
-    // 폼 제출 핸들러 (Streaming 적용)
+    // 위트 있는 로딩 메시지
+    const loadingMessages = [
+        { title: "운명의 실을 풀어내는 중... 🔮", subtitle: "하늘의 별이 당신의 사주를 계산하고 있습니다." },
+        { title: "음양오행을 조율하는 중... 🌙", subtitle: "당신의 태어난 순간, 우주의 기운을 모으고 있어요." },
+        { title: "천간지지를 배열하는 중... ✨", subtitle: "복잡하게 얽힌 운명의 지도를 그려내고 있습니다." },
+        { title: "당신만의 운명 지도를 작성하는 중... 🧙‍♂️", subtitle: "잠시만 기다려주세요, 거의 다 되었습니다." }
+    ];
+
+    const loadingTips = [
+        "시간을 모를 경우 정오(12시)로 계산하면 가장 정확해요.",
+        "사주는 통계학에 기반한 삶의 이정표일 뿐입니다.",
+        "긍정적인 마음가짐이 운명을 바꾸는 가장 큰 열쇠예요.",
+        "오늘의 분석 결과를 보관함에 저장해두고 꺼내보세요."
+    ];
+
+    // 폼 제출 핸들러 (Premium Loading 적용)
     document.getElementById('sajuForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const form = e.target;
         const formData = new FormData(form);
 
-        // localStorage에 입력 정보 저장
-        const inputData = {
-            name: formData.get('name'),
-            gender: formData.get('gender'),
-            birth_year: parseInt(formData.get('birth_year')),
-            birth_month: parseInt(formData.get('birth_month')),
-            birth_day: parseInt(formData.get('birth_day')),
-            birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
-            birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
-            calendar_type: formData.get('calendar_type'),
-            mode: formData.get('mode'),
-            timestamp: Date.now()
-        };
-        localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
+        // [하루 5회 제한 검사] - 개인 API 키 사용자는 무제한
+        // Django template에서 변수 주입 (False면 문자열 "False")
+        const hasPersonalApiKey = "{{ has_personal_api_key|default:'False' }}" === "True";
 
-        // UI 전환
-        document.getElementById('formContainer').classList.add('hidden');
-        document.getElementById('resultContainer').classList.remove('hidden');
+        if (!hasPersonalApiKey) {
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const usageKey = `saju_usage_${today}`;
+            let usageCount = parseInt(localStorage.getItem(usageKey) || '0');
 
-        // 결과 섹션 노출 (초기엔 숨겨져 있을 수 있음)
-        document.getElementById('shareSection').classList.remove('hidden');
-        document.getElementById('dailyFortuneSection').classList.remove('hidden');
-        document.getElementById('saveSection').classList.remove('hidden');
-        document.getElementById('resultDivider').classList.remove('hidden');
-
-        // 결과 영역 상단으로 부드럽게 스크롤
-        const resultContainer = document.getElementById('resultContainer');
-        if (resultContainer) {
-            // 약간의 지연 후 스크롤 (UI 전환이 완료된 후)
-            setTimeout(() => {
-                resultContainer.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 100);
+            if (usageCount >= 5) {
+                alert("오늘의 사주 분석 횟수(5회)를 모두 사용하셨습니다.\n내일 다시 이용해주세요! 🍀\n\n(개인 API Key를 등록하면 무제한 이용 가능합니다)");
+                return;
+            }
         }
 
-        const resultTarget = document.getElementById('markdownResult');
-        resultTarget.innerHTML = '<div class="flex items-center gap-3 text-purple-600 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> 주역을 풀이하고 있습니다...</div>';
+        // UI 전환 및 모달 표시
+        const loadingModal = document.getElementById('loadingModal');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const loadingTitle = document.getElementById('loadingTitle');
+        const loadingSubtitle = document.getElementById('loadingSubtitle');
+        const loadingTip = document.getElementById('loadingTip');
+
+        loadingModal.classList.add('show');
+
+        // 랜덤 메시지 설정
+        const randomMsg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        loadingTitle.textContent = randomMsg.title;
+        loadingSubtitle.textContent = randomMsg.subtitle;
+        loadingTip.textContent = loadingTips[Math.floor(Math.random() * loadingTips.length)];
+
+        // 가짜 프로그레스 바 시작
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 5;
+                if (progress > 90) progress = 90;
+                loadingProgress.style.width = `${progress}%`;
+            }
+        }, 400);
 
         try {
-            const response = await fetch('{% url "fortune:saju_streaming_api" %}', {
+            // non-streaming API 호출
+            const response = await fetch('{% url "fortune:saju_api" %}', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': formData.get('csrfmiddlewaretoken')
@@ -2089,84 +2213,96 @@
                 body: formData
             });
 
+            const data = await response.json();
+
+            // 성공 시 카운트 증가
+            if (response.ok && data.success) {
+                usageCount++;
+                localStorage.setItem(usageKey, usageCount);
+            }
+
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || '분석 중 오류가 발생했습니다.');
+                throw new Error(data.message || data.error || '분석 중 오류가 발생했습니다.');
             }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let accumulatedText = '';
+            // 완료 처리
+            clearInterval(progressInterval);
+            loadingProgress.style.width = '100%';
 
-            resultTarget.innerHTML = ''; // 초기 로딩 메시지 제거
+            // 결과 데이터 추출
+            const accumulatedText = data.result;
 
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
+            // 로컬 스토리지에 입력 정보 저장 (결과 포함)
+            const inputData = {
+                name: formData.get('name'),
+                gender: formData.get('gender'),
+                birth_year: parseInt(formData.get('birth_year')),
+                birth_month: parseInt(formData.get('birth_month')),
+                birth_day: parseInt(formData.get('birth_day')),
+                birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
+                birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
+                calendar_type: formData.get('calendar_type'),
+                mode: formData.get('mode'),
+                timestamp: Date.now(),
+                daystem: (accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/) || [])[1]
+            };
+            localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
 
-                const chunk = decoder.decode(value, { stream: true });
-                accumulatedText += chunk;
-
-                // [Error Detection] Check for error signatures in the stream
-                // Sometimes backend streams an error message instead of failing the request
-                if (accumulatedText.startsWith('[오류 발생:') || accumulatedText.startsWith('{"error":')) {
-                    const errorMsg = accumulatedText.replace('[오류 발생:', '').replace(']', '').trim();
-                    throw new Error(errorMsg || "분석 중 알 수 없는 오류가 발생했습니다.");
-                }
-
-                // 마크다운 실시간 렌더링
-                resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-
-                // 스크롤 조절 (필요 시)
-                // window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }
-
-            // 완료 후 추가 처리
-            detectAndShowElement(accumulatedText);
-            updateShareCard(accumulatedText);
-
-            // 일간 정보 추출 및 localStorage 업데이트
-            const daystemMatch = accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/);
-            if (daystemMatch) {
-                const savedInput = localStorage.getItem('lastSajuInput');
-                if (savedInput) {
-                    const data = JSON.parse(savedInput);
-                    data.daystem = daystemMatch[1];
-                    localStorage.setItem('lastSajuInput', JSON.stringify(data));
-                }
-            }
-
-            // 비회원 결과 보존: 로컬 스토리지에 저장
-            const chartDataElem = document.getElementById('saju-chart-data');
-            const chartData = chartDataElem ? JSON.parse(chartDataElem.textContent) : {};
-
+            // 비회원 결과 보존
             localStorage.setItem('pendingSajuResult', JSON.stringify({
                 result: accumulatedText,
-                chart: chartData,
-                name: "{{ name|default:'' }}",
-                gender: "{{ gender|default:'' }}",
+                chart: data.chart,
+                name: data.name,
+                gender: formData.get('gender'),
                 mode: formData.get('mode'),
                 timestamp: Date.now()
             }));
 
-        } catch (err) {
-            console.error(err);
-            let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
+            // 약간의 지연 후 결과 표시 (UX를 위해)
+            setTimeout(() => {
+                loadingModal.classList.remove('show');
 
-            // 힌트 제공 (선택적)
-            if (err.message && !err.message.includes('fetch')) {
+                // UI 전환
+                document.getElementById('formContainer').classList.add('hidden');
+                document.getElementById('resultContainer').classList.remove('hidden');
+                document.getElementById('shareSection').classList.remove('hidden');
+                document.getElementById('dailyFortuneSection').classList.remove('hidden');
+                document.getElementById('saveSection').classList.remove('hidden');
+
+                // 결과 렌더링
+                const resultTarget = document.getElementById('markdownResult');
+                resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
+
+                updatePremiumUI(accumulatedText, data.chart, data.mode);
+
+                // 섹션 그룹화 적용
+                groupMarkdownSections();
+
+                // 스크롤
+                setTimeout(() => {
+                    document.getElementById('resultContainer').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            }, 800);
+
+        } catch (err) {
+            clearInterval(progressInterval);
+            loadingModal.classList.remove('show');
+            console.error(err);
+
+            let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
+            if (err.message) {
                 userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
             }
 
-            resultTarget.innerHTML = `
-                <div class="p-6 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-center shadow-sm">
-                    <div class="text-4xl mb-3">🌪️</div>
-                    <div class="font-bold text-lg whitespace-pre-line">${userMessage}</div>
-                    <button onclick="window.location.reload()" class="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">
-                        <i class="fa-solid fa-rotate-right mr-2"></i>다시 시도하기
-                    </button>
-                </div>
-            `;
+            // 오류 시 폼으로 다시 이동하거나 에러 메시지 표시
+            showToast(err.message || '오류가 발생했습니다.', 'error');
+
+            // 결과 영역에 에러 표시
+            document.getElementById('formContainer').classList.remove('hidden');
+            alert(userMessage.replace('<br>', '\n'));
         }
     });
 
@@ -2194,36 +2330,174 @@
 
     // --- Core UI & Analysis Functions ---
 
-    // 일간 감지 및 오행 배지 표시
-    function detectAndShowElement(markdown) {
-        const badgeContainer = document.getElementById('elementBadge');
-        if (!badgeContainer) return;
+    // --- Premium UI & Analysis Functions ---
 
-        // "일주(나): OO" 또는 "일간: O" 패턴에서 첫 글자(천간) 추출
-        const patterns = [
-            /일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일간[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/,
-            /일주[^:]*:[^가-힣]*([갑을병정무기경신임계])/
-        ];
+    function updatePremiumUI(markdown, chart, mode = 'teacher') {
+        console.log("Updating Premium UI - Mode:", mode);
 
-        let detected = null;
-        for (const pattern of patterns) {
-            const match = markdown.match(pattern);
-            if (match) {
-                detected = match[1];
-                break;
+        // 1. Detect Day Stem (Prioritize Definitive Chart Data)
+        let dayStem = null;
+        if (chart && chart.day) {
+            dayStem = (typeof chart.day === 'string') ? chart.day[0] : chart.day[0];
+        }
+
+        // 1a. Fallback to Regex only if chart data is missing
+        if (!dayStem) {
+            const pattern = /(?:일주|일간|중심\(일간\)|나의 정체성)[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/;
+            let match = markdown.match(pattern);
+            dayStem = match ? match[1] : null;
+        }
+
+        // 1b. Last Resort Fallback: Scan top of markdown
+        if (!dayStem) {
+            const topText = markdown.substring(0, 500);
+            for (let key in ELEMENT_MAP) {
+                if (topText.includes(key)) {
+                    dayStem = key;
+                    break;
+                }
             }
         }
 
-        if (detected && ELEMENT_MAP[detected]) {
-            const info = ELEMENT_MAP[detected];
-            badgeContainer.innerHTML = `
-                <div class="element-badge ${info.element}">
-                    <span class="element-icon">${info.icon}</span>
-                    <span>${info.name}</span>
-                    <span style="opacity: 0.8; font-weight: normal;">- ${info.desc}</span>
+        if (dayStem && ELEMENT_MAP[dayStem]) {
+            const info = ELEMENT_MAP[dayStem];
+
+            // Header Identity Card
+            document.getElementById('stemIconBig').textContent = info.icon;
+            document.getElementById('stemStaticName').textContent = info.name;
+            document.getElementById('stemStaticDesc').textContent = info.desc;
+
+            // Badge & Background
+            const badge = document.getElementById('premiumBadge');
+            const bg = document.getElementById('hero-bg');
+            if (badge) {
+                document.getElementById('badgeIcon').textContent = info.icon;
+                document.getElementById('badgeText').textContent = info.name;
+                badge.className = `text-sm py-1 px-3 rounded-full border shadow-sm backdrop-blur-sm ${elementBadgeStyles[info.element]}`;
+            }
+            if (bg) {
+                const colors = { wood: '#10b981', fire: '#ef4444', earth: '#f59e0b', metal: '#8b5cf6', water: '#3b82f6' };
+                bg.style.background = `linear-gradient(135deg, ${colors[info.element] || '#6366f1'}, transparent)`;
+            }
+        }
+
+        // 2. Render Tabs Dynamically
+        renderDynamicTabs(mode);
+
+        // 3. Render Natal Chart from API data
+        if (chart) {
+            renderPremiumNatalChart(chart);
+        }
+
+        // 4. Update Share Card
+        updateShareCard(markdown);
+    }
+
+    function renderDynamicTabs(mode) {
+        const tabContainer = document.getElementById('analysisTabs');
+        if (!tabContainer) return;
+
+        const teacherTabs = [
+            { id: 'summary', icon: '📌', label: '핵심요약' },
+            { id: 'pillars', icon: '📜', label: '사주 원국' },
+            { id: 'personality', icon: '🏫', label: '교실 기질' },
+            { id: 'students', icon: '🐣', label: '학생 지도' },
+            { id: 'colleagues', icon: '👥', label: '동료 관계' },
+            { id: 'healing', icon: '📅', label: '운세/힐링' }
+        ];
+
+        const generalTabs = [
+            { id: 'summary', icon: '📌', label: '핵심요약' },
+            { id: 'pillars', icon: '📜', label: '원국 분석' },
+            { id: 'personality', icon: '💡', label: '기질/성격' },
+            { id: 'wealth', icon: '💰', label: '재물/직업' },
+            { id: 'romance', icon: '❤️', label: '애정/관계' },
+            { id: 'luck', icon: '📅', label: '운세/개운' }
+        ];
+
+        const tabs = (mode === 'teacher') ? teacherTabs : generalTabs;
+        tabContainer.innerHTML = tabs.map((t, idx) => `
+            <button onclick="switchTab(this, '${t.id}')"
+                class="tab-btn ${idx === 0 ? 'active bg-purple-100 text-purple-700 border-purple-200' : 'border-transparent hover:bg-white/80'} px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border shadow-sm ${idx === 0 ? '' : 'bg-white/80'}">
+                ${t.icon} ${t.label}
+            </button>
+        `).join('');
+    }
+
+    function renderPremiumNatalChart(chart) {
+        const container = document.getElementById('sajuChartDisplay');
+        if (!container) return;
+
+        const pillars = [
+            { label: '시주', key: 'hour', sub: '말년' },
+            { label: '일주', key: 'day', sub: '나', special: true },
+            { label: '월주', key: 'month', sub: '사회' },
+            { label: '년주', key: 'year', sub: '조상' }
+        ];
+
+        container.innerHTML = pillars.map(p => {
+            let chars = chart[p.key] || ['?', '?'];
+
+            // Handle string format like "甲子"
+            if (typeof chars === 'string') {
+                chars = chars.split('');
+            }
+
+            const stem = chars[0] || '?';
+            const branch = chars[1] || '?';
+
+            const stemColor = ELEMENT_MAP[stem] ? `color-${ELEMENT_MAP[stem].element}` : '';
+            const branchColor = ELEMENT_MAP[branch] ? `color-${ELEMENT_MAP[branch].element}` : '';
+
+            const specialClass = p.special ? 'border-2 border-purple-400/30 bg-purple-50/80 scale-105 shadow-md' : '';
+            const topColor = p.special ? 'text-purple-600' : 'text-gray-400';
+
+            return `
+                <div class="pillar-box ${specialClass} relative group">
+                    <span class="pillar-top ${topColor}">${p.label}</span>
+                    <span class="pillar-main ${stemColor}">${stem}</span>
+                    <span class="pillar-main ${branchColor}">${branch}</span>
+                    <span class="pillar-sub text-[10px] mt-1">${p.sub}</span>
                 </div>
             `;
+        }).join('');
+    }
+
+    function switchTab(el, tab) {
+        if (!el) return;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn?.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'border-purple-200');
+            btn?.classList.add('border-transparent');
+            if (btn) btn.style.backgroundColor = '';
+        });
+        el.classList.remove('border-transparent');
+        el.classList.add('active', 'bg-purple-100', 'text-purple-700', 'border-purple-200');
+
+        const headers = document.querySelectorAll('#markdownResult h1, #markdownResult h2');
+        const tabKeywords = {
+            'summary': ['요약', '핵심'],
+            'pillars': ['명식', '원국', '팔자'],
+            'personality': ['성격', '기질', '특성', '교실'],
+            'wealth': ['재물', '금전', '돈'],
+            'career': ['직업', '진로', '적성'],
+            'students': ['학생', '지도', '케미'],
+            'colleagues': ['동료', '관계', '포지션'],
+            'healing': ['힐링', '처방', '스트레스'],
+            'romance': ['애정', '연애', '궁합', '결혼'],
+            'compatibility': ['애정', '연애', '궁합', '결혼'],
+            'luck': ['운세', '개운', '2026']
+        };
+
+        const keywords = tabKeywords[tab];
+        if (keywords) {
+            for (let h of headers) {
+                if (keywords.some(k => h.innerText.includes(k))) {
+                    h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    h.classList?.add('bg-yellow-100');
+                    setTimeout(() => h.classList?.remove('bg-yellow-100'), 1500);
+                    break;
+                }
+            }
         }
     }
 
@@ -2243,7 +2517,8 @@
             }
         }
 
-        const keywordMatch = markdown.match(/키워드[^"]*"([^"]+)"[^"]*"([^"]+)"[^"]*"([^"]+)"/);
+        // Robust Keyword Regex: Handles quotes, commas, spaces flexibly
+        const keywordMatch = markdown.match(/키워드[^:]*:\s*["']?([^"',\s]+)["']?[\s,]+["']?([^"',\s]+)["']?[\s,]+["']?([^"',\s]+)["']?/);
         if (keywordMatch) {
             const keywordsContainer = document.getElementById('shareCardKeywords');
             if (keywordsContainer) {
@@ -2347,7 +2622,8 @@
 
     // 이미지 저장 (현재 결과 화면 전체 캡처)
     function saveAsImage() {
-        const resultCard = document.getElementById('resultCard');
+        // Fix: Use 'capture-area' instead of non-existent 'resultCard'
+        const resultCard = document.getElementById('capture-area');
         if (!resultCard) {
             showToast('저장할 결과가 없습니다.');
             return;
@@ -2566,6 +2842,67 @@
             showToast(e.message || '서버 통신 오류가 발생했습니다.');
         }
     }
+
+    // 서비스 안내 모달 제어
+    function showInfoModal() {
+        document.getElementById('infoModal').classList.remove('hidden');
+        document.getElementById('infoModal').classList.add('flex');
+    }
+
+    function closeInfoModal() {
+        document.getElementById('infoModal').classList.add('hidden');
+        document.getElementById('infoModal').classList.remove('flex');
+    }
+
+    function closeInfoModalOnBackdrop(event) {
+        if (event.target === event.currentTarget) {
+            closeInfoModal();
+        }
+    }
+
+    // 마크다운 섹션 그룹화 (컬럼 레이아웃 깨짐 방지)
+    function groupMarkdownSections() {
+        const container = document.getElementById('markdownResult');
+        if (!container) return;
+
+        const children = Array.from(container.children);
+        const newContent = document.createDocumentFragment();
+        let currentSection = null;
+
+        children.forEach(child => {
+            // 헤더(H1~H4)를 만나면 새로운 섹션 시작
+            if (['H1', 'H2', 'H3', 'H4'].includes(child.tagName)) {
+                if (currentSection) {
+                    newContent.appendChild(currentSection);
+                }
+                currentSection = document.createElement('div');
+                currentSection.style.pageBreakInside = 'avoid';
+                currentSection.style.breakInside = 'avoid';
+                currentSection.style.marginBottom = '1.5rem';
+                currentSection.appendChild(child);
+            } else {
+                // 헤더가 아니면 현재 섹션에 추가 (섹션이 없으면 그냥 추가)
+                if (currentSection) {
+                    currentSection.appendChild(child);
+                } else {
+                    // 첫 헤더가 나오기 전의 콘텐츠들 (예: 서론)
+                    const wrapper = document.createElement('div');
+                    wrapper.style.breakInside = 'avoid';
+                    wrapper.appendChild(child);
+                    newContent.appendChild(wrapper);
+                }
+            }
+        });
+
+        // 마지막 섹션 추가
+        if (currentSection) {
+            newContent.appendChild(currentSection);
+        }
+
+        // 컨테이너 비우고 새로 채우기
+        container.innerHTML = '';
+        container.appendChild(newContent);
+    }
 </script>
 
 {% if result %}
@@ -2580,6 +2917,9 @@
             marked.setOptions({ breaks: true, gfm: true });
             const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
             document.getElementById('markdownResult').innerHTML = htmlContent;
+
+            // 섹션 그룹화 적용
+            groupMarkdownSections();
 
             detectAndShowElement(rawMarkdown);
             updateShareCard(rawMarkdown);
