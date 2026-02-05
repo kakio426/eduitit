@@ -19,8 +19,7 @@
         color: #4a5568;
         word-break: keep-all;
         overflow-wrap: break-word;
-        white-space: pre-wrap;
-        /* 줄바꿈 보존 */
+        white-space: pre-wrap; /* 줄바꿈 보존 */
     }
 
     .markdown-body table {
@@ -68,8 +67,7 @@
 
     .markdown-body p {
         margin-bottom: 1.5rem;
-        white-space: pre-wrap;
-        /* 줄바꿈 보존 */
+        white-space: pre-wrap; /* 줄바꿈 보존 */
     }
 
     .markdown-body ul,
@@ -684,7 +682,25 @@
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-4xl mx-auto">
 
-
+    <!-- 리마인더 알림 배너 -->
+    <div id="reminderBanner" class="hidden mb-6 animate-in slide-in-from-top duration-500">
+        <div class="clay-card p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center text-white text-2xl animate-bounce">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-gray-800">오늘의 운세를 확인해보세요! ✨</h3>
+                        <p class="text-gray-600 font-medium">어제 설정한 알림입니다</p>
+                    </div>
+                </div>
+                <button onclick="dismissReminder()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 헤더 -->
     <div class="text-center mb-12" data-aos="fade-down">
@@ -722,9 +738,130 @@
     </div>
     {% endif %}
 
+    <!-- 프로필 관리 섹션 (로그인 사용자만) -->
+    {% if user.is_authenticated %}
+    <div id="profileManagerSection" class="mb-8">
+        <div class="clay-card p-6 md:p-8" data-aos="fade-up">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-2xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-800">내 프로필</h3>
+                        <p class="text-gray-600 font-medium text-base">여러 사람의 사주를 저장하고 관리하세요</p>
+                    </div>
+                </div>
+                <button onclick="showProfileModal()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-plus mr-2"></i>프로필 추가
+                </button>
+            </div>
 
+            <!-- 프로필 카드 목록 (가로 스크롤) -->
+            <div id="profileCardsContainer" class="overflow-x-auto pb-4 -mx-4 px-4">
+                <div id="profileCards" class="flex gap-4 min-w-max">
+                    <!-- 프로필 카드가 여기에 동적으로 추가됩니다 -->
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-2"></i>
+                        <p>프로필 로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- 즐겨찾기 날짜 & 통계 (로그인 사용자만) -->
+    {% if user.is_authenticated %}
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <!-- 즐겨찾기 날짜 -->
+        <div class="clay-card p-6" data-aos="fade-up">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-black text-gray-800">
+                    <i class="fa-solid fa-star text-amber-500 mr-2"></i>
+                    즐겨찾기 날짜
+                </h3>
+                <button onclick="showFavoriteDateModal()" class="text-amber-500 hover:text-amber-600">
+                    <i class="fa-solid fa-plus text-2xl"></i>
+                </button>
+            </div>
+            <div id="favoriteDatesContainer" class="space-y-2 max-h-60 overflow-y-auto">
+                <p class="text-gray-400 text-center py-4">로딩 중...</p>
+            </div>
+        </div>
 
+        <!-- 통계 대시보드 -->
+        <div class="clay-card p-6" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="text-xl font-black text-gray-800 mb-4">
+                <i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>
+                활동 통계
+            </h3>
+            <div id="statisticsContainer" class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">총 사주 분석</span>
+                    <span id="statTotalAnalyses" class="text-2xl font-black text-indigo-600">-</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">일진 조회</span>
+                    <span id="statTotalDaily" class="text-2xl font-black text-purple-600">-</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                    <span class="text-gray-700 font-bold">최근 7일 활동</span>
+                    <span id="statRecentActivity" class="text-2xl font-black text-green-600">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}  <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
+
+    <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
+    <div id="quickAccessContainer" class="hidden mb-8">
+        <div class="clay-card p-8 md:p-10 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 border-2 border-purple-200" data-aos="fade-up">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center text-4xl" id="quickAccessIcon">
+                    🔮
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-gray-800">마지막으로 본 사주</h3>
+                    <p class="text-gray-600 font-medium">저장된 정보로 빠르게 다시 확인하세요</p>
+                </div>
+            </div>
+
+            <div class="bg-white/70 rounded-2xl p-6 mb-6">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">이름</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessName">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">성별</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessGender">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">생년월일</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessBirthDate">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">상담 모드</div>
+                        <div class="text-xl font-bold text-gray-800" id="quickAccessMode">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4">
+                <button onclick="useLastSajuInfo()" class="flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
+                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
+                    shadow-lg hover:shadow-xl hover:-translate-y-1">
+                    <i class="fa-solid fa-bolt mr-2"></i>이 정보로 다시 보기
+                </button>
+                <button onclick="showNewSajuForm()" class="flex-1 py-5 rounded-2xl font-bold text-2xl transition-all
+                    bg-white text-gray-700 border-2 border-gray-300
+                    hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1">
+                    <i class="fa-solid fa-user-plus mr-2"></i>새로운 사주 입력
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 입력 폼 섹션 -->
     <div id="formContainer" class="{% if result %}hidden{% endif %}">
@@ -1015,8 +1152,7 @@
     </div>
 
     <!-- 즐겨찾기 날짜 추가 모달 -->
-    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4"
-        onclick="closeFavoriteDateModalOnBackdrop(event)">
+    <div id="favoriteDateModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeFavoriteDateModalOnBackdrop(event)">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
@@ -1036,8 +1172,7 @@
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">라벨</label>
-                    <input type="text" id="favoriteLabel" class="saju-input" placeholder="예: 시험일, 생일, 기념일" required
-                        maxlength="50">
+                    <input type="text" id="favoriteLabel" class="saju-input" placeholder="예: 시험일, 생일, 기념일" required maxlength="50">
                 </div>
 
                 <div>
@@ -1046,12 +1181,10 @@
                 </div>
 
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeFavoriteDateModal()"
-                        class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                    <button type="button" onclick="closeFavoriteDateModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
                         취소
                     </button>
-                    <button type="submit"
-                        class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
                         저장
                     </button>
                 </div>
@@ -1060,8 +1193,7 @@
     </div>
 
     <!-- 프로필 추가/수정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4"
-        onclick="closeProfileModalOnBackdrop(event)">
+    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4" onclick="closeProfileModalOnBackdrop(event)">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-2xl font-black text-gray-800">
@@ -1078,14 +1210,12 @@
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">프로필 이름</label>
-                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required
-                        maxlength="20">
+                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required maxlength="20">
                 </div>
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">실제 이름</label>
-                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required
-                        maxlength="20">
+                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required maxlength="20">
                 </div>
 
                 <div>
@@ -1105,22 +1235,17 @@
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">생년월일</label>
                     <div class="grid grid-cols-3 gap-3">
-                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required
-                            min="1940" max="2025">
-                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1"
-                            max="12">
-                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1"
-                            max="31">
+                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required min="1940" max="2025">
+                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1" max="12">
+                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1" max="31">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">태어난 시간 (선택)</label>
                     <div class="grid grid-cols-2 gap-3">
-                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0"
-                            max="23">
-                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0"
-                            max="59">
+                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0" max="23">
+                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0" max="59">
                     </div>
                 </div>
 
@@ -1139,12 +1264,10 @@
                 </div>
 
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeProfileModal()"
-                        class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
+                    <button type="button" onclick="closeProfileModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
                         취소
                     </button>
-                    <button type="submit"
-                        class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
+                    <button type="submit" class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
                         저장
                     </button>
                 </div>
@@ -1474,7 +1597,7 @@
     }
 
     // 프로필 폼 제출
-    document.getElementById('profileForm')?.addEventListener('submit', async function (e) {
+    document.getElementById('profileForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -1606,8 +1729,8 @@
             const daysText = isPast
                 ? `${Math.abs(fav.days_until)}일 전`
                 : fav.days_until === 0
-                    ? '오늘'
-                    : `D-${fav.days_until}`;
+                ? '오늘'
+                : `D-${fav.days_until}`;
 
             return `
                 <div class="favorite-date-item ${isPast ? 'past' : ''}" onclick="selectFavoriteDate('${fav.date}')">
@@ -1694,7 +1817,7 @@
     }
 
     // 즐겨찾기 폼 제출
-    document.getElementById('favoriteDateForm')?.addEventListener('submit', async function (e) {
+    document.getElementById('favoriteDateForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
