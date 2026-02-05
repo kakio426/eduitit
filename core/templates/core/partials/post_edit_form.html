@@ -1,5 +1,5 @@
-<form hx-post="{% url 'post_edit' post.id %}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML"
-    class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
+<form id="post-{{ post.id }}" hx-post="{% url 'post_edit' post.id %}" hx-target="#post-{{ post.id }}"
+    hx-swap="outerHTML" class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
 
     <div class="mb-3">
         <label class="block text-xs font-bold text-slate-500 mb-1">내용 수정</label>
