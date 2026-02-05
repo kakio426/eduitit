@@ -48,12 +48,30 @@ function initGame() {
     isAIThinking = false;
 }
 
+var pieceCDNs = [
+    'https://chessboardjs.com/img/chesspieces/wikipedia/', // [1] 공식 사이트 (가장 안정적)
+    'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/', // [2] unpkg (안정적)
+    'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/' // [3] GitHub (최후의 수단)
+];
+var currentCDNIndex = 0;
+
+// Piece Image Fallback Listener - 이미지 로드 실패 시 다음 CDN으로 자동 전환
+window.addEventListener('error', function (e) {
+    if (e.target.tagName === 'IMG' && e.target.src.includes('chesspieces')) {
+        if (currentCDNIndex < pieceCDNs.length - 1) {
+            console.warn("Piece image failed to load from " + pieceCDNs[currentCDNIndex] + ". Trying next CDN...");
+            currentCDNIndex++;
+            if (board) board.position(game.fen()); // 보드 재렌더링
+        }
+    }
+}, true);
+
 function initBoard() {
     var config = {
         draggable: false, // STRICTLY Click-to-Move
         position: 'start',
         pieceTheme: function (piece) {
-            return 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/' + piece + '.png';
+            return pieceCDNs[currentCDNIndex] + piece + '.png';
         },
         onSnapEnd: onSnapEnd
     };
