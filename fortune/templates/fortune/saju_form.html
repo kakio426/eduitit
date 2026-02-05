@@ -2215,10 +2215,12 @@
 
             const data = await response.json();
 
-            // 성공 시 카운트 증가
-            if (response.ok && data.success) {
-                usageCount++;
-                localStorage.setItem(usageKey, usageCount);
+            // 성공 시 카운트 증가 (개인 API 키 없을 때만)
+            if (response.ok && data.success && !hasPersonalApiKey) {
+                const today = new Date().toISOString().split('T')[0];
+                const usageKey = `saju_usage_${today}`;
+                let currentCount = parseInt(localStorage.getItem(usageKey) || '0');
+                localStorage.setItem(usageKey, currentCount + 1);
             }
 
             if (!response.ok) {
