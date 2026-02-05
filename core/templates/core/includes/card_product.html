@@ -27,7 +27,8 @@
                         class="{% if product.card_size == 'hero' %}text-lg md:text-2xl lg:text-3xl{% else %}text-base md:text-xl lg:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-1 md:mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                         {{ product.title }}
                     </h3>
-                    <p class="text-xs md:text-sm lg:text-base text-gray-500 leading-relaxed font-hand line-clamp-2 md:line-clamp-3">
+                    <p
+                        class="text-sm md:text-base text-slate-600 leading-relaxed font-sans line-clamp-2 md:line-clamp-3">
                         {{ product.lead_text|default:product.description }}
                     </p>
                 </div>
@@ -37,7 +38,8 @@
                 <div
                     class="flex items-center gap-1 md:gap-2 font-bold text-gray-400 group-hover:text-purple-600 transition-colors">
                     <span class="text-xs md:text-sm">보기</span>
-                    <i class="fa-solid fa-arrow-right text-[10px] md:text-xs group-hover:translate-x-1 transition-transform"></i>
+                    <i
+                        class="fa-solid fa-arrow-right text-[10px] md:text-xs group-hover:translate-x-1 transition-transform"></i>
                 </div>
                 {% if product.card_size == 'hero' %}
                 <div
