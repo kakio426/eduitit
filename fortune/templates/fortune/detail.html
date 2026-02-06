@@ -225,7 +225,8 @@
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-400 to-indigo-500"></div>
 
         <!-- 일간 이미지 영역 -->
-        <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10" id="stemImageContainer">
+        <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10"
+            id="stemImageContainer">
             <!-- 이미지가 있으면 표시, 없으면 이모지 표시 -->
             <div class="w-48 h-48 flex items-center justify-center text-9xl" id="stemIcon">
                 🔮
@@ -241,7 +242,8 @@
 
     <!-- 2. 사주 명식 카드 (강조) -->
     {% if item.natal_chart %}
-    <div class="clay-card p-8 md:p-10 mb-8 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 border-2 border-purple-200" data-aos="fade-up">
+    <div class="clay-card p-8 md:p-10 mb-8 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 border-2 border-purple-200"
+        data-aos="fade-up">
         <h2 class="text-2xl font-black text-gray-800 mb-6 text-center flex items-center justify-center gap-2">
             <i class="fa-solid fa-yin-yang text-purple-500"></i>
             사주 팔자 명식
@@ -258,7 +260,8 @@
             <!-- 일주 (강조) -->
             <div class="pillar-box border-4 border-purple-400 bg-purple-50/50 shadow-xl transform scale-105">
                 <span class="pillar-top text-purple-600">일주 ⭐</span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|first }}" id="dayStemChar"></span>
+                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|first }}"
+                    id="dayStemChar"></span>
                 <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|last }}"></span>
                 <span class="pillar-sub text-purple-600 font-black">나 자신</span>
             </div>
@@ -279,19 +282,24 @@
         </div>
 
         <div class="mt-8 flex flex-wrap justify-center gap-3">
-            <div class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-green-100 text-green-700 rounded-full shadow-sm">
+            <div
+                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-green-100 text-green-700 rounded-full shadow-sm">
                 🌳 목(Wood)
             </div>
-            <div class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-red-100 text-red-700 rounded-full shadow-sm">
+            <div
+                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-red-100 text-red-700 rounded-full shadow-sm">
                 🔥 화(Fire)
             </div>
-            <div class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-amber-100 text-amber-700 rounded-full shadow-sm">
+            <div
+                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-amber-100 text-amber-700 rounded-full shadow-sm">
                 ⛰️ 토(Earth)
             </div>
-            <div class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-slate-200 text-slate-700 rounded-full shadow-sm">
+            <div
+                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-slate-200 text-slate-700 rounded-full shadow-sm">
                 ⚔️ 금(Metal)
             </div>
-            <div class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-blue-100 text-blue-700 rounded-full shadow-sm">
+            <div
+                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-blue-100 text-blue-700 rounded-full shadow-sm">
                 💧 수(Water)
             </div>
         </div>
@@ -325,7 +333,7 @@
             </button>
             <a href="{% url 'fortune:saju' %}"
                 class="px-8 py-4 bg-purple-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
-                <i class="fa-solid fa-rotate-right"></i> 다시 보기
+                <i class="fa-solid fa-crystal-ball"></i> 나도 사주보기
             </a>
         </div>
     </div>
@@ -431,35 +439,39 @@
 
     // 카카오톡 공유
     function shareToKakao() {
-        const natalChart = {{ item.natal_chart|safe }};
-        const dayStem = natalChart.day ? natalChart.day[0] : '?';
-        const stemKorean = stemKoreanMap[dayStem] || '사주';
-        const stemEmoji = stemEmojiMap[dayStem] || '🔮';
+        const natalChart = {{ item.natal_chart| safe
+    }};
+    const dayStem = natalChart.day ? natalChart.day[0] : '?';
+    const stemKorean = stemKoreanMap[dayStem] || '사주';
+    const stemEmoji = stemEmojiMap[dayStem] || '🔮';
 
-        const mode = '{{ item.get_mode_display }}';
-        const resultPreview = rawText.substring(0, 100).replace(/\n/g, ' ') + '...';
+    const mode = '{{ item.get_mode_display }}';
 
-        Kakao.Share.sendDefault({
-            objectType: 'feed',
-            content: {
-                title: `${stemEmoji} ${stemKorean} 기운의 사주 분석`,
-                description: `${mode} 상담 결과입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
-                imageUrl: 'https://images.unsplash.com/photo-1515940175183-6798529cb860?q=80&w=800&auto=format&fit=crop',
+    // Use the new image
+    const imageUrl = window.location.origin + '/static/fortune/images/teacher_saju_card.png';
+    const shareUrl = window.location.href;
+
+    Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+            title: `${stemEmoji} ${stemKorean} 기운의 사주 결과`,
+            description: `${mode} 상담 결과입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
+            imageUrl: imageUrl,
+            link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+            },
+        },
+        buttons: [
+            {
+                title: '나도 사주보기 🔮',
                 link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
+                    mobileWebUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
+                    webUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
                 },
             },
-            buttons: [
-                {
-                    title: '나도 사주보기 🔮',
-                    link: {
-                        mobileWebUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
-                        webUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
-                    },
-                },
-            ],
-        });
+        ],
+    });
     }
 
     // 링크 복사

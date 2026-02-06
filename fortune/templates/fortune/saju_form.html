@@ -2794,12 +2794,20 @@
                 shareUrl = window.location.origin + '/fortune/history/' + savedResultId + '/';
             }
 
+            // 이름 처리 (중복 방지)
+            let displayTitle = `${nameContext} 선생님의 사주 결과`;
+            if (nameContext === '선생님') {
+                displayTitle = `선생님의 사주 결과`;
+            } else if (nameContext.endsWith('선생님')) {
+                displayTitle = `${nameContext}의 사주 결과`;
+            }
+
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: `${elementIcon} ${nameContext} 선생님의 사주 결과`,
+                    title: `${elementIcon} ${displayTitle}`,
                     description: `${elementName} 기운을 가진 선생님을 위한 분석입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
-                    imageUrl: 'https://images.unsplash.com/photo-1515940175183-6798529cb860?q=80&w=800&auto=format&fit=crop',
+                    imageUrl: window.location.origin + '/static/fortune/images/teacher_saju_card.png',
                     link: {
                         mobileWebUrl: shareUrl,
                         webUrl: shareUrl,
