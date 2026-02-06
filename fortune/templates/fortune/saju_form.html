@@ -912,9 +912,10 @@
     </div>
 
     <!-- 즐겨찾기 날짜 & 통계 (로그인 사용자만) -->
+    <!--
     {% if user.is_authenticated %}
     <div class="grid md:grid-cols-2 gap-6 mb-8">
-        <!-- 즐겨찾기 날짜 -->
+        
         <div class="clay-card p-6" data-aos="fade-up">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-black text-gray-800">
@@ -930,7 +931,7 @@
             </div>
         </div>
 
-        <!-- 통계 대시보드 -->
+        
         <div class="clay-card p-6" data-aos="fade-up" data-aos-delay="100">
             <h3 class="text-xl font-black text-gray-800 mb-4">
                 <i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>
@@ -953,6 +954,7 @@
         </div>
     </div>
     {% endif %}
+    -->
     {% endif %} <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
 
     <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
@@ -1270,7 +1272,8 @@
             </div>
         </div>
 
-        <!-- 저장/가입 유도 섹션 -->
+        <!-- 저장/가입 유도 섹션 (User Requested Removal) -->
+        <!--
         <div id="saveSection" class="{% if not result %}hidden{% endif %}">
             {% if user.is_authenticated %}
             <div class="space-y-4">
@@ -1335,6 +1338,7 @@
             </div>
             {% endif %}
         </div>
+        -->
 
         <div class="mt-10 text-center" id="restartSection">
             <button type="button" onclick="resetToForm()" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
@@ -1553,6 +1557,14 @@
         Kakao.init("{{ kakao_js_key }}");
         console.log("Kakao SDK Initialized:", Kakao.isInitialized());
     }
+
+    // Global State for Caching & Auto-Save
+    window.currentSajuState = {
+        natal_chart: null,
+        mode: 'teacher',
+        savedId: null,
+        result_text: null
+    };
 
     // UI Safe-guard: Ensure form is visible if no result
     document.addEventListener('DOMContentLoaded', () => {
@@ -2133,9 +2145,13 @@
             const response = await fetch('{% url "fortune:statistics_api" %}');
             const data = await response.json();
 
-            document.getElementById('statTotalAnalyses').textContent = data.total_analyses;
-            document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
-            document.getElementById('statRecentActivity').textContent = data.recent_activity;
+            // JS Check: Ensure elements exist before setting (since they might be removed)
+            const statTotalEl = document.getElementById('statTotalAnalyses');
+            if (statTotalEl) {
+                statTotalEl.textContent = data.total_analyses;
+                document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
+                document.getElementById('statRecentActivity').textContent = data.recent_activity;
+            }
         } catch (e) {
             console.error('Failed to load statistics:', e);
         }
@@ -2204,7 +2220,11 @@
             document.getElementById('resultContainer').classList.remove('hidden');
             document.getElementById('shareSection').classList.remove('hidden');
             document.getElementById('dailyFortuneSection').classList.remove('hidden');
-            document.getElementById('saveSection').classList.remove('hidden');
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('shareSection').classList.remove('hidden');
+            document.getElementById('dailyFortuneSection').classList.remove('hidden');
+            // document.getElementById('saveSection').classList.remove('hidden'); // Removed functionality
 
             updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
 
@@ -2233,8 +2253,26 @@
             // 로그인한 경우 자동 저장 제안 - 가입 유도 메시지 분리
             if (isAuthenticated) {
                 showToast('이전 사주 결과를 복원했습니다!');
+
+                // Cache Restoration
+                window.currentSajuState = {
+                    natal_chart: data.chart,
+                    mode: data.mode || 'teacher',
+                    savedId: null, // Reset saved ID on restore to potentially allow re-save if needed, or check DB?
+                    result_text: data.result
+                };
+
+                // Trigger Auto-Save (if not already saved in session)
+                autoSaveResult();
             } else {
                 showToast('이전 사주 결과를 복원했습니다! 회원가입하면 영구 보관할 수 있어요.');
+                // Helper for guests
+                window.currentSajuState = {
+                    natal_chart: data.chart,
+                    mode: data.mode || 'teacher',
+                    savedId: null,
+                    result_text: data.result
+                };
             }
 
         } catch (e) {
@@ -2404,7 +2442,7 @@
                 document.getElementById('resultContainer').classList.remove('hidden');
                 document.getElementById('shareSection').classList.remove('hidden');
                 document.getElementById('dailyFortuneSection').classList.remove('hidden');
-                document.getElementById('saveSection').classList.remove('hidden');
+                // document.getElementById('saveSection').classList.remove('hidden');
 
                 // 결과 렌더링 (day_master 전달)
                 updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master, data.name);
@@ -2419,6 +2457,17 @@
                         block: 'start'
                     });
                 }, 100);
+
+                // Update Global Cache
+                window.currentSajuState = {
+                    natal_chart: data.chart,
+                    mode: data.mode || 'teacher',
+                    savedId: null,
+                    result_text: accumulatedText
+                };
+
+                // Trigger Auto-Save
+                autoSaveResult();
             }, 800);
 
         } catch (err) {
@@ -2906,7 +2955,10 @@
         const chartDataElem = document.getElementById('saju-chart-data');
         let natalChart = {};
 
-        if (chartDataElem) {
+        // Cache Strategy: Use Global State first
+        if (window.currentSajuState && window.currentSajuState.natal_chart) {
+            natalChart = window.currentSajuState.natal_chart;
+        } else if (chartDataElem) {
             natalChart = JSON.parse(chartDataElem.textContent);
         } else {
             const resultText = document.getElementById('markdownResult').innerText;
@@ -2923,7 +2975,7 @@
             natalChart.hour = extractPillar('시주');
         }
 
-        if (!natalChart.day) {
+        if (!natalChart || !natalChart.day) {
             showToast('분석 결과를 찾을 수 없습니다. 먼저 사주 분석을 완료해주세요.', 'error');
             return;
         }
@@ -2975,6 +3027,43 @@
 
     // 저장된 결과 ID를 저장할 변수
     let savedResultId = null;
+
+    // 자동 저장 (Silent Auto-Save)
+    async function autoSaveResult() {
+        if ("{{ user.is_authenticated }}" !== "True") return;
+        if (!window.currentSajuState || !window.currentSajuState.result_text) return;
+        if (window.currentSajuState.savedId) return; // Already saved
+
+        console.log("Auto-saving results...");
+
+        try {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (!csrfInput) return;
+
+            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfInput.value
+                },
+                body: JSON.stringify({
+                    mode: window.currentSajuState.mode || 'teacher',
+                    natal_chart: window.currentSajuState.natal_chart,
+                    result_text: window.currentSajuState.result_text,
+                    target_date: null // Main analysis, not daily
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                window.currentSajuState.savedId = data.result_id;
+                savedResultId = data.result_id; // For sharing link
+                showToast('결과가 보관함에 자동 저장되었습니다! 📂');
+            }
+        } catch (e) {
+            console.error("Auto-save failed", e);
+        }
+    }
 
     // 보관함 저장
     async function saveToLibrary() {
