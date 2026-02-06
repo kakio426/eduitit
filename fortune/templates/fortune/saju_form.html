@@ -2338,8 +2338,25 @@
         "시간을 모를 경우 정오(12시)로 계산하면 가장 정확해요.",
         "사주는 통계학에 기반한 삶의 이정표일 뿐입니다.",
         "긍정적인 마음가짐이 운명을 바꾸는 가장 큰 열쇠예요.",
-        "오늘의 분석 결과를 보관함에 저장해두고 꺼내보세요."
     ];
+
+    // 사주 입력 데이터 기반 고유 캐시 키 생성 (이름, 성별, 생년월일시, 모드 포함)
+    function getSajuCacheKey(formData) {
+        const keyParts = [
+            formData.get('name') || '',
+            formData.get('gender') || '',
+            formData.get('birth_year') || '',
+            formData.get('birth_month') || '',
+            formData.get('birth_day') || '',
+            formData.get('birth_hour') || '',
+            formData.get('calendar_type') || '',
+            formData.get('mode') || 'teacher'
+        ];
+        const rawKey = keyParts.join('|');
+        // 한글 포함 키를 안전하게 해싱 (Base64 활용)
+        const hash = btoa(unescape(encodeURIComponent(rawKey))).substring(0, 24);
+        return `saju_result_cache_${hash}`;
+    }
 
     // 폼 제출 핸들러 (Premium Loading 적용)
     document.getElementById('sajuForm')?.addEventListener('submit', async function (e) {
@@ -2369,6 +2386,63 @@
         const loadingTitle = document.getElementById('loadingTitle');
         const loadingSubtitle = document.getElementById('loadingSubtitle');
         const loadingTip = document.getElementById('loadingTip');
+
+        // [중복 분석 방지: 캐시 체크]
+        const cacheKey = getSajuCacheKey(formData);
+        const cachedResult = localStorage.getItem(cacheKey);
+
+        if (cachedResult) {
+            console.log("Found cached saju result, simulating deep analysis for reliability.");
+            try {
+                const data = JSON.parse(cachedResult);
+
+                // 로딩 모달 표시 및 가짜 프로그레스 시작
+                loadingModal.classList.add('show');
+                const randomMsg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+                loadingTitle.textContent = randomMsg.title;
+                loadingSubtitle.textContent = randomMsg.subtitle;
+                loadingTip.textContent = loadingTips[Math.floor(Math.random() * loadingTips.length)];
+
+                // 캐시된 결과이므로 좀 더 빠르게(1.5초 정도) 로딩 연출
+                let cacheProgress = 0;
+                const cacheInterval = setInterval(() => {
+                    cacheProgress += 10;
+                    loadingProgress.style.width = `${cacheProgress}%`;
+                    if (cacheProgress >= 100) clearInterval(cacheInterval);
+                }, 150);
+
+                setTimeout(() => {
+                    clearInterval(cacheInterval);
+                    loadingModal.classList.remove('show');
+
+                    updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
+                    groupMarkdownSections();
+
+                    document.getElementById('formContainer').classList.add('hidden');
+                    document.getElementById('resultContainer').classList.remove('hidden');
+                    document.getElementById('shareSection').classList.remove('hidden');
+                    document.getElementById('dailyFortuneSection').classList.remove('hidden');
+
+                    window.currentSajuState = {
+                        natal_chart: data.chart,
+                        mode: data.mode || 'teacher',
+                        savedId: null,
+                        result_text: data.result
+                    };
+
+                    setTimeout(() => {
+                        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+
+                    showToast('이전에 분석한 결과를 불러왔습니다. ✨', 'success');
+                }, 1500);
+
+                return; // API 호출 중단
+            } catch (e) {
+                console.warn("Cached result parse error, proceeding with API:", e);
+                localStorage.removeItem(cacheKey);
+            }
+        }
 
         loadingModal.classList.add('show');
 
@@ -2435,16 +2509,20 @@
             };
             localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
 
-            // 비회원 결과 보존
-            localStorage.setItem('pendingSajuResult', JSON.stringify({
+            // 캐시 저장 (3일간 유효하도록 타임스탬프 포함)
+            const cacheEntry = {
                 result: accumulatedText,
                 chart: data.chart,
                 name: data.name,
                 gender: formData.get('gender'),
                 mode: formData.get('mode'),
-                day_master: data.day_master, // 명시적 일간 정보 보존
+                day_master: data.day_master,
                 timestamp: Date.now()
-            }));
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
+
+            // 비회원 결과 보존 (최신 1건)
+            localStorage.setItem('pendingSajuResult', JSON.stringify(cacheEntry));
 
             // 약간의 지연 후 결과 표시 (UX를 위해)
             setTimeout(() => {
