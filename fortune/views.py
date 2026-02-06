@@ -12,9 +12,11 @@ from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
 from datetime import datetime
+from django.core.cache import cache
 import pytz
 import json
 import logging
+import hashlib
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -199,12 +201,26 @@ def saju_view(request):
             logger.info(f"User Input: {data}")
             logger.info(f"Calculated Chart: {chart_context}")
             
-            # Form Prompt with SSOT data
+            # [SERVER CACHE] 중복 분석 방지: 동일 명식/모드 결과 존재 여부 확인
+            from .models import FortuneResult
+            existing_result = None
+            if request.user.is_authenticated:
+                # 동일 사용자, 동일 모드, 동일 사주 명식(JSON)을 가진 최근 결과 조회
+                existing_result = FortuneResult.objects.filter(
+                    user=request.user,
+                    mode=mode,
+                    natal_chart=chart_context
+                ).order_by('-created_at').first()
+
             prompt = get_prompt(mode, data, chart_context=chart_context)
 
             try:
-                # Wrap generator to maintain current sync behavior until Phase 4
-                generated_text = "".join(generate_ai_response(prompt, request))
+                if existing_result:
+                    logger.info(f"Found existing result in DB for user {request.user}, bypassing Gemini.")
+                    generated_text = existing_result.result_text
+                else:
+                    # Wrap generator to maintain current sync behavior until Phase 4
+                    generated_text = "".join(generate_ai_response(prompt, request))
                 
                 # Validation: If result is empty/whitespace, treat as None/Error
                 if generated_text and generated_text.strip():
@@ -312,11 +328,25 @@ def saju_api_view(request):
     # Logic Engine
     chart_context = get_chart_context(data)
     
+    # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
+    from .models import FortuneResult
+    existing_result = None
+    if request.user.is_authenticated:
+        existing_result = FortuneResult.objects.filter(
+            user=request.user,
+            mode=mode,
+            natal_chart=chart_context
+        ).order_by('-created_at').first()
+
     prompt = get_prompt(mode, data, chart_context=chart_context)
 
     try:
-        # Wrap generator to maintain current sync behavior
-        response_text = "".join(generate_ai_response(prompt, request))
+        if existing_result:
+            logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini.")
+            response_text = existing_result.result_text
+        else:
+            # Wrap generator to maintain current sync behavior
+            response_text = "".join(generate_ai_response(prompt, request))
         
         return JsonResponse({
             'success': True,
@@ -398,8 +428,18 @@ def daily_fortune_api(request):
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
 
-        # Wrap generator to maintain current sync behavior
-        response_text = "".join(generate_ai_response(prompt, request))
+        # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효)
+        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(str(natal_data).encode()).hexdigest()}"
+        cached_response = cache.get(cache_key)
+        
+        if cached_response:
+            logger.info(f"Found cached daily fortune for {name} on {target_date_str}, bypassing Gemini.")
+            response_text = cached_response
+        else:
+            # Wrap generator to maintain current sync behavior
+            response_text = "".join(generate_ai_response(prompt, request))
+            # 캐시 저장
+            cache.set(cache_key, response_text, 60*60*12) # 12시간
 
         # 통계용 로그 저장
         if request.user.is_authenticated:

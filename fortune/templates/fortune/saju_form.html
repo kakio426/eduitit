@@ -3095,16 +3095,39 @@
         const cachedResult = localStorage.getItem(cacheKey);
 
         if (cachedResult) {
-            console.log("Using cached daily fortune...");
-            const dailyResultDiv = document.getElementById('dailyFortuneResult');
-            const dailyContentDiv = document.getElementById('dailyFortuneContent');
-            dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(cachedResult));
-            dailyResultDiv.classList.remove('hidden');
-            dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            console.log("Using cached daily fortune, simulating analysis for reliability...");
+
+            // 로딩 모달 표시 및 연출
+            loadingModal.classList.add('show');
+            // 일진 확인에 어울리는 메시지 선택
+            loadingTitle.textContent = "오늘의 기운을 분석하는 중... 🍀";
+            loadingSubtitle.textContent = `${targetDate}의 우주 에너지를 당신의 사주와 맞추고 있습니다.`;
+
+            let cacheProgress = 0;
+            const cacheInterval = setInterval(() => {
+                cacheProgress += 15;
+                if (cacheProgress > 100) cacheProgress = 100;
+                loadingProgress.style.width = `${cacheProgress}%`;
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(cacheInterval);
+                loadingModal.classList.remove('show');
+
+                const dailyResultDiv = document.getElementById('dailyFortuneResult');
+                const dailyContentDiv = document.getElementById('dailyFortuneContent');
+                dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(cachedResult));
+                dailyResultDiv.classList.remove('hidden');
+                dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('오늘의 운세를 성공적으로 불러왔습니다.', 'success');
+            }, 1200);
+
             return;
         }
 
-        document.getElementById('loadingModal').classList.add('show');
+        loadingModal.classList.add('show');
+        loadingTitle.textContent = loadingMessages[0].title;
+        loadingSubtitle.textContent = loadingMessages[0].subtitle;
 
         try {
             const response = await fetch('{% url "fortune:daily_fortune_api" %}', {
