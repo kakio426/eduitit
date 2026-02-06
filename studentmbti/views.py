@@ -38,6 +38,22 @@ def generate_session_qr(session_id, request):
 
 
 # ================================
+# 공개 랜딩 페이지
+# ================================
+
+def landing_page(request):
+    """공개 랜딩 페이지 - 로그인 불필요"""
+    try:
+        service = get_student_service()
+        return render(request, 'studentmbti/landing.html', {
+            'service': service,
+        })
+    except Exception as e:
+        logger.error(f"[StudentMBTI] Landing Page Error: {str(e)}")
+        return HttpResponse("페이지를 로드하는 중 오류가 발생했습니다.", status=500)
+
+
+# ================================
 # 교사용 대시보드 뷰
 # ================================
 

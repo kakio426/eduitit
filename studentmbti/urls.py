@@ -4,6 +4,9 @@ from . import views
 app_name = 'studentmbti'
 
 urlpatterns = [
+    # 공개 랜딩 페이지
+    path('', views.landing_page, name='landing'),
+    
     # 교사용 대시보드
     path('dashboard/', views.dashboard, name='dashboard'),
     path('session/create/', views.session_create, name='session_create'),

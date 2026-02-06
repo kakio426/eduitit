@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ service.title }} - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+    <div class="max-w-4xl mx-auto">
+
+        <!-- 헤더 섹션 -->
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-7xl mb-4 float-icon">{{ service.icon }}</div>
+            <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title }}</h1>
+            <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
+                {{ service.lead_text }}
+            </p>
+        </div>
+
+        <!-- 서비스 설명 카드 -->
+        <div class="clay-card p-8 md:p-10 mb-8" data-aos="zoom-in">
+            <div class="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-6 mb-6">
+                <p class="text-lg md:text-xl text-gray-700 leading-relaxed break-keep">
+                    {{ service.description|linebreaksbr }}
+                </p>
+            </div>
+
+            <!-- 사용 방법 -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- 교사용 -->
+                <div class="bg-white/50 rounded-2xl p-6 border-2 border-purple-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-12 h-12 rounded-full bg-purple-500 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">선생님이신가요?</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6 leading-relaxed">
+                        로그인 후 검사 세션을 생성하고,<br>
+                        학생들의 결과를 실시간으로 확인하세요!
+                    </p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'studentmbti:dashboard' %}"
+                        class="block w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        대시보드 가기
+                        <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'account_login' %}?next={% url 'studentmbti:dashboard' %}"
+                        class="block w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        로그인하기
+                        <i class="fa-solid fa-sign-in-alt ml-2"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- 학생용 -->
+                <div class="bg-white/50 rounded-2xl p-6 border-2 border-pink-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-12 h-12 rounded-full bg-pink-500 text-white flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">학생이신가요?</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6 leading-relaxed">
+                        선생님이 보여주신 QR 코드를<br>
+                        스캔하거나 링크를 클릭하세요!
+                    </p>
+                    <div class="bg-gradient-to-r from-pink-100 to-purple-100 rounded-xl p-4 text-center">
+                        <div class="text-4xl mb-2">
+                            <i class="fa-solid fa-qrcode text-pink-500"></i>
+                        </div>
+                        <p class="text-sm text-gray-600 font-medium">
+                            선생님께 QR 코드를<br>요청해주세요
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 주요 기능 -->
+        {% if service.features.all %}
+        <div class="clay-card p-8 md:p-10" data-aos="fade-up">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center font-title">
+                <i class="fa-solid fa-sparkles text-purple-500 mr-2"></i>
+                주요 기능
+            </h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                {% for feature in service.features.all %}
+                <div class="text-center">
+                    <div
+                        class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl mx-auto mb-4 float-icon">
+                        {% if "fa-" in feature.icon %}
+                        <i class="{{ feature.icon }} text-purple-500"></i>
+                        {% else %}
+                        {{ feature.icon }}
+                        {% endif %}
+                    </div>
+                    <h4 class="text-lg font-bold text-gray-800 mb-2">{{ feature.title }}</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed break-keep">{{ feature.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 뒤로가기 버튼 -->
+        <div class="text-center mt-8">
+            <a href="{% url 'home' %}"
+                class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="font-medium">서비스 목록으로 돌아가기</span>
+            </a>
+        </div>
+
+    </div>
+</section>
+
+<!-- AOS 애니메이션 초기화 -->
+<script>
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+</script>
+{% endblock %}
