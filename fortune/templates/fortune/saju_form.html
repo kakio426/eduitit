@@ -96,6 +96,8 @@
     .capture-active {
         width: 800px !important;
         margin: 0 auto !important;
+        background-color: #F8FAF6 !important;
+        padding-top: 20px !important;
     }
 
     .capture-active .no-print {
@@ -104,6 +106,102 @@
 
     .capture-active #markdownResult {
         columns: 1 !important;
+    }
+
+    /* Fix Alignment & Rendering for html2canvas */
+    /* Fix Alignment & Rendering for html2canvas */
+    .capture-active #premiumBadge {
+        display: inline-block !important;
+        height: 28px !important;
+        line-height: normal !important;
+        padding: 5px 12px 3px 12px !important;
+        /* Asymmetric padding for optical center */
+        border-radius: 9999px !important;
+        backdrop-filter: none !important;
+        background-color: white !important;
+        border: 1px solid #e2e8f0 !important;
+        vertical-align: middle !important;
+    }
+
+    .capture-active #badgeIcon {
+        display: inline !important;
+        vertical-align: middle !important;
+        margin-right: 4px !important;
+    }
+
+    .capture-active #badgeText {
+        display: inline !important;
+        vertical-align: middle !important;
+        font-size: 0.9rem !important;
+    }
+
+    .capture-active #stemIconBig {
+        display: table-cell !important;
+        /* The Primitive Fix: Table Cell always holds vertical center */
+        vertical-align: middle !important;
+        text-align: center !important;
+        width: 4.5rem !important;
+        height: 4.5rem !important;
+        background-color: white !important;
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 0 !important;
+        font-size: 2.5rem !important;
+        border-radius: 1rem !important;
+    }
+
+    .capture-active #stemStaticName {
+        background: none !important;
+        background-image: none !important;
+        -webkit-background-clip: initial !important;
+        background-clip: initial !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: initial !important;
+        font-weight: 900 !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.2 !important;
+    }
+
+    /* Highlight Alignment Fix (html2canvas baseline correction) */
+    /* Highlight Alignment Fix: Return to safe inline display */
+    .capture-active .analysis-content strong {
+        background: none !important;
+        /* Remove background to stop floating */
+        box-shadow: inset 0 -0.5em 0 rgba(124, 58, 237, 0.1) !important;
+        /* Bottom-half highlight that sticks to baseline */
+        padding: 0 0.1rem !important;
+        border-radius: 0 !important;
+        /* Sharp edges for marker feel */
+        display: inline !important;
+        line-height: inherit !important;
+        vertical-align: baseline !important;
+        margin: 0 !important;
+    }
+
+    /* Simulate slight padding without layout shift */
+
+
+    .capture-active .pillar-box {
+        display: block !important;
+        text-align: center !important;
+        padding: 12px 4px !important;
+        backdrop-filter: none !important;
+        background-color: white !important;
+        height: auto !important;
+    }
+
+    .capture-active .pillar-main {
+        display: block !important;
+        line-height: 1.2 !important;
+        margin: 2px 0 !important;
+    }
+
+    .capture-active .pillar-top,
+    .capture-active .pillar-sub {
+        display: block !important;
+        line-height: 1 !important;
     }
 
     .analysis-content p {
@@ -136,6 +234,29 @@
         left: 0;
         color: var(--premium-purple);
         opacity: 0.7;
+    }
+
+    /* ========================================
+       Element Colors (O행 색상)
+       ======================================== */
+    .color-wood {
+        color: #10b981 !important;
+    }
+
+    .color-fire {
+        color: #ef4444 !important;
+    }
+
+    .color-earth {
+        color: #f59e0b !important;
+    }
+
+    .color-metal {
+        color: #8b5cf6 !important;
+    }
+
+    .color-water {
+        color: #3b82f6 !important;
     }
 
     /* ========================================
@@ -998,67 +1119,71 @@
     <!-- 결과 화면 섹션 (Compact Premium Redesign) -->
     <div id="resultContainer" class="{% if not result %}hidden{% endif %}">
 
-        <!-- 1. 히어로 통합 카드 (일간 + 사주 명식) -->
-        <div id="capture-area" class="relative z-10 mb-8">
-            <div class="clay-card overflow-hidden transition-transform hover:scale-[1.005]">
-                <div id="hero-bg" class="absolute inset-0 opacity-30 transition-colors duration-1000"></div>
-                <div class="relative p-6 md:p-8 grid md:grid-cols-12 gap-6 md:gap-10 items-center">
-                    <!-- Left: Identity Section -->
-                    <div
-                        class="md:col-span-5 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-slate-200 border-dashed pb-6 md:pb-0 md:pr-6">
-                        <div class="w-full flex justify-center md:justify-start mb-4">
-                            <div class="inline-flex items-center gap-1 text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
-                                id="premiumBadge">
-                                <span id="badgeIcon">🔮</span> <span id="badgeText" class="font-bold">분석 중...</span>
+        <!-- 캡처 영역 (히어로 카드 + 분석 내용 포함) -->
+        <div id="capture-area" class="relative z-10">
+            <!-- 1. 히어로 통합 카드 (일간 + 사주 명식) -->
+            <div class="mb-8">
+                <div class="clay-card overflow-hidden transition-transform hover:scale-[1.005]">
+                    <div id="hero-bg" class="absolute inset-0 opacity-30 transition-colors duration-1000"></div>
+                    <div class="relative p-6 md:p-8 grid md:grid-cols-12 gap-6 md:gap-10 items-center">
+                        <!-- Left: Identity Section -->
+                        <div
+                            class="md:col-span-5 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-slate-200 border-dashed pb-6 md:pb-0 md:pr-6">
+                            <div class="w-full flex justify-center md:justify-start mb-4">
+                                <div class="inline-flex items-center gap-1 text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
+                                    id="premiumBadge">
+                                    <span id="badgeIcon">🔮</span> <span id="badgeText" class="font-bold">분석 중...</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 w-full justify-center md:justify-start">
+                                <div class="flex items-center justify-center text-4xl bg-white rounded-2xl shadow-clay-inner"
+                                    id="stemIconBig">🔮</div>
+                                <div class="flex-1 text-center md:text-left">
+                                    <h2 class="text-2xl font-black leading-tight"><span id="stemStaticName"
+                                            class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">...</span>
+                                    </h2>
+                                    <p class="text-sm text-gray-500 font-medium mt-1 leading-snug break-keep"
+                                        id="stemStaticDesc">분석 결과를 불러오고 있습니다.</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4 w-full justify-center md:justify-start">
-                            <div class="flex items-center justify-center text-4xl bg-white rounded-2xl shadow-clay-inner"
-                                id="stemIconBig">🔮</div>
-                            <div class="flex-1 text-center md:text-left">
-                                <h2 class="text-2xl font-black leading-tight"><span id="stemStaticName"
-                                        class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">...</span>
-                                </h2>
-                                <p class="text-sm text-gray-500 font-medium mt-1 leading-snug break-keep"
-                                    id="stemStaticDesc">분석 결과를 불러오고 있습니다.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Right: Natal Chart -->
-                    <div class="md:col-span-7 w-full">
-                        <div class="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border border-white/50 shadow-inner">
-                            <div id="sajuChartDisplay" class="grid grid-cols-4 gap-2 md:gap-4">
-                                <!-- JS will populate chart here -->
+                        <!-- Right: Natal Chart -->
+                        <div class="md:col-span-7 w-full">
+                            <div
+                                class="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border border-white/50 shadow-inner">
+                                <div id="sajuChartDisplay" class="grid grid-cols-4 gap-2 md:gap-4">
+                                    <!-- JS will populate chart here -->
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 2. 탭 네비게이션 -->
-        <div class="flex overflow-x-auto gap-2 mb-6 scrollbar-hide px-1" id="analysisTabs">
-            <button onclick="switchTab(this, 'summary')"
-                class="tab-btn active px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent shadow-sm bg-white/80">📌
-                핵심요약</button>
-            <button onclick="switchTab(this, 'personality')"
-                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">📜
-                기질/성격</button>
-            <button onclick="switchTab(this, 'wealth')"
-                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💰
-                재물운</button>
-            <button onclick="switchTab(this, 'career')"
-                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💼
-                직업/진로</button>
-            <button onclick="switchTab(this, 'compatibility')"
-                class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">❤️
-                애정/인연</button>
-        </div>
+            <!-- 2. 탭 네비게이션 (캡처 제외) -->
+            <div class="flex overflow-x-auto gap-2 mb-6 scrollbar-hide px-1 no-print" id="analysisTabs">
+                <button onclick="switchTab(this, 'summary')"
+                    class="tab-btn active px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent shadow-sm bg-white/80">📌
+                    핵심요약</button>
+                <button onclick="switchTab(this, 'personality')"
+                    class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">📜
+                    기질/성격</button>
+                <button onclick="switchTab(this, 'wealth')"
+                    class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💰
+                    재물운</button>
+                <button onclick="switchTab(this, 'career')"
+                    class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">💼
+                    직업/진로</button>
+                <button onclick="switchTab(this, 'compatibility')"
+                    class="tab-btn px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm border border-transparent hover:bg-white/80">❤️
+                    애정/인연</button>
+            </div>
 
-        <!-- 3. AI 분석 내용 -->
-        <div class="analysis-card relative overflow-hidden mb-10">
-            <div id="markdownResult" class="analysis-content prose prose-slate max-w-none md:columns-2 md:gap-10">
-                {% if result %}{{ result|safe }}{% endif %}
+            <!-- 3. AI 분석 내용 -->
+            <div class="analysis-card relative overflow-hidden mb-10">
+                <div id="markdownResult" class="analysis-content prose prose-slate max-w-none md:columns-2 md:gap-10">
+                    {% if result %}{{ result|safe }}{% endif %}
+                </div>
             </div>
         </div>
 
@@ -2073,7 +2198,7 @@
             document.getElementById('dailyFortuneSection').classList.remove('hidden');
             document.getElementById('saveSection').classList.remove('hidden');
 
-            updatePremiumUI(data.result, data.chart, data.mode, data.day_master);
+            updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
 
             // Chart Data 복원 (Daily Fortune 등을 위해 필수)
             // 기존 요소가 있으면 제거 후 재생성
@@ -2274,7 +2399,7 @@
                 document.getElementById('saveSection').classList.remove('hidden');
 
                 // 결과 렌더링 (day_master 전달)
-                updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master);
+                updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master, data.name);
 
                 // 섹션 그룹화 적용
                 groupMarkdownSections();
@@ -2333,7 +2458,7 @@
 
     // --- Premium UI & Analysis Functions ---
 
-    function updatePremiumUI(markdown, chart, mode = 'teacher', dayMaster = null) {
+    function updatePremiumUI(markdown, chart, mode = 'teacher', dayMaster = null, userName = '') {
         console.log("Updating Premium UI - Mode:", mode);
 
         // 1. Render Natal Chart FIRST from API data (to use as reliable identity source)
@@ -2379,9 +2504,9 @@
         if (dayStemChar && ELEMENT_MAP[dayStemChar]) {
             const info = ELEMENT_MAP[dayStemChar];
 
-            // Header Identity Card
+            // Header Identity Card: Restore Person Name if available
             document.getElementById('stemIconBig').textContent = info.icon;
-            document.getElementById('stemStaticName').textContent = info.name;
+            document.getElementById('stemStaticName').textContent = userName ? `${userName} 선생님` : info.name;
             document.getElementById('stemStaticDesc').textContent = info.desc;
 
             // Badge & Background
@@ -2653,15 +2778,36 @@
             useCORS: true,
             logging: false,
             allowTaint: true,
-            windowWidth: 800,
+            windowWidth: 800, // 뷰포트 고정 (PC/모바일 동일 품질)
             onclone: (clonedDoc) => {
                 const clonedArea = clonedDoc.getElementById('capture-area');
                 if (clonedArea) {
+                    clonedArea.style.width = '800px'; // 너비 강제 고정
                     clonedArea.style.padding = '40px';
                     clonedArea.style.borderRadius = '0';
-                    // 캡처 시 불필요한 요소 제거 확인
+                    clonedArea.style.transform = 'none';
+                    clonedArea.style.backgroundColor = '#F8FAF6';
+
+                    // 캡처 시 불필요한 요소 제거
                     const noPrint = clonedDoc.querySelectorAll('.no-print');
                     noPrint.forEach(el => el.style.display = 'none');
+
+                    // 모든 블러 효과 제거 (호환성)
+                    const blurred = clonedDoc.querySelectorAll('.backdrop-blur-sm, .backdrop-blur-md');
+                    blurred.forEach(el => {
+                        el.style.backdropFilter = 'none';
+                        el.style.webkitBackdropFilter = 'none';
+                        el.style.backgroundColor = 'white';
+                    });
+
+                    // 이름 렌더링 강제 보정
+                    const nameElem = clonedDoc.getElementById('stemStaticName');
+                    if (nameElem) {
+                        nameElem.style.background = 'none';
+                        nameElem.style.backgroundImage = 'none';
+                        nameElem.style.color = '#4f46e5';
+                        nameElem.style.display = 'block';
+                    }
                 }
             }
         };
@@ -2951,7 +3097,7 @@
                 element: "{{ day_master.element|default:'' }}"
             };
 
-            updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null);
+            updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null, "{{ name|default:'' }}");
         }
     });
 </script>
