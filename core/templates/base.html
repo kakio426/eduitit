@@ -426,30 +426,29 @@
         <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300 opacity-0"
             id="modalBackdrop" aria-hidden="true" onclick="closeModal()"></div>
 
-        <div class="fixed inset-0 z-10 overflow-hidden">
-            <div class="flex min-h-full items-center justify-center p-4 text-center">
-                <div class="relative transform rounded-2xl md:rounded-[2.5rem] bg-white backdrop-blur-2xl text-left shadow-2xl transition-all w-full max-w-2xl scale-95 opacity-0 duration-300 flex flex-col max-h-[90vh] md:max-h-[85vh]"
-                    id="modalPanel">
+        <div class="fixed inset-0 z-10 flex items-center justify-center p-4 md:p-6">
+            <div class="relative w-full max-w-2xl max-h-[90vh] md:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl md:rounded-3xl bg-white shadow-2xl transform transition-all duration-300 scale-95 opacity-0"
+                id="modalPanel">
 
-                    <!-- Loading Spinner Overlay -->
-                    <div id="modalLoading"
-                        class="absolute inset-0 z-20 flex items-center justify-center bg-white/50 hidden">
-                        <div class="flex flex-col items-center gap-4">
-                            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
-                            <p class="text-xl font-bold text-gray-500">정보를 가져오는 중...</p>
-                        </div>
+                <!-- Loading Spinner Overlay -->
+                <div id="modalLoading"
+                    class="absolute inset-0 z-20 flex items-center justify-center bg-white/80 rounded-2xl md:rounded-3xl hidden">
+                    <div class="flex flex-col items-center gap-4">
+                        <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
+                        <p class="text-lg font-bold text-gray-500">정보를 가져오는 중...</p>
                     </div>
+                </div>
 
-                    <!-- Close Button (Top Right Inside) -->
-                    <button onclick="closeModal()"
-                        class="absolute top-6 right-6 z-30 w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shadow-sm"
-                        aria-label="Close modal">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
+                <!-- Close Button -->
+                <button onclick="closeModal()"
+                    class="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-gray-100/80 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Close modal">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
 
-                    <div id="modalContent" class="flex-1 overflow-hidden relative h-full flex flex-col">
-                        <!-- Content will be loaded here -->
-                    </div>
+                <!-- Content Container: flex-1 + min-h-0 ensures flex overflow works -->
+                <div id="modalContent" class="flex-1 min-h-0 flex flex-col">
+                    <!-- Content will be loaded here -->
                 </div>
             </div>
         </div>
