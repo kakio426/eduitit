@@ -8,8 +8,12 @@
 새로운 서비스를 정의할 때 아래 요소를 포함하여 기술합니다.
 
 - **아이콘 & 테마**: 이모지(예: 🎨) + 메인 컬러(`purple`, `green`, `red`, `blue`, `orange`)
-- **App 위치 (독립성)**: 새로운 대형 서비스는 반드시 별도의 Django App(예: `ssambti`, `autoarticle`)으로 구성합니다. 기존 앱(예: `fortune`, `products`) 내부에 기생하는 구조를 절대 금지하며(예: DutyTicker), 각 앱은 독립적인 `models.py`, `views.py`, `urls.py`를 가져야 합니다.
-- **핵심 가치**: 사용자(선생님)가 이 도구로 얻는 구체적인 이득
+- **App 위치 (독립성)**: 새로운 대형 서비스는 반드시 별도의 Django App으로 구성합니다. 독립적인 `models.py`, `views.py`, `urls.py`는 필수입니다.
+- **모달 풍성함 (Rich Content)**: 서비스를 `Product` 모델에 등록할 때, 다음 요소를 반드시 포함하여 프리뷰 모달이 "빈약해" 보이지 않게 합니다.
+  - **Lead Text**: 서비스의 핵심 가치를 담은 매력적인 한 줄 문구.
+  - **Description**: 서비스 사용법과 기대 효과를 포함한 2~3문장 이상의 설명.
+  - **ProductFeatures**: 최소 3개 이상의 핵심 기능(아이콘+제목+설명)을 등록해야 합니다.
+- **용어 표현 (Kid-Friendly)**: 학생용 서비스인 경우 MBTI, 진단 등 딱딱한 용어 대신 '캐릭터', '친구 찾기' 등 학생 친화적인 용어를 사용합니다.
 
 ---
 
@@ -19,6 +23,7 @@
 - **Framework**: **Django Vanilla (4.2+)** - 복잡한 의존성 없이 장고의 기본 기능을 우선 활용합니다.
 - **Deployment**: **Railway** - `Procfile` 기반의 배포를 준수하며, 모든 설정은 환경 변수(`env`)로 관리합니다.
 - **Database**: **Neon (Postgres)** - 서버리스 DB 환경이므로, 배포 전 반드시 `makemigrations`를 완료하고 배포 시 자동으로 실행되도록 설정합니다.
+- **Dependency Management**: 새로운 라이브러리(예: `qrcode`, `openpyxl`)를 로컬에서 설치한 경우, 반드시 즉시 `requirements.txt`에 추가해야 합니다. 배포 환경(Railway)은 이 파일을 기준으로 빌드되므로, 누락 시 배포 실패의 원인이 됩니다.
 - **Admin Path**: 보안을 위해 `secret-admin-kakio/` 경로를 사용합니다.
 
 ---
@@ -31,9 +36,19 @@
 - **Template Scoping**: 템플릿 파일은 반드시 `app_name/templates/app_name/` 폴더 안에 위치해야 합니다. 
   - (O) `ssambti/templates/ssambti/main.html`
   - [Rule] 절대 타 앱의 템플릿(예: `fortune/zoo_main.html`)을 빌려 쓰지 마십시오.
-- **Static Scoping**: 정적 파일 역시 `app_name/static/app_name/` 경로를 준수하여 타 앱과의 파일명 충돌을 방지합니다.
+- **Static Scoping**: 정적 파일은 반드시 `app_name/static/app_name/` 경로를 준수하여 타 앱과의 파일명 충돌을 방지합니다. (예: `studentmbti/static/studentmbti/images/`)
+- **Data Isolation**: 대량의 정적 매핑 데이터(예: 캐릭터 결과 문구)는 `views.py`에 두지 않고 별도의 `student_mbti_data.py` (또는 `constants.py`)로 분리하여 임포트합니다.
 
 ---
+
+## 3.1. 교실용 서비스 운영 표준 (Teacher-Student Interaction)
+
+학급 전체가 참여하는 서비스(예: 검사, 퀴즈)는 다음의 **와이어프레임 구조**를 표준으로 합니다.
+
+1. **교사 (Manager Profile)**: 로그인 상태에서 세션(Session/UUID)을 생성하고 실시간 대시보드를 확인합니다.
+2. **학생 (Guest Flow)**: 별도의 회원가입/로그인 없이, 교사가 생성한 QR 코드나 URL(UUID 포함)을 통해 즉시 활동에 참여합니다. 
+3. **참여 방식**: 학생은 이름(닉네임)과 번호 정도의 최소 정보만 입력 후 결과까지 비로그인 상태로 유지됩니다.
+4. **결과 영속성**: 학생의 결과는 `models.py`에 저장되나, 학생 개인은 세션 브라우저 종료 시 권한이 만료되므로 교사가 대시보드에서 관리해 주어야 합니다.
 
 ## 4. 디자인 시스템 (UI/UX Standard)
 
@@ -174,6 +189,43 @@ def process_with_ai(request):
 2. **진입 경로**: `dashboard.html`에서 클릭 시 `unifiedModal`을 통해 프리뷰 노출 후 이동.
 3. **뒤로가기**: 항상 상단 네비게이션의 로고를 통해 홈으로 이동 가능하도록 `base.html` 준수.
 
+### 6.1. Product 자동 등록 표준 (ensure_* Management Command)
+새로운 서비스를 추가할 때, 대시보드에 노출되려면 `Product` 테이블에 데이터가 존재해야 합니다. **코드만 배포하고 Product 등록을 누락하면 서비스가 대시보드에 나타나지 않습니다.**
+
+- **Rule**: 모든 신규 서비스는 반드시 `ensure_<app_name>` management command를 생성해야 합니다.
+- **위치**: `<app_name>/management/commands/ensure_<app_name>.py` 또는 `products/management/commands/ensure_<app_name>.py`
+- **Procfile 등록**: 생성한 커맨드는 반드시 `Procfile`의 `migrate` 이후에 추가해야 배포 시 자동 실행됩니다.
+
+```python
+# 표준 ensure 커맨드 구조
+from django.core.management.base import BaseCommand
+from products.models import Product, ProductFeature
+
+class Command(BaseCommand):
+    help = 'Ensure <ServiceName> product exists in database'
+
+    def handle(self, *args, **options):
+        product, created = Product.objects.get_or_create(
+            title='서비스 제목',
+            defaults={
+                'lead_text': '매력적인 한 줄 문구',
+                'description': '2~3문장 이상의 설명',
+                'price': 0.00,
+                'is_active': True,
+                'icon': '🎨',
+                'color_theme': 'purple',
+                'card_size': 'small',
+                'service_type': 'tool',
+            }
+        )
+        # ProductFeature 최소 3개 등록 (SIS Rule)
+```
+
+```
+# Procfile 예시
+web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && python3 manage.py ensure_studentmbti && ...
+```
+
 ---
 
 ---
@@ -220,7 +272,11 @@ def process_with_ai(request):
 - [ ] 사용자 경험(UX) 측면에서 `vibe_check`를 완료했는가? (브라우저 없이 코드로 직접 확인)
 - [ ] **[Efficiency]** 모든 로직 검증을 브라우저 실행 없이 터미널(`shell`, `check`)에서 완료했는가?
 - [ ] **[Infra]** 새로운 모델 추가 시 `makemigrations`를 수행했는가?
-- [ ] **[Infra]** Railway 배포를 위해 필요한 환경 변수(`env`) 설정 리스트를 정리했는가?
+- [ ] **[Richness]** `ProductFeature`가 최소 3개 이상 등록되어 모달이 풍성해 보이는가?
+- [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
+- [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
+- [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
+- [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 `Procfile`에 등록했는가? (누락 시 배포 후 대시보드에 서비스가 노출되지 않음)
 
 ---
 **이 가이드는 `eduitit`의 바이브를 유지하며 가장 빠르게 서비스를 출시하기 위한 약속입니다.**
