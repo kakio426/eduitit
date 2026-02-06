@@ -345,6 +345,9 @@
 <!-- 카카오 SDK -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
 
+<!-- 데이터 안전 전달 -->
+{{ item.natal_chart|json_script:"natal-chart-data" }}
+
 <script>
     // Element Mapping
     const elementMap = {
@@ -410,10 +413,6 @@
         if (stemIcon) stemIcon.textContent = stemEmojiMap[dayStemCharacter];
         if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
         if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
-
-        // 이미지가 있다면 표시 (나중에 이미지 추가 시)
-        // const stemImageContainer = document.getElementById('stemImageContainer');
-        // stemImageContainer.innerHTML = `<img src="/static/fortune/images/stems/${dayStemCharacter}.png" class="w-48 h-48 object-cover rounded-full" alt="${stemKoreanMap[dayStemCharacter]}">`;
     }
 
     // Render Markdown with proper settings
@@ -429,8 +428,13 @@
     });
 
     // Parse and sanitize
-    const parsedMarkdown = marked.parse(rawText);
-    outputArea.innerHTML = DOMPurify.sanitize(parsedMarkdown);
+    try {
+        const parsedMarkdown = marked.parse(rawText);
+        outputArea.innerHTML = DOMPurify.sanitize(parsedMarkdown);
+    } catch (e) {
+        console.error("Markdown rendering failed:", e);
+        outputArea.innerHTML = rawText.replace(/\n/g, '<br>');
+    }
 
     // 카카오 SDK 초기화
     if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
@@ -439,39 +443,43 @@
 
     // 카카오톡 공유
     function shareToKakao() {
-        const natalChart = {{ item.natal_chart| safe
-    }};
-    const dayStem = natalChart.day ? natalChart.day[0] : '?';
-    const stemKorean = stemKoreanMap[dayStem] || '사주';
-    const stemEmoji = stemEmojiMap[dayStem] || '🔮';
+        try {
+            const natalChart = JSON.parse(document.getElementById('natal-chart-data').textContent);
+            const dayStem = natalChart.day ? natalChart.day[0] : '?';
+            const stemKorean = stemKoreanMap[dayStem] || '사주';
+            const stemEmoji = stemEmojiMap[dayStem] || '🔮';
 
-    const mode = '{{ item.get_mode_display }}';
+            const mode = '{{ item.get_mode_display }}';
 
-    // Use the new image
-    const imageUrl = window.location.origin + '/static/fortune/images/teacher_saju_card.png';
-    const shareUrl = window.location.href;
+            // Use the new image
+            const imageUrl = window.location.origin + '/static/fortune/images/teacher_saju_card.png';
+            const shareUrl = window.location.href;
 
-    Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-            title: `${stemEmoji} ${stemKorean} 기운의 사주 결과`,
-            description: `${mode} 상담 결과입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
-            imageUrl: imageUrl,
-            link: {
-                mobileWebUrl: shareUrl,
-                webUrl: shareUrl,
-            },
-        },
-        buttons: [
-            {
-                title: '나도 사주보기 🔮',
-                link: {
-                    mobileWebUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
-                    webUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
+            Kakao.Share.sendDefault({
+                objectType: 'feed',
+                content: {
+                    title: `${stemEmoji} ${stemKorean} 기운의 사주 결과`,
+                    description: `${mode} 상담 결과입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
+                    imageUrl: imageUrl,
+                    link: {
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
+                    },
                 },
-            },
-        ],
-    });
+                buttons: [
+                    {
+                        title: '나도 사주보기 🔮',
+                        link: {
+                            mobileWebUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
+                            webUrl: '{{ request.scheme }}://{{ request.get_host }}{% url "fortune:saju" %}',
+                        },
+                    },
+                ],
+            });
+        } catch (e) {
+            console.error("Kakao Share Error:", e);
+            alert("공유하기 중 오류가 발생했습니다.");
+        }
     }
 
     // 링크 복사
