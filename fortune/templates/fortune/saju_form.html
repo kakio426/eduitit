@@ -1940,12 +1940,29 @@
         }
     }
 
-    // 페이지 로드 시 프로필 로드
+    // 페이지 로드 시 프로필 로드 및 캐시 정리
     if ("{{ user.is_authenticated }}" === "True") {
         loadProfiles();
         loadFavoriteDates();
         loadStatistics();
+
+        // Cleanup old daily saju caches
+        try {
+            const todayStr = new Date().toISOString().split('T')[0];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('daily_saju_cache_')) {
+                    if (!key.endsWith(todayStr)) {
+                        localStorage.removeItem(key);
+                        i--; // Adjust index after removal
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Cache cleanup failed", e);
+        }
     }
+
 
     // 리마인더 확인 (모든 사용자)
     checkReminder();
@@ -2998,6 +3015,21 @@
             return;
         }
 
+        // Caching Logic: Unique key based on natal chart and date
+        const natalKey = Object.values(natalChart).join('_');
+        const cacheKey = `daily_saju_cache_${btoa(unescape(encodeURIComponent(natalKey))).substring(0, 16)}_${targetDate}`;
+        const cachedResult = localStorage.getItem(cacheKey);
+
+        if (cachedResult) {
+            console.log("Using cached daily fortune...");
+            const dailyResultDiv = document.getElementById('dailyFortuneResult');
+            const dailyContentDiv = document.getElementById('dailyFortuneContent');
+            dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(cachedResult));
+            dailyResultDiv.classList.remove('hidden');
+            dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         document.getElementById('loadingOverlay').classList.add('show');
 
         try {
@@ -3019,6 +3051,9 @@
             document.getElementById('loadingOverlay').classList.remove('show');
 
             if (data.success) {
+                // Save to cache
+                localStorage.setItem(cacheKey, data.result);
+
                 const dailyResultDiv = document.getElementById('dailyFortuneResult');
                 const dailyContentDiv = document.getElementById('dailyFortuneContent');
                 dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
@@ -3031,6 +3066,7 @@
             document.getElementById('loadingOverlay').classList.remove('show');
             showToast('서버 통신 오류가 발생했습니다.');
         }
+
     }
 
     // 저장된 결과 ID를 저장할 변수

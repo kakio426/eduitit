@@ -335,7 +335,14 @@
                 class="px-8 py-4 bg-purple-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
                 <i class="fa-solid fa-crystal-ball"></i> 나도 사주보기
             </a>
+            {% if user.is_authenticated and item.user == user %}
+            <button onclick="deleteItem('{{ item.id }}')"
+                class="px-8 py-4 bg-red-50 text-red-500 border border-red-100 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition shadow-clay text-lg">
+                <i class="fa-solid fa-trash-can"></i> 삭제하기
+            </button>
+            {% endif %}
         </div>
+
     </div>
 </main>
 
