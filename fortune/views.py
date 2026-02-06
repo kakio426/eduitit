@@ -243,11 +243,16 @@ def saju_view(request):
         'error': error_message,
         'name': request.POST.get('name') if request.method == 'POST' else None,
         'gender': request.POST.get('gender') if request.method == 'POST' else None,
+        'mode': request.POST.get('mode') if request.method == 'POST' else 'teacher',
+        'day_master': {
+            'char': str(chart_context['day']['stem']),
+            'element': chart_context['day']['stem'].element
+        } if chart_context else None,
         'chart': {
-            'year': str(chart_context['year']['stem']) + str(chart_context['year']['branch']),
-            'month': str(chart_context['month']['stem']) + str(chart_context['month']['branch']),
-            'day': str(chart_context['day']['stem']) + str(chart_context['day']['branch']),
-            'hour': str(chart_context['hour']['stem']) + str(chart_context['hour']['branch']),
+            'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
+            'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
+            'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
+            'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
         } if chart_context else None,
         'kakao_js_key': settings.KAKAO_JS_KEY,
     })
@@ -318,11 +323,15 @@ def saju_api_view(request):
             'result': response_text,
             'name': data['name'],
             'mode': mode,
+            'day_master': {
+                'char': str(chart_context['day']['stem']),
+                'element': chart_context['day']['stem'].element
+            } if chart_context else None,
             'chart': {
-                'year': str(chart_context['year']['stem']) + str(chart_context['year']['branch']),
-                'month': str(chart_context['month']['stem']) + str(chart_context['month']['branch']),
-                'day': str(chart_context['day']['stem']) + str(chart_context['day']['branch']),
-                'hour': str(chart_context['hour']['stem']) + str(chart_context['hour']['branch']),
+                'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
+                'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
+                'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
+                'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
             } if chart_context else None
         })
     except Exception as e:

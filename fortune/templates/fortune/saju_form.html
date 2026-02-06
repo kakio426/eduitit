@@ -23,90 +23,95 @@
         --clay-shadow: 8px 8px 16px rgba(160, 170, 190, 0.2), -6px -6px 14px rgba(255, 255, 255, 0.8);
     }
 
-    /* Result Pillar styling */
+    /* Result Pillar styling (Refined Alignment) */
     .pillar-box {
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 0.1rem;
-        padding: 0.75rem 0.5rem;
-        border-radius: 1rem;
+        padding: 0.75rem 0.25rem;
+        border-radius: 1.25rem;
         background: var(--glass-bg);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         box-shadow: var(--clay-shadow);
         transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         border: var(--glass-border);
-        min-width: 65px;
+        min-width: 60px;
+        aspect-ratio: 1 / 1.6;
     }
 
     .pillar-top {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        letter-spacing: -0.02em;
         font-weight: 800;
         color: #94a3b8;
+        margin-bottom: 2px;
     }
 
     .pillar-main {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 900;
-        line-height: 1.1;
+        line-height: 1;
         font-family: 'NanumGothic', serif;
     }
 
     .pillar-sub {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 700;
         color: #64748b;
+        margin-top: 4px;
     }
 
-    .color-wood {
-        color: #059669;
+    /* Hero Section Visual Hierarchy */
+    .shadow-clay-inner {
+        box-shadow: inset 4px 4px 8px rgba(165, 175, 195, 0.15), inset -4px -4px 8px rgba(255, 255, 255, 0.8);
     }
 
-    .color-fire {
-        color: #dc2626;
-    }
-
-    .color-earth {
-        color: #d97706;
-    }
-
-    .color-metal {
-        color: #7c3aed;
-    }
-
-    .color-water {
-        color: #2563eb;
-    }
-
-    /* Analysis Content (Compact) */
-    .analysis-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(8px);
-        border-radius: 1.5rem;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-    }
-
-    .analysis-content h2 {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #1e293b;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid rgba(124, 58, 237, 0.1);
+    #stemIconBig {
+        min-width: 4.5rem;
+        min-height: 4.5rem;
+        line-height: 1;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .clay-card {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Mobile Optimization: Horizontal Scroll Prevention */
+    body {
+        overflow-x: hidden;
+        touch-action: pan-y;
+    }
+
+    /* Capture Only Styles */
+    .capture-active {
+        width: 800px !important;
+        margin: 0 auto !important;
+    }
+
+    .capture-active .no-print {
+        display: none !important;
+    }
+
+    .capture-active #markdownResult {
+        columns: 1 !important;
     }
 
     .analysis-content p {
         font-size: 1.05rem;
-        line-height: 1.5;
+        line-height: 1.6;
         color: #334155;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
+        text-align: justify;
     }
 
     .analysis-content strong {
@@ -1001,16 +1006,16 @@
                     <!-- Left: Identity Section -->
                     <div
                         class="md:col-span-5 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-slate-200 border-dashed pb-6 md:pb-0 md:pr-6">
-                        <div class="flex items-center justify-between w-full mb-4">
-                            <div class="text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
+                        <div class="w-full flex justify-center md:justify-start mb-4">
+                            <div class="inline-flex items-center gap-1 text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
                                 id="premiumBadge">
-                                <span id="badgeIcon">🔮</span> <span id="badgeText">분석 중...</span>
+                                <span id="badgeIcon">🔮</span> <span id="badgeText" class="font-bold">분석 중...</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <div class="w-20 h-20 flex items-center justify-center text-4xl bg-white rounded-2xl shadow-clay-inner"
+                        <div class="flex items-center gap-4 w-full justify-center md:justify-start">
+                            <div class="flex items-center justify-center text-4xl bg-white rounded-2xl shadow-clay-inner"
                                 id="stemIconBig">🔮</div>
-                            <div>
+                            <div class="flex-1 text-center md:text-left">
                                 <h2 class="text-2xl font-black leading-tight"><span id="stemStaticName"
                                         class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">...</span>
                                 </h2>
@@ -2068,11 +2073,7 @@
             document.getElementById('dailyFortuneSection').classList.remove('hidden');
             document.getElementById('saveSection').classList.remove('hidden');
 
-            // 결과 복원
-            const resultTarget = document.getElementById('markdownResult');
-            resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
-
-            updatePremiumUI(data.result, data.chart, data.mode);
+            updatePremiumUI(data.result, data.chart, data.mode, data.day_master);
 
             // Chart Data 복원 (Daily Fortune 등을 위해 필수)
             // 기존 요소가 있으면 제거 후 재생성
@@ -2257,6 +2258,7 @@
                 name: data.name,
                 gender: formData.get('gender'),
                 mode: formData.get('mode'),
+                day_master: data.day_master, // 명시적 일간 정보 보존
                 timestamp: Date.now()
             }));
 
@@ -2271,11 +2273,8 @@
                 document.getElementById('dailyFortuneSection').classList.remove('hidden');
                 document.getElementById('saveSection').classList.remove('hidden');
 
-                // 결과 렌더링
-                const resultTarget = document.getElementById('markdownResult');
-                resultTarget.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-
-                updatePremiumUI(accumulatedText, data.chart, data.mode);
+                // 결과 렌더링 (day_master 전달)
+                updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master);
 
                 // 섹션 그룹화 적용
                 groupMarkdownSections();
@@ -2334,35 +2333,51 @@
 
     // --- Premium UI & Analysis Functions ---
 
-    function updatePremiumUI(markdown, chart, mode = 'teacher') {
+    function updatePremiumUI(markdown, chart, mode = 'teacher', dayMaster = null) {
         console.log("Updating Premium UI - Mode:", mode);
 
-        // 1. Detect Day Stem (Prioritize Definitive Chart Data)
-        let dayStem = null;
-        if (chart && chart.day) {
-            dayStem = (typeof chart.day === 'string') ? chart.day[0] : chart.day[0];
+        // 1. Render Natal Chart FIRST from API data (to use as reliable identity source)
+        if (chart) {
+            renderPremiumNatalChart(chart);
         }
 
-        // 1a. Fallback to Regex only if chart data is missing
-        if (!dayStem) {
-            const pattern = /(?:일주|일간|중심\(일간\)|나의 정체성)[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/;
-            let match = markdown.match(pattern);
-            dayStem = match ? match[1] : null;
-        }
-
-        // 1b. Last Resort Fallback: Scan top of markdown
-        if (!dayStem) {
-            const topText = markdown.substring(0, 500);
-            for (let key in ELEMENT_MAP) {
-                if (topText.includes(key)) {
-                    dayStem = key;
-                    break;
+        // 2. Render Markdown
+        if (markdown) {
+            marked.setOptions({ breaks: true, gfm: true });
+            const htmlContent = DOMPurify.sanitize(marked.parse(markdown));
+            const resultElem = document.getElementById('markdownResult');
+            if (resultElem) {
+                resultElem.innerHTML = htmlContent;
+                if (typeof groupMarkdownSections === 'function') {
+                    groupMarkdownSections();
                 }
             }
         }
 
-        if (dayStem && ELEMENT_MAP[dayStem]) {
-            const info = ELEMENT_MAP[dayStem];
+        // 3. Identify Day Master (Strict Priority: Data > DOM > Context-Regex)
+        let dayStemChar = (dayMaster) ? dayMaster.char : '';
+        let dayStemElement = (dayMaster) ? dayMaster.element : '';
+
+        // Prioritize DOM ID if explicit dayMaster (from AJAX/SSR) is missing
+        if (!dayStemChar) {
+            const domDayStem = document.getElementById('natalDayStem');
+            if (domDayStem && domDayStem.textContent.trim() !== '?') {
+                dayStemChar = domDayStem.textContent.trim();
+            }
+        }
+
+        // Final fallback: Context-aware Regex (must mention keywords)
+        if (!dayStemChar && markdown) {
+            const pattern = /(?:일주|일간|중심 기운)[^:]*[:：]?\s*[\*\s]*([갑을병정무기경신임계])/;
+            const match = markdown.match(pattern);
+            if (match) {
+                dayStemChar = match[1];
+            }
+        }
+
+        // Update UI Elements
+        if (dayStemChar && ELEMENT_MAP[dayStemChar]) {
+            const info = ELEMENT_MAP[dayStemChar];
 
             // Header Identity Card
             document.getElementById('stemIconBig').textContent = info.icon;
@@ -2375,7 +2390,7 @@
             if (badge) {
                 document.getElementById('badgeIcon').textContent = info.icon;
                 document.getElementById('badgeText').textContent = info.name;
-                badge.className = `text-sm py-1 px-3 rounded-full border shadow-sm backdrop-blur-sm ${elementBadgeStyles[info.element]}`;
+                badge.className = `text-sm py-1 px-3 rounded-full border shadow-sm backdrop-blur-sm ${elementBadgeStyles[info.element] || 'bg-white/50 border-slate-200'}`;
             }
             if (bg) {
                 const colors = { wood: '#10b981', fire: '#ef4444', earth: '#f59e0b', metal: '#8b5cf6', water: '#3b82f6' };
@@ -2383,15 +2398,8 @@
             }
         }
 
-        // 2. Render Tabs Dynamically
+        // 4. Render Tabs and Update Share Card
         renderDynamicTabs(mode);
-
-        // 3. Render Natal Chart from API data
-        if (chart) {
-            renderPremiumNatalChart(chart);
-        }
-
-        // 4. Update Share Card
         updateShareCard(markdown);
     }
 
@@ -2445,21 +2453,25 @@
                 chars = chars.split('');
             }
 
-            const stem = chars[0] || '?';
-            const branch = chars[1] || '?';
+            // Explicitly handle array of strings from backend
+            const stem = (chars && chars.length > 0) ? chars[0] : '?';
+            const branch = (chars && chars.length > 1) ? chars[1] : '?';
 
-            const stemColor = ELEMENT_MAP[stem] ? `color-${ELEMENT_MAP[stem].element}` : '';
-            const branchColor = ELEMENT_MAP[branch] ? `color-${ELEMENT_MAP[branch].element}` : '';
+            const stemColor = (stem && ELEMENT_MAP[stem]) ? `color-${ELEMENT_MAP[stem].element}` : '';
+            const branchColor = (branch && ELEMENT_MAP[branch]) ? `color-${ELEMENT_MAP[branch].element}` : '';
 
-            const specialClass = p.special ? 'border-2 border-purple-400/30 bg-purple-50/80 scale-105 shadow-md' : '';
-            const topColor = p.special ? 'text-purple-600' : 'text-gray-400';
+            const specialClass = p.special ? 'border-2 border-purple-400/50 bg-purple-50/80 scale-105 shadow-md' : '';
+            const topColor = p.special ? 'text-purple-600' : 'text-slate-400';
+
+            // Add ID for Day Stem to ensure reliable identification
+            const stemIdAttr = p.special ? 'id="natalDayStem"' : '';
 
             return `
                 <div class="pillar-box ${specialClass} relative group">
                     <span class="pillar-top ${topColor}">${p.label}</span>
-                    <span class="pillar-main ${stemColor}">${stem}</span>
+                    <span class="pillar-main ${stemColor}" ${stemIdAttr}>${stem}</span>
                     <span class="pillar-main ${branchColor}">${branch}</span>
-                    <span class="pillar-sub text-[10px] mt-1">${p.sub}</span>
+                    <span class="pillar-sub text-[10px] sm:text-xs mt-1 font-bold text-slate-500">${p.sub}</span>
                 </div>
             `;
         }).join('');
@@ -2622,44 +2634,51 @@
         });
     }
 
-    // 이미지 저장 (현재 결과 화면 전체 캡처)
+    // 이미지 저장 (현재 결과 화면 전체 캡처 고도화)
     function saveAsImage() {
-        // Fix: Use 'capture-area' instead of non-existent 'resultCard'
-        const resultCard = document.getElementById('capture-area');
-        if (!resultCard) {
+        const captureArea = document.getElementById('capture-area');
+        if (!captureArea) {
             showToast('저장할 결과가 없습니다.');
             return;
         }
 
-        // 로딩 표시
-        showToast('이미지를 생성하고 있습니다...');
+        // 캡처 전용 스타일 적용
+        captureArea.classList.add('capture-active');
+        showToast('고화질 리포트 이미지를 생성하고 있습니다...');
 
-        // 캡처할 요소 준비 (no-print 요소들 임시 숨김)
-        const noPrintElements = document.querySelectorAll('.no-print');
-        noPrintElements.forEach(el => el.style.display = 'none');
-
-        html2canvas(resultCard, {
-            backgroundColor: '#E0E5EC',  // 배경색
-            scale: 2,  // 고해상도
+        // 캡처 옵션 최적화
+        const options = {
+            backgroundColor: '#F8FAF6',
+            scale: 2,
             useCORS: true,
             logging: false,
-            windowWidth: resultCard.scrollWidth,
-            windowHeight: resultCard.scrollHeight
-        }).then(canvas => {
-            // no-print 요소들 복원
-            noPrintElements.forEach(el => el.style.display = '');
+            allowTaint: true,
+            windowWidth: 800,
+            onclone: (clonedDoc) => {
+                const clonedArea = clonedDoc.getElementById('capture-area');
+                if (clonedArea) {
+                    clonedArea.style.padding = '40px';
+                    clonedArea.style.borderRadius = '0';
+                    // 캡처 시 불필요한 요소 제거 확인
+                    const noPrint = clonedDoc.querySelectorAll('.no-print');
+                    noPrint.forEach(el => el.style.display = 'none');
+                }
+            }
+        };
+
+        html2canvas(captureArea, options).then(canvas => {
+            captureArea.classList.remove('capture-active');
 
             const link = document.createElement('a');
             const nameContext = "{{ name|default:'사주결과' }}";
-            link.download = `${nameContext}_사주분석_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.download = `${nameContext}_사주분석리포트_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
-            showToast('이미지가 저장되었습니다!');
+            showToast('이미지가 성공적으로 저장되었습니다!');
         }).catch(err => {
             console.error(err);
-            // no-print 요소들 복원
-            noPrintElements.forEach(el => el.style.display = '');
-            showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
+            captureArea.classList.remove('capture-active');
+            showToast('이미지 저장 중 오류가 발생했습니다.');
         });
     }
 
@@ -2917,14 +2936,22 @@
         if (resultDataElem) {
             const rawMarkdown = JSON.parse(resultDataElem.textContent);
             marked.setOptions({ breaks: true, gfm: true });
-            const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
-            document.getElementById('markdownResult').innerHTML = htmlContent;
+            // SSR 결과 렌더링
+            const chartDataElem = document.getElementById('saju-chart-data');
+            let chartData = null;
+            if (chartDataElem) {
+                try {
+                    chartData = JSON.parse(chartDataElem.textContent);
+                } catch (e) { console.error("Chart data parse error:", e); }
+            }
 
-            // 섹션 그룹화 적용
-            groupMarkdownSections();
+            // Template context에서 day_master 가져오기
+            const dayMaster = {
+                char: "{{ day_master.char|default:'' }}",
+                element: "{{ day_master.element|default:'' }}"
+            };
 
-            detectAndShowElement(rawMarkdown);
-            updateShareCard(rawMarkdown);
+            updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null);
         }
     });
 </script>
