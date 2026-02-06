@@ -193,8 +193,12 @@ def process_with_ai(request):
 새로운 서비스를 추가할 때, 대시보드에 노출되려면 `Product` 테이블에 데이터가 존재해야 합니다. **코드만 배포하고 Product 등록을 누락하면 서비스가 대시보드에 나타나지 않습니다.**
 
 - **Rule**: 모든 신규 서비스는 반드시 `ensure_<app_name>` management command를 생성해야 합니다.
-- **위치**: `<app_name>/management/commands/ensure_<app_name>.py` 또는 `products/management/commands/ensure_<app_name>.py`
-- **Procfile 등록**: 생성한 커맨드는 반드시 `Procfile`의 `migrate` 이후에 추가해야 배포 시 자동 실행됩니다.
+- **위치**: `products/management/commands/ensure_<app_name>.py` (통일 위치. 앱 내부 `management/`에 두지 말 것)
+- **4곳 동시 등록 (누락 시 502 에러 발생)**:
+  1. `config/settings_production.py` → `INSTALLED_APPS`에 앱 추가
+  2. `Procfile` → `migrate` 이후에 `ensure_<app_name>` 커맨드 추가
+  3. `nixpacks.toml` → `[phases.start]` 명령에 동일하게 추가 (Procfile과 동기화)
+  4. `config/settings_production.py` → `run_startup_tasks()`에 `call_command('ensure_<app_name>')` 추가
 
 ```python
 # 표준 ensure 커맨드 구조
@@ -276,7 +280,8 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
 - [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
 - [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
-- [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 `Procfile`에 등록했는가? (누락 시 배포 후 대시보드에 서비스가 노출되지 않음)
+- [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 **4곳 모두** 등록했는가? (`INSTALLED_APPS`, `Procfile`, `nixpacks.toml`, `run_startup_tasks()`) — 하나라도 누락 시 502 에러 또는 대시보드 미노출
+- [ ] **[Infra]** `nixpacks.toml`의 `[phases.start]` 명령이 `Procfile`과 동기화되어 있는가? (불일치 시 배포 환경에 따라 다른 명령이 실행됨)
 
 ---
 **이 가이드는 `eduitit`의 바이브를 유지하며 가장 빠르게 서비스를 출시하기 위한 약속입니다.**

@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
+    'studentmbti.apps.StudentmbtiConfig',
     'django_htmx',
     'django.contrib.humanize',
 
@@ -479,6 +480,7 @@ def run_startup_tasks():
         from django.core.management import call_command
         call_command('ensure_ssambti')
         call_command('ensure_chess')
+        call_command('ensure_studentmbti')
     except Exception as e:
         print(f"DEBUG: Startup product ensure tasks failed: {e}")
 
