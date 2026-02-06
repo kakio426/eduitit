@@ -1,0 +1,28 @@
+{% load static %}
+
+{% if results %}
+{% for result in results %}
+<a href="{% url 'studentmbti:result_detail_teacher' result.id %}"
+    class="result-row flex items-center justify-between block hover:bg-gray-50">
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-full text-2xl">
+            🎓
+        </div>
+        <div>
+            <div class="font-bold text-gray-700">{{ result.student_name }}</div>
+            <div class="text-sm text-gray-500">{{ result.animal_name }}</div>
+        </div>
+    </div>
+    <div class="text-right">
+        <div class="text-sm text-gray-400">{{ result.created_at|date:"H:i" }}</div>
+        <div class="text-xs text-orange-500 font-bold">상세보기 <i class="fa-solid fa-chevron-right"></i></div>
+    </div>
+</a>
+{% endfor %}
+{% else %}
+<div class="text-center py-12 text-gray-400">
+    <i class="fa-solid fa-hourglass-half text-4xl mb-4 animate-pulse"></i>
+    <p class="text-lg">아직 참여한 학생이 없습니다</p>
+    <p class="text-sm">학생들이 QR 코드를 스캔하면 여기에 표시됩니다</p>
+</div>
+{% endif %}

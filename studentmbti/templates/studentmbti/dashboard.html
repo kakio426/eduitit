@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<meta property="og:title" content="학교생활 동물 찾기 - 교사 대시보드" />
+<meta property="og:description" content="학생 학교생활 동물 검사 세션 관리" />
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-card {
+        background: linear-gradient(135deg, #E0E5EC 0%, #F5F7FA 100%);
+        border-radius: 20px;
+        box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
+        transition: all 0.3s ease;
+    }
+
+    .session-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 12px 12px 24px #b8bec5, -12px -12px 24px #ffffff;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+
+    .status-active {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+
+    .status-inactive {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-4xl mx-auto">
+        <!-- 헤더 -->
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"🎓" }}</div>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-4">
+                {{ service.title|default:"학교생활 동물 찾기" }}
+            </h1>
+            <p class="text-xl text-gray-500">{{ service.lead_text|default:"학생 상담을 위한 캐릭터 검사 세션 관리" }}</p>
+        </div>
+
+        <!-- 새 세션 생성 -->
+        <div class="clay-card p-6 mb-8" data-aos="fade-up">
+            <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-orange-500"></i>
+                새 검사 세션 만들기
+            </h2>
+            <form action="{% url 'studentmbti:session_create' %}" method="post" class="flex gap-4">
+                {% csrf_token %}
+                <input type="text" name="session_name" placeholder="예: 3학년 1반 캐릭터 검사"
+                    class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-500 focus:outline-none text-lg">
+                <button type="submit"
+                    class="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                    <i class="fa-solid fa-qrcode mr-2"></i>
+                    세션 생성
+                </button>
+            </form>
+        </div>
+
+        <!-- 세션 목록 -->
+        <div class="space-y-4">
+            <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                <i class="fa-solid fa-list text-purple-500"></i>
+                내 검사 세션 목록
+            </h2>
+
+            {% if sessions %}
+            {% for session in sessions %}
+            <div class="session-card p-6" data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h3 class="text-xl font-bold text-gray-700">{{ session.session_name }}</h3>
+                            {% if session.is_active %}
+                            <span class="status-badge status-active">
+                                <i class="fa-solid fa-circle-check mr-1"></i>활성
+                            </span>
+                            {% else %}
+                            <span class="status-badge status-inactive">
+                                <i class="fa-solid fa-circle-xmark mr-1"></i>종료
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-gray-500 text-sm flex items-center gap-4">
+                            <span><i class="fa-solid fa-users mr-1"></i>{{ session.result_count }}명 참여</span>
+                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d H:i"
+                                }}</span>
+                        </div>
+                    </div>
+                    <a href="{% url 'studentmbti:session_detail' session.id %}"
+                        class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
+                        <i class="fa-solid fa-eye"></i>
+                        상세보기
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-12 text-gray-400">
+                <i class="fa-solid fa-folder-open text-5xl mb-4"></i>
+                <p class="text-lg">아직 생성된 검사 세션이 없습니다.</p>
+                <p>위에서 새 세션을 만들어보세요!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

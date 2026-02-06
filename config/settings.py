@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
+    'studentmbti.apps.StudentmbtiConfig',
     'django_htmx',
     'django.contrib.humanize',
     

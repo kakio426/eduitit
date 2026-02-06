@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<meta property="og:title" content="{{ session.session_name }} - 학교생활 MBTI" />
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qr-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .qr-image {
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
+    .result-row {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 0.75rem;
+        box-shadow: 4px 4px 8px #b8bec5, -4px -4px 8px #ffffff;
+        transition: all 0.2s;
+    }
+
+    .result-row:hover {
+        transform: translateX(4px);
+    }
+
+    .fullscreen-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 100;
+    }
+
+    .qr-fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .qr-fullscreen img {
+        width: 60vmin;
+        height: 60vmin;
+        max-width: 500px;
+        max-height: 500px;
+    }
+
+    .stats-bar {
+        height: 12px;
+        border-radius: 6px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .stats-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]" x-data="{showFullscreen: false}">
+    <div class="max-w-6xl mx-auto">
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between mb-8" data-aos="fade-up">
+            <div>
+                <a href="{% url 'studentmbti:dashboard' %}"
+                    class="text-gray-500 hover:text-purple-600 transition mb-2 inline-block font-bold">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>대시보드로 돌아가기
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">{{ service.icon|default:"🎓" }}</span>
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-700 font-title">
+                        {{ session.session_name }}
+                    </h1>
+                </div>
+                <p class="text-gray-500 mt-1">
+                    <i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y년 m월 d일 H:i" }}
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'studentmbti:session_toggle' session.id %}"
+                    class="px-4 py-2 rounded-xl font-bold transition {% if session.is_active %}bg-red-100 text-red-600 hover:bg-red-200{% else %}bg-green-100 text-green-600 hover:bg-green-200{% endif %}">
+                    {% if session.is_active %}
+                    <i class="fa-solid fa-stop mr-1"></i>검사 종료
+                    {% else %}
+                    <i class="fa-solid fa-play mr-1"></i>검사 재개
+                    {% endif %}
+                </a>
+                <a href="{% url 'studentmbti:export_excel' session.id %}"
+                    class="px-4 py-2 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition">
+                    <i class="fa-solid fa-file-excel mr-1"></i>엑셀 다운로드
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- QR 코드 섹션 -->
+            <div class="lg:col-span-1" data-aos="fade-up">
+                <div class="qr-container">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4">
+                        <i class="fa-solid fa-qrcode text-orange-500 mr-2"></i>
+                        검사 QR 코드
+                    </h2>
+                    <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image">
+                    <p class="text-gray-500 mt-4 text-sm">학생들이 이 QR 코드를 스캔하면<br>검사를 시작할 수 있습니다.</p>
+
+                    <button @click="showFullscreen = true"
+                        class="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                        <i class="fa-solid fa-expand mr-2"></i>
+                        전체화면으로 보기
+                    </button>
+
+                    {% if session.is_active %}
+                    <div class="mt-4 p-3 bg-green-100 rounded-xl text-green-700 text-sm">
+                        <i class="fa-solid fa-circle-check mr-1"></i>
+                        검사가 활성화 상태입니다
+                    </div>
+                    {% else %}
+                    <div class="mt-4 p-3 bg-red-100 rounded-xl text-red-600 text-sm">
+                        <i class="fa-solid fa-circle-xmark mr-1"></i>
+                        검사가 종료되었습니다
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- 통계 -->
+                {% if mbti_stats %}
+                <div class="clay-card p-6 mt-6">
+                    <h3 class="text-lg font-bold text-gray-700 mb-4">
+                        <i class="fa-solid fa-chart-pie text-purple-500 mr-2"></i>
+                        캐릭터 분포
+                    </h3>
+                    <div class="space-y-3">
+                        {% for stat in mbti_stats %}
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-bold">{{ stat.theme.emoji }} {{ stat.animal_name }}</span>
+                                <span class="text-gray-500">{{ stat.count }}명</span>
+                            </div>
+                            <div class="stats-bar">
+                                <div class="stats-fill" style="width: 0%;"
+                                    x-init="setTimeout(() => $el.style.width = '{{ stat.percentage }}%', 50)"
+                                    data-color="{{ stat.theme.primary }}"
+                                    x-on:mouseover="$el.style.backgroundColor = $el.dataset.color"
+                                    x-effect="$el.style.backgroundColor = $el.dataset.color"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 결과 목록 -->
+            <div class="lg:col-span-2" data-aos="fade-up" data-aos-delay="100">
+                <div class="clay-card p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-gray-700">
+                            <i class="fa-solid fa-users text-blue-500 mr-2"></i>
+                            참여 학생 목록
+                            <span class="text-orange-500 ml-2" id="total-count">{{ total_count }}명</span>
+                        </h2>
+                        <div class="text-sm text-gray-400">
+                            <i class="fa-solid fa-sync-alt mr-1"></i>3초마다 자동 새로고침
+                        </div>
+                    </div>
+
+                    <div id="results-container" hx-get="{% url 'studentmbti:session_results_partial' session.id %}"
+                        hx-trigger="every 3s" hx-swap="innerHTML">
+                        {% include 'studentmbti/partials/results_list.html' %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체화면 QR -->
+    <div x-show="showFullscreen" x-transition class="qr-fullscreen" @click="showFullscreen = false">
+        <h1 class="text-4xl font-bold text-gray-700 mb-8">{{ session.session_name }}</h1>
+        <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code">
+        <p class="text-2xl text-gray-500 mt-8">스마트폰으로 QR 코드를 스캔하세요</p>
+        <button class="mt-8 px-8 py-4 bg-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-300 transition">
+            <i class="fa-solid fa-times mr-2"></i>닫기 (화면 아무 곳이나 클릭)
+        </button>
+    </div>
+</section>
+{% endblock %}

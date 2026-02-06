@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<meta property="og:title" content="나의 학교생활 동물 찾기" />
+<meta property="og:description" content="{{ session.session_name }} - 나는 어떤 학교생활 동물일까?" />
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quiz-step {
+        display: none;
+        min-height: 350px;
+    }
+
+    .quiz-step.active {
+        display: block;
+        animation: slideIn 0.4s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .progress-bar {
+        height: 10px;
+        background: #e2e8f0;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #8B5CF6, #EC4899);
+        transition: width 0.3s ease;
+    }
+
+    .option-btn {
+        width: 100%;
+        padding: 1.25rem 1.5rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 4px 4px 12px #d1d5db, -4px -4px 12px #ffffff;
+        text-align: left;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #374151;
+        transition: all 0.2s;
+        border: 3px solid transparent;
+        margin-bottom: 1rem;
+    }
+
+    .option-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 6px 6px 16px #d1d5db, -6px -6px 16px #ffffff;
+    }
+
+    .option-btn.selected {
+        border-color: #8B5CF6;
+        background: linear-gradient(135deg, #F3E8FF 0%, #FCE7F3 100%);
+        color: #7C3AED;
+    }
+
+    .name-input {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        font-size: 1.25rem;
+        border: 3px solid #E5E7EB;
+        border-radius: 16px;
+        text-align: center;
+        transition: all 0.2s;
+    }
+
+    .name-input:focus {
+        outline: none;
+        border-color: #8B5CF6;
+        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+    }
+
+    .animal-emoji {
+        font-size: 3rem;
+        animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-24 pb-20 px-4 min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+    <div class="max-w-xl mx-auto">
+        <!-- 헤더 -->
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="animal-emoji mb-4">🎓</div>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-700 font-title mb-2">
+                학교생활 캐릭터 찾기
+            </h1>
+            <p class="text-gray-500">{{ session.session_name }}</p>
+        </div>
+
+        <!-- 진행 상황 -->
+        <div class="mb-6" data-aos="fade-up">
+            <div class="flex justify-between text-sm font-bold mb-2">
+                <span class="text-purple-600" id="step-text">이름 입력</span>
+                <span class="text-gray-400" id="step-counter">0 / 12</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- 퀴즈 카드 -->
+        <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8" data-aos="zoom-in">
+            <form id="quiz-form" action="{% url 'studentmbti:analyze' session.id %}" method="post">
+                {% csrf_token %}
+
+                <!-- Step 0: 이름 입력 -->
+                <div class="quiz-step active" id="step-0">
+                    <div class="text-center">
+                        <div class="text-6xl mb-6">👋</div>
+                        <h2 class="text-2xl font-bold text-gray-700 mb-4">안녕! 이름이 뭐야?</h2>
+                        <p class="text-gray-500 mb-6">검사 결과에 이름이 표시돼요</p>
+                        <input type="text" name="student_name" id="student-name" class="name-input" placeholder="예: 홍길동"
+                            required maxlength="20">
+                    </div>
+                </div>
+
+                <!-- 질문들 -->
+                {% for q in questions %}
+                <div class="quiz-step" id="step-{{ q.id }}">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-6 leading-relaxed">
+                        {{ q.title }}
+                    </h2>
+                    <div class="space-y-3">
+                        {% for option in q.options %}
+                        <button type="button" class="option-btn"
+                            onclick="selectOption({{ q.id }}, {{ forloop.counter0 }}, this)">
+                            {{ option }}
+                        </button>
+                        {% endfor %}
+                        <input type="hidden" name="q{{ q.id }}" id="input-q{{ q.id }}" value="">
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- 네비게이션 -->
+                <div class="mt-8 flex justify-between items-center">
+                    <button type="button" id="prev-btn" onclick="prevStep()"
+                        class="hidden px-6 py-3 rounded-full text-gray-400 font-bold hover:text-gray-600 transition">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>이전
+                    </button>
+                    <button type="button" id="next-btn" onclick="nextStep()"
+                        class="ml-auto px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-lg font-bold shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                        시작하기 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                    <button type="submit" id="submit-btn"
+                        class="hidden ml-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-lg font-bold shadow-lg hover:shadow-xl transition transform hover:scale-105 animate-pulse">
+                        결과 보기 <i class="fa-solid fa-wand-magic-sparkles ml-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 안내 -->
+        <p class="text-center text-sm text-gray-400 mt-6">
+            솔직하게 답해줘요! 정답은 없어요 😊
+        </p>
+    </div>
+</section>
+
+<script>
+    let currentStep = 0;
+    const totalSteps = 12;
+
+    function updateUI() {
+        // 모든 스텝 숨기기
+        document.querySelectorAll('.quiz-step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+
+        // 진행 바 업데이트
+        const stepRatio = currentStep / (totalSteps + 1);
+        const progressVal = stepRatio * 100;
+        document.getElementById('progress-bar').style.width = progressVal + '%';
+
+        // 텍스트 업데이트
+        if (currentStep === 0) {
+            document.getElementById('step-text').innerText = '이름 입력';
+            document.getElementById('step-counter').innerText = '0 / 12';
+        } else {
+            document.getElementById('step-text').innerText = `질문 ${currentStep}`;
+            document.getElementById('step-counter').innerText = `${currentStep} / ${totalSteps}`;
+        }
+
+        // 버튼 상태
+        document.getElementById('prev-btn').classList.toggle('hidden', currentStep === 0);
+
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+
+        if (currentStep === 0) {
+            nextBtn.innerHTML = '시작하기 <i class="fa-solid fa-arrow-right ml-2"></i>';
+            nextBtn.classList.remove('hidden');
+            submitBtn.classList.add('hidden');
+        } else if (currentStep === totalSteps) {
+            // 마지막 질문에서 답변이 있으면 제출 버튼 표시
+            const lastAnswer = document.getElementById(`input-q${totalSteps}`).value;
+            if (lastAnswer !== '') {
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.add('hidden');
+            }
+        } else {
+            nextBtn.classList.add('hidden');
+            submitBtn.classList.add('hidden');
+        }
+    }
+
+    function nextStep() {
+        if (currentStep === 0) {
+            const name = document.getElementById('student-name').value.trim();
+            if (!name) {
+                document.getElementById('student-name').focus();
+                document.getElementById('student-name').classList.add('border-red-500');
+                return;
+            }
+            document.getElementById('student-name').classList.remove('border-red-500');
+        }
+
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateUI();
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 0) {
+            currentStep--;
+            updateUI();
+        }
+    }
+
+    function selectOption(step, value, btn) {
+        // 선택 표시
+        const buttons = document.getElementById(`step-${step}`).querySelectorAll('.option-btn');
+        buttons.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+
+        // 값 저장
+        document.getElementById('input-q' + step).value = value;
+
+        // 자동 다음 스텝
+        setTimeout(() => {
+            if (currentStep < totalSteps) {
+                nextStep();
+            } else {
+                updateUI();
+            }
+        }, 300);
+    }
+
+    document.addEventListener('DOMContentLoaded', updateUI);
+</script>
+{% endblock %}

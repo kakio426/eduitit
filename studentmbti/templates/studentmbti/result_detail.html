@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .result-card {
+        background: linear-gradient(135deg, var(--bg-color) 0%, white 100%);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .animal-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+    }
+
+    .animal-img-mini {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 1rem;
+        background: white;
+        border-radius: 30px;
+        padding: 8px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .animal-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .animal-emoji {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .teacher-section {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border: 2px solid #F59E0B;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-28 pb-20 px-4 min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50"
+    style="--bg-color: {{ theme.bg }}; --primary-color: {{ theme.primary }}; --accent-color: {{ theme.accent }};">
+    <div class="max-w-2xl mx-auto">
+        <!-- 상단 네비게이션 -->
+        <div class="mb-6 flex items-center justify-between">
+            <a href="{% url 'studentmbti:session_detail' result.session.id %}"
+                class="text-purple-600 hover:text-purple-800 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-arrow-left"></i>
+                세션으로 돌아가기
+            </a>
+            <span class="text-2xl">{{ service.icon|default:"🎓" }}</span>
+        </div>
+
+        <div class="result-card" data-aos="zoom-in">
+            <!-- 동물 헤더 -->
+            <div class="animal-header">
+                {% if mbti_data.animal_image %}
+                <div class="animal-img-mini">
+                    <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
+                        alt="{{ result.animal_name }}" class="animal-img">
+                </div>
+                {% else %}
+                <span class="animal-emoji">{{ mbti_data.emoji }}</span>
+                {% endif %}
+                <h1 class="text-xl font-bold mb-1">{{ result.student_name }} 학생</h1>
+                <h2 class="text-2xl md:text-3xl font-bold">{{ result.animal_name }}</h2>
+                <p class="text-sm opacity-80 mt-2">검사 시간: {{ result.created_at|date:"Y-m-d H:i" }}</p>
+            </div>
+
+            <!-- 내용 -->
+            <div class="p-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 학생 정보 -->
+                    <div class="section-card">
+                        <h3 class="section-title">📚 학교생활 특징</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.school_life_traits }}</p>
+                    </div>
+
+                    <div class="section-card">
+                        <h3 class="section-title">💪 나의 강점</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.strengths }}</p>
+                    </div>
+
+                    <div class="section-card">
+                        <h3 class="section-title">🌱 성장 포인트</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.growth_points }}</p>
+                    </div>
+                </div>
+
+                <!-- 교사용 상담 가이드 (펼쳐진 상태) -->
+                <div class="section-card teacher-section mt-4">
+                    <h3 class="section-title text-amber-700">
+                        👨‍🏫 상담 가이드
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div>
+                            <h4 class="font-bold text-amber-800 text-sm mb-1">💡 상담 전략</h4>
+                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.counseling_tips }}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-amber-800 text-sm mb-1">⚠️ 주의사항</h4>
+                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.cautions }}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-amber-800 text-sm mb-1">🎯 학급경영 팁</h4>
+                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.classroom_management }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 응답 내역 -->
+                {% if result.answers_json %}
+                <details class="mt-4">
+                    <summary class="cursor-pointer text-gray-500 hover:text-gray-700 text-sm font-bold">
+                        <i class="fa-solid fa-list-check mr-2"></i>응답 내역 보기
+                    </summary>
+                    <div class="mt-3 bg-gray-50 rounded-xl p-4 text-sm">
+                        {% for key, value in result.answers_json.items %}
+                        <div class="flex justify-between py-1 border-b border-gray-100 last:border-0">
+                            <span class="text-gray-500">{{ key }}</span>
+                            <span class="font-bold">{% if value == 0 %}A{% else %}B{% endif %}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

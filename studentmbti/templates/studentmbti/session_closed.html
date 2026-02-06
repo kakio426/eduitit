@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-xl mx-auto text-center">
+        <div class="clay-card p-12">
+            <div class="text-6xl mb-6">🔒</div>
+            <h1 class="text-2xl font-bold text-gray-700 mb-4">검사가 종료되었습니다</h1>
+            <p class="text-gray-500 mb-6">
+                <strong>{{ session.session_name }}</strong> 검사 세션이<br>
+                선생님에 의해 종료되었습니다.
+            </p>
+            <p class="text-sm text-gray-400">
+                검사를 다시 진행하려면 선생님께 문의해주세요.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
