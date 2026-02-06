@@ -48,3 +48,4 @@ pytz>=2024.1
 
 # HTMX
 django-htmx==1.19.0
+qrcode>=8.0
