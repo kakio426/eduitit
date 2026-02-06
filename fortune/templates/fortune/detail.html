@@ -427,6 +427,17 @@
         mangle: false
     });
 
+    // Pre-process text to ensure headers and lists are on new lines
+    // 1. Ensure headers (##) have newlines before them
+    rawText = rawText.replace(/(#{1,6}\s)/g, '\n\n$1');
+
+    // 2. Ensure numbered lists (1. , 2. ) have newlines before them if they are following text
+    // We look for "number. space" that is NOT at the start of the string
+    rawText = rawText.replace(/([^\n])\s+(\d+\.\s)/g, '$1\n\n$2');
+
+    // 3. Ensure bullet points (- ) have newlines
+    rawText = rawText.replace(/([^\n])\s+(-\s)/g, '$1\n\n$2');
+
     // Parse and sanitize
     try {
         const parsedMarkdown = marked.parse(rawText);
