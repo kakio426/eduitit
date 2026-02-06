@@ -111,28 +111,36 @@
     /* Fix Alignment & Rendering for html2canvas */
     /* Fix Alignment & Rendering for html2canvas */
     .capture-active #premiumBadge {
-        display: inline-block !important;
-        height: 28px !important;
-        line-height: normal !important;
-        padding: 5px 12px 3px 12px !important;
-        /* Asymmetric padding for optical center */
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+        padding: 4px 10px !important;
+        /* Adjusted padding for vertical center */
         border-radius: 9999px !important;
         backdrop-filter: none !important;
         background-color: white !important;
         border: 1px solid #e2e8f0 !important;
         vertical-align: middle !important;
+        margin-top: -2px !important;
+        /* Slight visual lift */
     }
 
     .capture-active #badgeIcon {
-        display: inline !important;
+        display: inline-block !important;
         vertical-align: middle !important;
         margin-right: 4px !important;
+        margin-bottom: 2px !important;
+        /* Icon adjustment */
     }
 
     .capture-active #badgeText {
-        display: inline !important;
+        display: inline-block !important;
         vertical-align: middle !important;
         font-size: 0.9rem !important;
+        margin-top: 1px !important;
+        /* Text baseline adjustment */
     }
 
     .capture-active #stemIconBig {
@@ -165,19 +173,19 @@
     }
 
     /* Highlight Alignment Fix (html2canvas baseline correction) */
-    /* Highlight Alignment Fix: Return to safe inline display */
+    /* Highlight Alignment Fix: Solid background for html2canvas */
     .capture-active .analysis-content strong {
-        background: none !important;
-        /* Remove background to stop floating */
-        box-shadow: inset 0 -0.5em 0 rgba(124, 58, 237, 0.1) !important;
-        /* Bottom-half highlight that sticks to baseline */
-        padding: 0 0.1rem !important;
-        border-radius: 0 !important;
-        /* Sharp edges for marker feel */
+        background: rgba(124, 58, 237, 0.1) !important;
+        box-shadow: none !important;
+        padding: 0 0.2rem !important;
+        border-radius: 4px !important;
         display: inline !important;
         line-height: inherit !important;
         vertical-align: baseline !important;
         margin: 0 !important;
+        color: #7c3aed !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     /* Simulate slight padding without layout shift */
@@ -2689,11 +2697,45 @@
             // 일간 정보에 따른 아이콘/이름 추출
             let elementIcon = '🔮';
             let elementName = '사주 분석';
-            for (const [char, info] of Object.entries(ELEMENT_MAP)) {
-                if (resultText.includes(char)) {
+
+            // 1. DOM에서 확정된 일간 정보 우선 탐색 (정확도 향상)
+            // (1) 배지 텍스트 활용 (예: "신금(辛金)")
+            const badgeText = document.getElementById('badgeText')?.textContent;
+            // (2) 일주 글자 활용 (예: "辛")
+            const natalDayStem = document.getElementById('natalDayStem')?.textContent;
+
+            let found = false;
+
+            // 배지 텍스트로 검색
+            if (badgeText) {
+                for (const [char, info] of Object.entries(ELEMENT_MAP)) {
+                    if (badgeText.includes(info.name.split('(')[0])) { // "신금" 매칭
+                        elementIcon = info.icon;
+                        elementName = info.name;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            // 배지 실패 시 일주 글자로 검색
+            if (!found && natalDayStem) {
+                const info = ELEMENT_MAP[natalDayStem.trim()];
+                if (info) {
                     elementIcon = info.icon;
                     elementName = info.name;
-                    break;
+                    found = true;
+                }
+            }
+
+            // 최후의 수단: 본문 검색 (기존 로직)
+            if (!found) {
+                for (const [char, info] of Object.entries(ELEMENT_MAP)) {
+                    if (resultText.includes(char)) {
+                        elementIcon = info.icon;
+                        elementName = info.name;
+                        break;
+                    }
                 }
             }
 
