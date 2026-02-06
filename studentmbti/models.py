@@ -12,6 +12,7 @@ class TestSession(models.Model):
     is_active = models.BooleanField(default=True)
     
     class Meta:
+        app_label = 'studentmbti'
         ordering = ['-created_at']
         verbose_name = '학생 MBTI 검사 세션'
         verbose_name_plural = '학생 MBTI 검사 세션 목록'
@@ -35,6 +36,7 @@ class StudentMBTIResult(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
+        app_label = 'studentmbti'
         ordering = ['-created_at']
         verbose_name = '학생 MBTI 결과'
         verbose_name_plural = '학생 MBTI 결과 목록'
