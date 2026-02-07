@@ -22,8 +22,8 @@ def get_student_service():
 
 def generate_session_qr(session_id, request):
     """세션 QR 코드 생성 (Base64 반환)"""
-    # 절대 URL 생성
-    url = request.build_absolute_uri(f'/studentmbti/session/{session_id}/')
+    # 절대 URL 생성 (짧은 URL 별칭 사용)
+    url = request.build_absolute_uri(f'/m/session/{session_id}/')
     
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(url)

@@ -246,7 +246,7 @@
             document.getElementById('student-name').classList.remove('border-red-500');
 
             // 서버에 학생 등록 (즉시 참여자 목록에 표시)
-            fetch('{% url 'studentmbti: start_test' session.id %}', {
+            fetch("{% url 'studentmbti:start_test' session.id %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
