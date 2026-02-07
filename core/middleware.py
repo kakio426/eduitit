@@ -89,3 +89,40 @@ class OnboardingMiddleware:
 
         response = self.get_response(request)
         return response
+
+
+class MaintenanceModeMiddleware:
+    """
+    점검 모드를 관리하는 미들웨어.
+    - settings.MAINTENANCE_MODE가 True인 경우 작동합니다.
+    - 관리자(is_superuser)는 점검 중에도 모든 페이지에 접근 가능합니다.
+    - 일반 사용자는 모든 요청 시 점검 페이지로 이동하거나 점검 템플릿을 보게 됩니다.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.conf import settings
+        from django.shortcuts import render
+
+        # 점검 모드 스위치가 켜져 있는지 확인
+        is_maintenance = getattr(settings, 'MAINTENANCE_MODE', False)
+
+        if is_maintenance:
+            # 관리자(내 계정)는 점검 중에도 사이트를 볼 수 있어야 함
+            if request.user.is_authenticated and request.user.is_superuser:
+                return self.get_response(request)
+
+            # 관리자 페이지 접근은 허용 (로그인해야 하니까)
+            if any(request.path.startswith(p) for p in ['/admin/', '/secret-admin-kakio/', '/accounts/login/']):
+                return self.get_response(request)
+
+            # 정적 파일 접근 허용
+            if any(request.path.startswith(p) for p in ['/static/', '/media/']):
+                return self.get_response(request)
+
+            # 그 외 모든 사용자는 점검 페이지 렌더링
+            return render(request, 'core/maintenance.html', status=503)
+
+        return self.get_response(request)

@@ -97,6 +97,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     # Custom Middleware
+    'core.middleware.MaintenanceModeMiddleware',  # 점검 모드 (제일 위쪽 처리가 좋음)
     'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
     'core.middleware.VisitorTrackingMiddleware',
 ]
@@ -398,3 +399,6 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+# Maintenance Mode
+# 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
+MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="min-h-[80vh] flex items-center justify-center p-6">
+    <div class="max-w-2xl w-full text-center" data-aos="zoom-in">
+        <!-- 일러스트/아이콘 영역 -->
+        <div class="mb-12 relative inline-block">
+            <div class="w-48 h-48 bg-purple-100 rounded-full flex items-center justify-center animate-pulse">
+                <i class="fa-solid fa-screwdriver-wrench text-7xl text-purple-600 animate-bounce"></i>
+            </div>
+            <div
+                class="absolute -top-4 -right-4 w-12 h-12 bg-orange-400 rounded-full flex items-center justify-center border-4 border-white shadow-lg animate-spin-slow">
+                <i class="fa-solid fa-gear text-white text-xl"></i>
+            </div>
+        </div>
+
+        <h1 class="text-5xl font-black text-gray-800 mb-6 font-title tracking-tight">
+            잠시 점검 중입니다
+        </h1>
+
+        <p class="text-xl text-gray-500 mb-10 leading-relaxed font-bold">
+            더 나은 서비스를 위해 시스템을 최적화하고 있습니다.<br>
+            잠시만 기다려 주시면 금방 돌아오겠습니다! 🚀
+        </p>
+
+        <div class="bg-white/50 backdrop-blur-md rounded-3xl p-8 border-2 border-purple-50 inline-block shadow-clay">
+            <div class="flex items-center gap-4 text-purple-700 font-bold mb-2">
+                <i class="fa-solid fa-clock"></i>
+                <span>예상 완료 시간</span>
+            </div>
+            <p class="text-2xl font-black text-gray-800">최대한 빠르게 완료하겠습니다!</p>
+        </div>
+
+        <div class="mt-16 flex justify-center gap-6">
+            <div class="flex flex-col items-center gap-2">
+                <div
+                    class="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-xl shadow-sm">
+                    <i class="fa-brands fa-github"></i>
+                </div>
+                <span class="text-xs text-gray-400 font-bold">System Update</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <div
+                    class="w-12 h-12 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center text-xl shadow-sm">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <span class="text-xs text-gray-400 font-bold">Safe & Secure</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    @keyframes spin-slow {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .animate-spin-slow {
+        animation: spin-slow 8s linear infinite;
+    }
+
+    .shadow-clay {
+        box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+    }
+</style>
+{% endblock %}
