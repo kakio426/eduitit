@@ -22,4 +22,6 @@ urlpatterns = [
     path('policy/', views.policy_view, name='policy'),
     path('update-email/', views.update_email, name='update_email'),
     path('delete-account/', views.delete_account, name='delete_account'),
+    path('feedback/', views.feedback_view, name='feedback'),
+    path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
 ]

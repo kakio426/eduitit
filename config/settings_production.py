@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'studentmbti.apps.StudentmbtiConfig',
     'django_htmx',
     'django.contrib.humanize',
+    'dbbackup',
 
     # Auth & Allauth
     'django.contrib.sites',
@@ -104,6 +105,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     # Custom Middleware
+    'core.middleware.MaintenanceModeMiddleware',  # 점검 모드 (제일 위쪽 처리가 좋음)
     'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
     'core.middleware.VisitorTrackingMiddleware',
 ]
@@ -123,6 +125,9 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 # Custom Context Processors
                 'core.context_processors.visitor_counts',
+                'core.context_processors.toast_messages',
+                'core.context_processors.site_config',
+                'core.context_processors.seo_meta',
             ],
         },
     },
@@ -535,4 +540,29 @@ print(f"DEBUG: STATIC_ROOT => {STATIC_ROOT}")
 print(f"DEBUG: STATICFILES_DIRS => {STATICFILES_DIRS}")
 print(f"DEBUG: STATICFILES_STORAGE => {STATICFILES_STORAGE}")
 print("="*60)
+
+# Maintenance Mode
+# 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
+MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
+
+# =============================================================================
+# SENTRY ERROR TRACKING (production only)
+# =============================================================================
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN and not DEBUG:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=0.2,
+            profiles_sample_rate=0.1,
+        )
+    except ImportError:
+        pass
+
+# =============================================================================
+# DATABASE BACKUP (django-dbbackup)
+# =============================================================================
+DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
+DBBACKUP_STORAGE_OPTIONS = {'location': BASE_DIR / 'backups/'}
 

@@ -49,3 +49,9 @@ pytz>=2024.1
 # HTMX
 django-htmx==1.19.0
 qrcode>=8.0
+
+# Error Tracking
+sentry-sdk>=2.0.0
+
+# Database Backup
+django-dbbackup>=4.1.0

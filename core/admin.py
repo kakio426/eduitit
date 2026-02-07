@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile, Post
+from .models import UserProfile, Post, SiteConfig, Feedback
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -41,3 +41,33 @@ class PostAdmin(admin.ModelAdmin):
     def like_count(self, obj):
         return obj.likes.count()
     like_count.short_description = '좋아요 수'
+
+
+@admin.register(SiteConfig)
+class SiteConfigAdmin(admin.ModelAdmin):
+    list_display = ['__str__', 'banner_active', 'banner_text']
+    fieldsets = (
+        ('배너 설정', {
+            'fields': ('banner_active', 'banner_text', 'banner_color', 'banner_link'),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # 싱글톤: 이미 존재하면 추가 불가
+        return not SiteConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'message_summary', 'is_resolved', 'created_at']
+    list_filter = ['category', 'is_resolved', 'created_at']
+    search_fields = ['name', 'email', 'message']
+    list_editable = ['is_resolved']
+    readonly_fields = ['created_at']
+
+    def message_summary(self, obj):
+        return obj.message[:60] + "..." if len(obj.message) > 60 else obj.message
+    message_summary.short_description = '내용 요약'

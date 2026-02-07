@@ -1,6 +1,9 @@
 import jwt
 import datetime
 from django.conf import settings
+from django.utils import timezone
+from django.db.models import Count
+from django.db.models.functions import TruncDate, TruncWeek
 
 
 # =============================================================================
@@ -75,6 +78,41 @@ def generate_sso_token(user):
     }
     
     return jwt.encode(payload, settings.SSO_JWT_SECRET, algorithm='HS256')
+
+def get_visitor_stats(days=30):
+    """VisitorLog 일별 집계를 반환 (최근 N일)"""
+    from .models import VisitorLog
+    start_date = timezone.localdate() - datetime.timedelta(days=days - 1)
+    stats = (
+        VisitorLog.objects
+        .filter(visit_date__gte=start_date)
+        .values('visit_date')
+        .annotate(count=Count('id'))
+        .order_by('visit_date')
+    )
+    # 빈 날짜 채우기
+    result = []
+    date_map = {s['visit_date']: s['count'] for s in stats}
+    for i in range(days):
+        d = start_date + datetime.timedelta(days=i)
+        result.append({'date': d, 'count': date_map.get(d, 0)})
+    return result
+
+
+def get_weekly_stats(weeks=8):
+    """VisitorLog 주간 집계를 반환 (최근 N주)"""
+    from .models import VisitorLog
+    start_date = timezone.localdate() - datetime.timedelta(weeks=weeks)
+    stats = (
+        VisitorLog.objects
+        .filter(visit_date__gte=start_date)
+        .annotate(week=TruncWeek('visit_date'))
+        .values('week')
+        .annotate(count=Count('id'))
+        .order_by('week')
+    )
+    return list(stats)
+
 
 def get_schoolit_url(role):
     """

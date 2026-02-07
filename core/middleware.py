@@ -108,10 +108,14 @@ class MaintenanceModeMiddleware:
 
         # 점검 모드 스위치가 켜져 있는지 확인
         is_maintenance = getattr(settings, 'MAINTENANCE_MODE', False)
+        
+        # DEBUG: 점검 모드 상태 확인
+        print(f"[MAINTENANCE DEBUG] Path: {request.path} | Mode: {is_maintenance} | User: {request.user} | Superuser: {request.user.is_superuser if request.user.is_authenticated else 'N/A'}")
 
         if is_maintenance:
             # 관리자(내 계정)는 점검 중에도 사이트를 볼 수 있어야 함
             if request.user.is_authenticated and request.user.is_superuser:
+                print(f"[MAINTENANCE DEBUG] Bypass for superuser: {request.user}")
                 return self.get_response(request)
 
             # 관리자 페이지 접근은 허용 (로그인해야 하니까)

@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from django.views.decorators.http import require_POST
 from products.models import Product
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post, Comment
+from .models import UserProfile, Post, Comment, Feedback
 from django.contrib import messages
 from django.db.models import Count
 from PIL import Image
@@ -363,3 +364,73 @@ def delete_account(request):
         return redirect('home')
     
     return render(request, 'core/delete_account.html')
+
+
+@login_required
+def admin_dashboard_view(request):
+    """superuser 전용 방문자 통계 대시보드"""
+    if not request.user.is_superuser:
+        messages.error(request, '관리자만 접근 가능합니다.')
+        return redirect('home')
+
+    from .utils import get_visitor_stats, get_weekly_stats
+    from .models import VisitorLog
+    from django.utils import timezone
+    import datetime
+
+    today = timezone.localdate()
+    today_count = VisitorLog.objects.filter(visit_date=today).count()
+    week_start = today - datetime.timedelta(days=today.weekday())
+    week_count = VisitorLog.objects.filter(visit_date__gte=week_start).count()
+    month_start = today.replace(day=1)
+    month_count = VisitorLog.objects.filter(visit_date__gte=month_start).count()
+    total_count = VisitorLog.objects.count()
+
+    daily_stats = get_visitor_stats(30)
+    weekly_stats = get_weekly_stats(8)
+
+    # 차트 최대값 (CSS 바 높이 계산용)
+    max_daily = max((s['count'] for s in daily_stats), default=1) or 1
+
+    return render(request, 'core/admin_dashboard.html', {
+        'today_count': today_count,
+        'week_count': week_count,
+        'month_count': month_count,
+        'total_count': total_count,
+        'daily_stats': daily_stats,
+        'weekly_stats': weekly_stats,
+        'max_daily': max_daily,
+    })
+
+
+@require_POST
+def feedback_view(request):
+    """피드백 제출 (비로그인 사용자도 가능)"""
+    name = request.POST.get('name', '').strip()
+    email = request.POST.get('email', '').strip()
+    category = request.POST.get('category', 'other')
+    message_text = request.POST.get('message', '').strip()
+
+    if not name or not message_text:
+        messages.error(request, '이름과 내용은 필수 입력입니다.')
+        if request.headers.get('HX-Request'):
+            return HttpResponse(
+                '<div class="text-red-500 text-sm font-bold p-2">이름과 내용은 필수입니다.</div>',
+                status=200,
+            )
+        return redirect('home')
+
+    Feedback.objects.create(
+        name=name,
+        email=email,
+        category=category if category in ('bug', 'suggestion', 'other') else 'other',
+        message=message_text,
+    )
+    messages.success(request, '소중한 의견 감사합니다! 빠르게 확인하겠습니다.')
+
+    if request.headers.get('HX-Request'):
+        return HttpResponse(
+            '<div class="text-green-600 text-sm font-bold p-2">감사합니다! 의견이 접수되었습니다.</div>',
+            status=200,
+        )
+    return redirect('home')
