@@ -56,10 +56,14 @@ class Command(BaseCommand):
             for old_file in backups[keep:]:
                 old_file.unlink()
                 self.stdout.write(f'오래된 백업 삭제: {old_file.name}')
+            
+            import sys
+            sys.exit(0)
 
         except Exception as e:
             self.stderr.write(self.style.ERROR(f'DB 백업 실패: {e}'))
             logger.error(f'DB backup failed: {e}', exc_info=True)
             if filename.exists():
                 filename.unlink()
-            raise
+            import sys
+            sys.exit(1)
