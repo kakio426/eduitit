@@ -2,11 +2,11 @@
 
 <!-- SNS 위젯 -->
 <aside
-    class="w-full md:w-[380px] flex flex-col h-auto md:h-[calc(100vh-8rem)] md:sticky md:top-32 z-20 flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden ml-0 md:ml-6 mb-6 md:mb-0">
+    class="w-full md:w-[380px] flex flex-col h-auto md:sticky md:top-32 z-20 flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden ml-0 md:ml-6 mb-6 md:mb-0">
 
     <!-- 1. Header -->
-    <div
-        class="p-5 border-b border-slate-100 bg-white/90 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0">
+    <div class="p-5 border-b border-slate-100 bg-white/90 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0"
+        style="will-change: transform;">
         <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
             <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
             실시간 소통
@@ -18,8 +18,8 @@
         </button>
     </div>
 
-    <!-- 2. Infinite Scroll Feed Area -->
-    <div class="flex-1 overflow-y-auto bg-slate-50/50 p-4 space-y-3 custom-scrollbar" id="feed-scroll-container">
+    <!-- 2. Feed Area (Unified with Body Scroll) -->
+    <div class="flex-1 overflow-visible bg-slate-50/50 p-4 space-y-3" id="feed-scroll-container">
 
         {% if user.is_authenticated %}
         <!-- Write Input - 로그인 사용자만 -->
@@ -36,7 +36,8 @@
 
             <!-- 이미지 미리보기 영역 -->
             <div id="image-preview-container" class="hidden mt-3 relative">
-                <img id="image-preview" src="" alt="미리보기" class="w-full h-auto max-h-64 object-cover rounded-xl border border-slate-200">
+                <img id="image-preview" src="" alt="미리보기"
+                    class="w-full h-auto max-h-64 object-cover rounded-xl border border-slate-200">
                 <button type="button" id="remove-image-btn"
                     class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full hover:bg-red-600 transition shadow-lg flex items-center justify-center">
                     <i class="ph ph-x text-lg"></i>
