@@ -4,6 +4,7 @@ from datetime import datetime
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
+from django.db import connections
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,10 @@ class Command(BaseCommand):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = backup_dir / f'backup_{timestamp}.json'
+
+        # Neon/PgBouncer 호환: 서버사이드 커서 비활성화
+        db_conn = connections['default']
+        db_conn.settings_dict['DISABLE_SERVER_SIDE_CURSORS'] = True
 
         self.stdout.write('DB 백업을 시작합니다...')
         try:
