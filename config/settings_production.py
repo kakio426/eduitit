@@ -533,6 +533,10 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
+    "dbbackup": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": BASE_DIR / "backups/"},
+    },
 }
 
 print("="*60)
@@ -563,6 +567,5 @@ if SENTRY_DSN and not DEBUG:
 # =============================================================================
 # DATABASE BACKUP (django-dbbackup)
 # =============================================================================
-DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-DBBACKUP_STORAGE_OPTIONS = {'location': BASE_DIR / 'backups/'}
+# STORAGES['dbbackup'] 키로 설정됨 (위 STORAGES 딕셔너리 참조)
 
