@@ -10,6 +10,7 @@ class TestSession(models.Model):
     session_name = models.CharField(max_length=100, help_text="예: 3학년 1반 MBTI 검사")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    access_code = models.CharField(max_length=10, unique=True, null=True, blank=True, help_text="학생 입장 코드 (예: AB12CD)")
     
     class Meta:
         app_label = 'studentmbti'
@@ -20,6 +21,20 @@ class TestSession(models.Model):
     def __str__(self):
         return f"{self.session_name} ({self.teacher.username})"
     
+    def save(self, *args, **kwargs):
+        if not self.access_code:
+            self.access_code = self.generate_unique_access_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_access_code():
+        import random
+        import string
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            if not TestSession.objects.filter(access_code=code).exists():
+                return code
+
     @property
     def result_count(self):
         return self.results.count()

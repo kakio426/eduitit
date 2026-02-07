@@ -123,6 +123,17 @@
                         검사 QR 코드
                     </h2>
                     <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image">
+
+                    {% if session.access_code %}
+                    <div class="mt-6 p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
+                        <p class="text-sm text-gray-600 mb-2">또는 입장 코드로 접속</p>
+                        <div class="text-4xl font-black text-purple-600 tracking-widest">
+                            {{ session.access_code }}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">학생들이 랜딩 페이지에서 이 코드를 입력하면<br>바로 검사를 시작할 수 있습니다.</p>
+                    </div>
+                    {% endif %}
+
                     <p class="text-gray-500 mt-4 text-sm">학생들이 이 QR 코드를 스캔하면<br>검사를 시작할 수 있습니다.</p>
 
                     <button @click="showFullscreen = true"
@@ -142,6 +153,15 @@
                         검사가 종료되었습니다
                     </div>
                     {% endif %}
+
+                    <form action="{% url 'studentmbti:session_delete' session.id %}" method="post" class="mt-4"
+                        onsubmit="return confirm('정말로 이 세션을 삭제하시겠습니까? 모든 결과가 함께 삭제됩니다.');">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm">
+                            <i class="fa-solid fa-trash mr-1"></i>세션 삭제
+                        </button>
+                    </form>
                 </div>
 
                 <!-- 통계 -->
@@ -199,6 +219,14 @@
     <div x-show="showFullscreen" x-cloak x-transition class="qr-fullscreen" @click="showFullscreen = false">
         <h1 class="text-4xl font-bold text-gray-700 mb-8">{{ session.session_name }}</h1>
         <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code">
+        {% if session.access_code %}
+        <div class="mt-12 text-center">
+            <p class="text-3xl text-gray-600 mb-4">또는 입장 코드 입력</p>
+            <div class="text-8xl font-black text-purple-600 tracking-widest">
+                {{ session.access_code }}
+            </div>
+        </div>
+        {% endif %}
         <p class="text-2xl text-gray-500 mt-8">스마트폰으로 QR 코드를 스캔하세요</p>
         <button @click.stop="showFullscreen = false"
             class="mt-8 px-8 py-4 bg-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-300 transition">

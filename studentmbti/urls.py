@@ -13,8 +13,10 @@ urlpatterns = [
     path('session/<uuid:session_id>/detail/', views.session_detail, name='session_detail'),
     path('session/<uuid:session_id>/results-partial/', views.session_results_partial, name='session_results_partial'),
     path('session/<uuid:session_id>/toggle/', views.session_toggle_active, name='session_toggle'),
+    path('session/<uuid:session_id>/delete/', views.session_delete, name='session_delete'),
     path('session/<uuid:session_id>/export/', views.export_excel, name='export_excel'),
     path('result/<uuid:result_id>/teacher/', views.result_detail_teacher, name='result_detail_teacher'),
+    path('join/', views.join_session, name='join_session'),
     
     # 학생용 (비회원)
     path('session/<uuid:session_id>/', views.session_test, name='session_test'),

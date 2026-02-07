@@ -151,6 +151,32 @@ def session_toggle_active(request, session_id):
 
 
 @login_required
+@require_POST
+def session_delete(request, session_id):
+    """세션 삭제"""
+    session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
+    session.delete()
+    logger.info(f"[StudentMBTI] Session Deleted: {session_id} by {request.user.username}")
+    return redirect('studentmbti:dashboard')
+
+
+def join_session(request):
+    """입장 코드로 세션 참여"""
+    code = request.GET.get('code', '').strip().upper()
+    if not code:
+        code = request.POST.get('code', '').strip().upper()
+    
+    if code:
+        try:
+            session = TestSession.objects.get(access_code=code, is_active=True)
+            return redirect('studentmbti:session_test', session_id=session.id)
+        except TestSession.DoesNotExist:
+            return HttpResponse("유효하지 않은 입장 코드입니다. 선생님께 확인해주세요.", status=404)
+    
+    return HttpResponse("입장 코드를 입력해주세요.", status=400)
+
+
+@login_required
 def result_detail_teacher(request, result_id):
     """교사용 결과 상세보기"""
     try:

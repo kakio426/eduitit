@@ -93,17 +93,31 @@
                             </span>
                             {% endif %}
                         </div>
-                        <div class="text-gray-500 text-sm flex items-center gap-4">
+                        <div class="text-gray-500 text-sm flex items-center gap-4 flex-wrap">
                             <span><i class="fa-solid fa-users mr-1"></i>{{ session.result_count }}명 참여</span>
                             <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d H:i"
                                 }}</span>
+                            {% if session.access_code %}
+                            <span class="font-bold text-purple-600"><i class="fa-solid fa-key mr-1"></i>코드: {{
+                                session.access_code }}</span>
+                            {% endif %}
                         </div>
                     </div>
-                    <a href="{% url 'studentmbti:session_detail' session.id %}"
-                        class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
-                        <i class="fa-solid fa-eye"></i>
-                        상세보기
-                    </a>
+                    <div class="flex gap-2">
+                        <a href="{% url 'studentmbti:session_detail' session.id %}"
+                            class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
+                            <i class="fa-solid fa-eye"></i>
+                            상세보기
+                        </a>
+                        <form action="{% url 'studentmbti:session_delete' session.id %}" method="post"
+                            onsubmit="return confirm('정말로 이 세션을 삭제하시겠습니까? 모든 결과가 함께 삭제됩니다.');">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
             {% endfor %}

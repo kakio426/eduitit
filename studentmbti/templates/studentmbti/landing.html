@@ -65,14 +65,28 @@
                     </div>
                     <p class="text-gray-600 mb-6 leading-relaxed">
                         선생님이 보여주신 QR 코드를<br>
-                        스캔하거나 링크를 클릭하세요!
+                        스캔하거나 입장 코드를 입력하세요!
                     </p>
+
+                    <!-- 입장 코드 입력 폼 -->
+                    <form action="{% url 'studentmbti:join_session' %}" method="get" class="mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" name="code" placeholder="입장 코드 (예: AB12CD)" maxlength="10"
+                                class="flex-1 px-4 py-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-lg font-bold text-center uppercase"
+                                required>
+                            <button type="submit"
+                                class="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </form>
+
                     <div class="bg-gradient-to-r from-pink-100 to-purple-100 rounded-xl p-4 text-center">
                         <div class="text-4xl mb-2">
                             <i class="fa-solid fa-qrcode text-pink-500"></i>
                         </div>
                         <p class="text-sm text-gray-600 font-medium">
-                            선생님께 QR 코드를<br>요청해주세요
+                            또는 선생님께 QR 코드를<br>요청해주세요
                         </p>
                     </div>
                 </div>
