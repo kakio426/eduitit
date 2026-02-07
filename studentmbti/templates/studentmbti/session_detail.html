@@ -126,11 +126,15 @@
 
                     {% if session.access_code %}
                     <div class="mt-6 p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
-                        <p class="text-sm text-gray-600 mb-2">또는 입장 코드로 접속</p>
+                        <p class="text-sm text-gray-600 mb-2">입장 코드로 접속</p>
                         <div class="text-4xl font-black text-purple-600 tracking-widest">
                             {{ session.access_code }}
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">학생들이 랜딩 페이지에서 이 코드를 입력하면<br>바로 검사를 시작할 수 있습니다.</p>
+                        <div class="mt-3 p-2 bg-white/70 rounded-lg">
+                            <p class="text-xs text-gray-700 font-bold mb-1">📱 학생 접속 방법:</p>
+                            <p class="text-sm text-purple-700 font-mono font-bold">eduitit.site/m/</p>
+                            <p class="text-xs text-gray-500 mt-1">위 주소에서 입장 코드 입력</p>
+                        </div>
                     </div>
                     {% endif %}
 
@@ -234,4 +238,37 @@
         </button>
     </div>
 </section>
+
+<script>
+    // QR 전체화면 뒤로가기 처리
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('qrFullscreenHandler', () => ({
+            showFullscreen: false,
+            init() {
+                this.$watch('showFullscreen', (value) => {
+                    if (value) {
+                        // 전체화면 열릴 때 히스토리 추가
+                        history.pushState({ qrFullscreen: true }, '');
+                    }
+                });
+            }
+        }));
+    });
+
+    // 뒤로가기 버튼 처리
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.qrFullscreen) {
+            // QR 전체화면이 열려있으면 닫기만 하고 페이지는 유지
+            const fullscreenEl = document.querySelector('[x-data]');
+            if (fullscreenEl && fullscreenEl.__x) {
+                fullscreenEl.__x.$data.showFullscreen = false;
+            }
+            // 히스토리를 다시 추가하여 페이지를 유지
+            history.pushState(null, '');
+        }
+    });
+
+    // 페이지 로드 시 초기 히스토리 상태 설정
+    history.pushState(null, '');
+</script>
 {% endblock %}

@@ -244,6 +244,24 @@
                 return;
             }
             document.getElementById('student-name').classList.remove('border-red-500');
+
+            // 서버에 학생 등록 (즉시 참여자 목록에 표시)
+            fetch('{% url 'studentmbti: start_test' session.id %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new URLSearchParams({
+                    'student_name': name
+                })
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Student registered:', data.result_id);
+                    }
+                })
+                .catch(error => console.error('Registration error:', error));
         }
 
         if (currentStep < totalSteps) {

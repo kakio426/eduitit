@@ -226,6 +226,39 @@ def session_test(request, session_id):
 
 
 @require_POST
+def start_test(request, session_id):
+    """학생이 이름을 입력하고 테스트를 시작할 때 호출 (즉시 참여자 목록에 등록)"""
+    try:
+        session = get_object_or_404(TestSession, id=session_id)
+        
+        if not session.is_active:
+            return JsonResponse({'error': '이 검사 세션은 종료되었습니다.'}, status=400)
+        
+        student_name = request.POST.get('student_name', '').strip()
+        if not student_name:
+            return JsonResponse({'error': '이름을 입력해주세요.'}, status=400)
+        
+        # 이름만으로 결과 레코드 생성 (MBTI는 나중에 업데이트)
+        result = StudentMBTIResult.objects.create(
+            session=session,
+            student_name=student_name,
+            mbti_type=None,
+            animal_name=None,
+            answers_json=None
+        )
+        
+        # 세션에 result_id 저장 (나중에 analyze에서 사용)
+        request.session['student_result_id'] = str(result.id)
+        
+        logger.info(f"[StudentMBTI] Student Started: {student_name} in session {session_id}")
+        return JsonResponse({'success': True, 'result_id': str(result.id)})
+    except Exception as e:
+        logger.error(f"[StudentMBTI] Start Test Error: {str(e)}")
+        return JsonResponse({'error': '등록 중 오류가 발생했습니다.'}, status=500)
+
+
+
+@require_POST
 def analyze(request, session_id):
     """학생 MBTI 분석 및 결과 저장"""
     try:
@@ -271,15 +304,37 @@ def analyze(request, session_id):
         mbti_data = STUDENT_MBTI_RESULTS.get(mbti_type, {})
         animal_name = mbti_data.get('animal_name', '알 수 없음')
         
-        # 결과 저장
-        result = StudentMBTIResult.objects.create(
-            session=session,
-            student_name=student_name,
-            mbti_type=mbti_type,
-            animal_name=animal_name,
-            answers_json=answers
-        )
-        logger.info(f"[StudentMBTI] Analyze Success: Result {result.id}, MBTI {mbti_type}")
+        # 기존 레코드 업데이트 또는 새로 생성
+        result_id = request.session.get('student_result_id')
+        if result_id:
+            try:
+                result = StudentMBTIResult.objects.get(id=result_id, session=session)
+                result.mbti_type = mbti_type
+                result.animal_name = animal_name
+                result.answers_json = answers
+                result.save()
+                logger.info(f"[StudentMBTI] Analyze Success (Updated): Result {result.id}, MBTI {mbti_type}")
+            except StudentMBTIResult.DoesNotExist:
+                # 세션에 저장된 ID가 유효하지 않으면 새로 생성
+                result = StudentMBTIResult.objects.create(
+                    session=session,
+                    student_name=student_name,
+                    mbti_type=mbti_type,
+                    animal_name=animal_name,
+                    answers_json=answers
+                )
+                logger.info(f"[StudentMBTI] Analyze Success (New): Result {result.id}, MBTI {mbti_type}")
+        else:
+            # start_test를 거치지 않은 경우 (이전 방식 호환)
+            result = StudentMBTIResult.objects.create(
+                session=session,
+                student_name=student_name,
+                mbti_type=mbti_type,
+                animal_name=animal_name,
+                answers_json=answers
+            )
+            logger.info(f"[StudentMBTI] Analyze Success (Legacy): Result {result.id}, MBTI {mbti_type}")
+        
         return redirect('studentmbti:result', result_id=result.id)
     except Exception as e:
         logger.error(f"[StudentMBTI] Analyze Error: {str(e)}")

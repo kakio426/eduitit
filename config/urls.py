@@ -37,6 +37,7 @@ urlpatterns = [
     path('padlet/', include('padlet_bot.urls', namespace='padlet_bot')),
     path('chess/', include('chess.urls', namespace='chess')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
+    path('m/', include('studentmbti.urls')),  # 짧은 URL 별칭
 ]
 
 if settings.DEBUG:

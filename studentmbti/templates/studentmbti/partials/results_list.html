@@ -2,20 +2,30 @@
 
 {% if results %}
 {% for result in results %}
-<a href="{% url 'studentmbti:result_detail_teacher' result.id %}"
-    class="result-row flex items-center justify-between block hover:bg-gray-50">
+<a href="{% if result.mbti_type %}{% url 'studentmbti:result_detail_teacher' result.id %}{% else %}#{% endif %}"
+    class="result-row flex items-center justify-between block {% if result.mbti_type %}hover:bg-gray-50{% else %}opacity-60{% endif %}">
     <div class="flex items-center gap-4">
         <div class="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-full text-2xl">
-            🎓
+            {% if result.mbti_type %}🎓{% else %}⏳{% endif %}
         </div>
         <div>
             <div class="font-bold text-gray-700">{{ result.student_name }}</div>
-            <div class="text-sm text-gray-500">{{ result.animal_name }}</div>
+            <div class="text-sm text-gray-500">
+                {% if result.mbti_type %}
+                {{ result.animal_name }}
+                {% else %}
+                <span class="text-orange-500 animate-pulse">검사 진행 중...</span>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="text-right">
         <div class="text-sm text-gray-400">{{ result.created_at|date:"H:i" }}</div>
+        {% if result.mbti_type %}
         <div class="text-xs text-orange-500 font-bold">상세보기 <i class="fa-solid fa-chevron-right"></i></div>
+        {% else %}
+        <div class="text-xs text-gray-400">대기 중</div>
+        {% endif %}
     </div>
 </a>
 {% endfor %}

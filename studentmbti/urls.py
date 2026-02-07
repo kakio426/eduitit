@@ -20,6 +20,7 @@ urlpatterns = [
     
     # 학생용 (비회원)
     path('session/<uuid:session_id>/', views.session_test, name='session_test'),
+    path('session/<uuid:session_id>/start/', views.start_test, name='start_test'),
     path('session/<uuid:session_id>/analyze/', views.analyze, name='analyze'),
     path('result/<uuid:result_id>/', views.result, name='result'),
 ]
