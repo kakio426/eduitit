@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def get_student_service():
     """SIS 규격에 따라 서비스 정보 로드"""
-    return Product.objects.filter(title__icontains="학교생활 캐릭터").first()
+    return Product.objects.filter(title__icontains="우리반 캐릭터").first()
 
 def generate_session_qr(session_id, request):
     """세션 QR 코드 생성 (Base64 반환)"""
