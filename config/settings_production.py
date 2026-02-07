@@ -551,10 +551,14 @@ SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
 if SENTRY_DSN and not DEBUG:
     try:
         import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
         sentry_sdk.init(
             dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration()],
             traces_sample_rate=0.2,
             profiles_sample_rate=0.1,
+            # IP 주소 등 개인 식별 정보를 수집하여 에러 분석을 돕습니다.
+            send_default_pii=True,
         )
     except ImportError:
         pass

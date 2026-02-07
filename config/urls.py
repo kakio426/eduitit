@@ -20,11 +20,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
-def trigger_error(request):
-    division_by_zero = 1 / 0
-
 urlpatterns = [
-    path('sentry-debug/', trigger_error),
     path('secret-admin-kakio/', admin.site.urls),
     path('', include('core.urls')),
     path('products/', include('products.urls')),

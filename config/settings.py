@@ -410,13 +410,19 @@ MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 # SENTRY ERROR TRACKING (production only)
 # =============================================================================
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
-if SENTRY_DSN:
+if SENTRY_DSN and not DEBUG:
     try:
         import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
         sentry_sdk.init(
             dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration()],
+            # Set traces_sample_rate to 1.0 to capture 100%
+            # of transactions for performance monitoring.
             traces_sample_rate=0.2,
             profiles_sample_rate=0.1,
+            # IP 주소 등 개인 식별 정보를 수집하여 에러 분석을 돕습니다.
+            send_default_pii=True,
         )
     except ImportError:
         pass
