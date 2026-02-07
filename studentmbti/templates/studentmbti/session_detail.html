@@ -196,11 +196,12 @@
     </div>
 
     <!-- 전체화면 QR -->
-    <div x-show="showFullscreen" x-transition class="qr-fullscreen" @click="showFullscreen = false">
+    <div x-show="showFullscreen" x-cloak x-transition class="qr-fullscreen" @click="showFullscreen = false">
         <h1 class="text-4xl font-bold text-gray-700 mb-8">{{ session.session_name }}</h1>
         <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code">
         <p class="text-2xl text-gray-500 mt-8">스마트폰으로 QR 코드를 스캔하세요</p>
-        <button class="mt-8 px-8 py-4 bg-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-300 transition">
+        <button @click.stop="showFullscreen = false"
+            class="mt-8 px-8 py-4 bg-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-300 transition">
             <i class="fa-solid fa-times mr-2"></i>닫기 (화면 아무 곳이나 클릭)
         </button>
     </div>

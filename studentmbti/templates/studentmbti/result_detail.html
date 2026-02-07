@@ -117,20 +117,29 @@
                 <!-- 교사용 상담 가이드 (펼쳐진 상태) -->
                 <div class="section-card teacher-section mt-4">
                     <h3 class="section-title text-amber-700">
-                        👨‍🏫 상담 가이드
+                        👨‍🏫 선생님 상담 가이드
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                        <div>
-                            <h4 class="font-bold text-amber-800 text-sm mb-1">💡 상담 전략</h4>
-                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.counseling_tips }}</p>
+                    <div class="space-y-4 mt-4">
+                        <div class="bg-white/60 p-4 rounded-xl border border-amber-200 shadow-sm">
+                            <h4 class="font-bold text-amber-800 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-lightbulb"></i> 상담 전략
+                            </h4>
+                            <p class="text-amber-900 text-sm leading-relaxed break-keep">{{
+                                mbti_data.counseling_tips|linebreaksbr }}</p>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-amber-800 text-sm mb-1">⚠️ 주의사항</h4>
-                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.cautions }}</p>
+                        <div class="bg-white/60 p-4 rounded-xl border border-red-100 shadow-sm">
+                            <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-triangle-exclamation"></i> 주의사항
+                            </h4>
+                            <p class="text-red-900 text-sm leading-relaxed break-keep">{{
+                                mbti_data.cautions|linebreaksbr }}</p>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-amber-800 text-sm mb-1">🎯 학급경영 팁</h4>
-                            <p class="text-amber-900 text-xs leading-relaxed">{{ mbti_data.classroom_management }}</p>
+                        <div class="bg-white/60 p-4 rounded-xl border border-blue-100 shadow-sm">
+                            <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-bullseye"></i> 학급경영 팁
+                            </h4>
+                            <p class="text-blue-900 text-sm leading-relaxed break-keep">{{
+                                mbti_data.classroom_management|linebreaksbr }}</p>
                         </div>
                     </div>
                 </div>

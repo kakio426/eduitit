@@ -144,28 +144,7 @@
                     <p class="text-gray-600 leading-relaxed">{{ mbti_data.growth_points }}</p>
                 </div>
 
-                <!-- 교사용 섹션 (토글) -->
-                <div class="section-card teacher-section"
-                    x-data="{open: {% if is_teacher_view %}true{% else %}false{% endif %}}">
-                    <button @click="open = !open" class="section-title w-full text-left text-amber-700 justify-between">
-                        <span>👨‍🏫 선생님 상담 가이드</span>
-                        <i :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" class="fa-solid text-amber-500"></i>
-                    </button>
-                    <div x-show="open" x-transition class="mt-4 space-y-4">
-                        <div>
-                            <h4 class="font-bold text-amber-800 mb-1">💡 상담 전략</h4>
-                            <p class="text-amber-900 text-sm">{{ mbti_data.counseling_tips }}</p>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-amber-800 mb-1">⚠️ 주의사항</h4>
-                            <p class="text-amber-900 text-sm">{{ mbti_data.cautions }}</p>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-amber-800 mb-1">🎯 학급경영 팁</h4>
-                            <p class="text-amber-900 text-sm">{{ mbti_data.classroom_management }}</p>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- 공유 버튼 -->
                 <div class="flex flex-wrap gap-3 justify-center mt-6">
