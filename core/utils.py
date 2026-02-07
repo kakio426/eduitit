@@ -79,13 +79,17 @@ def generate_sso_token(user):
     
     return jwt.encode(payload, settings.SSO_JWT_SECRET, algorithm='HS256')
 
-def get_visitor_stats(days=30):
+def get_visitor_stats(days=30, exclude_bots=False):
     """VisitorLog 일별 집계를 반환 (최근 N일)"""
     from .models import VisitorLog
     start_date = timezone.localdate() - datetime.timedelta(days=days - 1)
+    
+    queryset = VisitorLog.objects.filter(visit_date__gte=start_date)
+    if exclude_bots:
+        queryset = queryset.filter(is_bot=False)
+
     stats = (
-        VisitorLog.objects
-        .filter(visit_date__gte=start_date)
+        queryset
         .values('visit_date')
         .annotate(count=Count('id'))
         .order_by('visit_date')
@@ -99,13 +103,17 @@ def get_visitor_stats(days=30):
     return result
 
 
-def get_weekly_stats(weeks=8):
+def get_weekly_stats(weeks=8, exclude_bots=False):
     """VisitorLog 주간 집계를 반환 (최근 N주)"""
     from .models import VisitorLog
     start_date = timezone.localdate() - datetime.timedelta(weeks=weeks)
+    
+    queryset = VisitorLog.objects.filter(visit_date__gte=start_date)
+    if exclude_bots:
+        queryset = queryset.filter(is_bot=False)
+
     stats = (
-        VisitorLog.objects
-        .filter(visit_date__gte=start_date)
+        queryset
         .annotate(week=TruncWeek('visit_date'))
         .values('week')
         .annotate(count=Count('id'))

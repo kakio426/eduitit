@@ -38,11 +38,29 @@ class VisitorTrackingMiddleware:
 
             if not already_recorded:
                 try:
-                    # Use get_or_create to avoid duplicates for the same IP on the same day
-                    obj, created = VisitorLog.objects.get_or_create(ip_address=ip, visit_date=today)
+                    user_agent = request.META.get('HTTP_USER_AGENT', '')
+                    
+                    # Common bot keywords
+                    bot_keywords = [
+                        'bot', 'spider', 'crawler', 'slurp', 'mediapartners', 'uptime',
+                        'lighthouse', 'search', 'facebookexternalhit', 'pinterest',
+                        'gptbot', 'chatgpt', 'yandex', 'naver', 'yeti'
+                    ]
+                    is_bot = any(keyword in user_agent.lower() for keyword in bot_keywords)
+
+                    # Use update_or_create to save user_agent and is_bot if it already exists, 
+                    # but typically it shouldn't hit this if already_recorded works correctly.
+                    obj, created = VisitorLog.objects.get_or_create(
+                        ip_address=ip, 
+                        visit_date=today,
+                        defaults={
+                            'user_agent': user_agent,
+                            'is_bot': is_bot
+                        }
+                    )
                     request.session[session_key] = True
-                    print(f"[VISITOR DEBUG] DB operation - Created: {created} | IP: {ip} | Date: {today}")
-                    logger.info(f"[VISITOR] DB operation - Created: {created} | IP: {ip} | Date: {today}")
+                    print(f"[VISITOR DEBUG] DB operation - Created: {created} | IP: {ip} | Bot: {is_bot} | Date: {today}")
+                    logger.info(f"[VISITOR] DB operation - Created: {created} | IP: {ip} | Bot: {is_bot} | Date: {today}")
                 except Exception as e:
                     print(f"[VISITOR DEBUG] Error: {e}")
                     logger.error(f"[VISITOR] Error: {e}", exc_info=True)

@@ -104,6 +104,8 @@ class Feedback(models.Model):
 
 class VisitorLog(models.Model):
     ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
+    user_agent = models.TextField(blank=True, null=True, verbose_name="User Agent")
+    is_bot = models.BooleanField(default=False, verbose_name="봇 여부")
     visit_date = models.DateField(auto_now_add=True, verbose_name="방문 날짜")
 
     class Meta:

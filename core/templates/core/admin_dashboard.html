@@ -12,20 +12,24 @@
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         <div class="clay-card p-5 text-center">
-            <div class="text-3xl font-bold text-orange-500">{{ today_count }}</div>
+            <div class="text-3xl font-bold text-orange-500">{{ today_human_count }} <span
+                    class="text-xs text-gray-400">({{ today_bot_count }})</span></div>
             <div class="text-sm font-bold text-gray-500 mt-1">오늘 방문자</div>
         </div>
         <div class="clay-card p-5 text-center">
-            <div class="text-3xl font-bold text-blue-500">{{ week_count }}</div>
-            <div class="text-sm font-bold text-gray-500 mt-1">이번 주</div>
+            <div class="text-3xl font-bold text-blue-500">{{ week_human_count }} <span class="text-xs text-gray-400">봇
+                    포함: {{ week_count }}</span></div>
+            <div class="text-sm font-bold text-gray-500 mt-1">이번 주 (사람)</div>
         </div>
         <div class="clay-card p-5 text-center">
-            <div class="text-3xl font-bold text-green-500">{{ month_count }}</div>
-            <div class="text-sm font-bold text-gray-500 mt-1">이번 달</div>
+            <div class="text-3xl font-bold text-green-500">{{ month_human_count }} <span class="text-xs text-gray-400">봇
+                    포함: {{ month_count }}</span></div>
+            <div class="text-sm font-bold text-gray-500 mt-1">이번 달 (사람)</div>
         </div>
         <div class="clay-card p-5 text-center">
-            <div class="text-3xl font-bold text-purple-600">{{ total_count }}</div>
-            <div class="text-sm font-bold text-gray-500 mt-1">전체 누적</div>
+            <div class="text-3xl font-bold text-purple-600">{{ human_total_count }} <span
+                    class="text-xs text-gray-400">({{ bot_total_count }})</span></div>
+            <div class="text-sm font-bold text-gray-500 mt-1">전체 누적 (봇)</div>
         </div>
     </div>
 
@@ -71,7 +75,9 @@
                         <td class="py-3 px-4 font-medium text-gray-700">{{ stat.week|date:"Y-m-d" }}</td>
                         <td class="py-3 px-4 font-bold text-purple-600">{{ stat.count }}</td>
                         <td class="py-3 px-4">
-                            <div class="h-4 rounded-full" style="width: {% widthratio stat.count total_count 200 %}px; min-width: 8px; background: linear-gradient(to right, #3b82f6, #7c3aed);"></div>
+                            <div class="h-4 rounded-full"
+                                style="width: {% widthratio stat.count total_count 200 %}px; min-width: 8px; background: linear-gradient(to right, #3b82f6, #7c3aed);">
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

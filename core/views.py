@@ -379,24 +379,46 @@ def admin_dashboard_view(request):
     import datetime
 
     today = timezone.localdate()
-    today_count = VisitorLog.objects.filter(visit_date=today).count()
-    week_start = today - datetime.timedelta(days=today.weekday())
-    week_count = VisitorLog.objects.filter(visit_date__gte=week_start).count()
-    month_start = today.replace(day=1)
-    month_count = VisitorLog.objects.filter(visit_date__gte=month_start).count()
+    
+    # Total counts
     total_count = VisitorLog.objects.count()
+    human_total_count = VisitorLog.objects.filter(is_bot=False).count()
+    bot_total_count = total_count - human_total_count
 
-    daily_stats = get_visitor_stats(30)
-    weekly_stats = get_weekly_stats(8)
+    # Today's counts
+    today_count = VisitorLog.objects.filter(visit_date=today).count()
+    today_human_count = VisitorLog.objects.filter(visit_date=today, is_bot=False).count()
+    today_bot_count = today_count - today_human_count
 
-    # 차트 최대값 (CSS 바 높이 계산용)
+    # Weekly/Monthly start dates
+    week_start = today - datetime.timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+
+    # Weekly/Monthly counts
+    week_count = VisitorLog.objects.filter(visit_date__gte=week_start).count()
+    week_human_count = VisitorLog.objects.filter(visit_date__gte=week_start, is_bot=False).count()
+    
+    month_count = VisitorLog.objects.filter(visit_date__gte=month_start).count()
+    month_human_count = VisitorLog.objects.filter(visit_date__gte=month_start, is_bot=False).count()
+
+    # Detailed stats (Humans only for the chart)
+    daily_stats = get_visitor_stats(30, exclude_bots=True)
+    weekly_stats = get_weekly_stats(8, exclude_bots=True)
+
+    # Chart max value
     max_daily = max((s['count'] for s in daily_stats), default=1) or 1
 
     return render(request, 'core/admin_dashboard.html', {
         'today_count': today_count,
+        'today_human_count': today_human_count,
+        'today_bot_count': today_bot_count,
         'week_count': week_count,
+        'week_human_count': week_human_count,
         'month_count': month_count,
+        'month_human_count': month_human_count,
         'total_count': total_count,
+        'human_total_count': human_total_count,
+        'bot_total_count': bot_total_count,
         'daily_stats': daily_stats,
         'weekly_stats': weekly_stats,
         'max_daily': max_daily,
