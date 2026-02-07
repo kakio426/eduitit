@@ -1,0 +1,50 @@
+{% load static %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+    {% if results %}
+    {% for result in results %}
+    <div
+        class="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-lg border-2 border-purple-50 flex items-center gap-5 transform transition-all duration-300 hover:scale-105 animate-fade-in">
+        <div class="w-16 h-16 flex items-center justify-center bg-purple-50 rounded-2xl text-4xl">
+            {% if result.mbti_type %}🎓{% else %}⏳{% endif %}
+        </div>
+        <div class="flex-1 overflow-hidden">
+            <div class="font-black text-gray-800 truncate text-2xl mb-1">{{ result.student_name }}</div>
+            <div class="text-lg font-bold">
+                {% if result.mbti_type %}
+                <span class="text-purple-600">{{ result.animal_name }}</span>
+                {% else %}
+                <span class="text-orange-500 animate-pulse">검사 중...</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-span-full flex flex-col items-center justify-center py-32 text-gray-400">
+        <div class="w-24 h-24 mb-6 rounded-full bg-gray-100 flex items-center justify-center animate-bounce">
+            <i class="fa-solid fa-users text-5xl"></i>
+        </div>
+        <p class="text-3xl font-black text-gray-500">학생들의 접속을 기다리고 있습니다</p>
+        <p class="text-xl mt-4 text-gray-400 font-bold">QR 코드를 스캔하거나 입장 코드를 입력하세요!</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fade-in 0.4s ease-out forwards;
+    }
+</style>

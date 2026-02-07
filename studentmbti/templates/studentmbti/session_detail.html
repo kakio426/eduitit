@@ -219,23 +219,81 @@
         </div>
     </div>
 
-    <!-- 전체화면 QR -->
-    <div x-show="showFullscreen" x-cloak x-transition class="qr-fullscreen" @click="showFullscreen = false">
-        <h1 class="text-4xl font-bold text-gray-700 mb-8">{{ session.session_name }}</h1>
-        <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code">
-        {% if session.access_code %}
-        <div class="mt-12 text-center">
-            <p class="text-3xl text-gray-600 mb-4">또는 입장 코드 입력</p>
-            <div class="text-8xl font-black text-purple-600 tracking-widest">
-                {{ session.access_code }}
+    <!-- 전체화면 모드 (분할 화면) -->
+    <div x-show="showFullscreen" x-cloak x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+        class="fixed inset-0 z-[1000] bg-[#F8F9FD] flex overflow-hidden">
+
+        <!-- 좌측: 접속 정보 -->
+        <div
+            class="w-1/3 h-full bg-white shadow-2xl flex flex-col items-center justify-center p-12 relative z-10 border-r-2 border-purple-100">
+            <div class="mb-10 text-center">
+                <span class="text-7xl mb-4 block">🎓</span>
+                <h1 class="text-4xl font-black text-gray-800 font-title leading-tight">{{ session.session_name }}</h1>
+            </div>
+
+            <div class="bg-white p-6 rounded-[40px] shadow-2xl border-4 border-purple-50 mb-10">
+                <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code"
+                    class="w-[350px] h-[350px] object-contain">
+            </div>
+
+            <div class="w-full space-y-8">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-400 mb-2">접속 주소</p>
+                    <div
+                        class="text-4xl font-black text-purple-600 font-mono tracking-tight bg-purple-50 py-4 px-6 rounded-2xl inline-block border-2 border-purple-100">
+                        eduitit.site/m/
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-400 mb-2">입장 코드</p>
+                    <div class="text-8xl font-black text-purple-600 tracking-[0.2em] font-mono">
+                        {{ session.access_code }}
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-2xl text-gray-400 mt-16 font-bold animate-pulse text-center">
+                <i class="fa-solid fa-mobile-screen-button mr-2"></i>
+                스마트폰으로 참여하세요!
+            </p>
+        </div>
+
+        <!-- 우측: 참여 학생 목록 -->
+        <div class="flex-1 h-full bg-[#E0E5EC]/30 flex flex-col">
+            <!-- 닫기 버튼 (우측 상단) -->
+            <div class="absolute top-8 right-8 z-20">
+                <button @click="showFullscreen = false"
+                    class="w-16 h-16 bg-white text-gray-400 hover:text-red-500 rounded-2xl shadow-xl flex items-center justify-center text-4xl transition-all hover:rotate-90">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-12 pb-6">
+                <div class="flex items-end gap-4 mb-4">
+                    <h2 class="text-5xl font-black text-gray-800 font-title">
+                        참여 학생 목록
+                    </h2>
+                    <span class="text-3xl font-black text-purple-600 mb-2" id="fs-total-count">{{ total_count }}명</span>
+                </div>
+                <div class="h-1.5 w-full bg-purple-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-purple-500 animate-pulse" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 h-full custom-scrollbar"
+                hx-get="{% url 'studentmbti:session_results_partial' session.id %}?template=fullscreen"
+                hx-trigger="every 3s" hx-swap="innerHTML" hx-target="#fs-results-container">
+                <div id="fs-results-container">
+                    {% include 'studentmbti/partials/fullscreen_results.html' %}
+                </div>
+            </div>
+
+            <div class="p-10 text-center text-gray-400 font-bold text-xl">
+                <i class="fa-solid fa-sync fa-spin mr-2"></i> 실시간으로 자동 업데이트 중입니다
             </div>
         </div>
-        {% endif %}
-        <p class="text-2xl text-gray-500 mt-8">스마트폰으로 QR 코드를 스캔하세요</p>
-        <button @click.stop="showFullscreen = false"
-            class="mt-8 px-8 py-4 bg-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-300 transition">
-            <i class="fa-solid fa-times mr-2"></i>닫기 (화면 아무 곳이나 클릭)
-        </button>
     </div>
 </section>
 
@@ -270,5 +328,16 @@
 
     // 페이지 로드 시 초기 히스토리 상태 설정
     history.pushState(null, '');
+
+    // 참여 인원 숫자 동기화 (HTMX 로드 후)
+    document.body.addEventListener('htmx:afterOnLoad', (event) => {
+        if (event.detail.target.id === 'results-container' || event.detail.target.id === 'fs-results-container') {
+            const totalCount = document.querySelector('#total-count')?.innerText;
+            const fsTotalCount = document.querySelector('#fs-total-count');
+            if (totalCount && fsTotalCount) {
+                fsTotalCount.innerText = totalCount;
+            }
+        }
+    });
 </script>
 {% endblock %}

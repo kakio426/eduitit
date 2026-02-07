@@ -134,7 +134,12 @@ def session_results_partial(request, session_id):
     session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
     results = session.results.all().order_by('-created_at')
     
-    return render(request, 'studentmbti/partials/results_list.html', {
+    # 전체화면 모드용 템플릿 요청인 경우
+    template_name = 'studentmbti/partials/results_list.html'
+    if request.GET.get('template') == 'fullscreen':
+        template_name = 'studentmbti/partials/fullscreen_results.html'
+    
+    return render(request, template_name, {
         'results': results,
         'total_count': results.count(),
     })

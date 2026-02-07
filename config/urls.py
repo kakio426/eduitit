@@ -37,7 +37,7 @@ urlpatterns = [
     path('padlet/', include('padlet_bot.urls', namespace='padlet_bot')),
     path('chess/', include('chess.urls', namespace='chess')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
-    path('m/', include('studentmbti.urls')),  # 짧은 URL 별칭
+    path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 
 if settings.DEBUG:
