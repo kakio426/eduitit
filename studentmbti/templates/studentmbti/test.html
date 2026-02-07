@@ -151,8 +151,8 @@
                     </h2>
                     <div class="space-y-3">
                         {% for option in q.options %}
-                        <button type="button" class="option-btn"
-                            onclick="selectOption({{ q.id }}, {{ forloop.counter0 }}, this)">
+                        <button type="button" class="option-btn" data-q-id="{{ q.id }}"
+                            data-option-idx="{{ forloop.counter0 }}" onclick="selectOption(this)">
                             {{ option }}
                         </button>
                         {% endfor %}
@@ -277,7 +277,10 @@
         }
     }
 
-    function selectOption(step, value, btn) {
+    function selectOption(btn) {
+        const step = btn.dataset.qId;
+        const value = btn.dataset.optionIdx;
+
         // 선택 표시
         const buttons = document.getElementById(`step-${step}`).querySelectorAll('.option-btn');
         buttons.forEach(b => b.classList.remove('selected'));
