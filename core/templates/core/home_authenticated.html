@@ -88,65 +88,6 @@
                 {% include 'core/includes/card_product.html' with product=product delay='100' %}
                 {% endfor %}
 
-                <!-- EDUITIT만의 특별함 -->
-                <div class="col-span-2 md:col-span-2 clay-card p-5 md:p-8 h-full bg-slate-900 text-white border-none shadow-xl relative overflow-hidden"
-                    data-aos="fade-up" data-aos-delay="500">
-                    <h3 class="text-xl md:text-2xl font-bold mb-4 md:mb-6 flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-sm"><i
-                                class="fa-solid fa-sparkles"></i></span>
-                        EDUITIT만의 특별함
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 relative z-10">
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 text-indigo-400 font-bold"><i
-                                    class="fa-solid fa-check"></i>
-                                <span class="text-sm uppercase tracking-wider">Free Access</span>
-                            </div>
-                            <p class="text-lg font-bold">100% 무료 도구</p>
-                        </div>
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 text-blue-400 font-bold"><i
-                                    class="fa-solid fa-check"></i> <span class="text-sm uppercase tracking-wider">Web
-                                    Based</span></div>
-                            <p class="text-lg font-bold">무설치 지원</p>
-                        </div>
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 text-emerald-400 font-bold"><i
-                                    class="fa-solid fa-check"></i>
-                                <span class="text-sm uppercase tracking-wider">Smart AI</span>
-                            </div>
-                            <p class="text-lg font-bold">최신 AI 기술 결합</p>
-                        </div>
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 text-orange-400 font-bold"><i
-                                    class="fa-solid fa-check"></i>
-                                <span class="text-sm uppercase tracking-wider">Teacher Made</span>
-                            </div>
-                            <p class="text-lg font-bold">현직 교사가 제작</p>
-                        </div>
-                    </div>
-
-                    <!-- Decor -->
-                    <div
-                        class="absolute -right-10 -bottom-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none">
-                    </div>
-                </div>
-
-                <!-- 새로운 도구 제안 -->
-                <div class="col-span-2 md:col-span-2 clay-card p-5 md:p-8 h-full flex flex-col md:flex-row items-center justify-between gap-6 bg-white/40 backdrop-blur-md relative overflow-hidden"
-                    data-aos="fade-up" data-aos-delay="600">
-                    <div>
-                        <h3 class="text-2xl font-bold text-gray-800 mb-1">새로운 도구 제안</h3>
-                        <p class="text-slate-500 text-lg">선생님의 스마트한 교실을 위한 아이디어를 기다려요.</p>
-                    </div>
-                    <a href="mailto:kakio@naver.com"
-                        class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all flex items-center gap-3 shadow-lg hover:-translate-y-1 relative z-10">
-                        <i class="fa-solid fa-paper-plane text-sm"></i> 의견 보내기
-                    </a>
-                    <div
-                        class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-200/50 rounded-full blur-3xl pointer-events-none">
-                    </div>
-                </div>
             </div>
 
             {% if not products %}

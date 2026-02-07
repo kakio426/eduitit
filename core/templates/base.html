@@ -136,6 +136,7 @@
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             border: 1px solid rgba(255, 255, 255, 0.4);
             /* Glassy border */
+            contain: layout;
         }
 
         .clay-card:hover {
@@ -206,7 +207,7 @@
 
     <!-- Navbar -->
     {% if not hide_navbar %}
-    <nav class="fixed w-full z-50 top-0 left-0 px-6 py-4">
+    <nav class="fixed w-full z-50 top-0 left-0 px-6 py-4" style="will-change: transform, opacity;">
         <div
             class="max-w-7xl mx-auto clay-card px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 backdrop-blur-sm">
             <div class="flex items-center gap-3">
