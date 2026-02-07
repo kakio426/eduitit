@@ -757,6 +757,71 @@
         background: #fecaca;
     }
 
+    /* ========================================
+       일진 결과 스타일 (가독성 향상)
+       ======================================== */
+    #dailyFortuneContent {
+        font-size: 1.05rem;
+        line-height: 1.8;
+    }
+
+    #dailyFortuneContent h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        color: #4338ca;
+        border-bottom: 3px solid #e0e7ff;
+        padding-bottom: 0.5rem;
+    }
+
+    #dailyFortuneContent h2:first-child {
+        margin-top: 0;
+    }
+
+    #dailyFortuneContent h3 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        color: #5b21b6;
+    }
+
+    #dailyFortuneContent hr {
+        border: none;
+        border-top: 2px dashed #e0e7ff;
+        margin: 2rem 0;
+    }
+
+    #dailyFortuneContent ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 1rem 0;
+    }
+
+    #dailyFortuneContent li {
+        padding-left: 1.5rem;
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
+
+    #dailyFortuneContent li::before {
+        content: "✦";
+        position: absolute;
+        left: 0;
+        color: #818cf8;
+        font-weight: bold;
+    }
+
+    #dailyFortuneContent strong {
+        color: #4338ca;
+        font-weight: 700;
+    }
+
+    #dailyFortuneContent p {
+        margin-bottom: 1rem;
+    }
+
     /* 모바일 최적화 */
     @media (max-width: 768px) {
         .profile-card {
@@ -1261,9 +1326,30 @@
             </div>
 
             <div id="dailyFortuneResult" class="mt-8 hidden animate-in fade-in slide-in-from-top duration-500">
-                <div class="bg-white rounded-2xl p-6 border border-indigo-50 shadow-sm markdown-body"
-                    id="dailyFortuneContent">
-                    <!-- JS Populated -->
+                <!-- 일진 결과 카드 -->
+                <div
+                    class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-3xl p-8 border border-indigo-100 shadow-lg">
+                    <!-- 결과 내용 -->
+                    <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-indigo-50 shadow-sm prose prose-slate max-w-none"
+                        id="dailyFortuneContent">
+                        <!-- JS Populated -->
+                    </div>
+
+                    <!-- 공유 버튼 -->
+                    <div class="flex flex-wrap gap-3 justify-center mt-6 pt-6 border-t border-indigo-100">
+                        <button onclick="shareDailyToKakao()"
+                            class="px-6 py-3 bg-[#FEE500] hover:bg-[#FDD835] rounded-full font-bold flex items-center gap-2 transition shadow-sm hover:shadow-md">
+                            <i class="fa-solid fa-comment"></i> 카카오 공유
+                        </button>
+                        <button onclick="saveDailyAsImage()"
+                            class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-bold flex items-center gap-2 transition shadow-sm hover:shadow-md">
+                            <i class="fa-solid fa-image"></i> 이미지 저장
+                        </button>
+                        <button onclick="copyDailyLink()"
+                            class="px-6 py-3 bg-white hover:bg-gray-50 rounded-full font-bold flex items-center gap-2 transition shadow-sm hover:shadow-md border border-gray-200">
+                            <i class="fa-solid fa-link"></i> 링크 복사
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3114,6 +3200,13 @@
                 clearInterval(cacheInterval);
                 loadingModal.classList.remove('show');
 
+                // 전역 상태에 일진 결과 저장 (캐시)
+                window.lastDailyFortune = {
+                    date: targetDate,
+                    result: cachedResult,
+                    timestamp: Date.now()
+                };
+
                 const dailyResultDiv = document.getElementById('dailyFortuneResult');
                 const dailyContentDiv = document.getElementById('dailyFortuneContent');
                 dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(cachedResult));
@@ -3128,6 +3221,16 @@
         loadingModal.classList.add('show');
         loadingTitle.textContent = loadingMessages[0].title;
         loadingSubtitle.textContent = loadingMessages[0].subtitle;
+
+        // 진행 바 애니메이션 시작
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 5;
+                if (progress > 90) progress = 90;
+                loadingProgress.style.width = `${progress}%`;
+            }
+        }, 400);
 
         try {
             const response = await fetch('{% url "fortune:daily_fortune_api" %}', {
@@ -3145,25 +3248,175 @@
             });
 
             const data = await response.json();
-            document.getElementById('loadingModal').classList.remove('show');
 
-            if (data.success) {
-                // Save to cache
-                localStorage.setItem(cacheKey, data.result);
+            // 진행 바 완료 처리
+            clearInterval(progressInterval);
+            loadingProgress.style.width = '100%';
 
-                const dailyResultDiv = document.getElementById('dailyFortuneResult');
-                const dailyContentDiv = document.getElementById('dailyFortuneContent');
-                dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
-                dailyResultDiv.classList.remove('hidden');
-                dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                showToast(data.error || '분석 중 오류가 발생했습니다.');
-            }
+            // 약간의 지연 후 모달 닫기
+            setTimeout(() => {
+                document.getElementById('loadingModal').classList.remove('show');
+
+                if (data.success) {
+                    // Save to cache
+                    localStorage.setItem(cacheKey, data.result);
+
+                    // 전역 상태에 일진 결과 저장
+                    window.lastDailyFortune = {
+                        date: targetDate,
+                        result: data.result,
+                        timestamp: Date.now()
+                    };
+
+                    const dailyResultDiv = document.getElementById('dailyFortuneResult');
+                    const dailyContentDiv = document.getElementById('dailyFortuneContent');
+                    dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.result));
+                    dailyResultDiv.classList.remove('hidden');
+                    dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    showToast(data.error || '분석 중 오류가 발생했습니다.');
+                }
+            }, 500);
         } catch (e) {
+            clearInterval(progressInterval);
             document.getElementById('loadingModal').classList.remove('show');
             showToast('서버 통신 오류가 발생했습니다.');
         }
 
+    }
+
+    // ============================================
+    // 일진 공유 기능
+    // ============================================
+
+    // 카카오톡 공유 (일진)
+    function shareDailyToKakao() {
+        if (!window.lastDailyFortune) {
+            showToast('공유할 운세 결과가 없습니다.', 'error');
+            return;
+        }
+
+        try {
+            const nameContext = "{{ name|default:'선생님' }}";
+            const dateStr = window.lastDailyFortune.date;
+            const dateObj = new Date(dateStr);
+            const formattedDate = `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+
+            // 결과에서 에너지 지수 추출 (있으면)
+            const resultText = window.lastDailyFortune.result;
+            let energyScore = '';
+            const scoreMatch = resultText.match(/종합 운세[:\s]*([★☆]+)/);
+            if (scoreMatch) {
+                energyScore = scoreMatch[1];
+            }
+
+            let shareUrl = window.location.origin + '/fortune/saju/';
+
+            Kakao.Share.sendDefault({
+                objectType: 'feed',
+                content: {
+                    title: `📅 ${formattedDate} ${nameContext}의 운세`,
+                    description: `${energyScore ? energyScore + '\n' : ''}오늘의 운세를 확인해보세요!\n\n당신의 운세는 어떨까요? 지금 바로 확인해보세요! 🔮`,
+                    imageUrl: window.location.origin + '/static/fortune/images/teacher_saju_card.png',
+                    link: {
+                        mobileWebUrl: shareUrl,
+                        webUrl: shareUrl,
+                    },
+                },
+                buttons: [
+                    {
+                        title: '내 운세 보기 🔮',
+                        link: {
+                            mobileWebUrl: shareUrl,
+                            webUrl: shareUrl,
+                        },
+                    },
+                ],
+            });
+        } catch (e) {
+            console.error('Kakao Share Error:', e);
+            if (navigator.share) {
+                navigator.share({
+                    title: '📅 오늘의 운세',
+                    text: 'Eduitit에서 오늘의 운세를 확인해봤어요!',
+                    url: window.location.origin + '/fortune/saju/'
+                });
+            } else {
+                copyDailyLink();
+            }
+        }
+    }
+
+    // 링크 복사 (일진)
+    function copyDailyLink() {
+        const shareUrl = window.location.origin + '/fortune/saju/';
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('링크가 복사되었습니다! 친구들과 공유해보세요 😊');
+        }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = shareUrl;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('링크가 복사되었습니다!');
+        });
+    }
+
+    // 이미지 저장 (일진)
+    function saveDailyAsImage() {
+        if (!window.lastDailyFortune) {
+            showToast('저장할 운세 결과가 없습니다.', 'error');
+            return;
+        }
+
+        const captureArea = document.getElementById('dailyFortuneContent');
+        if (!captureArea) {
+            showToast('저장할 결과가 없습니다.', 'error');
+            return;
+        }
+
+        showToast('이미지를 생성하고 있습니다...');
+
+        const options = {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            windowWidth: 800,
+            onclone: (clonedDoc) => {
+                const clonedArea = clonedDoc.getElementById('dailyFortuneContent');
+                if (clonedArea) {
+                    clonedArea.style.width = '800px';
+                    clonedArea.style.padding = '40px';
+                    clonedArea.style.borderRadius = '16px';
+                    clonedArea.style.backgroundColor = '#ffffff';
+
+                    // 블러 효과 제거
+                    const blurred = clonedDoc.querySelectorAll('.backdrop-blur-sm, .backdrop-blur-md');
+                    blurred.forEach(el => {
+                        el.style.backdropFilter = 'none';
+                        el.style.webkitBackdropFilter = 'none';
+                        el.style.backgroundColor = 'white';
+                    });
+                }
+            }
+        };
+
+        html2canvas(captureArea, options).then(canvas => {
+            const link = document.createElement('a');
+            const nameContext = "{{ name|default:'운세' }}";
+            const dateStr = window.lastDailyFortune.date;
+            link.download = `${nameContext}_${dateStr}_일진운세.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+            showToast('이미지가 성공적으로 저장되었습니다!');
+        }).catch(err => {
+            console.error(err);
+            showToast('이미지 저장 중 오류가 발생했습니다.', 'error');
+        });
     }
 
     // 저장된 결과 ID를 저장할 변수

@@ -150,7 +150,7 @@ def get_general_prompt(data, chart_context=None):
 """
 
 def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context):
-    """특정 날짜의 일진(운세) 분석 프롬프트 (Lite 최적화)"""
+    """특정 날짜의 일진(운세) 분석 프롬프트 (구조화 및 가독성 최적화)"""
     gender_str = get_gender_korean(gender)
     natal_info = get_chart_info(natal_context)
     target_info = get_chart_info(target_context)
@@ -161,6 +161,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 1. **계산 금지**: 제공된 원국 데이터를 그대로 쓰십시오.
 2. **주인공 고정**: 반드시 **일주(Day)의 첫 글자**를 기준으로 분석하십시오.
 3. **즉시 시작**: 응답은 반드시 (줄바꿈 후) `## ` (샵 뒤 공백 필수)로 시작하십시오.
+4. **구조화**: 각 섹션을 명확히 구분하고, 중요한 키워드는 **볼드** 처리하십시오.
 
 [User Data] {name}({gender_str})
 {natal_info}
@@ -168,18 +169,51 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 {target_info}
 
 
-## 📅 {target_date.strftime('%m월 %d일')} 오늘의 운세 요약
-- 한 줄 요약
+## 📅 {target_date.strftime('%m월 %d일')} 오늘의 운세
 
-## 🌟 오늘의 주요 기운 (십신)
-- 주요 십신 의미와 오늘 흐르는 에너지 설명
+### ⚡ 오늘의 에너지 지수
+**종합 운세: ★★★★☆ (0~100점 중 점수 표시)**
 
-## 💡 선생님을 위한 조언
-- 행동 지침 및 주의사항 (짧게)
+한 줄 핵심 요약 (이 날의 전체적인 기운을 한 문장으로)
+
+---
+
+## 🌟 오늘의 주요 기운 (십신 분석)
+
+### 흐르는 에너지
+- **주요 십신**: (십신 이름) - 의미 설명
+- **에너지 특성**: 오늘 하루 어떤 기운이 강하게 작용하는지 2~3줄로 설명
+
+### 이 날에 유리한 활동
+- 활동 1 (구체적으로)
+- 활동 2
+- 활동 3
+
+---
+
+## 💡 {name} 선생님을 위한 조언
+
+### ✅ 추천 행동
+- **업무**: 구체적인 조언
+- **대인관계**: 구체적인 조언
+- **자기계발**: 구체적인 조언
+
+### ⚠️ 주의사항
+- 주의할 점 1
+- 주의할 점 2
+
+---
 
 ## 🍀 행운 코드
-- 행운의 시간: 
-- 행운의 색상: 
+
+**행운의 시간**: 玄時(21:00~22:59) - 물 기운이 강해져 교형을 찾는 시간  
+**행운의 색상**: 검정색, 남색, 짙은 파란색 (수(水) 기운을 보강하여 안정감을 주는 색상)  
+**행운의 숫자**: 1, 6 (수 기운 숫자)  
+**행운의 방향**: 북쪽
+
+---
+
+💫 {name} 선생님의 빛나는 하루를 응원합니다!
 """
 
 def get_prompt(mode, data, chart_context=None):
