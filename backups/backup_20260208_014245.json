@@ -1,0 +1,2015 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$lZowoeTi35DTmZbwQyut5s$QnA5GUcwjJadRWQphRAMW5PZLF0wDv2og3duCtcmUpg=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "kakio",
+    "first_name": "",
+    "last_name": "",
+    "email": "kakio@naver.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-01-18T09:23:41.681Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$tFX3lyl6rPcU2IzHGkkc0Z$bZV36S5twTLGuf7AHlh5xb/F0NTM7NcAOrT5oPTBAj4=",
+    "last_login": "2026-01-27T03:17:19.175Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@example.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-01-20T13:10:59.786Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$YotZMsQrbawAr3gx7xVZRO$XvnAr9Ua3VE20l2BvEKShMxjCt1bFMGS8b2zsl88ejE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-02-04T12:58:41.012Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "core.userprofile",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "role": "school",
+    "nickname": "관리자",
+    "gemini_api_key": "",
+    "padlet_api_key": ""
+  }
+},
+{
+  "model": "core.userprofile",
+  "pk": 3,
+  "fields": {
+    "user": [
+      "kakio"
+    ],
+    "role": "school",
+    "nickname": null,
+    "gemini_api_key": null,
+    "padlet_api_key": null
+  }
+},
+{
+  "model": "core.userprofile",
+  "pk": 7,
+  "fields": {
+    "user": [
+      "test"
+    ],
+    "role": null,
+    "nickname": null,
+    "gemini_api_key": null,
+    "padlet_api_key": null
+  }
+},
+{
+  "model": "core.post",
+  "pk": 1,
+  "fields": {
+    "author": [
+      "admin"
+    ],
+    "content": "테스트 중입니다.ㅎㅎ",
+    "image": "",
+    "created_at": "2026-01-27T03:16:11.545Z",
+    "updated_at": "2026-02-02T10:39:55.527Z",
+    "likes": []
+  }
+},
+{
+  "model": "core.post",
+  "pk": 4,
+  "fields": {
+    "author": [
+      "kakio"
+    ],
+    "content": "Test post",
+    "image": "",
+    "created_at": "2026-01-27T04:09:34.326Z",
+    "updated_at": "2026-02-02T10:39:55.527Z",
+    "likes": []
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 1,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-01"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 2,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-02"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 3,
+  "fields": {
+    "ip_address": "8.8.8.8",
+    "visit_date": "2026-02-02"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 4,
+  "fields": {
+    "ip_address": "10.0.0.1",
+    "visit_date": "2026-02-02"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 5,
+  "fields": {
+    "ip_address": "10.0.0.2",
+    "visit_date": "2026-02-02"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 6,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-03"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 7,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-04"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 8,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-05"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 9,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-06"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 10,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "visit_date": "2026-02-07"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 121,
+  "fields": {
+    "title": "반짝반짝 우리반 알림판",
+    "lead_text": "선생님, 저 지금 뭐해요? 우리 반 아이들이 할 일을 잊지 않도록 화면으로 챙겨주세요.",
+    "description": "\"선생님, 저 청소 당번인 거 깜빡했어요!\" 이런 말, 이제 그만 듣고 싶으시죠? 교실 TV에 '반짝반짝 우리반 알림판'을 띄워두세요. 자신의 이름과 해야 할 일이 화면에 계속 보이니, 아이들이 선생님 잔소리 없이도 스스로 할 일을 기억하고 실천합니다.",
+    "image": "https://placehold.co/600x400/purple/white?text=DutyTicker",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-users-gear",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 1,
+    "service_type": "tool",
+    "external_url": "/products/dutyticker/",
+    "created_at": "2026-01-24T14:06:12.489Z",
+    "updated_at": "2026-01-30T10:45:22.291Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 122,
+  "fields": {
+    "title": "왁자지껄 교실 윷놀이",
+    "lead_text": "준비물도 뒷정리도 필요 없어요. 커다란 화면 속에서 다 함께 즐기는 우리 전통 놀이!",
+    "description": "창의적 체험활동 시간이나 비 오는 날 체육 시간, 무엇을 할지 고민이신가요? 준비물 없이 화면 하나로 즐기는 '왁자지껄 교실 윷놀이'로 우리 반의 단합력을 높여보세요. 아이들의 환호성으로 교실이 가득 찰 거예요.",
+    "image": "https://placehold.co/600x400/green/white?text=Yut+Noli",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "🎲",
+    "color_theme": "green",
+    "card_size": "small",
+    "display_order": 2,
+    "service_type": "game",
+    "external_url": "/products/yut/",
+    "created_at": "2026-01-24T14:06:12.515Z",
+    "updated_at": "2026-01-30T10:55:26.786Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 123,
+  "fields": {
+    "title": "토닥토닥 선생님 운세",
+    "lead_text": "지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.",
+    "description": "타고난 나의 기질과 학생들과의 케미, 그리고 2026년 운세까지! 명리학 전문가가 분석하는 선생님만을 위한 일대일 맞춤 운세 서비스를 만나보세요.",
+    "image": "https://placehold.co/600x400/blue/white?text=Fortune",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "🔮",
+    "color_theme": "blue",
+    "card_size": "small",
+    "display_order": 3,
+    "service_type": "tool",
+    "external_url": "/fortune/",
+    "created_at": "2026-01-24T14:06:12.539Z",
+    "updated_at": "2026-01-30T10:45:22.309Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 124,
+  "fields": {
+    "title": "가뿐하게 서명 톡",
+    "lead_text": "바쁜 쉬는 시간, 결재판 들고 교무실 내려갈 필요 없어요. 내 자리에서 링크 하나로 서명 끝!",
+    "description": "\"연수 때마다 종이 명단 돌리고 사인받기 귀찮으셨죠?\" 이제 종이 낭비 없이 태블릿이나 링크 공유로 간편하게 서명을 받으세요. 연수가 끝나면 참석자 명단이 실시간으로 취합되고, 서명이 포함된 PDF 결과 보고서까지 자동으로 생성됩니다.",
+    "image": "https://placehold.co/600x400/orange/white?text=Signatures",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "🖋️",
+    "color_theme": "orange",
+    "card_size": "small",
+    "display_order": 4,
+    "service_type": "tool",
+    "external_url": "/signatures/",
+    "created_at": "2026-01-24T14:06:12.564Z",
+    "updated_at": "2026-01-30T10:45:22.318Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 125,
+  "fields": {
+    "title": "궁금해? 패들릿 봇",
+    "lead_text": "패들릿 주소만 쏙 넣으세요. 그 안의 모든 내용을 읽고, 어떤 질문이든 찰떡같이 찾아 답변해 드려요.",
+    "description": "수업 자료를 패들릿에 올리셨나요? 이제 그 자료가 AI 챗봇이 됩니다. 학생들이 '선생님, 이거 어디 있어요?'라고 물으면 AI가 대신 찾아서 답변해줍니다. 패들릿 URL만 연결하면 게시물 내용을 자동으로 학습합니다. 선생님은 자료만 올리고, 나머지는 AI에게 맡기세요.",
+    "image": "https://placehold.co/600x400/blue/white?text=Padlet+AI",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "📋",
+    "color_theme": "blue",
+    "card_size": "small",
+    "display_order": 5,
+    "service_type": "tool",
+    "external_url": "/padlet/",
+    "created_at": "2026-01-24T14:06:12.589Z",
+    "updated_at": "2026-01-30T10:45:22.326Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 126,
+  "fields": {
+    "title": "몽글몽글 미술 수업",
+    "lead_text": "유튜브 미술 영상을 분석해서 단계별 수업 안내를 자동 생성하는 스마트 도우미",
+    "description": "'이 부분에서 잠깐 멈추고 따라 그려보세요'라고 일일이 설명하기 힘드셨죠? 이제 유튜브 미술 영상 URL만 넣으면 AI가 영상을 분석하여 학생들이 따라하기 좋은 단계별 안내를 자동으로 만들어줍니다. 교실 TV에 띄워놓고 학생들과 함께 차근차근 작품을 완성해보세요.",
+    "image": "https://placehold.co/600x400/purple/white?text=AI+Art+Class",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "🎨",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 6,
+    "service_type": "tool",
+    "external_url": "/artclass/",
+    "created_at": "2026-01-24T14:06:12.610Z",
+    "updated_at": "2026-01-30T10:45:22.336Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 127,
+  "fields": {
+    "title": "글솜씨 뚝딱! 소식지",
+    "lead_text": "글 쓰는 게 막막할 때 키워드만 톡! 학부모님이 감동하는 멋진 소식지를 선사해요.",
+    "description": "복잡한 기사 작성을 버튼 클릭 몇 번으로 해결하세요. 수업 소식, 학교 행사 등을 멋진 기사 형태로 변환하여 학부모님과 공유할 수 있습니다.",
+    "image": "https://placehold.co/600x400/purple/white?text=AI+Article",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-robot",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 7,
+    "service_type": "tool",
+    "external_url": "/autoarticle/",
+    "created_at": "2026-01-24T14:06:12.634Z",
+    "updated_at": "2026-01-30T10:45:22.343Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 128,
+  "fields": {
+    "title": "유튜브 탈알고리즘",
+    "lead_text": "내 피드에 갇힌 시야를 넓혀보세요. 추천 영상 너머, 전 세계 친구들이 진짜로 보고 있는 세상을 만나요.",
+    "description": "대형 언론사나 유명 유튜버가 아닌, 사람들의 진심 어린 사랑을 받고 있는 숨은 보석 같은 유튜브 채널을 매일매일 발견하세요. 알고리즘에 갇히지 않고 새로운 콘텐츠를 만나는 특별한 경험을 선사합니다.",
+    "image": "https://placehold.co/600x400/red/white?text=PlayAura",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-brands fa-youtube",
+    "color_theme": "red",
+    "card_size": "small",
+    "display_order": 8,
+    "service_type": "platform",
+    "external_url": "https://motube-woad.vercel.app/",
+    "created_at": "2026-01-24T14:06:12.659Z",
+    "updated_at": "2026-01-30T10:45:22.353Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 129,
+  "fields": {
+    "title": "학교 통합 지원 스쿨잇",
+    "lead_text": "복잡한 채용 업무와 업체 선정은 그만! AI가 학교에 딱 맞는 선생님은 물론, 신뢰할 수 있는 학교 행사 업체까지 한곳에서 연결해 드립니다.",
+    "description": "\"갑자기 대체 교사는 어디서 구하지?\", \"믿을만한 체험학습 업체는 어디일까?\" 매번 반복되는 채용난과 업체 선정 스트레스에서 벗어나세요. 스쿨잇은 학교의 행정 부담을 획기적으로 줄여주기 위해 탄생했습니다. AI를 통한 스마트한 채용 상담부터 검증된 행사 업체 매칭까지, 학교 운영에 필요한 모든 연결을 이 한 곳에서 쉽고 빠르게 해결할 수 있습니다.",
+    "image": "https://placehold.co/600x400/orange/white?text=Schoolit",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-school",
+    "color_theme": "orange",
+    "card_size": "small",
+    "display_order": 9,
+    "service_type": "platform",
+    "external_url": "https://schoolit.shop/",
+    "created_at": "2026-01-24T14:06:12.678Z",
+    "updated_at": "2026-01-30T10:45:22.360Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 130,
+  "fields": {
+    "title": "인사이트",
+    "lead_text": "AI 시대를 이끄는 선생님들을 위한 보석 같은 영감들을 모았습니다.",
+    "description": "영감 보석함 - 교육의 미래를 고민하는 선생님들과 함께 나누고 싶은 깊이 있는 통찰력을 제공합니다.",
+    "image": "https://placehold.co/600x400/purple/white?text=Insights",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-gem",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 10,
+    "service_type": "library",
+    "external_url": "/insights/",
+    "created_at": "2026-01-24T14:06:12.702Z",
+    "updated_at": "2026-01-30T10:45:22.369Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 131,
+  "fields": {
+    "title": "AI 도구 가이드",
+    "lead_text": "상황별로 딱 맞는 AI 도구를 추천해드려요.",
+    "description": "수업 준비부터 생활 지도까지! 복잡한 AI 툴들 사이에서 선생님께 꼭 필요한 것만 골라 사용법과 함께 안내합니다.",
+    "image": "https://placehold.co/600x400/gray/white?text=AI+Tools",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-robot",
+    "color_theme": "dark",
+    "card_size": "small",
+    "display_order": 11,
+    "service_type": "guide",
+    "external_url": "/tools/",
+    "created_at": "2026-01-24T14:06:12.708Z",
+    "updated_at": "2026-01-30T10:45:22.377Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 132,
+  "fields": {
+    "title": "AI 프롬프트 레시피",
+    "lead_text": "복사해서 바로 쓰는 검증된 AI 주문서.",
+    "description": "AI 전문가의 노하우가 담긴 프롬프트를 내 것으로! 시행착오 없이 바로 수업에 적용 가능한 강력한 프롬프트들을 제공합니다.",
+    "image": "https://placehold.co/600x400/purple/white?text=Prompt+Lab",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-wand-magic-sparkles",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 12,
+    "service_type": "tool",
+    "external_url": "/prompts/",
+    "created_at": "2026-01-24T14:06:12.714Z",
+    "updated_at": "2026-01-30T10:45:22.387Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 133,
+  "fields": {
+    "title": "학교폭력 사안 처리 비서",
+    "lead_text": "복잡한 학교폭력 사안 처리, AI와 함께 차근차근 해결하세요.",
+    "description": "매뉴얼 찾느라 고생하지 마세요. 최신 지침을 기반으로 사안 처리 단계마다 필요한 안내와 서식 작성을 도와드립니다.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-shield-halved",
+    "color_theme": "red",
+    "card_size": "small",
+    "display_order": 8,
+    "service_type": "tool",
+    "external_url": "/school_violence/",
+    "created_at": "2026-01-26T02:24:16.101Z",
+    "updated_at": "2026-01-30T10:45:22.395Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 135,
+  "fields": {
+    "title": "쌤BTI",
+    "lead_text": "나는 어떤 선생님일까? 🦁",
+    "description": "12가지 질문으로 알아보는 나의 교육 스타일! MBTI 기반 티처블 동물원에서 나와 닮은 동물을 찾아보세요.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": true,
+    "icon": "🦁",
+    "color_theme": "orange",
+    "card_size": "small",
+    "display_order": 13,
+    "service_type": "game",
+    "external_url": "",
+    "created_at": "2026-02-03T06:08:40.367Z",
+    "updated_at": "2026-02-03T06:08:40.367Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 136,
+  "fields": {
+    "title": "두뇌 풀가동! 교실 체스",
+    "lead_text": "준비물 NO! 설치 NO! 브라우저만 있으면 세계 최강 AI와 체스 한판 어때요? ♟️",
+    "description": "선생님, 비 오는 날이나 창체 시간에 아이들과 체스 한판 어떠신가요? \"두뇌 풀가동! 교실 체스\"는 별도의 설치나 가입 없이 바로 즐길 수 있는 체스 게임입니다. 친구와 함께하는 로컬 대전은 물론, 세계 최강 AI Stockfish와 실력을 겨뤄볼 수 있습니다. 규칙을 몰라도 걱정 마세요! 상세한 가이드가 함께 제공됩니다.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "♟️",
+    "color_theme": "dark",
+    "card_size": "small",
+    "display_order": 14,
+    "service_type": "game",
+    "external_url": "",
+    "created_at": "2026-02-03T06:25:34.219Z",
+    "updated_at": "2026-02-03T06:28:36.818Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 137,
+  "fields": {
+    "title": "HWP to PDF 변환기",
+    "lead_text": "한글 파일을 PDF로 간편하게 변환하세요 📄",
+    "description": "한글(Hancom Office)의 OLE Automation 기능을 활용하여 HWP/HWPX 파일을 PDF로 빠르고 간편하게 변환하는 경량 데스크톱 프로그램입니다. 정품 한글이 설치된 Windows 환경에서 작동하며, 별도의 서버 없이 로컬에서 바로 실행됩니다.\n\n[주의사항]\n- 본 프로그램의 상업적 목적의 재배포를 금지합니다.\n- 본 프로그램 사용 중 발생하는 모든 문제(데이터 손실, 손상 등)에 대한 책임은 사용자 본인에게 있습니다.\n- 본 프로그램은 한글과컴퓨터(주)와 무관하며, 정품 한글(Hancom Office) 설치가 필요합니다.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": true,
+    "icon": "📄",
+    "color_theme": "blue",
+    "card_size": "small",
+    "display_order": 14,
+    "service_type": "tool",
+    "external_url": "https://drive.google.com/file/d/1JfFn1WtkJyMBQ0OUleXPQPTf2t9ecgyq/view?usp=sharing",
+    "created_at": "2026-02-06T13:11:47.297Z",
+    "updated_at": "2026-02-06T13:26:13.731Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 138,
+  "fields": {
+    "title": "우리반 캐릭터 친구 찾기",
+    "lead_text": "우리 반 아이들은 어떤 동물 친구들일까요? 재미있는 설문으로 알아보는 교육용 성향 검사 도구입니다.",
+    "description": "MBTI 기반의 12가지 질문을 통해 학생들의 학교생활 스타일을 16가지 귀여운 동물 캐릭터로 분류해 드립니다.\n학생들의 강점, 학급에서의 역할, 그리고 선생님을 위한 맞춤형 상담 가이드와 학급 경영 팁까지 제공하여 더욱 행복하고 활기찬 교실을 만들 수 있도록 도와드립니다.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "",
+    "color_theme": "purple",
+    "card_size": "small",
+    "display_order": 0,
+    "service_type": "tool",
+    "external_url": "",
+    "created_at": "2026-02-06T15:44:50.399Z",
+    "updated_at": "2026-02-06T16:27:22.131Z"
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 210,
+  "fields": {
+    "product": 121,
+    "icon": "fa-solid fa-tv",
+    "title": "한눈에 보는 역할표",
+    "description": "현재 누가 어떤 역할을 맡고 있는지 큼직한 화면으로 보여주어 아이들이 잊지 않습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 211,
+  "fields": {
+    "product": 121,
+    "icon": "fa-solid fa-user-check",
+    "title": "스스로 챙기는 책임감",
+    "description": "자신의 이름이 화면에 떠 있으니 선생님의 지시 없이도 스스로 당번 활동을 시작합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 212,
+  "fields": {
+    "product": 121,
+    "icon": "fa-solid fa-stopwatch",
+    "title": "활동 집중 타이머",
+    "description": "청소 시간이나 쉬는 시간 등 활동 시간을 화면에 함께 띄워 효율적인 시간 관리를 돕습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 213,
+  "fields": {
+    "product": 122,
+    "icon": "fa-solid fa-people-group",
+    "title": "팀 대항전 모드",
+    "description": "모둠별로 팀을 나누어 박진감 넘치는 대결을 펼칠 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 214,
+  "fields": {
+    "product": 122,
+    "icon": "fa-solid fa-hand-back-fist",
+    "title": "리얼한 윷 던지기",
+    "description": "터치 한 번으로 윷을 던지는 쫄깃한 긴장감을 그대로 구현했습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 215,
+  "fields": {
+    "product": 122,
+    "icon": "fa-solid fa-robot",
+    "title": "자동 말 이동 시스템",
+    "description": "복잡한 윷판 규칙을 몰라도 AI가 알아서 말을 놓아줍니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 219,
+  "fields": {
+    "product": 124,
+    "icon": "fa-solid fa-qrcode",
+    "title": "간편한 서명 배부",
+    "description": "연수 장소에 QR코드를 띄우거나 링크를 공유하여 참석자들이 즉시 서명할 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 220,
+  "fields": {
+    "product": 124,
+    "icon": "fa-solid fa-users",
+    "title": "실시간 참석 확인",
+    "description": "누가 서명을 완료했는지 대시보드에서 실시간으로 확인하고 미참석자를 관리하세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 221,
+  "fields": {
+    "product": 124,
+    "icon": "fa-solid fa-file-pdf",
+    "title": "PDF 결과 보고서",
+    "description": "취합된 서명은 결재 문서에 바로 첨부할 수 있는 깔끔한 PDF 양식으로 자동 변환됩니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 222,
+  "fields": {
+    "product": 125,
+    "icon": "fa-solid fa-robot",
+    "title": "RAG 기반 AI 채팅",
+    "description": "업로드한 문서 내용을 기반으로 정확한 답변을 생성합니다. 헛소리 없이 자료에 있는 내용만 답변합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 223,
+  "fields": {
+    "product": 125,
+    "icon": "fa-solid fa-link",
+    "title": "패들릿 자동 연동",
+    "description": "패들릿 URL만 붙여넣으면 게시물 내용을 자동으로 가져와 학습합니다. API 키만 있으면 실시간 동기화도 가능합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 224,
+  "fields": {
+    "product": 125,
+    "icon": "fa-solid fa-file-csv",
+    "title": "다양한 파일 지원",
+    "description": "CSV, PDF, TXT 등 다양한 형식의 문서를 업로드하여 AI 지식베이스를 구축할 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 225,
+  "fields": {
+    "product": 126,
+    "icon": "fa-solid fa-wand-magic-sparkles",
+    "title": "AI 단계별 안내 생성",
+    "description": "유튜브 영상의 자막과 내용을 분석하여 학생 눈높이에 맞는 단계별 수업 가이드를 자동 생성합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 226,
+  "fields": {
+    "product": 126,
+    "icon": "fa-solid fa-tv",
+    "title": "교실 수업 모드",
+    "description": "생성된 단계를 교실 TV에 띄워놓고 버튼 하나로 다음 단계로 넘어가며 수업을 진행할 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 227,
+  "fields": {
+    "product": 126,
+    "icon": "fa-solid fa-clock",
+    "title": "타이머 연동",
+    "description": "각 단계별 작업 시간을 설정하여 학생들이 충분히 따라할 시간을 확보할 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 228,
+  "fields": {
+    "product": 127,
+    "icon": "fa-solid fa-wand-magic-sparkles",
+    "title": "AI 자동 글쓰기",
+    "description": "주제만 입력하면 Gemini AI가 흐름에 맞는 전문적인 글을 생성합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 229,
+  "fields": {
+    "product": 127,
+    "icon": "fa-solid fa-image",
+    "title": "이미지 결합",
+    "description": "관련 이미지를 업로드하면 기사 본문에 적절히 배치하여 가독성을 높입니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 230,
+  "fields": {
+    "product": 127,
+    "icon": "fa-solid fa-file-export",
+    "title": "다양한 내보내기",
+    "description": "생성된 결과물을 HTML 또는 PPT 형식으로 변환하여 바로 활용하세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 233,
+  "fields": {
+    "product": 129,
+    "icon": "fa-solid fa-file-pen",
+    "title": "3분 간편 공고",
+    "description": "과목, 시간 등 조건만 입력하면 스쿨잇이 복잡한 채용 공고를 뚝딱 완성합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 234,
+  "fields": {
+    "product": 129,
+    "icon": "fa-solid fa-robot",
+    "title": "AI 행정 지원",
+    "description": "채용 과정이나 행정 절차에 대해 궁금한 점이 있다면 24시간 대기 중인 AI 비서에게 바로 물어보고 해결하세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 235,
+  "fields": {
+    "product": 129,
+    "icon": "fa-solid fa-magnifying-glass",
+    "title": "행사 업체 일괄 검색",
+    "description": "체험학습, 진로체험활동, 스포츠데이 등 학교 행사 업체를 여기저기 연락할 필요 없이 스쿨잇에서 한 번에 찾아볼 수 있습니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 236,
+  "fields": {
+    "product": 128,
+    "icon": "fa-solid fa-gem",
+    "title": "숨은 보석 발굴",
+    "description": "대형 채널을 제외하고 진짜 사랑받는 중소형 크리에이터들의 채널을 매일 추천합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 237,
+  "fields": {
+    "product": 128,
+    "icon": "fa-solid fa-heart",
+    "title": "진심 어린 큐레이션",
+    "description": "조회수가 아닌 진정성으로 선별된 채널들을 통해 새로운 영감을 얻으세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 238,
+  "fields": {
+    "product": 123,
+    "icon": "fa-solid fa-chalkboard-user",
+    "title": "교직 생활 기질 분석",
+    "description": "나의 타고난 성향을 자연에 비유하여 교사로서의 강점과 보완점을 콕 짚어드립니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 239,
+  "fields": {
+    "product": 123,
+    "icon": "fa-solid fa-people-roof",
+    "title": "학생 지도 & 케미 분석",
+    "description": "아이들에게 비춰지는 나의 모습과 딱 맞는 학급 경영 및 상담 스타일을 제안합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 240,
+  "fields": {
+    "product": 123,
+    "icon": "fa-solid fa-calendar-check",
+    "title": "2026년 운세 & 힐링",
+    "description": "올해의 핵심 흐름부터 나를 지켜줄 행운 아이템과 힐링 팁을 꼼꼼히 챙겨드립니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 268,
+  "fields": {
+    "product": 136,
+    "icon": "🤖",
+    "title": "무료 AI 대전 (Stockfish)",
+    "description": "세계 최강급 AI 엔진 Stockfish.js를 탑재했습니다. 4단계 난이도(초급~최강)로 자신의 실력에 맞춰 도전해보세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 269,
+  "fields": {
+    "product": 136,
+    "icon": "🤝",
+    "title": "1대1 로컬 대전",
+    "description": "친구와 나란히 앉아 하나의 화면으로 즐기는 클래식한 로컬 대전 모드를 지원합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 270,
+  "fields": {
+    "product": 136,
+    "icon": "📜",
+    "title": "왕초보 가이드",
+    "description": "기초적인 말의 이동부터 캐슬링, 앙파상 같은 특수 규칙까지! 초보자도 금방 배울 수 있는 상세한 가이드를 제공합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 271,
+  "fields": {
+    "product": 137,
+    "icon": "⚡",
+    "title": "빠른 변환",
+    "description": "한글 OLE Automation을 활용한 고품질 PDF 변환"
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 272,
+  "fields": {
+    "product": 137,
+    "icon": "🖥️",
+    "title": "로컬 실행",
+    "description": "서버 불필요, 단일 exe 파일로 바로 실행"
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 273,
+  "fields": {
+    "product": 137,
+    "icon": "📂",
+    "title": "HWP/HWPX 지원",
+    "description": "HWP 및 HWPX 형식 모두 변환 가능"
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 277,
+  "fields": {
+    "product": 138,
+    "icon": "📱",
+    "title": "QR코드로 간편 참여",
+    "description": "학생들은 회원가입 없이 QR코드 스캔만으로 바로 참여할 수 있어요. 이름만 입력하면 끝!"
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 278,
+  "fields": {
+    "product": 138,
+    "icon": "🐾",
+    "title": "16가지 동물 캐릭터",
+    "description": "거북이, 강아지, 판다, 돌고래 등 귀여운 동물 캐릭터로 성격 유형을 재미있게 알려줍니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 279,
+  "fields": {
+    "product": 138,
+    "icon": "📊",
+    "title": "교사용 실시간 대시보드",
+    "description": "학생들의 참여 현황과 결과를 실시간으로 확인하고, 엑셀로 내보내기까지 한번에!"
+  }
+},
+{
+  "model": "products.dtsettings",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "auto_rotation": false,
+    "rotation_frequency": "daily",
+    "last_rotation_date": null,
+    "last_broadcast_message": "",
+    "mission_title": "오늘도 행복한 우리 교실",
+    "mission_desc": "선생님 말씀에 집중해 주세요."
+  }
+},
+{
+  "model": "insights.insight",
+  "pk": 3,
+  "fields": {
+    "title": "AI 시대, 교사의 역할은 어떻게 변할까?",
+    "category": "youtube",
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "thumbnail_url": "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+    "content": "지식의 전달자에서 영감의 설계자로.",
+    "kakio_note": "이 영상은 AI 도구를 수업에 녹여내는 구체적인 방법을 제시합니다. 꼭 확인해보세요.",
+    "tags": "#FutureEducation",
+    "is_featured": true,
+    "created_at": "2026-01-20T13:11:00.935Z",
+    "updated_at": "2026-01-20T13:11:00.935Z",
+    "likes": []
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 1,
+  "fields": {
+    "name": "Gap",
+    "character": "甲",
+    "polarity": "yang",
+    "element": "wood"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 2,
+  "fields": {
+    "name": "Eul",
+    "character": "乙",
+    "polarity": "yin",
+    "element": "wood"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 3,
+  "fields": {
+    "name": "Byung",
+    "character": "丙",
+    "polarity": "yang",
+    "element": "fire"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 4,
+  "fields": {
+    "name": "Jung",
+    "character": "丁",
+    "polarity": "yin",
+    "element": "fire"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 5,
+  "fields": {
+    "name": "Moo",
+    "character": "戊",
+    "polarity": "yang",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 6,
+  "fields": {
+    "name": "Gi",
+    "character": "己",
+    "polarity": "yin",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 7,
+  "fields": {
+    "name": "Gyung",
+    "character": "庚",
+    "polarity": "yang",
+    "element": "metal"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 8,
+  "fields": {
+    "name": "Shin",
+    "character": "辛",
+    "polarity": "yin",
+    "element": "metal"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 9,
+  "fields": {
+    "name": "Im",
+    "character": "壬",
+    "polarity": "yang",
+    "element": "water"
+  }
+},
+{
+  "model": "fortune.stem",
+  "pk": 10,
+  "fields": {
+    "name": "Gye",
+    "character": "癸",
+    "polarity": "yin",
+    "element": "water"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 1,
+  "fields": {
+    "name": "Ja",
+    "character": "子",
+    "polarity": "yang",
+    "element": "water"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 2,
+  "fields": {
+    "name": "Chuk",
+    "character": "丑",
+    "polarity": "yin",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 3,
+  "fields": {
+    "name": "In",
+    "character": "寅",
+    "polarity": "yang",
+    "element": "wood"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 4,
+  "fields": {
+    "name": "Myo",
+    "character": "卯",
+    "polarity": "yin",
+    "element": "wood"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 5,
+  "fields": {
+    "name": "Jin",
+    "character": "辰",
+    "polarity": "yang",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 6,
+  "fields": {
+    "name": "Sa",
+    "character": "巳",
+    "polarity": "yin",
+    "element": "fire"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 7,
+  "fields": {
+    "name": "O",
+    "character": "午",
+    "polarity": "yang",
+    "element": "fire"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 8,
+  "fields": {
+    "name": "Mi",
+    "character": "未",
+    "polarity": "yin",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 9,
+  "fields": {
+    "name": "Shin",
+    "character": "申",
+    "polarity": "yang",
+    "element": "metal"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 10,
+  "fields": {
+    "name": "Yoo",
+    "character": "酉",
+    "polarity": "yin",
+    "element": "metal"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 11,
+  "fields": {
+    "name": "Sool",
+    "character": "戌",
+    "polarity": "yang",
+    "element": "earth"
+  }
+},
+{
+  "model": "fortune.branch",
+  "pk": 12,
+  "fields": {
+    "name": "Hae",
+    "character": "亥",
+    "polarity": "yin",
+    "element": "water"
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 1,
+  "fields": {
+    "name": "Gap-Ja",
+    "stem": 1,
+    "branch": 1,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 2,
+  "fields": {
+    "name": "Eul-Chuk",
+    "stem": 2,
+    "branch": 2,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 3,
+  "fields": {
+    "name": "Byung-In",
+    "stem": 3,
+    "branch": 3,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 4,
+  "fields": {
+    "name": "Jung-Myo",
+    "stem": 4,
+    "branch": 4,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 5,
+  "fields": {
+    "name": "Moo-Jin",
+    "stem": 5,
+    "branch": 5,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 6,
+  "fields": {
+    "name": "Gi-Sa",
+    "stem": 6,
+    "branch": 6,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 7,
+  "fields": {
+    "name": "Gyung-O",
+    "stem": 7,
+    "branch": 7,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 8,
+  "fields": {
+    "name": "Shin-Mi",
+    "stem": 8,
+    "branch": 8,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 9,
+  "fields": {
+    "name": "Im-Shin",
+    "stem": 9,
+    "branch": 9,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 10,
+  "fields": {
+    "name": "Gye-Yoo",
+    "stem": 10,
+    "branch": 10,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 11,
+  "fields": {
+    "name": "Gap-Sool",
+    "stem": 1,
+    "branch": 11,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 12,
+  "fields": {
+    "name": "Eul-Hae",
+    "stem": 2,
+    "branch": 12,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 13,
+  "fields": {
+    "name": "Byung-Ja",
+    "stem": 3,
+    "branch": 1,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 14,
+  "fields": {
+    "name": "Jung-Chuk",
+    "stem": 4,
+    "branch": 2,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 15,
+  "fields": {
+    "name": "Moo-In",
+    "stem": 5,
+    "branch": 3,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 16,
+  "fields": {
+    "name": "Gi-Myo",
+    "stem": 6,
+    "branch": 4,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 17,
+  "fields": {
+    "name": "Gyung-Jin",
+    "stem": 7,
+    "branch": 5,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 18,
+  "fields": {
+    "name": "Shin-Sa",
+    "stem": 8,
+    "branch": 6,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 19,
+  "fields": {
+    "name": "Im-O",
+    "stem": 9,
+    "branch": 7,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 20,
+  "fields": {
+    "name": "Gye-Mi",
+    "stem": 10,
+    "branch": 8,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 21,
+  "fields": {
+    "name": "Gap-Shin",
+    "stem": 1,
+    "branch": 9,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 22,
+  "fields": {
+    "name": "Eul-Yoo",
+    "stem": 2,
+    "branch": 10,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 23,
+  "fields": {
+    "name": "Byung-Sool",
+    "stem": 3,
+    "branch": 11,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 24,
+  "fields": {
+    "name": "Jung-Hae",
+    "stem": 4,
+    "branch": 12,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 25,
+  "fields": {
+    "name": "Moo-Ja",
+    "stem": 5,
+    "branch": 1,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 26,
+  "fields": {
+    "name": "Gi-Chuk",
+    "stem": 6,
+    "branch": 2,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 27,
+  "fields": {
+    "name": "Gyung-In",
+    "stem": 7,
+    "branch": 3,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 28,
+  "fields": {
+    "name": "Shin-Myo",
+    "stem": 8,
+    "branch": 4,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 29,
+  "fields": {
+    "name": "Im-Jin",
+    "stem": 9,
+    "branch": 5,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 30,
+  "fields": {
+    "name": "Gye-Sa",
+    "stem": 10,
+    "branch": 6,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 31,
+  "fields": {
+    "name": "Gap-O",
+    "stem": 1,
+    "branch": 7,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 32,
+  "fields": {
+    "name": "Eul-Mi",
+    "stem": 2,
+    "branch": 8,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 33,
+  "fields": {
+    "name": "Byung-Shin",
+    "stem": 3,
+    "branch": 9,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 34,
+  "fields": {
+    "name": "Jung-Yoo",
+    "stem": 4,
+    "branch": 10,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 35,
+  "fields": {
+    "name": "Moo-Sool",
+    "stem": 5,
+    "branch": 11,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 36,
+  "fields": {
+    "name": "Gi-Hae",
+    "stem": 6,
+    "branch": 12,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 37,
+  "fields": {
+    "name": "Gyung-Ja",
+    "stem": 7,
+    "branch": 1,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 38,
+  "fields": {
+    "name": "Shin-Chuk",
+    "stem": 8,
+    "branch": 2,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 39,
+  "fields": {
+    "name": "Im-In",
+    "stem": 9,
+    "branch": 3,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 40,
+  "fields": {
+    "name": "Gye-Myo",
+    "stem": 10,
+    "branch": 4,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 41,
+  "fields": {
+    "name": "Gap-Jin",
+    "stem": 1,
+    "branch": 5,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 42,
+  "fields": {
+    "name": "Eul-Sa",
+    "stem": 2,
+    "branch": 6,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 43,
+  "fields": {
+    "name": "Byung-O",
+    "stem": 3,
+    "branch": 7,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 44,
+  "fields": {
+    "name": "Jung-Mi",
+    "stem": 4,
+    "branch": 8,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 45,
+  "fields": {
+    "name": "Moo-Shin",
+    "stem": 5,
+    "branch": 9,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 46,
+  "fields": {
+    "name": "Gi-Yoo",
+    "stem": 6,
+    "branch": 10,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 47,
+  "fields": {
+    "name": "Gyung-Sool",
+    "stem": 7,
+    "branch": 11,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 48,
+  "fields": {
+    "name": "Shin-Hae",
+    "stem": 8,
+    "branch": 12,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 49,
+  "fields": {
+    "name": "Im-Ja",
+    "stem": 9,
+    "branch": 1,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 50,
+  "fields": {
+    "name": "Gye-Chuk",
+    "stem": 10,
+    "branch": 2,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 51,
+  "fields": {
+    "name": "Gap-In",
+    "stem": 1,
+    "branch": 3,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 52,
+  "fields": {
+    "name": "Eul-Myo",
+    "stem": 2,
+    "branch": 4,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 53,
+  "fields": {
+    "name": "Byung-Jin",
+    "stem": 3,
+    "branch": 5,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 54,
+  "fields": {
+    "name": "Jung-Sa",
+    "stem": 4,
+    "branch": 6,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 55,
+  "fields": {
+    "name": "Moo-O",
+    "stem": 5,
+    "branch": 7,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 56,
+  "fields": {
+    "name": "Gi-Mi",
+    "stem": 6,
+    "branch": 8,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 57,
+  "fields": {
+    "name": "Gyung-Shin",
+    "stem": 7,
+    "branch": 9,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 58,
+  "fields": {
+    "name": "Shin-Yoo",
+    "stem": 8,
+    "branch": 10,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 59,
+  "fields": {
+    "name": "Im-Sool",
+    "stem": 9,
+    "branch": 11,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "fortune.sixtyjiazi",
+  "pk": 60,
+  "fields": {
+    "name": "Gye-Hae",
+    "stem": 10,
+    "branch": 12,
+    "na_yin_element": null
+  }
+},
+{
+  "model": "school_violence.guidelinedocument",
+  "pk": 1,
+  "fields": {
+    "title": "학교폭력 사안처리 행정절차 딥리서치 보고서",
+    "category": "guidebook",
+    "file": "school_violence/docs/school_violence_admin_procedures.md",
+    "description": "교사, 학교, 교육청의 역할 중심 학교폭력 사안처리 행정절차 보고서",
+    "is_processed": true,
+    "chunk_count": 25,
+    "uploaded_by": [
+      "kakio"
+    ],
+    "created_at": "2026-01-24T10:46:05.568Z",
+    "updated_at": "2026-01-24T10:46:18.071Z"
+  }
+},
+{
+  "model": "school_violence.consultationmode",
+  "pk": 1,
+  "fields": {
+    "mode_key": "homeroom",
+    "display_name": "담임교사 모드",
+    "description": "학생/학부모 초기 대응 및 학급 경영 지원",
+    "system_prompt": "담임교사 관점에서 따뜻하고 상세하게 안내해주세요.",
+    "icon": "fa-solid fa-chalkboard-user",
+    "color": "blue",
+    "is_active": true
+  }
+},
+{
+  "model": "school_violence.consultationmode",
+  "pk": 2,
+  "fields": {
+    "mode_key": "officer",
+    "display_name": "학폭책임교사 모드",
+    "description": "법적 절차 및 공문서 처리 가이드",
+    "system_prompt": "학교폭력 책임교사 관점에서 법령에 근거하여 정확하게 안내해주세요.",
+    "icon": "fa-solid fa-user-shield",
+    "color": "purple",
+    "is_active": true
+  }
+},
+{
+  "model": "school_violence.consultationmode",
+  "pk": 3,
+  "fields": {
+    "mode_key": "admin",
+    "display_name": "교육청/행정 모드",
+    "description": "관리자 의사결정 및 대외 협력 지원",
+    "system_prompt": "교장, 교감, 교육청 담당자 관점에서 행정 절차를 안내해주세요.",
+    "icon": "fa-solid fa-building-columns",
+    "color": "green",
+    "is_active": true
+  }
+},
+{
+  "model": "artclass.artclass",
+  "pk": 1,
+  "fields": {
+    "title": "",
+    "youtube_url": "https://www.youtube.com/watch?v=sqxYGkSKUM8",
+    "default_interval": 15,
+    "created_at": "2026-01-26T03:13:22.424Z",
+    "created_by": null,
+    "is_shared": true,
+    "view_count": 1
+  }
+},
+{
+  "model": "artclass.artclass",
+  "pk": 2,
+  "fields": {
+    "title": "",
+    "youtube_url": "https://www.youtube.com/watch?v=sqxYGkSKUM8",
+    "default_interval": 15,
+    "created_at": "2026-01-26T03:15:20.607Z",
+    "created_by": null,
+    "is_shared": true,
+    "view_count": 1
+  }
+},
+{
+  "model": "artclass.artclass",
+  "pk": 3,
+  "fields": {
+    "title": "",
+    "youtube_url": "https://www.youtube.com/watch?v=sqxYGkSKUM8",
+    "default_interval": 15,
+    "created_at": "2026-01-26T14:02:41.455Z",
+    "created_by": [
+      "admin"
+    ],
+    "is_shared": true,
+    "view_count": 1
+  }
+},
+{
+  "model": "artclass.artclass",
+  "pk": 4,
+  "fields": {
+    "title": "",
+    "youtube_url": "https://www.youtube.com/watch?v=sqxYGkSKUM8",
+    "default_interval": 15,
+    "created_at": "2026-01-26T14:03:47.937Z",
+    "created_by": [
+      "admin"
+    ],
+    "is_shared": true,
+    "view_count": 1
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 1,
+  "fields": {
+    "art_class": 1,
+    "step_number": 1,
+    "description": "asdfsdfsdf",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 2,
+  "fields": {
+    "art_class": 1,
+    "step_number": 2,
+    "description": "asdfsadf",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 3,
+  "fields": {
+    "art_class": 1,
+    "step_number": 3,
+    "description": "sdgasd",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 4,
+  "fields": {
+    "art_class": 2,
+    "step_number": 1,
+    "description": "asdfsadf",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 5,
+  "fields": {
+    "art_class": 2,
+    "step_number": 2,
+    "description": "asdfsadf",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 6,
+  "fields": {
+    "art_class": 2,
+    "step_number": 3,
+    "description": "asdfasdf",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 7,
+  "fields": {
+    "art_class": 3,
+    "step_number": 1,
+    "description": "ㅇㄹㅇㄹㅇㄹㅇㄹㅇ",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 8,
+  "fields": {
+    "art_class": 3,
+    "step_number": 2,
+    "description": "ㅁㄴㅇㄹㅇㅎㅇㄴㄻㄴㅇㄹ",
+    "image": ""
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 9,
+  "fields": {
+    "art_class": 3,
+    "step_number": 3,
+    "description": "ㄴㅇㄻㄴㅇㄹㄴㅇㅎ",
+    "image": "media/artclass/steps/paste_yenqvs"
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 10,
+  "fields": {
+    "art_class": 4,
+    "step_number": 1,
+    "description": "ㅇㄹㅇㄹㅇㄹㅇㄹㅇ",
+    "image": "media/artclass/steps/paste_psmq7a"
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 11,
+  "fields": {
+    "art_class": 4,
+    "step_number": 2,
+    "description": "ㅁㄴㅇㄹㅇㅎㅇㄴㄻㄴㅇㄹ",
+    "image": "media/artclass/steps/paste_uosr9z"
+  }
+},
+{
+  "model": "artclass.artstep",
+  "pk": 12,
+  "fields": {
+    "art_class": 4,
+    "step_number": 3,
+    "description": "ㄴㅇㄻㄴㅇㄹㄴㅇㅎ",
+    "image": ""
+  }
+},
+{
+  "model": "sites.site",
+  "fields": {
+    "domain": "web-production-f2869.up.railway.app",
+    "name": "Eduitit"
+  }
+}
+]

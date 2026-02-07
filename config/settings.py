@@ -410,7 +410,7 @@ MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 # SENTRY ERROR TRACKING (production only)
 # =============================================================================
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
-if SENTRY_DSN and not DEBUG:
+if SENTRY_DSN:
     try:
         import sentry_sdk
         sentry_sdk.init(
