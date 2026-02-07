@@ -77,7 +77,6 @@ INSTALLED_APPS = [
     'studentmbti.apps.StudentmbtiConfig',
     'django_htmx',
     'django.contrib.humanize',
-    'dbbackup',
 
     # Auth & Allauth
     'django.contrib.sites',
@@ -533,10 +532,6 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
-    "dbbackup": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-        "OPTIONS": {"location": BASE_DIR / "backups/"},
-    },
 }
 
 print("="*60)
@@ -563,9 +558,4 @@ if SENTRY_DSN and not DEBUG:
         )
     except ImportError:
         pass
-
-# =============================================================================
-# DATABASE BACKUP (django-dbbackup)
-# =============================================================================
-# STORAGES['dbbackup'] 키로 설정됨 (위 STORAGES 딕셔너리 참조)
 

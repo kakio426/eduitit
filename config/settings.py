@@ -73,7 +73,6 @@ INSTALLED_APPS = [
     'studentmbti.apps.StudentmbtiConfig',
     'django_htmx',
     'django.contrib.humanize',
-    'dbbackup',
 
     # Auth & Allauth
     'django.contrib.sites',
@@ -353,27 +352,11 @@ if USE_CLOUDINARY:
         "staticfiles": {
             "BACKEND": "cloudinary_storage.storage.StaticHashedCloudinaryStorage",
         },
-        "dbbackup": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-            "OPTIONS": {"location": BASE_DIR / "backups/"},
-        },
     }
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
     print("[OK] STORAGES and legacy storage constants configured for Cloudinary")
 else:
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-        },
-        "dbbackup": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-            "OPTIONS": {"location": BASE_DIR / "backups/"},
-        },
-    }
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
     print("[INFO] Cloudinary disabled - using local file system")
 
@@ -437,8 +420,3 @@ if SENTRY_DSN and not DEBUG:
         )
     except ImportError:
         pass
-
-# =============================================================================
-# DATABASE BACKUP (django-dbbackup)
-# =============================================================================
-# STORAGES['dbbackup'] 키로 설정됨 (위 STORAGES 딕셔너리 참조)
