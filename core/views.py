@@ -10,60 +10,54 @@ from django.db.models import Count
 from PIL import Image
 
 def home(request):
-    import sys, traceback
-    try:
-        # Order by display_order first, then by creation date
-        products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    # Order by display_order first, then by creation date
+    products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
 
-        # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
-        posts = Post.objects.select_related(
-            'author',
-            'author__userprofile'
-        ).prefetch_related(
-            'likes',
-            'comments',
-            'comments__author',
-            'comments__author__userprofile'
-        ).annotate(
-            likes_count_annotated=Count('likes', distinct=True),
-            comments_count_annotated=Count('comments', distinct=True)
-        ).order_by('-created_at')
+    # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
+    posts = Post.objects.select_related(
+        'author',
+        'author__userprofile'
+    ).prefetch_related(
+        'likes',
+        'comments',
+        'comments__author',
+        'comments__author__userprofile'
+    ).annotate(
+        likes_count_annotated=Count('likes', distinct=True),
+        comments_count_annotated=Count('comments', distinct=True)
+    ).order_by('-created_at')
 
-        # If user is logged in, show the "dashboard-style" authenticated home
-        if request.user.is_authenticated:
-            # Ensure profile exists to prevent 500 errors for legacy users
-            UserProfile.objects.get_or_create(user=request.user)
+    # If user is logged in, show the "dashboard-style" authenticated home
+    if request.user.is_authenticated:
+        # Ensure profile exists to prevent 500 errors for legacy users
+        UserProfile.objects.get_or_create(user=request.user)
 
-            from django.db.models import Q
-            # Get IDs of products explicitly owned by the user
-            owned_ids = request.user.owned_products.values_list('product_id', flat=True)
-            # Filter products that are either owned or free, and exclude specific ones
-            available_products = products.filter(
-                Q(id__in=owned_ids) | Q(price=0)
-            ).exclude(
-                Q(title__icontains="인사이트") | Q(title__icontains="사주")
-            ).distinct()
+        from django.db.models import Q
+        # Get IDs of products explicitly owned by the user
+        owned_ids = request.user.owned_products.values_list('product_id', flat=True)
+        # Filter products that are either owned or free, and exclude specific ones
+        available_products = products.filter(
+            Q(id__in=owned_ids) | Q(price=0)
+        ).exclude(
+            Q(title__icontains="인사이트") | Q(title__icontains="사주")
+        ).distinct()
 
-            return render(request, 'core/home_authenticated.html', {
-                'products': available_products,
-                'posts': posts
-            })
-
-        # Else show the public home
-        featured_product = products.filter(is_featured=True).first()
-        # Fallback if no featured product
-        if not featured_product:
-             featured_product = products.first()
-
-        return render(request, 'core/home.html', {
-            'products': products,
-            'featured_product': featured_product,
+        return render(request, 'core/home_authenticated.html', {
+            'products': available_products,
             'posts': posts
         })
-    except Exception as e:
-        print("!!! HOME VIEW ERROR !!!", file=sys.stderr)
-        traceback.print_exc()
-        return HttpResponse(f"Server Error: {str(e)}", status=500)
+
+    # Else show the public home
+    featured_product = products.filter(is_featured=True).first()
+    # Fallback if no featured product
+    if not featured_product:
+         featured_product = products.first()
+
+    return render(request, 'core/home.html', {
+        'products': products,
+        'featured_product': featured_product,
+        'posts': posts
+    })
 
 @login_required
 def dashboard(request):
