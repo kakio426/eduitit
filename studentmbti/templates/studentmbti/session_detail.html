@@ -210,13 +210,10 @@
                         </div>
                     </div>
 
-                    <div id="results-container">
-                        <template x-if="!showFullscreen">
-                            <div hx-get="{% url 'studentmbti:session_results_partial' session.id %}"
-                                hx-trigger="every 5s" hx-swap="innerHTML">
-                                {% include 'studentmbti/partials/results_list.html' %}
-                            </div>
-                        </template>
+                    <div id="results-container"
+                        hx-get="{% url 'studentmbti:session_results_partial' session.id %}"
+                        hx-trigger="every 5s" hx-swap="innerHTML">
+                        {% include 'studentmbti/partials/results_list.html' %}
                     </div>
                 </div>
             </div>
@@ -260,10 +257,7 @@
                     </div>
                 </div>
 
-                <p class="text-xl text-gray-400 mt-10 font-bold animate-pulse text-center pb-8">
-                    <i class="fa-solid fa-mobile-screen-button mr-2"></i>
-                    스마트폰으로 참여하세요!
-                </p>
+                <div class="mt-10 pb-8"></div>
             </div>
         </div>
 
@@ -289,14 +283,11 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-6 h-full custom-scrollbar">
-                <template x-if="showFullscreen">
-                    <div id="fs-results-container"
-                        hx-get="{% url 'studentmbti:session_results_partial' session.id %}?template=fullscreen"
-                        hx-trigger="every 5s" hx-swap="innerHTML">
-                        {% include 'studentmbti/partials/fullscreen_results.html' %}
-                    </div>
-                </template>
+            <div class="flex-1 overflow-y-auto px-6 h-full custom-scrollbar"
+                id="fs-results-container"
+                hx-get="{% url 'studentmbti:session_results_partial' session.id %}?template=fullscreen"
+                hx-trigger="every 5s" hx-swap="innerHTML">
+                {% include 'studentmbti/partials/fullscreen_results.html' %}
             </div>
 
             <div class="p-10 text-center text-gray-400 font-bold text-xl">
