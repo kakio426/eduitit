@@ -1218,7 +1218,7 @@
                         <div
                             class="md:col-span-5 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-slate-200 border-dashed pb-6 md:pb-0 md:pr-6">
                             <div class="w-full flex justify-center md:justify-start mb-4">
-                                <div class="inline-flex items-center gap-1 text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
+                                <div class="inline-flex items-center justify-center gap-1 text-sm py-1 px-3 rounded-full border bg-white/50 backdrop-blur-sm shadow-sm"
                                     id="premiumBadge">
                                     <span id="badgeIcon">🔮</span> <span id="badgeText" class="font-bold">분석 중...</span>
                                 </div>
@@ -2919,7 +2919,7 @@
             if (badge) {
                 document.getElementById('badgeIcon').textContent = info.icon;
                 document.getElementById('badgeText').textContent = info.name;
-                badge.className = `text-sm py-1 px-3 rounded-full border shadow-sm backdrop-blur-sm ${elementBadgeStyles[info.element] || 'bg-white/50 border-slate-200'}`;
+                badge.className = `inline-flex items-center justify-center gap-1 text-sm py-1 px-3 rounded-full border shadow-sm backdrop-blur-sm ${elementBadgeStyles[info.element] || 'bg-white/50 border-slate-200'}`;
             }
             if (bg) {
                 const colors = { wood: '#10b981', fire: '#ef4444', earth: '#f59e0b', metal: '#8b5cf6', water: '#3b82f6' };
