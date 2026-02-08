@@ -138,6 +138,10 @@
             if (response.ok) {
                 document.getElementById(`item-${pendingDeleteId}`).remove();
                 closeDeleteModal();
+
+                // 사주 결과 캐시 삭제 (새 프롬프트로 다시 분석할 수 있도록)
+                clearSajuCaches();
+
                 showToast('기록이 삭제되었습니다.');
 
                 if (document.querySelectorAll('.history-card').length === 0) {
@@ -148,6 +152,19 @@
             alert('삭제 중 오류가 발생했습니다.');
         }
     });
+
+    function clearSajuCaches() {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('saju_result_cache_')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        localStorage.removeItem('pendingSajuResult');
+        localStorage.removeItem('lastSajuInput');
+    }
 
     function showToast(msg) {
         // base.html에 토스트가 있다면 사용

@@ -503,6 +503,16 @@
                 }
             });
             if (response.ok) {
+                // 사주 결과 캐시 삭제
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('saju_result_cache_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                localStorage.removeItem('pendingSajuResult');
+                localStorage.removeItem('lastSajuInput');
+
                 location.href = "{% url 'fortune:history' %}";
             }
         } catch (e) {
