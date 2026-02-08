@@ -17,37 +17,37 @@
         </div>
 
         <!-- 서비스 설명 카드 -->
-        <div class="clay-card p-5 md:p-10 mb-8" data-aos="zoom-in">
-            <div class="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-6 mb-6">
-                <p class="text-lg md:text-xl text-gray-700 leading-relaxed break-keep">
+        <div class="clay-card p-4 md:p-10 mb-8" data-aos="zoom-in">
+            <div class="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-5 md:p-6 mb-6">
+                <p class="text-base md:text-xl text-gray-700 leading-relaxed break-keep">
                     {{ service.description|linebreaksbr }}
                 </p>
             </div>
 
             <!-- 사용 방법 -->
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid md:grid-cols-2 gap-4 md:gap-6">
                 <!-- 교사용 -->
-                <div class="bg-white/50 rounded-2xl p-5 border-2 border-purple-200">
+                <div class="bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-purple-200">
                     <div class="flex items-center gap-3 mb-4">
                         <div
-                            class="w-12 h-12 rounded-full bg-purple-500 text-white flex items-center justify-center text-2xl">
+                            class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-purple-500 text-white flex items-center justify-center text-xl md:text-2xl">
                             <i class="fa-solid fa-chalkboard-user"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-800">선생님이신가요?</h3>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">선생님이신가요?</h3>
                     </div>
-                    <p class="text-gray-600 mb-6 leading-relaxed">
+                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">
                         로그인 후 검사 세션을 생성하고,<br>
                         학생들의 결과를 실시간으로 확인하세요!
                     </p>
                     {% if user.is_authenticated %}
                     <a href="{% url 'studentmbti:dashboard' %}"
-                        class="block w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        class="block w-full py-3 md:py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         대시보드 가기
                         <i class="fa-solid fa-arrow-right ml-2"></i>
                     </a>
                     {% else %}
                     <a href="{% url 'account_login' %}?next={% url 'studentmbti:dashboard' %}"
-                        class="block w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        class="block w-full py-3 md:py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         로그인하기
                         <i class="fa-solid fa-sign-in-alt ml-2"></i>
                     </a>
@@ -55,15 +55,15 @@
                 </div>
 
                 <!-- 학생용 -->
-                <div class="bg-white/50 rounded-2xl p-5 border-2 border-pink-200">
+                <div class="bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-pink-200">
                     <div class="flex items-center gap-3 mb-4">
                         <div
-                            class="w-12 h-12 rounded-full bg-pink-500 text-white flex items-center justify-center text-2xl">
+                            class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-pink-500 text-white flex items-center justify-center text-xl md:text-2xl">
                             <i class="fa-solid fa-users"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-800">학생이신가요?</h3>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">학생이신가요?</h3>
                     </div>
-                    <p class="text-gray-600 mb-6 leading-relaxed">
+                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">
                         선생님이 보여주신 QR 코드를<br>
                         스캔하거나 입장 코드를 입력하세요!
                     </p>
@@ -72,20 +72,20 @@
                     <form action="{% url 'studentmbti:join_session' %}" method="get" class="mb-4">
                         <div class="flex gap-2">
                             <input type="text" name="code" placeholder="입장 코드 (예: 123456)" maxlength="6"
-                                class="flex-1 px-4 py-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-lg font-bold text-center"
+                                class="flex-1 px-3 py-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-base md:text-lg font-bold text-center"
                                 required>
                             <button type="submit"
-                                class="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
+                                class="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
                                 <i class="fa-solid fa-arrow-right"></i>
                             </button>
                         </div>
                     </form>
 
                     <div class="bg-gradient-to-r from-pink-100 to-purple-100 rounded-xl p-4 text-center">
-                        <div class="text-4xl mb-2">
+                        <div class="text-3xl md:text-4xl mb-2">
                             <i class="fa-solid fa-qrcode text-pink-500"></i>
                         </div>
-                        <p class="text-sm text-gray-600 font-medium">
+                        <p class="text-xs md:text-sm text-gray-600 font-medium">
                             또는 선생님께 QR 코드를<br>요청해주세요
                         </p>
                     </div>
