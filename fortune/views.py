@@ -456,7 +456,7 @@ def daily_fortune_api(request):
         # 통계용 로그 저장
         if request.user.is_authenticated:
             from .models import DailyFortuneLog
-             DailyFortuneLog.objects.create(
+            DailyFortuneLog.objects.create(
                 user=request.user,
                 target_date=target_dt.date()
             )
