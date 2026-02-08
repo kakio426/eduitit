@@ -491,7 +491,27 @@
                 body: JSON.stringify(data)
             });
 
-            const result = await response.json();
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            let result;
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonErr) {
+                    console.error("[Mobile Debug] Calculate JSON Parse Error:", jsonErr);
+                    throw new Error('계산 데이터를 읽는 중 오류가 발생했습니다.');
+                }
+            } else {
+                const errorBody = await response.text();
+                console.error("[Mobile Debug] Calculate Non-JSON Response:", {
+                    status: response.status,
+                    contentType: contentType,
+                    preview: errorBody.substring(0, 300),
+                    userAgent: navigator.userAgent
+                });
+                throw new Error(`서버 응답 오류가 발생했습니다. (${response.status})`);
+            }
 
             if (!response.ok || !result.success) {
                 throw new Error(result.error || '계산에 실패했습니다.');
@@ -686,7 +706,32 @@
                 })
             });
 
-            const result = await response.json();
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            let result;
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonErr) {
+                    console.error("[Mobile Debug] Analyze JSON Parse Error:", jsonErr);
+                    throw new Error('분석 데이터를 읽는 중 오류가 발생했습니다.');
+                }
+            } else {
+                const errorBody = await response.text();
+                console.error("[Mobile Debug] Analyze Non-JSON Response:", {
+                    status: response.status,
+                    contentType: contentType,
+                    preview: errorBody.substring(0, 300),
+                    userAgent: navigator.userAgent
+                });
+
+                if (response.status === 429) {
+                    throw new Error('일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!');
+                } else {
+                    throw new Error(`분석 중 오류가 발생했습니다. (${response.status})`);
+                }
+            }
 
             if (!result.success) throw new Error(result.error);
 

@@ -2595,7 +2595,35 @@
                 body: formData
             });
 
-            const data = await response.json();
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            let data;
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    console.error("[Mobile Debug] JSON Parse Error:", e);
+                    throw new Error('응답 데이터를 읽는 중 오류가 발생했습니다.');
+                }
+            } else {
+                // JSON이 아닌 경우 (보통 HTML 에러 페이지)
+                const errorBody = await response.text();
+                console.error("[Mobile Debug] Non-JSON Response:", {
+                    status: response.status,
+                    contentType: contentType,
+                    preview: errorBody.substring(0, 300),
+                    userAgent: navigator.userAgent
+                });
+
+                if (response.status === 429) {
+                    throw new Error('한꺼번에 많은 요청이 들어왔습니다. 잠시 후 다시 시도해주세요.');
+                } else if (response.status >= 500) {
+                    throw new Error('서버에 문제가 발생했습니다. 관리자에게 문의해주세요.');
+                } else {
+                    throw new Error(`알 수 없는 응답 형식입니다. (${response.status})`);
+                }
+            }
 
             // 성공 시 카운트 증가 (개인 API 키 없을 때만)
             if (response.ok && data.success && !hasPersonalApiKey) {
@@ -3288,7 +3316,35 @@
                 })
             });
 
-            const data = await response.json();
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            let data;
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (jsonErr) {
+                    console.error("[Mobile Debug] Daily Fortune JSON Parse Error:", jsonErr);
+                    throw new Error('오늘의 운세 데이터를 읽는 중 오류가 발생했습니다.');
+                }
+            } else {
+                const errorBody = await response.text();
+                console.error("[Mobile Debug] Daily Fortune Non-JSON Response:", {
+                    status: response.status,
+                    contentType: contentType,
+                    preview: errorBody.substring(0, 300),
+                    userAgent: navigator.userAgent
+                });
+
+                if (response.status === 429) {
+                    throw new Error('한꺼번에 많은 요청이 들어왔습니다. 잠시 후 다시 시도해주세요.');
+                } else if (response.status >= 500) {
+                    throw new Error('서버에 문제가 발생했습니다. 관리자에게 문의해주세요.');
+                } else {
+                    throw new Error(`알 수 없는 응답 형식입니다. (${response.status})`);
+                }
+            }
+
 
             // 진행 바 완료 처리
             clearInterval(progressInterval);
@@ -3489,6 +3545,13 @@
                 })
             });
 
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn("[Mobile Debug] Auto-save Non-JSON Response", response.status);
+                return; // Auto-save failure is silent but logged
+            }
+
             const data = await response.json();
             if (data.success) {
                 window.currentSajuState.savedId = data.result_id;
@@ -3555,7 +3618,18 @@
                 })
             });
 
-            const data = await response.json();
+            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
+            const contentType = response.headers.get('content-type');
+            let data;
+
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const errorText = await response.text();
+                console.error("[Mobile Debug] Save Library Non-JSON Response:", errorText.substring(0, 200));
+                throw new Error('서버와 통신 중 문제가 발생했습니다. (JSON 형식 아님)');
+            }
+
             if (data.success) {
                 savedResultId = data.result_id; // 저장된 ID 저장
                 showToast('보관함에 저장되었습니다! 🎁');
