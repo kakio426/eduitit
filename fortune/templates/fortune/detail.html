@@ -192,6 +192,22 @@
         margin: 1.5rem 0;
     }
 
+    /* Capture styles for html2canvas */
+    .capture-active {
+        width: 800px !important;
+        margin: 0 auto !important;
+        background-color: #F8FAF6 !important;
+        padding: 20px 40px !important;
+    }
+
+    .capture-active .no-print {
+        display: none !important;
+    }
+
+    .capture-active #markdown-output {
+        columns: 1 !important;
+    }
+
     @media print {
         .no-print {
             display: none;
@@ -220,6 +236,8 @@
         <span class="text-gray-400">{{ item.created_at|date:"Y.m.d H:i" }} 분석</span>
     </div>
 
+    <!-- 캡처 영역 -->
+    <div id="capture-area">
     <!-- 1. 헤더 카드 (일간 이미지 & 타이틀) -->
     <div class="clay-card p-10 text-center relative overflow-hidden mb-8" data-aos="fade-up">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-400 to-indigo-500"></div>
@@ -311,6 +329,7 @@
         <div id="markdown-output" class="prose prose-slate max-w-none md:columns-2 md:gap-10">
         </div>
     </div>
+    </div><!-- /capture-area -->
 
     <!-- 4. 공유 액션 카드 -->
     <div class="clay-card p-8 bg-white/50 border border-white/60 text-center mt-8 no-print" data-aos="fade-up">
@@ -326,9 +345,9 @@
                 class="px-8 py-4 bg-white text-gray-600 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay border border-gray-100 text-lg">
                 <i class="fa-solid fa-link"></i> 링크 복사
             </button>
-            <button onclick="window.print()"
-                class="px-8 py-4 bg-slate-100 text-gray-600 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay border border-gray-100 text-lg">
-                <i class="fa-solid fa-print"></i> 인쇄하기
+            <button onclick="saveAsImage()"
+                class="px-8 py-4 bg-rose-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
+                <i class="fa-solid fa-image"></i> 이미지 저장
             </button>
             <a href="{% url 'fortune:saju' %}"
                 class="px-8 py-4 bg-purple-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
@@ -348,6 +367,7 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <!-- 카카오 SDK -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
 
@@ -518,6 +538,67 @@
         } catch (e) {
             alert('삭제 중 오류가 발생했습니다.');
         }
+    }
+
+    // 이미지 저장
+    function saveAsImage() {
+        const captureArea = document.getElementById('capture-area');
+        if (!captureArea) {
+            alert('저장할 결과가 없습니다.');
+            return;
+        }
+
+        captureArea.classList.add('capture-active');
+        alert('이미지를 생성하고 있습니다. 잠시만 기다려주세요.');
+
+        const options = {
+            backgroundColor: '#F8FAF6',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            windowWidth: 800,
+            onclone: (clonedDoc) => {
+                const clonedArea = clonedDoc.getElementById('capture-area');
+                if (clonedArea) {
+                    clonedArea.style.width = '800px';
+                    clonedArea.style.padding = '40px';
+                    clonedArea.style.borderRadius = '0';
+                    clonedArea.style.transform = 'none';
+                    clonedArea.style.backgroundColor = '#F8FAF6';
+
+                    const noPrint = clonedDoc.querySelectorAll('.no-print');
+                    noPrint.forEach(el => el.style.display = 'none');
+
+                    const blurred = clonedDoc.querySelectorAll('.backdrop-blur-sm, .backdrop-blur-md');
+                    blurred.forEach(el => {
+                        el.style.backdropFilter = 'none';
+                        el.style.webkitBackdropFilter = 'none';
+                        el.style.backgroundColor = 'white';
+                    });
+
+                    // 마크다운 영역 단일 컬럼으로 변경
+                    const mdOutput = clonedDoc.getElementById('markdown-output');
+                    if (mdOutput) {
+                        mdOutput.style.columns = '1';
+                    }
+                }
+            }
+        };
+
+        html2canvas(captureArea, options).then(canvas => {
+            captureArea.classList.remove('capture-active');
+
+            const link = document.createElement('a');
+            const name = "{{ item.user.first_name|default:item.user.username|default:'사주결과' }}";
+            link.download = `${name}_사주분석리포트_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            captureArea.classList.remove('capture-active');
+            alert('이미지 저장 중 오류가 발생했습니다.');
+        });
     }
 
     // AOS 초기화 (애니메이션)
