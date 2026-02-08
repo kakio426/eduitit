@@ -160,9 +160,6 @@ def get_chart_context(data):
         hour = data['birth_hour'] if data['birth_hour'] is not None else 12 # Default noon
         minute = data['birth_minute'] if data['birth_minute'] is not None else 0
         
-        # Assume Solar input for now. 
-        # TODO: Handle Lunar input if calendar_type is 'lunar' using manse.lunar_to_solar
-        
         # User timezone assumption: KST (Asia/Seoul)
         tz = pytz.timezone('Asia/Seoul')
         dt = datetime(year, month, day, hour, minute, tzinfo=tz)
@@ -171,6 +168,17 @@ def get_chart_context(data):
     except Exception as e:
         logger.error(f"Error calculating pillars: {e}")
         return None
+
+def serialize_chart_context(chart_context):
+    """DB 객체(Stem, Branch)가 포함된 context를 JSON 직렬화 가능한 형태로 변환"""
+    if not chart_context:
+        return None
+    return {
+        k: {
+            'stem': str(v['stem']),
+            'branch': str(v['branch'])
+        } for k, v in chart_context.items()
+    }
 
 
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
@@ -201,15 +209,17 @@ def saju_view(request):
             logger.info(f"User Input: {data}")
             logger.info(f"Calculated Chart: {chart_context}")
             
-            # [SERVER CACHE] 중복 분석 방지: 동일 명식/모드 결과 존재 여부 확인
+            # [SERVER CACHE] 중복 분석 방지
             from .models import FortuneResult
             existing_result = None
-            if request.user.is_authenticated:
-                # 동일 사용자, 동일 모드, 동일 사주 명식(JSON)을 가진 최근 결과 조회
+            # JSONField 필터를 위해 객체를 문자열로 직렬화
+            serialized_chart = serialize_chart_context(chart_context)
+            
+            if request.user.is_authenticated and serialized_chart:
                 existing_result = FortuneResult.objects.filter(
                     user=request.user,
                     mode=mode,
-                    natal_chart=chart_context
+                    natal_chart=serialized_chart
                 ).order_by('-created_at').first()
 
             prompt = get_prompt(mode, data, chart_context=chart_context)
@@ -344,11 +354,14 @@ def saju_api_view(request):
         # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
         from .models import FortuneResult
         existing_result = None
-        if request.user.is_authenticated:
+        # JSONField 필터를 위해 객체를 문자열로 직렬화
+        serialized_chart = serialize_chart_context(chart_context)
+
+        if request.user.is_authenticated and serialized_chart:
             existing_result = FortuneResult.objects.filter(
                 user=request.user,
                 mode=mode,
-                natal_chart=chart_context
+                natal_chart=serialized_chart
             ).order_by('-created_at').first()
 
         prompt = get_prompt(mode, data, chart_context=chart_context)
