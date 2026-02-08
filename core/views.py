@@ -10,9 +10,6 @@ from django.db.models import Count
 from PIL import Image
 
 def home(request):
-    from products.models import Product
-    from core.models import Post
-    
     # Order by display_order first, then by creation date
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
 
@@ -33,8 +30,7 @@ def home(request):
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
         # Ensure profile exists to prevent 500 errors for legacy users
-        if not hasattr(request.user, 'userprofile'):
-            UserProfile.objects.create(user=request.user)
+        UserProfile.objects.get_or_create(user=request.user)
 
         from django.db.models import Q
         # Get IDs of products explicitly owned by the user
@@ -45,7 +41,6 @@ def home(request):
         ).exclude(
             Q(title__icontains="인사이트") | Q(title__icontains="사주")
         ).distinct()
-
 
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,

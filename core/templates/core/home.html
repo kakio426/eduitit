@@ -97,7 +97,7 @@
 
             <!-- 2. Dynamic Product Cards -->
             {% for product in products %}
-            {% if product.id != featured_product.id %}
+            {% if not featured_product or product.id != featured_product.id %}
             {% include 'core/includes/card_product.html' with product=product delay='200' %}
             {% endif %}
             {% endfor %}
