@@ -308,8 +308,7 @@
 
     <!-- 3. AI 분석 내용 -->
     <div class="clay-card p-8 md:p-12 bg-white analysis-content" data-aos="fade-up">
-        <div id="markdown-output" class="prose prose-slate max-w-none">
-            {{ item.result_text }}
+        <div id="markdown-output" class="prose prose-slate max-w-none md:columns-2 md:gap-10">
         </div>
     </div>
 
@@ -422,36 +421,21 @@
         if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
     }
 
-    // Render Markdown with proper settings
+    // Render Markdown (saju_form.html과 동일한 방식)
     const outputArea = document.getElementById('markdown-output');
-    const rawText = outputArea.innerText || outputArea.textContent;
+    const rawMarkdown = "{{ item.result_text|escapejs }}";
 
-    // Configure marked for better formatting
-    marked.setOptions({
-        breaks: true,        // 줄바꿈 인식
-        gfm: true,          // GitHub Flavored Markdown
-        headerIds: false,
-        mangle: false
-    });
+    marked.setOptions({ breaks: true, gfm: true });
 
-    // Pre-process text to ensure headers and lists are on new lines
-    // 1. Ensure headers (##) have newlines before them
-    rawText = rawText.replace(/(#{1,6}\s)/g, '\n\n$1');
-
-    // 2. Ensure numbered lists (1. , 2. ) have newlines before them if they are following text
-    // We look for "number. space" that is NOT at the start of the string
-    rawText = rawText.replace(/([^\n])\s+(\d+\.\s)/g, '$1\n\n$2');
-
-    // 3. Ensure bullet points (- ) have newlines
-    rawText = rawText.replace(/([^\n])\s+(-\s)/g, '$1\n\n$2');
-
-    // Parse and sanitize
     try {
-        const parsedMarkdown = marked.parse(rawText);
-        outputArea.innerHTML = DOMPurify.sanitize(parsedMarkdown);
+        const htmlContent = DOMPurify.sanitize(marked.parse(rawMarkdown));
+        outputArea.innerHTML = htmlContent;
+        if (typeof groupMarkdownSections === 'function') {
+            groupMarkdownSections();
+        }
     } catch (e) {
         console.error("Markdown rendering failed:", e);
-        outputArea.innerHTML = rawText.replace(/\n/g, '<br>');
+        outputArea.innerHTML = rawMarkdown.replace(/\n/g, '<br>');
     }
 
     // 카카오 SDK 초기화
