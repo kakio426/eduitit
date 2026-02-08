@@ -306,9 +306,75 @@ DB에서 `FortuneResult`를 삭제해도 브라우저 `localStorage`의 사주 �
 
 > **사례**: 프롬프트를 개선했는데 캐시된 옛 결과만 계속 표시됨. 보관함 삭제 시 localStorage 캐시도 함께 삭제하도록 수정.
 
+### 12. AI 프롬프트에서 "제목 쓰지 마세요" 지시는 `## ` 헤더까지 생략시킴
+
+프롬프트에 "별도 제목은 쓰지 마세요"라고 쓰면 AI가 출력 템플릿의 `## ` 섹션 헤더까지 모두 생략한다. 서론만 금지하고 싶으면 명확히 분리해야 함.
+
+```
+# ❌ AI가 ## 헤더를 모두 생략 → 결과 글에 중간 제목 없음
+서론이나 별도 제목은 쓰지 마세요.
+
+# ✅ 서론만 금지, 섹션 헤더는 필수로 지시
+서론을 쓰지 마세요. 각 섹션은 반드시 아래 출력 템플릿의 `## ` 제목을 그대로 포함하세요.
+```
+
+> **사례 (2026-02-08)**: 일반사주 결과에 핵심 요약, 원국 분석, 기질/성격 등 중간 제목이 전혀 표시되지 않음. "별도 제목은 쓰지 마세요" 지시가 원인.
+
+### 13. JS `element.className = ...` 전체 교체 시 레이아웃 클래스 유실
+
+`className`을 통째로 교체하면 원래 HTML에 있던 `inline-flex`, `items-center`, `gap-1` 등 레이아웃 클래스가 사라진다. `classList.add/remove`를 쓰거나, 전체 교체 시 레이아웃 클래스를 반드시 포함해야 함.
+
+```javascript
+// ❌ 레이아웃 클래스 유실 → 텍스트 중앙 정렬 깨짐
+badge.className = `text-sm py-1 px-3 rounded-full ${colorClass}`;
+
+// ✅ 레이아웃 클래스 포함
+badge.className = `inline-flex items-center justify-center gap-1 text-sm py-1 px-3 rounded-full ${colorClass}`;
+```
+
+> **사례 (2026-02-08)**: 신금(辛金) 배지 텍스트가 중앙 정렬되지 않음. JS에서 `badge.className`을 교체하면서 `items-center`, `gap-1` 등이 빠진 것이 원인.
+
+### 14. Django Admin N+1 쿼리 — 새 모델 추가 시 반드시 체크
+
+`ModelAdmin`에서 `list_display`에 FK 필드나 `.count()` 메서드를 넣으면 행마다 쿼리가 발생한다.
+
+```python
+# ❌ list_display에 FK 필드 → 행마다 SELECT
+list_display = ['user', 'product', 'created_at']
+# 결과: N+1 쿼리 (100행이면 200+ 쿼리)
+
+# ✅ get_queryset에 select_related 추가
+def get_queryset(self, request):
+    return super().get_queryset(request).select_related('user', 'product')
+```
+
+```python
+# ❌ .count() 메서드 → 행마다 COUNT 쿼리
+def like_count(self, obj):
+    return obj.likes.count()
+
+# ✅ annotate로 단일 쿼리 집계 + admin_order_field로 정렬 지원
+def get_queryset(self, request):
+    return super().get_queryset(request).annotate(
+        _like_count=Count('likes', distinct=True)
+    )
+
+def like_count_display(self, obj):
+    return obj._like_count
+like_count_display.admin_order_field = '_like_count'
+```
+
+**새 앱/모델 추가 시 체크리스트**:
+- [ ] `list_display`에 FK 필드가 있으면 → `get_queryset`에 `select_related` 추가
+- [ ] `list_display`에 `.count()` 메서드가 있으면 → `annotate` + `_display` 메서드로 교체
+- [ ] User FK에는 `raw_id_fields` 사용 (드롭다운 대신 ID 입력)
+- [ ] 규칙 4번 주의: `author__userprofile` 같은 선택적 관계는 `select_related` 금지
+
+> **사례 (2026-02-08)**: 10개 앱의 admin에 select_related/annotate 일괄 적용. Fortune 앱 11개 모델 신규 등록 시에도 동일 패턴 적용.
+
 ### 관련 파일
 - `fortune/prompts.py` - AI 프롬프트 (원본: `prompts_backup.py`)
-- `fortune/templates/fortune/detail.html` - 보관함 상세 (마크다운 렌더링)
+- `fortune/templates/fortune/detail.html` - 보관함 상세 (마크다운 렌더링, 이미지 저장)
 - `fortune/templates/fortune/history.html` - 보관함 목록 (삭제 + 캐시)
 - `fortune/templates/fortune/saju_form.html` - 사주 입력/결과 화면
 
