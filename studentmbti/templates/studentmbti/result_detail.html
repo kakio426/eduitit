@@ -3,165 +3,526 @@
 
 {% block extra_css %}
 <style>
-    .result-card {
-        background: linear-gradient(135deg, var(--bg-color) 0%, white 100%);
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
+    :root {
+        --bg-color: {{ theme.bg }};
+        --primary-color: {{ theme.primary }};
+        --accent-color: {{ theme.accent }};
     }
 
-    .animal-header {
+    .detail-page {
+        background: #f5f5f5;
+    }
+
+    /* 학생 프로필 헤더 */
+    .student-header {
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-        padding: 2rem;
-        text-align: center;
+        border-radius: 20px;
+        padding: 1.5rem;
         color: white;
-        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     }
 
-    .animal-img-mini {
-        width: 120px;
-        height: 120px;
-        margin: 0 auto 1rem;
+    .student-header .animal-thumb {
+        width: 80px;
+        height: 80px;
         background: white;
-        border-radius: 30px;
-        padding: 8px;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 20px;
+        padding: 6px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
-    .animal-img {
+    .student-header .animal-thumb img {
         width: 100%;
         height: 100%;
         object-fit: contain;
     }
 
-    .animal-emoji {
-        font-size: 4rem;
-        display: block;
-        margin-bottom: 0.5rem;
+    .student-header .animal-emoji-sm {
+        font-size: 2.5rem;
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 20px;
+        flex-shrink: 0;
     }
 
-    .section-card {
+    .student-header .info h1 {
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
+
+    .student-header .info .one-line {
+        font-size: 0.8rem;
+        opacity: 0.85;
+        margin-top: 0.25rem;
+    }
+
+    .student-header .info .meta {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 0.5rem;
+    }
+
+    /* 탭 시스템 */
+    .tab-container {
+        display: flex;
+        gap: 0.25rem;
+        background: #e5e7eb;
+        border-radius: 14px;
+        padding: 4px;
+        margin-top: 1.25rem;
+    }
+
+    .tab-btn {
+        flex: 1;
+        padding: 0.65rem 0.5rem;
+        border-radius: 11px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+    }
+
+    .tab-btn.active {
+        background: white;
+        color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* 학생 정보 카드 */
+    .student-card {
         background: white;
         border-radius: 16px;
         padding: 1.25rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        margin-bottom: 0.75rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.04);
     }
 
-    .section-title {
-        font-size: 1rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
+    .student-card .card-header {
         display: flex;
         align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .student-card .card-header .icon-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .student-card .card-header h3 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .student-card .card-text {
+        font-size: 0.85rem;
+        line-height: 1.75;
+        color: #4a4a4a;
+        word-break: keep-all;
+    }
+
+    /* 교사 상담 가이드 섹션 */
+    .guide-section {
+        background: white;
+        border-radius: 16px;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .guide-header {
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .guide-header:hover {
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .guide-header .badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .guide-header h4 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        flex: 1;
+    }
+
+    .guide-header .chevron {
+        transition: transform 0.3s;
+        color: #9ca3af;
+        font-size: 0.8rem;
+    }
+
+    .guide-header .chevron.open {
+        transform: rotate(180deg);
+    }
+
+    .guide-body {
+        padding: 0 1.25rem 1.25rem;
+    }
+
+    .guide-item {
+        display: flex;
+        gap: 0.6rem;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.84rem;
+        line-height: 1.7;
+        color: #374151;
+        word-break: keep-all;
+    }
+
+    .guide-item:last-child {
+        border-bottom: none;
+    }
+
+    .guide-item .bullet {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 0.55rem;
+    }
+
+    /* 색상별 가이드 */
+    .guide-strategy .guide-header { border-left: 4px solid #f59e0b; }
+    .guide-strategy .badge { background: #fef3c7; color: #92400e; }
+    .guide-strategy .bullet { background: #f59e0b; }
+
+    .guide-caution .guide-header { border-left: 4px solid #ef4444; }
+    .guide-caution .badge { background: #fee2e2; color: #991b1b; }
+    .guide-caution .bullet { background: #ef4444; }
+
+    .guide-classroom .guide-header { border-left: 4px solid #3b82f6; }
+    .guide-classroom .badge { background: #dbeafe; color: #1e40af; }
+    .guide-classroom .bullet { background: #3b82f6; }
+
+    /* 응답 내역 */
+    .response-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
         gap: 0.5rem;
     }
 
-    .teacher-section {
-        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-        border: 2px solid #F59E0B;
+    @media (max-width: 480px) {
+        .response-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .response-item {
+        background: #f9fafb;
+        border-radius: 10px;
+        padding: 0.6rem;
+        text-align: center;
+    }
+
+    .response-item .q-label {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+
+    .response-item .q-answer {
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-top: 0.15rem;
+    }
+
+    .response-item .q-answer.answer-a {
+        color: var(--primary-color);
+    }
+
+    .response-item .q-answer.answer-b {
+        color: var(--accent-color);
+    }
+
+    /* 모토 배너 */
+    .motto-banner {
+        background: linear-gradient(135deg, var(--bg-color) 0%, white 100%);
+        border: 2px solid var(--primary-color);
+        border-radius: 14px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .motto-banner p {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        font-style: italic;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50"
+<section class="pt-32 pb-20 px-4 min-h-screen detail-page"
     style="--bg-color: {{ theme.bg }}; --primary-color: {{ theme.primary }}; --accent-color: {{ theme.accent }};">
     <div class="max-w-2xl mx-auto">
+
         <!-- 상단 네비게이션 -->
-        <div class="mb-6 flex items-center justify-between">
+        <div class="mb-4 flex items-center justify-between">
             <a href="{% url 'studentmbti:session_detail' result.session.id %}"
-                class="text-purple-600 hover:text-purple-800 font-bold flex items-center gap-1">
+                class="text-gray-600 hover:text-gray-800 font-bold flex items-center gap-1 text-sm">
                 <i class="fa-solid fa-arrow-left"></i>
                 세션으로 돌아가기
             </a>
-            <span class="text-2xl">{{ service.icon|default:"🎓" }}</span>
+            <span class="text-sm text-gray-400">{{ result.created_at|date:"Y-m-d H:i" }}</span>
         </div>
 
-        <div class="result-card" data-aos="zoom-in">
-            <!-- 동물 헤더 -->
-            <div class="animal-header">
-                {% if mbti_data.animal_image %}
-                <div class="animal-img-mini">
-                    <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
-                        alt="{{ result.animal_name }}" class="animal-img">
-                </div>
-                {% else %}
-                <span class="animal-emoji">{{ mbti_data.emoji }}</span>
-                {% endif %}
-                <h1 class="text-xl font-bold mb-1">{{ result.student_name }} 학생</h1>
-                <h2 class="text-2xl md:text-3xl font-bold">{{ result.animal_name }}</h2>
-                <p class="text-sm opacity-80 mt-2">검사 시간: {{ result.created_at|date:"Y-m-d H:i" }}</p>
+        <!-- 학생 프로필 헤더 -->
+        <div class="student-header" data-aos="fade-down">
+            {% if mbti_data.animal_image %}
+            <div class="animal-thumb">
+                <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
+                    alt="{{ result.animal_name }}">
             </div>
-
-            <!-- 내용 -->
-            <div class="p-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- 학생 정보 -->
-                    <div class="section-card">
-                        <h3 class="section-title">📚 학교생활 특징</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.school_life_traits }}</p>
-                    </div>
-
-                    <div class="section-card">
-                        <h3 class="section-title">💪 나의 강점</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.strengths }}</p>
-                    </div>
-
-                    <div class="section-card">
-                        <h3 class="section-title">🌱 성장 포인트</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">{{ mbti_data.growth_points }}</p>
-                    </div>
-                </div>
-
-                <!-- 교사용 상담 가이드 (펼쳐진 상태) -->
-                <div class="section-card teacher-section mt-4">
-                    <h3 class="section-title text-amber-700">
-                        👨‍🏫 선생님 상담 가이드
-                    </h3>
-                    <div class="space-y-4 mt-4">
-                        <div class="bg-white/60 p-4 rounded-xl border border-amber-200 shadow-sm">
-                            <h4 class="font-bold text-amber-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-lightbulb"></i> 상담 전략
-                            </h4>
-                            <p class="text-amber-900 text-sm leading-relaxed break-keep">
-                                {{mbti_data.counseling_tips|linebreaksbr }}</p>
-                        </div>
-                        <div class="bg-white/60 p-4 rounded-xl border border-red-100 shadow-sm">
-                            <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-triangle-exclamation"></i> 주의사항
-                            </h4>
-                            <p class="text-red-900 text-sm leading-relaxed break-keep">
-                                {{mbti_data.cautions|linebreaksbr}}</p>
-                        </div>
-                        <div class="bg-white/60 p-4 rounded-xl border border-blue-100 shadow-sm">
-                            <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-bullseye"></i> 학급경영 팁
-                            </h4>
-                            <p class="text-blue-900 text-sm leading-relaxed break-keep">
-                                {{mbti_data.classroom_management|linebreaksbr }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 응답 내역 -->
-                {% if result.answers_json %}
-                <details class="mt-4">
-                    <summary class="cursor-pointer text-gray-500 hover:text-gray-700 text-sm font-bold">
-                        <i class="fa-solid fa-list-check mr-2"></i>응답 내역 보기
-                    </summary>
-                    <div class="mt-3 bg-gray-50 rounded-xl p-4 text-sm">
-                        {% for key, value in result.answers_json.items %}
-                        <div class="flex justify-between py-1 border-b border-gray-100 last:border-0">
-                            <span class="text-gray-500">{{ key }}</span>
-                            <span class="font-bold">{% if value == 0 %}A{% else %}B{% endif %}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </details>
-                {% endif %}
+            {% else %}
+            <div class="animal-emoji-sm">{{ mbti_data.emoji }}</div>
+            {% endif %}
+            <div class="info">
+                <h1>{{ result.student_name }} <span class="font-normal opacity-80">학생</span></h1>
+                <p class="text-lg font-bold">{{ result.animal_name }} ({{ result.mbti_type }})</p>
+                <p class="one-line">{{ mbti_data.one_line }}</p>
             </div>
         </div>
+
+        <!-- 탭 네비게이션 -->
+        <div class="tab-container" data-aos="fade-up" data-aos-delay="100">
+            <button class="tab-btn active" onclick="switchTab('student')">
+                <i class="fa-solid fa-user mr-1"></i>학생 정보
+            </button>
+            <button class="tab-btn" onclick="switchTab('counseling')">
+                <i class="fa-solid fa-user-tie mr-1"></i>상담 가이드
+            </button>
+            <button class="tab-btn" onclick="switchTab('response')">
+                <i class="fa-solid fa-list-check mr-1"></i>응답 내역
+            </button>
+        </div>
+
+        <!-- 탭 1: 학생 정보 -->
+        <div id="tab-student" class="tab-content active mt-4" data-aos="fade-up" data-aos-delay="200">
+
+            <!-- 모토 -->
+            <div class="motto-banner">
+                <p>{{ mbti_data.motto }}</p>
+            </div>
+
+            <!-- 학교생활 특징 -->
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: {{ theme.bg }};">📚</div>
+                    <h3>학교생활 특징</h3>
+                </div>
+                <p class="card-text">{{ mbti_data.school_life_traits }}</p>
+            </div>
+
+            <!-- 나의 강점 -->
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #FEF3C7;">💪</div>
+                    <h3>나의 강점</h3>
+                </div>
+                <p class="card-text">{{ mbti_data.strengths }}</p>
+            </div>
+
+            <!-- 성장 포인트 -->
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #DCFCE7;">🌱</div>
+                    <h3>성장 포인트</h3>
+                </div>
+                <p class="card-text">{{ mbti_data.growth_points }}</p>
+            </div>
+
+            <!-- 공부 꿀팁 -->
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #EFF6FF;">📝</div>
+                    <h3>맞춤 공부법</h3>
+                </div>
+                <p class="card-text">{{ mbti_data.study_tip }}</p>
+            </div>
+
+            <!-- 친구 관계 -->
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #FFF7ED;">🤝</div>
+                    <h3>친구 관계 가이드</h3>
+                </div>
+                <p class="card-text">{{ mbti_data.friendship_tip }}</p>
+            </div>
+        </div>
+
+        <!-- 탭 2: 상담 가이드 -->
+        <div id="tab-counseling" class="tab-content mt-4">
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-start gap-2">
+                <i class="fa-solid fa-lock text-amber-500 mt-0.5"></i>
+                <p class="text-xs text-amber-700 leading-relaxed">이 섹션은 교사 전용 상담 가이드입니다. 학생에게는 표시되지 않습니다.</p>
+            </div>
+
+            <!-- 상담 전략 -->
+            <div class="guide-section guide-strategy" x-data="{ open: true }">
+                <div class="guide-header" @click="open = !open">
+                    <div class="badge"><i class="fa-solid fa-lightbulb"></i></div>
+                    <h4 class="text-amber-800">상담 전략</h4>
+                    <i class="fa-solid fa-chevron-down chevron" :class="{ 'open': open }"></i>
+                </div>
+                <div class="guide-body" x-show="open" x-transition>
+                    {% for tip in mbti_data.counseling_tips.splitlines %}
+                    {% if tip.strip %}
+                    <div class="guide-item">
+                        <div class="bullet"></div>
+                        <span>{{ tip|cut:"- " }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 주의사항 -->
+            <div class="guide-section guide-caution" x-data="{ open: true }">
+                <div class="guide-header" @click="open = !open">
+                    <div class="badge"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h4 class="text-red-800">주의사항</h4>
+                    <i class="fa-solid fa-chevron-down chevron" :class="{ 'open': open }"></i>
+                </div>
+                <div class="guide-body" x-show="open" x-transition>
+                    {% for caution in mbti_data.cautions.splitlines %}
+                    {% if caution.strip %}
+                    <div class="guide-item">
+                        <div class="bullet"></div>
+                        <span>{{ caution|cut:"- " }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 학급경영 팁 -->
+            <div class="guide-section guide-classroom" x-data="{ open: true }">
+                <div class="guide-header" @click="open = !open">
+                    <div class="badge"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <h4 class="text-blue-800">학급경영 팁</h4>
+                    <i class="fa-solid fa-chevron-down chevron" :class="{ 'open': open }"></i>
+                </div>
+                <div class="guide-body" x-show="open" x-transition>
+                    {% for tip in mbti_data.classroom_management.splitlines %}
+                    {% if tip.strip %}
+                    <div class="guide-item">
+                        <div class="bullet"></div>
+                        <span>{{ tip|cut:"- " }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 3: 응답 내역 -->
+        <div id="tab-response" class="tab-content mt-4">
+            {% if result.answers_json %}
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #F3F4F6;"><i class="fa-solid fa-clipboard-list text-gray-500 text-sm"></i></div>
+                    <h3>질문별 응답</h3>
+                </div>
+                <div class="response-grid mt-2">
+                    {% for key, value in result.answers_json.items %}
+                    <div class="response-item">
+                        <div class="q-label">{{ key|upper }}</div>
+                        <div class="q-answer {% if value == 0 %}answer-a{% else %}answer-b{% endif %}">
+                            {% if value == 0 %}A{% else %}B{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="student-card">
+                <div class="card-header">
+                    <div class="icon-circle" style="background: #F3F4F6;"><i class="fa-solid fa-chart-bar text-gray-500 text-sm"></i></div>
+                    <h3>차원별 분석</h3>
+                </div>
+                <div class="space-y-3 mt-2">
+                    {% for letter in result.mbti_type %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-bold w-6 text-center" style="color: var(--primary-color);">{{ letter }}</span>
+                        <div class="flex-1 bg-gray-100 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full" style="background: var(--primary-color); width: 66%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-xs text-gray-400 mt-3">* 12개 질문(차원별 3문항)에 기반한 결과입니다.</p>
+            </div>
+            {% else %}
+            <div class="student-card text-center py-8">
+                <i class="fa-solid fa-file-circle-question text-3xl text-gray-300 mb-3"></i>
+                <p class="text-gray-400 text-sm">응답 데이터가 없습니다.</p>
+            </div>
+            {% endif %}
+        </div>
+
     </div>
 </section>
+
+<script>
+    function switchTab(tabName) {
+        // 모든 탭 버튼 비활성화
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        // 모든 탭 콘텐츠 숨기기
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // 선택된 탭 활성화
+        const tabs = ['student', 'counseling', 'response'];
+        const index = tabs.indexOf(tabName);
+        document.querySelectorAll('.tab-btn')[index].classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+</script>
 {% endblock %}

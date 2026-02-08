@@ -3,35 +3,66 @@
 
 {% block extra_head %}
 <meta property="og:title" content="{{ result.student_name }}의 학교생활 MBTI - {{ result.animal_name }}" />
-<meta property="og:description" content="{{ mbti_data.school_life_traits|truncatewords:20 }}" />
+<meta property="og:description" content="{{ mbti_data.one_line }}" />
 {% endblock %}
 
 {% block extra_css %}
 <style>
-    .result-card {
-        background: linear-gradient(135deg, var(--bg-color) 0%, white 100%);
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
+    :root {
+        --bg-color: {{ theme.bg }};
+        --primary-color: {{ theme.primary }};
+        --accent-color: {{ theme.accent }};
     }
 
-    .animal-header {
+    .result-page {
+        background: linear-gradient(180deg, var(--bg-color) 0%, #f8f9fa 40%, white 100%);
+    }
+
+    .hero-section {
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-        padding: 2.5rem 2rem;
+        border-radius: 0 0 40px 40px;
+        padding: 3rem 1.5rem 2.5rem;
         text-align: center;
         color: white;
         position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        animation: shimmer 6s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { transform: translate(0, 0); }
+        50% { transform: translate(10%, 10%); }
     }
 
     .animal-img-container {
-        width: 180px;
-        height: 180px;
+        width: 160px;
+        height: 160px;
         margin: 0 auto 1.5rem;
         background: white;
-        border-radius: 40px;
-        padding: 10px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        border-radius: 36px;
+        padding: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         animation: float 4s ease-in-out infinite;
+        position: relative;
+        z-index: 1;
+    }
+
+    @media (min-width: 768px) {
+        .animal-img-container {
+            width: 200px;
+            height: 200px;
+            border-radius: 44px;
+        }
     }
 
     .animal-img {
@@ -45,41 +76,105 @@
         display: block;
         margin-bottom: 1rem;
         animation: float 4s ease-in-out infinite;
+        position: relative;
+        z-index: 1;
     }
 
     @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-12px) rotate(2deg); }
+    }
 
-        0%,
-        100% {
-            transform: translateY(0) rotate(0deg);
-        }
+    .one-line-tag {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        padding: 0.4rem 1.2rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        position: relative;
+        z-index: 1;
+    }
 
-        50% {
-            transform: translateY(-15px) rotate(2deg);
+    .content-area {
+        padding: 1.5rem 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    @media (min-width: 768px) {
+        .content-area {
+            padding: 2rem 1.5rem;
         }
     }
 
-    .section-card {
+    .info-card {
         background: white;
-        border-radius: 16px;
+        border-radius: 20px;
         padding: 1.5rem;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        transition: transform 0.2s ease;
     }
 
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: bold;
-        margin-bottom: 0.75rem;
+    .info-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        color: var(--primary-color);
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
     }
 
-    .teacher-section {
-        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-        border: 2px dashed #F59E0B;
+    .card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .card-body {
+        color: #4a4a4a;
+        font-size: 0.9rem;
+        line-height: 1.7;
+        margin-top: 0.75rem;
+        word-break: keep-all;
+    }
+
+    .motto-card {
+        background: linear-gradient(135deg, var(--bg-color) 0%, white 100%);
+        border: 2px solid var(--primary-color);
+        text-align: center;
+        padding: 1.5rem 2rem;
+    }
+
+    .motto-text {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        line-height: 1.6;
+        font-style: italic;
+    }
+
+    .tip-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .share-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        padding: 1rem 0 1.5rem;
     }
 
     .share-btn {
@@ -87,96 +182,166 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: bold;
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 0.9rem;
         transition: all 0.2s;
+        border: none;
+        cursor: pointer;
     }
 
     .share-btn:hover {
         transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .share-kakao {
+        background: #FEE500;
+        color: #3C1E1E;
+    }
+
+    .share-link {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .section-divider {
+        width: 40px;
+        height: 3px;
+        background: var(--primary-color);
+        border-radius: 2px;
+        margin: 0.5rem 0 0.75rem;
+        opacity: 0.6;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="pt-24 pb-20 px-4 min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50"
+<section class="pt-24 pb-16 min-h-screen result-page"
     style="--bg-color: {{ theme.bg }}; --primary-color: {{ theme.primary }}; --accent-color: {{ theme.accent }};">
-    <div class="max-w-xl mx-auto">
 
-        <div class="result-card" data-aos="zoom-in">
-            <!-- 동물 헤더 -->
-            <div class="animal-header">
-                {% if mbti_data.animal_image %}
-                <div class="animal-img-container">
-                    <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
-                        alt="{{ result.animal_name }}" class="animal-img">
-                </div>
-                {% else %}
-                <span class="animal-emoji">{{ mbti_data.emoji }}</span>
-                {% endif %}
-                <h1 class="text-2xl font-bold mb-1">{{ result.student_name }}님은</h1>
-                <h2 class="text-3xl md:text-4xl font-bold">{{ result.animal_name }}</h2>
-            </div>
+    <!-- 히어로 섹션 -->
+    <div class="hero-section" data-aos="fade-down">
+        {% if mbti_data.animal_image %}
+        <div class="animal-img-container">
+            <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
+                alt="{{ result.animal_name }}" class="animal-img">
+        </div>
+        {% else %}
+        <span class="animal-emoji">{{ mbti_data.emoji }}</span>
+        {% endif %}
+        <h1 class="text-xl md:text-2xl font-bold mb-1 relative z-10">{{ result.student_name }}님은</h1>
+        <h2 class="text-3xl md:text-4xl font-extrabold relative z-10">{{ result.animal_name }}</h2>
+        <span class="one-line-tag">{{ mbti_data.one_line }}</span>
+    </div>
 
-            <!-- 내용 -->
-            <div class="p-6">
-                <!-- 학교생활 특징 -->
-                <div class="section-card">
-                    <h3 class="section-title">
-                        📚 학교생활 특징
-                    </h3>
-                    <p class="text-gray-600 leading-relaxed">{{ mbti_data.school_life_traits }}</p>
-                </div>
+    <!-- 콘텐츠 영역 -->
+    <div class="content-area" data-aos="fade-up" data-aos-delay="200">
 
-                <!-- 나의 강점 -->
-                <div class="section-card">
-                    <h3 class="section-title">
-                        💪 나의 강점
-                    </h3>
-                    <p class="text-gray-600 leading-relaxed">{{ mbti_data.strengths }}</p>
-                </div>
-
-                <!-- 성장 포인트 -->
-                <div class="section-card">
-                    <h3 class="section-title">
-                        🌱 성장 포인트
-                    </h3>
-                    <p class="text-gray-600 leading-relaxed">{{ mbti_data.growth_points }}</p>
-                </div>
-
-
-
-                <!-- 공유 버튼 -->
-                <div class="flex flex-wrap gap-3 justify-center mt-6">
-                    <button onclick="shareKakao()" class="share-btn bg-yellow-400 text-yellow-900 hover:bg-yellow-500">
-                        <i class="fa-solid fa-comment"></i>카카오톡 공유
-                    </button>
-                    <button onclick="copyLink()" class="share-btn bg-gray-200 text-gray-700 hover:bg-gray-300">
-                        <i class="fa-solid fa-link"></i>링크 복사
-                    </button>
-                </div>
-
-                {% if is_teacher_view %}
-                <div class="mt-6 text-center">
-                    <a href="{% url 'studentmbti:session_detail' result.session.id %}"
-                        class="text-purple-600 hover:text-purple-800 font-bold">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>세션으로 돌아가기
-                    </a>
-                </div>
-                {% endif %}
-            </div>
+        <!-- 좌우명 카드 -->
+        <div class="info-card motto-card" data-aos="fade-up" data-aos-delay="250">
+            <p class="motto-text">{{ mbti_data.motto }}</p>
         </div>
 
-        <!-- 다시하기 (교사 뷰가 아닐 때만) -->
-        {% if not is_teacher_view %}
-        <div class="text-center mt-6">
-            <a href="{% url 'studentmbti:session_test' result.session.id %}"
+        <!-- 학교생활 특징 -->
+        <div class="info-card" data-aos="fade-up" data-aos-delay="300">
+            <div class="flex items-center gap-3">
+                <div class="card-icon" style="background: {{ theme.bg }};">
+                    <span>📚</span>
+                </div>
+                <div>
+                    <h3 class="card-title">나의 학교생활</h3>
+                    <div class="section-divider"></div>
+                </div>
+            </div>
+            <p class="card-body">{{ mbti_data.school_life_traits }}</p>
+        </div>
+
+        <!-- 나의 강점 -->
+        <div class="info-card" data-aos="fade-up" data-aos-delay="350">
+            <div class="flex items-center gap-3">
+                <div class="card-icon" style="background: #FEF3C7;">
+                    <span>💪</span>
+                </div>
+                <div>
+                    <h3 class="card-title">나의 강점</h3>
+                    <div class="section-divider"></div>
+                </div>
+            </div>
+            <p class="card-body">{{ mbti_data.strengths }}</p>
+        </div>
+
+        <!-- 성장 포인트 -->
+        <div class="info-card" data-aos="fade-up" data-aos-delay="400">
+            <div class="flex items-center gap-3">
+                <div class="card-icon" style="background: #DCFCE7;">
+                    <span>🌱</span>
+                </div>
+                <div>
+                    <h3 class="card-title">성장 포인트</h3>
+                    <div class="section-divider"></div>
+                </div>
+            </div>
+            <p class="card-body">{{ mbti_data.growth_points }}</p>
+        </div>
+
+        <!-- 공부 꿀팁 -->
+        <div class="info-card tip-card" data-aos="fade-up" data-aos-delay="450">
+            <div class="flex items-center gap-3">
+                <div class="card-icon" style="background: white;">
+                    <span>📝</span>
+                </div>
+                <div>
+                    <h3 class="card-title">나에게 맞는 공부법</h3>
+                    <div class="section-divider"></div>
+                </div>
+            </div>
+            <p class="card-body">{{ mbti_data.study_tip }}</p>
+        </div>
+
+        <!-- 친구 관계 팁 -->
+        <div class="info-card tip-card" data-aos="fade-up" data-aos-delay="500">
+            <div class="flex items-center gap-3">
+                <div class="card-icon" style="background: white;">
+                    <span>🤝</span>
+                </div>
+                <div>
+                    <h3 class="card-title">친구 관계 꿀팁</h3>
+                    <div class="section-divider"></div>
+                </div>
+            </div>
+            <p class="card-body">{{ mbti_data.friendship_tip }}</p>
+        </div>
+
+        <!-- 공유 버튼 -->
+        <div class="share-area" data-aos="fade-up" data-aos-delay="550">
+            <button onclick="shareKakao()" class="share-btn share-kakao">
+                <i class="fa-solid fa-comment"></i>카카오톡 공유
+            </button>
+            <button onclick="copyLink()" class="share-btn share-link">
+                <i class="fa-solid fa-link"></i>링크 복사
+            </button>
+        </div>
+
+        {% if is_teacher_view %}
+        <div class="text-center pb-4">
+            <a href="{% url 'studentmbti:session_detail' result.session.id %}"
                 class="text-purple-600 hover:text-purple-800 font-bold">
-                <i class="fa-solid fa-redo mr-2"></i>다시 검사하기
+                <i class="fa-solid fa-arrow-left mr-2"></i>세션으로 돌아가기
             </a>
         </div>
         {% endif %}
     </div>
+
+    <!-- 다시하기 (교사 뷰가 아닐 때만) -->
+    {% if not is_teacher_view %}
+    <div class="text-center pb-6">
+        <a href="{% url 'studentmbti:session_test' result.session.id %}"
+            class="text-purple-600 hover:text-purple-800 font-bold">
+            <i class="fa-solid fa-redo mr-2"></i>다시 검사하기
+        </a>
+    </div>
+    {% endif %}
 </section>
 
 <script>
@@ -192,7 +357,7 @@
                 objectType: 'feed',
                 content: {
                     title: '{{ result.student_name }}님의 학교생활 캐릭터',
-                    description: '나는 {{ result.animal_name }}! 너는 어떤 동물일까?',
+                    description: '나는 {{ result.animal_name }}! {{ mbti_data.one_line }}',
                     imageUrl: 'https://eduitit.site/static/images/eduitit_og.png',
                     link: {
                         mobileWebUrl: window.location.href,
