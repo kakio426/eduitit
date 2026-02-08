@@ -8,4 +8,4 @@ cmds = ["python3 -m pip install -r requirements.txt", "npm ci"]
 cmds = ["python3 manage.py collectstatic --noinput"]
 
 [phases.start]
-cmds = ["python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && python3 manage.py ensure_studentmbti && gunicorn config.wsgi --log-file - --timeout 120"]
+cmds = ["python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && python3 manage.py ensure_studentmbti && python3 manage.py ensure_notebooklm && gunicorn config.wsgi --log-file - --timeout 120"]

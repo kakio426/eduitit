@@ -84,9 +84,12 @@
     <div class="shrink-0 px-5 py-4 md:px-8 md:py-5 border-t border-gray-100">
         {% comment %}Build target URL based on product{% endcomment %}
         <a href="{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '두뇌 풀가동! 교실 체스' %}{% url 'chess:index' %}{% elif product.title == '우리반 캐릭터 친구 찾기' %}{% url 'studentmbti:landing' %}{% elif product.title == 'AI 도구 가이드' %}{% url 'tool_guide' %}{% elif product.title == 'AI 프롬프트 레시피' %}{% url 'prompt_lab' %}{% else %}{% url 'home' %}{% endif %}"
+            {% if product.title=='교사 백과사전' or product.external_url %}target="_blank" rel="noopener noreferrer" {% endif
+            %}
             class="block w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            바로 시작하기
-            <i class="fa-solid fa-circle-play ml-1.5"></i>
+            시작하기
+            <i
+                class="fa-solid fa-{% if product.title == '교사 백과사전' or product.external_url %}arrow-up-right-from-square{% else %}circle-play{% endif %} ml-1.5"></i>
         </a>
     </div>
 </div>

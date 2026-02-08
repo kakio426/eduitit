@@ -485,6 +485,7 @@ def run_startup_tasks():
         call_command('ensure_ssambti')
         call_command('ensure_chess')
         call_command('ensure_studentmbti')
+        call_command('ensure_notebooklm')
     except Exception as e:
         print(f"DEBUG: Startup product ensure tasks failed: {e}")
 

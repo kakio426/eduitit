@@ -43,6 +43,7 @@ def home(request):
             Q(title__icontains="인사이트") | Q(title__icontains="사주")
         ).distinct()
 
+
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
             'posts': posts
@@ -50,6 +51,7 @@ def home(request):
 
     # Else show the public home
     featured_product = products.filter(is_featured=True).first() or products.first()
+
     return render(request, 'core/home.html', {
         'products': products,
         'featured_product': featured_product,
@@ -374,9 +376,35 @@ def admin_dashboard_view(request):
         return redirect('home')
 
     from .utils import get_visitor_stats, get_weekly_stats
-    from .models import VisitorLog
+    from .models import VisitorLog, SiteConfig
+    from products.models import Product
     from django.utils import timezone
     import datetime
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Handle NotebookLM URL update
+    if request.method == 'POST' and 'notebook_manual_url' in request.POST:
+        notebook_url = request.POST.get('notebook_manual_url', '').strip()
+        
+        # Validate URL (must be notebooklm.google.com or empty)
+        if notebook_url and not notebook_url.startswith('https://notebooklm.google.com'):
+            logger.warning(f"[NotebookLM_Config] Action: URL_UPDATE, Status: VALIDATION_FAILED, URL: {notebook_url}, User: {request.user.username}")
+            messages.error(request, 'NotebookLM URL은 https://notebooklm.google.com 도메인이어야 합니다.')
+        else:
+            # Update Product instead of SiteConfig (SIS Compliance)
+            product = Product.objects.filter(title='교사 백과사전').first()
+            if product:
+                old_url = product.external_url
+                product.external_url = notebook_url
+                product.save()
+                logger.info(f"[NotebookLM_Config] Action: URL_UPDATE, Status: SUCCESS, Old_URL: {old_url}, New_URL: {notebook_url}, User: {request.user.username}")
+                messages.success(request, 'NotebookLM 매뉴얼 URL이 성공적으로 업데이트되었습니다.')
+            else:
+                messages.error(request, '교사 백과사전 서비스를 찾을 수 없습니다. (ensure_notebooklm 실행 필요)')
+        
+        return redirect('admin_dashboard')
 
     today = timezone.localdate()
     
@@ -407,6 +435,10 @@ def admin_dashboard_view(request):
 
     # Chart max value
     max_daily = max((s['count'] for s in daily_stats), default=1) or 1
+    
+    # Get current NotebookLM URL from Product (SIS Compliance)
+    notebook_product = Product.objects.filter(title='교사 백과사전').first()
+    current_notebook_url = notebook_product.external_url if notebook_product else ''
 
     return render(request, 'core/admin_dashboard.html', {
         'today_count': today_count,
@@ -422,6 +454,7 @@ def admin_dashboard_view(request):
         'daily_stats': daily_stats,
         'weekly_stats': weekly_stats,
         'max_daily': max_daily,
+        'current_notebook_url': current_notebook_url,
     })
 
 

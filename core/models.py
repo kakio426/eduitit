@@ -62,6 +62,7 @@ class SiteConfig(models.Model):
     banner_color = models.CharField(max_length=7, default='#7c3aed', verbose_name="배너 색상 (HEX)")
     banner_link = models.URLField(blank=True, default='', verbose_name="배너 링크 URL")
 
+
     class Meta:
         verbose_name = "사이트 설정"
         verbose_name_plural = "사이트 설정"
