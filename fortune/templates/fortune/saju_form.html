@@ -1845,9 +1845,15 @@
 
         try {
             const response = await fetch('{% url "fortune:profile_list_api" %}');
-            const data = await response.json();
-            currentProfiles = data.profiles;
-            renderProfileCards();
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                currentProfiles = data.profiles;
+                renderProfileCards();
+            } else {
+                console.warn("[Mobile Debug] loadProfiles: Non-JSON response", response.status);
+            }
         } catch (e) {
             console.error('Failed to load profiles:', e);
         }
@@ -2015,6 +2021,13 @@
                 body: JSON.stringify(profileData)
             });
 
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const errText = await response.text();
+                console.error("[Mobile Debug] saveProfile Non-JSON:", errText.substring(0, 200));
+                throw new Error(`서버 응답 오류 (${response.status})`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -2096,9 +2109,13 @@
     async function loadFavoriteDates() {
         try {
             const response = await fetch('{% url "fortune:favorite_dates_api" %}');
-            const data = await response.json();
-            currentFavorites = data.favorites;
-            renderFavoriteDates();
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                currentFavorites = data.favorites;
+                renderFavoriteDates();
+            }
         } catch (e) {
             console.error('Failed to load favorites:', e);
         }
@@ -2279,14 +2296,18 @@
     async function loadStatistics() {
         try {
             const response = await fetch('{% url "fortune:statistics_api" %}');
-            const data = await response.json();
+            const contentType = response.headers.get('content-type');
 
-            // JS Check: Ensure elements exist before setting (since they might be removed)
-            const statTotalEl = document.getElementById('statTotalAnalyses');
-            if (statTotalEl) {
-                statTotalEl.textContent = data.total_analyses;
-                document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
-                document.getElementById('statRecentActivity').textContent = data.recent_activity;
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+
+                // JS Check: Ensure elements exist before setting (since they might be removed)
+                const statTotalEl = document.getElementById('statTotalAnalyses');
+                if (statTotalEl) {
+                    statTotalEl.textContent = data.total_analyses;
+                    document.getElementById('statTotalDaily').textContent = data.total_daily_checks;
+                    document.getElementById('statRecentActivity').textContent = data.recent_activity;
+                }
             }
         } catch (e) {
             console.error('Failed to load statistics:', e);

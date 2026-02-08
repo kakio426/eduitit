@@ -92,6 +92,13 @@ class OnboardingMiddleware:
             )
 
             if needs_onboarding:
+                # AJAX 요청이나 API 경로는 리다이렉트 하지 않음 (JSON 응답을 기대하므로)
+                is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+                is_api = request.path.startswith('/api/') or '/api/' in request.path
+                
+                if is_ajax or is_api:
+                    return self.get_response(request)
+
                 allowed_paths = [
                     '/accounts/logout/',
                     '/update-email/',
