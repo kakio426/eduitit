@@ -253,6 +253,26 @@ def saju_view(request):
     else:
         form = SajuForm()
 
+    # Ensure chart data is always available for template (even when using cached results)
+    # chart_context is calculated at line 198 for all POST requests
+    chart_data = None
+    day_master_data = None
+    
+    if chart_context:
+        try:
+            chart_data = {
+                'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
+                'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
+                'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
+                'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
+            }
+            day_master_data = {
+                'char': str(chart_context['day']['stem']),
+                'element': chart_context['day']['stem'].element
+            }
+        except Exception as e:
+            logger.error(f"Error building chart data for template: {e}")
+    
     return render(request, 'fortune/saju_form.html', {
         'form': form,
         'result': result_html,
@@ -260,16 +280,8 @@ def saju_view(request):
         'name': request.POST.get('name') if request.method == 'POST' else None,
         'gender': request.POST.get('gender') if request.method == 'POST' else None,
         'mode': request.POST.get('mode') if request.method == 'POST' else 'teacher',
-        'day_master': {
-            'char': str(chart_context['day']['stem']),
-            'element': chart_context['day']['stem'].element
-        } if chart_context else None,
-        'chart': {
-            'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
-            'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
-            'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
-            'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
-        } if chart_context else None,
+        'day_master': day_master_data,
+        'chart': chart_data,
         'kakao_js_key': settings.KAKAO_JS_KEY,
     })
 

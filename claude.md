@@ -140,7 +140,49 @@ diff config/settings.py config/settings_production.py
 
 > **사례 (2026-02-08)**: studentmbti 세션 상세 페이지에서 전체화면 모드의 실시간 학생 목록이 항상 0명으로 표시. `<template x-if>` 안의 HTMX 폴링이 작동하지 않았음.
 
-## 6. 초등학생 대상 콘텐츠 어휘 수준
+## 6. JSON 파싱 시 HTML 에러 페이지 감지
+
+Django가 에러를 반환할 때 JSON 대신 HTML 에러 페이지를 보낼 수 있다. `JSON.parse()`에 HTML을 넘기면 `Unexpected token '<'` 에러 발생.
+
+```javascript
+// ❌ 위험: HTML 에러 페이지 파싱 시 크래시
+const data = JSON.parse(element.textContent);
+
+// ✅ 안전: HTML 감지 및 fallback
+function safeJSONParse(text, fallback = null) {
+    if (!text) return fallback;
+    const trimmed = text.trim();
+    
+    // HTML 에러 페이지 감지
+    if (trimmed.startsWith('<')) {
+        console.error("HTML detected instead of JSON");
+        return fallback;
+    }
+    
+    try {
+        return JSON.parse(trimmed);
+    } catch (e) {
+        console.error("JSON parse error:", e);
+        return fallback;
+    }
+}
+
+// 사용
+const data = safeJSONParse(element.textContent, {});
+```
+
+**Django 템플릿에서 JSON 전달 시 주의사항**:
+```django
+{# ✅ json_script 필터 사용 #}
+{{ chart|json_script:"chart-data" }}
+
+{# ✅ View에서 chart가 None일 수 있으므로 항상 생성 #}
+chart_data = {...} if chart_context else None
+```
+
+> **사례 (2026-02-08)**: Fortune 앱에서 캐싱된 사주 결과 불러온 후 일진 확인 시 `Unexpected token '<'` 에러. 원인: 캐싱 시 `chart` 데이터가 재생성되지 않아 템플릿에서 `None` → `json_script`가 빈 값 생성 → JavaScript에서 파싱 실패. 해결: (1) View에서 캐싱 여부와 관계없이 `chart_data` 항상 생성, (2) 모든 `JSON.parse()` → `safeJSONParse()`로 교체.
+
+## 7. 초등학생 대상 콘텐츠 어휘 수준
 
 학생에게 보여지는 텍스트에서 다음과 같은 어려운 단어 사용 금지:
 - **한자어/전문용어**: 사색가, 통찰력, 유일무이, 조망, 적재적소, 카리스마, 비전, 본능적, 전략적, 효율성, 역산
@@ -149,7 +191,7 @@ diff config/settings.py config/settings_production.py
 
 > **사례 (2026-02-08)**: studentmbti 결과지에서 초등학생이 이해하기 어려운 단어 다수 발견. 12개 이상의 어휘 순화 작업 진행.
 
-## 7. SNS Sidebar 통합 패턴
+## 8. SNS Sidebar 통합 패턴
 
 다른 서비스에 SNS sidebar 추가 시:
 

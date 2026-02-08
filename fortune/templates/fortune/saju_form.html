@@ -1648,6 +1648,38 @@
         result_text: null
     };
 
+    /**
+     * Safe JSON Parse Helper
+     * Prevents errors when parsing invalid JSON or HTML error pages
+     * @param {string} text - Text to parse
+     * @param {*} fallback - Fallback value if parsing fails
+     * @returns {*} Parsed JSON or fallback value
+     */
+    function safeJSONParse(text, fallback = null) {
+        if (!text) {
+            console.warn("safeJSONParse: Empty text provided");
+            return fallback;
+        }
+
+        try {
+            const trimmed = text.trim();
+
+            // Detect HTML error pages (starts with <!doctype or <html)
+            if (trimmed.startsWith('<')) {
+                console.error("safeJSONParse: HTML detected instead of JSON");
+                return fallback;
+            }
+
+            // Attempt to parse
+            return JSON.parse(trimmed);
+        } catch (e) {
+            console.error("safeJSONParse: JSON parse error:", e);
+            console.error("safeJSONParse: Failed text:", text.substring(0, 100));
+            return fallback;
+        }
+    }
+
+
     // UI Safe-guard: Ensure form is visible if no result
     document.addEventListener('DOMContentLoaded', () => {
         const resultContainer = document.getElementById('resultContainer');
@@ -1680,7 +1712,7 @@
 
         if (lastSajuInput) {
             try {
-                const data = JSON.parse(lastSajuInput);
+                const data = safeJSONParse(lastSajuInput, null);
 
                 // 7일 이내 데이터만 표시
                 const age = Date.now() - data.timestamp;
@@ -1758,7 +1790,12 @@
         }
 
         try {
-            const data = JSON.parse(lastSajuInput);
+            const data = safeJSONParse(lastSajuInput, null);
+            if (!data) {
+                showToast('저장된 정보가 유효하지 않습니다.', 'error');
+                localStorage.removeItem('lastSajuInput');
+                return;
+            }
 
             // 폼 필드 채우기
             document.querySelector('[name="name"]').value = data.name || '';
@@ -2301,7 +2338,7 @@
         if (!pendingData) return;
 
         try {
-            const data = JSON.parse(pendingData);
+            const data = safeJSONParse(pendingData, null);
             const age = Date.now() - data.timestamp;
 
             // 24시간 이내 데이터만 복원
@@ -2480,7 +2517,7 @@
         if (cachedResult) {
             console.log("Found cached saju result, simulating deep analysis for reliability.");
             try {
-                const data = JSON.parse(cachedResult);
+                const data = safeJSONParse(cachedResult, null);
 
                 // 로딩 모달 표시 및 가짜 프로그레스 시작
                 loadingModal.classList.add('show');
@@ -3144,7 +3181,11 @@
         if (window.currentSajuState && window.currentSajuState.natal_chart) {
             natalChart = window.currentSajuState.natal_chart;
         } else if (chartDataElem) {
-            natalChart = JSON.parse(chartDataElem.textContent);
+            natalChart = safeJSONParse(chartDataElem.textContent, {});
+            // If parsing failed or returned empty object, fall through to text extraction
+            if (!natalChart || Object.keys(natalChart).length === 0) {
+                console.warn("Chart data parsing failed, will extract from text");
+            }
         } else {
             const resultText = document.getElementById('markdownResult').innerText;
             // 더 유연한 정규표현식: 괄호 내 한자 포함 지원 및 불필요한 공백/별표 무시
@@ -3480,7 +3521,7 @@
 
         if (chartDataElem) {
             try {
-                natalChart = JSON.parse(chartDataElem.textContent);
+                natalChart = safeJSONParse(chartDataElem.textContent, {});
             } catch (e) {
                 console.error("Chart JSON parse error", e);
             }
@@ -3605,14 +3646,14 @@
     document.addEventListener('DOMContentLoaded', function () {
         const resultDataElem = document.getElementById('saju-result-data');
         if (resultDataElem) {
-            const rawMarkdown = JSON.parse(resultDataElem.textContent);
+            const rawMarkdown = safeJSONParse(resultDataElem.textContent, '');
             marked.setOptions({ breaks: true, gfm: true });
             // SSR 결과 렌더링
             const chartDataElem = document.getElementById('saju-chart-data');
             let chartData = null;
             if (chartDataElem) {
                 try {
-                    chartData = JSON.parse(chartDataElem.textContent);
+                    chartData = safeJSONParse(chartDataElem.textContent, null);
                 } catch (e) { console.error("Chart data parse error:", e); }
             }
 
