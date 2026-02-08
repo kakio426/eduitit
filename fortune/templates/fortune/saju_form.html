@@ -2682,17 +2682,15 @@
                 console.error("[Mobile Debug] Non-JSON Response:", {
                     status: response.status,
                     contentType: contentType,
-                    preview: errorBody.substring(0, 300),
                     userAgent: navigator.userAgent
                 });
 
                 if (response.status === 429) {
-                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다. <span class="text-xs opacity-70 mt-1 block">Status: 429 Limit Exceeded</span>`);
+                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다.`);
                 } else if (response.status >= 500) {
-                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
-                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
+                    throw new Error(`서버에 문제가 발생했습니다.`);
                 } else {
-                    throw new Error(`알 수 없는 응답 형식입니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
+                    throw new Error(`일시적인 연결 오류가 발생했습니다.`);
                 }
             }
 
@@ -2797,11 +2795,8 @@
             }
 
             let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
-            if (err.message && err.message.includes('<span')) {
-                // 이미 상세 정보가 포함된 에러 메시지인 경우
+            if (err.message && (err.message.includes('한꺼번에') || err.message.includes('서버') || err.message.includes('연결'))) {
                 userMessage = `사주 분석 중 문제가 발생했습니다. 😥<br>${err.message}`;
-            } else if (err.message) {
-                userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
             }
 
             // 토스트로 에러 표시 (HTML 포함 가능하도록 처리하거나 텍스트만)

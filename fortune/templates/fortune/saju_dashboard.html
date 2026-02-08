@@ -512,16 +512,14 @@
                 console.error("[Mobile Debug] Calculate Non-JSON Response:", {
                     status: response.status,
                     contentType: contentType,
-                    preview: errorBody.substring(0, 300),
                     userAgent: navigator.userAgent
                 });
                 if (response.status === 429) {
-                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다. <span class="text-xs opacity-70 mt-1 block">Status: 429 Limit Exceeded</span>`);
+                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다.`);
                 } else if (response.status >= 500) {
-                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
-                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
+                    throw new Error(`서버에 문제가 발생했습니다.`);
                 } else {
-                    throw new Error(`사주 계산 중 오류가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
+                    throw new Error(`사주 계산 중 오류가 발생했습니다.`);
                 }
             }
 
@@ -743,17 +741,15 @@
                 console.error("[Mobile Debug] Analyze Non-JSON Response:", {
                     status: response.status,
                     contentType: contentType,
-                    preview: errorBody.substring(0, 300),
                     userAgent: navigator.userAgent
                 });
 
                 if (response.status === 429) {
-                    throw new Error('일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요! <span class="text-xs opacity-70 mt-1 block">Status: 429</span>');
+                    throw new Error('일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!');
                 } else if (response.status >= 500) {
-                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
-                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
+                    throw new Error(`서버에 문제가 발생했습니다.`);
                 } else {
-                    throw new Error(`분석 중 오류가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
+                    throw new Error(`분석 중 오류가 발생했습니다.`);
                 }
             }
 

@@ -393,14 +393,14 @@ def saju_api_view(request):
         logger.exception(f"사주 API 전역 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
         error_str = str(e)
         if "API_KEY_MISSING" in error_str:
-            return JsonResponse({'error': 'CONFIG_ERROR', 'message': 'API 키가 설정되지 않았습니다.'}, status=500)
+            return JsonResponse({'error': 'CONFIG_ERROR', 'message': 'API 키가 설정되지 않았습니다. 관리자에게 문의해주세요.'}, status=500)
         if "matching query does not exist" in error_str:
-            return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다.'}, status=500)
+            return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다. 서버 점검 중입니다.'}, status=500)
         if "503" in error_str:
-             return JsonResponse({'error': 'AI_OVERLOADED', 'message': 'AI가 현재 너무 바쁩니다.'}, status=503)
+             return JsonResponse({'error': 'AI_OVERLOADED', 'message': '지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊'}, status=503)
         if "Insufficient Balance" in error_str:
              return JsonResponse({'error': 'AI_LIMIT', 'message': '선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 개인 API 키를 등록해주세요!'}, status=429)
-        return JsonResponse({'error': 'AI_ERROR', 'message': error_str}, status=500)
+        return JsonResponse({'error': 'AI_ERROR', 'message': '분석 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}, status=500)
 
 
 @csrf_exempt
@@ -481,7 +481,7 @@ def daily_fortune_api(request):
         })
     except Exception as e:
         logger.exception(f"일진 API 전역 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': '일일 운세를 분석하는 중 오류가 발생했습니다.'}, status=500)
 
 
 @login_required
@@ -501,7 +501,8 @@ def save_fortune_api(request):
         )
         return JsonResponse({'success': True, 'result_id': saved_result.pk})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        logger.error(f"Save Result Error: {e}")
+        return JsonResponse({'success': False, 'error': '결과를 보관함에 저장하지 못했습니다.'}, status=400)
 
 
 @login_required
