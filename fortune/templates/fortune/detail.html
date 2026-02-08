@@ -506,7 +506,7 @@
                 // 사주 결과 캐시 삭제
                 for (let i = localStorage.length - 1; i >= 0; i--) {
                     const key = localStorage.key(i);
-                    if (key && key.startsWith('saju_result_cache_')) {
+                    if (key && (key.startsWith('saju_result_cache_') || key.startsWith('saju_result_v2_') || key.startsWith('daily_saju_cache_') || key.startsWith('daily_saju_v2_'))) {
                         localStorage.removeItem(key);
                     }
                 }

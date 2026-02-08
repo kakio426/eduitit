@@ -157,7 +157,10 @@
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('saju_result_cache_')) {
+            if (key && (key.startsWith('saju_result_cache_') || key.startsWith('saju_result_v2_'))) {
+                keysToRemove.push(key);
+            }
+            if (key && (key.startsWith('daily_saju_cache_') || key.startsWith('daily_saju_v2_'))) {
                 keysToRemove.push(key);
             }
         }
