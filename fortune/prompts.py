@@ -169,14 +169,19 @@ def get_general_prompt(data, chart_context=None):
 💫 {data['name']}님의 행복한 미래를 응원합니다!
 """
 
-def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context):
+def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context, mode='teacher'):
     """특정 날짜의 일진(운세) 분석 프롬프트 (구조화 및 가독성 최적화)"""
     gender_str = get_gender_korean(gender)
     natal_info = get_chart_info(natal_context)
     target_info = get_chart_info(target_context)
     
+    # 모드별 호칭 및 역할 설정
+    is_teacher = (mode == 'teacher')
+    honorific = "선생님" if is_teacher else "님"
+    role_desc = "30년 경력 교사 전문 명리 상담사" if is_teacher else "30년 경력 명리 전문가"
+    
     return f"""
-[Role] 30년 경력 명리 전문가
+[Role] {role_desc}
 [Tone] 친한 언니/오빠가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
 - "~해보시는 건 어떨까요?", "~하시면 좋겠어요"
 - 전문용어는 쉬운 우리말로 풀어서 설명하세요.
@@ -193,7 +198,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 - 시간은 "오후 9시~11시"처럼 쉽게 표현하세요.
 - 오행 비유 시 반드시 해당 오행에 맞는 자연물을 사용하세요 (목=나무/숲, 화=불/태양, 토=흙/산, 금=보석/쇠, 수=물/비).
 
-[User Data] {name}({gender_str})
+[User Data] {name}({gender_str}) / 모드: {'교사' if is_teacher else '일반'}
 {natal_info}
 [Target Date] {target_date.strftime('%Y-%m-%d')}
 {target_info}
@@ -221,10 +226,10 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 
 ---
 
-## 💡 {name} 선생님을 위한 조언
+## 💡 {name} {honorific}을 위한 조언
 
 ### ✅ 추천 행동
-- 업무에서의 조언
+- {"교직 생활/업무" if is_teacher else "업무/학업"}에서의 조언
 - 대인관계 조언
 - 자기계발 조언
 
@@ -243,7 +248,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 
 ---
 
-💫 {name} 선생님의 빛나는 하루를 응원합니다!
+💫 {name} {honorific}의 빛나는 하루를 응원합니다!
 """
 
 def get_prompt(mode, data, chart_context=None):

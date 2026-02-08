@@ -2861,6 +2861,10 @@
     function updatePremiumUI(markdown, chart, mode = 'teacher', dayMaster = null, userName = '') {
         console.log("Updating Premium UI - Mode:", mode);
 
+        // Mode-specific Honorific
+        const isTeacher = (mode === 'teacher');
+        const honorific = isTeacher ? '선생님' : '님';
+
         // 1. Render Natal Chart FIRST from API data (to use as reliable identity source)
         if (chart) {
             renderPremiumNatalChart(chart);
@@ -2906,7 +2910,7 @@
 
             // Header Identity Card: Restore Person Name if available
             document.getElementById('stemIconBig').textContent = info.icon;
-            document.getElementById('stemStaticName').textContent = userName ? `${userName} 선생님` : info.name;
+            document.getElementById('stemStaticName').textContent = userName ? `${userName} ${honorific}` : info.name;
             document.getElementById('stemStaticDesc').textContent = info.desc;
 
             // Badge & Background
@@ -3042,9 +3046,13 @@
 
     // 공유카드 업데이트 (이미지 저장용)
     function updateShareCard(markdown) {
-        const nameContext = "{{ name|default:'선생님' }}";
+        const nameContext = "{{ name|default:'' }}";
+        const mode = document.getElementById('modeInput').value;
+        const honorific = (mode === 'teacher') ? '선생님' : '님';
+        const displayName = nameContext ? `${nameContext} ${honorific}` : (mode === 'teacher' ? '선생님' : '당신');
+
         const titleElem = document.getElementById('shareCardTitle');
-        if (titleElem) titleElem.textContent = `🔮 ${nameContext} 선생님의 사주`;
+        if (titleElem) titleElem.textContent = `🔮 ${displayName}의 사주`;
 
         for (const [char, info] of Object.entries(ELEMENT_MAP)) {
             if (markdown.includes(char)) {
@@ -3345,9 +3353,10 @@
             return;
         }
 
-        // Caching Logic: Unique key based on natal chart and date
+        // Caching Logic: Unique key based on natal chart, date, AND mode
+        const currentMode = document.getElementById('modeInput').value || 'teacher';
         const natalKey = Object.values(natalChart).join('_');
-        const cacheKey = `daily_saju_v2_${btoa(unescape(encodeURIComponent(natalKey))).substring(0, 16)}_${targetDate}`;
+        const cacheKey = `daily_saju_v2_${btoa(unescape(encodeURIComponent(natalKey))).substring(0, 16)}_${targetDate}_${currentMode}`;
         const cachedResult = localStorage.getItem(cacheKey);
 
         if (cachedResult) {
@@ -3412,8 +3421,9 @@
                 body: JSON.stringify({
                     target_date: targetDate,
                     natal_chart: natalChart,
-                    name: "{{ name|default:'선생님' }}",
-                    gender: "{{ gender|default:'female' }}"
+                    name: "{{ name|default:'' }}",
+                    gender: "{{ gender|default:'female' }}",
+                    mode: currentMode
                 })
             });
 
@@ -3495,7 +3505,11 @@
         }
 
         try {
-            const nameContext = "{{ name|default:'선생님' }}";
+            const nameContext = "{{ name|default:'' }}";
+            const mode = document.getElementById('modeInput').value;
+            const honorific = (mode === 'teacher') ? '선생님' : '님';
+            const displayName = nameContext ? `${nameContext} ${honorific}` : (mode === 'teacher' ? '선생님' : '당신');
+
             const dateStr = window.lastDailyFortune.date;
             const dateObj = new Date(dateStr);
             const formattedDate = `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
@@ -3513,7 +3527,7 @@
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: `📅 ${formattedDate} ${nameContext}의 운세`,
+                    title: `📅 ${formattedDate} ${displayName}의 운세`,
                     description: `${energyScore ? energyScore + '\n' : ''}오늘의 운세를 확인해보세요!\n\n당신의 운세는 어떨까요? 지금 바로 확인해보세요! 🔮`,
                     imageUrl: window.location.origin + '/static/fortune/images/teacher_saju_card.png',
                     link: {

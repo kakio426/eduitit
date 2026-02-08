@@ -263,6 +263,57 @@ else:
 
 ---
 
+## Fortune 앱 - 프롬프트/캐시/UI 이슈 (2026-02-08)
+
+### 9. AI 프롬프트 SSOT 지시에는 반드시 볼드 유지
+
+프롬프트 톤을 부드럽게 바꾸더라도, **SSOT 정체성 규칙에는 `**볼드**`를 유지**해야 AI가 강하게 따른다.
+
+```
+# ❌ 볼드 제거 → AI가 일간 오행을 무시하고 엉뚱한 비유 사용
+선생님의 정체성은 반드시 상단 [SSOT Data]의 'Day' 첫 글자입니다.
+
+# ✅ 볼드 유지 → AI가 정확히 일간 기준으로 해석
+**정체성 고정**: 선생님의 정체성은 반드시 **[SSOT Data]의 일주(Day) 첫 글자(천간)**입니다.
+```
+
+또한 출력 템플릿에서 "자연물 비유"라고만 쓰면 AI가 아무 자연물이나 매칭한다. **"일간 오행에 맞는 자연물"**이라고 제약을 걸어야 함.
+
+> **사례**: 신금(辛金)인데 "맑은 샘물"로 묘사 → 출력 템플릿에 "일간 오행에 맞는" 제약이 빠졌기 때문. 오행-자연물 매핑(`금=보석/쇠, 수=물/비`)을 명시하여 해결.
+
+### 10. detail.html `const` 재할당 크래시 (마크다운 미렌더링)
+
+```javascript
+// ❌ const 변수에 재할당 → TypeError → 마크다운 렌더링 전체 실패
+const rawText = outputArea.innerText;
+rawText = rawText.replace(...);  // try/catch 밖이라 크래시
+
+// ✅ escapejs로 순수 문자열 전달 (saju_form.html과 동일 방식)
+const rawMarkdown = "{{ item.result_text|escapejs }}";
+marked.parse(rawMarkdown);
+```
+
+> **사례**: 보관함 상세 페이지에서 마크다운이 raw 텍스트로 보임. `const` 재할당 에러가 `try/catch` 밖에서 발생하여 스크립트 전체 중단.
+
+### 11. 보관함 삭제 시 localStorage 캐시 동기화 필수
+
+DB에서 `FortuneResult`를 삭제해도 브라우저 `localStorage`의 사주 캐시는 남아있어서, 같은 조건으로 분석하면 옛 결과가 반환된다.
+
+**삭제 시 함께 제거해야 할 캐시 키 패턴**:
+- `saju_result_cache_*`, `saju_result_v2_*`
+- `daily_saju_cache_*`, `daily_saju_v2_*`
+- `pendingSajuResult`, `lastSajuInput`
+
+> **사례**: 프롬프트를 개선했는데 캐시된 옛 결과만 계속 표시됨. 보관함 삭제 시 localStorage 캐시도 함께 삭제하도록 수정.
+
+### 관련 파일
+- `fortune/prompts.py` - AI 프롬프트 (원본: `prompts_backup.py`)
+- `fortune/templates/fortune/detail.html` - 보관함 상세 (마크다운 렌더링)
+- `fortune/templates/fortune/history.html` - 보관함 목록 (삭제 + 캐시)
+- `fortune/templates/fortune/saju_form.html` - 사주 입력/결과 화면
+
+---
+
 ## SNS Sidebar 통합 상세 가이드 (2026-02-04)
 
 ### 올바른 레이아웃 구조

@@ -420,6 +420,7 @@ def daily_fortune_api(request):
         natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
         name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
+        mode = data.get('mode', 'teacher') # 'teacher' or 'general'
 
         if not target_date_str:
             return JsonResponse({'error': 'Target date required'}, status=400)
@@ -451,14 +452,14 @@ def daily_fortune_api(request):
 
         # Prompt
         from .prompts import get_daily_fortune_prompt
-        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context)
+        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
 
-        # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효)
-        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(str(natal_data).encode()).hexdigest()}"
+        # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효) - 모드 포함
+        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(str(natal_data).encode()).hexdigest()}_{mode}"
         cached_response = cache.get(cache_key)
         
         if cached_response:
-            logger.info(f"Found cached daily fortune for {name} on {target_date_str}, bypassing Gemini.")
+            logger.info(f"Found cached daily fortune for {name} ({mode}) on {target_date_str}, bypassing Gemini.")
             response_text = cached_response
         else:
             # Wrap generator to maintain current sync behavior
