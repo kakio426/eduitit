@@ -321,38 +321,38 @@ def saju_streaming_api(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_api_view(request):
     """사주 분석 API (5회/h, 10회/d)"""
-    if getattr(request, 'limited', False):
-        return JsonResponse({
-            'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
-        }, status=429)
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
-
-    form = SajuForm(request.POST)
-    if not form.is_valid():
-        return JsonResponse({'error': '입력값을 확인해주세요.', 'errors': form.errors}, status=400)
-
-    data = form.cleaned_data
-    mode = data['mode']
-    
-    # Logic Engine
-    chart_context = get_chart_context(data)
-    
-    # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
-    from .models import FortuneResult
-    existing_result = None
-    if request.user.is_authenticated:
-        existing_result = FortuneResult.objects.filter(
-            user=request.user,
-            mode=mode,
-            natal_chart=chart_context
-        ).order_by('-created_at').first()
-
-    prompt = get_prompt(mode, data, chart_context=chart_context)
-
     try:
+        if getattr(request, 'limited', False):
+            return JsonResponse({
+                'error': 'LIMIT_EXCEEDED',
+                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
+            }, status=429)
+
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
+
+        form = SajuForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({'error': '입력값을 확인해주세요.', 'errors': form.errors}, status=400)
+
+        data = form.cleaned_data
+        mode = data['mode']
+        
+        # Logic Engine
+        chart_context = get_chart_context(data)
+        
+        # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
+        from .models import FortuneResult
+        existing_result = None
+        if request.user.is_authenticated:
+            existing_result = FortuneResult.objects.filter(
+                user=request.user,
+                mode=mode,
+                natal_chart=chart_context
+            ).order_by('-created_at').first()
+
+        prompt = get_prompt(mode, data, chart_context=chart_context)
+
         if existing_result:
             logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini.")
             response_text = existing_result.result_text
@@ -377,7 +377,7 @@ def saju_api_view(request):
             } if chart_context else None
         })
     except Exception as e:
-        logger.exception(f"사주 API 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
+        logger.exception(f"사주 API 전역 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
         error_str = str(e)
         if "API_KEY_MISSING" in error_str:
             return JsonResponse({'error': 'CONFIG_ERROR', 'message': 'API 키가 설정되지 않았습니다.'}, status=500)
@@ -395,13 +395,13 @@ def saju_api_view(request):
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def daily_fortune_api(request):
     """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d)"""
-    if getattr(request, 'limited', False):
-        return JsonResponse({
-            'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
-        }, status=429)
-
     try:
+        if getattr(request, 'limited', False):
+            return JsonResponse({
+                'error': 'LIMIT_EXCEEDED',
+                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
+            }, status=429)
+
         data = json.loads(request.body)
         target_date_str = data.get('target_date') # YYYY-MM-DD
         natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
@@ -456,7 +456,7 @@ def daily_fortune_api(request):
         # 통계용 로그 저장
         if request.user.is_authenticated:
             from .models import DailyFortuneLog
-            DailyFortuneLog.objects.create(
+             DailyFortuneLog.objects.create(
                 user=request.user,
                 target_date=target_dt.date()
             )
@@ -466,9 +466,8 @@ def daily_fortune_api(request):
             'result': response_text,
             'target_date': target_date_str
         })
-
     except Exception as e:
-        logger.exception(f"일진 API 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
+        logger.exception(f"일진 API 전역 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
         return JsonResponse({'error': str(e)}, status=500)
 
 

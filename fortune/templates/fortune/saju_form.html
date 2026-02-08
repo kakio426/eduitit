@@ -2659,7 +2659,8 @@
             const response = await fetch('{% url "fortune:saju_api" %}', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: formData
             });
