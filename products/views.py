@@ -14,18 +14,12 @@ def product_detail(request, pk):
     return render(request, 'products/detail.html', {'product': product, 'is_owned': is_owned})
 
 def product_preview(request, pk):
-    import sys, traceback
-    try:
-        product = get_object_or_404(Product, pk=pk, is_active=True)
-        features = product.features.all()
-        return render(request, 'products/partials/preview_modal.html', {
-            'product': product,
-            'features': features
-        })
-    except Exception as e:
-        print(f"!!! PRODUCT PREVIEW ERROR (ID: {pk}) !!!", file=sys.stderr)
-        traceback.print_exc()
-        return HttpResponse(str(e), status=500)
+    product = get_object_or_404(Product, pk=pk, is_active=True)
+    features = product.features.all()
+    return render(request, 'products/partials/preview_modal.html', {
+        'product': product,
+        'features': features
+    })
 
 def yut_game(request):
     # 모바일 접근 체크
