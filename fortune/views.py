@@ -694,10 +694,11 @@ def statistics_api(request):
 
     from .models import DailyFortuneLog, FortuneResult
     from django.db.models import Count
-    from datetime import date, timedelta
+    from datetime import timedelta
+    from django.utils import timezone
 
     # 최근 30일간 조회 기록
-    thirty_days_ago = date.today() - timedelta(days=30)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
     recent_logs = DailyFortuneLog.objects.filter(
         user=request.user,
         viewed_at__gte=thirty_days_ago
@@ -715,7 +716,7 @@ def statistics_api(request):
     total_daily_checks = DailyFortuneLog.objects.filter(user=request.user).count()
 
     # 최근 7일 활동
-    seven_days_ago = date.today() - timedelta(days=7)
+    seven_days_ago = timezone.now() - timedelta(days=7)
     recent_activity = recent_logs.filter(viewed_at__gte=seven_days_ago).count()
 
     return JsonResponse({
