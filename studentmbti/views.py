@@ -221,9 +221,28 @@ def session_test(request, session_id):
                 'session': session,
             })
         
+        # 즉시 '접속 중' 레코드 생성 (선생님 화면에 바로 뜨도록)
+        # 이미 세션에 result_id가 있고 해당 레코드가 유효하면 재사용
+        result_id = request.session.get('student_result_id')
+        result = None
+        if result_id:
+            result = StudentMBTIResult.objects.filter(id=result_id, session=session).first()
+        
+        if not result:
+            result = StudentMBTIResult.objects.create(
+                session=session,
+                student_name="접속 중...",
+                mbti_type=None,
+                animal_name=None,
+                answers_json=None
+            )
+            request.session['student_result_id'] = str(result.id)
+            logger.info(f"[StudentMBTI] Temporary Student Created: {result.id} in session {session_id}")
+        
         return render(request, 'studentmbti/test.html', {
             'session': session,
             'questions': STUDENT_QUESTIONS,
+            'result_id': result.id,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Student Test View Error: {str(e)}")
@@ -232,7 +251,7 @@ def session_test(request, session_id):
 
 @require_POST
 def start_test(request, session_id):
-    """학생이 이름을 입력하고 테스트를 시작할 때 호출 (즉시 참여자 목록에 등록)"""
+    """학생이 이름을 입력하고 테스트를 시작할 때 호출 (기존 레코드 이름 업데이트)"""
     try:
         session = get_object_or_404(TestSession, id=session_id)
         
@@ -243,7 +262,20 @@ def start_test(request, session_id):
         if not student_name:
             return JsonResponse({'error': '이름을 입력해주세요.'}, status=400)
         
-        # 이름만으로 결과 레코드 생성 (MBTI는 나중에 업데이트)
+        # 세션에 저장된 result_id로 기존 레코드 찾아서 이름 업데이트
+        result_id = request.session.get('student_result_id') or request.POST.get('result_id')
+        
+        if result_id:
+            try:
+                result = StudentMBTIResult.objects.get(id=result_id, session=session)
+                result.student_name = student_name
+                result.save()
+                logger.info(f"[StudentMBTI] Student Named: {student_name} for Result {result.id}")
+                return JsonResponse({'success': True, 'result_id': str(result.id)})
+            except StudentMBTIResult.DoesNotExist:
+                pass
+        
+        # 레코드가 없으면 새로 생성 (폴백)
         result = StudentMBTIResult.objects.create(
             session=session,
             student_name=student_name,
@@ -251,11 +283,9 @@ def start_test(request, session_id):
             animal_name=None,
             answers_json=None
         )
-        
-        # 세션에 result_id 저장 (나중에 analyze에서 사용)
         request.session['student_result_id'] = str(result.id)
         
-        logger.info(f"[StudentMBTI] Student Started: {student_name} in session {session_id}")
+        logger.info(f"[StudentMBTI] Student Started (New): {student_name} in session {session_id}")
         return JsonResponse({'success': True, 'result_id': str(result.id)})
     except Exception as e:
         logger.error(f"[StudentMBTI] Start Test Error: {str(e)}")

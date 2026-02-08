@@ -266,3 +266,58 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] 상수/딕셔너리는 파일 상단에 정의
 - [ ] 모든 view 함수에 `return` 문 있는지 확인
 - [ ] `python manage.py check <앱이름>` 실행하여 검증
+
+---
+
+### ⚠️ Railway 배포 환경 제약사항 (2026-02-08)
+
+**Railway 컨테이너에는 시스템 도구가 제한적이다.**
+
+1. **`pg_dump` 없음** — `django-dbbackup`처럼 외부 DB 클라이언트가 필요한 패키지는 작동하지 않음
+   - 해결: Django 내장 `dumpdata`로 JSON 백업 (`core/management/commands/backup_db.py`)
+   - `pg_dump`이 필요하면 `nixpacks.toml`의 `nixPkgs`에 `"postgresql"` 추가 필요
+
+2. **Neon PostgreSQL = PgBouncer (transaction pooling mode)**
+   - 서버사이드 커서 사용 불가 → `dumpdata` 등 대량 쿼리 시 `cursor does not exist` 에러
+   - 해결: `connections['default'].settings_dict['DISABLE_SERVER_SIDE_CURSORS'] = True`
+   - 또는 settings에 전역으로 설정: `DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True`
+
+3. **Railway Cron Job은 별도 컨테이너**
+   - 메인 웹 서비스와 다른 컨테이너에서 실행됨
+   - management command에서 `raise` 대신 `sys.exit(0/1)` 사용해야 성공/실패 상태가 정확히 전달됨
+   - startup task(ensure_ssambti 등)와 로그가 섞일 수 있음
+
+4. **새 Python 패키지 추가 시 반드시 확인할 것**:
+   - `requirements.txt`에 추가 (즉시!)
+   - 해당 패키지가 시스템 바이너리에 의존하는지 확인 (예: `pg_dump`, `wkhtmltopdf` 등)
+   - 시스템 바이너리가 필요하면 `nixpacks.toml`의 `nixPkgs`에 추가
+   - `Procfile` ↔ `nixpacks.toml` start 명령어 동기화 확인
+
+---
+
+### ⚠️ 서비스 인프라 구조 참고 (2026-02-08)
+
+**현재 구현된 서비스 핵심 기능:**
+
+| 기능 | 파일 | 비고 |
+|------|------|------|
+| Toast 알림 | `core/context_processors.py` → `toast_messages()` | Django messages + Alpine.js |
+| 글로벌 배너 | `core/models.py` → `SiteConfig` (싱글톤) | Admin에서 관리 |
+| SEO 메타태그 | `core/context_processors.py` → `seo_meta()` | view context로 override 가능 |
+| 피드백 위젯 | `core/models.py` → `Feedback`, `/feedback/` | HTMX + 플로팅 버튼 |
+| 관리자 대시보드 | `/admin-dashboard/` | superuser 전용, 봇/사람 구분 |
+| Sentry | `SENTRY_DSN` 환경변수 | production only |
+| DB 백업 | `python manage.py backup_db` | dumpdata JSON, Cron 가능 |
+
+**context_processors 등록 순서** (두 settings 파일 모두):
+```python
+'core.context_processors.visitor_counts',
+'core.context_processors.toast_messages',
+'core.context_processors.site_config',
+'core.context_processors.seo_meta',
+```
+
+**VisitorLog 모델에 봇 구분 필드 있음:**
+- `user_agent`: TextField
+- `is_bot`: BooleanField
+- `get_visitor_stats(days, exclude_bots=True)` 로 사람만 필터링 가능

@@ -10,7 +10,7 @@ class TestSession(models.Model):
     session_name = models.CharField(max_length=100, help_text="예: 3학년 1반 MBTI 검사")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
-    access_code = models.CharField(max_length=10, unique=True, null=True, blank=True, help_text="학생 입장 코드 (예: AB12CD)")
+    access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="학생 입장 코드 (예: 123456)")
     
     class Meta:
         app_label = 'studentmbti'
@@ -31,7 +31,8 @@ class TestSession(models.Model):
         import random
         import string
         while True:
-            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            # 숫자로만 구성된 6자리 코드 생성
+            code = ''.join(random.choices(string.digits, k=6))
             if not TestSession.objects.filter(access_code=code).exists():
                 return code
 

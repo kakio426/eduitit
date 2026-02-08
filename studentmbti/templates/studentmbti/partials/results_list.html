@@ -36,3 +36,6 @@
     <p class="text-sm">학생들이 QR 코드를 스캔하면 여기에 표시됩니다</p>
 </div>
 {% endif %}
+
+<!-- HTMX OOB swap for real-time count update -->
+<span id="total-count" hx-swap-oob="innerHTML">{{ total_count }}명</span>

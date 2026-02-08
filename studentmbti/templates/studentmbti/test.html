@@ -245,7 +245,7 @@
             }
             document.getElementById('student-name').classList.remove('border-red-500');
 
-            // 서버에 학생 등록 (즉시 참여자 목록에 표시)
+            // 서버에 학생 등록 (기존 레코드 이름 업데이트)
             fetch("{% url 'studentmbti:start_test' session.id %}", {
                 method: 'POST',
                 headers: {
@@ -253,7 +253,8 @@
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 body: new URLSearchParams({
-                    'student_name': name
+                    'student_name': name,
+                    'result_id': '{{ result_id }}'
                 })
             }).then(response => response.json())
                 .then(data => {
