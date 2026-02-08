@@ -1077,6 +1077,9 @@
 
     <!-- 입력 폼 섹션 -->
     <div id="formContainer" class="{% if result %}hidden{% endif %}">
+        <div id="globalErrorDisplay"
+            class="hidden clay-card p-6 mb-8 border-2 border-red-200 bg-red-50/50 text-red-600 font-bold"
+            data-aos="fade-up"></div>
         <div class="clay-card p-8 md:p-12" data-aos="fade-up">
 
             <form method="post" id="sajuForm">
@@ -1695,9 +1698,43 @@
         // Note: Automatic restoration removed to prevent confusion.
         // Restoration is now manual via the "Quick View Last Result" button.
 
+        // [Restoration Plan] 미완료된(에러 등) 입력이 있으면 복구 시도
+        const pendingInput = localStorage.getItem('pending_saju_input');
+        if (pendingInput) {
+            try {
+                const data = JSON.parse(pendingInput);
+                const age = Date.now() - (data.timestamp || 0);
+                if (age < 60 * 60 * 1000) { // 1시간 이내 데이터만
+                    restoreFormInputs(data);
+                    showToast('입력하시던 정보를 복구했습니다. ✨', 'info');
+                }
+                localStorage.removeItem('pending_saju_input');
+            } catch (e) { console.warn("Restore failed", e); }
+        }
+
         // 마지막 사주 정보 로드 및 빠른 접근 카드 표시
         loadLastSajuInfo();
     });
+
+    // 폼 입력값 복구 함수
+    function restoreFormInputs(data) {
+        const form = document.getElementById('sajuForm');
+        if (!form) return;
+
+        for (const [key, value] of Object.entries(data)) {
+            const input = form.elements[key];
+            if (input) {
+                if (input.type === 'radio') {
+                    const target = Array.from(form.elements[key]).find(r => r.value === value);
+                    if (target) target.checked = true;
+                } else {
+                    input.value = value;
+                }
+            }
+        }
+        // 모드 토글 동기화
+        if (data.mode) setMode(data.mode);
+    }
 
     // 마지막 사주 정보 로드
     function loadLastSajuInfo() {
@@ -2524,6 +2561,17 @@
             }
         }
 
+        // [Restoration Plan] 분석 시작 전 백업
+        try {
+            const currentInputs = Object.fromEntries(formData.entries());
+            localStorage.setItem('pending_saju_input', JSON.stringify({
+                ...currentInputs,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.warn("Input backup failed", e);
+        }
+
         // UI 전환 및 모달 표시
         const loadingModal = document.getElementById('loadingModal');
         const loadingProgress = document.getElementById('loadingProgress');
@@ -2638,11 +2686,12 @@
                 });
 
                 if (response.status === 429) {
-                    throw new Error('한꺼번에 많은 요청이 들어왔습니다. 잠시 후 다시 시도해주세요.');
+                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다. <span class="text-xs opacity-70 mt-1 block">Status: 429 Limit Exceeded</span>`);
                 } else if (response.status >= 500) {
-                    throw new Error('서버에 문제가 발생했습니다. 관리자에게 문의해주세요.');
+                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
+                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
                 } else {
-                    throw new Error(`알 수 없는 응답 형식입니다. (${response.status})`);
+                    throw new Error(`알 수 없는 응답 형식입니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
                 }
             }
 
@@ -2738,17 +2787,34 @@
             loadingModal.classList.remove('show');
             console.error(err);
 
+            // [Restoration Plan] 에러 시 폼을 숨기지 않고 입력값 유지
+            const formContainer = document.getElementById('formContainer');
+            if (formContainer) {
+                formContainer.classList.remove('hidden');
+                // 결과창이 열려있었다면 닫기
+                document.getElementById('resultContainer')?.classList.add('hidden');
+            }
+
             let userMessage = "선생님, 잠시 AI와의 연결이 불안정했어요. 😥<br>잠시 후 다시 시도해주시면 꼼꼼하게 분석해드릴게요!";
-            if (err.message) {
+            if (err.message && err.message.includes('<span')) {
+                // 이미 상세 정보가 포함된 에러 메시지인 경우
+                userMessage = `사주 분석 중 문제가 발생했습니다. 😥<br>${err.message}`;
+            } else if (err.message) {
                 userMessage += `<br><span class="text-sm opacity-70 mt-2 block">(${err.message})</span>`;
             }
 
-            // 오류 시 폼으로 다시 이동하거나 에러 메시지 표시
-            showToast(err.message || '오류가 발생했습니다.', 'error');
+            // 토스트로 에러 표시 (HTML 포함 가능하도록 처리하거나 텍스트만)
+            showToast('분석 중 오류가 발생했습니다. 메시지를 확인해주세요.', 'error');
 
-            // 결과 영역에 에러 표시
-            document.getElementById('formContainer').classList.remove('hidden');
-            alert(userMessage.replace('<br>', '\n'));
+            // 전역 에러 알림 영역이 있다면 표시 (없으면 alert fallback)
+            const errorDisplay = document.getElementById('globalErrorDisplay');
+            if (errorDisplay) {
+                errorDisplay.innerHTML = userMessage;
+                errorDisplay.classList.remove('hidden');
+                errorDisplay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                alert(userMessage.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''));
+            }
         }
     });
 

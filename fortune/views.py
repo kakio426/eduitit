@@ -377,7 +377,7 @@ def saju_api_view(request):
             } if chart_context else None
         })
     except Exception as e:
-        logger.exception("사주 API 오류")
+        logger.exception(f"사주 API 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
         error_str = str(e)
         if "API_KEY_MISSING" in error_str:
             return JsonResponse({'error': 'CONFIG_ERROR', 'message': 'API 키가 설정되지 않았습니다.'}, status=500)
@@ -468,7 +468,7 @@ def daily_fortune_api(request):
         })
 
     except Exception as e:
-        logger.exception("일진 API 오류")
+        logger.exception(f"일진 API 오류 | User: {request.user} | UA: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
         return JsonResponse({'error': str(e)}, status=500)
 
 

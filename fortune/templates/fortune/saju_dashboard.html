@@ -173,6 +173,10 @@
                     </p>
                 </div>
 
+                <div id="globalErrorDisplay"
+                    class="hidden glass-card p-6 mb-8 border-2 border-red-500/50 bg-red-900/30 text-red-200 font-bold text-center">
+                </div>
+
                 <form id="sajuForm" onsubmit="handleCalculate(event)" class="space-y-6 relative z-10">
                     <input type="hidden" name="mode" id="serviceMode" value="general">
 
@@ -345,7 +349,8 @@
                     </div>
                     <div class="relative z-10">
                         <h3 class="text-xl font-bold text-purple-300 mb-2"><i
-                                class="fa-solid fa-fingerprint mr-2"></i>타고난 기질</h3>
+                                class="fa-solid fa-fingerprint mr-2"></i>타고난
+                            기질</h3>
                         <p class="text-gray-400 text-sm">나의 숨겨진 성격과 장점을<br>확인해보세요.</p>
                     </div>
                 </button>
@@ -510,7 +515,14 @@
                     preview: errorBody.substring(0, 300),
                     userAgent: navigator.userAgent
                 });
-                throw new Error(`서버 응답 오류가 발생했습니다. (${response.status})`);
+                if (response.status === 429) {
+                    throw new Error(`한꺼번에 많은 요청이 들어왔습니다. <span class="text-xs opacity-70 mt-1 block">Status: 429 Limit Exceeded</span>`);
+                } else if (response.status >= 500) {
+                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
+                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
+                } else {
+                    throw new Error(`사주 계산 중 오류가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
+                }
             }
 
             if (!response.ok || !result.success) {
@@ -535,7 +547,15 @@
             }));
 
         } catch (e) {
-            alert('오류가 발생했습니다: ' + e.message);
+            console.error(e);
+            const errorDisplay = document.getElementById('globalErrorDisplay');
+            if (errorDisplay) {
+                errorDisplay.innerHTML = `오류가 발생했습니다: ${e.message}`;
+                errorDisplay.classList.remove('hidden');
+                errorDisplay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                alert('오류가 발생했습니다: ' + e.message.replace(/<[^>]*>/g, ''));
+            }
         } finally {
             btn.classList.remove('btn-loading');
             btn.textContent = '사주 명함 발급받기 ✨';
@@ -727,9 +747,12 @@
                 });
 
                 if (response.status === 429) {
-                    throw new Error('일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!');
+                    throw new Error('일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요! <span class="text-xs opacity-70 mt-1 block">Status: 429</span>');
+                } else if (response.status >= 500) {
+                    const preview = errorBody.substring(0, 50).replace(/</g, "&lt;");
+                    throw new Error(`서버에 문제가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status} | Info: ${preview}...</span>`);
                 } else {
-                    throw new Error(`분석 중 오류가 발생했습니다. (${response.status})`);
+                    throw new Error(`분석 중 오류가 발생했습니다. <span class="text-xs opacity-70 mt-1 block">Status: ${response.status}</span>`);
                 }
             }
 
@@ -740,8 +763,14 @@
             showResult(topic, result.result);
 
         } catch (e) {
-            alert('분석 중 오류가 발생했습니다: ' + e.message);
-            resultArea.classList.add('hidden'); // Hide if error
+            console.error(e);
+            // AI 분석 결과 영역에 에러 표시
+            resultContent.innerHTML = `
+                <div class="p-6 bg-red-900/30 border border-red-500/50 rounded-2xl text-red-200">
+                    <p class="font-bold mb-2">분석 중 오류가 발생했습니다. 😥</p>
+                    <p class="text-sm opacity-90">${e.message}</p>
+                </div>
+            `;
         } finally {
             btn.disabled = false;
             btn.classList.remove('opacity-70');
