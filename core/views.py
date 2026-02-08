@@ -10,6 +10,9 @@ from django.db.models import Count
 from PIL import Image
 
 def home(request):
+    from products.models import Product
+    from core.models import Post
+    
     # Order by display_order first, then by creation date
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
 
