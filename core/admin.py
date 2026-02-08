@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from django.db.models import Count
 from .models import UserProfile, Post, SiteConfig, Feedback
 
 class UserProfileInline(admin.StackedInline):
@@ -12,7 +13,10 @@ class UserProfileInline(admin.StackedInline):
 class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
     list_display = ('username', 'email', 'get_nickname', 'is_staff')
-    
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('userprofile')
+
     def get_nickname(self, instance):
         return instance.userprofile.nickname
     get_nickname.short_description = '별명'
@@ -27,20 +31,29 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'nickname']
     list_filter = ['role']
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ['author', 'content_summary', 'created_at', 'like_count']
+    list_display = ['author', 'content_summary', 'created_at', 'like_count_display']
     list_filter = ['created_at', 'author']
     search_fields = ['content', 'author__username']
     readonly_fields = ['created_at']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('author').annotate(
+            _like_count=Count('likes', distinct=True)
+        )
 
     def content_summary(self, obj):
         return obj.content[:50] + "..." if len(obj.content) > 50 else obj.content
     content_summary.short_description = '내용 요약'
 
-    def like_count(self, obj):
-        return obj.likes.count()
-    like_count.short_description = '좋아요 수'
+    def like_count_display(self, obj):
+        return obj._like_count
+    like_count_display.short_description = '좋아요 수'
+    like_count_display.admin_order_field = '_like_count'
 
 
 @admin.register(SiteConfig)

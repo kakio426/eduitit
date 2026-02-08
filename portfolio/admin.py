@@ -19,6 +19,9 @@ class LectureHistoryAdmin(admin.ModelAdmin):
     list_filter = ('date', 'program')
     search_fields = ('client_name',)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('program')
+
 @admin.register(Inquiry)
 class InquiryAdmin(admin.ModelAdmin):
     list_display = ('name', 'organization', 'topic', 'requested_date', 'created_at', 'is_reviewed')

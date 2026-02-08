@@ -16,9 +16,15 @@ class ArtClassAdmin(admin.ModelAdmin):
     inlines = [ArtStepInline]
     readonly_fields = ['created_at']
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by')
+
 
 @admin.register(ArtStep)
 class ArtStepAdmin(admin.ModelAdmin):
     list_display = ['id', 'art_class', 'step_number', 'description', 'image']
     list_filter = ['art_class']
     search_fields = ['description']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('art_class')

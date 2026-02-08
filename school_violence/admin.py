@@ -10,6 +10,9 @@ class GuidelineDocumentAdmin(admin.ModelAdmin):
     readonly_fields = ['is_processed', 'chunk_count', 'created_at', 'updated_at']
     ordering = ['-created_at']
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('uploaded_by')
+
 
 @admin.register(ConsultationMode)
 class ConsultationModeAdmin(admin.ModelAdmin):

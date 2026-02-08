@@ -9,6 +9,9 @@ class PadletDocumentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description']
     readonly_fields = ['is_processed', 'chunk_count', 'created_at', 'updated_at']
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('uploaded_by')
+
 
 @admin.register(LinkedPadletBoard)
 class LinkedPadletBoardAdmin(admin.ModelAdmin):
