@@ -122,7 +122,34 @@ diff config/settings.py config/settings_production.py
 
 > **사례 (2026-02-04)**: 프로덕션에서 UserProfile 없는 User 존재 → 500 에러. 로컬에서는 재현 안 됨.
 
-## 5. SNS Sidebar 통합 패턴
+## 5. Alpine.js `<template x-if>` 안에 HTMX 넣지 않기
+
+`<template x-if>`는 조건에 따라 DOM을 완전히 제거/추가하므로, 그 안의 HTMX 속성(`hx-trigger`, `hx-get` 등)이 제대로 초기화되지 않을 수 있다.
+
+```html
+<!-- ❌ HTMX 폴링이 작동하지 않음 -->
+<template x-if="showFullscreen">
+    <div hx-get="/api/data/" hx-trigger="every 5s">...</div>
+</template>
+
+<!-- ✅ HTMX를 template 밖에 두기 -->
+<div x-show="showFullscreen">
+    <div hx-get="/api/data/" hx-trigger="every 5s">...</div>
+</div>
+```
+
+> **사례 (2026-02-08)**: studentmbti 세션 상세 페이지에서 전체화면 모드의 실시간 학생 목록이 항상 0명으로 표시. `<template x-if>` 안의 HTMX 폴링이 작동하지 않았음.
+
+## 6. 초등학생 대상 콘텐츠 어휘 수준
+
+학생에게 보여지는 텍스트에서 다음과 같은 어려운 단어 사용 금지:
+- **한자어/전문용어**: 사색가, 통찰력, 유일무이, 조망, 적재적소, 카리스마, 비전, 본능적, 전략적, 효율성, 역산
+- **현실과 맞지 않는 표현**: 기말고사(시험을 보지 않는 학교가 많음)
+- **대체 방식**: 쉬운 우리말로 풀어쓰기 (조망→한눈에 보기, 적재적소→딱 맞는 순간, 역산→거꾸로 계산)
+
+> **사례 (2026-02-08)**: studentmbti 결과지에서 초등학생이 이해하기 어려운 단어 다수 발견. 12개 이상의 어휘 순화 작업 진행.
+
+## 7. SNS Sidebar 통합 패턴
 
 다른 서비스에 SNS sidebar 추가 시:
 
