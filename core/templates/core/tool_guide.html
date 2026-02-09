@@ -12,6 +12,12 @@
             0 10px 20px rgba(124, 58, 237, 0.1);
     }
 
+    /* Modal: base.html의 .clay-card:hover transform이 centering을 덮어쓰는 것 방지 */
+    .tool-modal.clay-card:hover {
+        transform: translate(-50%, -50%) !important;
+        z-index: 60;
+    }
+
     /* Modal Text Enhancements */
     .modal-desc {
         font-size: 1.125rem;
@@ -180,7 +186,7 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
         @click.outside="closeModal()"
-        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl max-h-[85vh] overflow-y-auto clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-[60]"
+        class="tool-modal fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl max-h-[85vh] overflow-y-auto clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-[60]"
         style="display: none;">
 
         <template x-if="selectedTool">
