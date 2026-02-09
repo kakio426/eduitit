@@ -505,4 +505,22 @@ context['posts'] = posts
 
 ---
 
-**마지막 업데이트:** 2026-02-08
+# 임시 비활성화 기능
+
+## Fortune 앱 - 일반 모드(general) 숨김 (2026-02-09)
+
+**상태:** 비활성화 (교사 모드만 노출)
+
+**재활성화 방법 (3곳 수정):**
+1. `fortune/templates/fortune/saju_form.html` — `MODE_TOGGLE_START` ~ `MODE_TOGGLE_END` 주석 해제
+2. `fortune/views.py` — `saju_view` 함수 내 `mode = 'teacher'` → `mode = data['mode']`로 복원
+3. `fortune/views.py` — `saju_streaming_api` 함수 내 `get_prompt('teacher', ...)` → `get_prompt(data['mode'], ...)`로 복원
+4. `fortune/views.py` — `saju_api_view` 함수 내 `mode = 'teacher'` → `mode = data['mode']`로 복원
+
+**검색 키워드:** `일반 모드 임시 비활성화` 로 grep하면 모든 수정 지점 확인 가능
+
+**참고:** `fortune/forms.py`의 MODE_CHOICES, `fortune/prompts.py`의 `get_general_prompt()`, 템플릿의 `generalTabs` 배열 등 백엔드/프롬프트 코드는 그대로 유지. UI와 뷰 진입점만 잠금.
+
+---
+
+**마지막 업데이트:** 2026-02-09

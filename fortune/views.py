@@ -203,7 +203,7 @@ def saju_view(request):
         form = SajuForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            mode = data['mode']
+            mode = 'teacher'  # 일반 모드 임시 비활성화 — 재활성화: mode = data['mode']
 
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
@@ -316,7 +316,7 @@ def saju_streaming_api(request):
 
     data = form.cleaned_data
     chart_context = get_chart_context(data)
-    prompt = get_prompt(data['mode'], data, chart_context=chart_context)
+    prompt = get_prompt('teacher', data, chart_context=chart_context)  # 일반 모드 임시 비활성화 — 재활성화: get_prompt(data['mode'], ...)
 
     def stream_response():
         try:
@@ -352,7 +352,7 @@ def saju_api_view(request):
             return JsonResponse({'error': '입력값을 확인해주세요.', 'errors': form.errors}, status=400)
 
         data = form.cleaned_data
-        mode = data['mode']
+        mode = 'teacher'  # 일반 모드 임시 비활성화 — 재활성화: mode = data['mode']
         
         # Logic Engine
         chart_context = get_chart_context(data)
