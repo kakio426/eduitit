@@ -585,6 +585,30 @@ function getAudioContext() {
 - `chess/templates/chess/play.html` - 게임 UI (모달, 하이라이트 CSS)
 - `chess/templates/chess/index.html` - 로비 페이지
 
+### 18. CSS `transform` 충돌 — 전역 hover가 모달 centering을 파괴
+
+`base.html`의 `.clay-card:hover { transform: translateY(-4px) scale(1.005) }`처럼 전역 hover 스타일이 있으면, `fixed` + `transform: translate(-50%, -50%)`로 중앙 정렬된 모달의 위치를 **완전히 덮어쓴다**. CSS `transform`은 개별 값이 아닌 **전체가 교체**되기 때문이다.
+
+**증상**: 모달 위에 마우스를 올리면 오른쪽 아래로 튀어나가고, 마우스가 벗어나면 돌아오면서 반짝거림(flicker) 발생.
+
+```css
+/* ❌ base.html 전역 스타일이 모달 centering을 파괴 */
+.clay-card:hover {
+    transform: translateY(-4px) scale(1.005);  /* translate(-50%,-50%) 사라짐 */
+}
+
+/* ✅ 모달에 고유 클래스 부여 후 hover transform 고정 */
+.tool-modal.clay-card:hover {
+    transform: translate(-50%, -50%) !important;
+}
+```
+
+**체크리스트** (fixed + transform 중앙 정렬 모달 만들 때):
+- [ ] 모달에 `clay-card`, `clay-btn` 등 전역 hover transform이 있는 클래스를 사용하고 있는가?
+- [ ] 사용한다면, 모달 전용 클래스로 hover transform을 `translate(-50%, -50%)`로 고정했는가?
+
+> **사례 (2026-02-09)**: tools 페이지 모달이 `.clay-card:hover`의 `translateY(-4px)`에 의해 centering이 깨지면서 반짝거림 발생. `.tool-modal.clay-card:hover`로 transform 고정하여 해결.
+
 ---
 
 **마지막 업데이트:** 2026-02-09
