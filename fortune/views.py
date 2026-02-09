@@ -7,7 +7,7 @@ from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
-from core.utils import ratelimit_key_for_master_only
+from core.utils import ratelimit_key_for_master_only, has_personal_api_key
 from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
