@@ -159,10 +159,102 @@
     .highlight-attack {
         box-shadow: inset 0 0 3px 3px rgba(255, 0, 0, 0.3);
     }
+
+    .highlight-last-move {
+        background-color: rgba(255, 255, 0, 0.4) !important;
+        box-shadow: inset 0 0 5px 2px rgba(255, 200, 0, 0.6);
+    }
+
+    .highlight-check-king {
+        background: radial-gradient(circle, rgba(220, 38, 38, 0.6) 0%, rgba(185, 28, 28, 0.3) 70%) !important;
+        animation: pulse-check 1.5s infinite;
+    }
+
+    @keyframes pulse-check {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Captured Pieces Styles */
+    .captured-pieces {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        min-height: 2rem;
+        padding: 0.5rem;
+        background: #f9fafb;
+        border-radius: 10px;
+    }
+
+    .captured-piece {
+        font-size: 1.5rem;
+        opacity: 0.8;
+    }
+
+    /* Promotion Modal Styles */
+    .promotion-btn {
+        padding: 1rem;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .promotion-btn:hover {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: white;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(124, 58, 237, 0.4);
+    }
+
+    /* Toast Notification Styles */
+    .toast {
+        position: fixed;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 20px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        box-shadow: 0 10px 25px rgba(124, 58, 237, 0.5);
+        opacity: 0;
+        transition: all 0.5s ease;
+        z-index: 1000;
+        pointer-events: none;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
 <div class="min-h-screen pt-32 pb-20 px-6">
     <div class="max-w-7xl mx-auto">
 
@@ -228,6 +320,38 @@
                             메인으로
                         </a>
                     </div>
+
+                    <!-- Display Options -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <button id="highlightToggleBtn" onclick="toggleLastMoveHighlight()"
+                            class="btn-game text-sm py-2 px-4 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-xl w-full">
+                            이전 수 표시: ON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Captured Pieces -->
+                <div class="game-info mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-chess text-purple-500"></i>
+                        잡은 기물
+                    </h2>
+
+                    <!-- White's Captured Pieces -->
+                    <div class="mb-3">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-1">백이 잡은 기물</h3>
+                        <div id="whiteCaptured" class="captured-pieces">
+                            <span class="text-gray-400 text-sm italic">없음</span>
+                        </div>
+                    </div>
+
+                    <!-- Black's Captured Pieces -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-600 mb-1">흑이 잡은 기물</h3>
+                        <div id="blackCaptured" class="captured-pieces">
+                            <span class="text-gray-400 text-sm italic">없음</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Move History -->
@@ -246,6 +370,38 @@
     </div>
 </div>
 
+<!-- Pawn Promotion Modal -->
+<div id="promotionModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500/40 backdrop-blur-md transition-opacity"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div
+                class="relative transform overflow-hidden rounded-[2rem] bg-white text-center shadow-2xl p-8 max-w-md w-full">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">♟️ 폰 승급</h3>
+                <p class="text-gray-600 mb-6">승급할 기물을 선택하세요</p>
+                <div class="grid grid-cols-4 gap-4">
+                    <button onclick="selectPromotion('q')" class="promotion-btn">
+                        <span class="text-6xl">♛</span>
+                        <span class="block text-sm mt-2">퀸</span>
+                    </button>
+                    <button onclick="selectPromotion('r')" class="promotion-btn">
+                        <span class="text-6xl">♜</span>
+                        <span class="block text-sm mt-2">룩</span>
+                    </button>
+                    <button onclick="selectPromotion('b')" class="promotion-btn">
+                        <span class="text-6xl">♝</span>
+                        <span class="block text-sm mt-2">비숍</span>
+                    </button>
+                    <button onclick="selectPromotion('n')" class="promotion-btn">
+                        <span class="text-6xl">♞</span>
+                        <span class="block text-sm mt-2">나이트</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Game Over Modal -->
 <div id="gameOverModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity"></div>
@@ -254,8 +410,8 @@
             <div
                 class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-center shadow-2xl p-10 max-w-md w-full">
                 <div class="text-6xl mb-4" id="gameOverIcon">🏆</div>
-                <h3 class="text-3xl font-bold text-gray-800 mb-3" id="gameOverTitle">체크메이트!</h3>
-                <p class="text-xl text-gray-600 mb-6" id="gameOverMessage">백 승리!</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-3" id="gameOverTitle">게임 종료</h3>
+                <p class="text-xl text-gray-600 mb-6" id="gameOverMessage">결과를 확인하세요</p>
                 <div class="flex flex-col gap-3">
                     <button onclick="resetGame()" class="btn-game btn-primary w-full">
                         <i class="fa-solid fa-rotate-right mr-2"></i>

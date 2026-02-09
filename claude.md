@@ -523,4 +523,68 @@ context['posts'] = posts
 
 ---
 
+## Chess 앱 - JS 게임 로직 주의사항 (2026-02-09)
+
+### 15. JS `var` 호이스팅 — 같은 함수 내 변수 재선언 금지
+
+`var`로 같은 이름을 재선언하면 호이스팅에 의해 하나의 변수로 합쳐져, 이후 분기에서 예상과 다른 값을 참조한다.
+
+```javascript
+// ❌ var piece가 2번 선언 → 호이스팅으로 하나로 합쳐짐
+function onSquareClick(square) {
+    var piece = game.get(square);         // 클릭한 칸
+    if (selectedSquare) {
+        var piece = game.get(selectedSquare); // 이전 선택 칸으로 덮어씀
+        // move 실패 시 fall-through...
+    }
+    // 여기서 piece는 selectedSquare 기준 → 잘못된 값
+    if (!piece || piece.color !== game.turn()) { ... }
+}
+
+// ✅ 다른 이름 사용
+var selectedPiece = game.get(selectedSquare);
+```
+
+> **사례 (2026-02-09)**: 체스 앱에서 기물 선택 후 잘못된 칸 클릭 → 새 기물 선택이 안 되는 버그. `var piece` 재선언이 원인.
+
+### 16. Undo/Reset 시 모든 파생 상태 동기화 필수
+
+게임에서 `undo()` 또는 `reset()` 호출 시, 핵심 상태뿐 아니라 **파생 UI 상태**도 반드시 동기화해야 한다.
+
+**체크리스트** (체스 기준):
+- [ ] `capturedPieces` 배열에서 되돌린 기물 제거 + `renderCapturedPieces()` 호출
+- [ ] `lastMove` 갱신 (남은 기록의 마지막 수 또는 null) + `highlightLastMove()` 호출
+- [ ] `moveHistory` 배열 pop + `updateMoveHistory()` 호출
+- [ ] Reset 시 `renderCapturedPieces()` 호출 (initGame이 배열만 비우고 DOM은 안 건드림)
+
+> **사례 (2026-02-09)**: 되돌리기 후 잡은 기물 패널에 이미 돌아간 기물이 표시되고, 하이라이트가 잘못된 칸에 남아있었음.
+
+### 17. Web Audio API — AudioContext 공유 필수
+
+`playSound()` 호출마다 `new AudioContext()`를 생성하면 브라우저 제한(보통 6개)에 도달하여 사운드가 멈춘다. 전역에 하나를 생성하고 `suspended` 상태일 때 `resume()` 호출.
+
+```javascript
+// ❌ 매번 생성
+function playSound() {
+    var ctx = new AudioContext();
+}
+
+// ✅ 전역 공유
+var sharedAudioContext = null;
+function getAudioContext() {
+    if (!sharedAudioContext) {
+        sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (sharedAudioContext.state === 'suspended') sharedAudioContext.resume();
+    return sharedAudioContext;
+}
+```
+
+### 관련 파일
+- `chess/static/chess/js/chess_logic.js` - 게임 로직 전체
+- `chess/templates/chess/play.html` - 게임 UI (모달, 하이라이트 CSS)
+- `chess/templates/chess/index.html` - 로비 페이지
+
+---
+
 **마지막 업데이트:** 2026-02-09
