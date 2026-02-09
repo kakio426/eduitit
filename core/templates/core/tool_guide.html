@@ -12,244 +12,235 @@
             0 10px 20px rgba(124, 58, 237, 0.1);
     }
 
-    /* Modal Stability */
-    #modal-content {
-        transition: opacity 0.3s ease, transform 0.3s ease !important;
-        animation: none !important;
-        z-index: 60;
-    }
-
-    #modal-content.clay-card:hover {
-        transform: translate(-50%, -50%) scale(1) !important;
-        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5) !important;
-    }
-
     /* Modal Text Enhancements */
-    #modal-desc {
+    .modal-desc {
         font-size: 1.125rem;
         line-height: 1.6;
         font-weight: 500;
     }
 
-    #modal-summary {
+    .modal-summary {
         font-size: 1.25rem;
         font-weight: 800;
     }
 
-    #modal-details {
+    .modal-details {
         font-size: 1rem;
     }
 </style>
 
-<section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto" x-data="{ 
-             activeFilter: 'all',
-             modalOpen: false,
-             selectedTool: null,
-             filterTools(category) {
-                 this.activeFilter = category;
-             },
-             openModal(tool) {
-                 this.selectedTool = tool;
-                 this.modalOpen = true;
-                 document.body.style.overflow = 'hidden';
-             },
-             closeModal() {
-                 this.modalOpen = false;
-                 document.body.style.overflow = 'auto';
-             }
-         }">
+{{ tools_json|json_script:"tools-data" }}
 
-    <!-- Header -->
-    <div class="text-center mb-16" data-aos="fade-down">
-        <span
-            class="inline-block px-5 py-2 rounded-full bg-purple-100 text-purple-600 font-bold text-xl mb-6 shadow-sm">
-            👋 2026 Edu-Tech Guide
-        </span>
-        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 text-shadow mb-6 leading-tight">
-            "선생님, 이럴 땐<br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">이 도구</span>를 쓰세요!"
-        </h1>
-        <p class="text-xl text-gray-500 font-bold leading-relaxed max-w-3xl mx-auto">
-            복잡한 AI 도구, 상황별로 딱 골라드립니다.<br>
-            수업 준비부터 행정 업무까지 한 번에 끝내세요.
-        </p>
-    </div>
+<div x-data="{
+        activeFilter: 'all',
+        modalOpen: false,
+        selectedTool: null,
+        tools: [],
+        init() {
+            this.tools = JSON.parse(document.getElementById('tools-data').textContent);
+        },
+        filterTools(category) {
+            this.activeFilter = category;
+        },
+        openModal(index) {
+            this.selectedTool = this.tools[index];
+            this.modalOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
+        closeModal() {
+            this.modalOpen = false;
+            this.selectedTool = null;
+            document.body.style.overflow = 'auto';
+        }
+    }">
 
-    <!-- Filter Tabs -->
-    <div class="flex flex-wrap justify-center gap-4 mb-12">
-        <button @click="filterTools('all')" :class="activeFilter === 'all' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            전체 보기
-        </button>
-        <button @click="filterTools('ai')" :class="activeFilter === 'ai' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            🤖 AI 비서
-        </button>
-        <button @click="filterTools('dev')" :class="activeFilter === 'dev' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            💻 코딩/개발
-        </button>
-        <button @click="filterTools('design')" :class="activeFilter === 'design' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            🎨 디자인
-        </button>
-        <button @click="filterTools('art')" :class="activeFilter === 'art' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            🖼️ 창작
-        </button>
-        <button @click="filterTools('work')" :class="activeFilter === 'work' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            ⚡ 생산성
-        </button>
-        <button @click="filterTools('ops')" :class="activeFilter === 'ops' ? 'text-gray-700' : 'text-gray-500'"
-            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
-            🛡️ 운영/모니터링
-        </button>
-    </div>
+    <section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
 
-    <!-- Tools Grid (SSR) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {% for tool in tools %}
-        <div x-show="activeFilter === 'all' || activeFilter === '{{ tool.category }}'"
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 transform scale-95"
-            x-transition:enter-end="opacity-100 transform scale-100" @click="openModal({
-                name: '{{ tool.name|escapejs }}',
-                icon: `{{ tool.icon|safe }}`,
-                desc: '{{ tool.desc|escapejs }}',
-                summary: '{{ tool.summary|escapejs }}',
-                details: {{ tool.details|safe }},
-                url: '{{ tool.url }}',
-                category: '{{ tool.category }}'
-            })"
-            class="clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]">
+        <!-- Header -->
+        <div class="text-center mb-16" data-aos="fade-down">
+            <span
+                class="inline-block px-5 py-2 rounded-full bg-purple-100 text-purple-600 font-bold text-xl mb-6 shadow-sm">
+                👋 2026 Edu-Tech Guide
+            </span>
+            <h1 class="text-6xl md:text-8xl font-bold text-gray-700 text-shadow mb-6 leading-tight">
+                "선생님, 이럴 땐<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">이 도구</span>를 쓰세요!"
+            </h1>
+            <p class="text-xl text-gray-500 font-bold leading-relaxed max-w-3xl mx-auto">
+                복잡한 AI 도구, 상황별로 딱 골라드립니다.<br>
+                수업 준비부터 행정 업무까지 한 번에 끝내세요.
+            </p>
+        </div>
 
-            <div class="flex items-center gap-4 mb-6">
-                <div
-                    class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 bg-white/50">
-                    {{ tool.icon|safe }}
+        <!-- Filter Tabs -->
+        <div class="flex flex-wrap justify-center gap-4 mb-12">
+            <button @click="filterTools('all')" :class="activeFilter === 'all' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                전체 보기
+            </button>
+            <button @click="filterTools('ai')" :class="activeFilter === 'ai' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                🤖 AI 비서
+            </button>
+            <button @click="filterTools('dev')" :class="activeFilter === 'dev' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                💻 코딩/개발
+            </button>
+            <button @click="filterTools('design')" :class="activeFilter === 'design' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                🎨 디자인
+            </button>
+            <button @click="filterTools('art')" :class="activeFilter === 'art' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                🖼️ 창작
+            </button>
+            <button @click="filterTools('work')" :class="activeFilter === 'work' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                ⚡ 생산성
+            </button>
+            <button @click="filterTools('ops')" :class="activeFilter === 'ops' ? 'text-gray-700' : 'text-gray-500'"
+                class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+                🛡️ 운영/모니터링
+            </button>
+        </div>
+
+        <!-- Tools Grid (SSR) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {% for tool in tools %}
+            <div x-show="activeFilter === 'all' || activeFilter === '{{ tool.category }}'"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform scale-95"
+                x-transition:enter-end="opacity-100 transform scale-100"
+                @click="openModal({{ forloop.counter0 }})"
+                class="clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]">
+
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 bg-white/50">
+                        {{ tool.icon|safe }}
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-3xl font-bold text-gray-700 leading-none mb-2">{{ tool.name }}</h3>
+                        <span class="inline-block px-3 py-1 rounded-lg text-sm font-bold
+                            {% if tool.category == 'ai' %}bg-blue-100 text-blue-600
+                            {% elif tool.category == 'dev' %}bg-purple-100 text-purple-600
+                            {% elif tool.category == 'design' %}bg-pink-100 text-pink-600
+                            {% elif tool.category == 'art' %}bg-orange-100 text-orange-600
+                            {% elif tool.category == 'work' %}bg-green-100 text-green-600
+                            {% elif tool.category == 'ops' %}bg-red-100 text-red-600
+                            {% endif %}">
+                            {% if tool.category == 'ai' %}AI 비서
+                            {% elif tool.category == 'dev' %}개발/코딩
+                            {% elif tool.category == 'design' %}디자인
+                            {% elif tool.category == 'art' %}창작/예술
+                            {% elif tool.category == 'work' %}생산성
+                            {% elif tool.category == 'ops' %}운영/모니터링
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
-                <div class="flex-1">
-                    <h3 class="text-3xl font-bold text-gray-700 leading-none mb-2">{{ tool.name }}</h3>
-                    <span class="inline-block px-3 py-1 rounded-lg text-sm font-bold 
-                        {% if tool.category == 'ai' %}bg-blue-100 text-blue-600
-                        {% elif tool.category == 'dev' %}bg-purple-100 text-purple-600
-                        {% elif tool.category == 'design' %}bg-pink-100 text-pink-600
-                        {% elif tool.category == 'art' %}bg-orange-100 text-orange-600
-                        {% elif tool.category == 'work' %}bg-green-100 text-green-600
-                        {% elif tool.category == 'ops' %}bg-red-100 text-red-600
-                        {% endif %}">
-                        {% if tool.category == 'ai' %}AI 비서
-                        {% elif tool.category == 'dev' %}개발/코딩
-                        {% elif tool.category == 'design' %}디자인
-                        {% elif tool.category == 'art' %}창작/예술
-                        {% elif tool.category == 'work' %}생산성
-                        {% elif tool.category == 'ops' %}운영/모니터링
-                        {% endif %}
+
+                <p class="text-gray-500 font-medium text-lg leading-relaxed mb-6 flex-1">
+                    {{ tool.desc }}
+                </p>
+
+                <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
+                    {% if tool.is_new %}
+                    <span class="text-lg text-purple-600 font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-sparkles"></i> NEW
+                    </span>
+                    {% else %}
+                    <span class="text-lg text-gray-400 font-mono">
+                        <i class="fa-regular fa-clock"></i> {{ tool.last_updated }}
+                    </span>
+                    {% endif %}
+                    <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">
+                        업데이트 확인 <i class="fa-solid fa-arrow-right"></i>
                     </span>
                 </div>
             </div>
-
-            <p class="text-gray-500 font-medium text-lg leading-relaxed mb-6 flex-1">
-                {{ tool.desc }}
-            </p>
-
-            <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
-                {% if tool.is_new %}
-                <span class="text-lg text-purple-600 font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-sparkles"></i> NEW
-                </span>
-                {% else %}
-                <span class="text-lg text-gray-400 font-mono">
-                    <i class="fa-regular fa-clock"></i> {{ tool.last_updated }}
-                </span>
-                {% endif %}
-                <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">
-                    업데이트 확인 <i class="fa-solid fa-arrow-right"></i>
-                </span>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+
+    </section>
+
+    <!-- Modal Overlay -->
+    <div x-show="modalOpen"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        @click="closeModal()"
+        class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50" style="display: none;">
     </div>
 
-</section>
+    <!-- Modal Content -->
+    <div x-show="modalOpen"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+        @click.outside="closeModal()"
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl max-h-[85vh] overflow-y-auto clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-[60]"
+        style="display: none;">
 
-<!-- Modal Overlay -->
-<div x-show="modalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="closeModal()"
-    class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50" style="display: none;">
-</div>
-
-<!-- Modal Content -->
-<div x-show="modalOpen" x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-    x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
-    x-transition:leave-end="opacity-0 scale-95"
-    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-50 overflow-hidden"
-    style="display: none;" @click.away="closeModal()">
-
-    <template x-if="selectedTool">
-        <div>
-            <!-- Modal Header -->
-            <div class="p-8 pb-0 flex justify-between items-start">
-                <div class="flex items-center gap-6">
-                    <div class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-6xl"
-                        x-html="selectedTool.icon">
+        <template x-if="selectedTool">
+            <div>
+                <!-- Modal Header -->
+                <div class="p-8 pb-0 flex justify-between items-start">
+                    <div class="flex items-center gap-6">
+                        <div class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-6xl"
+                            x-html="selectedTool.icon">
+                        </div>
+                        <div>
+                            <h2 class="text-6xl font-bold text-gray-800 mb-2" x-text="selectedTool.name"></h2>
+                        </div>
                     </div>
+                    <button @click="closeModal()"
+                        class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-8 space-y-8">
+                    <!-- Description -->
                     <div>
-                        <h2 class="text-6xl font-bold text-gray-800 mb-2" x-text="selectedTool.name"></h2>
+                        <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
+                            <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
+                        </h3>
+                        <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
+                            <p class="modal-desc text-gray-600 font-medium" x-text="selectedTool.desc"></p>
+                        </div>
+                    </div>
+
+                    <!-- Latest Update -->
+                    <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
+                        <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
+                            <i class="fa-solid fa-bolt"></i> 최신 업데이트
+                        </h3>
+                        <p class="modal-summary text-blue-800 font-bold mb-4" x-text="selectedTool.summary"></p>
+                        <ul class="modal-details space-y-3 text-blue-700/90">
+                            <template x-for="detail in selectedTool.details" :key="detail">
+                                <li class="flex items-start gap-4">
+                                    <i class="fa-solid fa-check mt-2 text-blue-500"></i>
+                                    <span class="font-medium" x-text="detail"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- CTA -->
+                    <div class="text-center pt-8 pb-4">
+                        <a :href="selectedTool.url" target="_blank" rel="noopener noreferrer"
+                            class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
+                            공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
                     </div>
                 </div>
-                <button @click="closeModal()"
-                    class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
             </div>
+        </template>
+    </div>
 
-            <!-- Modal Body -->
-            <div class="p-8 space-y-8">
-                <!-- Description -->
-                <div>
-                    <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
-                        <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
-                    </h3>
-                    <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
-                        <p id="modal-desc" class="text-gray-600 font-medium" x-text="selectedTool.desc"></p>
-                    </div>
-                </div>
-
-                <!-- Latest Update -->
-                <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
-                    <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
-                        <i class="fa-solid fa-bolt"></i> 최신 업데이트
-                    </h3>
-                    <p id="modal-summary" class="text-blue-800 font-bold mb-4" x-text="selectedTool.summary"></p>
-                    <ul id="modal-details" class="space-y-3 text-blue-700/90">
-                        <template x-for="detail in selectedTool.details" :key="detail">
-                            <li class="flex items-start gap-4">
-                                <i class="fa-solid fa-check mt-2 text-blue-500"></i>
-                                <span class="font-medium" x-text="detail"></span>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-
-                <!-- CTA -->
-                <div class="text-center pt-8 pb-4">
-                    <a :href="selectedTool.url" target="_blank" rel="noopener noreferrer"
-                        class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
-                        공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </template>
 </div>
-
-<script>
-    // Tools data is already rendered in the template via SSR
-    // Alpine.js will handle the modal state and filtering
-</script>
 
 {% endblock %}

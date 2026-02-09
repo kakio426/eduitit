@@ -225,7 +225,6 @@ def prompt_lab(request):
 def tool_guide(request):
     from core.data import TOOLS_DATA
     from datetime import datetime, timedelta
-    import json
     
     # Calculate is_new flag for each tool (updated within 30 days)
     today = datetime.now().date()
@@ -242,12 +241,9 @@ def tool_guide(request):
             tool_copy['is_new'] = False
         tools.append(tool_copy)
     
-    # JSON serialize for Alpine.js (escape for safe template rendering)
-    tools_json = json.dumps(tools, ensure_ascii=False)
-    
     return render(request, 'core/tool_guide.html', {
         'tools': tools,
-        'tools_json': tools_json
+        'tools_json': tools,
     })
 
 
