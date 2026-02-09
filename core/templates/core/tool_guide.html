@@ -4,7 +4,7 @@
 
 {% block content %}
 <style type="text/tailwindcss">
-    /* Fixed Hover Effects - No more flickering */
+    /* Fixed Hover Effects */
     .tool-card:hover {
         transform: translateY(-8px) scale(1.02);
         box-shadow:
@@ -12,24 +12,19 @@
             0 10px 20px rgba(124, 58, 237, 0.1);
     }
 
-    /* Bento Grid Utils */
-
-
-    /* Fix Modal Jumping & Increase Modal Font Sizes */
+    /* Modal Stability */
     #modal-content {
         transition: opacity 0.3s ease, transform 0.3s ease !important;
         animation: none !important;
         z-index: 60;
-        /* Higher than overlay */
     }
 
     #modal-content.clay-card:hover {
         transform: translate(-50%, -50%) scale(1) !important;
         box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5) !important;
-        animation: none !important;
     }
 
-    /* Modal Text Enhancements for NanumSquareRound Font */
+    /* Modal Text Enhancements */
     #modal-desc {
         font-size: 1.125rem;
         line-height: 1.6;
@@ -46,7 +41,23 @@
     }
 </style>
 
-<section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
+<section class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto" x-data="{ 
+             activeFilter: 'all',
+             modalOpen: false,
+             selectedTool: null,
+             filterTools(category) {
+                 this.activeFilter = category;
+             },
+             openModal(tool) {
+                 this.selectedTool = tool;
+                 this.modalOpen = true;
+                 document.body.style.overflow = 'hidden';
+             },
+             closeModal() {
+                 this.modalOpen = false;
+                 document.body.style.overflow = 'auto';
+             }
+         }">
 
     <!-- Header -->
     <div class="text-center mb-16" data-aos="fade-down">
@@ -66,603 +77,179 @@
 
     <!-- Filter Tabs -->
     <div class="flex flex-wrap justify-center gap-4 mb-12">
-        <button onclick="filterTools('all')"
-            class="filter-btn active clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-700 hover:text-purple-600">전체
-            보기</button>
-        <button onclick="filterTools('ai')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🤖
-            AI 비서</button>
-        <button onclick="filterTools('dev')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">💻
-            코딩/개발</button>
-        <button onclick="filterTools('art')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">🎨
-            창작/예술</button>
-        <button onclick="filterTools('work')"
-            class="filter-btn clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold text-gray-500 hover:text-purple-600">⚡
-            생산성</button>
+        <button @click="filterTools('all')" :class="activeFilter === 'all' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            전체 보기
+        </button>
+        <button @click="filterTools('ai')" :class="activeFilter === 'ai' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            🤖 AI 비서
+        </button>
+        <button @click="filterTools('dev')" :class="activeFilter === 'dev' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            💻 코딩/개발
+        </button>
+        <button @click="filterTools('design')" :class="activeFilter === 'design' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            🎨 디자인
+        </button>
+        <button @click="filterTools('art')" :class="activeFilter === 'art' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            🖼️ 창작
+        </button>
+        <button @click="filterTools('work')" :class="activeFilter === 'work' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            ⚡ 생산성
+        </button>
+        <button @click="filterTools('ops')" :class="activeFilter === 'ops' ? 'text-gray-700' : 'text-gray-500'"
+            class="clay-btn shadow-clay px-8 py-3 rounded-clay text-2xl font-bold hover:text-purple-600 transition-colors">
+            🛡️ 운영/모니터링
+        </button>
     </div>
 
-    <!-- Tools Grid (as per design 2) -->
-    <div id="tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <!-- Injected via JS -->
+    <!-- Tools Grid (SSR) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {% for tool in tools %}
+        <div x-show="activeFilter === 'all' || activeFilter === '{{ tool.category }}'"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95"
+            x-transition:enter-end="opacity-100 transform scale-100" @click="openModal({
+                name: '{{ tool.name|escapejs }}',
+                icon: `{{ tool.icon|safe }}`,
+                desc: '{{ tool.desc|escapejs }}',
+                summary: '{{ tool.summary|escapejs }}',
+                details: {{ tool.details|safe }},
+                url: '{{ tool.url }}',
+                category: '{{ tool.category }}'
+            })"
+            class="clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]">
+
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 bg-white/50">
+                    {{ tool.icon|safe }}
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-3xl font-bold text-gray-700 leading-none mb-2">{{ tool.name }}</h3>
+                    <span class="inline-block px-3 py-1 rounded-lg text-sm font-bold 
+                        {% if tool.category == 'ai' %}bg-blue-100 text-blue-600
+                        {% elif tool.category == 'dev' %}bg-purple-100 text-purple-600
+                        {% elif tool.category == 'design' %}bg-pink-100 text-pink-600
+                        {% elif tool.category == 'art' %}bg-orange-100 text-orange-600
+                        {% elif tool.category == 'work' %}bg-green-100 text-green-600
+                        {% elif tool.category == 'ops' %}bg-red-100 text-red-600
+                        {% endif %}">
+                        {% if tool.category == 'ai' %}AI 비서
+                        {% elif tool.category == 'dev' %}개발/코딩
+                        {% elif tool.category == 'design' %}디자인
+                        {% elif tool.category == 'art' %}창작/예술
+                        {% elif tool.category == 'work' %}생산성
+                        {% elif tool.category == 'ops' %}운영/모니터링
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <p class="text-gray-500 font-medium text-lg leading-relaxed mb-6 flex-1">
+                {{ tool.desc }}
+            </p>
+
+            <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
+                {% if tool.is_new %}
+                <span class="text-lg text-purple-600 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-sparkles"></i> NEW
+                </span>
+                {% else %}
+                <span class="text-lg text-gray-400 font-mono">
+                    <i class="fa-regular fa-clock"></i> {{ tool.last_updated }}
+                </span>
+                {% endif %}
+                <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">
+                    업데이트 확인 <i class="fa-solid fa-arrow-right"></i>
+                </span>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
 </section>
 
-<!-- Modal Overlay (as per design 3) -->
-<div id="modal-overlay"
-    class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50 hidden transition-opacity duration-300 opacity-0"
-    onclick="closeGuideModal()"></div>
+<!-- Modal Overlay -->
+<div x-show="modalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="closeModal()"
+    class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-50" style="display: none;">
+</div>
 
 <!-- Modal Content -->
-<div id="modal-content"
-    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-50 hidden transition-all duration-300 scale-95 opacity-0 overflow-hidden">
+<div x-show="modalOpen" x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-95"
+    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl clay-card bg-[#E0E5EC] p-0 shadow-clay rounded-[2.5rem] z-50 overflow-hidden"
+    style="display: none;" @click.away="closeModal()">
 
-    <!-- Modal Header -->
-    <div class="p-8 pb-0 flex justify-between items-start">
-        <div class="flex items-center gap-6">
-            <div id="modal-icon"
-                class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-6xl">
-            </div>
-            <div>
-                <h2 id="modal-title" class="text-6xl font-bold text-gray-800 mb-2"></h2>
-                <div id="modal-badge-container"></div>
-            </div>
-        </div>
-        <button onclick="closeGuideModal()"
-            class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    </div>
-
-    <!-- Modal Body -->
-    <div class="p-8 space-y-8">
-        <!-- Description -->
+    <template x-if="selectedTool">
         <div>
-            <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
-                <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
-            </h3>
-            <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
-                <p id="modal-desc" class="text-gray-600 font-medium"></p>
+            <!-- Modal Header -->
+            <div class="p-8 pb-0 flex justify-between items-start">
+                <div class="flex items-center gap-6">
+                    <div class="w-24 h-24 rounded-3xl shadow-clay-inner bg-white/50 flex items-center justify-center text-6xl"
+                        x-html="selectedTool.icon">
+                    </div>
+                    <div>
+                        <h2 class="text-6xl font-bold text-gray-800 mb-2" x-text="selectedTool.name"></h2>
+                    </div>
+                </div>
+                <button @click="closeModal()"
+                    class="w-14 h-14 rounded-full shadow-clay-inner flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-3xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-8 space-y-8">
+                <!-- Description -->
+                <div>
+                    <h3 class="text-3xl font-bold text-gray-700 mb-3 flex items-center gap-3">
+                        <i class="fa-regular fa-lightbulb text-yellow-500"></i> 어떤 툴인가요?
+                    </h3>
+                    <div class="p-8 rounded-3xl shadow-clay-inner bg-gray-50/50">
+                        <p id="modal-desc" class="text-gray-600 font-medium" x-text="selectedTool.desc"></p>
+                    </div>
+                </div>
+
+                <!-- Latest Update -->
+                <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
+                    <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
+                        <i class="fa-solid fa-bolt"></i> 최신 업데이트
+                    </h3>
+                    <p id="modal-summary" class="text-blue-800 font-bold mb-4" x-text="selectedTool.summary"></p>
+                    <ul id="modal-details" class="space-y-3 text-blue-700/90">
+                        <template x-for="detail in selectedTool.details" :key="detail">
+                            <li class="flex items-start gap-4">
+                                <i class="fa-solid fa-check mt-2 text-blue-500"></i>
+                                <span class="font-medium" x-text="detail"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <!-- CTA -->
+                <div class="text-center pt-8 pb-4">
+                    <a :href="selectedTool.url" target="_blank" rel="noopener noreferrer"
+                        class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
+                        공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                </div>
             </div>
         </div>
-
-        <!-- Latest Update -->
-        <div class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 shadow-sm">
-            <h3 class="text-3xl font-bold text-blue-600 mb-4 flex items-center gap-3">
-                <i class="fa-solid fa-bolt"></i> 최신 업데이트 (2026.01)
-            </h3>
-            <p id="modal-summary" class="text-blue-800 font-bold mb-4"></p>
-            <ul id="modal-details" class="space-y-3 text-blue-700/90"></ul>
-        </div>
-
-        <!-- CTA -->
-        <div class="text-center pt-8 pb-4">
-            <a id="modal-link" href="#"
-                class="clay-btn shadow-clay px-12 py-5 rounded-2xl text-3xl font-bold text-gray-700 hover:text-purple-600 hover:shadow-clay-hover transition-all inline-flex items-center gap-4">
-                공식 홈페이지 가기 <i class="fa-solid fa-arrow-up-right-from-square"></i>
-            </a>
-        </div>
-    </div>
+    </template>
 </div>
 
 <script>
-    const toolsData = [
-        // ========== AI 비서 (AI Assistants) - 10개 ==========
-        {
-            id: 'chatgpt',
-            name: 'ChatGPT',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-robot text-green-500"></i>',
-            desc: '만능 해결사. 가정통신문 초안, 수업 아이디어, 고민 상담 등 텍스트로 하는 모든 일의 기본입니다.',
-            summary: 'Canvas 기능이 무료로 풀렸어요! 글쓰기나 코딩할 때 별도 창에서 수정이 가능해져서 훨씬 편합니다.',
-            details: ['Canvas 기능 전면 무료화', 'SearchGPT 통합으로 실시간 검색 강화', '기억(Memory) 용량 2배 증가'],
-            url: 'https://chat.openai.com'
-        },
-        {
-            id: 'claude',
-            name: 'Claude',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-brain text-orange-500"></i>',
-            desc: '글쓰기와 코딩의 신. ChatGPT보다 한국어 문장이 훨씬 자연스럽고, 긴 문서를 분석할 때 탁월합니다.',
-            summary: '코딩 실력이 비약적으로 상승한 3.7 버전이 나왔습니다.',
-            details: ['Claude 3.7 Sonnet 모델 출시', 'Artifacts 기능으로 결과물 미리보기', '200K 토큰 컨텍스트 윈도우'],
-            url: 'https://claude.ai'
-        },
-        {
-            id: 'gemini',
-            name: 'Gemini',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-star text-blue-500"></i>',
-            desc: '구글 찐친. 구글 문서, 스프레드시트, 유튜브 내용을 분석하거나 요약해야 할 때 가장 강력합니다.',
-            summary: '구글 워크스페이스 연동성이 강화되었습니다.',
-            details: ['Gemini 2.5 Flash 업데이트', 'Google Sheets 자동 시각화 기능', 'YouTube 영상 요약 강화'],
-            url: 'https://gemini.google.com'
-        },
-        {
-            id: 'perplexity',
-            name: 'Perplexity',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-magnifying-glass text-teal-500"></i>',
-            desc: '거짓말 안 하는 검색 AI. 논문, 뉴스 기사 등 "출처"가 중요한 자료를 찾을 때 네이버/구글 대신 쓰세요.',
-            summary: 'Deep Research 모드가 추가되었습니다.',
-            details: ['Deep Research 기능 베타', 'Pro Search 속도 개선', '실시간 뉴스 검색 강화'],
-            url: 'https://perplexity.ai'
-        },
-        {
-            id: 'copilot',
-            name: 'Microsoft Copilot',
-            category: 'ai',
-            icon: '<i class="fa-brands fa-microsoft text-blue-600"></i>',
-            desc: 'MS Office의 AI 비서. 워드, 엑셀, 파워포인트에서 바로 AI를 불러 문서 작업을 자동화할 수 있습니다.',
-            summary: 'Office 365 통합이 더욱 강화되었습니다.',
-            details: ['PowerPoint Designer AI 강화', 'Excel 수식 자동 생성', 'Word 문서 요약 기능'],
-            url: 'https://copilot.microsoft.com'
-        },
-        {
-            id: 'poe',
-            name: 'Poe',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-comments text-purple-500"></i>',
-            desc: '여러 AI를 한 곳에서. ChatGPT, Claude, Gemini 등을 앱 하나로 비교하며 사용할 수 있습니다.',
-            summary: '커스텀 봇 생성 기능이 무료로 제공됩니다.',
-            details: ['무료 커스텀 봇 생성', '다중 AI 모델 동시 비교', '모바일 앱 최적화'],
-            url: 'https://poe.com'
-        },
-        {
-            id: 'deepl',
-            name: 'DeepL',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-language text-indigo-500"></i>',
-            desc: '번역의 끝판왕. 구글 번역보다 훨씬 자연스러운 번역을 제공합니다. 영어 논문이나 외국 자료 읽을 때 필수!',
-            summary: '한국어 번역 품질이 대폭 향상되었습니다.',
-            details: ['한국어 번역 정확도 30% 향상', '문서 번역 속도 개선', 'PDF 직접 번역 지원'],
-            url: 'https://deepl.com'
-        },
-        {
-            id: 'notionai',
-            name: 'Notion AI',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-note-sticky text-black"></i>',
-            desc: '노션 안에서 바로 쓰는 AI. 회의록 정리, 아이디어 확장, 문서 요약을 노션 페이지 안에서 즉시 처리합니다.',
-            summary: 'Q&A 기능으로 노션 DB 검색이 가능해졌습니다.',
-            details: ['Notion DB 자연어 검색', '자동 태그 생성', '템플릿 AI 추천'],
-            url: 'https://notion.so/product/ai'
-        },
-        {
-            id: 'jasper',
-            name: 'Jasper',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-pen-fancy text-red-500"></i>',
-            desc: '마케팅 글쓰기 전문 AI. 블로그 포스트, SNS 콘텐츠, 광고 문구를 빠르게 생성할 때 유용합니다.',
-            summary: 'Brand Voice 기능으로 일관된 톤앤매너 유지가 가능합니다.',
-            details: ['Brand Voice 커스터마이징', 'SEO 최적화 제안', '다국어 콘텐츠 생성'],
-            url: 'https://jasper.ai'
-        },
-        {
-            id: 'wrtn',
-            name: 'WRTN (뤼튼)',
-            category: 'ai',
-            icon: '<i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i>',
-            desc: '한국형 AI 플랫폼. 한국어에 특화되어 있고, 다양한 AI 도구를 무료로 사용할 수 있습니다.',
-            summary: '교육용 템플릿이 대폭 추가되었습니다.',
-            details: ['교육 전용 템플릿 50+ 추가', '한국어 맞춤법 검사 강화', '무료 크레딧 확대'],
-            url: 'https://wrtn.ai'
-        },
-
-        // ========== 코딩 & 개발 (Coding & Development) - 10개 ==========
-        {
-            id: 'cursor',
-            name: 'Cursor',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-terminal text-gray-700"></i>',
-            desc: 'AI가 탑재된 코딩 편집기. "이거 만들어줘"라고 치면 코드를 다 짜줍니다. 바이브 코딩의 핵심 툴!',
-            summary: 'Composer 기능이 더 강력해졌습니다.',
-            details: ['Composer 다중 파일 편집 기능', '자연어 터미널 명령 지원', 'Claude 3.7 통합'],
-            url: 'https://cursor.sh'
-        },
-        {
-            id: 'github-copilot',
-            name: 'GitHub Copilot',
-            category: 'dev',
-            icon: '<i class="fa-brands fa-github text-black"></i>',
-            desc: 'VS Code 안에서 쓰는 AI 코딩 도우미. 코드 자동완성부터 버그 수정까지 실시간으로 도와줍니다.',
-            summary: 'Copilot Chat이 더욱 똑똑해졌습니다.',
-            details: ['Copilot Chat 업그레이드', '코드 리뷰 자동화', '보안 취약점 탐지'],
-            url: 'https://github.com/features/copilot'
-        },
-        {
-            id: 'codeium',
-            name: 'Codeium',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-code text-blue-500"></i>',
-            desc: '무료 AI 코딩 도구. GitHub Copilot과 비슷하지만 완전 무료로 사용할 수 있습니다.',
-            summary: '70개 이상의 프로그래밍 언어를 지원합니다.',
-            details: ['완전 무료 제공', '70+ 언어 지원', 'IDE 플러그인 확대'],
-            url: 'https://codeium.com'
-        },
-        {
-            id: 'tabnine',
-            name: 'Tabnine',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-microchip text-purple-600"></i>',
-            desc: '프라이버시 중심 AI 코딩 도구. 회사 코드를 외부로 보내지 않고 로컬에서 AI를 실행할 수 있습니다.',
-            summary: '온프레미스 배포 옵션이 추가되었습니다.',
-            details: ['로컬 AI 모델 지원', '기업용 보안 강화', '팀 코드 학습 기능'],
-            url: 'https://tabnine.com'
-        },
-        {
-            id: 'replit',
-            name: 'Replit Ghostwriter',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-ghost text-orange-500"></i>',
-            desc: '설치 없는 코딩. 복잡한 세팅 없이 인터넷 창에서 바로 코딩하고 결과물을 공유할 수 있습니다.',
-            summary: 'Replit Agent가 정식 출시되었습니다.',
-            details: ['Replit Agent 정식 런칭', '모바일 앱 코딩 지원', '실시간 협업 강화'],
-            url: 'https://replit.com'
-        },
-        {
-            id: 'v0',
-            name: 'v0.dev',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-shapes text-gray-700"></i>',
-            desc: '디자인 복사기. 마음에 드는 사이트 캡처해서 올리면 똑같은 모양의 코드를 만들어줍니다.',
-            summary: '피그마(Figma) 디자인 변환 정확도 향상.',
-            details: ['Figma to React 변환 개선', 'Tailwind CSS 최적화', 'shadcn/ui 통합'],
-            url: 'https://v0.dev'
-        },
-        {
-            id: 'sourcegraph',
-            name: 'Sourcegraph Cody',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-search-plus text-red-500"></i>',
-            desc: '코드베이스 전체를 이해하는 AI. 대규모 프로젝트에서 특정 코드를 찾거나 이해할 때 유용합니다.',
-            summary: '코드 검색 속도가 10배 빨라졌습니다.',
-            details: ['대규모 코드베이스 검색 최적화', 'AI 코드 설명 기능', '리팩토링 제안'],
-            url: 'https://sourcegraph.com/cody'
-        },
-        {
-            id: 'warp',
-            name: 'Warp Terminal',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-square-terminal text-green-600"></i>',
-            desc: 'AI가 들어간 터미널. 명령어를 자연어로 물어보면 정확한 커맨드를 알려줍니다.',
-            summary: 'AI Command Search가 더욱 정확해졌습니다.',
-            details: ['자연어 명령어 변환', '명령어 히스토리 AI 검색', '팀 협업 기능'],
-            url: 'https://warp.dev'
-        },
-        {
-            id: 'codewhisperer',
-            name: 'Amazon CodeWhisperer',
-            category: 'dev',
-            icon: '<i class="fa-brands fa-aws text-orange-600"></i>',
-            desc: 'AWS 전문 AI 코딩 도구. 클라우드 인프라 코드를 작성할 때 특히 강력합니다.',
-            summary: 'AWS 서비스 통합이 강화되었습니다.',
-            details: ['AWS SDK 자동완성', '보안 스캔 기능', 'Lambda 함수 생성 지원'],
-            url: 'https://aws.amazon.com/codewhisperer'
-        },
-        {
-            id: 'blackbox',
-            name: 'Blackbox AI',
-            category: 'dev',
-            icon: '<i class="fa-solid fa-box text-black"></i>',
-            desc: '코드 스니펫 검색 AI. 스택오버플로우처럼 코드 예제를 찾되, AI가 맥락에 맞게 수정해줍니다.',
-            summary: '이미지에서 코드 추출 기능이 추가되었습니다.',
-            details: ['Image-to-Code 기능', '실시간 코드 설명', '다국어 코드 변환'],
-            url: 'https://blackbox.ai'
-        },
-
-        // ========== 생산성 도구 (Productivity & Utilities) - 10개 ==========
-        {
-            id: 'zoomit',
-            name: 'ZoomIt',
-            category: 'work',
-            icon: '<i class="fa-solid fa-magnifying-glass-plus text-blue-600"></i>',
-            desc: '화면 확대 및 판서 도구. 수업 중 화면을 크게 확대하거나 직접 그림을 그려가며 설명할 수 있습니다.',
-            summary: 'Microsoft 공식 무료 도구로 안정성이 뛰어납니다.',
-            details: ['화면 확대 (Ctrl+1)', '화면 판서 (Ctrl+2)', '타이머 기능 (Ctrl+3)'],
-            url: 'https://learn.microsoft.com/sysinternals/downloads/zoomit'
-        },
-        {
-            id: 'snipaste',
-            name: 'Snipaste',
-            category: 'work',
-            icon: '<i class="fa-solid fa-scissors text-orange-500"></i>',
-            desc: '캡처 후 화면 고정. 스크린샷을 찍으면 그 이미지를 화면 위에 띄워놓고 참고하며 작업할 수 있습니다.',
-            summary: '캡처한 이미지를 항상 위에 고정할 수 있어 멀티태스킹에 유용합니다.',
-            details: ['F1으로 빠른 캡처', '캡처 이미지 화면 고정', '색상 추출 기능'],
-            url: 'https://snipaste.com'
-        },
-        {
-            id: 'monitorian',
-            name: 'Monitorian',
-            category: 'work',
-            icon: '<i class="fa-solid fa-sun text-yellow-500"></i>',
-            desc: '모니터 밝기 조절. 여러 모니터의 밝기를 소프트웨어로 한 번에 조절할 수 있습니다.',
-            summary: '듀얼 모니터 사용자에게 필수 도구입니다.',
-            details: ['다중 모니터 밝기 통합 조절', '단축키 지원', '자동 밝기 조절'],
-            url: 'https://github.com/emoacht/Monitorian'
-        },
-        {
-            id: 'everything',
-            name: 'Everything',
-            category: 'work',
-            icon: '<i class="fa-solid fa-bolt text-yellow-600"></i>',
-            desc: '초고속 파일 검색. 윈도우 기본 검색보다 100배 빠르게 컴퓨터 안의 파일을 찾아줍니다.',
-            summary: '수백만 개의 파일도 1초 안에 검색합니다.',
-            details: ['실시간 인덱싱', '정규식 검색 지원', 'HTTP/FTP 서버 기능'],
-            url: 'https://voidtools.com'
-        },
-        {
-            id: 'powertoys',
-            name: 'PowerToys',
-            category: 'work',
-            icon: '<i class="fa-brands fa-microsoft text-blue-500"></i>',
-            desc: 'Windows 생산성 도구 모음. 창 정렬, 색상 추출, 파일 이름 일괄 변경 등 편의 기능이 가득합니다.',
-            summary: 'Microsoft 공식 무료 도구입니다.',
-            details: ['FancyZones (창 정리)', 'PowerRename (파일명 일괄 변경)', 'Color Picker'],
-            url: 'https://github.com/microsoft/PowerToys'
-        },
-        {
-            id: 'obsidian',
-            name: 'Obsidian',
-            category: 'work',
-            icon: '<i class="fa-solid fa-gem text-purple-600"></i>',
-            desc: '제2의 뇌. 노트들을 서로 연결하여 지식 네트워크를 만들 수 있는 메모 앱입니다.',
-            summary: '로컬 저장으로 데이터 소유권을 보장합니다.',
-            details: ['마크다운 기반', '그래프 뷰로 노트 연결 시각화', '플러그인 생태계'],
-            url: 'https://obsidian.md'
-        },
-        {
-            id: 'raycast',
-            name: 'Raycast',
-            category: 'work',
-            icon: '<i class="fa-solid fa-rocket text-red-500"></i>',
-            desc: 'Mac 생산성 런처. 단축키 하나로 앱 실행, 파일 검색, 계산기 등을 즉시 사용할 수 있습니다.',
-            summary: 'AI 명령어 기능이 추가되었습니다.',
-            details: ['AI Commands 통합', '확장 프로그램 스토어', '클립보드 히스토리'],
-            url: 'https://raycast.com'
-        },
-        {
-            id: 'linear',
-            name: 'Linear',
-            category: 'work',
-            icon: '<i class="fa-solid fa-diagram-project text-indigo-600"></i>',
-            desc: '프로젝트 관리 도구. 개발팀을 위한 이슈 트래커이지만, 교육 프로젝트 관리에도 유용합니다.',
-            summary: '가장 빠르고 깔끔한 프로젝트 관리 도구입니다.',
-            details: ['키보드 중심 인터페이스', 'GitHub 통합', '자동 이슈 분류'],
-            url: 'https://linear.app'
-        },
-        {
-            id: 'flux',
-            name: 'f.lux',
-            category: 'work',
-            icon: '<i class="fa-solid fa-moon text-indigo-400"></i>',
-            desc: '눈 보호 도구. 시간대에 따라 화면 색온도를 자동 조절하여 눈의 피로를 줄여줍니다.',
-            summary: '야간 작업 시 블루라이트를 줄여 수면의 질을 높입니다.',
-            details: ['자동 색온도 조절', '위치 기반 일출/일몰 감지', '다크모드 연동'],
-            url: 'https://justgetflux.com'
-        },
-        {
-            id: 'trello',
-            name: 'Trello',
-            category: 'work',
-            icon: '<i class="fa-brands fa-trello text-blue-500"></i>',
-            desc: '칸반 보드 도구. 할 일을 카드로 만들어 드래그앤드롭으로 진행 상황을 관리할 수 있습니다.',
-            summary: 'Butler 자동화 기능으로 반복 작업을 자동화할 수 있습니다.',
-            details: ['직관적인 칸반 보드', 'Butler 자동화', '팀 협업 기능'],
-            url: 'https://trello.com'
-        },
-
-        // ========== 창작 & 예술 (Creative Arts & Media) - 10개 ==========
-        {
-            id: 'canva',
-            name: 'Canva',
-            category: 'art',
-            icon: '<i class="fa-solid fa-palette text-cyan-500"></i>',
-            desc: '디자인 만능 도구. 포스터, 인포그래픽, 프레젠테이션을 템플릿 기반으로 쉽게 만들 수 있습니다.',
-            summary: 'AI 디자인 생성 기능이 대폭 강화되었습니다.',
-            details: ['Magic Design (AI 자동 디자인)', 'Magic Eraser (배경 제거)', '무료 템플릿 10만+'],
-            url: 'https://canva.com'
-        },
-        {
-            id: 'midjourney',
-            name: 'Midjourney',
-            category: 'art',
-            icon: '<i class="fa-solid fa-image text-purple-500"></i>',
-            desc: 'AI 이미지 생성의 끝판왕. 텍스트만 입력하면 예술 작품 수준의 이미지를 만들어줍니다.',
-            summary: 'V7 모델로 사실성과 디테일이 극대화되었습니다.',
-            details: ['Midjourney V7 출시', '초고해상도 업스케일', '스타일 일관성 유지'],
-            url: 'https://midjourney.com'
-        },
-        {
-            id: 'stable-diffusion',
-            name: 'Stable Diffusion',
-            category: 'art',
-            icon: '<i class="fa-solid fa-wand-sparkles text-pink-500"></i>',
-            desc: '오픈소스 AI 이미지 생성. 무료로 사용할 수 있고, 자신의 컴퓨터에서 실행 가능합니다.',
-            summary: 'SDXL 1.0으로 이미지 품질이 크게 향상되었습니다.',
-            details: ['완전 무료 오픈소스', 'LoRA 모델 커스터마이징', 'ControlNet 정밀 제어'],
-            url: 'https://stability.ai'
-        },
-        {
-            id: 'runway',
-            name: 'Runway Gen-2',
-            category: 'art',
-            icon: '<i class="fa-solid fa-video text-green-500"></i>',
-            desc: 'AI 영상 생성 도구. 텍스트나 이미지를 입력하면 짧은 영상 클립을 만들어줍니다.',
-            summary: 'Gen-3 Alpha가 출시되어 영상 품질이 비약적으로 향상되었습니다.',
-            details: ['Gen-3 Alpha 출시', '16초 영상 생성', '모션 브러시 기능'],
-            url: 'https://runwayml.com'
-        },
-        {
-            id: 'firefly',
-            name: 'Adobe Firefly',
-            category: 'art',
-            icon: '<i class="fa-solid fa-fire text-orange-600"></i>',
-            desc: 'Adobe의 AI 이미지 생성. Photoshop과 통합되어 있어 전문적인 편집 작업에 유용합니다.',
-            summary: 'Firefly 3 모델로 상업적 사용이 안전합니다.',
-            details: ['상업적 사용 안전', 'Photoshop 통합', 'Generative Fill'],
-            url: 'https://firefly.adobe.com'
-        },
-        {
-            id: 'figma',
-            name: 'Figma',
-            category: 'art',
-            icon: '<i class="fa-brands fa-figma text-purple-600"></i>',
-            desc: 'UI/UX 디자인 도구. 웹사이트나 앱 화면을 디자인하고 프로토타입을 만들 수 있습니다.',
-            summary: 'AI 디자인 제안 기능이 추가되었습니다.',
-            details: ['실시간 협업', 'Dev Mode (개발자 모드)', 'AI 디자인 제안'],
-            url: 'https://figma.com'
-        },
-        {
-            id: 'capcut',
-            name: 'CapCut',
-            category: 'art',
-            icon: '<i class="fa-solid fa-film text-black"></i>',
-            desc: '무료 영상 편집 도구. TikTok 제작사가 만들어서 숏폼 영상 편집에 최적화되어 있습니다.',
-            summary: 'AI 자막 생성과 배경 제거 기능이 무료입니다.',
-            details: ['AI 자동 자막', '배경 제거', '무료 음악 라이브러리'],
-            url: 'https://capcut.com'
-        },
-        {
-            id: 'elevenlabs',
-            name: 'ElevenLabs',
-            category: 'art',
-            icon: '<i class="fa-solid fa-microphone text-blue-600"></i>',
-            desc: 'AI 음성 생성. 텍스트를 입력하면 사람처럼 자연스러운 음성으로 읽어줍니다.',
-            summary: '한국어 음성 품질이 크게 향상되었습니다.',
-            details: ['한국어 음성 지원', '감정 표현 가능', '음성 복제 기능'],
-            url: 'https://elevenlabs.io'
-        },
-        {
-            id: 'suno',
-            name: 'Suno AI',
-            category: 'art',
-            icon: '<i class="fa-solid fa-music text-green-600"></i>',
-            desc: 'AI 음악 생성. 가사와 스타일을 입력하면 완성된 노래를 만들어줍니다.',
-            summary: 'V4 모델로 음질과 보컬이 크게 개선되었습니다.',
-            details: ['V4 모델 출시', '2분 길이 음악 생성', '다양한 장르 지원'],
-            url: 'https://suno.ai'
-        },
-        {
-            id: 'removebg',
-            name: 'Remove.bg',
-            category: 'art',
-            icon: '<i class="fa-solid fa-eraser text-red-500"></i>',
-            desc: '배경 제거 전문 도구. 사진에서 사람이나 물체만 남기고 배경을 깔끔하게 지워줍니다.',
-            summary: 'AI 정확도가 99% 수준으로 향상되었습니다.',
-            details: ['5초 안에 배경 제거', 'API 제공', '대량 처리 지원'],
-            url: 'https://remove.bg'
-        }
-    ];
-
-
-    const grid = document.getElementById('tools-grid');
-    const filterBtns = document.querySelectorAll('.filter-btn');
-
-    function renderTools(filter = 'all') {
-        grid.style.opacity = '0';
-        setTimeout(() => {
-            grid.innerHTML = '';
-            const filtered = filter === 'all' ? toolsData : toolsData.filter(t => t.category === filter);
-
-            filtered.forEach(tool => {
-                const card = document.createElement('div');
-                card.className = `clay-card tool-card shadow-clay p-8 rounded-[2rem] group cursor-pointer transition-all duration-300 flex flex-col h-full bg-[#E0E5EC]`;
-                card.onclick = () => openGuideModal(tool);
-
-                // Colors
-                let catText = '', catBg = '', catColor = '';
-                if (tool.category === 'ai') { catText = 'AI 비서'; catBg = 'bg-blue-100'; catColor = 'text-blue-600'; }
-                else if (tool.category === 'dev') { catText = '개발/코딩'; catBg = 'bg-purple-100'; catColor = 'text-purple-600'; }
-                else if (tool.category === 'art') { catText = '창작/예술'; catBg = 'bg-orange-100'; catColor = 'text-orange-600'; }
-                else { catText = '생산성'; catBg = 'bg-green-100'; catColor = 'text-green-600'; }
-
-                card.innerHTML = `
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-4xl shrink-0 bg-white/50">
-                            ${tool.icon}
-                        </div>
-                        <div>
-                            <h3 class="text-3xl font-bold text-gray-700 leading-none mb-2">${tool.name}</h3>
-                            <span class="inline-block px-3 py-1 rounded-lg text-sm font-bold ${catBg} ${catColor}">${catText}</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-500 font-medium text-lg leading-relaxed mb-6 flex-1">
-                        ${tool.desc}
-                    </p>
-                    <div class="pt-4 border-t border-gray-200/50 flex justify-between items-center mt-auto">
-                        <span class="text-lg text-gray-400 font-mono"><i class="fa-regular fa-clock"></i> 1d ago</span>
-                        <span class="text-lg font-bold text-purple-500 group-hover:underline flex items-center gap-1">업데이트 확인 <i class="fa-solid fa-arrow-right"></i></span>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-            grid.style.opacity = '1';
-        }, 200);
-    }
-
-    function filterTools(cat) {
-        renderTools(cat);
-        filterBtns.forEach(btn => {
-            if (btn.getAttribute('onclick').includes(cat)) {
-                btn.classList.add('active', 'text-gray-700');
-                btn.classList.remove('text-gray-500');
-            } else {
-                btn.classList.remove('active', 'text-gray-700');
-                btn.classList.add('text-gray-500');
-            }
-        });
-    }
-
-    // Modal
-    const overlay = document.getElementById('modal-overlay');
-    const modal = document.getElementById('modal-content');
-
-    function openGuideModal(tool) {
-        document.getElementById('modal-icon').innerHTML = tool.icon;
-        document.getElementById('modal-title').innerText = tool.name;
-
-        // Badge
-        let badgeClass = '';
-        if (tool.category === 'ai') badgeClass = 'bg-blue-100 text-blue-600';
-        else if (tool.category === 'dev') badgeClass = 'bg-purple-100 text-purple-600';
-        else if (tool.category === 'art') badgeClass = 'bg-orange-100 text-orange-600';
-        else badgeClass = 'bg-green-100 text-green-600';
-
-        document.getElementById('modal-badge-container').innerHTML =
-            `<span class="px-5 py-2 rounded-full text-2xl font-bold ${badgeClass}">AI Assistant</span>`;
-
-        document.getElementById('modal-desc').innerHTML = tool.desc;
-        document.getElementById('modal-summary').innerText = tool.summary;
-        document.getElementById('modal-details').innerHTML = tool.details.map(d => `<li class="flex items-start gap-4"><i class="fa-solid fa-check mt-2 text-blue-500"></i><span class="font-medium">${d}</span></li>`).join('');
-        document.getElementById('modal-link').href = tool.url || "#"; // Use actual URL from tool data
-
-        overlay.classList.remove('hidden');
-        modal.classList.remove('hidden');
-
-        setTimeout(() => {
-            overlay.classList.remove('opacity-0');
-            modal.classList.remove('opacity-0', 'scale-95');
-            modal.style.transform = 'translate(-50%, -50%) scale(1)';
-        }, 10);
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeGuideModal() {
-        overlay.classList.add('opacity-0');
-        modal.classList.remove('scale-100');
-        modal.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => {
-            overlay.classList.add('hidden');
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }, 300);
-    }
-
-    // Init
-    renderTools('all');
+    // Tools data is already rendered in the template via SSR
+    // Alpine.js will handle the modal state and filtering
 </script>
+
 {% endblock %}
