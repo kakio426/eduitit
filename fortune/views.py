@@ -332,6 +332,7 @@ def saju_streaming_api(request):
     return response
 
 @login_required
+@csrf_exempt
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_api_view(request):
@@ -528,7 +529,12 @@ def delete_history_api(request, pk):
     """보관함 항목 삭제"""
     from .models import FortuneResult
     item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
-    item.delete()
+    # 같은 natal_chart + mode 캐시 레코드 모두 삭제
+    FortuneResult.objects.filter(
+        user=request.user,
+        natal_chart=item.natal_chart,
+        mode=item.mode
+    ).delete()
     return JsonResponse({'success': True})
 
 

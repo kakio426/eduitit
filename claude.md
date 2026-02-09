@@ -102,6 +102,8 @@ diff config/settings.py config/settings_production.py
 
 > **사례 (ssambti 앱)**: 위 3가지가 동시 발생. import 추가 + 함수 순서 재배치 + return 문 추가로 해결.
 
+> **사례 (2026-02-09, fortune 앱)**: `has_personal_api_key`를 `fortune/views.py`에서 import 없이 `@ratelimit` 콜백(`fortune_rate_h`, `fortune_rate_d`)에서 사용 → 일반 유저 요청 시 `NameError` → 500 에러. **superuser는 `or` 단축 평가로 해당 함수가 호출되지 않아 재현 불가**했음. 교훈: 데코레이터 콜백 안의 import 누락은 특정 조건에서만 터지므로, 코드 작성 시 **모든 함수 참조의 import 여부를 반드시 확인**할 것.
+
 ## 3. Railway 배포 환경 제약
 
 - **`pg_dump` 없음** → `dumpdata` JSON 백업 사용 (`core/management/commands/backup_db.py`)
