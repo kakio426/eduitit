@@ -38,16 +38,18 @@ def get_user_gemini_key(request):
     return None
 
 def fortune_rate_h(group, request):
-    """1시간당 5회 제한 (관리자 무제한)"""
-    if request.user and request.user.is_authenticated and request.user.is_superuser:
-        return None
+    """1시간당 5회 제한 (관리자 및 개인 키 소지자 무제한)"""
+    if request.user and request.user.is_authenticated:
+        if request.user.is_superuser or has_personal_api_key(request.user):
+            return None
     return '5/h'
 
 def fortune_rate_d(group, request):
-    """1일당 10회 제한 (관리자 무제한)"""
-    if request.user and request.user.is_authenticated and request.user.is_superuser:
-        return None
-    return '10/d'
+    """1일당 5회 제한 (관리자 및 개인 키 소지자 무제한)"""
+    if request.user and request.user.is_authenticated:
+        if request.user.is_superuser or has_personal_api_key(request.user):
+            return None
+    return '5/d'
 
 def generate_ai_response(prompt, request):
     """
@@ -181,10 +183,11 @@ def serialize_chart_context(chart_context):
     }
 
 
+@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_view(request):
-    """사주 분석 메인 뷰 (5회/h, 10회/d)"""
+    """사주 분석 메인 뷰"""
     if getattr(request, 'limited', False):
         error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
         
@@ -296,6 +299,7 @@ def saju_view(request):
     })
 
 
+@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_streaming_api(request):
@@ -327,6 +331,7 @@ def saju_streaming_api(request):
     response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx/Gunicorn
     return response
 
+@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
 def saju_api_view(request):
@@ -449,6 +454,9 @@ def daily_fortune_api(request):
             'day': get_pillar_obj(natal_data.get('day')),
             'hour': get_pillar_obj(natal_data.get('hour'))
         }
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'LOGIN_REQUIRED', 'message': '로그인이 필요합니다.'}, status=401)
 
         # Prompt
         from .prompts import get_daily_fortune_prompt
