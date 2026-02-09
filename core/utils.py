@@ -74,7 +74,7 @@ def generate_sso_token(user):
         'email': user.email or f"{user.username}@eduitit.proxy",
         'name': user.first_name or user.username,
         'role': role,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     }
     
     return jwt.encode(payload, settings.SSO_JWT_SECRET, algorithm='HS256')
