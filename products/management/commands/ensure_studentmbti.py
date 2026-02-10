@@ -15,11 +15,18 @@ class Command(BaseCommand):
 
         if product:
             self.stdout.write(f'[!] Found existing StudentMBTI product (ID: {product.id})')
-            product.title = '우리반 캐릭터 친구 찾기'
-            product.service_type = 'tool'
-            product.is_active = True
-            product.save()
-            self.stdout.write('[OK] Updated existing product settings')
+            needs_update = False
+            if product.title != '우리반 캐릭터 친구 찾기':
+                product.title = '우리반 캐릭터 친구 찾기'
+                needs_update = True
+            if not product.is_active:
+                product.is_active = True
+                needs_update = True
+            if needs_update:
+                product.save()
+                self.stdout.write('[OK] Updated existing product settings')
+            else:
+                self.stdout.write('[OK] Product already has correct settings')
         else:
             self.stdout.write('[!] StudentMBTI product not found, creating...')
 

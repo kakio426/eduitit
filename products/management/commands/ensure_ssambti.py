@@ -36,11 +36,6 @@ class Command(BaseCommand):
                 ssambti.external_url = ''
                 needs_update = True
 
-            if ssambti.service_type != 'game':
-                self.stdout.write(self.style.ERROR(f'  [X] service_type is "{ssambti.service_type}", should be "game"'))
-                ssambti.service_type = 'game'
-                needs_update = True
-
             if not ssambti.is_active:
                 self.stdout.write(self.style.ERROR('  [X] is_active is False!'))
                 ssambti.is_active = True
