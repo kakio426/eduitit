@@ -327,8 +327,7 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span class="text-xl">
-                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{
-                            user.username }}{% else %}사용자{% endif %}님
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{user.username }}{% else %}사용자{% endif %}님
                         </span>
                         <i class="fa-solid fa-chevron-down text-sm transition-transform group-hover:rotate-180"></i>
                     </button>
