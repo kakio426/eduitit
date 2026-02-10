@@ -191,6 +191,7 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Settings
 ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_EMAIL_REQUIRED = True  # 이메일 필수
 ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스 진입 장벽 낮춤)
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # 아이디 또는 이메일로 로그인 가능
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username']

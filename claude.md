@@ -25,6 +25,7 @@
 - `.env` 파일이나 민감한 정보 커밋 금지
 - 하드코딩된 API 키 사용 금지
 - UI 오버랩(NavBar 가림) 방치 금지 → 모든 페이지 `pt-32` 준수
+- `ensure_*` management command에서 Admin 관리 필드(service_type, display_order 등) 강제 덮어쓰기 금지 → Procfile이 매 배포마다 실행하므로 Admin 수정이 초기화됨
 
 ## 작업 완료 후 체크리스트
 - [ ] Django Check 통과 (`python manage.py check`)
@@ -788,6 +789,39 @@ migrations.RunPython(update_data, migrations.RunPython.noop)
 1. `{% if %}` / `{% endif %}` 밸런스 확인
 2. 줄바꿈으로 분리된 템플릿 태그가 없는지 확인
 3. `python manage.py check` + 실제 페이지 렌더링 테스트
+
+### 30. Procfile ensure_* 명령어 — Admin 관리 필드 덮어쓰기 금지 (CRITICAL)
+
+Procfile의 `ensure_*` 명령어는 **매 배포(git push)마다 실행**된다. 이 명령어 안에서 `service_type`, `display_order`, `color_theme` 등 **Admin에서 수동 관리하는 필드를 강제 변경하면, 배포할 때마다 Admin 수정 내용이 초기화**된다.
+
+```python
+# ❌ 매 배포마다 service_type 덮어씀 → Admin 수정 무효화
+if ssambti.service_type != 'game':
+    ssambti.service_type = 'game'
+
+# ❌ 조건 없이 무조건 save → Admin 변경 전부 리셋
+product.service_type = 'tool'
+product.save()
+
+# ✅ ensure 명령어는 "존재 보장"만 담당, Admin 관리 필드는 건드리지 않기
+if not product.is_active:
+    product.is_active = True
+    needs_update = True
+if needs_update:
+    product.save()
+```
+
+**ensure_* 명령어 작성 규칙:**
+- 상품이 없을 때 **생성**하는 것만 담당
+- 이미 존재하는 상품의 `service_type`, `display_order`, `color_theme` 등은 **절대 덮어쓰지 않기**
+- `is_active`, `external_url` 등 기능적 필수값만 조건부로 보정
+
+**현재 Procfile 실행 순서:**
+```
+migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → check_visitors → gunicorn
+```
+
+> **사례 (2026-02-10)**: `ensure_ssambti`가 매 배포마다 `service_type='game'`으로, `ensure_studentmbti`가 `service_type='tool'`로 강제 변경 → Admin에서 카테고리를 수정해도 다음 push에서 원복됨. service_type 강제 변경 로직 제거로 해결.
 
 ---
 

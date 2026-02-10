@@ -70,12 +70,12 @@
 
                     <!-- 입장 코드 입력 폼 -->
                     <form action="{% url 'studentmbti:join_session' %}" method="get" class="mb-4">
-                        <div class="flex gap-2">
-                            <input type="text" name="code" placeholder="입장 코드 (예: 123456)" maxlength="6"
-                                class="flex-1 px-3 py-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-base md:text-lg font-bold text-center"
+                        <div class="flex gap-1.5 md:gap-2">
+                            <input type="text" name="code" placeholder="입장 코드 6자리" maxlength="6"
+                                class="flex-1 min-w-0 px-2 md:px-3 py-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-base md:text-lg font-bold text-center"
                                 required>
                             <button type="submit"
-                                class="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
+                                class="shrink-0 px-4 md:px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
                                 <i class="fa-solid fa-arrow-right"></i>
                             </button>
                         </div>
