@@ -311,12 +311,8 @@
                             class="fa-solid fa-users-line"></i> {{ total_visitor_count|default:"0" }}</span>
                 </div>
                 {% if user.is_authenticated %}
-                <!-- Schoolit SSO (Temporarily hidden)
-                <a href="{% url 'sso_schoolit' %}"
-                    class="hover:text-blue-600 transition flex items-center gap-2 px-4 py-1.5 rounded-full shadow-clay text-blue-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i> 스쿨잇 이동
-                </a>
-                -->
+
+
 
                 <!-- User Dropdown -->
                 <div class="relative group">
@@ -410,12 +406,8 @@
                     <i class="fa-solid fa-user-circle text-2xl"></i>
                     <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{user.username }}{% else %}사용자{% endif %}님</span>
                 </div>
-                <!-- Schoolit SSO Mobile (Temporarily hidden)
-                <a href="{% url 'sso_schoolit' %}"
-                    class="hover:text-blue-600 transition py-2 border-b border-gray-200/50">
-                    <i class="fa-solid fa-graduation-cap mr-3 text-blue-400"></i> 스쿨잇 이동 (SSO)
-                </a>
-                -->
+
+
                 <a href="{% url 'fortune:history' %}"
                     class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                     <i class="fa-solid fa-box-archive mr-3 text-purple-400"></i> 사주 보관함
