@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}간편 수합 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div class="max-w-4xl mx-auto">
+
+        <!-- 헤더 -->
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📋" }}</div>
+            <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"간편 수합" }}</h1>
+            <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
+                {{ service.lead_text|default:"QR 코드 하나로 파일·링크·텍스트를 간편하게 수합하세요!" }}
+            </p>
+        </div>
+
+        <!-- 서비스 설명 카드 -->
+        <div class="clay-card p-4 md:p-10 mb-8" data-aos="zoom-in">
+            <div class="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-2xl p-5 md:p-6 mb-6">
+                <p class="text-base md:text-xl text-gray-700 leading-relaxed break-keep">
+                    {{ service.description|default:"여러 선생님으로부터 파일이나 정보를 수합해야 할 때, 메신저로 하나하나 받지 마세요. 수합 요청을 만들고 QR/코드를 공유하면, 참여자들은 비로그인으로 파일·링크·텍스트를 제출합니다. 한 화면에서 모든 제출물을 확인하고 다운로드하세요!"|linebreaksbr }}
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 md:gap-6">
+                <!-- 요청자 (교사) -->
+                <div class="bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-emerald-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl md:text-2xl">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">수합하려면?</h3>
+                    </div>
+                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">
+                        로그인 후 수합 요청을 생성하고,<br>
+                        QR 코드/입장코드를 공유하세요!
+                    </p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        대시보드 가기
+                        <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'account_login' %}?next={% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        로그인하기
+                        <i class="fa-solid fa-sign-in-alt ml-2"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- 제출자 -->
+                <div class="bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-teal-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-teal-500 text-white flex items-center justify-center text-xl md:text-2xl">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">제출하려면?</h3>
+                    </div>
+                    <p class="text-sm md:text-base text-gray-600 mb-4 leading-relaxed">
+                        QR 코드를 스캔하거나<br>
+                        입장코드를 입력하세요!
+                    </p>
+
+                    {% if error %}
+                    <div class="bg-red-100 text-red-700 p-3 rounded-xl mb-4 text-sm font-medium">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> {{ error }}
+                    </div>
+                    {% endif %}
+
+                    <form action="{% url 'collect:join' %}" method="get" class="mb-4">
+                        <div class="flex gap-1.5 md:gap-2">
+                            <input type="text" name="code" placeholder="입장코드 6자리" maxlength="6" class="flex-1 min-w-0 px-2 md:px-3 py-3 rounded-xl border-2 border-teal-300 focus:border-teal-500 focus:outline-none text-base md:text-lg font-bold text-center" required>
+                            <button type="submit" class="shrink-0 px-4 md:px-5 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bg-gradient-to-r from-teal-100 to-emerald-100 rounded-xl p-4 text-center">
+                        <div class="text-3xl md:text-4xl mb-2">
+                            <i class="fa-solid fa-qrcode text-teal-500"></i>
+                        </div>
+                        <p class="text-xs md:text-sm text-gray-600 font-medium">
+                            또는 QR 코드를<br>스캔해주세요
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이용 안내 -->
+        <div class="clay-card p-5 md:p-8 mb-8" data-aos="fade-up">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center font-title">
+                <i class="fa-solid fa-circle-info text-teal-500 mr-2"></i>
+                이용 안내
+            </h2>
+            <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+                    <i class="fa-solid fa-file-arrow-up text-emerald-500 text-lg mt-0.5"></i>
+                    <div>
+                        <p class="font-bold text-gray-700 mb-1">파일 크기 제한</p>
+                        <p>파일은 30MB까지 업로드 가능합니다. 초과 시 구글드라이브 링크로 제출해주세요.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+                    <i class="fa-solid fa-user-slash text-emerald-500 text-lg mt-0.5"></i>
+                    <div>
+                        <p class="font-bold text-gray-700 mb-1">비회원 제출 가능</p>
+                        <p>제출자는 회원가입 없이 이름만 입력하면 바로 제출할 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+                    <i class="fa-solid fa-trash-clock text-amber-500 text-lg mt-0.5"></i>
+                    <div>
+                        <p class="font-bold text-gray-700 mb-1">자동 정리</p>
+                        <p>수합 완료 후 7일 뒤 파일 삭제, 첫 제출 후 30일 뒤 요청 자동 삭제됩니다.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+                    <i class="fa-solid fa-file-lines text-blue-500 text-lg mt-0.5"></i>
+                    <div>
+                        <p class="font-bold text-gray-700 mb-1">양식 파일 제공</p>
+                        <p>요청자가 hwp/엑셀 양식을 첨부하면, 제출자가 다운로드 후 작성하여 제출할 수 있습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 주요 기능 -->
+        {% if service.features.all %}
+        <div class="clay-card p-5 md:p-10" data-aos="fade-up">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center font-title">
+                <i class="fa-solid fa-sparkles text-emerald-500 mr-2"></i>
+                주요 기능
+            </h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                {% for feature in service.features.all %}
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl mx-auto mb-4 float-icon">
+                        {% if "fa-" in feature.icon %}
+                        <i class="{{ feature.icon }} text-emerald-500"></i>
+                        {% else %}
+                        {{ feature.icon }}
+                        {% endif %}
+                    </div>
+                    <h4 class="text-lg font-bold text-gray-800 mb-2">{{ feature.title }}</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed break-keep">{{ feature.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 뒤로가기 -->
+        <div class="text-center mt-8">
+            <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="font-medium">서비스 목록으로 돌아가기</span>
+            </a>
+        </div>
+
+    </div>
+</section>
+
+<script>
+    AOS.init({ duration: 800, once: true, offset: 100 });
+</script>
+{% endblock %}

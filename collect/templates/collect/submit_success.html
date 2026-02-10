@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}제출 완료 - {{ req.title }}{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div class="max-w-lg mx-auto text-center">
+
+        <div class="clay-card p-8">
+            <div class="text-7xl mb-4">
+                <i class="fa-solid fa-circle-check text-emerald-500"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-3">제출 완료!</h1>
+            <p class="text-gray-500 mb-6 leading-relaxed">
+                <strong>{{ submission.contributor_name }}</strong>님의
+                {{ submission.get_submission_type_display }}이(가) 성공적으로 제출되었습니다.
+            </p>
+
+            {% if submission.submission_type == 'file' %}
+            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-600">
+                <i class="fa-solid fa-file mr-1"></i> {{ submission.original_filename }}
+            </div>
+            {% elif submission.submission_type == 'link' %}
+            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-600">
+                <i class="fa-solid fa-link mr-1"></i> {{ submission.link_url|truncatechars:50 }}
+            </div>
+            {% elif submission.submission_type == 'text' %}
+            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-600 text-left">
+                <i class="fa-solid fa-align-left mr-1"></i> {{ submission.text_content|truncatechars:100 }}
+            </div>
+            {% endif %}
+
+            <div class="space-y-3">
+                <a href="{% url 'collect:submit' req.id %}" class="block w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                    <i class="fa-solid fa-plus mr-2"></i>추가 제출하기
+                </a>
+                <a href="{% url 'collect:landing' %}" class="block w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">
+                    <i class="fa-solid fa-home mr-2"></i>홈으로 돌아가기
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

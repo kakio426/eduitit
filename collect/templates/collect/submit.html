@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ req.title }} - 제출하기{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div class="max-w-2xl mx-auto">
+
+        <!-- 헤더 -->
+        <div class="text-center mb-8">
+            <div class="text-5xl mb-3">📋</div>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{{ req.title }}</h1>
+            {% if req.description %}
+            <p class="text-gray-500 leading-relaxed break-keep">{{ req.description }}</p>
+            {% endif %}
+            {% if req.deadline %}
+            <p class="text-sm text-orange-500 mt-2 font-medium">
+                <i class="fa-solid fa-clock mr-1"></i>마감: {{ req.deadline|date:"Y년 m월 d일 H:i" }}
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- 양식 파일 다운로드 -->
+        {% if req.template_file %}
+        <div class="clay-card p-5 mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-file-lines text-amber-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-700">양식 파일</p>
+                        <p class="text-sm text-gray-500">{{ req.template_file_name|default:"양식 다운로드" }}</p>
+                    </div>
+                </div>
+                <a href="{% url 'collect:template_download' req.id %}" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105 text-sm" target="_blank">
+                    <i class="fa-solid fa-download mr-1"></i>양식 다운로드
+                </a>
+            </div>
+            <p class="text-xs text-amber-700 mt-3">
+                <i class="fa-solid fa-info-circle mr-1"></i>
+                양식을 다운로드한 뒤 내용을 작성하여 아래에서 제출해주세요.
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- 안내사항 -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-700 space-y-1">
+            <p><i class="fa-solid fa-info-circle mr-1"></i> 파일은 <strong>{{ req.max_file_size_mb }}MB 이하</strong>만 업로드 가능합니다.</p>
+            <p>{{ req.max_file_size_mb }}MB를 초과하는 파일은 <strong>구글드라이브/원드라이브</strong> 등에 업로드 후 링크로 제출해주세요.</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-100 text-red-700 p-4 rounded-xl mb-6 text-sm font-medium">
+            <i class="fa-solid fa-circle-exclamation mr-1"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- 제출 폼 -->
+        <div class="clay-card p-6" x-data="submitForm()">
+            <form action="{% url 'collect:submit_process' req.id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- 이름 + 소속 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
+                        {% if req.expected_submitters_list %}
+                        <div x-data="{ customName: false }">
+                            <select x-show="!customName" name="contributor_name_select" @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                                <option value="">-- 이름 선택 --</option>
+                                {% for name in req.expected_submitters_list %}
+                                <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                                <option value="__custom__">직접 입력...</option>
+                            </select>
+                            <div x-show="customName" class="flex gap-2">
+                                <input type="text" name="contributor_name_custom" x-ref="customInput" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                                <button type="button" @click="customName = false" class="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm hover:bg-gray-200 transition">
+                                    <i class="fa-solid fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <input type="text" name="contributor_name" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
+                        <input type="text" name="contributor_affiliation" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO부서">
+                    </div>
+                </div>
+
+                <!-- 제출 유형 탭 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-600 mb-2">제출 유형</label>
+                    <div class="flex gap-2 mb-4">
+                        {% if req.allow_file %}
+                        <button type="button" @click="tab='file'" :class="tab === 'file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                            <i class="fa-solid fa-file mr-1"></i>파일
+                        </button>
+                        {% endif %}
+                        {% if req.allow_link %}
+                        <button type="button" @click="tab='link'" :class="tab === 'link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                            <i class="fa-solid fa-link mr-1"></i>링크
+                        </button>
+                        {% endif %}
+                        {% if req.allow_text %}
+                        <button type="button" @click="tab='text'" :class="tab === 'text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                            <i class="fa-solid fa-align-left mr-1"></i>텍스트
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <input type="hidden" name="submission_type" :value="tab">
+
+                    <!-- 파일 업로드 -->
+                    <div x-show="tab === 'file'">
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center" :class="fileError && 'border-red-400 bg-red-50'">
+                            <input type="file" name="file" @change="checkFileSize($event)" class="hidden" id="file-input">
+                            <label for="file-input" class="cursor-pointer">
+                                <div class="text-4xl mb-2"><i class="fa-solid fa-cloud-arrow-up text-gray-400"></i></div>
+                                <p class="text-sm text-gray-500 mb-1">클릭하여 파일을 선택하세요</p>
+                                <p class="text-xs text-gray-400">최대 {{ req.max_file_size_mb }}MB</p>
+                            </label>
+                            <div x-show="fileName" class="mt-3 text-sm text-emerald-600 font-medium">
+                                <i class="fa-solid fa-check-circle mr-1"></i>
+                                <span x-text="fileName"></span>
+                                <span x-text="'(' + fileSizeMB + 'MB)'" class="text-gray-400"></span>
+                            </div>
+                            <div x-show="fileError" class="mt-3 text-sm text-red-600 font-medium">
+                                <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                                <span x-text="fileError"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 링크 제출 -->
+                    <div x-show="tab === 'link'" class="space-y-3">
+                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                    </div>
+
+                    <!-- 텍스트 제출 -->
+                    <div x-show="tab === 'text'">
+                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" :disabled="fileError" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>
+                    제출하기
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+function submitForm() {
+    // 첫 번째 허용된 탭을 기본값으로
+    var defaultTab = '{{ req.allow_file|yesno:"file," }}' || '{{ req.allow_link|yesno:"link," }}' || '{{ req.allow_text|yesno:"text," }}' || 'file';
+    defaultTab = defaultTab.replace(',', '');
+    return {
+        tab: defaultTab,
+        fileName: '',
+        fileSizeMB: '',
+        fileError: '',
+        checkFileSize(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            var maxSize = {{ req.max_file_size_mb }} * 1024 * 1024;
+            this.fileName = file.name;
+            this.fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+            if (file.size > maxSize) {
+                this.fileError = '파일 크기가 {{ req.max_file_size_mb }}MB를 초과합니다. 구글드라이브/원드라이브 링크로 제출해주세요.';
+            } else {
+                this.fileError = '';
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

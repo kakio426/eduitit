@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
     'studentmbti.apps.StudentmbtiConfig',
+    'collect.apps.CollectConfig',
     'django_htmx',
     'django.contrib.humanize',
 
@@ -479,6 +480,7 @@ def run_startup_tasks():
         call_command('ensure_chess')
         call_command('ensure_studentmbti')
         call_command('ensure_notebooklm')
+        call_command('ensure_collect')
     except Exception as e:
         print(f"DEBUG: Startup product ensure tasks failed: {e}")
 

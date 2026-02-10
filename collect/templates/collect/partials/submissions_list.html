@@ -1,0 +1,54 @@
+{% load humanize %}
+
+{% if submissions %}
+{% for sub in submissions %}
+<div class="submission-row flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <div class="w-10 h-10 flex items-center justify-center rounded-full text-xl
+            {% if sub.submission_type == 'file' %}bg-blue-100 text-blue-500
+            {% elif sub.submission_type == 'link' %}bg-purple-100 text-purple-500
+            {% else %}bg-amber-100 text-amber-500{% endif %}">
+            {% if sub.submission_type == 'file' %}<i class="fa-solid fa-file"></i>
+            {% elif sub.submission_type == 'link' %}<i class="fa-solid fa-link"></i>
+            {% else %}<i class="fa-solid fa-align-left"></i>{% endif %}
+        </div>
+        <div>
+            <div class="font-bold text-gray-700">
+                {{ sub.contributor_name }}
+                {% if sub.contributor_affiliation %}
+                <span class="text-xs text-gray-400 font-normal ml-1">{{ sub.contributor_affiliation }}</span>
+                {% endif %}
+            </div>
+            <div class="text-sm text-gray-500">
+                {% if sub.submission_type == 'file' %}
+                    {{ sub.original_filename|truncatechars:40 }}
+                    <span class="text-xs text-gray-400">({{ sub.file_size|filesizeformat }})</span>
+                {% elif sub.submission_type == 'link' %}
+                    <a href="{{ sub.link_url }}" target="_blank" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:40 }}</a>
+                    {% if sub.link_description %}<span class="text-gray-400 ml-1">- {{ sub.link_description }}</span>{% endif %}
+                {% else %}
+                    {{ sub.text_content|truncatechars:60 }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="text-right flex items-center gap-2">
+        <span class="text-xs text-gray-400">{{ sub.submitted_at|date:"m/d H:i" }}</span>
+        {% if sub.submission_type == 'file' and sub.file %}
+        <a href="{{ sub.file.url }}" target="_blank" class="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-200 transition">
+            <i class="fa-solid fa-download"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="text-center py-12 text-gray-400">
+    <i class="fa-solid fa-inbox text-4xl mb-4"></i>
+    <p class="text-lg">아직 제출물이 없습니다</p>
+    <p class="text-sm">참여자들이 제출하면 여기에 표시됩니다</p>
+</div>
+{% endif %}
+
+<!-- HTMX OOB swap for count -->
+<span id="total-count" hx-swap-oob="innerHTML">{{ total_count }}건</span>
