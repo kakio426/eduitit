@@ -763,7 +763,26 @@ if self.sociallogin and self.sociallogin.user.email:
 - 미전달 시: 원래 구조 유지 (다른 페이지 호환)
 - `{{ product.get_service_type_display }}` — 한글 카테고리명 표시
 
-### 28. git rebase 충돌 해결 시 주의사항
+### 28. DB 데이터 변경 시 반드시 데이터 마이그레이션 작성
+
+Django shell로 로컬 DB만 수동 수정하면 **프로덕션에는 반영되지 않는다**. DB 데이터를 변경할 때는 반드시 `RunPython` 데이터 마이그레이션을 함께 작성해야 한다.
+
+```python
+# ❌ Django shell로만 변경 → 프로덕션 미반영
+Product.objects.filter(id=121).update(service_type='classroom')
+
+# ✅ 데이터 마이그레이션 작성
+# python manage.py makemigrations products --empty --name update_xxx_data
+def update_data(apps, schema_editor):
+    Product = apps.get_model('products', 'Product')
+    Product.objects.filter(id=121).update(service_type='classroom')
+
+migrations.RunPython(update_data, migrations.RunPython.noop)
+```
+
+**적용 대상:** 카테고리 변경, 기본값 일괄 변경, 필드명 변경에 따른 기존 데이터 매핑 등 모든 DB 레코드 수정
+
+### 29. git rebase 충돌 해결 시 주의사항
 
 충돌 해결 후 반드시:
 1. `{% if %}` / `{% endif %}` 밸런스 확인
