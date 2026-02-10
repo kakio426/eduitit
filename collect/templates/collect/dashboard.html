@@ -14,13 +14,26 @@
         box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
         transition: all 0.3s ease;
     }
+
     .request-card:hover {
         transform: translateY(-4px);
         box-shadow: 12px 12px 24px #b8bec5, -12px -12px 24px #ffffff;
     }
-    .status-active { background: #DCFCE7; color: #15803D; }
-    .status-closed { background: #FEE2E2; color: #DC2626; }
-    .status-archived { background: #F3F4F6; color: #6B7280; }
+
+    .status-active {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+
+    .status-closed {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .status-archived {
+        background: #F3F4F6;
+        color: #6B7280;
+    }
 </style>
 {% endblock %}
 
@@ -43,11 +56,13 @@
                     <i class="fa-solid fa-plus-circle text-emerald-500"></i>
                     새 수합 요청 만들기
                 </h2>
-                <i class="fa-solid fa-chevron-down text-gray-400 transition-transform" :class="open && 'rotate-180'"></i>
+                <i class="fa-solid fa-chevron-down text-gray-400 transition-transform"
+                    :class="open && 'rotate-180'"></i>
             </div>
 
             <div x-show="open" x-transition class="mt-6">
-                <form action="{% url 'collect:request_create' %}" method="post" enctype="multipart/form-data" class="space-y-4">
+                <form action="{% url 'collect:request_create' %}" method="post" enctype="multipart/form-data"
+                    class="space-y-4">
                     {% csrf_token %}
 
                     <div>
@@ -68,7 +83,8 @@
                             <span class="text-xs text-gray-400 font-normal ml-1">(선택사항: 미제출자 확인용)</span>
                         </label>
                         {{ form.expected_submitters }}
-                        <p class="text-xs text-gray-400 mt-1">한 줄에 한 명씩 입력하면 제출 현황에서 누가 아직 제출하지 않았는지 확인할 수 있습니다. 비워두면 자유 제출입니다.</p>
+                        <p class="text-xs text-gray-400 mt-1">한 줄에 한 명씩 입력하면 제출 현황에서 누가 아직 제출하지 않았는지 확인할 수 있습니다. 비워두면 자유
+                            제출입니다.</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -90,7 +106,8 @@
                             <span class="text-xs text-gray-400 font-normal ml-1">(선택사항: 제출자에게 제공할 양식)</span>
                         </label>
                         {{ form.template_file }}
-                        <p class="text-xs text-gray-400 mt-1">hwp, xlsx, docx, pdf 등 양식 파일을 업로드하면 제출자가 다운로드 후 작성하여 제출할 수 있습니다.</p>
+                        <p class="text-xs text-gray-400 mt-1">hwp, xlsx, docx, pdf 등 양식 파일을 업로드하면 제출자가 다운로드 후 작성하여 제출할 수
+                            있습니다.</p>
                     </div>
 
                     <!-- 허용 유형 -->
@@ -120,14 +137,15 @@
                     {% if form.errors %}
                     <div class="bg-red-100 text-red-700 p-3 rounded-xl text-sm">
                         {% for field, errors in form.errors.items %}
-                            {% for error in errors %}
-                            <p>{{ error }}</p>
-                            {% endfor %}
+                        {% for error in errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
                         {% endfor %}
                     </div>
                     {% endif %}
 
-                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]">
+                    <button type="submit"
+                        class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]">
                         <i class="fa-solid fa-plus mr-2"></i>
                         수합 요청 생성
                     </button>
@@ -164,7 +182,7 @@
                             {% endif %}
                         </div>
                         <div class="text-gray-500 text-sm flex items-center gap-4 flex-wrap">
-                            <span><i class="fa-solid fa-paper-plane mr-1"></i>{{ req._submission_count }}건 제출</span>
+                            <span><i class="fa-solid fa-paper-plane mr-1"></i>{{ req.num_submissions }}건 제출</span>
                             <span><i class="fa-solid fa-calendar mr-1"></i>{{ req.created_at|date:"Y-m-d H:i" }}</span>
                             {% if req.access_code %}
                             <span class="font-bold text-emerald-600"><i class="fa-solid fa-key mr-1"></i>코드: {{ req.access_code }}</span>
@@ -175,13 +193,16 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="{% url 'collect:request_detail' req.id %}" class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
+                        <a href="{% url 'collect:request_detail' req.id %}"
+                            class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
                             <i class="fa-solid fa-eye"></i>
                             상세보기
                         </a>
-                        <form action="{% url 'collect:request_delete' req.id %}" method="post" onsubmit="return confirm('정말로 이 수합 요청을 삭제하시겠습니까? 모든 제출물이 함께 삭제됩니다.');">
+                        <form action="{% url 'collect:request_delete' req.id %}" method="post"
+                            onsubmit="return confirm('정말로 이 수합 요청을 삭제하시겠습니까? 모든 제출물이 함께 삭제됩니다.');">
                             {% csrf_token %}
-                            <button type="submit" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition">
+                            <button type="submit"
+                                class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </form>

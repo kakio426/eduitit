@@ -13,13 +13,13 @@ class CollectionRequestAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('creator').annotate(
-            _submission_count=Count('submissions', distinct=True)
+            num_submissions=Count('submissions', distinct=True)
         )
 
     def submission_count_display(self, obj):
-        return obj._submission_count
+        return obj.num_submissions
     submission_count_display.short_description = '제출 수'
-    submission_count_display.admin_order_field = '_submission_count'
+    submission_count_display.admin_order_field = 'num_submissions'
 
 
 @admin.register(Submission)

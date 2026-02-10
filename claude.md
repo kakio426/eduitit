@@ -825,4 +825,70 @@ migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebookl
 
 ---
 
+## 새 서비스(앱) 추가 시 체크리스트 (2026-02-10)
+
+### 31. 서비스 시작 버튼 URL 라우팅 — preview_modal.html 수정 필수
+
+`products/templates/products/partials/preview_modal.html`의 "시작하기" 버튼은 **product.title 기반 조건문**으로 URL을 결정한다. 새 서비스를 추가할 때 여기에 `{% elif %}` 분기를 추가하지 않으면, 시작 버튼을 눌러도 홈으로 돌아간다.
+
+```html
+<!-- preview_modal.html 라인 86 — 한 줄로 작성해야 함 (규칙 25) -->
+{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '간편 수합' %}{% url 'collect:landing' %}{% elif product.title == '교사 백과사전' %}{% url 'encyclopedia:landing' %}{% else %}{% url 'home' %}{% endif %}
+```
+
+**새 서비스 추가 시:**
+- [ ] `{% elif product.title == '서비스명' %}{% url 'app:landing' %}` 분기 추가
+- [ ] `external_url` 사용하는 외부 서비스는 분기 불필요 (첫 번째 조건에서 처리됨)
+
+> **사례 (2026-02-10)**: 간편 수합, 교사 백과사전 두 서비스 모두 preview_modal에 등록 누락 → 시작 버튼이 홈으로 리다이렉트. title 분기를 추가하여 해결.
+
+### 32. ensure_* 명령어 — defaults의 service_type은 반드시 SERVICE_CHOICES 값 사용
+
+`get_or_create(defaults={...})`에서 `service_type`을 지정할 때, 반드시 `products/models.py`의 `SERVICE_CHOICES`에 있는 값을 사용해야 한다.
+
+**현재 유효한 값:** `classroom`, `work`, `game`, `counsel`, `edutech`, `etc`
+
+```python
+# ❌ SERVICE_CHOICES에 없는 값 → Admin에서 표시 이상
+'service_type': 'guide',    # ← 없는 값!
+'service_type': 'tool',     # ← 없는 값!
+
+# ✅ 유효한 값만 사용
+'service_type': 'edutech',  # ← SERVICE_CHOICES에 존재
+```
+
+> **사례 (2026-02-10)**: `ensure_notebooklm`이 `service_type='guide'`로 생성 → Admin에서 카테고리가 빈 값으로 표시. 데이터 마이그레이션으로 `'edutech'`로 수정.
+
+### 33. 새 Django 앱 추가 시 전체 체크리스트
+
+| 단계 | 파일 | 작업 |
+|------|------|------|
+| 1 | 앱 디렉토리 | `models.py`, `views.py`, `urls.py`, `forms.py`, `admin.py`, `apps.py` 생성 |
+| 2 | `config/settings.py` | `INSTALLED_APPS`에 추가 |
+| 3 | `config/settings_production.py` | `INSTALLED_APPS`에 동일하게 추가 (규칙 1) |
+| 4 | `config/urls.py` | `path('앱/', include('앱.urls', namespace='앱'))` 추가 |
+| 5 | `preview_modal.html` | 시작 버튼 URL 분기 추가 (규칙 31) |
+| 6 | `ensure_*` 명령어 | Product 생성 보장, Admin 필드 덮어쓰기 금지 (규칙 30) |
+| 7 | `settings_production.py` | `run_startup_tasks()`에 `call_command('ensure_*')` 추가 |
+| 8 | `Procfile` | `ensure_*` 명령어 체인에 추가 |
+| 9 | `nixpacks.toml` | Procfile과 동기화 |
+| 10 | `admin.py` | `select_related` + `annotate` + `raw_id_fields` (규칙 14) |
+| 11 | 마이그레이션 | `makemigrations` + `migrate` |
+| 12 | 검증 | `python manage.py check` |
+
+**현재 Procfile 실행 순서:**
+```
+migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensure_collect → check_visitors → gunicorn
+```
+
+### 34. 새로운 서비스 개발 시 로컬 데이터베이스 데이터 확인
+
+로컬 환경에서는 데이터베이스(`db.sqlite3`)가 비어 있거나 개발 환경마다 데이터가 다를 수 있다. 새로운 서비스를 개발할 때 소스 코드만 작성하고 DB 레코드(`Product` 모델 등)를 생성하지 않으면, UI에서 해당 서비스가 아예 보이지 않거나 오류가 발생할 수 있다.
+
+- **증상**: 앱 코드는 존재하지만 홈 화면이나 상세 페이지에서 서비스 정보가 표시되지 않음.
+- **원인**: `get_collect_service()`와 같은 함수가 DB에서 데이터를 찾지 못해 `None`을 반환함.
+- **해결**: 개발 초기 단계에서 `create_xxx_data.py` 같은 임시 스크립트를 작성하여 로컬 DB에 필수 데이터를 넣거나, `python manage.py ensure_xxx` 명령어를 실행하여 데이터를 생성할 것.
+
+---
+
 **마지막 업데이트:** 2026-02-10

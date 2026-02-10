@@ -61,7 +61,7 @@ def dashboard(request):
     requests_list = CollectionRequest.objects.filter(
         creator=request.user
     ).annotate(
-        _submission_count=Count('submissions')
+        num_submissions=Count('submissions')
     ).order_by('-created_at')
 
     form = CollectionRequestForm()
@@ -93,7 +93,7 @@ def request_create(request):
     requests_list = CollectionRequest.objects.filter(
         creator=request.user
     ).annotate(
-        _submission_count=Count('submissions')
+        num_submissions=Count('submissions')
     ).order_by('-created_at')
 
     return render(request, 'collect/dashboard.html', {
