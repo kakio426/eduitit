@@ -442,21 +442,22 @@ CSP_FORM_ACTION = ("'self'", "https://sharer.kakao.com")
 # =============================================================================
 
 def sync_site_domain():
-    """DB의 Site 도메인을 현재 접속 주소와 자동으로 동기화합니다."""
+    """DB의 Site 도메인을 커스텀 도메인(eduitit.site)으로 동기화합니다."""
     try:
         from django.contrib.sites.models import Site
         current_site = Site.objects.get_current()
-        production_domain = os.environ.get('ALLOWED_HOSTS', '').split(',')[0]
-        
-        if not production_domain or 'railway.app' not in production_domain:
-            # ALLOWED_HOSTS에서 railway 도메인 찾기
-            for host in os.environ.get('ALLOWED_HOSTS', '').split(','):
-                host = host.strip()
-                if 'railway.app' in host:
-                    production_domain = host
-                    break
 
-        if production_domain and current_site.domain != production_domain:
+        # 커스텀 도메인 우선 사용 (railway.app이 아닌 실제 서비스 도메인)
+        production_domain = 'eduitit.site'
+        env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',')
+        for host in env_hosts:
+            host = host.strip()
+            # railway.app이 아닌 커스텀 도메인이 있으면 그것을 사용
+            if host and 'railway.app' not in host and 'onrender.com' not in host and host not in ('localhost', '127.0.0.1'):
+                production_domain = host
+                break
+
+        if current_site.domain != production_domain:
             print(f"DEBUG: SITE_ID {SITE_ID} 도메인을 {current_site.domain}에서 {production_domain}으로 업데이트합니다.")
             current_site.domain = production_domain
             current_site.name = "Eduitit Production"

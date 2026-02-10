@@ -611,4 +611,97 @@ function getAudioContext() {
 
 ---
 
-**마지막 업데이트:** 2026-02-09
+## 소셜 로그인 / Gunicorn / allauth 이슈 (2026-02-10)
+
+### 19. allauth ACCOUNT_SIGNUP_FORM_CLASS vs SOCIALACCOUNT_FORMS 구분 (CRITICAL)
+
+allauth 65.x에서 커스텀 가입 폼을 만들 때, **`SOCIALACCOUNT_FORMS`를 사용하면 안 된다.**
+
+```python
+# ❌ SOCIALACCOUNT_FORMS로 폼을 교체하면 try_save()/save() 없어서 500 에러
+SOCIALACCOUNT_FORMS = {
+    'signup': 'core.signup_forms.CustomSignupForm',
+}
+
+# ❌ allauth.socialaccount.forms.SignupForm을 직접 상속하면 순환 import → 크래시
+from allauth.socialaccount.forms import SignupForm as SocialSignupForm
+class CustomSignupForm(SocialSignupForm): ...
+
+# ✅ ACCOUNT_SIGNUP_FORM_CLASS만 사용 (allauth가 자동 상속 체인 구성)
+ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
+# → allauth 내부: SignupForm(BaseSignupForm(CustomSignupForm))
+# → try_save() → save() → custom_signup() → signup() 정상 작동
+```
+
+**CustomSignupForm은 `forms.Form`을 상속하고, 추가 필드 + `signup(request, user)` 메서드만 정의:**
+```python
+class CustomSignupForm(forms.Form):
+    nickname = forms.CharField(...)
+    def signup(self, request, user):
+        # 추가 프로필 저장 로직
+```
+
+> **사례**: `SOCIALACCOUNT_FORMS`로 `forms.Form` 기반 폼을 지정 → allauth가 `form.try_save()` 호출 → `AttributeError` → 500. 직접 상속으로 우회 시도 → 순환 import → 서버 크래시. `ACCOUNT_SIGNUP_FORM_CLASS`만 사용하여 해결.
+
+### 20. Gunicorn sync worker 고갈 — AI API 호출 시 필수 설정
+
+기본 Gunicorn 설정(`gunicorn config.wsgi`)은 **worker 1개 + sync 모드**. AI API처럼 30~60초 걸리는 동기 호출이 있으면 그 동안 **서버 전체가 먹통**.
+
+```bash
+# ❌ 기본 설정 (worker 1개) — AI 1건 처리 중 모든 요청 499
+gunicorn config.wsgi --timeout 120
+
+# ✅ gthread 모드 (동시 12개 요청 처리)
+gunicorn config.wsgi --workers 3 --threads 4 --worker-class gthread --timeout 120
+```
+
+**증상**: `/fortune` POST 처리 중 `/accounts/login/`, `/accounts/kakao/login/callback/` 등 모든 경로에서 499 에러 발생.
+
+> **사례**: 사주 분석 API가 54초간 worker를 점유 → 같은 시간대 모든 요청(로그인, 가입, 다른 서비스)이 499로 실패.
+
+### 21. OnboardingMiddleware — OAuth 콜백 경로 허용 필수
+
+`OnboardingMiddleware`의 `allowed_paths`에 `/accounts/` 전체를 포함해야 소셜 로그인 콜백이 차단되지 않음.
+
+```python
+# ❌ /accounts/logout/ 만 허용 → OAuth 콜백 차단
+allowed_paths = ['/accounts/logout/', ...]
+
+# ✅ /accounts/ 전체 허용
+allowed_paths = ['/accounts/', ...]
+```
+
+> **사례**: 카카오/네이버 로그인 콜백(`/accounts/kakao/login/callback/`)이 `allowed_paths`에 없어서, 인증 완료 후 `/update-email/`로 강제 리다이렉트 → 가입 실패.
+
+### 22. 커스텀 가입 폼 widget readonly — 소셜 제공자 이메일 미제공 시 입력 불가
+
+```python
+# ❌ 기본 widget에 readonly → 이메일 없으면 빈 칸 + 입력 불가 → 가입 불가
+email = forms.EmailField(widget=forms.EmailInput(attrs={'readonly': 'readonly'}))
+
+# ✅ 기본은 편집 가능, 소셜 이메일 있을 때만 __init__에서 readonly 설정
+email = forms.EmailField(widget=forms.EmailInput(attrs={...}))
+# __init__에서:
+if self.sociallogin and self.sociallogin.user.email:
+    self.fields['email'].widget.attrs['readonly'] = True
+```
+
+> **사례**: 카카오 로그인 시 이메일 미제공 → 가입 폼 이메일 칸이 readonly + 빈 값 → 필수 필드라 제출 불가 → 모든 신규 가입 차단.
+
+### 23. settings_production.py 서버 시작 시 DB 조작 주의
+
+`sync_site_domain()` 같은 시작 시 실행 함수에서 `SocialApp.objects.all().delete()` 등 **전체 삭제 쿼리**를 넣지 않기. 매 배포마다 불필요한 DB 조작이 발생하고, 레이스 컨디션 위험.
+
+### 24. SESSION_SAVE_EVERY_REQUEST 성능 영향
+
+`SESSION_SAVE_EVERY_REQUEST = True`는 **모든 HTTP 요청마다 DB write**를 발생시킴. 트래픽이 많은 서비스에서는 `False`로 설정하고, `SESSION_COOKIE_AGE`를 충분히 길게(24시간+) 설정.
+
+### 관련 파일
+- `core/signup_forms.py` — 소셜 가입 커스텀 폼 (nickname + signup)
+- `core/middleware.py` — OnboardingMiddleware (allowed_paths)
+- `config/settings_production.py` — allauth, 세션, Gunicorn 관련 설정
+- `Procfile`, `nixpacks.toml` — Gunicorn worker 설정
+
+---
+
+**마지막 업데이트:** 2026-02-10
