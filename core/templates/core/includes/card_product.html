@@ -1,3 +1,62 @@
+{% if is_filtered %}
+{# 필터링 모드: 외부 래퍼에 grid span이 있으므로 내부는 순수 카드만 #}
+<div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
+    role="button" tabindex="0" data-product-id="{{ product.id }}"
+    data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
+
+    <div class="relative z-10 flex flex-col h-full justify-between">
+        <div class="space-y-2 md:space-y-3">
+            <div class="flex justify-between items-start">
+                <div
+                    class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
+                    {% if "fa-" in product.icon %}
+                    <i class="{{ product.icon }}"></i>
+                    {% else %}
+                    {{ product.icon }}
+                    {% endif %}
+                </div>
+                {% if product.card_size == 'hero' %}
+                <span
+                    class="px-2 py-0.5 md:px-3 md:py-1 theme-badge rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <span
+                    class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
+                <h3
+                    class="{% if product.card_size == 'hero' %}text-lg md:text-2xl lg:text-3xl{% else %}text-base md:text-xl lg:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-1 md:mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
+                    {{ product.title }}
+                </h3>
+                <p
+                    class="text-sm md:text-base text-slate-600 leading-relaxed font-sans line-clamp-2 md:line-clamp-3">
+                    {{ product.lead_text|default:product.description }}
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-4 md:mt-6 flex items-center justify-between">
+            <div
+                class="flex items-center gap-1 md:gap-2 font-bold text-gray-400 group-hover:text-purple-600 transition-colors">
+                <span class="text-xs md:text-sm">보기</span>
+                <i
+                    class="fa-solid fa-arrow-right text-[10px] md:text-xs group-hover:translate-x-1 transition-transform"></i>
+            </div>
+            {% if product.card_size == 'hero' %}
+            <div
+                class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs shadow-lg group-hover:bg-purple-600 group-hover:rotate-45 transition-all duration-500">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div
+        class="absolute -bottom-8 -right-8 w-24 h-24 md:w-32 md:h-32 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-700">
+    </div>
+</div>
+{% else %}
+{# 기본 모드: 원래 구조 (다른 페이지에서 사용) #}
 <div class="{% if product.card_size == 'hero' and product.description|length > 100 %}col-span-2 md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}col-span-2 md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
     data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
     <div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
@@ -7,7 +66,7 @@
             <div class="space-y-2 md:space-y-3">
                 <div class="flex justify-between items-start">
                     <div
-                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl text-purple-500 theme-icon">
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
                         {% if "fa-" in product.icon %}
                         <i class="{{ product.icon }}"></i>
                         {% else %}
@@ -22,7 +81,7 @@
 
                 <div>
                     <span
-                        class="text-[10px] md:text-xs font-bold tracking-widest uppercase text-gray-400 mb-1 block">{{product.service_type|title}}</span>
+                        class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
                     <h3
                         class="{% if product.card_size == 'hero' %}text-lg md:text-2xl lg:text-3xl{% else %}text-base md:text-xl lg:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-1 md:mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                         {{ product.title }}
@@ -55,3 +114,4 @@
         </div>
     </div>
 </div>
+{% endif %}

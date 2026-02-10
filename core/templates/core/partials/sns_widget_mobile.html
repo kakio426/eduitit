@@ -1,0 +1,104 @@
+{% load static %}
+
+<!-- 모바일 전용 SNS 위젯 (아코디언 내부) -->
+<div class="bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden">
+
+    <!-- 1. Header -->
+    <div class="p-5 border-b border-slate-100 bg-white/90 backdrop-blur flex justify-between items-center shrink-0">
+        <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
+            <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
+            실시간 소통
+        </h2>
+        <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
+            hx-get="{% url 'home' %}" hx-select="#mobile-post-list-container" hx-target="#mobile-post-list-container"
+            hx-swap="outerHTML">
+            <i class="ph ph-arrows-clockwise text-xl"></i>
+        </button>
+    </div>
+
+    <!-- 2. Feed Area -->
+    <div class="bg-slate-50/50 p-4 space-y-3">
+
+        {% if user.is_authenticated %}
+        <!-- Write Input -->
+        <form hx-post="{% url 'post_create' %}" hx-target="#mobile-post-list-container" hx-swap="innerHTML"
+            hx-on::after-request="this.reset(); var previewEl = document.getElementById('mobile-image-preview-container'); if(previewEl) previewEl.classList.add('hidden'); var inputEl = document.getElementById('mobile-post-image-input'); if(inputEl) inputEl.value = '';"
+            hx-encoding="multipart/form-data"
+            class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
+            {% csrf_token %}
+            <textarea name="content"
+                class="w-full resize-none outline-none text-sm placeholder-slate-400 bg-transparent font-medium transition-colors"
+                rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?"></textarea>
+
+            <!-- 이미지 미리보기 영역 -->
+            <div id="mobile-image-preview-container" class="hidden mt-3 relative">
+                <img id="mobile-image-preview" src="" alt="미리보기"
+                    class="w-full h-auto max-h-64 object-cover rounded-xl border border-slate-200">
+                <button type="button"
+                    class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full hover:bg-red-600 transition shadow-lg flex items-center justify-center"
+                    onclick="document.getElementById('mobile-image-preview-container').classList.add('hidden'); document.getElementById('mobile-post-image-input').value = '';">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <input type="file" name="image" id="mobile-post-image-input" class="hidden" accept="image/*">
+
+            <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                <button type="button" onclick="document.getElementById('mobile-post-image-input').click()"
+                    class="text-slate-400 hover:text-indigo-500 p-2 rounded-lg hover:bg-slate-50 transition">
+                    <i class="ph ph-image text-xl"></i>
+                </button>
+                <button type="submit"
+                    class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md hover:translate-y-[-1px]">
+                    등록하기
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <!-- 로그인 유도 메시지 -->
+        <div class="bg-indigo-50 p-6 rounded-2xl text-center border border-indigo-100 shadow-sm mb-4">
+            <div class="mb-3">
+                <i class="ph ph-sign-in text-4xl text-indigo-600"></i>
+            </div>
+            <p class="text-slate-700 font-bold mb-2">글을 작성하고 소통하려면 로그인이 필요해요</p>
+            <p class="text-sm text-slate-500 mb-4">선생님들과 실시간으로 소통해보세요!</p>
+            <a href="{% url 'account_login' %}?next={{ request.path }}"
+                class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md hover:translate-y-[-1px]">
+                로그인하기
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Feed List Container -->
+        <div id="mobile-post-list-container" class="space-y-4 pb-4">
+            {% include 'core/partials/post_list.html' %}
+        </div>
+
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+<script>
+    // 모바일 이미지 업로드 미리보기
+    (function() {
+        var mobileInput = document.getElementById('mobile-post-image-input');
+        if (mobileInput) {
+            mobileInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        var preview = document.getElementById('mobile-image-preview');
+                        var container = document.getElementById('mobile-image-preview-container');
+                        if (preview && container) {
+                            preview.src = ev.target.result;
+                            container.classList.remove('hidden');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    })();
+</script>
+{% endif %}

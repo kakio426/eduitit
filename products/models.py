@@ -29,18 +29,19 @@ class Product(models.Model):
     ]
     
     SERVICE_CHOICES = [
-        ('game', 'Game'),
-        ('tool', 'Tool'),
-        ('platform', 'Platform'),
-        ('library', 'Library'),
-        ('guide', 'Guide'),
+        ('classroom', '운영과 수업'),
+        ('work', '업무경감'),
+        ('game', '게임모음'),
+        ('counsel', '상담·운세'),
+        ('edutech', '에듀테크'),
+        ('etc', '기타'),
     ]
     
     icon = models.CharField(max_length=50, default='🛠️', help_text="Emoji or FontAwesome class for card icon")
     color_theme = models.CharField(max_length=20, choices=COLOR_CHOICES, default='purple', help_text="Color theme")
     card_size = models.CharField(max_length=20, choices=SIZE_CHOICES, default='small', help_text="Card size")
     display_order = models.IntegerField(default=0, help_text="Order in which to display (lower numbers first)")
-    service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='tool', help_text="Service type")
+    service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='etc', help_text="서비스 카테고리")
     external_url = models.URLField(blank=True, help_text="External URL for services hosted elsewhere")
     
     created_at = models.DateTimeField(auto_now_add=True)

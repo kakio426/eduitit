@@ -10,21 +10,23 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ('title', 'icon', 'service_type', 'color_theme', 'display_order', 'price', 'is_active', 'is_featured')
     list_filter = ('is_active', 'is_featured', 'service_type', 'color_theme')
     search_fields = ('title', 'description')
-    list_editable = ('display_order', 'is_active', 'is_featured')
+    list_editable = ('service_type', 'icon', 'color_theme', 'display_order', 'is_active', 'is_featured')
     inlines = [ProductFeatureInline]
-    
+
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('title', 'description', 'price', 'image')
+        ('기본 정보', {
+            'fields': ('title', 'lead_text', 'description', 'price', 'image')
         }),
-        ('Display Settings', {
-            'fields': ('icon', 'color_theme', 'card_size', 'display_order')
+        ('표시 설정', {
+            'fields': ('icon', 'color_theme', 'card_size', 'display_order'),
+            'description': 'icon: 이모지(🎲) 또는 FontAwesome 클래스(fa-solid fa-dice)'
         }),
-        ('Service Configuration', {
-            'fields': ('service_type', 'external_url')
+        ('서비스 분류', {
+            'fields': ('service_type', 'external_url'),
+            'description': '카테고리를 선택하면 홈 화면 탭 필터에 반영됩니다.'
         }),
-        ('Status', {
-            'fields': ('is_active', 'is_featured')
+        ('상태', {
+            'fields': ('is_active', 'is_featured', 'is_guest_allowed')
         }),
     )
 
