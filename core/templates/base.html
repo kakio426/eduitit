@@ -409,8 +409,7 @@
                 {% if user.is_authenticated %}
                 <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
                     <i class="fa-solid fa-user-circle text-2xl"></i>
-                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{
-                        user.username }}{% else %}사용자{% endif %}님</span>
+                    <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{user.username }}{% else %}사용자{% endif %}님</span>
                 </div>
                 <!-- Schoolit SSO Mobile (Temporarily hidden)
                 <a href="{% url 'sso_schoolit' %}"
