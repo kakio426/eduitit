@@ -704,4 +704,72 @@ if self.sociallogin and self.sociallogin.user.email:
 
 ---
 
+## 홈 화면 레이아웃 & 카테고리 시스템 (2026-02-10)
+
+### 25. Django 템플릿 태그 `{% %}` 안에 줄바꿈 금지
+
+`{% if ... %}` 태그의 조건이 길어도 **절대 줄바꿈하면 안 된다**. Django 템플릿 파서는 `{%`와 `%}` 사이의 줄바꿈을 인식하지 못해 `TemplateSyntaxError: Invalid block tag 'endif'`를 발생시킨다.
+
+```html
+<!-- ❌ 줄바꿈 → TemplateSyntaxError -->
+{% if user.is_authenticated and
+    user.userprofile.nickname %}
+
+<!-- ✅ 한 줄로 -->
+{% if user.is_authenticated and user.userprofile.nickname %}
+```
+
+> **사례 (2026-02-10)**: `base.html` 피드백 위젯의 `{% if %}` 태그가 두 줄에 걸쳐 있어 홈 페이지 전체가 500 에러. git rebase 충돌 해결 과정에서 기존에 우연히 동작하던 줄바꿈이 깨짐.
+
+### 26. 홈 화면 레이아웃 구조 (모바일/PC 분리)
+
+**모바일**: 서비스 카드 above the fold → SNS 미리보기(최신 2개) → "소통창 열기" 아코디언
+**PC**: SNS 사이드바(왼쪽, sticky) + 메인 콘텐츠(오른쪽)
+
+```
+모바일 스크롤 간섭 해결 핵심:
+- SNS를 별도 스크롤 컨테이너(overflow-auto)에 넣지 않기
+- 페이지 본문 흐름에 통합 (overflow-visible)
+- 아코디언으로 펼치기/접기 → x-show + x-transition 사용
+```
+
+**관련 파일:**
+- `core/templates/core/home.html` — 비로그인 홈
+- `core/templates/core/home_authenticated.html` — 로그인 홈
+- `core/templates/core/partials/sns_widget.html` — PC 전용 사이드바
+- `core/templates/core/partials/sns_widget_mobile.html` — 모바일 전용 (아코디언 내부)
+
+### 27. 서비스 카테고리 시스템
+
+`products/models.py`의 `SERVICE_CHOICES`로 관리. Django Admin `list_editable`로 바로 수정 가능.
+
+| 코드 | 이름 | 탭 색상 | 아이콘 색상 |
+|------|------|---------|------------|
+| `classroom` | 운영과 수업 | 파란색 | `text-blue-500` |
+| `work` | 업무경감 | 초록색 | `text-emerald-500` |
+| `game` | 게임모음 | 빨간색 | `text-red-500` |
+| `counsel` | 상담·운세 | 보라색 | `text-violet-500` |
+| `edutech` | 에듀테크 | 시안색 | `text-cyan-500` |
+| `etc` | 기타 | 회색 | `text-slate-500` |
+
+**카테고리 추가/변경 시 수정 필요한 파일 (4곳):**
+1. `products/models.py` — `SERVICE_CHOICES` + 마이그레이션
+2. `core/templates/core/home.html` — CSS `.cat-{code}` + 탭 버튼
+3. `core/templates/core/home_authenticated.html` — 위와 동일
+4. `core/templates/core/includes/card_product.html` — 아이콘/라벨 색상 분기
+
+**카드 컴포넌트 `card_product.html`:**
+- `is_filtered=True` 전달 시: 외부 `x-show` 래퍼와 함께 사용 (Alpine.js 필터링 모드)
+- 미전달 시: 원래 구조 유지 (다른 페이지 호환)
+- `{{ product.get_service_type_display }}` — 한글 카테고리명 표시
+
+### 28. git rebase 충돌 해결 시 주의사항
+
+충돌 해결 후 반드시:
+1. `{% if %}` / `{% endif %}` 밸런스 확인
+2. 줄바꿈으로 분리된 템플릿 태그가 없는지 확인
+3. `python manage.py check` + 실제 페이지 렌더링 테스트
+
+---
+
 **마지막 업데이트:** 2026-02-10
