@@ -1,15 +1,10 @@
 {% load static %}
-<div class="relative w-full max-w-2xl mx-auto bg-[#E0E5EC] rounded-[2.5rem] shadow-clay overflow-hidden animate-fade-in-up dyn-style-root"
+<div class="flex flex-col h-full relative w-full max-w-2xl mx-auto bg-[#E0E5EC] rounded-[2.5rem] shadow-clay overflow-hidden animate-fade-in-up dyn-style-root"
     data-bg="{{ theme.bg }}">
     <!-- Header (Animal Card style) -->
-    <div class="p-8 md:p-10 text-center relative">
+    <div class="p-8 md:p-10 text-center relative flex-shrink-0">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r dyn-style-banner" data-from="{{ theme.bg }}"
             data-to="{{ theme.primary }}"></div>
-
-        <button type="button" onclick="closeModal()"
-            class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/50 text-gray-500 hover:text-gray-800 transition flex items-center justify-center shadow-sm z-20">
-            <i class="fa-solid fa-xmark text-xl"></i>
-        </button>
 
         <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10 mt-4">
             <img src="{% static 'ssambti/images/animals/' %}{{ animal_image }}" alt="{{ animal_name }}"
@@ -29,7 +24,7 @@
     </div>
 
     <!-- Analysis Content -->
-    <div class="p-8 md:p-10 bg-white/40 backdrop-blur-sm space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+    <div class="flex-1 min-h-0 p-8 md:p-10 bg-white/40 backdrop-blur-sm space-y-8 overflow-y-auto custom-scrollbar">
         <!-- Spirit Message -->
         <div class="clay-card p-6 bg-white/80 border-l-8 dyn-style-border" data-color="{{ theme.primary }}">
             <h3 class="text-xl font-bold text-gray-800 mb-4 font-title flex items-center gap-2">
