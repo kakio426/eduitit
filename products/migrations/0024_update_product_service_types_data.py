@@ -7,33 +7,34 @@ def update_service_types(apps, schema_editor):
     """Update product service_type values from old categories to new ones."""
     Product = apps.get_model('products', 'Product')
 
-    # Mapping: product_id -> new_service_type
-    # Based on the confirmed local DB state
-    updates = {
-        121: 'classroom',   # 반짝반짝 우리반 알림판
-        122: 'game',        # 왁자지껄 교실 윷놀이
-        123: 'counsel',     # 토닥토닥 선생님 운세
-        124: 'work',        # 가뿐하게 서명 톡
-        125: 'work',        # 궁금해? 패들릿 봇
-        126: 'classroom',   # 몽글몽글 미술 수업
-        127: 'work',        # 글솜씨 뚝딱! 소식지
-        128: 'etc',         # 유튜브 탈알고리즘
-        129: 'etc',         # 학교 통합 지원 스쿨잇
-        130: 'edutech',     # 인사이트
-        131: 'edutech',     # AI 도구 가이드
-        132: 'edutech',     # AI 프롬프트 레시피
-        133: 'work',        # 학교폭력 사안 처리 비서
-        135: 'counsel',     # 쌤BTI
-        136: 'game',        # 두뇌 풀가동! 교실 체스
-        137: 'work',        # HWP to PDF 변환기
-        138: 'counsel',     # 우리반 캐릭터 친구 찾기
-        139: 'work',        # 교사 백과사전
+    # Mapping: product title (partial match) -> new_service_type
+    title_to_category = {
+        '알림판': 'classroom',
+        '미술 수업': 'classroom',
+        '윷놀이': 'game',
+        '체스': 'game',
+        '운세': 'counsel',
+        '쌤BTI': 'counsel',
+        'BTI': 'counsel',
+        '캐릭터 친구': 'counsel',
+        '서명': 'work',
+        '패들릿': 'work',
+        '소식지': 'work',
+        '학교폭력': 'work',
+        'HWP': 'work',
+        'PDF': 'work',
+        '백과사전': 'work',
+        '인사이트': 'edutech',
+        'AI 도구': 'edutech',
+        '프롬프트': 'edutech',
+        '탈알고리즘': 'etc',
+        '스쿨잇': 'etc',
     }
 
-    for product_id, service_type in updates.items():
-        Product.objects.filter(id=product_id).update(service_type=service_type)
+    for keyword, service_type in title_to_category.items():
+        Product.objects.filter(title__icontains=keyword).update(service_type=service_type)
 
-    # Also update any remaining products with old values to 'etc'
+    # Catch-all: any remaining products with old values -> etc
     old_values = ['tool', 'platform', 'library', 'guide']
     Product.objects.filter(service_type__in=old_values).update(service_type='etc')
 
