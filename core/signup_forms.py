@@ -1,9 +1,14 @@
 from django import forms
-from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from .models import UserProfile
 
 
-class CustomSignupForm(SocialSignupForm):
+class CustomSignupForm(forms.Form):
+    """
+    allauth ACCOUNT_SIGNUP_FORM_CLASS용 커스텀 폼.
+    allauth의 BaseSignupForm이 이 클래스를 상속하므로,
+    nickname 필드와 signup() 메서드만 정의하면 됩니다.
+    email/username은 allauth가 자동 처리합니다.
+    """
     nickname = forms.CharField(
         max_length=50,
         required=True,
@@ -14,18 +19,7 @@ class CustomSignupForm(SocialSignupForm):
         })
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # 소셜 제공자가 이메일을 제공한 경우 읽기 전용으로 설정
-        if self.sociallogin and self.sociallogin.user.email:
-            self.fields['email'].widget.attrs['readonly'] = True
-            self.fields['email'].widget.attrs['class'] = 'bg-gray-100 text-gray-500 cursor-not-allowed'
-
     def signup(self, request, user):
-        # UserProfile 생성 또는 가져오기
         profile, created = UserProfile.objects.get_or_create(user=user)
-
-        # 별명 저장
         profile.nickname = self.cleaned_data['nickname']
         profile.save()

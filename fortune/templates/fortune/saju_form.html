@@ -1632,6 +1632,17 @@
         <div class="modal-tip">
             💡 <b>Tip:</b> <span id="loadingTip">시간을 모를 경우 정오(12시)로 계산돼요</span>
         </div>
+
+        <!-- 대기 안내 (15초 이상 걸릴 때 표시) -->
+        <div id="loadingQueueNotice" style="display:none; margin-top:1.25rem; padding:1rem 1.25rem; background:rgba(124,58,237,0.08); border-radius:1rem; border:1px solid rgba(124,58,237,0.15); text-align:center;">
+            <p style="font-size:0.95rem; color:#6d28d9; font-weight:700; margin-bottom:0.3rem;">
+                ☕ 지금 많은 분들이 사주를 보고 계세요!
+            </p>
+            <p style="font-size:0.85rem; color:#7c3aed; line-height:1.5;">
+                순서대로 분석하고 있으니 조금만 기다려주세요.<br>
+                페이지를 닫지 않으시면 자동으로 결과가 표시됩니다.
+            </p>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -2674,6 +2685,12 @@
             }
         }, 400);
 
+        // 15초 후 대기 안내 표시
+        const queueNotice = document.getElementById('loadingQueueNotice');
+        const queueTimer = setTimeout(() => {
+            if (queueNotice) queueNotice.style.display = 'block';
+        }, 15000);
+
         try {
             // non-streaming API 호출
             const response = await fetch('{% url "fortune:saju_api" %}', {
@@ -2728,6 +2745,8 @@
 
             // 완료 처리
             clearInterval(progressInterval);
+            clearTimeout(queueTimer);
+            if (queueNotice) queueNotice.style.display = 'none';
             loadingProgress.style.width = '100%';
 
             // 결과 데이터 추출
@@ -2803,6 +2822,8 @@
 
         } catch (err) {
             clearInterval(progressInterval);
+            clearTimeout(queueTimer);
+            if (queueNotice) queueNotice.style.display = 'none';
             loadingModal.classList.remove('show');
             console.error(err);
 
