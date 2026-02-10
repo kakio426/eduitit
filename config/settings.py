@@ -199,8 +199,8 @@ SOCIALACCOUNT_FORMS = {
     'signup': 'core.signup_forms.CustomSignupForm',  # ✅ 소셜 로그인 가입 시에도 커스텀 폼 적용
 }
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
-SESSION_COOKIE_AGE = 3600  # 1시간 동안 활동이 없으면 로그아웃
-SESSION_SAVE_EVERY_REQUEST = True  # 활동할 때마다 세션 만료 시간 연장
+SESSION_COOKIE_AGE = 86400  # 24시간 (OAuth 콜백 등 긴 플로우에서도 세션 유지)
+SESSION_SAVE_EVERY_REQUEST = False  # 매 요청마다 DB write 방지 (성능 개선)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 브라우저 닫으면 로그아웃
 SOCIALACCOUNT_AUTO_SIGNUP = False  # ✅ 소셜 로그인 후 추가 정보(별명) 입력 화면 표시
 SOCIALACCOUNT_LOGIN_ON_GET = True # ✅ 중간 페이지 없이 바로 소셜 로그인창으로 이동

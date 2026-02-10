@@ -100,7 +100,7 @@ class OnboardingMiddleware:
                     return self.get_response(request)
 
                 allowed_paths = [
-                    '/accounts/logout/',
+                    '/accounts/',
                     '/update-email/',
                     '/delete-account/',
                     '/admin/',
