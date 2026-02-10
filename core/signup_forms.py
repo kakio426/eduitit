@@ -8,7 +8,6 @@ class CustomSignupForm(forms.Form):
         widget=forms.EmailInput(attrs={
             'placeholder': '이메일 주소',
             'autocomplete': 'email',
-            'readonly': 'readonly'  # 소셜 로그인 정보는 수정 방지 (선택 사항)
         })
     )
     nickname = forms.CharField(
