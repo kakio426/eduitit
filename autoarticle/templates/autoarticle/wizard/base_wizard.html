@@ -20,12 +20,10 @@
                         <div class='grid gap-3'>
                             {% for t_name in theme_list %}
                             <label class='cursor-pointer'>
-                                <input type='radio' name='theme' value='{{ t_name }}' class='peer sr-only' {% if
-                                    theme==t_name %}checked{% endif %}>
+                                <input type='radio' name='theme' value='{{ t_name }}' class='peer sr-only' {% if theme == t_name %} checked {% endif %}>
                                 <div
                                     class='p-3 rounded-2xl border-2 border-gray-100 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all'>
-                                    <span class='font-medium text-gray-600 peer-checked:text-purple-700'>{{ t_name
-                                        }}</span>
+                                    <span class='font-medium text-gray-600 peer-checked:text-purple-700'>{{ t_name }}</span>
                                 </div>
                             </label>
                             {% endfor %}
