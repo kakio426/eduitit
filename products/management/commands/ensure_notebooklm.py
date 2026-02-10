@@ -5,18 +5,17 @@ class Command(BaseCommand):
     help = 'Ensure NotebookLM (Teacher Encyclopedia) product exists in database'
 
     def handle(self, *args, **options):
-        # 1. Product creation (SIS 1, 6.1)
         product, created = Product.objects.get_or_create(
             title='교사 백과사전',
             defaults={
-                'lead_text': 'AI와 함께하는 교육 매뉴얼의 혁신, NotebookLM 기반 교사 백과사전입니다.',
-                'description': 'Eduitit의 모든 기능과 교육적 활용 팁을 한눈에 확인하세요. Google NotebookLM 기술을 활용하여 방대한 매뉴얼도 질문 하나로 즉시 해결할 수 있습니다.',
+                'lead_text': 'NotebookLM 기반 AI 백과사전을 공유하고 활용하세요!',
+                'description': 'Google NotebookLM으로 만든 AI 백과사전을 등록하고, 다른 선생님들과 공유하세요. 교육 자료, 매뉴얼, 가이드를 AI가 요약·검색해주는 NotebookLM의 힘을 교실에서 활용할 수 있습니다.',
                 'price': 0.00,
                 'is_active': True,
                 'icon': 'fa-solid fa-book-open',
                 'color_theme': 'blue',
                 'card_size': 'small',
-                'service_type': 'guide',
+                'service_type': 'edutech',
             }
         )
 
@@ -25,7 +24,6 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS(f'Product already exists: {product.title}'))
 
-        # 2. Product Features creation (SIS 1.15 - Minimum 3 features)
         features_data = [
             {
                 'icon': 'fa-solid fa-magnifying-glass',

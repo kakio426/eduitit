@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'chess.apps.ChessConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
+    'encyclopedia.apps.EncyclopediaConfig',
     'django_htmx',
     'django.contrib.humanize',
 
