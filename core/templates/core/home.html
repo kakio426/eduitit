@@ -263,8 +263,7 @@
                     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
                     class="{% if featured_product.card_size == 'hero' and featured_product.description|length > 100 %}col-span-2 md:col-span-2 md:row-span-2{% elif featured_product.card_size == 'wide' %}col-span-2 md:col-span-2{% elif featured_product.card_size == 'tall' %}md:row-span-2{% endif %}">
-                    {% include 'core/includes/card_product.html' with product=featured_product delay='100'
-                    is_filtered=True %}
+                    {% include 'core/includes/card_product.html' with product=featured_product delay='100' is_filtered=True %}
                 </div>
                 {% endif %}
 
