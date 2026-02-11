@@ -77,29 +77,42 @@ def dashboard(request):
 @login_required
 @require_POST
 def request_create(request):
-    """새 수합 요청 생성"""
+    """새 수합 요청 생성 - 디버깅 강화 버전"""
+    logger.info(f"[Collect] Starting request_create for user: {request.user.username}")
     try:
+        # 1단계: 폼 바인딩
         form = CollectionRequestForm(request.POST, request.FILES)
+        logger.info("[Collect] Form bound with POST and FILES data")
+        
+        # 2단계: 폼 검증
         if form.is_valid():
+            logger.info("[Collect] Form is valid, preparing to save commit=False")
             collection_req = form.save(commit=False)
             collection_req.creator = request.user
-            # 양식 파일 원본 이름 저장
+            
             if request.FILES.get('template_file'):
                 collection_req.template_file_name = request.FILES['template_file'].name
+                logger.info(f"[Collect] Template file detected: {collection_req.template_file_name}")
             
-            # 실제 DB 저장 (Cloudinary 업로드 포함)
+            # 3단계: 실제 DB 저장 (Cloudinary 업로드 트리거 가능성)
+            logger.info("[Collect] Calling collection_req.save() - potential external call")
             collection_req.save()
+            logger.info(f"[Collect] Request saved successfully: {collection_req.id}")
             
-            logger.info(f"[Collect] Request Created: {collection_req.id} by {request.user.username}")
-            # UUID 객체를 문자열로 변환하여 리다이렉트 (안전성)
+            # 4단계: 리다이렉트
+            logger.info(f"[Collect] Redirecting to detail for ID: {collection_req.id}")
             return redirect('collect:request_detail', request_id=str(collection_req.id))
         else:
             logger.warning(f"[Collect] Form Invalid: {form.errors.as_json()}")
     except Exception as e:
-        logger.error(f"[Collect] Error in request_create: {type(e).__name__}: {str(e)}", exc_info=True)
-        # 500 에러를 직접 반환하기보다 대시보드에서 에러 메시지를 보여주는 것이 좋으나, 
-        # 현재는 디버깅을 위해 일단 로그만 남기고 에러를 다시 던집니다. (또는 500 페이지 렌더링)
-        raise e
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"[Collect] CRITICAL ERROR: {type(e).__name__}: {str(e)}\n{error_trace}")
+        
+        # 서버에서만 발생하는 에러를 잡기 위해 임시로 에러 메시지를 화면에 노출합니다.
+        # 원인 파악 후에는 다시 raise e 또는 템플릿 처리로 되돌려야 합니다.
+        debug_msg = f"서버 에러 발생! 원인 파악용 메시지:\n\n{type(e).__name__}: {str(e)}\n\n{error_trace[-500:]}"
+        return HttpResponse(debug_msg, content_type="text/plain; charset=utf-8", status=500)
 
     # 폼 오류 시 대시보드로 복귀
     service = get_collect_service()
