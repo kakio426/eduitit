@@ -935,34 +935,30 @@ fields = ['title']
 
 > **사례 (2026-02-11)**: 교사들에게 "파일당 최대 크기"를 입력하게 하는 것은 불필요한 인지 부하. 기본값 30MB로 고정하고 입력란 제거.
 
-### 39. `.clay-card` box-shadow 모바일 오버플로우 (CRITICAL)
+### 39. 모바일 카드 오버플로우 — `box-sizing` + `.clay-card` 제약 (CRITICAL)
 
-`.clay-card`의 `box-shadow`(8px offset + 16px blur = 최대 24px 확장)가 모바일에서 섹션 패딩(`px-4` = 16px)보다 넓어 뷰포트 밖으로 시각적으로 넘친다. `overflow-x: hidden`으로 스크롤바만 숨겨도 모바일 브라우저에서는 카드가 레이아웃 밖으로 튀어나가 보인다.
+Tailwind CDN(`<script src="https://cdn.tailwindcss.com">`)의 preflight(`box-sizing: border-box`)가 모바일 브라우저에서 미적용될 수 있다. 이 경우 `padding`과 `border`가 요소 크기에 **추가**되어(`content-box` 모드), 카드가 뷰포트보다 넓어진다.
 
-**해결 (3가지 동시 적용):**
+**해결 (`base.html`에 3가지 적용):**
 
-1. **모바일 그림자 축소** (`base.html` `.clay-card`): 기본 `4px 4px 8px`, `md:` 이상에서만 `8px 8px 16px`
-2. **모바일 hover scale 제거** (`base.html`): `@media (max-width: 767px)` 에서 `transform: none`
-3. **섹션에 `overflow-x-hidden` 추가**: clay-card를 포함하는 `<section>`에 적용
+1. **전역 `box-sizing: border-box` 명시** — Tailwind preflight 미적용 방어
+2. **`.clay-card`에 `max-width: 100%; overflow: hidden;`** — 카드가 부모를 절대 넘지 못하게 강제
+3. **랜딩 페이지 `<section>`에 `overflow-x-hidden`** — 추가 방어
 
 ```css
-/* ❌ 모바일에서 24px 그림자가 16px 패딩을 넘침 */
-.clay-card {
-    box-shadow: 8px 8px 16px ..., -8px -8px 16px ...;
-}
+/* base.html <style> 상단에 추가 */
+*, *::before, *::after { box-sizing: border-box; }
 
-/* ✅ 모바일은 작은 그림자, 데스크톱만 큰 그림자 */
+/* .clay-card에 추가 */
 .clay-card {
-    box-shadow: 4px 4px 8px ..., -4px -4px 8px ...;
-}
-@media (min-width: 768px) {
-    .clay-card { box-shadow: 8px 8px 16px ..., -8px -8px 16px ...; }
+    max-width: 100%;
+    overflow: hidden;
 }
 ```
 
-**새 서비스 랜딩 페이지 추가 시**: `<section>` 태그에 반드시 `overflow-x-hidden` 클래스 포함.
+**새 서비스 랜딩 페이지 추가 시**: `<section>` 태그에 `overflow-x-hidden` 클래스 포함.
 
-> **사례 (2026-02-11)**: studentmbti, collect 두 서비스의 모바일 랜딩 페이지에서 카드가 오른쪽으로 튀어나가는 현상. 4회 수정 시도 실패 — 카드 패딩/너비를 조정했으나 근본 원인은 `.clay-card` box-shadow였음.
+> **사례 (2026-02-11)**: studentmbti, collect 모바일 랜딩에서 카드가 오른쪽으로 튀어나감. box-shadow 축소, 패딩 조정 등으로는 해결 안 됨 — 근본 원인은 `box-sizing: content-box`로 padding/border가 요소 크기에 추가되는 것이었음.
 
 ---
 
