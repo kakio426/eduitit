@@ -39,7 +39,7 @@ class CollectionRequest(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.access_code:
-            self.access_code = self.generate_unique_access_code()
+            self.access_code = CollectionRequest.generate_unique_access_code()
         super().save(*args, **kwargs)
 
     @staticmethod

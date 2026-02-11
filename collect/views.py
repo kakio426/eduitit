@@ -78,16 +78,28 @@ def dashboard(request):
 @require_POST
 def request_create(request):
     """새 수합 요청 생성"""
-    form = CollectionRequestForm(request.POST, request.FILES)
-    if form.is_valid():
-        collection_req = form.save(commit=False)
-        collection_req.creator = request.user
-        # 양식 파일 원본 이름 저장
-        if request.FILES.get('template_file'):
-            collection_req.template_file_name = request.FILES['template_file'].name
-        collection_req.save()
-        logger.info(f"[Collect] Request Created: {collection_req.id} by {request.user.username}")
-        return redirect('collect:request_detail', request_id=collection_req.id)
+    try:
+        form = CollectionRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            collection_req = form.save(commit=False)
+            collection_req.creator = request.user
+            # 양식 파일 원본 이름 저장
+            if request.FILES.get('template_file'):
+                collection_req.template_file_name = request.FILES['template_file'].name
+            
+            # 실제 DB 저장 (Cloudinary 업로드 포함)
+            collection_req.save()
+            
+            logger.info(f"[Collect] Request Created: {collection_req.id} by {request.user.username}")
+            # UUID 객체를 문자열로 변환하여 리다이렉트 (안전성)
+            return redirect('collect:request_detail', request_id=str(collection_req.id))
+        else:
+            logger.warning(f"[Collect] Form Invalid: {form.errors.as_json()}")
+    except Exception as e:
+        logger.error(f"[Collect] Error in request_create: {type(e).__name__}: {str(e)}", exc_info=True)
+        # 500 에러를 직접 반환하기보다 대시보드에서 에러 메시지를 보여주는 것이 좋으나, 
+        # 현재는 디버깅을 위해 일단 로그만 남기고 에러를 다시 던집니다. (또는 500 페이지 렌더링)
+        raise e
 
     # 폼 오류 시 대시보드로 복귀
     service = get_collect_service()
