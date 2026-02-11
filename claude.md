@@ -794,6 +794,8 @@ migrations.RunPython(update_data, migrations.RunPython.noop)
 
 Procfile의 `ensure_*` 명령어는 **매 배포(git push)마다 실행**된다. 이 명령어 안에서 `service_type`, `display_order`, `color_theme` 등 **Admin에서 수동 관리하는 필드를 강제 변경하면, 배포할 때마다 Admin 수정 내용이 초기화**된다.
 
+**단, 초기 개발 중 서비스 카테고리(`service_type`)가 변경되거나 치명적인 오류가 있는 경우에는 조건부 보정 로직을 포함해야 한다.**
+
 ```python
 # ❌ 매 배포마다 service_type 덮어씀 → Admin 수정 무효화
 if ssambti.service_type != 'game':
@@ -808,6 +810,11 @@ if not product.is_active:
     product.is_active = True
     needs_update = True
 if needs_update:
+    product.save()
+
+# ✅ 단, 초기 개발 중 서비스 카테고리(service_type)가 변경되거나 치명적인 오류가 있는 경우에는 조건부 보정 로직을 포함해야 한다.
+if product.service_type != 'counsel':  # 잘못된 값일 때만 수정
+    product.service_type = 'counsel'
     product.save()
 ```
 
@@ -962,4 +969,32 @@ Tailwind CDN(`<script src="https://cdn.tailwindcss.com">`)의 preflight(`box-siz
 
 ---
 
-**마지막 업데이트:** 2026-02-11
+## 40. AI 로깅 표준 가이드 (Monitoring)
+
+사후 추적 및 AI 에이전트의 자가 수복을 용이하게 하기 위해 모든 주요 액션은 표준화된 포맷으로 로깅한다.
+
+**표준 포맷:** `[AppName] Action: ACTION_NAME, Status: SUCCESS/FAIL, Key: Value, ...`
+
+```python
+# ✅ 예시: 세션 생성 로깅
+logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}, Type: {test_type}")
+```
+
+## 41. 메인 컴포넌트 디자인 (Claymorphism)
+
+Eduitit의 메인 서비스 페이지(퀴즈, 대시보드 메인 카드 등)는 **Claymorphism** 디자인을 기본으로 한다.
+
+- **클래스**: `.clay-card` 필수 적용
+- **여백**: SIS Rule 8.271에 따라 모바일과 데스크톱 패딩 구분 (`p-6 md:p-14`)
+- **그림자**: 전역 태그의 hover 효과 활용 (`.clay-card:hover`)
+
+## 42. Django Template filter와 whitespace 주의
+
+JavaScript 안에서 Django 템플릿 변수를 사용할 때, 필터(`|`) 주위에 공백을 넣으면(예: `{{ var | length }}`) 일부 JS 린터나 에디터에서 구문 오류로 오인할 수 있다.
+
+- **권장**: `{{ questions|length }}` (공백 없이 밀착)
+- **이유**: 문자열 주입 시 linter의 불필요한 노이즈 제거 및 코드 간결성 확보
+
+---
+
+**마지막 업데이트:** 2026-02-11 19:15

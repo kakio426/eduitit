@@ -112,8 +112,7 @@
                         </div>
                         <div class="text-gray-500 text-sm flex items-center gap-4 flex-wrap">
                             <span><i class="fa-solid fa-users mr-1"></i>{{ session.result_count }}명 참여</span>
-                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d
-                                H:i"}}</span>
+                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d H:i"}}</span>
                             {% if session.access_code %}
                             <span class="font-bold text-purple-600"><i class="fa-solid fa-key mr-1"></i>코드:
                                 {{session.access_code }}</span>
