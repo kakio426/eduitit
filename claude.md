@@ -942,30 +942,33 @@ fields = ['title']
 
 > **사례 (2026-02-11)**: 교사들에게 "파일당 최대 크기"를 입력하게 하는 것은 불필요한 인지 부하. 기본값 30MB로 고정하고 입력란 제거.
 
-### 39. 모바일 카드 오버플로우 — `box-sizing` + `.clay-card` 제약 (CRITICAL)
+### 39. 모바일 카드 오버플로우 — `box-sizing` + 그림자 + `.clay-card` 제약 (CRITICAL)
 
-Tailwind CDN(`<script src="https://cdn.tailwindcss.com">`)의 preflight(`box-sizing: border-box`)가 모바일 브라우저에서 미적용될 수 있다. 이 경우 `padding`과 `border`가 요소 크기에 **추가**되어(`content-box` 모드), 카드가 뷰포트보다 넓어진다.
+모바일 브라우저에서 Tailwind CDN의 preflight(`box-sizing: border-box`)가 미적용되어 `padding`과 `border`가 요소 크기에 추가되거나, 깊은 `box-shadow`가 뷰포트 너비를 초과하여 오버플로우를 유발할 수 있다.
 
-**해결 (`base.html`에 3가지 적용):**
+**해결 (`base.html`에 적용):**
 
-1. **전역 `box-sizing: border-box` 명시** — Tailwind preflight 미적용 방어
-2. **`.clay-card`에 `max-width: 100%; overflow: hidden;`** — 카드가 부모를 절대 넘지 못하게 강제
-3. **랜딩 페이지 `<section>`에 `overflow-x-hidden`** — 추가 방어
+1. **전역 `box-sizing: border-box` 명시** — 상단에 별도 `<style>`로 선언
+2. **모바일 그림자 최적화** — 모바일에서는 좌우 그림자 오프셋을 0으로 설정(`box-shadow: 0 4px 12px ...`)
+3. **`.clay-card`에 `max-width: 100%; overflow: hidden;`** — 부모 너비를 넘지 못하게 강제
 
 ```css
-/* base.html <style> 상단에 추가 */
+/* base.html */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* .clay-card에 추가 */
 .clay-card {
     max-width: 100%;
     overflow: hidden;
+    /* 모바일: 좌우 오프셋 0으로 뷰포트 확장 방지 */
+    box-shadow: 0 4px 12px rgba(163, 177, 198, 0.4), 0 -2px 8px rgba(255, 255, 255, 0.6);
+}
+
+@media (min-width: 768px) {
+    .clay-card { box-shadow: 8px 8px 16px rgba(163, 177, 198, 0.5), -8px -8px 16px rgba(255, 255, 255, 0.6); }
 }
 ```
 
-**새 서비스 랜딩 페이지 추가 시**: `<section>` 태그에 `overflow-x-hidden` 클래스 포함.
-
-> **사례 (2026-02-11)**: studentmbti, collect 모바일 랜딩에서 카드가 오른쪽으로 튀어나감. box-shadow 축소, 패딩 조정 등으로는 해결 안 됨 — 근본 원인은 `box-sizing: content-box`로 padding/border가 요소 크기에 추가되는 것이었음.
+> **사례 (2026-02-11)**: studentmbti, collect 모바일 랜딩에서 카드가 오른쪽으로 튀어남. 근본 원인은 `content-box` 동작과 넓은 수평 그림자였음.
 
 ---
 
@@ -997,4 +1000,45 @@ JavaScript 안에서 Django 템플릿 변수를 사용할 때, 필터(`|`) 주�
 
 ---
 
-**마지막 업데이트:** 2026-02-11 19:15
+## 43. 스크립트 중복 방지 및 JS 데이터 전달 표준
+
+### 43.1 라이브러리 중복 로드 금지 (Duplication)
+`base.html`에서 로드된 라이브러리(HTMX, Alpine.js 등)를 자식 템플릿이나 Partial에서 다시 로드하지 않는다.
+- **증상**: 모달 내용 중복, 이벤트 리스너 중복 바인딩, UI 오동작 (예: 모달이 두 번 열림).
+- **해결**: 모든 공통 라이브러리는 `base.html` 상단에서만 관리한다.
+
+### 43.2 JS 데이터 전달: `json_script` 활용
+템플릿 태그(`{% for %}` 등)를 `<script>` 블록 안에 직접 써서 데이터를 구성하지 않는다. 이는 IDE 린트 에러를 유발하고 보안상 취약할 수 있다.
+- **해석**: `{{ data|json_script:"id" }}`를 사용하여 HTML에 JSON을 심고, JS에서 `JSON.parse(document.getElementById('id').textContent)`로 가져온다.
+
+### 43.3 인라인 스타일의 템플릿 태그 지양
+HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 문법 오류로 인식한다.
+- **해결**: Alpine.js의 `:style` 바인딩을 사용하거나, CSS 변수를 활용한다.
+
+```html
+<!-- ✅ 권장 패턴 -->
+<div x-data="{ color: '{{ theme_color|escapejs }}' }" :style="{ backgroundColor: color }">...</div>
+```
+
+## 44. Django Template Tag Fragmentation 및 줄바꿈 금지 (Critical)
+
+에이전트가 가독성을 위해 Django 템플릿 태그(`{% %}`, `{{ }}`)의 앞뒤나 내부를 임의로 줄바꿈하여 로직을 깨뜨리는 행위를 엄격히 금지한다.
+
+- **증상**: `{% if %}`와 `{{ var }}` 사이를 줄바꿈하여 텍스트가 깨지거나, HTML 속성/JavaScript 내부에서 구문 오류(500 에러) 유발.
+- **해결**: 복잡한 로직이 포함된 템플릿 태그는 가급적 **한 줄(One-liner)**로 유지하며, 에디터의 자동 줄바꿈 기능에 의존하지 않고 원본의 연속성을 보존한다.
+- **예시**:
+    *   ❌ (나쁜 예):
+        ```html
+        <span>
+          {% if user.nickname %}{{ user.nickname }} {% else %}{{ user.username
+           }}{% endif %}
+        </span>
+        ```
+    *   ✅ (좋은 예):
+        ```html
+        <span>{% if user.nickname %}{{ user.nickname }}{% else %}{{ user.username }}{% endif %}</span>
+        ```
+
+---
+
+**마지막 업데이트:** 2026-02-11 20:55
