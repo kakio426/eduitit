@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
+from cloudinary_storage.storage import RawCloudinaryStorage
 
 
 class CollectionRequest(models.Model):
@@ -24,7 +25,12 @@ class CollectionRequest(models.Model):
     max_file_size_mb = models.IntegerField(default=30, help_text="파일당 최대 크기(MB)")
     max_submissions = models.IntegerField(default=50, help_text="최대 제출 건수")
     expected_submitters = models.TextField(blank=True, help_text="예상 제출자 목록 (줄바꿈 구분)")
-    template_file = models.FileField(upload_to='collect/templates/', null=True, blank=True, help_text="양식 파일 (hwp, xlsx 등)")
+    template_file = models.FileField(
+        upload_to='collect/templates/', 
+        null=True, blank=True, 
+        storage=RawCloudinaryStorage(),
+        help_text="양식 파일 (hwp, xlsx 등)"
+    )
     template_file_name = models.CharField(max_length=255, blank=True, help_text="양식 파일 원본 이름")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -87,8 +93,8 @@ class Submission(models.Model):
     contributor_name = models.CharField(max_length=100, help_text="제출자 이름")
     contributor_affiliation = models.CharField(max_length=100, blank=True, help_text="소속")
     submission_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
-    # 파일 제출
-    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True)
+    # 파일 제출 (이미지 외 일반 파일 허용을 위해 Raw 스토리지 사용)
+    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True, storage=RawCloudinaryStorage())
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(default=0, help_text="파일 크기(bytes)")
     # 링크 제출
