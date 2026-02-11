@@ -131,7 +131,7 @@
                         <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-between gap-2">
                             <div class="flex flex-col items-start px-2">
                                 <span class="text-xs text-gray-400 font-medium">입장코드</span>
-                        <span class="text-2xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
+                                <span class="text-2xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
                             </div>
                             <button @click="copyInvite()"
                                 class="px-4 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm">
@@ -226,15 +226,15 @@
 <!-- JSZip CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="{% static 'collect/js/download_all.js' %}"></script>
+{{ files_data|json_script:"collect-files-data" }}
 <script>
-    // 파일 데이터를 JS에 전달
-    window.collectFiles = [
-        {% for sub in submissions %}
-    {% if sub.submission_type == 'file' and sub.file %}
-    { url: "{{ sub.file.url }}", name: "{{ sub.original_filename|escapejs }}", contributor: "{{ sub.contributor_name|escapejs }}" },
-    {% endif %}
-    {% endfor %}
-    ];
+    // 파일 데이터를 JS에 안전하게 전달
+    const filesDataElement = document.getElementById('collect-files-data');
+    if (filesDataElement) {
+        window.collectFiles = JSON.parse(filesDataElement.textContent);
+    } else {
+        window.collectFiles = [];
+    }
     window.collectTitle = "{{ req.title|escapejs }}";
 </script>
 {% endblock %}

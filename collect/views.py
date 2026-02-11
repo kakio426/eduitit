@@ -122,6 +122,16 @@ def request_detail(request, request_id):
     submitted_names = set(submissions.values_list('contributor_name', flat=True))
     not_submitted = [name for name in expected if name not in submitted_names]
 
+    # 파일 데이터 JSON 구성을 위한 리스트
+    files_data = []
+    for sub in submissions:
+        if sub.submission_type == 'file' and sub.file:
+            files_data.append({
+                'url': sub.file.url,
+                'name': sub.original_filename,
+                'contributor': sub.contributor_name
+            })
+
     return render(request, 'collect/request_detail.html', {
         'req': collection_req,
         'submissions': submissions,
@@ -130,6 +140,7 @@ def request_detail(request, request_id):
         'type_stats': {s['submission_type']: s['count'] for s in type_stats},
         'expected_submitters': expected,
         'not_submitted': not_submitted,
+        'files_data': files_data,
     })
 
 
