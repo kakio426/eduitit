@@ -34,7 +34,9 @@
                         <p class="text-sm text-gray-500">{{ req.template_file_name|default:"양식 다운로드" }}</p>
                     </div>
                 </div>
-                <a href="{% url 'collect:template_download' req.id %}" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105 text-sm" target="_blank">
+                <a href="{% url 'collect:template_download' req.id %}"
+                    class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105 text-sm"
+                    target="_blank">
                     <i class="fa-solid fa-download mr-1"></i>양식 다운로드
                 </a>
             </div>
@@ -59,7 +61,8 @@
 
         <!-- 제출 폼 -->
         <div class="clay-card p-6" x-data="submitForm()">
-            <form action="{% url 'collect:submit_process' req.id %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'collect:submit_process' req.id %}" method="post" enctype="multipart/form-data"
+                @submit="isSubmitting = true">
                 {% csrf_token %}
 
                 <!-- 이름 + 소속 -->
@@ -68,27 +71,44 @@
                         <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
                         {% if req.expected_submitters_list %}
                         <div x-data="{ customName: false }">
-                            <select x-show="!customName" name="contributor_name_select" @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                                <option value="">-- 이름 선택 --</option>
-                                {% for name in req.expected_submitters_list %}
-                                <option value="{{ name }}">{{ name }}</option>
-                                {% endfor %}
-                                <option value="__custom__">직접 입력...</option>
-                            </select>
-                            <div x-show="customName" class="flex gap-2">
-                                <input type="text" name="contributor_name_custom" x-ref="customInput" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
-                                <button type="button" @click="customName = false" class="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm hover:bg-gray-200 transition">
-                                    <i class="fa-solid fa-list"></i>
-                                </button>
-                            </div>
+                            <template x-if="!customName">
+                                <div class="flex gap-2">
+                                    <select name="contributor_name_select" required
+                                        @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }"
+                                        class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                                        <option value="">-- 이름 선택 --</option>
+                                        {% for name in req.expected_submitters_list %}
+                                        <option value="{{ name }}">{{ name }}</option>
+                                        {% endfor %}
+                                        <option value="__custom__">직접 입력...</option>
+                                    </select>
+                                </div>
+                            </template>
+                            <template x-if="customName">
+                                <div class="flex gap-2">
+                                    <input type="text" name="contributor_name_custom" x-ref="customInput"
+                                        :required="customName"
+                                        class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                                        placeholder="이름을 직접 입력하세요">
+                                    <button type="button" @click="customName = false"
+                                        class="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm hover:bg-gray-200 transition">
+                                        <i class="fa-solid fa-list"></i>
+                                    </button>
+                                </div>
+                            </template>
                         </div>
                         {% else %}
-                        <input type="text" name="contributor_name" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                        <input type="text" name="contributor_name" required
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                            placeholder="이름을 입력하세요">
                         {% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
-                        <input type="text" name="contributor_affiliation" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO부서">
+                        <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span
+                                class="text-gray-400 font-normal">(선택)</span></label>
+                        <input type="text" name="contributor_affiliation"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                            placeholder="예: OO학교, OO부서">
                     </div>
                 </div>
 
@@ -97,17 +117,23 @@
                     <label class="block text-sm font-bold text-gray-600 mb-2">제출 유형</label>
                     <div class="flex gap-2 mb-4">
                         {% if req.allow_file %}
-                        <button type="button" @click="tab='file'" :class="tab === 'file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                        <button type="button" @click="tab='file'"
+                            :class="tab === 'file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
+                            class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-file mr-1"></i>파일
                         </button>
                         {% endif %}
                         {% if req.allow_link %}
-                        <button type="button" @click="tab='link'" :class="tab === 'link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                        <button type="button" @click="tab='link'"
+                            :class="tab === 'link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
+                            class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-link mr-1"></i>링크
                         </button>
                         {% endif %}
                         {% if req.allow_text %}
-                        <button type="button" @click="tab='text'" :class="tab === 'text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
+                        <button type="button" @click="tab='text'"
+                            :class="tab === 'text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
+                            class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-align-left mr-1"></i>텍스트
                         </button>
                         {% endif %}
@@ -117,17 +143,24 @@
 
                     <!-- 파일 업로드 -->
                     <div x-show="tab === 'file'">
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center" :class="fileError && 'border-red-400 bg-red-50'">
-                            <input type="file" name="file" @change="checkFileSize($event)" class="hidden" id="file-input">
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors"
+                            :class="{'border-red-400 bg-red-50': fileError, 'border-emerald-400 bg-emerald-50': fileName && !fileError}">
+                            <input type="file" name="file" @change="checkFileSize($event)" class="hidden"
+                                id="file-input" :required="tab === 'file'">
                             <label for="file-input" class="cursor-pointer">
-                                <div class="text-4xl mb-2"><i class="fa-solid fa-cloud-arrow-up text-gray-400"></i></div>
-                                <p class="text-sm text-gray-500 mb-1">클릭하여 파일을 선택하세요</p>
+                                <div class="text-4xl mb-2">
+                                    <i class="fa-solid fa-cloud-arrow-up"
+                                        :class="fileName ? 'text-emerald-500' : 'text-gray-400'"></i>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-1" x-text="fileName ? '파일 변경하기' : '클릭하여 파일을 선택하세요'">
+                                </p>
                                 <p class="text-xs text-gray-400">최대 {{ req.max_file_size_mb }}MB</p>
                             </label>
-                            <div x-show="fileName" class="mt-3 text-sm text-emerald-600 font-medium">
+                            <div x-show="fileName"
+                                class="mt-3 text-sm text-emerald-600 font-bold bg-white/60 py-2 rounded-lg inline-block px-4">
                                 <i class="fa-solid fa-check-circle mr-1"></i>
                                 <span x-text="fileName"></span>
-                                <span x-text="'(' + fileSizeMB + 'MB)'" class="text-gray-400"></span>
+                                <span x-text="'(' + fileSizeMB + 'MB)'" class="text-gray-400 font-normal"></span>
                             </div>
                             <div x-show="fileError" class="mt-3 text-sm text-red-600 font-medium">
                                 <i class="fa-solid fa-circle-exclamation mr-1"></i>
@@ -138,19 +171,29 @@
 
                     <!-- 링크 제출 -->
                     <div x-show="tab === 'link'" class="space-y-3">
-                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        <input type="url" name="link_url" placeholder="https://drive.google.com/..."
+                            :required="tab === 'link'"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        <input type="text" name="link_description" placeholder="링크 설명 (선택)"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                     </div>
 
                     <!-- 텍스트 제출 -->
                     <div x-show="tab === 'text'">
-                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"></textarea>
+                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab === 'text'"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"></textarea>
                     </div>
                 </div>
 
-                <button type="submit" :disabled="fileError" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-paper-plane mr-2"></i>
-                    제출하기
+                <button type="submit" :disabled="fileError || isSubmitting"
+                    class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <template x-if="!isSubmitting">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </template>
+                    <template x-if="isSubmitting">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </template>
+                    <span x-text="isSubmitting ? '제출 중...' : '제출하기'"></span>
                 </button>
             </form>
         </div>
@@ -158,28 +201,32 @@
 </section>
 
 <script>
-function submitForm() {
-    // 첫 번째 허용된 탭을 기본값으로
-    var defaultTab = '{{ req.allow_file|yesno:"file," }}' || '{{ req.allow_link|yesno:"link," }}' || '{{ req.allow_text|yesno:"text," }}' || 'file';
-    defaultTab = defaultTab.replace(',', '');
-    return {
-        tab: defaultTab,
-        fileName: '',
-        fileSizeMB: '',
-        fileError: '',
-        checkFileSize(event) {
-            var file = event.target.files[0];
-            if (!file) return;
-            var maxSize = {{ req.max_file_size_mb }} * 1024 * 1024;
-            this.fileName = file.name;
-            this.fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
-            if (file.size > maxSize) {
-                this.fileError = '파일 크기가 {{ req.max_file_size_mb }}MB를 초과합니다. 구글드라이브/원드라이브 링크로 제출해주세요.';
-            } else {
-                this.fileError = '';
+    function submitForm() {
+        return {
+            tab: '{{ req.allow_file|yesno:"file," }}'.split(',')[0] || 'link',
+            fileName: '',
+            fileSizeMB: '',
+            fileError: '',
+            isSubmitting: false,
+            checkFileSize(event) {
+                const file = event.target.files[0];
+                if (!file) {
+                    this.fileName = '';
+                    this.fileSizeMB = '';
+                    this.fileError = '';
+                    return;
+                }
+                const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
+                const maxSize = maxMB * 1024 * 1024;
+                this.fileName = file.name;
+                this.fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                if (file.size > maxSize) {
+                    this.fileError = `파일 크기가 ${maxMB}MB를 초과합니다. 링크로 제출해주세요.`;
+                } else {
+                    this.fileError = '';
+                }
             }
-        }
+        };
     }
-}
 </script>
 {% endblock %}
