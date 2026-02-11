@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponse
 from django.db.models import Count
 from django.utils import timezone
 from django.conf import settings
+from django.urls import reverse
 import json
 import csv
 import qrcode
@@ -109,9 +110,9 @@ def request_detail(request, request_id):
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
     submissions = collection_req.submissions.all()
 
-    # QR 코드 생성
-    submit_url = request.build_absolute_uri(f'/collect/{collection_req.id}/submit/')
-    qr_code_base64 = generate_qr(submit_url)
+    # QR 코드 생성 (단축 링크 사용)
+    short_url = request.build_absolute_uri(reverse('collect:short_link', args=[collection_req.access_code]))
+    qr_code_base64 = generate_qr(short_url)
 
     # 제출 유형별 통계
     type_stats = submissions.values('submission_type').annotate(count=Count('id'))
@@ -207,6 +208,16 @@ def export_csv(request, request_id):
 # ================================
 # 제출자용 (비로그인)
 # ================================
+
+def short_link(request, code):
+    """단축 링크로 바로 제출 페이지 이동"""
+    collection_req = get_object_or_404(CollectionRequest, access_code=code)
+    
+    if collection_req.status != 'active':
+        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        
+    return redirect('collect:submit', request_id=collection_req.id)
+
 
 def join(request):
     """입장코드로 수합 참여"""

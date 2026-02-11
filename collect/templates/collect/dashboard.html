@@ -40,6 +40,14 @@
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-4xl mx-auto">
+        <!-- 뒤로가기 (메인으로) -->
+        <div class="mb-6">
+            <a href="/" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fa-solid fa-house"></i>
+                <span class="font-medium">첫 화면으로가기</span>
+            </a>
+        </div>
+
         <!-- 헤더 -->
         <div class="text-center mb-12" data-aos="fade-up">
             <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📋" }}</div>
@@ -50,7 +58,8 @@
         </div>
 
         <!-- 새 수합 요청 생성 -->
-        <div class="clay-card p-6 mb-8" data-aos="fade-up" x-data="{ open: false }">
+        <div class="clay-card p-6 mb-8" data-aos="fade-up"
+            x-data="{ open: {% if form.errors %}true{% else %}false{% endif %} }">
             <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
                 <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2">
                     <i class="fa-solid fa-plus-circle text-emerald-500"></i>
@@ -138,7 +147,7 @@
                     <div class="bg-red-100 text-red-700 p-3 rounded-xl text-sm">
                         {% for field, errors in form.errors.items %}
                         {% for error in errors %}
-                        <p>{{ error }}</p>
+                        <p><strong>{{ field }}:</strong> {{ error }}</p>
                         {% endfor %}
                         {% endfor %}
                     </div>

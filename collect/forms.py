@@ -6,7 +6,7 @@ class CollectionRequestForm(forms.ModelForm):
     class Meta:
         model = CollectionRequest
         fields = ['title', 'description', 'expected_submitters', 'allow_file', 'allow_link', 'allow_text',
-                  'deadline', 'max_file_size_mb', 'max_submissions', 'template_file']
+                  'deadline', 'max_submissions', 'template_file']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none text-lg',
@@ -26,10 +26,6 @@ class CollectionRequestForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none',
                 'type': 'datetime-local',
             }),
-            'max_file_size_mb': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none',
-                'min': 1, 'max': 30,
-            }),
             'max_submissions': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none',
                 'min': 1, 'max': 200,
@@ -46,7 +42,6 @@ class CollectionRequestForm(forms.ModelForm):
             'allow_link': '링크 제출 허용',
             'allow_text': '텍스트 제출 허용',
             'deadline': '마감일시',
-            'max_file_size_mb': '파일당 최대 크기(MB)',
             'max_submissions': '최대 제출 건수',
             'expected_submitters': '제출 대상자 목록',
             'template_file': '양식 파일',

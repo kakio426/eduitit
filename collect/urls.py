@@ -18,6 +18,7 @@ urlpatterns = [
     path('<uuid:request_id>/export-csv/', views.export_csv, name='export_csv'),
 
     # 제출자용 (비로그인)
+    path('s/<str:code>/', views.short_link, name='short_link'),
     path('<uuid:request_id>/submit/', views.submit, name='submit'),
     path('<uuid:request_id>/submit/process/', views.submit_process, name='submit_process'),
     path('<uuid:request_id>/template-download/', views.template_download, name='template_download'),

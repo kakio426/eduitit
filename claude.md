@@ -889,6 +889,81 @@ migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensu
 - **원인**: `get_collect_service()`와 같은 함수가 DB에서 데이터를 찾지 못해 `None`을 반환함.
 - **해결**: 개발 초기 단계에서 `create_xxx_data.py` 같은 임시 스크립트를 작성하여 로컬 DB에 필수 데이터를 넣거나, `python manage.py ensure_xxx` 명령어를 실행하여 데이터를 생성할 것.
 
+### 35. Django 템플릿의 변수 명명 규칙 제한 (CRITICAL)
+
+Django 템플릿 엔진은 **언더바(`_`)로 시작하는 속성이나 변수에 대한 직접 접근을 허용하지 않는다.** 파이썬의 관례상 `_`로 시작하는 멤버는 Private으로 간주되기 때문이다.
+
+- **증상**: `TemplateSyntaxError: Variables and attributes may not begin with underscores` 발생.
+- **원인**: View에서 `.annotate(_count=Count(...))`와 같이 언더바로 시작하는 이름으로 데이터를 넘기고, 템플릿에서 `{{ obj._count }}`로 접근하려 할 때 발생.
+- **해결**: 템플릿에서 사용할 변수나 속성 이름에는 절대 언더바를 접두어로 사용하지 말 것. (예: `_submission_count` 대신 `num_submissions` 또는 `submission_count` 사용)
+
+### 36. Alpine.js 상태 초기화와 Django 폼 에러 연동
+
+Alpine.js로 UI 상태(모달, 아코디언 등)를 관리할 때, 폼 제출 후 에러가 발생하면 **UI가 열린 상태로 유지**되어야 사용자가 에러를 인지할 수 있다.
+
+```html
+<!-- ❌ 에러가 있어도 닫힘 → 사용자는 "왜 안 되지?" 혼란 -->
+<div x-data="{ open: false }">
+
+<!-- ✅ 에러가 있으면 열린 상태로 초기화 -->
+<div x-data="{ open: {% if form.errors %}true{% else %}false{% endif %} }">
+```
+
+> **사례 (2026-02-11)**: 수합 요청 생성 폼이 에러 발생 시 닫힌 채로 리로드되어, 사용자가 요청이 생성되지 않은 이유를 알 수 없었음.
+
+### 37. ModelForm 필수 필드 누락 주의
+
+`forms.py`의 `ModelForm`에서 `fields` 리스트에 포함된 필드가 **템플릿(HTML)에서 렌더링되지 않으면**, 사용자는 입력할 방법이 없는데 서버는 `required` 에러를 낸다.
+
+**해결책**:
+1. 사용자에게 입력을 받을 필요가 없는 필드(예: `max_file_size_mb`)는 `fields` 리스트에서 **제거**하거나 `exclude` 처리.
+2. 반드시 필요하지만 사용자 입력이 불필요하면 `HiddenInput` 위젯 사용 또는 모델 `default` 값 활용.
+
+```python
+# ❌ 폼 필드엔 있는데 HTML엔 없음 → 유효성 검사 실패
+fields = ['title', 'max_file_size_mb'] 
+
+# ✅ 사용자 입력 불필요하면 필드 제거 (모델 default 사용)
+fields = ['title']
+```
+
+> **사례 (2026-02-11)**: `max_file_size_mb`가 폼 필드에는 있었으나 템플릿에 없어, "필수 항목입니다" 에러와 함께 생성 실패. 사용자에게 굳이 입력받을 필요 없는 기술적 설정이라 폼 필드에서 제거하여 해결.
+
+### 38. 사용자에게 기술적 설정 강요 금지 (Sensible Defaults)
+
+사용자(특히 비개발자)에게 "파일 최대 크기(MB)", "청크 사이즈" 같은 기술적 설정을 묻지 말 것. 시스템이 합리적인 기본값(Sensible Default)을 제공하고, 꼭 필요한 경우에만 고급 설정으로 숨겨서 제공한다.
+
+> **사례 (2026-02-11)**: 교사들에게 "파일당 최대 크기"를 입력하게 하는 것은 불필요한 인지 부하. 기본값 30MB로 고정하고 입력란 제거.
+
+### 39. `.clay-card` box-shadow 모바일 오버플로우 (CRITICAL)
+
+`.clay-card`의 `box-shadow`(8px offset + 16px blur = 최대 24px 확장)가 모바일에서 섹션 패딩(`px-4` = 16px)보다 넓어 뷰포트 밖으로 시각적으로 넘친다. `overflow-x: hidden`으로 스크롤바만 숨겨도 모바일 브라우저에서는 카드가 레이아웃 밖으로 튀어나가 보인다.
+
+**해결 (3가지 동시 적용):**
+
+1. **모바일 그림자 축소** (`base.html` `.clay-card`): 기본 `4px 4px 8px`, `md:` 이상에서만 `8px 8px 16px`
+2. **모바일 hover scale 제거** (`base.html`): `@media (max-width: 767px)` 에서 `transform: none`
+3. **섹션에 `overflow-x-hidden` 추가**: clay-card를 포함하는 `<section>`에 적용
+
+```css
+/* ❌ 모바일에서 24px 그림자가 16px 패딩을 넘침 */
+.clay-card {
+    box-shadow: 8px 8px 16px ..., -8px -8px 16px ...;
+}
+
+/* ✅ 모바일은 작은 그림자, 데스크톱만 큰 그림자 */
+.clay-card {
+    box-shadow: 4px 4px 8px ..., -4px -4px 8px ...;
+}
+@media (min-width: 768px) {
+    .clay-card { box-shadow: 8px 8px 16px ..., -8px -8px 16px ...; }
+}
+```
+
+**새 서비스 랜딩 페이지 추가 시**: `<section>` 태그에 반드시 `overflow-x-hidden` 클래스 포함.
+
+> **사례 (2026-02-11)**: studentmbti, collect 두 서비스의 모바일 랜딩 페이지에서 카드가 오른쪽으로 튀어나가는 현상. 4회 수정 시도 실패 — 카드 패딩/너비를 조정했으나 근본 원인은 `.clay-card` box-shadow였음.
+
 ---
 
-**마지막 업데이트:** 2026-02-10
+**마지막 업데이트:** 2026-02-11

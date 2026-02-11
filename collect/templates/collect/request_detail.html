@@ -15,7 +15,14 @@
         padding: 2rem;
         text-align: center;
     }
-    .qr-image { width: 220px; height: 220px; margin: 0 auto; border-radius: 12px; }
+
+    .qr-image {
+        width: 220px;
+        height: 220px;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
     .submission-row {
         background: white;
         border-radius: 12px;
@@ -24,7 +31,10 @@
         box-shadow: 4px 4px 8px #b8bec5, -4px -4px 8px #ffffff;
         transition: all 0.2s;
     }
-    .submission-row:hover { transform: translateX(4px); }
+
+    .submission-row:hover {
+        transform: translateX(4px);
+    }
 </style>
 {% endblock %}
 
@@ -34,7 +44,8 @@
 
         <!-- 뒤로가기 -->
         <div class="mb-6">
-            <a href="{% url 'collect:dashboard' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+            <a href="{% url 'collect:dashboard' %}"
+                class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-medium">대시보드로 돌아가기</span>
             </a>
@@ -69,16 +80,19 @@
                     <form action="{% url 'collect:request_toggle' req.id %}" method="post">
                         {% csrf_token %}
                         {% if req.status == 'active' %}
-                        <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm">
+                        <button type="submit"
+                            class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm">
                             <i class="fa-solid fa-stop mr-1"></i>마감하기
                         </button>
                         {% else %}
-                        <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-sm">
+                        <button type="submit"
+                            class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-sm">
                             <i class="fa-solid fa-play mr-1"></i>재개하기
                         </button>
                         {% endif %}
                     </form>
-                    <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-sm">
+                    <a href="{% url 'collect:export_csv' req.id %}"
+                        class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-sm">
                         <i class="fa-solid fa-file-csv mr-1"></i>CSV
                     </a>
                 </div>
@@ -86,7 +100,8 @@
         </div>
 
         <!-- 자동 정리 안내 -->
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-700 flex items-start gap-2">
+        <div
+            class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-700 flex items-start gap-2">
             <i class="fa-solid fa-clock mt-0.5"></i>
             <div>
                 <p>수합 마감 후 <strong>7일</strong> 뒤 제출 파일이 자동 삭제됩니다. 필요한 파일은 미리 다운로드해주세요.</p>
@@ -95,24 +110,43 @@
         </div>
 
         <div class="grid lg:grid-cols-3 gap-6">
-            <!-- 좌측: QR + 정보 -->
             <div class="space-y-6">
-                <!-- QR 코드 -->
                 <div class="qr-container">
                     <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image mb-4">
-                    <p class="text-sm text-gray-500 mb-2">이 QR 코드를 공유하세요</p>
-                    <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-center gap-2" x-data="{ copied: false }">
+                    <p class="text-sm text-gray-500 mb-4">이 QR 코드를 스캔하면<br>제출 페이지로 바로 연결됩니다.</p>
+
+                    <div class="space-y-3" x-data="{ 
+                copied: false,
+                copyInvite() {
+                    const title = '{{ req.title|escapejs }}';
+                    const code = '{{ req.access_code }}';
+                    const link = window.location.origin + '{% url 'collect:short_link' req.access_code %}';
+                    /* 아래 줄의 따옴표 충돌을 막기 위해 제목 주변을 작은따옴표(')로 변경했습니다 */
+                    const message = `[간편수합] '${title}' 요청에 참여해주세요.\n\n▶ 참여 링크: ${link}\n▶ 입장 코드: ${code}`;
+                    navigator.clipboard.writeText(message);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false }, 2000);
+                }
+            }">
+                        <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-between gap-2">
+                            <div class="flex flex-col items-start px-2">
+                                <span class="text-xs text-gray-400 font-medium">입장코드</span>
                         <span class="text-2xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
-                        <button @click="navigator.clipboard.writeText('{{ req.access_code }}'); copied = true; setTimeout(() => copied = false, 2000)" class="px-3 py-1 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition">
-                            <span x-show="!copied"><i class="fa-solid fa-copy mr-1"></i>복사</span>
-                            <span x-show="copied"><i class="fa-solid fa-check mr-1"></i>완료</span>
-                        </button>
+                            </div>
+                            <button @click="copyInvite()"
+                                class="px-4 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm">
+                                <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                                <span x-text="copied ? '복사됨' : '초대장 복사'"></span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
+
                 <!-- 제출 유형 통계 -->
                 <div class="clay-card p-4">
-                    <h3 class="font-bold text-gray-700 mb-3"><i class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i>제출 현황</h3>
+                    <h3 class="font-bold text-gray-700 mb-3"><i
+                            class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i>제출 현황</h3>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between">
                             <span class="text-gray-500"><i class="fa-solid fa-file mr-1"></i>파일</span>
@@ -152,7 +186,8 @@
                     {% endif %}
                     <div class="flex flex-wrap gap-1.5">
                         {% for name in expected_submitters %}
-                        <span class="px-2 py-1 rounded-lg text-xs font-medium {% if name in not_submitted %}bg-gray-100 text-gray-400 line-through{% else %}bg-emerald-100 text-emerald-600{% endif %}">{{ name }}</span>
+                        <span
+                            class="px-2 py-1 rounded-lg text-xs font-medium {% if name in not_submitted %}bg-gray-100 text-gray-400 line-through{% else %}bg-emerald-100 text-emerald-600{% endif %}">{{ name }}</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -160,7 +195,8 @@
 
                 <!-- 전체 다운로드 -->
                 {% if total_count > 0 %}
-                <button id="download-all-btn" onclick="downloadAllFiles()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-sm">
+                <button id="download-all-btn" onclick="downloadAllFiles()"
+                    class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-sm">
                     <i class="fa-solid fa-download mr-2"></i>
                     <span id="download-label">전체 파일 다운로드 (ZIP)</span>
                 </button>
@@ -176,7 +212,8 @@
                         <span class="text-sm font-normal text-gray-400">(5초마다 자동 갱신)</span>
                     </h2>
 
-                    <div id="submissions-list" hx-get="{% url 'collect:submissions_partial' req.id %}" hx-trigger="every 5s" hx-target="#submissions-list" hx-swap="innerHTML">
+                    <div id="submissions-list" hx-get="{% url 'collect:submissions_partial' req.id %}"
+                        hx-trigger="every 5s" hx-target="#submissions-list" hx-swap="innerHTML">
                         {% include 'collect/partials/submissions_list.html' %}
                     </div>
                 </div>
@@ -193,10 +230,10 @@
     // 파일 데이터를 JS에 전달
     window.collectFiles = [
         {% for sub in submissions %}
-        {% if sub.submission_type == 'file' and sub.file %}
-        { url: "{{ sub.file.url }}", name: "{{ sub.original_filename|escapejs }}", contributor: "{{ sub.contributor_name|escapejs }}" },
-        {% endif %}
-        {% endfor %}
+    {% if sub.submission_type == 'file' and sub.file %}
+    { url: "{{ sub.file.url }}", name: "{{ sub.original_filename|escapejs }}", contributor: "{{ sub.contributor_name|escapejs }}" },
+    {% endif %}
+    {% endfor %}
     ];
     window.collectTitle = "{{ req.title|escapejs }}";
 </script>
