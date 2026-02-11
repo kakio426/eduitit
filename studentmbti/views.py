@@ -79,14 +79,17 @@ def session_create(request):
     """새 검사 세션 생성"""
     try:
         session_name = request.POST.get('session_name', '').strip()
+        test_type = request.POST.get('test_type', 'low')  # Default to 'low'
+        
         if not session_name:
             session_name = f"검사 세션 ({timezone.now().strftime('%Y-%m-%d %H:%M')})"
         
         session = TestSession.objects.create(
             teacher=request.user,
-            session_name=session_name
+            session_name=session_name,
+            test_type=test_type
         )
-        logger.info(f"[StudentMBTI] Session Created: {session.id} by {request.user.username}")
+        logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}, Type: {test_type}")
         return redirect('studentmbti:session_detail', session_id=session.id)
     except Exception as e:
         logger.error(f"[StudentMBTI] Session Create Error: {str(e)}")
@@ -161,7 +164,7 @@ def session_delete(request, session_id):
     """세션 삭제"""
     session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
     session.delete()
-    logger.info(f"[StudentMBTI] Session Deleted: {session_id} by {request.user.username}")
+    logger.info(f"[StudentMBTI] Action: SESSION_DELETE, Status: SUCCESS, SessionID: {session_id}, User: {request.user.username}")
     return redirect('studentmbti:dashboard')
 
 
@@ -237,11 +240,15 @@ def session_test(request, session_id):
                 answers_json=None
             )
             request.session['student_result_id'] = str(result.id)
-            logger.info(f"[StudentMBTI] Temporary Student Created: {result.id} in session {session_id}")
+            logger.info(f"[StudentMBTI] Action: STUDENT_JOIN, Status: SUCCESS, ResultID: {result.id}, SessionID: {session_id}")
         
+        # 세션 타입에 따른 질문 로드
+        from .student_mbti_data import STUDENT_QUESTIONS_LOW, STUDENT_QUESTIONS_HIGH
+        questions = STUDENT_QUESTIONS_HIGH if session.test_type == 'high' else STUDENT_QUESTIONS_LOW
+
         return render(request, 'studentmbti/test.html', {
             'session': session,
-            'questions': STUDENT_QUESTIONS,
+            'questions': questions,
             'result_id': result.id,
         })
     except Exception as e:
@@ -306,11 +313,18 @@ def analyze(request, session_id):
         if not student_name:
             return JsonResponse({'error': '이름을 입력해주세요.'}, status=400)
         
+        # 테스트 타입에 따른 설정
+        is_high = session.test_type == 'high'
+        total_q = 28 if is_high else 12
+        cutoff = 4 if is_high else 2
+        
         # 답변 수집
         answers = {}
-        for i in range(1, 13):
+        for i in range(1, total_q + 1):
             answer = request.POST.get(f'q{i}')
             if answer is None or answer == '':
+                # 답변이 없는 경우, 기존 세션이면 에러, 아니면 무시 (테스트 중일수도)
+                # 여기서는 모든 답변이 필수라고 가정
                 return JsonResponse({'error': f'질문 {i}번에 답변해주세요.'}, status=400)
             answers[f'q{i}'] = int(answer)
         
@@ -323,17 +337,26 @@ def analyze(request, session_id):
                     count += 1
             return count
         
-        # E/I: Q1-3, S/N: Q4-6, T/F: Q7-9, J/P: Q10-12
-        e_count = get_dim_count(1, 3, 0)  # 첫번째 옵션이 E
-        s_count = get_dim_count(4, 6, 0)  # 첫번째 옵션이 S
-        t_count = get_dim_count(7, 9, 0)  # 첫번째 옵션이 T
-        j_count = get_dim_count(10, 12, 0)  # 첫번째 옵션이 J
+        if is_high:
+            # High Grade (28 Qs) - 7 per dimension
+            # E/I: Q1-7, S/N: Q8-14, T/F: Q15-21, J/P: Q22-28
+            e_count = get_dim_count(1, 7, 0)
+            s_count = get_dim_count(8, 14, 0)
+            t_count = get_dim_count(15, 21, 0)
+            j_count = get_dim_count(22, 28, 0)
+        else:
+            # Low Grade (12 Qs) - 3 per dimension
+            # E/I: Q1-3, S/N: Q4-6, T/F: Q7-9, J/P: Q10-12
+            e_count = get_dim_count(1, 3, 0)
+            s_count = get_dim_count(4, 6, 0)
+            t_count = get_dim_count(7, 9, 0)
+            j_count = get_dim_count(10, 12, 0)
         
         mbti_type = ''
-        mbti_type += 'E' if e_count >= 2 else 'I'
-        mbti_type += 'S' if s_count >= 2 else 'N'
-        mbti_type += 'T' if t_count >= 2 else 'F'
-        mbti_type += 'J' if j_count >= 2 else 'P'
+        mbti_type += 'E' if e_count >= cutoff else 'I'
+        mbti_type += 'S' if s_count >= cutoff else 'N'
+        mbti_type += 'T' if t_count >= cutoff else 'F'
+        mbti_type += 'J' if j_count >= cutoff else 'P'
         
         # 결과 데이터 가져오기
         mbti_data = STUDENT_MBTI_RESULTS.get(mbti_type, {})

@@ -42,10 +42,16 @@ class Command(BaseCommand):
                 color_theme='green',
                 card_size='small',
                 display_order=15,
-                service_type='tool',
+                service_type='counsel',
                 external_url='',
             )
             self.stdout.write(f'[OK] Created StudentMBTI product (ID: {product.id})')
+
+        # Ensure correct settings for existing product as well
+        if product.service_type != 'counsel':
+            product.service_type = 'counsel'
+            product.save()
+            self.stdout.write('[OK] Updated service_type to counsel')
 
         # Ensure ProductFeatures exist
         product.features.all().delete()

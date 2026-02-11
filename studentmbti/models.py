@@ -11,6 +11,12 @@ class TestSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="학생 입장 코드 (예: 123456)")
+    test_type = models.CharField(
+        max_length=10, 
+        choices=[('low', '저학년 (1~3학년)'), ('high', '고학년 (4~6학년)')],
+        default='low',
+        help_text="검사 유형 (저학년/고학년)"
+    )
     
     class Meta:
         app_label = 'studentmbti'

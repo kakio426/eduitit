@@ -120,7 +120,7 @@
         <div class="mb-6" data-aos="fade-up">
             <div class="flex justify-between text-sm font-bold mb-2">
                 <span class="text-purple-600" id="step-text">이름 입력</span>
-                <span class="text-gray-400" id="step-counter">0 / 12</span>
+                <span class="text-gray-400" id="step-counter">0 / {{ questions|length }}</span>
             </div>
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-bar" style="width: 0%;"></div>
@@ -128,7 +128,7 @@
         </div>
 
         <!-- 퀴즈 카드 -->
-        <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8" data-aos="zoom-in">
+        <div class="clay-card p-6 md:p-14" data-aos="zoom-in">
             <form id="quiz-form" action="{% url 'studentmbti:analyze' session.id %}" method="post">
                 {% csrf_token %}
 
@@ -188,7 +188,7 @@
 
 <script>
     let currentStep = 0;
-    const totalSteps = 12;
+    const totalSteps = {{ questions| length }};
 
     function updateUI() {
         // 모든 스텝 숨기기
@@ -203,7 +203,7 @@
         // 텍스트 업데이트
         if (currentStep === 0) {
             document.getElementById('step-text').innerText = '이름 입력';
-            document.getElementById('step-counter').innerText = '0 / 12';
+            document.getElementById('step-counter').innerText = '0 / ' + totalSteps;
         } else {
             document.getElementById('step-text').innerText = `질문 ${currentStep}`;
             document.getElementById('step-counter').innerText = `${currentStep} / ${totalSteps}`;

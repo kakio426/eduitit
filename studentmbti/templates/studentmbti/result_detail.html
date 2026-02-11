@@ -4,9 +4,29 @@
 {% block extra_css %}
 <style>
     :root {
-        --bg-color: {{ theme.bg }};
-        --primary-color: {{ theme.primary }};
-        --accent-color: {{ theme.accent }};
+        --bg-color: {
+                {
+                theme.bg
+            }
+        }
+
+        ;
+
+        --primary-color: {
+                {
+                theme.primary
+            }
+        }
+
+        ;
+
+        --accent-color: {
+                {
+                theme.accent
+            }
+        }
+
+        ;
     }
 
     .detail-page {
@@ -227,17 +247,44 @@
     }
 
     /* 색상별 가이드 */
-    .guide-strategy .guide-header { border-left: 4px solid #f59e0b; }
-    .guide-strategy .badge { background: #fef3c7; color: #92400e; }
-    .guide-strategy .bullet { background: #f59e0b; }
+    .guide-strategy .guide-header {
+        border-left: 4px solid #f59e0b;
+    }
 
-    .guide-caution .guide-header { border-left: 4px solid #ef4444; }
-    .guide-caution .badge { background: #fee2e2; color: #991b1b; }
-    .guide-caution .bullet { background: #ef4444; }
+    .guide-strategy .badge {
+        background: #fef3c7;
+        color: #92400e;
+    }
 
-    .guide-classroom .guide-header { border-left: 4px solid #3b82f6; }
-    .guide-classroom .badge { background: #dbeafe; color: #1e40af; }
-    .guide-classroom .bullet { background: #3b82f6; }
+    .guide-strategy .bullet {
+        background: #f59e0b;
+    }
+
+    .guide-caution .guide-header {
+        border-left: 4px solid #ef4444;
+    }
+
+    .guide-caution .badge {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .guide-caution .bullet {
+        background: #ef4444;
+    }
+
+    .guide-classroom .guide-header {
+        border-left: 4px solid #3b82f6;
+    }
+
+    .guide-classroom .badge {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .guide-classroom .bullet {
+        background: #3b82f6;
+    }
 
     /* 응답 내역 */
     .response-grid {
@@ -317,8 +364,7 @@
         <div class="student-header" data-aos="fade-down">
             {% if mbti_data.animal_image %}
             <div class="animal-thumb">
-                <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}"
-                    alt="{{ result.animal_name }}">
+                <img src="{% static 'studentmbti/images/'|add:mbti_data.animal_image %}" alt="{{ result.animal_name }}">
             </div>
             {% else %}
             <div class="animal-emoji-sm">{{ mbti_data.emoji }}</div>
@@ -468,7 +514,8 @@
             {% if result.answers_json %}
             <div class="student-card">
                 <div class="card-header">
-                    <div class="icon-circle" style="background: #F3F4F6;"><i class="fa-solid fa-clipboard-list text-gray-500 text-sm"></i></div>
+                    <div class="icon-circle" style="background: #F3F4F6;"><i
+                            class="fa-solid fa-clipboard-list text-gray-500 text-sm"></i></div>
                     <h3>질문별 응답</h3>
                 </div>
                 <div class="response-grid mt-2">
@@ -485,7 +532,8 @@
 
             <div class="student-card">
                 <div class="card-header">
-                    <div class="icon-circle" style="background: #F3F4F6;"><i class="fa-solid fa-chart-bar text-gray-500 text-sm"></i></div>
+                    <div class="icon-circle" style="background: #F3F4F6;"><i
+                            class="fa-solid fa-chart-bar text-gray-500 text-sm"></i></div>
                     <h3>차원별 분석</h3>
                 </div>
                 <div class="space-y-3 mt-2">
@@ -498,7 +546,13 @@
                     </div>
                     {% endfor %}
                 </div>
-                <p class="text-xs text-gray-400 mt-3">* 12개 질문(차원별 3문항)에 기반한 결과입니다.</p>
+                <p class="text-xs text-gray-400 mt-3">
+                    {% if result.session.test_type == 'high' %}
+                    * 28개 질문(차원별 7문항)에 기반한 결과입니다.
+                    {% else %}
+                    * 12개 질문(차원별 3문항)에 기반한 결과입니다.
+                    {% endif %}
+                </p>
             </div>
             {% else %}
             <div class="student-card text-center py-8">

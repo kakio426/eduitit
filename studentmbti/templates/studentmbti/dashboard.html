@@ -57,15 +57,32 @@
                 <i class="fa-solid fa-plus-circle text-orange-500"></i>
                 새 검사 세션 만들기
             </h2>
-            <form action="{% url 'studentmbti:session_create' %}" method="post" class="flex gap-4">
+            <form action="{% url 'studentmbti:session_create' %}" method="post" class="flex flex-col gap-4">
                 {% csrf_token %}
-                <input type="text" name="session_name" placeholder="예: 3학년 1반 캐릭터 검사"
-                    class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-500 focus:outline-none text-lg">
-                <button type="submit"
-                    class="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-105">
-                    <i class="fa-solid fa-qrcode mr-2"></i>
-                    세션 생성
-                </button>
+                <div class="flex gap-4">
+                    <input type="text" name="session_name" placeholder="예: 3학년 1반 캐릭터 검사"
+                        class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-500 focus:outline-none text-lg">
+                    <button type="submit"
+                        class="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                        <i class="fa-solid fa-qrcode mr-2"></i>
+                        세션 생성
+                    </button>
+                </div>
+
+                <!-- 학년/문항수 선택 -->
+                <div class="flex gap-6 px-2">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="test_type" value="low" checked
+                            class="w-5 h-5 text-orange-500 focus:ring-orange-500 border-gray-300">
+                        <span class="text-gray-600 group-hover:text-gray-800 font-medium">저학년용 (1~3학년) - 12문항</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="test_type" value="high"
+                            class="w-5 h-5 text-orange-500 focus:ring-orange-500 border-gray-300">
+                        <span class="text-gray-600 group-hover:text-gray-800 font-medium">고학년용 (4~6학년) - 28문항 <span
+                                class="text-xs text-orange-500 font-bold ml-1">추천!</span></span>
+                    </label>
+                </div>
             </form>
         </div>
 
@@ -95,9 +112,11 @@
                         </div>
                         <div class="text-gray-500 text-sm flex items-center gap-4 flex-wrap">
                             <span><i class="fa-solid fa-users mr-1"></i>{{ session.result_count }}명 참여</span>
-                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d H:i"}}</span>
+                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ session.created_at|date:"Y-m-d
+                                H:i"}}</span>
                             {% if session.access_code %}
-                            <span class="font-bold text-purple-600"><i class="fa-solid fa-key mr-1"></i>코드: {{session.access_code }}</span>
+                            <span class="font-bold text-purple-600"><i class="fa-solid fa-key mr-1"></i>코드:
+                                {{session.access_code }}</span>
                             {% endif %}
                         </div>
                     </div>
