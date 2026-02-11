@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
-from cloudinary_storage.storage import RawCloudinaryStorage
+from cloudinary_storage.storage import RawMediaCloudinaryStorage
 
 
 class CollectionRequest(models.Model):
@@ -28,7 +28,7 @@ class CollectionRequest(models.Model):
     template_file = models.FileField(
         upload_to='collect/templates/', 
         null=True, blank=True, 
-        storage=RawCloudinaryStorage(),
+        storage=RawMediaCloudinaryStorage(),
         help_text="양식 파일 (hwp, xlsx 등)"
     )
     template_file_name = models.CharField(max_length=255, blank=True, help_text="양식 파일 원본 이름")
@@ -94,9 +94,10 @@ class Submission(models.Model):
     contributor_affiliation = models.CharField(max_length=100, blank=True, help_text="소속")
     submission_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     # 파일 제출 (이미지 외 일반 파일 허용을 위해 Raw 스토리지 사용)
-    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True, storage=RawCloudinaryStorage())
+    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True, storage=RawMediaCloudinaryStorage())
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(default=0, help_text="파일 크기(bytes)")
+
     # 링크 제출
     link_url = models.URLField(max_length=500, blank=True)
     link_description = models.CharField(max_length=200, blank=True)
