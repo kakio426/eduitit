@@ -6,10 +6,10 @@
             <span class="font-bold text-gray-700">{{ room.name }}</span>
         </div>
         <button hx-post="{% url 'reservations:room_settings' school.slug %}"
-            hx-confirm="정말 삭제하시겠습니까? 해당 특별실의 모든 예약도 함께 삭제됩니다." hx-target="#room-list-container"
-            class="text-red-400 hover:text-red-600 p-2">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="room_id" value="{{ room.id }}">
+            hx-confirm="정말 삭제하시겠습니까? 해당 특별실의 모든 예약도 함께 삭제됩니다." 
+            hx-target="#room-list-container"
+            hx-vals='{"action": "delete", "room_id": "{{ room.id }}"}'
+            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform">
             <i class="fas fa-trash-alt"></i>
         </button>
     </div>
