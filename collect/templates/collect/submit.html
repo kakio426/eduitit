@@ -206,6 +206,18 @@
                             </div>
                         </div>
 
+                        <!-- 보안 및 책임 주의 안내 -->
+                        <div class="bg-red-50 border border-red-100 text-red-600 rounded-xl mb-4 p-3 text-[11px] md:text-xs leading-tight">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-octagon-exclamation flex-shrink-0 text-sm mt-0.5"></i>
+                                <div>
+                                    <p class="font-bold mb-1">보안 및 책임 주의</p>
+                                    <p>- 개인정보나 <b>외부 유출 금지 자료(공문서 등)</b> 제출을 지양해 주세요.</p>
+                                    <p>- 파일 유출 및 관리에 대한 책임은 당사자에게 있으며, 서비스는 면책됩니다.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- 파일 설명 (텍스트와 같이 제출) -->
                         <textarea name="file_description" rows="3" placeholder="파일에 대한 설명이나 내용을 입력하세요 (선택)"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% endif %}</textarea>
