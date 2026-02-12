@@ -1126,9 +1126,9 @@ const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
 
 ### 51. allauth v65.x+ 설정 마이그레이션 (Monitoring)
 
-서버 구동 시 또는 마이그레이션 시 Deprecation 경고 발생 대응.
+서버 구동 시 또는 마이그레이션 시 Deprecation 경고 및 Critical Error 발생 대응.
 
 - `ACCOUNT_AUTHENTICATION_METHOD` → `ACCOUNT_LOGIN_METHODS = {'email', 'username'}`
-- `ACCOUNT_EMAIL_REQUIRED` → `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']`
+- `ACCOUNT_EMAIL_REQUIRED` → 삭제 (ACCOUNT_SIGNUP_FIELDS로 대체)
+- `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*']` (**필수 필드는 `*`를 붙여야 함**)
 - 프로덕션 `settings_production.py`와 로컬 `settings.py` 모두 동기화 필수.
-
