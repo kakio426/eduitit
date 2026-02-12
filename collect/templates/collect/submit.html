@@ -161,7 +161,7 @@
 
                     <!-- 파일 업로드 -->
                     <div x-show="tab === 'file'">
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors"
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors mb-4"
                             :class="{'border-red-400 bg-red-50': fileError, 'border-emerald-400 bg-emerald-50': fileName && !fileError}">
                             <input type="file" name="file" @change="checkFileSize($event)" class="hidden"
                                 id="file-input" :required="tab === 'file' && !isEdit">
@@ -185,6 +185,10 @@
                                 <span x-text="fileError"></span>
                             </div>
                         </div>
+                        
+                        <!-- 파일 설명 (텍스트와 같이 제출) -->
+                        <textarea name="file_description" rows="3" placeholder="파일에 대한 설명이나 내용을 입력하세요 (선택)"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% endif %}</textarea>
                     </div>
 
                     <!-- 링크 제출 -->
@@ -202,7 +206,7 @@
                     </div>
                 </div>
 
-                <button type="submit" :disabled="fileError || isSubmitting"
+                <button type="submit" :disabled="(tab === 'file' && fileError) || isSubmitting"
                     class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="!isSubmitting">
                         <span><i class="fa-solid fa-paper-plane mr-2"></i><span

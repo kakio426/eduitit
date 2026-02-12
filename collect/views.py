@@ -334,6 +334,9 @@ def submit_process(request, request_id):
         submission.file = uploaded_file
         submission.original_filename = uploaded_file.name
         submission.file_size = uploaded_file.size
+        
+        # 파일 설명 저장
+        submission.text_content = request.POST.get('file_description', '').strip()
 
     elif submission_type == 'link':
         link_url = request.POST.get('link_url', '').strip()
