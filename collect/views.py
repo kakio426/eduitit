@@ -280,28 +280,35 @@ def join(request):
 
 
 def submit(request, request_id):
-    """제출 페이지"""
-    collection_req = get_object_or_404(CollectionRequest, id=request_id)
+    """제출 페이지 - 진입 단계 500 에러 디버깅"""
+    try:
+        logger.info(f"[Collect] submit view entered for request_id: {request_id}")
+        collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
-    if collection_req.status != 'active':
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        if collection_req.status != 'active':
+            return render(request, 'collect/request_closed.html', {'req': collection_req})
 
-    # 마감일 초과 확인
-    if collection_req.is_deadline_passed:
-        collection_req.status = 'closed'
-        collection_req.save()
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        # 마감일 초과 확인
+        if collection_req.is_deadline_passed:
+            collection_req.status = 'closed'
+            collection_req.save()
+            return render(request, 'collect/request_closed.html', {'req': collection_req})
 
-    # 최대 제출 수 확인
-    if collection_req.submission_count >= collection_req.max_submissions:
-        return render(request, 'collect/request_closed.html', {
+        # 최대 제출 수 확인
+        if collection_req.submission_count >= collection_req.max_submissions:
+            return render(request, 'collect/request_closed.html', {
+                'req': collection_req,
+                'reason': '최대 제출 건수에 도달했습니다.',
+            })
+
+        return render(request, 'collect/submit.html', {
             'req': collection_req,
-            'reason': '최대 제출 건수에 도달했습니다.',
         })
-
-    return render(request, 'collect/submit.html', {
-        'req': collection_req,
-    })
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"[Collect] SUBMIT VIEW ENTRY ERROR: {str(e)}\n{error_trace}")
+        return HttpResponse(f"제출 페이지 진입 중 오류가 발생했습니다.<br><br><b>{type(e).__name__}: {str(e)}</b><br><br><pre>{error_trace}</pre>", status=500)
 
 
 @require_POST
