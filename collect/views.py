@@ -307,6 +307,7 @@ def submit(request, request_id):
 @require_POST
 def submit_process(request, request_id):
     """제출 처리 - 전체 try-except로 에러 캡처"""
+    logger.info(f"[Collect] submit_process started for request_id: {request_id}")
     try:
         collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
