@@ -90,12 +90,35 @@
                     class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
-                    <div class="flex gap-2">
-                        <input type="text" name="icon" placeholder="📍"
-                            class="w-14 md:w-20 shadow-clay-inner p-3 rounded-xl text-center text-xl bg-[#E0E5EC] outline-none" value="📍">
-                        <input type="text" name="name" placeholder="특별실 이름 (예: 과학실)"
-                            class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm md:text-base bg-[#E0E5EC] outline-none" required>
-                        <button type="submit" class="clay-btn-primary px-4 flex items-center justify-center">
+                    <input type="hidden" name="action" value="add">
+                    <div class="flex gap-2 items-stretch h-12">
+                        <!-- Icon Select -->
+                        <div class="relative w-20 flex-shrink-0 group">
+                            <select name="icon" class="w-full h-full shadow-clay-inner pl-3 pr-8 text-xl bg-[#E0E5EC] outline-none rounded-xl appearance-none cursor-pointer text-center font-emoji">
+                                <option value="🏫">🏫</option>
+                                <option value="🔬">🔬</option>
+                                <option value="💻">💻</option>
+                                <option value="🎨">🎨</option>
+                                <option value="🤸">🤸</option>
+                                <option value="🎵">🎵</option>
+                                <option value="📚">📚</option>
+                                <option value="🗣️">🗣️</option>
+                                <option value="🍳">🍳</option>
+                                <option value="📍" selected>📍</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none text-gray-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Name Input -->
+                        <div class="flex-1 min-w-0">
+                            <input type="text" name="name" placeholder="특별실 이름"
+                                class="w-full h-full shadow-clay-inner px-4 text-sm md:text-base bg-[#E0E5EC] outline-none rounded-xl" required>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button type="submit" class="flex-shrink-0 clay-btn-primary w-12 md:w-auto md:px-6 flex items-center justify-center rounded-xl">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
