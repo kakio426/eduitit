@@ -86,7 +86,7 @@
                                         class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                                         <option value="">-- 이름 선택 --</option>
                                         {% for name in req.expected_submitters_list %}
-                                        <option value="{{ name }}">{{ name }}</option>
+                                        <option value="{{ name }}" {% if submission.contributor_name==name %}selected{% endif %}>{{ name }}</option>
                                         {% endfor %}
                                         <option value="__custom__">직접 입력...</option>
                                     </select>
@@ -163,7 +163,7 @@
                         <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors"
                             :class="{'border-red-400 bg-red-50': fileError, 'border-emerald-400 bg-emerald-50': fileName && !fileError}">
                             <input type="file" name="file" @change="checkFileSize($event)" class="hidden"
-                                id="file-input" :required="tab === 'file'">
+                                id="file-input" :required="tab === 'file' && !isEdit">
                             <label for="file-input" class="cursor-pointer">
                                 <div class="text-4xl mb-2">
                                     <i class="fa-solid fa-cloud-arrow-up"
@@ -204,12 +204,12 @@
                 <button type="submit" :disabled="fileError || isSubmitting"
                     class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="!isSubmitting">
-                        <i class="fa-solid fa-paper-plane"></i>
+                        <span><i class="fa-solid fa-paper-plane mr-2"></i><span
+                                x-text="isEdit ? '수정 완료' : '제출하기'"></span></span>
                     </template>
                     <template x-if="isSubmitting">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span><i class="fa-solid fa-spinner fa-spin mr-2"></i>저장 중...</span>
                     </template>
-                    <span x-text="isSubmitting ? '저장 중...' : (isEdit ? '수정 완료' : '제출하기')"></span>
                 </button>
 
                 {% if is_edit %}
@@ -244,14 +244,14 @@
         const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
         const maxSize = maxMB * 1024 * 1024;
         this.fileName = file.name;
-        this.fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        this.fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
         if (file.size > maxSize) {
             this.fileError = `파일 크기가 ${maxMB}MB를 초과합니다. 링크로 제출해주세요.`;
         } else {
             this.fileError = '';
         }
     }
-        };
     }
+}
 </script>
 {% endblock %}
