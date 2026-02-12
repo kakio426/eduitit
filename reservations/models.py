@@ -21,6 +21,10 @@ class SchoolConfig(models.Model):
     max_periods = models.IntegerField(default=6) # Safety/Legacy
     period_labels = models.TextField(default="1교시,2교시,3교시,4교시,5교시,6교시") # Custom labels
     reservation_window_days = models.IntegerField(default=14)
+    # 주간 예약 오픈 제한 설정 (Weekly Opening Rule)
+    weekly_opening_mode = models.BooleanField(default=False)
+    weekly_opening_weekday = models.IntegerField(default=4, help_text="0=월, 1=화, ... 4=금, 6=일") # Default: Friday
+    weekly_opening_hour = models.IntegerField(default=9, help_text="0-23시") # Default: 9 AM
 
     def get_period_list(self):
         """Returns labels as a list of strings: ['1교시', '2교시', ...]"""

@@ -70,9 +70,9 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             <!-- 1. 특별실 관리 (Special Rooms) -->
-            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="100">
+            <div class="clay-card p-5 md:p-8" data-aos="fade-up" data-aos-delay="100">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
                         <i class="fas fa-door-open text-purple-500"></i> 특별실 관리
                     </h2>
                 </div>
@@ -87,15 +87,15 @@
 
                 <!-- Add Room Form -->
                 <form hx-post="{% url 'reservations:room_settings' school.slug %}" hx-target="#room-list-container"
-                    class="mt-6 pt-6 border-t border-gray-200">
+                    class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
                     <div class="flex gap-2">
-                        <input type="text" name="icon" placeholder="이모지"
-                            class="w-20 clay-inner p-3 rounded-xl text-center text-xl" value="📍">
+                        <input type="text" name="icon" placeholder="📍"
+                            class="w-14 md:w-20 shadow-clay-inner p-3 rounded-xl text-center text-xl bg-[#E0E5EC] outline-none" value="📍">
                         <input type="text" name="name" placeholder="특별실 이름 (예: 과학실)"
-                            class="flex-1 clay-inner p-3 rounded-xl" required>
-                        <button type="submit" class="clay-btn px-4 bg-purple-100 text-purple-600 hover:text-purple-800">
+                            class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm md:text-base bg-[#E0E5EC] outline-none" required>
+                        <button type="submit" class="clay-btn-primary px-4 flex items-center justify-center">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -103,9 +103,9 @@
             </div>
 
             <!-- 2. 블랙아웃 관리 (Blackout Dates) -->
-            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="200">
+            <div class="clay-card p-5 md:p-8" data-aos="fade-up" data-aos-delay="200">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
                         <i class="fas fa-ban text-red-500"></i> 예약 제한(블랙아웃) 설정
                     </h2>
                 </div>
@@ -120,22 +120,22 @@
 
                 <!-- Add Blackout Form -->
                 <form hx-post="{% url 'reservations:blackout_settings' school.slug %}"
-                    hx-target="#blackout-list-container" class="mt-6 pt-6 border-t border-gray-200">
+                    hx-target="#blackout-list-container" class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
                     <div class="flex flex-col gap-3">
                         <div class="flex gap-2">
-                            <input type="date" name="start_date" class="flex-1 clay-inner p-3 rounded-xl text-sm"
+                            <input type="date" name="start_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none"
                                 required>
                             <span class="self-center text-gray-400">~</span>
-                            <input type="date" name="end_date" class="flex-1 clay-inner p-3 rounded-xl text-sm"
+                            <input type="date" name="end_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none"
                                 required>
                         </div>
                         <div class="flex gap-2">
                             <input type="text" name="reason" placeholder="사유 (예: 중간고사기간)"
-                                class="flex-1 clay-inner p-3 rounded-xl" required>
+                                class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none" required>
                             <button type="submit"
-                                class="clay-btn px-6 bg-red-100 text-red-600 hover:text-red-800 font-bold">
+                                class="px-6 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors">
                                 추가
                             </button>
                         </div>
@@ -144,12 +144,12 @@
             </div>
 
             <!-- 3. 교시(Period) 관리 -->
-            <div class="lg:col-span-2 clay-card p-8" data-aos="fade-up" data-aos-delay="300">
+            <div class="lg:col-span-2 clay-card p-5 md:p-8" data-aos="fade-up" data-aos-delay="300">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
                         <i class="fas fa-clock text-orange-500"></i> 교시(Period) 설정
                     </h2>
-                    <p class="text-sm text-gray-500">
+                    <p class="hidden md:block text-sm text-gray-500">
                         * 예약판의 행(교시)을 이름별로 관리하세요. 콤마(,)로 구분하여 순서대로 입력하세요.
                     </p>
                 </div>
@@ -159,13 +159,13 @@
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">학교 이름</label>
                         <input type="text" name="school_name" value="{{ school.name }}"
-                            class="w-full clay-inner p-4 rounded-2xl font-bold" required>
+                            class="w-full shadow-clay-inner p-4 rounded-2xl font-bold bg-[#E0E5EC] outline-none" required>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 구성 (순서대로 입력)</label>
                         <textarea name="period_labels" rows="3" 
-                            class="w-full clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed"
+                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none"
                             placeholder="1교시,2교시,3교시,4교시,5교시,6교시">{{ school.config.period_labels }}</textarea>
                         <p class="text-[10px] text-gray-400 mt-2 ml-2">
                             * 교시 이름을 콤마(,)로 구분하여 입력하세요. 입력한 개수만큼 예약판의 행이 생깁니다.
@@ -181,22 +181,80 @@
                             설정 전체 저장
                         </button>
                     </div>
+
+                    <div class="border-t border-gray-200 pt-6 mt-6">
+                        <label class="block text-sm font-bold text-gray-600 mb-4 ml-1 flex items-center gap-2">
+                            <i class="fas fa-calendar-check text-green-500"></i> 예약 오픈 규칙 설정
+                        </label>
+                        
+                        <div class="bg-white/50 rounded-2xl p-4 md:p-6" x-data="{ weeklyMode: {{ school.config.weekly_opening_mode|yesno:'true,false' }} }">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h4 class="font-bold text-gray-700">주간 예약 제한 모드</h4>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        켜면 매주 지정된 요일/시간에 <strong class="text-purple-600">다음 주 예약</strong>이 열립니다.<br>
+                                        꺼두면 날짜 제한 없이 언제든 미래 예약을 할 수 있습니다.
+                                    </p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="weekly_opening_mode" class="sr-only peer" x-model="weeklyMode">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+
+                            <div x-show="weeklyMode" class="flex flex-col md:flex-row gap-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 -translate-y-2"
+                                x-transition:enter-end="opacity-100 translate-y-0">
+                                
+                                <div class="flex-1">
+                                    <label class="block text-xs font-bold text-purple-800 mb-1">오픈 요일</label>
+                                    <select name="weekly_opening_weekday" class="w-full clay-inner p-3 rounded-xl bg-white text-sm">
+                                        <option value="0" {% if school.config.weekly_opening_weekday == 0 %}selected{% endif %}>월요일</option>
+                                        <option value="1" {% if school.config.weekly_opening_weekday == 1 %}selected{% endif %}>화요일</option>
+                                        <option value="2" {% if school.config.weekly_opening_weekday == 2 %}selected{% endif %}>수요일</option>
+                                        <option value="3" {% if school.config.weekly_opening_weekday == 3 %}selected{% endif %}>목요일</option>
+                                        <option value="4" {% if school.config.weekly_opening_weekday == 4 %}selected{% endif %}>금요일</option>
+                                        <option value="5" {% if school.config.weekly_opening_weekday == 5 %}selected{% endif %}>토요일</option>
+                                        <option value="6" {% if school.config.weekly_opening_weekday == 6 %}selected{% endif %}>일요일</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <label class="block text-xs font-bold text-purple-800 mb-1">오픈 시간</label>
+                                    <select name="weekly_opening_hour" class="w-full clay-inner p-3 rounded-xl bg-white text-sm">
+                                        {% for i in "012345678901234567890123"|make_list %}
+                                            {% if forloop.counter0 < 24 %}
+                                            <option value="{{ forloop.counter0 }}" {% if school.config.weekly_opening_hour == forloop.counter0 %}selected{% endif %}>
+                                                {{ forloop.counter0|stringformat:"02d" }}:00
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="flex items-center text-xs text-purple-600 font-bold px-2">
+                                    <span>부터 다음 주 예약 가능</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
 
             <!-- 4. 고정 시간표 매트릭스 (Full Width) -->
-            <div class="lg:col-span-2 clay-card p-8" data-aos="fade-up" data-aos-delay="400">
+            <div class="lg:col-span-2 clay-card p-5 md:p-8" data-aos="fade-up" data-aos-delay="400">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
                         <i class="fas fa-th text-blue-500"></i> 고정 수업(Recurring) 설정
                     </h2>
-                    <p class="text-sm text-gray-500">
+                    <p class="hidden md:block text-sm text-gray-500">
                         * 특정 교시를 클릭하여 고정 수업을 설정하거나 해제하세요.
                     </p>
                 </div>
 
                 <div id="recurring-matrix-container" hx-get="{% url 'reservations:recurring_settings' school.slug %}"
-                    hx-trigger="load">
+                    hx-trigger="load" class="overflow-x-auto no-scrollbar">
                     <div class="flex justify-center py-12">
                         <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400"></i>
                     </div>

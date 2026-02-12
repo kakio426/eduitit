@@ -1,14 +1,15 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.urls import reverse
 from django.utils.text import slugify
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 
 from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, BlackoutDate, Reservation
+from .utils import get_max_booking_date
 import logging
 
 logger = logging.getLogger(__name__)
@@ -188,8 +189,21 @@ def update_config(request, school_slug):
         config.period_labels = period_labels
         # max_periods 동기화 (기존 코드와의 호환성)
         config.max_periods = len(config.get_period_list())
-        config.save()
-        messages.success(request, "학교 설정이 저장되었습니다.")
+    
+    # 주간 예약 제한 설정 업데이트
+    weekly_mode = request.POST.get('weekly_opening_mode') == 'on'
+    config.weekly_opening_mode = weekly_mode
+    
+    if weekly_mode:
+        config.weekly_opening_weekday = int(request.POST.get('weekly_opening_weekday', 4))
+        config.weekly_opening_hour = int(request.POST.get('weekly_opening_hour', 9))
+    else:
+        # weekly_opening_mode가 꺼지면 관련 설정도 초기화하거나 무시
+        config.weekly_opening_weekday = None
+        config.weekly_opening_hour = None
+    
+    config.save()
+    messages.success(request, "학교 설정이 저장되었습니다.")
     
     # 설정 후 대시보드로 리다이렉트 (HTMX일 경우 HX-Refresh)
     response = HttpResponse()
@@ -238,7 +252,21 @@ def reservation_index(request, school_slug):
             target_date = timezone.localdate()
     else:
         target_date = timezone.localdate()
-        
+    
+    # [Weekly Limit Check]
+    max_date = get_max_booking_date(school)
+    if not request.user.is_authenticated or school.owner != request.user:
+        # 관리자는 제한 무시
+        if max_date and target_date > max_date:
+            # 예약 가능 날짜를 초과한 경우, max_date로 리다이렉트
+            messages.warning(request, f"아직 예약이 열리지 않았습니다. (예약 가능: {max_date.strftime('%m월 %d일')}까지)")
+            return redirect(f"{reverse('reservations:reservation_index', args=[school.slug])}?date={max_date.strftime('%Y-%m-%d')}")
+    
+        # 과거 날짜로 이동 시도 시 오늘 날짜로 리다이렉트 (관리자는 가능)
+        if target_date < timezone.localdate():
+            messages.warning(request, "과거 날짜는 조회할 수 없습니다.")
+            return redirect(f"{reverse('reservations:reservation_index', args=[school.slug])}?date={timezone.localdate().strftime('%Y-%m-%d')}")
+    
     # 날짜 네비게이션
     prev_date = target_date - timedelta(days=1)
     next_date = target_date + timedelta(days=1)
@@ -253,7 +281,6 @@ def reservation_index(request, school_slug):
     # 데이터 조회
     rooms = school.specialroom_set.all()
     period_labels = config.get_period_list()
-    # periods = range(1, config.max_periods + 1)
     periods_data = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
     
     # 예약 및 고정 수업 조회
@@ -301,11 +328,13 @@ def reservation_index(request, school_slug):
         'is_blackout': is_blackout,
         'rooms_data': rooms_data,
         'periods': periods_data,
-        'weekday_name': ['월', '화', '수', '목', '금', '토', '일'][target_date.weekday()]
+        'weekday_name': ['월', '화', '수', '목', '금', '토', '일'][target_date.weekday()],
+        'period_labels': period_labels,
+        'max_date': max_date, # 템플릿에 전달하여 '다음' 버튼 비활성화에 사용
     }
     
     # HTMX 요청이면 부분 렌더링 (Polling 등)
-    if request.htmx and not request.htmx.boosted:
+    if request.headers.get('HX-Request'):
         return render(request, 'reservations/partials/reservation_grid.html', context)
         
     return render(request, 'reservations/index.html', context)
@@ -328,6 +357,15 @@ def create_reservation(request, school_slug):
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
+        
+        # [Weekly Limit Check] 백엔드 검증
+        if not request.user.is_authenticated or school.owner != request.user: # 관리자는 제한 무시
+            max_date = get_max_booking_date(school)
+            if max_date and target_date > max_date:
+                return HttpResponse(
+                    f"<script>alert('예약이 아직 열리지 않았습니다. {max_date.strftime('%Y-%m-%d')}까지만 예약 가능합니다.');</script>", 
+                    status=200 # HTMX swap을 위해 200 유지하되 스크립트 실행
+                )
         
         # 1. 블랙아웃 체크
         if BlackoutDate.objects.filter(school=school, start_date__lte=target_date, end_date__gte=target_date).exists():

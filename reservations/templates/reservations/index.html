@@ -51,24 +51,35 @@
 
             <div class="flex items-center gap-4 bg-white/50 rounded-xl p-2 shadow-inner">
                 <a href="?date={{ prev_date|date:'Y-m-d' }}"
-                    class="w-10 h-10 flex items-center justify-center rounded-full clay-btn hover:text-purple-600">
+                    class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
                     <i class="fas fa-chevron-left"></i>
                 </a>
 
                 <div class="text-center px-4">
-                    <div class="text-lg font-bold text-gray-800">{{ target_date|date:"Y.m.d" }} ({{ weekday_name }})
-                    </div>
+                    <div class="text-base md:text-lg font-bold text-gray-800">{{ target_date|date:"Y.m.d" }} ({{ weekday_name }})</div>
                     {% if is_blackout %}
-                    <div class="text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded-full mt-1">
-                        {{ is_blackout.reason }} (예약 불가)
+                    <div class="text-[10px] md:text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded-full mt-1">
+                        {{ is_blackout.reason }}
+                    </div>
+                    {% endif %}
+                    {% if max_date %}
+                    <div class="text-[10px] text-purple-500 font-bold mt-1">
+                        예약 가능: {{ max_date|date:"m/d" }}까지
                     </div>
                     {% endif %}
                 </div>
 
+                {% if max_date and target_date >= max_date %}
+                <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:'Y-m-d' }}까지)')"
+                    class="w-8 h-8 md:w-10 md:h-10 text-gray-300 bg-gray-100 flex items-center justify-center rounded-full cursor-not-allowed">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                {% else %}
                 <a href="?date={{ next_date|date:'Y-m-d' }}"
-                    class="w-10 h-10 flex items-center justify-center rounded-full clay-btn hover:text-purple-600">
+                    class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
                     <i class="fas fa-chevron-right"></i>
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
