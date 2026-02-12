@@ -111,7 +111,6 @@ def request_create(request):
         logger.error(f"[Collect] CRITICAL ERROR: {type(e).__name__}: {str(e)}\n{error_trace}")
         
         # 서버에서만 발생하는 에러를 잡기 위해 임시로 에러 메시지를 화면에 노출합니다.
-        # 원인 파악 후에는 다시 raise e 또는 템플릿 처리로 되돌려야 합니다.
         debug_msg = f"서버 에러 발생! 원인 파악용 메시지:\n\n{type(e).__name__}: {str(e)}\n\n{error_trace[-500:]}"
         return HttpResponse(debug_msg, content_type="text/plain; charset=utf-8", status=500)
 
@@ -307,43 +306,43 @@ def submit(request, request_id):
 
 @require_POST
 def submit_process(request, request_id):
-    """제출 처리"""
-    collection_req = get_object_or_404(CollectionRequest, id=request_id)
-
-    if collection_req.status != 'active':
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
-
-    # 이름: 직접 입력 > 셀렉트 > 일반 입력
-    contributor_name = request.POST.get('contributor_name_custom', '').strip()
-    if not contributor_name:
-        selected = request.POST.get('contributor_name_select', '').strip()
-        if selected and selected != '__custom__':
-            contributor_name = selected
-    if not contributor_name:
-        contributor_name = request.POST.get('contributor_name', '').strip()
-    contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
-    submission_type = request.POST.get('submission_type', '')
-
-    if not contributor_name:
-        return render(request, 'collect/submit.html', {
-            'req': collection_req,
-            'error': '이름을 입력해주세요.',
-        })
-
-    if submission_type not in ('file', 'link', 'text'):
-        return render(request, 'collect/submit.html', {
-            'req': collection_req,
-            'error': '제출 유형을 선택해주세요.',
-        })
-
-    submission = Submission(
-        collection_request=collection_req,
-        contributor_name=contributor_name,
-        contributor_affiliation=contributor_affiliation,
-        submission_type=submission_type,
-    )
-
+    """제출 처리 - 전체 try-except로 에러 캡처"""
     try:
+        collection_req = get_object_or_404(CollectionRequest, id=request_id)
+
+        if collection_req.status != 'active':
+            return render(request, 'collect/request_closed.html', {'req': collection_req})
+
+        # 이름: 직접 입력 > 셀렉트 > 일반 입력
+        contributor_name = request.POST.get('contributor_name_custom', '').strip()
+        if not contributor_name:
+            selected = request.POST.get('contributor_name_select', '').strip()
+            if selected and selected != '__custom__':
+                contributor_name = selected
+        if not contributor_name:
+            contributor_name = request.POST.get('contributor_name', '').strip()
+        contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
+        submission_type = request.POST.get('submission_type', '')
+
+        if not contributor_name:
+            return render(request, 'collect/submit.html', {
+                'req': collection_req,
+                'error': '이름을 입력해주세요.',
+            })
+
+        if submission_type not in ('file', 'link', 'text'):
+            return render(request, 'collect/submit.html', {
+                'req': collection_req,
+                'error': '제출 유형을 선택해주세요.',
+            })
+
+        submission = Submission(
+            collection_request=collection_req,
+            contributor_name=contributor_name,
+            contributor_affiliation=contributor_affiliation,
+            submission_type=submission_type,
+        )
+
         if submission_type == 'file':
             uploaded_file = request.FILES.get('file')
             if not uploaded_file:
@@ -382,7 +381,7 @@ def submit_process(request, request_id):
             submission.text_content = text_content
 
         submission.save()
-        logger.info(f"[Collect] Submission: {submission.id} to {collection_req.id} by {contributor_name}")
+        logger.info(f"[Collect] Submission saved: {submission.id}")
 
         # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
         request.session[f'can_manage_{submission.management_id}'] = True
@@ -393,7 +392,7 @@ def submit_process(request, request_id):
         import traceback
         error_trace = traceback.format_exc()
         logger.error(f"[Collect] SUBMIT ERROR: {str(e)}\n{error_trace}")
-        return HttpResponse(f"제출 중 오류가 발생했습니다.<br><br>Error: {str(e)}<br><pre>{error_trace}</pre>", status=500)
+        return HttpResponse(f"제출 중 오류가 발생했습니다.<br><br><b>{type(e).__name__}: {str(e)}</b><br><br><pre>{error_trace}</pre>", status=500)
 
 
 # ================================
@@ -416,7 +415,7 @@ def submission_edit(request, management_id):
     """제출물 수정 페이지"""
     submission = get_object_or_404(Submission, management_id=management_id)
     
-    # 세션 권한 체크 (방금 제출했거나 이전에 관리 페이지에 접근한 경우)
+    # 세션 권한 체크
     if not request.session.get(f'can_manage_{management_id}', False):
         return render(request, 'collect/submission_manage.html', {
             'submission': submission,
@@ -431,9 +430,6 @@ def submission_edit(request, management_id):
         if contributor_name:
             submission.contributor_name = contributor_name
             submission.contributor_affiliation = contributor_affiliation
-            
-            # 파일/링크/텍스트 내용 수정은 보안상/복잡성상 이름/소속만 일단 허용하거나 
-            # 필요시 추가 구현 가능. 여기선 기본 정보만 수정 허용.
             
             if submission.submission_type == 'link':
                 submission.link_url = request.POST.get('link_url', submission.link_url)
@@ -467,40 +463,32 @@ def submission_delete(request, management_id):
 
 
 def submission_download(request, submission_id):
-    """파일명 변경하여 파일 다운로드 (교사용 프록시)"""
-    # 1. 제출물 확인
+    """파일명 변경하여 파일 다운로드"""
     submission = get_object_or_404(Submission, id=submission_id)
     
-    # 2. 권한 확인 (수합 요청 생성자만)
     if not request.user.is_authenticated or submission.collection_request.creator != request.user:
         return HttpResponse("권한이 없습니다.", status=403)
         
     if not submission.file:
         return HttpResponse("파일이 없습니다.", status=404)
 
-    # 3. 파일명 구성: [소속]_이름_파일명
     aff = f"[{submission.contributor_affiliation}]_" if submission.contributor_affiliation else ""
     safe_name = f"{aff}{submission.contributor_name}_{submission.original_filename}"
-    # 공백 및 특수문자 처리
     import urllib.parse
     encoded_filename = urllib.parse.quote(safe_name)
 
-    # 4. 파일 스트리밍 (Cloudinary 또는 Local)
     from django.http import StreamingHttpResponse
     import requests
 
     file_url = submission.file.url
     
-    # Cloudinary인 경우 원격 파일 스트리밍
     if file_url.startswith('http'):
         def stream_file():
             with requests.get(file_url, stream=True) as r:
                 for chunk in r.iter_content(chunk_size=8192):
                     yield chunk
-        
         response = StreamingHttpResponse(stream_file())
     else:
-        # 로컬 시스템인 경우 직접 반환
         response = StreamingHttpResponse(submission.file)
 
     response['Content-Type'] = 'application/octet-stream'
