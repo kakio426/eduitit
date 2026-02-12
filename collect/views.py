@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
 from django.db.models import Count
 from django.utils import timezone
 from django.conf import settings
@@ -342,50 +343,57 @@ def submit_process(request, request_id):
         submission_type=submission_type,
     )
 
-    if submission_type == 'file':
-        uploaded_file = request.FILES.get('file')
-        if not uploaded_file:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '파일을 선택해주세요.',
-            })
-        max_size = collection_req.max_file_size_mb * 1024 * 1024
-        if uploaded_file.size > max_size:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
-            })
-        submission.file = uploaded_file
-        submission.original_filename = uploaded_file.name
-        submission.file_size = uploaded_file.size
+    try:
+        if submission_type == 'file':
+            uploaded_file = request.FILES.get('file')
+            if not uploaded_file:
+                return render(request, 'collect/submit.html', {
+                    'req': collection_req,
+                    'error': '파일을 선택해주세요.',
+                })
+            max_size = collection_req.max_file_size_mb * 1024 * 1024
+            if uploaded_file.size > max_size:
+                return render(request, 'collect/submit.html', {
+                    'req': collection_req,
+                    'error': f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
+                })
+            submission.file = uploaded_file
+            submission.original_filename = uploaded_file.name
+            submission.file_size = uploaded_file.size
 
-    elif submission_type == 'link':
-        link_url = request.POST.get('link_url', '').strip()
-        link_description = request.POST.get('link_description', '').strip()
-        if not link_url:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '링크를 입력해주세요.',
-            })
-        submission.link_url = link_url
-        submission.link_description = link_description
+        elif submission_type == 'link':
+            link_url = request.POST.get('link_url', '').strip()
+            link_description = request.POST.get('link_description', '').strip()
+            if not link_url:
+                return render(request, 'collect/submit.html', {
+                    'req': collection_req,
+                    'error': '링크를 입력해주세요.',
+                })
+            submission.link_url = link_url
+            submission.link_description = link_description
 
-    elif submission_type == 'text':
-        text_content = request.POST.get('text_content', '').strip()
-        if not text_content:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '내용을 입력해주세요.',
-            })
-        submission.text_content = text_content
+        elif submission_type == 'text':
+            text_content = request.POST.get('text_content', '').strip()
+            if not text_content:
+                return render(request, 'collect/submit.html', {
+                    'req': collection_req,
+                    'error': '내용을 입력해주세요.',
+                })
+            submission.text_content = text_content
 
-    submission.save()
-    logger.info(f"[Collect] Submission: {submission.id} to {collection_req.id} by {contributor_name}")
+        submission.save()
+        logger.info(f"[Collect] Submission: {submission.id} to {collection_req.id} by {contributor_name}")
 
-    # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
-    request.session[f'can_manage_{submission.management_id}'] = True
+        # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
+        request.session[f'can_manage_{submission.management_id}'] = True
 
-    return redirect('collect:submission_manage', management_id=submission.management_id)
+        return redirect('collect:submission_manage', management_id=submission.management_id)
+
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"[Collect] SUBMIT ERROR: {str(e)}\n{error_trace}")
+        return HttpResponse(f"제출 중 오류가 발생했습니다.<br><br>Error: {str(e)}<br><pre>{error_trace}</pre>", status=500)
 
 
 # ================================
