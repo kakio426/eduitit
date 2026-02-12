@@ -39,7 +39,6 @@
             event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
         });
     </script>
-
     <style>
         [x-cloak] {
             display: none !important;
@@ -442,6 +441,7 @@
                         class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                         <i class="fa-solid fa-box-archive mr-3 text-purple-400"></i> 사주 보관함
                     </a>
+
                     <a href="{% url 'settings' %}"
                         class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                         <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 내 설정

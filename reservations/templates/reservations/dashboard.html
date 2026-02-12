@@ -79,7 +79,7 @@
 
                 <!-- Room List (HTMX) -->
                 <div id="room-list-container" hx-get="{% url 'reservations:room_settings' school.slug %}"
-                    hx-trigger="load">
+                    hx-trigger="load" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                     <div class="flex justify-center py-8">
                         <i class="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
                     </div>
@@ -135,7 +135,7 @@
 
                 <!-- Blackout List (HTMX) -->
                 <div id="blackout-list-container" hx-get="{% url 'reservations:blackout_settings' school.slug %}"
-                    hx-trigger="load">
+                    hx-trigger="load" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                     <div class="flex justify-center py-8">
                         <i class="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
                     </div>

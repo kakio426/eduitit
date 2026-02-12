@@ -225,8 +225,8 @@ def blackout_settings(request, school_slug):
                 BlackoutDate.objects.create(school=school, start_date=start, end_date=end, reason=reason)
                 messages.success(request, "블랙아웃 기간이 설정되었습니다.")
         elif action == 'delete':
-            Item_id = request.POST.get('item_id')
-            BlackoutDate.objects.filter(id=Item_id, school=school).delete()
+            item_id = request.POST.get('item_id')
+            BlackoutDate.objects.filter(id=item_id, school=school).delete()
             messages.success(request, "블랙아웃 기간이 삭제되었습니다.")
 
     return render(request, 'reservations/partials/blackout_list.html', {
