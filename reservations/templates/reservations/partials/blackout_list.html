@@ -7,7 +7,7 @@
                 {{ blackout.start_date|date:"Y.m.d" }} ~ {{ blackout.end_date|date:"Y.m.d" }}
             </div>
         </div>
-        <button hx-post="{% url 'reservations:blackout_settings' school.slug %}" 
+        <button hx-post="{% url 'reservations:blackout_settings' school.slug %}"
             hx-target="#blackout-list-container"
             hx-confirm="이 기간의 예약 제한을 해제하시겠습니까?"
             hx-vals='{"action": "delete", "item_id": "{{ blackout.id }}"}'

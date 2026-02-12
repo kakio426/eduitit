@@ -72,7 +72,7 @@
                         {% else %}
                         <!-- Available -->
                         <button
-                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:'Y-m-d' }}', '{{ p.label }}')"
+                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.label }}')"
                             class="w-full h-full bg-white rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-md flex justify-center items-center group transition-all">
                             <i
                                 class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
