@@ -358,8 +358,7 @@ def submit_process(request, request_id):
     submission.save()
     logger.info(f"[Collect] Submission saved: {submission.id}")
 
-    # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
-    request.session[f'can_manage_{submission.management_id}'] = True
+    # UUID 기반 매니지먼트 페이지로 이동
 
     return redirect('collect:submission_manage', management_id=submission.management_id)
 
@@ -371,7 +370,8 @@ def submit_process(request, request_id):
 def submission_manage(request, management_id):
     """제출물 관리 페이지 (수정/삭제 안내)"""
     submission = get_object_or_404(Submission, management_id=management_id)
-    can_manage = request.session.get(f'can_manage_{management_id}', False)
+    # UUID 자체가 보안 코드 역할을 하므로 세션 체크 없이 접근 허용
+    can_manage = True
     
     return render(request, 'collect/submission_manage.html', {
         'submission': submission,
@@ -384,13 +384,7 @@ def submission_edit(request, management_id):
     """제출물 수정 페이지"""
     submission = get_object_or_404(Submission, management_id=management_id)
     
-    # 세션 권한 체크
-    if not request.session.get(f'can_manage_{management_id}', False):
-        return render(request, 'collect/submission_manage.html', {
-            'submission': submission,
-            'req': submission.collection_request,
-            'error': '수정 권한이 없습니다. 제출 직후에만 수정이 가능합니다.'
-        })
+    # UUID 기반으로 동작하므로 세션 체크 생략 (링크를 가진 사람이 권한자)
         
     if request.method == 'POST':
         contributor_name = request.POST.get('contributor_name', '').strip()
@@ -422,8 +416,7 @@ def submission_delete(request, management_id):
     """제출물 삭제"""
     submission = get_object_or_404(Submission, management_id=management_id)
     
-    if not request.session.get(f'can_manage_{management_id}', False):
-        return HttpResponse("권한이 없습니다.", status=403)
+    # UUID 기반 권한 확인
         
     req_id = submission.collection_request.id
     submission.delete()

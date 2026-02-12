@@ -79,10 +79,16 @@
                     </button>
                 </div>
 
-                <div
-                    class="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-8 text-xs text-orange-700 text-left">
-                    <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>주의사항</p>
-                    <p>브라우저를 닫거나 세션이 만료되면 더 이상 수정/삭제가 불가능합니다. 신중하게 확인해 주세요.</p>
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-8 text-sm text-blue-700 text-left" x-data="{ copied: false }">
+                    <p class="font-bold mb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-link mr-1"></i>관리용 링크 안내</span>
+                        <button @click="navigator.clipboard.writeText(window.location.href); copied = true; setTimeout(() => copied = false, 2000)" 
+                                class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition">
+                            <span x-show="!copied">주소 복사</span>
+                            <span x-show="copied">복사됨!</span>
+                        </button>
+                    </p>
+                    <p class="text-xs opacity-80">이 페이지의 주소를 복사해두시면 브라우저를 닫은 후에도 나중에 다시 돌아와서 수정하거나 삭제할 수 있습니다.</p>
                 </div>
                 {% endif %}
 
