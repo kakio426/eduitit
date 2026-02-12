@@ -397,7 +397,20 @@ def submission_edit(request, management_id):
             submission.contributor_name = contributor_name
             submission.contributor_affiliation = contributor_affiliation
             
-            if submission.submission_type == 'link':
+            if submission.submission_type == 'file':
+                # 파일 교체 지원
+                uploaded_file = request.FILES.get('file')
+                if uploaded_file:
+                    max_size = submission.collection_request.max_file_size_mb * 1024 * 1024
+                    if uploaded_file.size <= max_size:
+                        submission.file = uploaded_file
+                        submission.original_filename = uploaded_file.name
+                        submission.file_size = uploaded_file.size
+                
+                # 파일 설명(텍스트 내용) 업데이트
+                submission.text_content = request.POST.get('file_description', submission.text_content)
+
+            elif submission.submission_type == 'link':
                 submission.link_url = request.POST.get('link_url', submission.link_url)
                 submission.link_description = request.POST.get('link_description', submission.link_description)
             elif submission.submission_type == 'text':

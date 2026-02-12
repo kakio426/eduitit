@@ -122,9 +122,18 @@
                     </div>
                 </div>
 
-                <!-- 제출 유형 탭 -->
+                <!-- 제출 유형 탭 (수정 시에는 유형 고정) -->
                 <div class="mb-6">
                     <label class="block text-sm font-bold text-gray-600 mb-2">제출 유형</label>
+                    {% if is_edit %}
+                    <div class="mb-4">
+                        <span class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm border border-emerald-200">
+                            <i class="fa-solid {% if submission.submission_type == 'file' %}fa-file{% elif submission.submission_type == 'link' %}fa-link{% else %}fa-align-left{% endif %} mr-1"></i>
+                            {{ submission.get_submission_type_display }}
+                        </span>
+                        <input type="hidden" name="submission_type" value="{{ submission.submission_type }}">
+                    </div>
+                    {% else %}
                     <div class="flex gap-2 mb-4">
                         {% if req.allow_file %}
                         <button type="button" @click="tab = 'file'"
@@ -148,14 +157,25 @@
                         </button>
                         {% endif %}
                     </div>
-
                     <input type="hidden" name="submission_type" :value="tab">
+                    {% endif %}
 
                     {% if is_edit and submission.submission_type == 'file' %}
                     <div x-show="tab === 'file'" class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
                         <p class="text-sm font-medium text-gray-700 mb-1">현재 제출된 파일:</p>
-                        <p class="text-sm text-emerald-600"><i class="fa-solid fa-file mr-1"></i> {{ submission.original_filename }}</p>
-                        <p class="text-xs text-gray-500 mt-2">* 파일 자체를 변경하시려면 삭제 후 다시 제출해주세요.</p>
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-emerald-600 font-bold truncate pr-4">
+                                <i class="fa-solid fa-file mr-1"></i> {{ submission.original_filename }}
+                            </p>
+                            <button type="button" @click="$dispatch('open-delete-modal')"
+                                class="flex-shrink-0 text-xs bg-white border border-red-200 text-red-500 px-2 py-1.5 rounded-lg font-bold hover:bg-red-500 hover:text-white transition shadow-sm">
+                                <i class="fa-solid fa-trash-can mr-1"></i>삭제하기
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2 leading-tight">
+                            * 아래에서 새 파일을 선택하면 기존 파일이 교체됩니다.<br>
+                            * 제출물 자체를 삭제하시려면 오른쪽 삭제 단추를 눌러주세요.
+                        </p>
                     </div>
                     {% endif %}
 
@@ -185,7 +205,7 @@
                                 <span x-text="fileError"></span>
                             </div>
                         </div>
-                        
+
                         <!-- 파일 설명 (텍스트와 같이 제출) -->
                         <textarea name="file_description" rows="3" placeholder="파일에 대한 설명이나 내용을 입력하세요 (선택)"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% endif %}</textarea>
@@ -228,12 +248,39 @@
     </div>
 </section>
 
+<!-- 삭제 확인 모달 (Alpine.js) -->
+{% if is_edit %}
+<div x-data="{ show: false }" @open-delete-modal.window="show = true" x-show="show"
+    class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" style="display: none;">
+
+    <div @click.away="show = false" class="clay-card w-full max-w-sm p-6 bg-white shadow-2xl">
+        <div class="text-4xl text-red-500 mb-4 text-center">
+            <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">제출물을 삭제하시겠습니까?</h3>
+        <p class="text-gray-500 text-sm mb-6 text-center">삭제된 자료는 복구할 수 없습니다.</p>
+
+        <div class="flex gap-3">
+            <button @click="show = false" class="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold">취소</button>
+            <form action="{% url 'collect:submission_delete' submission.management_id %}" method="post" class="flex-1">
+                {% csrf_token %}
+                <button type="submit"
+                    class="w-full py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200">삭제
+                    확정</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
     function submitForm() {
         return {
             tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
             isEdit: {{ is_edit|yesno:"true,false" }},
-        
+
     fileName: '',
         fileSizeMB: '',
             fileError: '',
