@@ -75,7 +75,8 @@
                 <!-- 이름 + 소속 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span
+                                class="text-red-500">*</span></label>
                         {% if req.expected_submitters_list %}
                         <div x-data="{ customName: false }">
                             <template x-if="!customName">
@@ -226,7 +227,8 @@
     function submitForm() {
         return {
             tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
-            isEdit: {{ is_edit | yesno: "true,false" }},
+            isEdit: {{ is_edit | yesno: "true,false" }
+    },
     fileName: '',
         fileSizeMB: '',
             fileError: '',

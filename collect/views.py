@@ -78,41 +78,17 @@ def dashboard(request):
 @login_required
 @require_POST
 def request_create(request):
-    """새 수합 요청 생성 - 디버깅 강화 버전"""
-    logger.info(f"[Collect] Starting request_create for user: {request.user.username}")
-    try:
-        # 1단계: 폼 바인딩
-        form = CollectionRequestForm(request.POST, request.FILES)
-        logger.info("[Collect] Form bound with POST and FILES data")
+    """새 수합 요청 생성"""
+    form = CollectionRequestForm(request.POST, request.FILES)
+    if form.is_valid():
+        collection_req = form.save(commit=False)
+        collection_req.creator = request.user
         
-        # 2단계: 폼 검증
-        if form.is_valid():
-            logger.info("[Collect] Form is valid, preparing to save commit=False")
-            collection_req = form.save(commit=False)
-            collection_req.creator = request.user
+        if request.FILES.get('template_file'):
+            collection_req.template_file_name = request.FILES['template_file'].name
             
-            if request.FILES.get('template_file'):
-                collection_req.template_file_name = request.FILES['template_file'].name
-                logger.info(f"[Collect] Template file detected: {collection_req.template_file_name}")
-            
-            # 3단계: 실제 DB 저장 (Cloudinary 업로드 트리거 가능성)
-            logger.info("[Collect] Calling collection_req.save() - potential external call")
-            collection_req.save()
-            logger.info(f"[Collect] Request saved successfully: {collection_req.id}")
-            
-            # 4단계: 리다이렉트
-            logger.info(f"[Collect] Redirecting to detail for ID: {collection_req.id}")
-            return redirect('collect:request_detail', request_id=str(collection_req.id))
-        else:
-            logger.warning(f"[Collect] Form Invalid: {form.errors.as_json()}")
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        logger.error(f"[Collect] CRITICAL ERROR: {type(e).__name__}: {str(e)}\n{error_trace}")
-        
-        # 서버에서만 발생하는 에러를 잡기 위해 임시로 에러 메시지를 화면에 노출합니다.
-        debug_msg = f"서버 에러 발생! 원인 파악용 메시지:\n\n{type(e).__name__}: {str(e)}\n\n{error_trace[-500:]}"
-        return HttpResponse(debug_msg, content_type="text/plain; charset=utf-8", status=500)
+        collection_req.save()
+        return redirect('collect:request_detail', request_id=str(collection_req.id))
 
     # 폼 오류 시 대시보드로 복귀
     service = get_collect_service()
@@ -280,127 +256,112 @@ def join(request):
 
 
 def submit(request, request_id):
-    """제출 페이지 - 진입 단계 500 에러 디버깅"""
-    try:
-        logger.info(f"[Collect] submit view entered for request_id: {request_id}")
-        collection_req = get_object_or_404(CollectionRequest, id=request_id)
+    """제출 페이지"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
-        if collection_req.status != 'active':
-            return render(request, 'collect/request_closed.html', {'req': collection_req})
+    if collection_req.status != 'active':
+        return render(request, 'collect/request_closed.html', {'req': collection_req})
 
-        # 마감일 초과 확인
-        if collection_req.is_deadline_passed:
-            collection_req.status = 'closed'
-            collection_req.save()
-            return render(request, 'collect/request_closed.html', {'req': collection_req})
+    # 마감일 초과 확인
+    if collection_req.is_deadline_passed:
+        collection_req.status = 'closed'
+        collection_req.save()
+        return render(request, 'collect/request_closed.html', {'req': collection_req})
 
-        # 최대 제출 수 확인
-        if collection_req.submission_count >= collection_req.max_submissions:
-            return render(request, 'collect/request_closed.html', {
-                'req': collection_req,
-                'reason': '최대 제출 건수에 도달했습니다.',
-            })
-
-        return render(request, 'collect/submit.html', {
+    # 최대 제출 수 확인
+    if collection_req.submission_count >= collection_req.max_submissions:
+        return render(request, 'collect/request_closed.html', {
             'req': collection_req,
+            'reason': '최대 제출 건수에 도달했습니다.',
         })
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        logger.error(f"[Collect] SUBMIT VIEW ENTRY ERROR: {str(e)}\n{error_trace}")
-        return HttpResponse(f"제출 페이지 진입 중 오류가 발생했습니다.<br><br><b>{type(e).__name__}: {str(e)}</b><br><br><pre>{error_trace}</pre>", status=500)
+
+    return render(request, 'collect/submit.html', {
+        'req': collection_req,
+    })
 
 
 @require_POST
 def submit_process(request, request_id):
-    """제출 처리 - 전체 try-except로 에러 캡처"""
-    logger.info(f"[Collect] submit_process started for request_id: {request_id}")
-    try:
-        collection_req = get_object_or_404(CollectionRequest, id=request_id)
+    """제출 처리"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
-        if collection_req.status != 'active':
-            return render(request, 'collect/request_closed.html', {'req': collection_req})
+    if collection_req.status != 'active':
+        return render(request, 'collect/request_closed.html', {'req': collection_req})
 
-        # 이름: 직접 입력 > 셀렉트 > 일반 입력
-        contributor_name = request.POST.get('contributor_name_custom', '').strip()
-        if not contributor_name:
-            selected = request.POST.get('contributor_name_select', '').strip()
-            if selected and selected != '__custom__':
-                contributor_name = selected
-        if not contributor_name:
-            contributor_name = request.POST.get('contributor_name', '').strip()
-        contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
-        submission_type = request.POST.get('submission_type', '')
+    # 이름: 직접 입력 > 셀렉트 > 일반 입력
+    contributor_name = request.POST.get('contributor_name_custom', '').strip()
+    if not contributor_name:
+        selected = request.POST.get('contributor_name_select', '').strip()
+        if selected and selected != '__custom__':
+            contributor_name = selected
+    if not contributor_name:
+        contributor_name = request.POST.get('contributor_name', '').strip()
+    contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
+    submission_type = request.POST.get('submission_type', '')
 
-        if not contributor_name:
+    if not contributor_name:
+        return render(request, 'collect/submit.html', {
+            'req': collection_req,
+            'error': '이름을 입력해주세요.',
+        })
+
+    if submission_type not in ('file', 'link', 'text'):
+        return render(request, 'collect/submit.html', {
+            'req': collection_req,
+            'error': '제출 유형을 선택해주세요.',
+        })
+
+    submission = Submission(
+        collection_request=collection_req,
+        contributor_name=contributor_name,
+        contributor_affiliation=contributor_affiliation,
+        submission_type=submission_type,
+    )
+
+    if submission_type == 'file':
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
             return render(request, 'collect/submit.html', {
                 'req': collection_req,
-                'error': '이름을 입력해주세요.',
+                'error': '파일을 선택해주세요.',
             })
-
-        if submission_type not in ('file', 'link', 'text'):
+        max_size = collection_req.max_file_size_mb * 1024 * 1024
+        if uploaded_file.size > max_size:
             return render(request, 'collect/submit.html', {
                 'req': collection_req,
-                'error': '제출 유형을 선택해주세요.',
+                'error': f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
             })
+        submission.file = uploaded_file
+        submission.original_filename = uploaded_file.name
+        submission.file_size = uploaded_file.size
 
-        submission = Submission(
-            collection_request=collection_req,
-            contributor_name=contributor_name,
-            contributor_affiliation=contributor_affiliation,
-            submission_type=submission_type,
-        )
+    elif submission_type == 'link':
+        link_url = request.POST.get('link_url', '').strip()
+        link_description = request.POST.get('link_description', '').strip()
+        if not link_url:
+            return render(request, 'collect/submit.html', {
+                'req': collection_req,
+                'error': '링크를 입력해주세요.',
+            })
+        submission.link_url = link_url
+        submission.link_description = link_description
 
-        if submission_type == 'file':
-            uploaded_file = request.FILES.get('file')
-            if not uploaded_file:
-                return render(request, 'collect/submit.html', {
-                    'req': collection_req,
-                    'error': '파일을 선택해주세요.',
-                })
-            max_size = collection_req.max_file_size_mb * 1024 * 1024
-            if uploaded_file.size > max_size:
-                return render(request, 'collect/submit.html', {
-                    'req': collection_req,
-                    'error': f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
-                })
-            submission.file = uploaded_file
-            submission.original_filename = uploaded_file.name
-            submission.file_size = uploaded_file.size
+    elif submission_type == 'text':
+        text_content = request.POST.get('text_content', '').strip()
+        if not text_content:
+            return render(request, 'collect/submit.html', {
+                'req': collection_req,
+                'error': '내용을 입력해주세요.',
+            })
+        submission.text_content = text_content
 
-        elif submission_type == 'link':
-            link_url = request.POST.get('link_url', '').strip()
-            link_description = request.POST.get('link_description', '').strip()
-            if not link_url:
-                return render(request, 'collect/submit.html', {
-                    'req': collection_req,
-                    'error': '링크를 입력해주세요.',
-                })
-            submission.link_url = link_url
-            submission.link_description = link_description
+    submission.save()
+    logger.info(f"[Collect] Submission saved: {submission.id}")
 
-        elif submission_type == 'text':
-            text_content = request.POST.get('text_content', '').strip()
-            if not text_content:
-                return render(request, 'collect/submit.html', {
-                    'req': collection_req,
-                    'error': '내용을 입력해주세요.',
-                })
-            submission.text_content = text_content
+    # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
+    request.session[f'can_manage_{submission.management_id}'] = True
 
-        submission.save()
-        logger.info(f"[Collect] Submission saved: {submission.id}")
-
-        # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
-        request.session[f'can_manage_{submission.management_id}'] = True
-
-        return redirect('collect:submission_manage', management_id=submission.management_id)
-
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        logger.error(f"[Collect] SUBMIT ERROR: {str(e)}\n{error_trace}")
-        return HttpResponse(f"제출 중 오류가 발생했습니다.<br><br><b>{type(e).__name__}: {str(e)}</b><br><br><pre>{error_trace}</pre>", status=500)
+    return redirect('collect:submission_manage', management_id=submission.management_id)
 
 
 # ================================
