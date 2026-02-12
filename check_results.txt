@@ -1,0 +1,31 @@
+﻿python : System check identified some issues:
+위치 줄:1 문자:1
++ python manage.py check 2>&1 | Out-File -FilePath chec
+k_results.txt -E ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (System ch 
+   eck identified some issues::String) [], RemoteExce  
+  ption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+WARNINGS:
+?: settings.ACCOUNT_EMAIL_REQUIRED is deprecated, use: 
+settings.ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*'
+, 'password1*', 'password2*']
+
+System check identified 1 issue (0 silenced).
+[DATABASE] Using SQLite (development)
+================================================================================
+[CLOUDINARY] Environment variable check
+================================================================================
+CLOUDINARY_URL: [X] NOT SET
+CLOUDINARY_CLOUD_NAME: dl5pq1o6o
+CLOUDINARY_API_KEY: [X] NOT SET
+CLOUDINARY_API_SECRET: SET
+[CLOUDINARY] Using individual environment variables
+[CLOUDINARY] USE_CLOUDINARY = False
+[INFO] Cloudinary disabled - using local file system
+================================================================================
+[SENTRY] DSN=NOT SET, DEBUG=True
+[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)

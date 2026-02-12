@@ -8,7 +8,9 @@ from django.test import RequestFactory
 from fortune.views import saju_view
 
 factory = RequestFactory()
+from django.contrib.auth.models import AnonymousUser
 request = factory.get('/fortune/')
+request.user = AnonymousUser()
 
 try:
     response = saju_view(request)

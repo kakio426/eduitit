@@ -146,7 +146,7 @@
                 {% else %}
                 <!-- Available -->
                 <button
-                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:'Y-m-d' }}', '{{ s.label }}')"
+                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.label }}')"
                     class="w-full bg-white rounded-lg p-3 border border-gray-100 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-purple-300 transition-all group relative">
                     <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 group-hover:text-purple-400 truncate max-w-[60px]">{{ s.label }}</div>
                     <div class="text-gray-300 font-bold text-sm group-hover:text-purple-500">예약 가능</div>

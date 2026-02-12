@@ -1,7 +1,19 @@
 Traceback (most recent call last):
-  File "C:\Users\kakio\eduitit\reproduce_500.py", line 14, in <module>
+  File "C:\Users\kakio\eduitit\reproduce_500.py", line 16, in <module>
     response = saju_view(request)
-  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\contrib\auth\decorators.py", line 56, in _view_wrapper
-    test_pass = test_func(request.user)
-                          ^^^^^^^^^^^^
-AttributeError: 'WSGIRequest' object has no attribute 'user'
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\contrib\auth\decorators.py", line 60, in _view_wrapper
+    return _redirect_to_login(request)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\contrib\auth\decorators.py", line 23, in _redirect_to_login
+    path = request.build_absolute_uri()
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\http\request.py", line 289, in build_absolute_uri
+    location = self._current_scheme_host + location.removeprefix("//")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\http\request.py", line 299, in _current_scheme_host
+    return "{}://{}".format(self.scheme, self.get_host())
+                                         ~~~~~~~~~~~~~^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\http\request.py", line 205, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
