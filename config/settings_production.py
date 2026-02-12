@@ -237,24 +237,22 @@ cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
 api_key = os.environ.get('CLOUDINARY_API_KEY', '')
 api_secret = os.environ.get('CLOUDINARY_API_SECRET', '')
 
-CLOUDINARY_STORAGE = {}
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': cloud_name,
+    'API_KEY': api_key,
+    'API_SECRET': api_secret,
+}
 
 if cloudinary_url:
     try:
         parsed = urlparse(cloudinary_url)
-        # 1. Start with parsed values
-        CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': parsed.hostname or '',
-            'API_KEY': parsed.username or '',
-            'API_SECRET': parsed.password or '',
-        }
+        # 1. Start with parsed values if individual ones aren't provided
+        if not CLOUDINARY_STORAGE['CLOUD_NAME']: CLOUDINARY_STORAGE['CLOUD_NAME'] = parsed.hostname or ''
+        if not CLOUDINARY_STORAGE['API_KEY']: CLOUDINARY_STORAGE['API_KEY'] = parsed.username or ''
+        if not CLOUDINARY_STORAGE['API_SECRET']: CLOUDINARY_STORAGE['API_SECRET'] = parsed.password or ''
     except Exception:
         pass
 
-# 2. Override with individual variables if provided (Railway case)
-if cloud_name: CLOUDINARY_STORAGE['CLOUD_NAME'] = cloud_name
-if api_key: CLOUDINARY_STORAGE['API_KEY'] = api_key
-if api_secret: CLOUDINARY_STORAGE['API_SECRET'] = api_secret
 
 # Initialize Cloudinary library
 if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):

@@ -27,14 +27,14 @@ def create_ssambti_product(apps, schema_editor):
         service_type='game',
         external_url='',  # FIXED: Empty for internal service
     )
-    print("✓ Ssambti product created successfully!")
+    print("[OK] Ssambti product created successfully!")
 
 
 def delete_ssambti_product(apps, schema_editor):
     """Reverse migration: delete Ssambti product"""
     Product = apps.get_model('products', 'Product')
     Product.objects.filter(title='쌤BTI').delete()
-    print("✓ Ssambti product deleted.")
+    print("[OK] Ssambti product deleted.")
 
 
 class Migration(migrations.Migration):

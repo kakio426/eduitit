@@ -151,9 +151,11 @@ def request_detail(request, request_id):
     files_data = []
     for sub in submissions:
         if sub.submission_type == 'file' and sub.file:
+            aff = f"[{sub.contributor_affiliation}]_" if sub.contributor_affiliation else ""
+            descriptive_name = f"{aff}{sub.contributor_name}_{sub.original_filename}"
             files_data.append({
-                'url': sub.file.url,
-                'name': sub.original_filename,
+                'url': reverse('collect:submission_download', args=[sub.id]),
+                'name': descriptive_name,
                 'contributor': sub.contributor_name
             })
 
@@ -380,10 +382,123 @@ def submit_process(request, request_id):
     submission.save()
     logger.info(f"[Collect] Submission: {submission.id} to {collection_req.id} by {contributor_name}")
 
-    return render(request, 'collect/submit_success.html', {
-        'req': collection_req,
+    # 최근 제출물 세션에 저장 (수정/삭제 권한 부여용)
+    request.session[f'can_manage_{submission.management_id}'] = True
+
+    return redirect('collect:submission_manage', management_id=submission.management_id)
+
+
+# ================================
+# 제출물 관리 및 다운로드
+# ================================
+
+def submission_manage(request, management_id):
+    """제출물 관리 페이지 (수정/삭제 안내)"""
+    submission = get_object_or_404(Submission, management_id=management_id)
+    can_manage = request.session.get(f'can_manage_{management_id}', False)
+    
+    return render(request, 'collect/submission_manage.html', {
         'submission': submission,
+        'req': submission.collection_request,
+        'can_manage': can_manage
     })
+
+
+def submission_edit(request, management_id):
+    """제출물 수정 페이지"""
+    submission = get_object_or_404(Submission, management_id=management_id)
+    
+    # 세션 권한 체크 (방금 제출했거나 이전에 관리 페이지에 접근한 경우)
+    if not request.session.get(f'can_manage_{management_id}', False):
+        return render(request, 'collect/submission_manage.html', {
+            'submission': submission,
+            'req': submission.collection_request,
+            'error': '수정 권한이 없습니다. 제출 직후에만 수정이 가능합니다.'
+        })
+        
+    if request.method == 'POST':
+        contributor_name = request.POST.get('contributor_name', '').strip()
+        contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
+        
+        if contributor_name:
+            submission.contributor_name = contributor_name
+            submission.contributor_affiliation = contributor_affiliation
+            
+            # 파일/링크/텍스트 내용 수정은 보안상/복잡성상 이름/소속만 일단 허용하거나 
+            # 필요시 추가 구현 가능. 여기선 기본 정보만 수정 허용.
+            
+            if submission.submission_type == 'link':
+                submission.link_url = request.POST.get('link_url', submission.link_url)
+                submission.link_description = request.POST.get('link_description', submission.link_description)
+            elif submission.submission_type == 'text':
+                submission.text_content = request.POST.get('text_content', submission.text_content)
+            
+            submission.save()
+            messages.success(request, '제출 정보가 수정되었습니다.')
+            return redirect('collect:submission_manage', management_id=management_id)
+
+    return render(request, 'collect/submit.html', {
+        'req': submission.collection_request,
+        'submission': submission,
+        'is_edit': True
+    })
+
+
+@require_POST
+def submission_delete(request, management_id):
+    """제출물 삭제"""
+    submission = get_object_or_404(Submission, management_id=management_id)
+    
+    if not request.session.get(f'can_manage_{management_id}', False):
+        return HttpResponse("권한이 없습니다.", status=403)
+        
+    req_id = submission.collection_request.id
+    submission.delete()
+    messages.success(request, '제출물이 삭제되었습니다.')
+    return redirect('collect:submit', request_id=req_id)
+
+
+def submission_download(request, submission_id):
+    """파일명 변경하여 파일 다운로드 (교사용 프록시)"""
+    # 1. 제출물 확인
+    submission = get_object_or_404(Submission, id=submission_id)
+    
+    # 2. 권한 확인 (수합 요청 생성자만)
+    if not request.user.is_authenticated or submission.collection_request.creator != request.user:
+        return HttpResponse("권한이 없습니다.", status=403)
+        
+    if not submission.file:
+        return HttpResponse("파일이 없습니다.", status=404)
+
+    # 3. 파일명 구성: [소속]_이름_파일명
+    aff = f"[{submission.contributor_affiliation}]_" if submission.contributor_affiliation else ""
+    safe_name = f"{aff}{submission.contributor_name}_{submission.original_filename}"
+    # 공백 및 특수문자 처리
+    import urllib.parse
+    encoded_filename = urllib.parse.quote(safe_name)
+
+    # 4. 파일 스트리밍 (Cloudinary 또는 Local)
+    from django.http import StreamingHttpResponse
+    import requests
+
+    file_url = submission.file.url
+    
+    # Cloudinary인 경우 원격 파일 스트리밍
+    if file_url.startswith('http'):
+        def stream_file():
+            with requests.get(file_url, stream=True) as r:
+                for chunk in r.iter_content(chunk_size=8192):
+                    yield chunk
+        
+        response = StreamingHttpResponse(stream_file())
+    else:
+        # 로컬 시스템인 경우 직접 반환
+        response = StreamingHttpResponse(submission.file)
+
+    response['Content-Type'] = 'application/octet-stream'
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+    
+    return response
 
 
 def template_download(request, request_id):
@@ -392,5 +507,4 @@ def template_download(request, request_id):
     if not collection_req.template_file:
         return HttpResponse("양식 파일이 없습니다.", status=404)
 
-    # Cloudinary URL로 리다이렉트
     return redirect(collection_req.template_file.url)

@@ -29,14 +29,14 @@ def recreate_ssambti_product(apps, schema_editor):
         service_type='game',
         external_url='',  # CRITICAL FIX: Empty for internal service
     )
-    print("✓ Ssambti product recreated successfully with correct settings!")
+    print("[OK] Ssambti product recreated successfully with correct settings!")
 
 
 def reverse_recreate(apps, schema_editor):
     """Reverse migration: delete Ssambti product"""
     Product = apps.get_model('products', 'Product')
     Product.objects.filter(title='쌤BTI').delete()
-    print("✓ Ssambti product deleted.")
+    print("[OK] Ssambti product deleted.")
 
 
 class Migration(migrations.Migration):

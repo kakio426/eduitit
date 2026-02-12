@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ req.title }} - 제출하기{% endblock %}
+{% block title %}{% if is_edit %}제출물 수정{% else %}{{ req.title }} - 제출하기{% endif %}{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
@@ -9,8 +9,13 @@
 
         <!-- 헤더 -->
         <div class="text-center mb-8">
-            <div class="text-5xl mb-3">📋</div>
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{{ req.title }}</h1>
+            <div class="text-5xl mb-3">{% if is_edit %}✏️{% else %}📋{% endif %}</div>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                {% if is_edit %}제출물 수정{% else %}{{ req.title }}{% endif %}
+            </h1>
+            {% if is_edit %}
+            <p class="text-gray-500"><strong>{{ submission.contributor_name }}</strong>님의 제출 정보를 수정합니다.</p>
+            {% else %}
             {% if req.description %}
             <p class="text-gray-500 leading-relaxed break-keep">{{ req.description }}</p>
             {% endif %}
@@ -18,6 +23,7 @@
             <p class="text-sm text-orange-500 mt-2 font-medium">
                 <i class="fa-solid fa-clock mr-1"></i>마감: {{ req.deadline|date:"Y년 m월 d일 H:i" }}
             </p>
+            {% endif %}
             {% endif %}
         </div>
 
@@ -61,14 +67,16 @@
 
         <!-- 제출 폼 -->
         <div class="clay-card p-6" x-data="submitForm()">
-            <form action="{% url 'collect:submit_process' req.id %}" method="post" enctype="multipart/form-data"
-                @submit="isSubmitting = true">
+            <form
+                action="{% if is_edit %}{% url 'collect:submission_edit' submission.management_id %}{% else %}{% url 'collect:submit_process' req.id %}{% endif %}"
+                method="post" enctype="multipart/form-data" @submit="isSubmitting = true">
                 {% csrf_token %}
 
                 <!-- 이름 + 소속 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span
+                                class="text-red-500">*</span></label>
                         {% if req.expected_submitters_list %}
                         <div x-data="{ customName: false }">
                             <template x-if="!customName">
@@ -98,7 +106,7 @@
                             </template>
                         </div>
                         {% else %}
-                        <input type="text" name="contributor_name" required
+                        <input type="text" name="contributor_name" required value="{{ submission.contributor_name }}"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
                             placeholder="이름을 입력하세요">
                         {% endif %}
@@ -107,6 +115,7 @@
                         <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span
                                 class="text-gray-400 font-normal">(선택)</span></label>
                         <input type="text" name="contributor_affiliation"
+                            value="{{ submission.contributor_affiliation }}"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
                             placeholder="예: OO학교, OO부서">
                     </div>
@@ -141,6 +150,14 @@
 
                     <input type="hidden" name="submission_type" :value="tab">
 
+                    {% if is_edit and submission.submission_type == 'file' %}
+                    <div x-show="tab === 'file'" class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
+                        <p class="text-sm font-medium text-gray-700 mb-1">현재 제출된 파일:</p>
+                        <p class="text-sm text-emerald-600"><i class="fa-solid fa-file mr-1"></i> {{ submission.original_filename }}</p>
+                        <p class="text-xs text-gray-500 mt-2">* 파일 자체를 변경하시려면 삭제 후 다시 제출해주세요.</p>
+                    </div>
+                    {% endif %}
+
                     <!-- 파일 업로드 -->
                     <div x-show="tab === 'file'">
                         <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors"
@@ -171,17 +188,16 @@
 
                     <!-- 링크 제출 -->
                     <div x-show="tab === 'link'" class="space-y-3">
-                        <input type="url" name="link_url" placeholder="https://drive.google.com/..."
-                            :required="tab === 'link'"
+                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." {% if is_edit %}value="{{ submission.link_url }}" {% endif %} :required="tab === 'link'"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                        <input type="text" name="link_description" placeholder="링크 설명 (선택)"
+                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" {% if is_edit %}value="{{ submission.link_description }}" {% endif %}
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                     </div>
 
                     <!-- 텍스트 제출 -->
                     <div x-show="tab === 'text'">
                         <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab === 'text'"
-                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"></textarea>
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">{% if is_edit %}{{ submission.text_content }}{% endif %}</textarea>
                     </div>
                 </div>
 
@@ -193,8 +209,15 @@
                     <template x-if="isSubmitting">
                         <i class="fa-solid fa-spinner fa-spin"></i>
                     </template>
-                    <span x-text="isSubmitting ? '제출 중...' : '제출하기'"></span>
+                    <span x-text="isSubmitting ? '저장 중...' : (isEdit ? '수정 완료' : '제출하기')"></span>
                 </button>
+
+                {% if is_edit %}
+                <a href="{% url 'collect:submission_manage' submission.management_id %}"
+                    class="block text-center mt-4 text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fa-solid fa-arrow-left mr-1"></i>취소하고 돌아가기
+                </a>
+                {% endif %}
             </form>
         </div>
     </div>
@@ -203,29 +226,31 @@
 <script>
     function submitForm() {
         return {
-            tab: '{{ req.allow_file|yesno:"file," }}'.split(',')[0] || 'link',
-            fileName: '',
-            fileSizeMB: '',
+            tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
+            isEdit: {{ is_edit | yesno: "true,false" }
+    },
+    fileName: '',
+        fileSizeMB: '',
             fileError: '',
-            isSubmitting: false,
-            checkFileSize(event) {
-                const file = event.target.files[0];
-                if (!file) {
-                    this.fileName = '';
-                    this.fileSizeMB = '';
-                    this.fileError = '';
-                    return;
-                }
-                const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
-                const maxSize = maxMB * 1024 * 1024;
-                this.fileName = file.name;
-                this.fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-                if (file.size > maxSize) {
-                    this.fileError = `파일 크기가 ${maxMB}MB를 초과합니다. 링크로 제출해주세요.`;
-                } else {
-                    this.fileError = '';
-                }
-            }
+                isSubmitting: false,
+                    checkFileSize(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            this.fileName = '';
+            this.fileSizeMB = '';
+            this.fileError = '';
+            return;
+        }
+        const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
+        const maxSize = maxMB * 1024 * 1024;
+        this.fileName = file.name;
+        this.fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        if (file.size > maxSize) {
+            this.fileError = `파일 크기가 ${maxMB}MB를 초과합니다. 링크로 제출해주세요.`;
+        } else {
+            this.fileError = '';
+        }
+    }
         };
     }
 </script>

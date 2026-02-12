@@ -1,7 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
-from cloudinary_storage.storage import RawMediaCloudinaryStorage
+from django.conf import settings
+from django.core.files.storage import default_storage
+
+
+def get_raw_storage():
+    """Cloudinary가 설정된 경우에만 Cloudinary 로컬/원격 저장소 반환, 
+    그렇지 않으면 장고 기본 저장소(FileSystemStorage) 반환"""
+    if getattr(settings, 'USE_CLOUDINARY', False):
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+            return RawMediaCloudinaryStorage()
+        except (ImportError, Exception):
+            return default_storage
+    return default_storage
 
 
 class CollectionRequest(models.Model):
@@ -28,7 +41,7 @@ class CollectionRequest(models.Model):
     template_file = models.FileField(
         upload_to='collect/templates/', 
         null=True, blank=True, 
-        storage=RawMediaCloudinaryStorage(),
+        storage=get_raw_storage,
         help_text="양식 파일 (hwp, xlsx 등)"
     )
     template_file_name = models.CharField(max_length=255, blank=True, help_text="양식 파일 원본 이름")
@@ -94,9 +107,12 @@ class Submission(models.Model):
     contributor_affiliation = models.CharField(max_length=100, blank=True, help_text="소속")
     submission_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     # 파일 제출 (이미지 외 일반 파일 허용을 위해 Raw 스토리지 사용)
-    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True, storage=RawMediaCloudinaryStorage())
+    file = models.FileField(upload_to='collect/submissions/', null=True, blank=True, storage=get_raw_storage)
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(default=0, help_text="파일 크기(bytes)")
+
+    # 관리용 보안 ID (로그인 없이 수정/삭제 접근용)
+    management_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     # 링크 제출
     link_url = models.URLField(max_length=500, blank=True)
