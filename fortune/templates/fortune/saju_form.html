@@ -1093,8 +1093,7 @@
             <form method="post" id="sajuForm">
                 {% csrf_token %}
 
-                <!-- 모드 선택 (일반 모드 임시 숨김 — 재활성화: 아래 주석 해제) -->
-                <!-- MODE_TOGGLE_START
+                <!-- 모드 선택 -->
                 <div class="mb-8">
                     <label class="block text-2xl font-bold text-gray-600 mb-4">
                         <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>상담 모드
@@ -1110,7 +1109,6 @@
                         </button>
                     </div>
                 </div>
-                MODE_TOGGLE_END -->
                 <input type="hidden" name="mode" id="modeInput" value="teacher">
 
                 <!-- 이름 -->
