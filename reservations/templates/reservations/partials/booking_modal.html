@@ -1,0 +1,51 @@
+<div x-show="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+    x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-y-4"
+    x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200 transform"
+    x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative" @click.away="showModal = false">
+
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span class="text-purple-600 font-extrabold" x-text="selectedRoom"></span>
+            <span class="text-gray-400 font-medium text-sm" x-text="selectedPeriod + '교시'"></span>
+        </h3>
+
+        <form hx-post="{% url 'reservations:create_reservation' school.slug %}" hx-target="#reservation-grid-container"
+            hx-swap="none" class="space-y-4" @submit="saveAndSubmit()">
+            {% csrf_token %}
+            <input type="hidden" name="room_id" :value="selectedRoomId">
+            <input type="hidden" name="date" :value="selectedDate">
+            <input type="hidden" name="period" :value="selectedPeriod">
+
+            <div class="flex gap-4">
+                <div class="w-1/3">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">학년</label>
+                    <input type="number" name="grade" x-model="grade"
+                        class="w-full clay-inner p-3 rounded-xl text-center" min="1" max="6" required placeholder="N">
+                </div>
+                <div class="w-1/3">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">반</label>
+                    <input type="number" name="class_no" x-model="classNo"
+                        class="w-full clay-inner p-3 rounded-xl text-center" min="1" max="15" required placeholder="N">
+                </div>
+                <div class="w-1/3">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">이름</label>
+                    <input type="text" name="name" x-model="name" class="w-full clay-inner p-3 rounded-xl text-center"
+                        required placeholder="입력">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">메모 (선택)</label>
+                <input type="text" name="memo" x-model="memo" class="w-full clay-inner p-3 rounded-xl"
+                    placeholder="실험 제목 등">
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button type="button" @click="showModal = false"
+                    class="w-1/3 py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-100 transition-colors">취소</button>
+                <button type="submit"
+                    class="w-2/3 py-3 rounded-xl bg-purple-500 text-white font-bold shadow-clay hover:bg-purple-600 transition-colors transform active:scale-95">예약하기</button>
+            </div>
+        </form>
+    </div>
+</div>

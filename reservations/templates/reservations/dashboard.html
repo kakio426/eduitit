@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800 font-title flex items-center gap-3">
+                    <span class="text-5xl">🎛️</span>
+                    <span>{{ school.name }} 관리자 대시보드</span>
+                </h1>
+                <p class="text-gray-500 mt-2 ml-1">특별실, 고정 수업, 블랙아웃 기간을 관리하세요.</p>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="{% url 'reservations:reservation_index' school.slug %}" target="_blank"
+                    class="clay-btn-primary px-6 py-3 font-bold flex items-center gap-2">
+                    <i class="fas fa-external-link-alt"></i> 예약 현황판
+                </a>
+                <a href="{% url 'home' %}"
+                    class="clay-btn px-6 py-3 text-gray-600 font-bold hover:text-purple-600 flex items-center gap-2">
+                    <i class="fas fa-home"></i> 홈으로
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- 1. 특별실 관리 (Special Rooms) -->
+            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-door-open text-purple-500"></i> 특별실 관리
+                    </h2>
+                </div>
+
+                <!-- Room List (HTMX) -->
+                <div id="room-list-container" hx-get="{% url 'reservations:room_settings' school.slug %}"
+                    hx-trigger="load">
+                    <div class="flex justify-center py-8">
+                        <i class="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+
+                <!-- Add Room Form -->
+                <form hx-post="{% url 'reservations:room_settings' school.slug %}" hx-target="#room-list-container"
+                    class="mt-6 pt-6 border-t border-gray-200">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    <div class="flex gap-2">
+                        <input type="text" name="icon" placeholder="이모지"
+                            class="w-20 clay-inner p-3 rounded-xl text-center text-xl" value="📍">
+                        <input type="text" name="name" placeholder="특별실 이름 (예: 과학실)"
+                            class="flex-1 clay-inner p-3 rounded-xl" required>
+                        <button type="submit" class="clay-btn px-4 bg-purple-100 text-purple-600 hover:text-purple-800">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 2. 블랙아웃 관리 (Blackout Dates) -->
+            <div class="clay-card p-8" data-aos="fade-up" data-aos-delay="200">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-ban text-red-500"></i> 예약 제한(블랙아웃) 설정
+                    </h2>
+                </div>
+
+                <!-- Blackout List (HTMX) -->
+                <div id="blackout-list-container" hx-get="{% url 'reservations:blackout_settings' school.slug %}"
+                    hx-trigger="load">
+                    <div class="flex justify-center py-8">
+                        <i class="fas fa-circle-notch fa-spin text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+
+                <!-- Add Blackout Form -->
+                <form hx-post="{% url 'reservations:blackout_settings' school.slug %}"
+                    hx-target="#blackout-list-container" class="mt-6 pt-6 border-t border-gray-200">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex gap-2">
+                            <input type="date" name="start_date" class="flex-1 clay-inner p-3 rounded-xl text-sm"
+                                required>
+                            <span class="self-center text-gray-400">~</span>
+                            <input type="date" name="end_date" class="flex-1 clay-inner p-3 rounded-xl text-sm"
+                                required>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" name="reason" placeholder="사유 (예: 중간고사기간)"
+                                class="flex-1 clay-inner p-3 rounded-xl" required>
+                            <button type="submit"
+                                class="clay-btn px-6 bg-red-100 text-red-600 hover:text-red-800 font-bold">
+                                추가
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 3. 고정 시간표 매트릭스 (Full Width) -->
+            <div class="lg:col-span-2 clay-card p-8" data-aos="fade-up" data-aos-delay="300">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-th text-blue-500"></i> 고정 수업(Recurring) 설정
+                    </h2>
+                    <p class="text-sm text-gray-500">
+                        * 특정 교시를 클릭하여 고정 수업을 설정하거나 해제하세요.
+                    </p>
+                </div>
+
+                <div id="recurring-matrix-container" hx-get="{% url 'reservations:recurring_settings' school.slug %}"
+                    hx-trigger="load">
+                    <div class="flex justify-center py-12">
+                        <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,66 @@
+<div class="space-y-12">
+    {% for item in rooms_data %}
+    <div class="bg-white/50 rounded-2xl p-6 border border-white/60">
+        <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+            <span class="text-3xl">{{ item.room.icon }}</span>
+            <span>{{ item.room.name }}</span>
+        </h3>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-center border-separate border-spacing-1">
+                <thead>
+                    <tr>
+                        <th class="p-2 text-gray-500 text-sm font-medium">교시</th>
+                        {% for day_name in day_names %}
+                        <th class="p-2 text-gray-600 font-bold bg-white/40 rounded-lg w-24 sm:w-32">{{ day_name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for period_row in item.matrix %}
+                    <tr>
+                        <td class="p-2 text-gray-500 font-bold bg-white/40 rounded-lg text-sm">
+                            {{ forloop.counter }}교시
+                        </td>
+
+                        {% for schedule in period_row %}
+                        <td
+                            class="bg-gray-50/50 rounded-lg p-0 hover:bg-purple-50 transition-colors relative h-16 border border-transparent hover:border-purple-200">
+                            <!-- Toggle Button -->
+                            <form hx-post="{% url 'reservations:recurring_settings' school.slug %}"
+                                hx-target="#recurring-matrix-container" hx-swap="innerHTML"
+                                class="w-full h-full flex items-center justify-center cursor-pointer">
+                                {% csrf_token %}
+                                <input type="hidden" name="room_id" value="{{ item.room.id }}">
+                                <input type="hidden" name="day" value="{{ forloop.counter0 }}">
+                                <input type="hidden" name="period" value="{{ forloop.parentloop.counter }}">
+
+                                <button type="submit"
+                                    class="w-full h-full rounded-lg flex flex-col items-center justify-center gap-1 group">
+                                    {% if schedule %}
+                                    <!-- Active State -->
+                                    <div
+                                        class="text-purple-600 font-bold text-sm bg-purple-100 px-3 py-1 rounded-full shadow-sm">
+                                        <i class="fas fa-lock text-xs mr-1"></i>
+                                        {{ schedule.name }}
+                                    </div>
+                                    <span class="text-[10px] text-gray-400 group-hover:text-red-400 transition-colors">
+                                        (클릭하여 해제)
+                                    </span>
+                                    {% else %}
+                                    <!-- Inactive State -->
+                                    <i
+                                        class="fas fa-plus text-gray-300 group-hover:text-purple-400 text-lg transition-transform group-hover:scale-110"></i>
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>

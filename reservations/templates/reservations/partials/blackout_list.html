@@ -1,0 +1,22 @@
+<div class="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+    {% for blackout in blackouts %}
+    <div class="flex justify-between items-center p-3 bg-red-50 border border-red-100 rounded-xl">
+        <div>
+            <div class="text-sm font-bold text-red-800">{{ blackout.reason }}</div>
+            <div class="text-xs text-red-500">
+                {{ blackout.start_date|date:"Y.m.d" }} ~ {{ blackout.end_date|date:"Y.m.d" }}
+            </div>
+        </div>
+        <button hx-post="{% url 'reservations:blackout_settings' school.slug %}" hx-confirm="이 기간의 예약 제한을 해제하시겠습니까?"
+            hx-target="#blackout-list-container" class="text-red-400 hover:text-red-600 p-2">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="item_id" value="{{ blackout.id }}">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% empty %}
+    <div class="text-center text-gray-400 py-4">
+        설정된 블랙아웃 기간이 없습니다.
+    </div>
+    {% endfor %}
+</div>

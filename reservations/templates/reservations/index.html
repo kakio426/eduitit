@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="pt-24 pb-20 min-h-screen bg-[#E0E5EC]" x-data="{ 
+        showModal: false,
+        selectedRoom: null,
+        selectedRoomId: null,
+        selectedPeriod: null,
+        selectedDate: '{{ target_date|date:" Y-m-d" }}', grade: '' , classNo: '' , name: '' , memo: '' ,
+    openBooking(roomId, roomName, period, date) { this.selectedRoomId=roomId; this.selectedRoom=roomName;
+    this.selectedPeriod=period; this.selectedDate=date; // Load from LocalStorage const
+    saved=JSON.parse(localStorage.getItem('my_reservation_info') || '{}' ); if (saved.grade) this.grade=saved.grade; if
+    (saved.classNo) this.classNo=saved.classNo; if (saved.name) this.name=saved.name; this.showModal=true; },
+    saveAndSubmit() { // Save to LocalStorage localStorage.setItem('my_reservation_info', JSON.stringify({ grade:
+    this.grade, classNo: this.classNo, name: this.name })); // Allow form submission (HTMX will handle it, but we let
+    the event bubble) this.showModal=false; }, myReservations: JSON.parse(localStorage.getItem('my_reservations')
+    || '[]' ), addMyReservation(id) { if (!this.myReservations.includes(id)) { this.myReservations.push(id);
+    localStorage.setItem('my_reservations', JSON.stringify(this.myReservations)); } }, removeMyReservation(id) {
+    this.myReservations=this.myReservations.filter(rid=> rid !== id);
+    localStorage.setItem('my_reservations', JSON.stringify(this.myReservations));
+    }
+    }"
+    @reservation-created="addMyReservation($event.detail.id)"
+    >
+
+    <!-- Header & Date Navigation -->
+    <div class="max-w-7xl mx-auto px-4 mb-6">
+        <div class="flexflex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span class="text-3xl">🗓️</span>
+                <span>{{ school.name }} 특별실 예약</span>
+            </h1>
+
+            <div class="flex items-center gap-4 bg-white/50 rounded-xl p-2 shadow-inner">
+                <a href="?date={{ prev_date|date:'Y-m-d' }}"
+                    class="w-10 h-10 flex items-center justify-center rounded-full clay-btn hover:text-purple-600">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+
+                <div class="text-center px-4">
+                    <div class="text-lg font-bold text-gray-800">{{ target_date|date:"Y.m.d" }} ({{ weekday_name }})
+                    </div>
+                    {% if is_blackout %}
+                    <div class="text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded-full mt-1">
+                        {{ is_blackout.reason }} (예약 불가)
+                    </div>
+                    {% endif %}
+                </div>
+
+                <a href="?date={{ next_date|date:'Y-m-d' }}"
+                    class="w-10 h-10 flex items-center justify-center rounded-full clay-btn hover:text-purple-600">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (Grid) - HTMX Polling -->
+    <div class="max-w-7xl mx-auto px-4" id="reservation-grid-container"
+        hx-get="{% url 'reservations:reservation_index' school.slug %}?date={{ target_date|date:'Y-m-d' }}"
+        hx-trigger="load, every 30s" hx-swap="innerHTML">
+
+        <!-- Loading Spinner -->
+        <div class="flex justify-center py-20">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400"></i>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    {% include 'reservations/partials/booking_modal.html' %}
+
+</div>
+
+<!-- Listen for HTMX events -->
+<script>
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.detail.xhr.getResponseHeader('HX-Refresh') === 'true') {
+            window.location.reload();
+        }
+    });
+</script>
+{% endblock %}

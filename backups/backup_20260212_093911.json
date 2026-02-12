@@ -3,10 +3,10 @@
   "model": "auth.user",
   "fields": {
     "password": "pbkdf2_sha256$1200000$lZowoeTi35DTmZbwQyut5s$QnA5GUcwjJadRWQphRAMW5PZLF0wDv2og3duCtcmUpg=",
-    "last_login": null,
+    "last_login": "2026-02-11T12:22:29.501Z",
     "is_superuser": true,
     "username": "kakio",
-    "first_name": "",
+    "first_name": "유교사",
     "last_name": "",
     "email": "kakio@naver.com",
     "is_staff": true,
@@ -51,6 +51,23 @@
   }
 },
 {
+  "model": "auth.user",
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "testuser_repro",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-02-10T14:45:51.566Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
   "model": "core.userprofile",
   "pk": 1,
   "fields": {
@@ -71,7 +88,7 @@
       "kakio"
     ],
     "role": "school",
-    "nickname": null,
+    "nickname": "유교사",
     "gemini_api_key": null,
     "padlet_api_key": null
   }
@@ -82,6 +99,19 @@
   "fields": {
     "user": [
       "test"
+    ],
+    "role": null,
+    "nickname": null,
+    "gemini_api_key": null,
+    "padlet_api_key": null
+  }
+},
+{
+  "model": "core.userprofile",
+  "pk": 8,
+  "fields": {
+    "user": [
+      "testuser_repro"
     ],
     "role": null,
     "nickname": null,
@@ -118,10 +148,22 @@
   }
 },
 {
+  "model": "core.siteconfig",
+  "pk": 1,
+  "fields": {
+    "banner_text": "",
+    "banner_active": false,
+    "banner_color": "#7c3aed",
+    "banner_link": ""
+  }
+},
+{
   "model": "core.visitorlog",
   "pk": 1,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-01"
   }
 },
@@ -130,6 +172,8 @@
   "pk": 2,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-02"
   }
 },
@@ -138,6 +182,8 @@
   "pk": 3,
   "fields": {
     "ip_address": "8.8.8.8",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-02"
   }
 },
@@ -146,6 +192,8 @@
   "pk": 4,
   "fields": {
     "ip_address": "10.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-02"
   }
 },
@@ -154,6 +202,8 @@
   "pk": 5,
   "fields": {
     "ip_address": "10.0.0.2",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-02"
   }
 },
@@ -162,6 +212,8 @@
   "pk": 6,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-03"
   }
 },
@@ -170,6 +222,8 @@
   "pk": 7,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-04"
   }
 },
@@ -178,6 +232,8 @@
   "pk": 8,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-05"
   }
 },
@@ -186,6 +242,8 @@
   "pk": 9,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-06"
   }
 },
@@ -194,7 +252,49 @@
   "pk": 10,
   "fields": {
     "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
     "visit_date": "2026-02-07"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 11,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "user_agent": null,
+    "is_bot": false,
+    "visit_date": "2026-02-08"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 12,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+    "is_bot": false,
+    "visit_date": "2026-02-09"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 13,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "user_agent": "",
+    "is_bot": false,
+    "visit_date": "2026-02-10"
+  }
+},
+{
+  "model": "core.visitorlog",
+  "pk": 14,
+  "fields": {
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+    "is_bot": false,
+    "visit_date": "2026-02-11"
   }
 },
 {
@@ -209,14 +309,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "fa-solid fa-users-gear",
+    "icon": "fa-solid fa-clipboard-list",
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 1,
-    "service_type": "tool",
+    "service_type": "classroom",
     "external_url": "/products/dutyticker/",
     "created_at": "2026-01-24T14:06:12.489Z",
-    "updated_at": "2026-01-30T10:45:22.291Z"
+    "updated_at": "2026-02-10T08:52:55.145Z"
   }
 },
 {
@@ -231,14 +331,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "🎲",
+    "icon": "fa-solid fa-dice",
     "color_theme": "green",
     "card_size": "small",
     "display_order": 2,
     "service_type": "game",
     "external_url": "/products/yut/",
     "created_at": "2026-01-24T14:06:12.515Z",
-    "updated_at": "2026-01-30T10:55:26.786Z"
+    "updated_at": "2026-02-10T08:52:55.218Z"
   }
 },
 {
@@ -253,14 +353,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "🔮",
+    "icon": "fa-solid fa-star",
     "color_theme": "blue",
     "card_size": "small",
     "display_order": 3,
-    "service_type": "tool",
+    "service_type": "counsel",
     "external_url": "/fortune/",
     "created_at": "2026-01-24T14:06:12.539Z",
-    "updated_at": "2026-01-30T10:45:22.309Z"
+    "updated_at": "2026-02-10T08:52:55.229Z"
   }
 },
 {
@@ -275,14 +375,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "🖋️",
+    "icon": "fa-solid fa-file-signature",
     "color_theme": "orange",
     "card_size": "small",
     "display_order": 4,
-    "service_type": "tool",
+    "service_type": "work",
     "external_url": "/signatures/",
     "created_at": "2026-01-24T14:06:12.564Z",
-    "updated_at": "2026-01-30T10:45:22.318Z"
+    "updated_at": "2026-02-10T08:52:55.169Z"
   }
 },
 {
@@ -297,14 +397,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "📋",
+    "icon": "fa-solid fa-comments",
     "color_theme": "blue",
     "card_size": "small",
     "display_order": 5,
-    "service_type": "tool",
+    "service_type": "work",
     "external_url": "/padlet/",
     "created_at": "2026-01-24T14:06:12.589Z",
-    "updated_at": "2026-01-30T10:45:22.326Z"
+    "updated_at": "2026-02-10T09:03:04.959Z"
   }
 },
 {
@@ -319,14 +419,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "🎨",
+    "icon": "fa-solid fa-palette",
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 6,
-    "service_type": "tool",
+    "service_type": "classroom",
     "external_url": "/artclass/",
     "created_at": "2026-01-24T14:06:12.610Z",
-    "updated_at": "2026-01-30T10:45:22.336Z"
+    "updated_at": "2026-02-10T09:03:04.948Z"
   }
 },
 {
@@ -341,14 +441,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "fa-solid fa-robot",
+    "icon": "fa-solid fa-newspaper",
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 7,
-    "service_type": "tool",
+    "service_type": "work",
     "external_url": "/autoarticle/",
     "created_at": "2026-01-24T14:06:12.634Z",
-    "updated_at": "2026-01-30T10:45:22.343Z"
+    "updated_at": "2026-02-10T08:52:55.175Z"
   }
 },
 {
@@ -367,10 +467,10 @@
     "color_theme": "red",
     "card_size": "small",
     "display_order": 8,
-    "service_type": "platform",
+    "service_type": "etc",
     "external_url": "https://motube-woad.vercel.app/",
     "created_at": "2026-01-24T14:06:12.659Z",
-    "updated_at": "2026-01-30T10:45:22.353Z"
+    "updated_at": "2026-02-10T08:58:11.143Z"
   }
 },
 {
@@ -389,10 +489,10 @@
     "color_theme": "orange",
     "card_size": "small",
     "display_order": 9,
-    "service_type": "platform",
+    "service_type": "etc",
     "external_url": "https://schoolit.shop/",
     "created_at": "2026-01-24T14:06:12.678Z",
-    "updated_at": "2026-01-30T10:45:22.360Z"
+    "updated_at": "2026-02-10T08:52:55.235Z"
   }
 },
 {
@@ -411,10 +511,10 @@
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 10,
-    "service_type": "library",
+    "service_type": "edutech",
     "external_url": "/insights/",
     "created_at": "2026-01-24T14:06:12.702Z",
-    "updated_at": "2026-01-30T10:45:22.369Z"
+    "updated_at": "2026-02-10T08:58:11.129Z"
   }
 },
 {
@@ -429,14 +529,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "fa-solid fa-robot",
+    "icon": "fa-solid fa-lightbulb",
     "color_theme": "dark",
     "card_size": "small",
     "display_order": 11,
-    "service_type": "guide",
+    "service_type": "edutech",
     "external_url": "/tools/",
     "created_at": "2026-01-24T14:06:12.708Z",
-    "updated_at": "2026-01-30T10:45:22.377Z"
+    "updated_at": "2026-02-10T08:58:11.115Z"
   }
 },
 {
@@ -451,14 +551,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "fa-solid fa-wand-magic-sparkles",
+    "icon": "fa-solid fa-wand-sparkles",
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 12,
-    "service_type": "tool",
+    "service_type": "edutech",
     "external_url": "/prompts/",
     "created_at": "2026-01-24T14:06:12.714Z",
-    "updated_at": "2026-01-30T10:45:22.387Z"
+    "updated_at": "2026-02-10T08:58:11.122Z"
   }
 },
 {
@@ -473,14 +573,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "fa-solid fa-shield-halved",
+    "icon": "fa-solid fa-shield-heart",
     "color_theme": "red",
     "card_size": "small",
     "display_order": 8,
-    "service_type": "tool",
+    "service_type": "work",
     "external_url": "/school_violence/",
     "created_at": "2026-01-26T02:24:16.101Z",
-    "updated_at": "2026-01-30T10:45:22.395Z"
+    "updated_at": "2026-02-10T08:52:55.188Z"
   }
 },
 {
@@ -495,14 +595,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": true,
-    "icon": "🦁",
+    "icon": "fa-solid fa-heart-pulse",
     "color_theme": "orange",
     "card_size": "small",
     "display_order": 13,
-    "service_type": "game",
+    "service_type": "counsel",
     "external_url": "",
     "created_at": "2026-02-03T06:08:40.367Z",
-    "updated_at": "2026-02-03T06:08:40.367Z"
+    "updated_at": "2026-02-10T08:58:11.100Z"
   }
 },
 {
@@ -517,14 +617,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "♟️",
+    "icon": "fa-solid fa-chess-knight",
     "color_theme": "dark",
     "card_size": "small",
     "display_order": 14,
     "service_type": "game",
     "external_url": "",
     "created_at": "2026-02-03T06:25:34.219Z",
-    "updated_at": "2026-02-03T06:28:36.818Z"
+    "updated_at": "2026-02-10T08:52:55.223Z"
   }
 },
 {
@@ -539,14 +639,14 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": true,
-    "icon": "📄",
+    "icon": "fa-solid fa-file-export",
     "color_theme": "blue",
     "card_size": "small",
     "display_order": 14,
-    "service_type": "tool",
+    "service_type": "work",
     "external_url": "https://drive.google.com/file/d/1JfFn1WtkJyMBQ0OUleXPQPTf2t9ecgyq/view?usp=sharing",
     "created_at": "2026-02-06T13:11:47.297Z",
-    "updated_at": "2026-02-06T13:26:13.731Z"
+    "updated_at": "2026-02-10T08:52:55.182Z"
   }
 },
 {
@@ -561,14 +661,58 @@
     "is_active": true,
     "is_featured": false,
     "is_guest_allowed": false,
-    "icon": "",
+    "icon": "fa-solid fa-children",
     "color_theme": "purple",
     "card_size": "small",
     "display_order": 0,
-    "service_type": "tool",
+    "service_type": "counsel",
     "external_url": "",
     "created_at": "2026-02-06T15:44:50.399Z",
-    "updated_at": "2026-02-06T16:27:22.131Z"
+    "updated_at": "2026-02-10T08:58:11.109Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 139,
+  "fields": {
+    "title": "교사 백과사전",
+    "lead_text": "AI와 함께하는 교육 매뉴얼의 혁신, NotebookLM 기반 교사 백과사전입니다.",
+    "description": "Eduitit의 모든 기능과 교육적 활용 팁을 한눈에 확인하세요. Google NotebookLM 기술을 활용하여 방대한 매뉴얼도 질문 하나로 즉시 해결할 수 있습니다.",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": false,
+    "icon": "fa-solid fa-book-open",
+    "color_theme": "blue",
+    "card_size": "small",
+    "display_order": 0,
+    "service_type": "work",
+    "external_url": "",
+    "created_at": "2026-02-08T15:17:44.620Z",
+    "updated_at": "2026-02-10T08:58:11.136Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 140,
+  "fields": {
+    "title": "간편 수합",
+    "lead_text": "QR 코드 하나로 파일·링크·텍스트를 간편하게 수합하세요!",
+    "description": "여러 선생님으로부터 파일이나 정보를 수합해야 할 때, 메신저로 하나하나 받지 마세요.\n수합 요청을 만들고 QR/코드를 공유하면, 참여자들은 비로그인으로 파일·링크·텍스트를 제출합니다.\n한 화면에서 모든 제출물을 확인하고 다운로드하세요!",
+    "image": "",
+    "price": "0.00",
+    "is_active": true,
+    "is_featured": false,
+    "is_guest_allowed": true,
+    "icon": "📋",
+    "color_theme": "green",
+    "card_size": "small",
+    "display_order": 10,
+    "service_type": "work",
+    "external_url": "",
+    "created_at": "2026-02-10T14:49:23.690Z",
+    "updated_at": "2026-02-10T14:49:23.691Z"
   }
 },
 {
@@ -893,7 +1037,37 @@
 },
 {
   "model": "products.productfeature",
-  "pk": 277,
+  "pk": 280,
+  "fields": {
+    "product": 139,
+    "icon": "fa-solid fa-magnifying-glass",
+    "title": "지능형 검색",
+    "description": "매뉴얼의 방대한 내용 중 필요한 정보만 AI가 즉시 찾아줍니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 281,
+  "fields": {
+    "product": 139,
+    "icon": "fa-solid fa-graduation-cap",
+    "title": "교육적 활용 가이드",
+    "description": "각 서비스별 학급 경영 및 수업 활용 팁을 제공합니다."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 282,
+  "fields": {
+    "product": 139,
+    "icon": "fa-solid fa-bolt",
+    "title": "실시간 업데이트",
+    "description": "관리자가 업데이트하는 최신 기능 설명을 가장 빠르게 확인하세요."
+  }
+},
+{
+  "model": "products.productfeature",
+  "pk": 286,
   "fields": {
     "product": 138,
     "icon": "📱",
@@ -903,7 +1077,7 @@
 },
 {
   "model": "products.productfeature",
-  "pk": 278,
+  "pk": 287,
   "fields": {
     "product": 138,
     "icon": "🐾",
@@ -913,7 +1087,7 @@
 },
 {
   "model": "products.productfeature",
-  "pk": 279,
+  "pk": 288,
   "fields": {
     "product": 138,
     "icon": "📊",
@@ -2003,6 +2177,106 @@
     "step_number": 3,
     "description": "ㄴㅇㄻㄴㅇㄹㄴㅇㅎ",
     "image": ""
+  }
+},
+{
+  "model": "studentmbti.testsession",
+  "pk": "891cf7f9-2988-4b9d-b42e-77489439b660",
+  "fields": {
+    "teacher": [
+      "kakio"
+    ],
+    "session_name": "검사 세션 (2026-02-11 10:04)",
+    "created_at": "2026-02-11T10:04:21.752Z",
+    "is_active": true,
+    "access_code": "438435",
+    "test_type": "high"
+  }
+},
+{
+  "model": "studentmbti.testsession",
+  "pk": "aa66b4bb-a0b7-49ac-a4fd-0b18c019fb9f",
+  "fields": {
+    "teacher": [
+      "kakio"
+    ],
+    "session_name": "3-1",
+    "created_at": "2026-02-08T03:53:28.702Z",
+    "is_active": true,
+    "access_code": "960768",
+    "test_type": "low"
+  }
+},
+{
+  "model": "collect.collectionrequest",
+  "pk": "120439c8-4cd8-4d6f-afe5-f8baed670eff",
+  "fields": {
+    "creator": [
+      "kakio"
+    ],
+    "access_code": "407517",
+    "title": "dfdf",
+    "description": "dfdfdf",
+    "allow_file": true,
+    "allow_link": true,
+    "allow_text": true,
+    "deadline": "2026-02-28T12:22:00Z",
+    "status": "active",
+    "max_file_size_mb": 30,
+    "max_submissions": 50,
+    "expected_submitters": "dfdf\r\ndfdfs\r\ndfdfdg",
+    "template_file": "collect/templates/2026_교육과정_준비기간_연수자료현암.hwp",
+    "template_file_name": "2026 교육과정 준비기간 연수자료(현암).hwp",
+    "created_at": "2026-02-11T12:23:19.655Z",
+    "updated_at": "2026-02-11T12:23:19.655Z"
+  }
+},
+{
+  "model": "collect.collectionrequest",
+  "pk": "5ce61e8d-f815-447a-a500-d84c82250d72",
+  "fields": {
+    "creator": [
+      "kakio"
+    ],
+    "access_code": "258541",
+    "title": "교육과정 수합dfdf",
+    "description": "교육과정 제출해주세요.dfdf",
+    "allow_file": true,
+    "allow_link": true,
+    "allow_text": true,
+    "deadline": "2026-02-28T04:40:00Z",
+    "status": "active",
+    "max_file_size_mb": 30,
+    "max_submissions": 51,
+    "expected_submitters": "1학년\r\n2학년\r\n3학년\r\n4학년\r\n5학년\r\n6학년",
+    "template_file": "",
+    "template_file_name": "",
+    "created_at": "2026-02-11T04:52:30.906Z",
+    "updated_at": "2026-02-11T04:52:30.906Z"
+  }
+},
+{
+  "model": "collect.collectionrequest",
+  "pk": "b9d05eb1-fb26-4f0d-8706-fd1eb6dac835",
+  "fields": {
+    "creator": [
+      "kakio"
+    ],
+    "access_code": "815031",
+    "title": "Test Request",
+    "description": "",
+    "allow_file": true,
+    "allow_link": true,
+    "allow_text": true,
+    "deadline": null,
+    "status": "active",
+    "max_file_size_mb": 30,
+    "max_submissions": 50,
+    "expected_submitters": "",
+    "template_file": "",
+    "template_file_name": "",
+    "created_at": "2026-02-11T04:22:43.129Z",
+    "updated_at": "2026-02-11T04:22:43.129Z"
   }
 },
 {
