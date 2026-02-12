@@ -55,7 +55,8 @@
 
         <!-- 안내사항 -->
         <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-700 space-y-1">
-            <p><i class="fa-solid fa-info-circle mr-1"></i> 파일은 <strong>{{ req.max_file_size_mb }}MB 이하</strong>만 업로드 가능합니다.</p>
+            <p><i class="fa-solid fa-info-circle mr-1"></i> 파일은 <strong>{{ req.max_file_size_mb }}MB 이하</strong>만 업로드
+                가능합니다.</p>
             <p>{{ req.max_file_size_mb }}MB를 초과하는 파일은 <strong>구글드라이브/원드라이브</strong> 등에 업로드 후 링크로 제출해주세요.</p>
         </div>
 
@@ -86,7 +87,7 @@
                                         class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                                         <option value="">-- 이름 선택 --</option>
                                         {% for name in req.expected_submitters_list %}
-                                        <option value="{{ name }}" {% if submission.contributor_name==name %}selected{% endif %}>{{ name }}</option>
+                                        <option value="{{ name }}" {% if submission.contributor_name == name %}selected{% endif %}>{{ name }}</option>
                                         {% endfor %}
                                         <option value="__custom__">직접 입력...</option>
                                     </select>
@@ -126,21 +127,21 @@
                     <label class="block text-sm font-bold text-gray-600 mb-2">제출 유형</label>
                     <div class="flex gap-2 mb-4">
                         {% if req.allow_file %}
-                        <button type="button" @click="tab='file'"
+                        <button type="button" @click="tab = 'file'"
                             :class="tab === 'file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
                             class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-file mr-1"></i>파일
                         </button>
                         {% endif %}
                         {% if req.allow_link %}
-                        <button type="button" @click="tab='link'"
+                        <button type="button" @click="tab = 'link'"
                             :class="tab === 'link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
                             class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-link mr-1"></i>링크
                         </button>
                         {% endif %}
                         {% if req.allow_text %}
-                        <button type="button" @click="tab='text'"
+                        <button type="button" @click="tab = 'text'"
                             :class="tab === 'text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'"
                             class="px-4 py-2 rounded-xl font-bold text-sm transition-all">
                             <i class="fa-solid fa-align-left mr-1"></i>텍스트
@@ -227,8 +228,8 @@
     function submitForm() {
         return {
             tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
-            isEdit: {{ is_edit | yesno: "true,false" }
-    },
+            isEdit: {{ is_edit|yesno:"true,false" }},
+        
     fileName: '',
         fileSizeMB: '',
             fileError: '',
@@ -251,7 +252,7 @@
             this.fileError = '';
         }
     }
-    }
+    };
 }
 </script>
 {% endblock %}
