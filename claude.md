@@ -847,7 +847,7 @@ migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebookl
 - [ ] `{% elif product.title == '서비스명' %}{% url 'app:landing' %}` 분기 추가
 - [ ] `external_url` 사용하는 외부 서비스는 분기 불필요 (첫 번째 조건에서 처리됨)
 
-> **사례 (2026-02-12)**: '간편 수합', '교사 백과사전', '학교 예약 시스템' 등 새 서비스를 추가할 때 `preview_modal.html`에 등록을 누락하여 시작 버튼이 작동하지 않는 현상이 반복됨. 신규 앱 생성 시 체크리스트 5번 항목(`preview_modal.html` 분기 추가)을 반드시 준수할 것.
+> **사례 (2026-02-12)**: '간편 수합', '교사 백과사전', '학교 예약 시스템' 등 새 서비스를 추가할 때 `preview_modal.html`에 등록을 누락하여 시작 버튼이 작동하지 않는 현상이 반복됨. 신규 앱 생성 시 체크리스트 5번 항목(`preview_modal.html` 분기 추가)을 반드시 준수할 것. (현재: '학교 예약 시스템' -> `reservations:reservation_index`)
 
 ### 32. ensure_* 명령어 — defaults의 service_type은 반드시 SERVICE_CHOICES 값 사용
 
@@ -885,7 +885,7 @@ migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebookl
 
 **현재 Procfile 실행 순서:**
 ```
-migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensure_collect → check_visitors → gunicorn
+migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensure_collect → ensure_reservations → check_visitors → gunicorn
 ```
 
 ### 34. 새로운 서비스 개발 시 로컬 데이터베이스 데이터 확인
@@ -1043,7 +1043,7 @@ HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 �
 
 ---
 
-**마지막 업데이트:** 2026-02-12 11:55
+**마지막 업데이트:** 2026-02-12 12:30
 
 ## 45. 비회원 관리 접근 권한 — 세션 대신 UUID(Management ID) 사용 (CRITICAL)
 
@@ -1101,3 +1101,34 @@ const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
 ```
 
 > **사례 (2026-02-11)**: 제출 페이지에서 JS 문법 에러로 Alpine.js 초기화가 중단되어 버튼이 비활성화되는 버그 발생. 템플릿 태그를 한 줄로 정리하여 해결.
+
+---
+
+# 앱별 이슈 분석 기록 (계속)
+
+## Reservations 앱 - 커스텀 교시 및 보안 URL (2026-02-12)
+
+### 49. 공공용 URL의 무작위성 확보 (Security/Random Slugs)
+
+사용자(교사)가 직접 주소를 정하게 하면 `hyunam`, `seoul` 등 추측하기 쉬운 단어를 사용하여 타인이 무단으로 접속하거나 장난을 칠 우려가 있다.
+
+- **증상**: 학교 이름을 슬러그로 쓸 때 타 학교 학생이 주소를 맞혀서 예약을 엉망으로 만듦.
+- **해결**: `models.py`의 `save()` 메서드에서 `uuid.uuid4().hex[:8]`를 사용해 추측 불가능한 슬러그를 자동 생성하고, UI에서 사용자의 직접 수정을 제한한다.
+- **Short URL**: 보안 URL이 길어 불편하므로 `/go/<id>/` 형태의 짧은 전용 리다이렉트 링크를 제공한다.
+
+### 50. 커스텀 교시(Period Labels) 관리 전략
+
+학교마다 "1교시", "5교시A", "특강팀" 등 사용하는 이름과 교시 수가 다르다.
+
+- **패턴**: `SchoolConfig` 모델에 `period_labels` (TextField, CSV) 필드를 추가.
+- **작동**: 콤마(`,`)로 구분된 문자열을 `get_period_list()` 메서드로 리스트화하여, 예약 그리드(Row)를 동적으로 생성.
+- **주의**: 그리드 렌더링 시 "몇 번째 교시"라는 숫자 대신 "Label과 ID"를 매칭하여 렌더링해야 함. (`{% if s.period == p.id %}`)
+
+### 51. allauth v65.x+ 설정 마이그레이션 (Monitoring)
+
+서버 구동 시 또는 마이그레이션 시 Deprecation 경고 발생 대응.
+
+- `ACCOUNT_AUTHENTICATION_METHOD` → `ACCOUNT_LOGIN_METHODS = {'email', 'username'}`
+- `ACCOUNT_EMAIL_REQUIRED` → `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']`
+- 프로덕션 `settings_production.py`와 로컬 `settings.py` 모두 동기화 필수.
+

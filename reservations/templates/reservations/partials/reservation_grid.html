@@ -18,11 +18,11 @@
             <tbody>
                 {% for p in periods %}
                 <tr>
-                    <td class="p-3 bg-gray-50 rounded-xl font-bold text-gray-500">{{ p }}교시</td>
+                    <td class="p-3 bg-gray-50 rounded-xl font-bold text-gray-500 text-sm truncate max-w-[100px]">{{ p.label }}</td>
                     {% for room_data in rooms_data %}
                     <!-- Actually, we prepared slots as list, so let's use lookup -->
                     {% for s in room_data.slots %}
-                    {% if s.period == p %}
+                    {% if s.period == p.id %}
                     <td class="p-0 h-20 transition-all transform hover:scale-[1.02]">
                         {% if s.state == 'reserved' %}
                         <div
@@ -72,7 +72,7 @@
                         {% else %}
                         <!-- Available -->
                         <button
-                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p }}, '{{ target_date|date:'Y-m-d' }}')"
+                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:'Y-m-d' }}', '{{ p.label }}')"
                             class="w-full h-full bg-white rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-md flex justify-center items-center group transition-all">
                             <i
                                 class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
@@ -104,12 +104,12 @@
                 {% if s.state == 'reserved' %}
                 <div
                     class="bg-purple-50 rounded-lg p-3 border border-purple-100 h-20 flex flex-col justify-center items-center text-center relative">
-                    <div class="text-xs font-bold text-gray-400 absolute top-1 left-2">{{ s.period }}교시</div>
+                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
                     <div class="text-purple-800 font-bold text-sm">{{ s.reservation.grade }}-{{ s.reservation.class_no }} {{ s.reservation.name }}</div>
 
                     <!-- My Reservation -->
                     <div x-show="myReservations.includes({{ s.reservation.id }})" class="absolute top-1 right-2">
-                        <i class="fas fa-check-circle text-purple-500 text-xs"></i>
+                        <i class="fas fa-check-circle text-purple-500 text-[10px]"></i>
                     </div>
 
                     <!-- User Delete -->
@@ -117,7 +117,7 @@
                         hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
                         hx-confirm="예약을 취소하시겠습니까?" class="absolute bottom-1 right-2 text-red-400 hover:text-red-600 p-1"
                         onclick="event.stopPropagation()">
-                        <i class="fas fa-trash-alt text-xs"></i>
+                        <i class="fas fa-trash-alt text-[10px]"></i>
                     </button>
 
                     <!-- Admin Delete Override -->
@@ -133,22 +133,22 @@
                 {% elif s.state == 'recurring' %}
                 <div
                     class="bg-gray-50 rounded-lg p-3 border border-dashed border-gray-200 h-20 flex flex-col justify-center items-center text-center">
-                    <div class="text-xs font-bold text-gray-400 absolute top-1 left-2">{{ s.period }}교시</div>
+                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
                     <div class="text-gray-400 text-xs font-bold flex items-center gap-1">
                         <i class="fas fa-lock text-[10px]"></i> {{ s.recurring.name }}
                     </div>
                 </div>
                 {% elif s.state == 'blackout' %}
-                <div class="bg-red-50 rounded-lg p-3 h-20 flex justify-center items-center opacity-50">
-                    <div class="text-xs font-bold text-Red-300 absolute top-1 left-2">{{ s.period }}교시</div>
+                <div class="bg-red-50 rounded-lg p-3 h-20 flex justify-center items-center opacity-50 relative">
+                    <div class="text-[10px] font-bold text-red-300 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
                     <i class="fas fa-ban text-red-300"></i>
                 </div>
                 {% else %}
                 <!-- Available -->
                 <button
-                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:'Y-m-d' }}')"
-                    class="w-full bg-white rounded-lg p-3 border border-gray-100 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-purple-300 transition-all group">
-                    <div class="text-xs font-bold text-gray-400 absolute top-1 left-2 group-hover:text-purple-400">{{ s.period }}교시</div>
+                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:'Y-m-d' }}', '{{ s.label }}')"
+                    class="w-full bg-white rounded-lg p-3 border border-gray-100 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-purple-300 transition-all group relative">
+                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 group-hover:text-purple-400 truncate max-w-[60px]">{{ s.label }}</div>
                     <div class="text-gray-300 font-bold text-sm group-hover:text-purple-500">예약 가능</div>
                 </button>
                 {% endif %}

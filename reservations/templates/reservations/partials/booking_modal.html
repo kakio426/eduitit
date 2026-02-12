@@ -6,7 +6,7 @@
 
         <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span class="text-purple-600 font-extrabold" x-text="selectedRoom"></span>
-            <span class="text-gray-400 font-medium text-sm" x-text="selectedPeriod + '교시'"></span>
+            <span class="text-gray-400 font-medium text-sm" x-text="selectedPeriodLabel"></span>
         </h3>
 
         <form hx-post="{% url 'reservations:create_reservation' school.slug %}" hx-target="#reservation-grid-container"

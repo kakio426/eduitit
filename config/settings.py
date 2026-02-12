@@ -194,11 +194,10 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Settings
 ACCOUNT_LOGOUT_ON_GET = True
-ACCOUNT_EMAIL_REQUIRED = True  # 이메일 필수
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증은 선택 (서비스 진입 장벽 낮춤)
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # 아이디 또는 이메일로 로그인 가능
-ACCOUNT_SIGNUP_FIELDS = ['email', 'username']
-ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'  # 커스텀 가입 폼 (별명 필수, 소셜 포함)
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
 SESSION_COOKIE_AGE = 86400  # 24시간 (OAuth 콜백 등 긴 플로우에서도 세션 유지)
 SESSION_SAVE_EVERY_REQUEST = False  # 매 요청마다 DB write 방지 (성능 개선)

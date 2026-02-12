@@ -46,9 +46,16 @@ def dashboard_landing(request):
             SpecialRoom.objects.create(school=school, name="컴퓨터실", icon="💻")
             
             messages.success(request, f"{school.name}이(가) 생성되었습니다.")
-            return redirect('reservations:admin_dashboard', school_slug=school.slug)
-            
-    return render(request, 'reservations/landing.html')
+    if school:
+        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+    
+    # 사실 School 모델 정의 상 multi-school도 가능하지만 현재는 1인 1학교로 가정
+    return render(request, 'reservations/dashboard_landing.html')
+
+def short_url_redirect(request, school_id):
+    """ID 기반의 짧은 URL으로 접속하면 학교 페이지로 리다이렉트"""
+    school = get_object_or_404(School, id=school_id)
+    return redirect('reservations:reservation_index', school_slug=school.slug)
 
 @login_required
 def admin_dashboard(request, school_slug):
@@ -127,32 +134,68 @@ def recurring_settings(request, school_slug):
     # matrix[period-1][day] 형태로 접근 가능하게 (1교시가 0번 인덱스)
     
     config = school.config
-    periods = range(1, config.max_periods + 1)
+    period_labels = config.get_period_list()
+    periods = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
     days = range(5) # 0~4 (월~금)
     
     rooms_data = []
     for room in rooms:
-        # Init empty matrix: rows=periods, cols=days
+        # matrix[period-1][day]
         matrix = [[None for _ in days] for _ in periods]
-        
         schedules = RecurringSchedule.objects.filter(room=room)
-        
         for sched in schedules:
-            if 1 <= sched.period <= config.max_periods and 0 <= sched.day_of_week <= 4:
+            if 1 <= sched.period <= len(periods) and 0 <= sched.day_of_week <= 4:
                 matrix[sched.period-1][sched.day_of_week] = sched
+        
+        # 행 단위로 변환 (교시 정보 포함)
+        rows = []
+        for i, period_info in enumerate(periods):
+            rows.append({
+                'period': period_info,
+                'slots': matrix[i]
+            })
                 
         rooms_data.append({
             'room': room,
-            'matrix': matrix
+            'rows': rows
         })
     
     return render(request, 'reservations/partials/recurring_matrix.html', {
         'school': school,
         'rooms_data': rooms_data,
-        'periods': periods,
         'days': days,
         'day_names': ['월', '화', '수', '목', '금']
     })
+
+@login_required
+@require_POST
+def update_config(request, school_slug):
+    """
+    학교 설정 업데이트 (교시 이름 등)
+    """
+    school = get_object_or_404(School, slug=school_slug, owner=request.user)
+    config = school.config
+    
+    # 학교 기본 정보 변경 (이름)
+    new_name = request.POST.get('school_name')
+    if new_name:
+        school.name = new_name
+    
+    school.save()
+
+    period_labels = request.POST.get('period_labels')
+    if period_labels:
+        config.period_labels = period_labels
+        # max_periods 동기화 (기존 코드와의 호환성)
+        config.max_periods = len(config.get_period_list())
+        config.save()
+        messages.success(request, "학교 설정이 저장되었습니다.")
+    
+    # 설정 후 대시보드로 리다이렉트 (HTMX일 경우 HX-Refresh)
+    response = HttpResponse()
+    # 슬러그가 바뀌었을 수 있으므로 전체 새로고침
+    response['HX-Refresh'] = "true"
+    return response
 
 @login_required
 def blackout_settings(request, school_slug):
@@ -209,24 +252,24 @@ def reservation_index(request, school_slug):
     
     # 데이터 조회
     rooms = school.specialroom_set.all()
-    periods = range(1, config.max_periods + 1)
+    period_labels = config.get_period_list()
+    # periods = range(1, config.max_periods + 1)
+    periods_data = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
     
     # 예약 및 고정 수업 조회
     reservations = Reservation.objects.filter(room__school=school, date=target_date).select_related('room')
     recurring = RecurringSchedule.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     
     # 매트릭스 구성
-    # structure: [ { 'room': room, 'slots': [ { 'period': 1, 'res': ..., 'rec': ..., 'state': ... } ] } ]
-    
     reservation_map = {(r.room_id, r.period): r for r in reservations}
     recurring_map = {(r.room_id, r.period): r for r in recurring}
     
     rooms_data = []
     for room in rooms:
         slots = []
-        for p in periods:
-            res = reservation_map.get((room.id, p))
-            rec = recurring_map.get((room.id, p))
+        for p in periods_data:
+            res = reservation_map.get((room.id, p['id']))
+            rec = recurring_map.get((room.id, p['id']))
             
             # 상태 결정
             state = 'available'
@@ -238,7 +281,8 @@ def reservation_index(request, school_slug):
                 state = 'reserved'
             
             slots.append({
-                'period': p,
+                'period': p['id'],
+                'label': p['label'],
                 'reservation': res,
                 'recurring': rec,
                 'state': state
@@ -256,7 +300,7 @@ def reservation_index(request, school_slug):
         'next_date': next_date,
         'is_blackout': is_blackout,
         'rooms_data': rooms_data,
-        'periods': periods,
+        'periods': periods_data,
         'weekday_name': ['월', '화', '수', '목', '금', '토', '일'][target_date.weekday()]
     }
     

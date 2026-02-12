@@ -1,18 +1,30 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
 class School(models.Model):
     name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True, allow_unicode=True) # URL key like 'seoul-es'
+    slug = models.SlugField(unique=True, allow_unicode=True) # Public identifier (randomized)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            # Generate a random 8-character slug
+            self.slug = uuid.uuid4().hex[:8]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
 class SchoolConfig(models.Model):
     school = models.OneToOneField(School, on_delete=models.CASCADE, related_name='config')
-    max_periods = models.IntegerField(default=6) # 1~N periods
-    reservation_window_days = models.IntegerField(default=14) # How far in future to book
+    max_periods = models.IntegerField(default=6) # Safety/Legacy
+    period_labels = models.TextField(default="1교시,2교시,3교시,4교시,5교시,6교시") # Custom labels
+    reservation_window_days = models.IntegerField(default=14)
+
+    def get_period_list(self):
+        """Returns labels as a list of strings: ['1교시', '2교시', ...]"""
+        return [p.strip() for p in self.period_labels.split(',') if p.strip()]
 
     def __str__(self):
         return f"{self.school.name} Config"

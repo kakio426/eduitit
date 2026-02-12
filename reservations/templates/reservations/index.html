@@ -1,24 +1,42 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="pt-24 pb-20 min-h-screen bg-[#E0E5EC]" x-data="{ 
+<div class="pt-24 pb-20 min-h-screen bg-[#E0E5EC]" 
+    x-data="{ 
         showModal: false,
         selectedRoom: null,
         selectedRoomId: null,
         selectedPeriod: null,
-        selectedDate: '{{ target_date|date:" Y-m-d" }}', grade: '' , classNo: '' , name: '' , memo: '' ,
-    openBooking(roomId, roomName, period, date) { this.selectedRoomId=roomId; this.selectedRoom=roomName;
-    this.selectedPeriod=period; this.selectedDate=date; // Load from LocalStorage const
-    saved=JSON.parse(localStorage.getItem('my_reservation_info') || '{}' ); if (saved.grade) this.grade=saved.grade; if
-    (saved.classNo) this.classNo=saved.classNo; if (saved.name) this.name=saved.name; this.showModal=true; },
-    saveAndSubmit() { // Save to LocalStorage localStorage.setItem('my_reservation_info', JSON.stringify({ grade:
-    this.grade, classNo: this.classNo, name: this.name })); // Allow form submission (HTMX will handle it, but we let
-    the event bubble) this.showModal=false; }, myReservations: JSON.parse(localStorage.getItem('my_reservations')
-    || '[]' ), addMyReservation(id) { if (!this.myReservations.includes(id)) { this.myReservations.push(id);
-    localStorage.setItem('my_reservations', JSON.stringify(this.myReservations)); } }, removeMyReservation(id) {
-    this.myReservations=this.myReservations.filter(rid=> rid !== id);
-    localStorage.setItem('my_reservations', JSON.stringify(this.myReservations));
-    }
+        selectedPeriodLabel: '',
+        selectedDate: '{{ target_date|date:'Y-m-d' }}', 
+        grade: '', classNo: '', name: '', memo: '',
+        openBooking(roomId, roomName, period, date, periodLabel) { 
+            this.selectedRoomId = roomId; 
+            this.selectedRoom = roomName;
+            this.selectedPeriod = period; 
+            this.selectedPeriodLabel = periodLabel;
+            this.selectedDate = date; 
+            const saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}'); 
+            if (saved.grade) this.grade = saved.grade; 
+            if (saved.classNo) this.classNo = saved.classNo; 
+            if (saved.name) this.name = saved.name; 
+            this.showModal = true; 
+        },
+        saveAndSubmit() { 
+            localStorage.setItem('my_reservation_info', JSON.stringify({ grade: this.grade, classNo: this.classNo, name: this.name })); 
+            this.showModal = false; 
+        }, 
+        myReservations: JSON.parse(localStorage.getItem('my_reservations') || '[]'), 
+        addMyReservation(id) { 
+            if (!this.myReservations.includes(id)) { 
+                this.myReservations.push(id);
+                localStorage.setItem('my_reservations', JSON.stringify(this.myReservations)); 
+            } 
+        }, 
+        removeMyReservation(id) {
+            this.myReservations = this.myReservations.filter(rid => rid !== id);
+            localStorage.setItem('my_reservations', JSON.stringify(this.myReservations));
+        }
     }"
     @reservation-created="addMyReservation($event.detail.id)"
     >
