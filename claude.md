@@ -1042,3 +1042,35 @@ HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 �
 ---
 
 **마지막 업데이트:** 2026-02-11 20:55
+
+## 31. Cloudinary 비이미지 파일 처리 (resource_type='raw') (CRITICAL)
+
+Cloudinary 기본 설정은 `resource_type='image'`입니다. HWP, XLSX, PDF, ZIP 등 이미지가 아닌 일반 파일을 업로드하려면 **`RawMediaCloudinaryStorage`**를 사용해야 합니다.
+
+```python
+# ❌ Invalid image file 에러 발생 (이미지로 처리를 시도함)
+from cloudinary_storage.storage import VideoMediaCloudinaryStorage # 또는 기본 Storage
+file = models.FileField(storage=VideoMediaCloudinaryStorage())
+
+# ✅ 일반 파일용 스토리지 사용
+from cloudinary_storage.storage import RawMediaCloudinaryStorage
+file = models.FileField(storage=RawMediaCloudinaryStorage())
+```
+
+> **사례 (2026-02-11)**: 간편 수합 서비스에서 한글(hwp)이나 엑셀 파일을 올릴 때 "Invalid image file" 에러와 함께 500 에러 발생. `RawMediaCloudinaryStorage`로 교체하여 해결. **주의: `RawCloudinaryStorage`가 아니라 `RawMediaCloudinaryStorage`가 올바른 클래스 이름임.** (ImportError 방지)
+
+## 32. JS 내 Django 템플릿 태그 사용 시 공백/필터 주의
+
+JavaScript 코드 안에서 `{{ value }}`를 사용할 때, 필터나 공백 처리가 잘못되면 JS 문법 에러(`SyntaxError`)가 발생하여 해당 블록 전체가 작동하지 않을 수 있습니다.
+
+```javascript
+/* ❌ 줄바꿈이나 공백이 JS 문법을 파괴할 수 있음 */
+var maxSize = {{ req.max_file_size_mb |default: 30 }}; 
+// 결과가 만약 줄바꿈을 포함하면 JS 에러
+
+/* ✅ 괄호나 따옴표로 감싸거나, 간단한 필터만 사용 */
+const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
+const maxSize = maxMB * 1024 * 1024;
+```
+
+> **사례 (2026-02-11)**: 제출 페이지에서 '제출하기' 버튼이 계속 비활성화되는 현상 발생. 원인은 JS 내 `{{ }}` 태그가 rebase 과정에서 줄바꿈이 섞여 JS 문법 에러를 유발, Alpine.js 초기화가 중단되었기 때문. 템플릿 태그를 한 줄로 정리하고 `parseInt`로 안전하게 처리하여 해결.

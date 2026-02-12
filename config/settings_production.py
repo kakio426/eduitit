@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'encyclopedia.apps.EncyclopediaConfig',
     'django_htmx',
     'django.contrib.humanize',
+    'reservations.apps.ReservationsConfig',
 
     # Auth & Allauth
     'django.contrib.sites',
@@ -480,6 +481,7 @@ def run_startup_tasks():
         call_command('ensure_studentmbti')
         call_command('ensure_notebooklm')
         call_command('ensure_collect')
+        call_command('ensure_reservations')
     except Exception as e:
         print(f"DEBUG: Startup product ensure tasks failed: {e}")
 

@@ -55,8 +55,7 @@
 
         <!-- 안내사항 -->
         <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-700 space-y-1">
-            <p><i class="fa-solid fa-info-circle mr-1"></i> 파일은 <strong>{{ req.max_file_size_mb }}MB 이하</strong>만 업로드
-                가능합니다.</p>
+            <p><i class="fa-solid fa-info-circle mr-1"></i> 파일은 <strong>{{ req.max_file_size_mb }}MB 이하</strong>만 업로드 가능합니다.</p>
             <p>{{ req.max_file_size_mb }}MB를 초과하는 파일은 <strong>구글드라이브/원드라이브</strong> 등에 업로드 후 링크로 제출해주세요.</p>
         </div>
 
@@ -76,8 +75,7 @@
                 <!-- 이름 + 소속 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span
-                                class="text-red-500">*</span></label>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
                         {% if req.expected_submitters_list %}
                         <div x-data="{ customName: false }">
                             <template x-if="!customName">
@@ -154,8 +152,7 @@
                     {% if is_edit and submission.submission_type == 'file' %}
                     <div x-show="tab === 'file'" class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
                         <p class="text-sm font-medium text-gray-700 mb-1">현재 제출된 파일:</p>
-                        <p class="text-sm text-emerald-600"><i class="fa-solid fa-file mr-1"></i> {{
-                            submission.original_filename }}</p>
+                        <p class="text-sm text-emerald-600"><i class="fa-solid fa-file mr-1"></i> {{ submission.original_filename }}</p>
                         <p class="text-xs text-gray-500 mt-2">* 파일 자체를 변경하시려면 삭제 후 다시 제출해주세요.</p>
                     </div>
                     {% endif %}
@@ -190,11 +187,9 @@
 
                     <!-- 링크 제출 -->
                     <div x-show="tab === 'link'" class="space-y-3">
-                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." {% if is_edit
-                            %}value="{{ submission.link_url }}" {% endif %} :required="tab === 'link'"
+                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." {% if is_edit %}value="{{ submission.link_url }}" {% endif %} :required="tab === 'link'"
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" {% if is_edit
-                            %}value="{{ submission.link_description }}" {% endif %}
+                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" {% if is_edit %}value="{{ submission.link_description }}" {% endif %}
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                     </div>
 
@@ -231,8 +226,7 @@
     function submitForm() {
         return {
             tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
-            isEdit: {{ is_edit | yesno: "true,false" }
-    },
+            isEdit: {{ is_edit | yesno: "true,false" }},
     fileName: '',
         fileSizeMB: '',
             fileError: '',

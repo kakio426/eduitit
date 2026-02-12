@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'encyclopedia.apps.EncyclopediaConfig',
     'django_htmx',
     'django.contrib.humanize',
+    'reservations.apps.ReservationsConfig',
 
     # Auth & Allauth
     'django.contrib.sites',

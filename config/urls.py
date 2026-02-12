@@ -38,6 +38,7 @@ urlpatterns = [
     path('chess/', include('chess.urls', namespace='chess')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
     path('collect/', include('collect.urls', namespace='collect')),
+    path('reservations/', include('reservations.urls', namespace='reservations')),
     path('encyclopedia/', include('encyclopedia.urls', namespace='encyclopedia')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
