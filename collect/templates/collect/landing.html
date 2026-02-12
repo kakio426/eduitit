@@ -140,14 +140,15 @@
         </div>
 
         <!-- 주요 기능 -->
-        {% if service.features.all %}
+        <!-- 주요 기능 -->
+        {% if features %}
         <div class="clay-card p-5 md:p-10" data-aos="fade-up">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center font-title">
                 <i class="fa-solid fa-sparkles text-emerald-500 mr-2"></i>
                 주요 기능
             </h2>
             <div class="grid md:grid-cols-3 gap-6">
-                {% for feature in service.features.all %}
+                {% for feature in features %}
                 <div class="text-center">
                     <div
                         class="w-16 h-16 rounded-2xl shadow-clay-inner flex items-center justify-center text-3xl mx-auto mb-4 float-icon">

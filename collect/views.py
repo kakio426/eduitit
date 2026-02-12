@@ -47,8 +47,19 @@ def generate_qr(url):
 def landing(request):
     """서비스 소개 + 입장코드 입력"""
     service = get_collect_service()
+    
+    # 기능 중복 제거 (임시 조치: DB에 중복데이터가 있어도 화면에는 1개만 표시)
+    features = []
+    if service:
+        seen_titles = set()
+        for feature in service.features.all():
+            if feature.title not in seen_titles:
+                features.append(feature)
+                seen_titles.add(feature.title)
+
     return render(request, 'collect/landing.html', {
         'service': service,
+        'features': features,
     })
 
 
