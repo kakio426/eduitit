@@ -847,7 +847,7 @@ migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebookl
 - [ ] `{% elif product.title == '서비스명' %}{% url 'app:landing' %}` 분기 추가
 - [ ] `external_url` 사용하는 외부 서비스는 분기 불필요 (첫 번째 조건에서 처리됨)
 
-> **사례 (2026-02-10)**: 간편 수합, 교사 백과사전 두 서비스 모두 preview_modal에 등록 누락 → 시작 버튼이 홈으로 리다이렉트. title 분기를 추가하여 해결.
+> **사례 (2026-02-12)**: '간편 수합', '교사 백과사전', '학교 예약 시스템' 등 새 서비스를 추가할 때 `preview_modal.html`에 등록을 누락하여 시작 버튼이 작동하지 않는 현상이 반복됨. 신규 앱 생성 시 체크리스트 5번 항목(`preview_modal.html` 분기 추가)을 반드시 준수할 것.
 
 ### 32. ensure_* 명령어 — defaults의 service_type은 반드시 SERVICE_CHOICES 값 사용
 
@@ -1041,9 +1041,38 @@ HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 �
 
 ---
 
-**마지막 업데이트:** 2026-02-11 20:55
+---
 
-## 31. Cloudinary 비이미지 파일 처리 (resource_type='raw') (CRITICAL)
+**마지막 업데이트:** 2026-02-12 11:55
+
+## 45. 비회원 관리 접근 권한 — 세션 대신 UUID(Management ID) 사용 (CRITICAL)
+
+비회원이 제출한 데이터(예: 간편 수합)를 나중에 다시 수정/삭제해야 할 때, **세션(Session) 기반 권한은 브라우저를 닫으면 증발**한다.
+
+**해결 패턴**:
+1. 모델에 고유한 `management_id` (UUID) 필드를 추가한다.
+2. 관리 페이지 URL에 이 UUID를 포함한다: `/manage/<uuid:management_id>/`
+3. 뷰에서는 세션 체크 대신 이 UUID의 존재 여부만으로 권한을 위임한다 (URL 자체가 토큰 역할).
+4. 사용자에게 **"이 주소를 복사해두면 나중에 다시 와서 관리할 수 있다"**고 안내하고 '주소 복사' 버튼을 제공한다.
+
+> **사례 (2026-02-12)**: 간편 수합(Collect) 앱에서 브라우저를 닫으면 수정이 불가능하던 문제를 세션에서 UUID(management_id) 기반으로 전환하여 해결.
+
+## 46. Alpine.js를 이용한 간편한 UI 피드백 (주소 복사 등)
+
+텍스트 복사 후 "복사됨!" 메시지를 잠시 보여주는 등의 작은 피드백은 Alpine.js의 `x-data`와 `setTimeout`을 활용하면 간결하게 구현 가능하다.
+
+```html
+<div x-data="{ copied: false }">
+    <button @click="navigator.clipboard.writeText(window.location.href); copied = true; setTimeout(() => copied = false, 2000)">
+        <span x-show="!copied">주소 복사</span>
+        <span x-show="copied">복사됨!</span>
+    </button>
+</div>
+```
+
+> **사례 (2026-02-12)**: 제출물 관리 페이지에서 관리용 URL 복사 기능을 제공하여 사용자 편의성을 높임.
+
+## 47. Cloudinary 비이미지 파일 처리 (resource_type='raw') (CRITICAL)
 
 Cloudinary 기본 설정은 `resource_type='image'`입니다. HWP, XLSX, PDF, ZIP 등 이미지가 아닌 일반 파일을 업로드하려면 **`RawMediaCloudinaryStorage`**를 사용해야 합니다.
 
@@ -1057,20 +1086,18 @@ from cloudinary_storage.storage import RawMediaCloudinaryStorage
 file = models.FileField(storage=RawMediaCloudinaryStorage())
 ```
 
-> **사례 (2026-02-11)**: 간편 수합 서비스에서 한글(hwp)이나 엑셀 파일을 올릴 때 "Invalid image file" 에러와 함께 500 에러 발생. `RawMediaCloudinaryStorage`로 교체하여 해결. **주의: `RawCloudinaryStorage`가 아니라 `RawMediaCloudinaryStorage`가 올바른 클래스 이름임.** (ImportError 방지)
+> **사례 (2026-02-11)**: 간편 수합 서비스에서 한글(hwp)이나 엑셀 파일을 올릴 때 "Invalid image file" 에러와 함께 500 에러 발생. `RawMediaCloudinaryStorage`로 교체하여 해결.
 
-## 32. JS 내 Django 템플릿 태그 사용 시 공백/필터 주의
+## 48. JS 내 Django 템플릿 태그 사용 시 공백/필터 주의
 
 JavaScript 코드 안에서 `{{ value }}`를 사용할 때, 필터나 공백 처리가 잘못되면 JS 문법 에러(`SyntaxError`)가 발생하여 해당 블록 전체가 작동하지 않을 수 있습니다.
 
 ```javascript
 /* ❌ 줄바꿈이나 공백이 JS 문법을 파괴할 수 있음 */
 var maxSize = {{ req.max_file_size_mb |default: 30 }}; 
-// 결과가 만약 줄바꿈을 포함하면 JS 에러
 
 /* ✅ 괄호나 따옴표로 감싸거나, 간단한 필터만 사용 */
 const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
-const maxSize = maxMB * 1024 * 1024;
 ```
 
-> **사례 (2026-02-11)**: 제출 페이지에서 '제출하기' 버튼이 계속 비활성화되는 현상 발생. 원인은 JS 내 `{{ }}` 태그가 rebase 과정에서 줄바꿈이 섞여 JS 문법 에러를 유발, Alpine.js 초기화가 중단되었기 때문. 템플릿 태그를 한 줄로 정리하고 `parseInt`로 안전하게 처리하여 해결.
+> **사례 (2026-02-11)**: 제출 페이지에서 JS 문법 에러로 Alpine.js 초기화가 중단되어 버튼이 비활성화되는 버그 발생. 템플릿 태그를 한 줄로 정리하여 해결.
