@@ -231,6 +231,7 @@ def blackout_settings(request, school_slug):
 
     return render(request, 'reservations/partials/blackout_list.html', {
         'blackouts': school.blackoutdate_set.all().order_by('start_date'),
+        'school': school,
     })
 
 # Public Reservation Views

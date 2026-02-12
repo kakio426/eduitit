@@ -1128,27 +1128,43 @@ const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
 
 서버 구동 시 또는 마이그레이션 시 Deprecation 경고 및 Critical Error 발생 대응.
 
-- `ACCOUNT_AUTHENTICATION_METHOD` → `ACCOUNT_LOGIN_METHODS = {'email', 'username'}`
-- `ACCOUNT_EMAIL_REQUIRED` → 삭제 (ACCOUNT_SIGNUP_FIELDS로 대체)
-- `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*']` (**필수 필드는 `*`를 붙여야 함**)
-- 프로덕션 `settings_production.py`와 로컬 `settings.py` 모두 동기화 필수.
+-   `ACCOUNT_LOGIN_METHODS = {'email', 'username'}`
+-   `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*']` (**필수 필드는 `*`를 붙여야 함**)
+-   프로덕션 `settings_production.py`와 로컬 `settings.py` 모두 동기화 필수.
+
+---
 
 ## 52. JS/Alpine 속성 내 Django 템플릿 태그 따옴표 중복 처리 (CRITICAL)
 
-JavaScript 또는 Alpine.js 속성(예: `@click`, `:class`) 내부에 Django 템플릿 태그를 사용할 때, **내부 필터 인자의 따옴표가 외부 JavaScript 문자열의 따옴표와 충돌**하면 구문 오류(SyntaxError)가 발생하여 500 에러나 JS 실행 중단을 유발한다.
+JavaScript 또는 Alpine.js 속성(예: `@click`, `:class`) 내부에 Django 템플릿 태그를 사용할 때, 내부 필터 인자의 따옴표가 외부 JavaScript 문자열의 따옴표와 충돌하면 구문 오류(SyntaxError)가 발생하여 500 에러나 JS 실행 중단을 유발한다.
 
 ```javascript
 /* ❌ 500 에러 유발: 문자열 리터럴('...') 내부에서 date 필터의 작은따옴표('...')가 충돌 */
 @click="openBooking(..., '{{ target_date|date:'Y-m-d' }}', ...)"
 
-/* ✅ 해결: 내부 인자에는 다른 종류의 따옴표(큰따옴표) 사용 */
+/* ✅ 해결: 내부 인자에는 쌍따옴표(") 사용 */
 @click="openBooking(..., '{{ target_date|date:"Y-m-d" }}', ...)"
 ```
 
 **증상**: 브라우저 콘솔에는 `SyntaxError: Unexpected token`이 나타나며, 서버 로그에는 `TemplateSyntaxError`가 찍힐 수 있다. 특히 PC에서는 잘 되고 모바일 전용 블록(`lg:hidden`) 내부에서만 이 실수가 있을 경우 원인을 찾기 매우 어렵다.
 
-> **사례 (2026-02-12)**: `reservation_grid.html` 모바일 레이아웃 작업 중 `@click` 핸들러 내 `date:'Y-m-d'`의 작은따옴표 중복 사용으로 인해 모바일에서만 500 에러 발생.
+**사례 (2026-02-12)**: 예약 시스템 모바일 레이아웃 작업 중 `@click` 핸들러 내 `date:'Y-m-d'`의 작은따옴표 중복 사용으로 인해 모바일에서만 500 에러 발생.
+
+## 53. HTMX 단독 버튼의 데이터 전송 (hx-vals 사용)
+
+HTMX 버튼이 `<form>` 태그 밖에 단독으로 있을 때는 내부의 `<input type="hidden">` 값을 자동으로 인식하지 못한다. 이 경우 반드시 `hx-vals` 속성을 사용하여 데이터를 명시적으로 전송해야 한다.
+
+-   **옳은 예**: `<button hx-post="..." hx-vals='{"room_id": "{{ room.id }}"}'>`
+-   **나쁜 예**: `<button hx-post="..."><input type="hidden" name="name" value="..."></button>`
+
+## 54. 부분 템플릿(Partial) 렌더링 시 컨텍스트 관리
+
+HTMX 요청으로 그리드나 목록만 별도로 업데이트(렌더링)할 때, 해당 템플릿 안에서 사용되는 모든 변수(예: `school`, `config` 등)를 뷰(View)의 `render()` 호출 시점에 반드시 포함해야 한다. 변수가 누락되면 URL 생성 오류가 나거나 화면이 제대로 그려지지 않는다.
+
+## 55. 모바일 레이아웃 검증 (360px 기준)
+
+UI를 구현할 때는 항상 모바일 표준 너비인 360px에서 화면이 깨지거나 요소가 겹치지 않는지 먼저 확인한다. `flex-1`, `min-w-0`, `truncate`와 같은 CSS 클래스를 적절히 사용하여 좁은 화면에서도 레이아웃이 유연하게 대응하도록 설계한다.
 
 ---
 
-**마지막 업데이트:** 2026-02-12 18:35
+**마지막 업데이트:** 2026-02-12 20:10

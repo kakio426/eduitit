@@ -30,7 +30,7 @@
         <div class="clay-card p-6 mb-8 border-l-8 border-purple-500 bg-white/80" data-aos="zoom-in" 
              x-data="{ 
                 copied: false,
-                shareUrl: '{{ request.scheme }}://{{ request.get_host }}{% url 'reservations:short_url' school.id %}',
+                shareUrl: '{{ request.scheme }}://{{ request.get_host }}{% url 'reservations:reservation_index' school.slug %}',
                 getShareMessage() {
                     return `[{{ school.name }} 특별실 예약 안내]\n\n선생님 안녕하세요,\n특별실 예약 시스템이 오픈되었습니다. 아래 링크를 통해 원하시는 시간대에 예약을 진행해 주세요.\n\n🔗 예약 링크: ${this.shareUrl}\n\n* 예약 시 학년/반/이름을 입력하면 브라우저가 기억하여 다음 예약이 더 빨라집니다.`;
                 },

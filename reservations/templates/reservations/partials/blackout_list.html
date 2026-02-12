@@ -7,10 +7,11 @@
                 {{ blackout.start_date|date:"Y.m.d" }} ~ {{ blackout.end_date|date:"Y.m.d" }}
             </div>
         </div>
-        <button hx-post="{% url 'reservations:blackout_settings' school.slug %}" hx-confirm="이 기간의 예약 제한을 해제하시겠습니까?"
-            hx-target="#blackout-list-container" class="text-red-400 hover:text-red-600 p-2">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="item_id" value="{{ blackout.id }}">
+        <button hx-post="{% url 'reservations:blackout_settings' school.slug %}" 
+            hx-target="#blackout-list-container"
+            hx-confirm="이 기간의 예약 제한을 해제하시겠습니까?"
+            hx-vals='{"action": "delete", "item_id": "{{ blackout.id }}"}'
+            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform">
             <i class="fas fa-times"></i>
         </button>
     </div>
