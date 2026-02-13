@@ -22,4 +22,5 @@ urlpatterns = [
     
     # Config Settings
     path('<str:school_slug>/settings/config/', views.update_config, name='update_config'),
+    path('<str:school_slug>/delete-school/', views.delete_school, name='delete_school'),
 ]

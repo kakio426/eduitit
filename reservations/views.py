@@ -17,19 +17,16 @@ logger = logging.getLogger(__name__)
 @login_required
 def dashboard_landing(request):
     """
-    사용자의 학교 유무를 확인하고 대시보드로 이동하거나 학교 생성으로 안내
+    사용자의 학교 목록을 보여주거나 새 학교 생성으로 안내
     """
-    # 사용자가 소유한 학교가 있는지 확인
-    school = School.objects.filter(owner=request.user).first()
+    # 사용자가 소유한 학교 목록 확인
+    user_schools = School.objects.filter(owner=request.user)
     
-    if school:
-        return redirect('reservations:admin_dashboard', school_slug=school.slug)
-    
-    # 학교가 없으면 생성 로직 (임시로 자동 생성 또는 폼으로 유도)
+    # 학교가 없거나 생성 요청(POST)인 경우 처리
     if request.method == 'POST':
         name = request.POST.get('school_name')
         if name:
-            # Slug 생성 (간단하게 처리, 실제로는 중복 체크 등 필요)
+            # Slug 생성
             slug = slugify(name, allow_unicode=True) or f"school-{request.user.id}"
             
             # 중복 slug 방지
@@ -42,16 +39,26 @@ def dashboard_landing(request):
             school = School.objects.create(name=name, slug=slug, owner=request.user)
             SchoolConfig.objects.create(school=school) # Config 자동 생성
             
-            # 기본 특별실 생성
-            SpecialRoom.objects.create(school=school, name="과학실", icon="🧬")
+            # 기본 특별실 생성 (이전보다 간소하게 변경 가능)
+            SpecialRoom.objects.create(school=school, name="과학실", icon="🔬")
             SpecialRoom.objects.create(school=school, name="컴퓨터실", icon="💻")
             
             messages.success(request, f"{school.name}이(가) 생성되었습니다.")
-    if school:
-        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+            return redirect('reservations:admin_dashboard', school_slug=school.slug)
     
-    # 사실 School 모델 정의 상 multi-school도 가능하지만 현재는 1인 1학교로 가정
-    return render(request, 'reservations/landing.html')
+    return render(request, 'reservations/landing.html', {
+        'user_schools': user_schools
+    })
+
+@login_required
+@require_POST
+def delete_school(request, school_slug):
+    """학교 및 관련 데이터 전체 삭제"""
+    school = get_object_or_404(School, slug=school_slug, owner=request.user)
+    school_name = school.name
+    school.delete()
+    messages.success(request, f"'{school_name}' 학교와 관련된 모든 데이터가 삭제되었습니다.")
+    return redirect('reservations:dashboard_landing')
 
 def short_url_redirect(request, school_id):
     """ID 기반의 짧은 URL으로 접속하면 학교 페이지로 리다이렉트"""

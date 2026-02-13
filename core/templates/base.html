@@ -471,7 +471,7 @@
         {% block content %}{% endblock %}
 
         <!-- Floating Feedback Widget -->
-        <div x-data="{ open: false }" class="fixed bottom-6 right-6 z-[90]">
+        <div x-data="{ open: false }" class="fixed bottom-6 right-6 z-[90] hidden md:block">
             <!-- Toggle Button -->
             <button @click="open = !open"
                 class="w-14 h-14 rounded-full shadow-clay bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition transform hover:scale-110 active:scale-95">

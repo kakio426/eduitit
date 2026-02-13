@@ -14,10 +14,14 @@
                 <p class="text-gray-500 mt-2 ml-1">특별실, 고정 수업, 블랙아웃 기간을 관리하세요.</p>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex flex-wrap justify-center md:justify-end gap-3">
                 <a href="{% url 'reservations:reservation_index' school.slug %}" target="_blank"
                     class="clay-btn-primary px-6 py-3 font-bold flex items-center gap-2">
                     <i class="fas fa-external-link-alt"></i> 예약 현황판
+                </a>
+                <a href="{% url 'reservations:dashboard_landing' %}"
+                    class="clay-btn px-6 py-3 text-purple-600 font-bold hover:shadow-clay-hover flex items-center gap-2">
+                    <i class="fas fa-list"></i> 내 학교 목록
                 </a>
                 <a href="{% url 'home' %}"
                     class="clay-btn px-6 py-3 text-gray-600 font-bold hover:text-purple-600 flex items-center gap-2">
@@ -281,6 +285,52 @@
                     <div class="flex justify-center py-12">
                         <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400"></i>
                     </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="lg:col-span-2 mt-12 pt-8 border-t border-gray-300" data-aos="fade-up">
+                <div class="clay-card p-6 border-2 border-red-200 bg-red-50/30" x-data="{ showDeleteModal: false }">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-red-600 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle"></i> 위험 구역
+                            </h3>
+                            <p class="text-sm text-gray-500 mt-1">학교와 관련된 모든 데이터(예약, 특별실 설정 등)가 영구적으로 삭제됩니다.</p>
+                        </div>
+                        <button @click="showDeleteModal = true" 
+                                class="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition active:scale-95 shadow-lg">
+                            학교 전체 삭제하기
+                        </button>
+                    </div>
+
+                    <!-- Delete Confirmation Modal -->
+                    <template x-if="showDeleteModal">
+                        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100">
+                            <div class="clay-card w-full max-w-md p-8 bg-white" @click.away="showDeleteModal = false">
+                                <div class="text-center mb-6">
+                                    <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </div>
+                                    <h4 class="text-2xl font-bold text-gray-800">정말 삭제할까요?</h4>
+                                    <p class="text-gray-500 mt-2">'{{ school.name }}'의 모든 정보가 삭제되며, 이 작업은 되돌릴 수 없습니다.</p>
+                                </div>
+                                <div class="flex gap-3">
+                                    <button @click="showDeleteModal = false" 
+                                            class="flex-1 py-4 clay-btn text-gray-600 font-bold">취소</button>
+                                    <form action="{% url 'reservations:delete_school' school.slug %}" method="post" class="flex-1">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full py-4 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-clay active:scale-95 transition">
+                                            삭제 확인
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 

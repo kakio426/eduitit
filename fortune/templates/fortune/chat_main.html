@@ -83,7 +83,7 @@
                     </button>
                 </form>
                 <!-- New Session Button (Reloads page to select profile) -->
-                <a href="{% url 'fortune:chat_main' %}" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
+                <a href="{% url 'fortune:chat_main' %}?reset=true" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
                     <i class="fa-solid fa-plus mr-1"></i> 새로 시작
                 </a>
             </div>

@@ -20,6 +20,12 @@ def chat_main_page(request):
     Lists user's profiles to start chat with.
     """
     profiles = UserSajuProfile.objects.filter(user=request.user)
+    # Handle session reset
+    if request.GET.get('reset') == 'true':
+        ChatSession.objects.filter(user=request.user, is_active=True).update(is_active=False)
+        logger.info(f"[Fortune] Action: CHAT_SESSION_RESET, User: {request.user.username}")
+        return redirect('fortune:chat_main')
+
     # Check for active session
     active_session = ChatSession.objects.filter(user=request.user, is_active=True).select_related('profile').first()
     
