@@ -72,11 +72,6 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write('[Ensuring Product Features...]')
 
-        existing_features = ssambti.features.count()
-        if existing_features > 0:
-            self.stdout.write(f'  [!] Found {existing_features} existing features, deleting...')
-            ssambti.features.all().delete()
-
         # Create features
         features_data = [
             {
@@ -97,12 +92,15 @@ class Command(BaseCommand):
         ]
 
         for feature_data in features_data:
-            ProductFeature.objects.create(
+            feature, created = ProductFeature.objects.get_or_create(
                 product=ssambti,
-                **feature_data
+                title=feature_data['title'],
+                defaults=feature_data
             )
-
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {len(features_data)} features'))
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  [OK] Created feature: {feature.title}'))
+            else:
+                self.stdout.write(f'  [-] Feature already exists: {feature.title}')
 
         # Final summary - ASCII-safe output
         self.stdout.write('')

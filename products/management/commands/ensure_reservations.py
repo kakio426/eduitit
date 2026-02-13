@@ -62,9 +62,6 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write('[Ensuring Product Features...]')
 
-        # Always refresh features to match code
-        product.features.all().delete()
-
         features_data = [
             {
                 'icon': '⚡',
@@ -84,10 +81,14 @@ class Command(BaseCommand):
         ]
 
         for feature_data in features_data:
-            ProductFeature.objects.create(
+            feature, created = ProductFeature.objects.get_or_create(
                 product=product,
-                **feature_data
+                title=feature_data['title'],
+                defaults=feature_data
             )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  [OK] Created feature: {feature.title}'))
+            else:
+                self.stdout.write(f'  [-] Feature already exists: {feature.title}')
 
-        self.stdout.write(self.style.SUCCESS(f'  [OK] Created {len(features_data)} features'))
         self.stdout.write('=' * 70)

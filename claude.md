@@ -25,7 +25,7 @@
 - `.env` 파일이나 민감한 정보 커밋 금지
 - 하드코딩된 API 키 사용 금지
 - UI 오버랩(NavBar 가림) 방치 금지 → 모든 페이지 `pt-32` 준수
-- `ensure_*` management command에서 Admin 관리 필드(service_type, display_order 등) 강제 덮어쓰기 금지 → Procfile이 매 배포마다 실행하므로 Admin 수정이 초기화됨
+- `ensure_*` management command에서 데이터 중복 생성 및 Admin 관리 데이터 덮어쓰기 금지 → `Procfile`이 매 배포마다 실행하므로 Admin 수정이 초기화되거나 데이터가 중복됨
 
 ## 작업 완료 후 체크리스트
 - [ ] Django Check 통과 (`python manage.py check`)
@@ -824,6 +824,31 @@ migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebookl
 
 > **사례 (2026-02-10)**: `ensure_ssambti`가 매 배포마다 `service_type='game'`으로, `ensure_studentmbti`가 `service_type='tool'`로 강제 변경 → Admin에서 카테고리를 수정해도 다음 push에서 원복됨. service_type 강제 변경 로직 제거로 해결.
 
+### 31. management command 데이터 구성 시 `get_or_create` 필수 (CRITICAL)
+
+`ensure_*` 형태의 관리 명령어는 배포 시마다 실행되므로, 기존 데이터를 무조건 삭제하고 다시 생성(`delete()` 후 `create()`)하면 안 된다.
+
+**문제점**:
+1.  **데이터 유실**: 관리자 페이지(Admin)에서 수동으로 수정한 설명이나 추가한 항목이 배포 때마다 사라짐.
+2.  **데이터 중복**: 여러 명령어가 동시에 실행되거나 로직 오류 시 똑같은 항목이 여러 번 생성됨.
+
+```python
+# ❌ 절대 금지: 기존 데이터 삭제 후 재생성
+product.features.all().delete()
+for feat in features:
+    ProductFeature.objects.create(product=product, **feat)
+
+# ✅ 권장: get_or_create를 사용하여 존재 여부 확인 후 생성
+for feat in features_data:
+    obj, created = ProductFeature.objects.get_or_create(
+        product=product,
+        title=feat['title'],
+        defaults=feat
+    )
+```
+
+> **사례 (2026-02-13)**: '학교 예약 시스템' 등 주요 서비스의 Key Features 항목이 배포 때마다 중복 생성되거나 Admin 수정본이 초기화되는 문제 발생. 모든 `ensure_*` 명령어를 `get_or_create` 로직으로 전수 수정함.
+
 ---
 
 ## 새 서비스(앱) 추가 시 체크리스트 (2026-02-10)
@@ -1286,6 +1311,25 @@ return render(request, 'chat_message.html', {'message': msg})
 - AI 통합: `fortune/utils/chat_ai.py` (DeepSeek streaming)
 - 시스템 프롬프트: `fortune/utils/chat_logic.py`
 - 템플릿: `fortune/templates/fortune/chat_main.html`, `partials/chat_room.html`, `partials/chat_message.html`
+
+---
+
+## 64. OneToOneField 접근 시 존재 보장 (Safety First)
+
+`OneToOneField` (예: `School` - `SchoolConfig`) 관계에서 대상 객체가 어떤 이유로든 누락되었을 경우, 속성 접근(`school.config`) 시 `DoesNotExist` 에러가 발생하여 500 에러를 유발할 수 있다.
+
+**해결 패턴**:
+- 뷰(View)에서 속성에 직접 접근하기보다 `get_or_create()`를 사용하여 존재를 보장한 뒤 사용한다.
+
+```python
+# ❌ 위험: config가 없으면 DoesNotExist 에러 발생
+config = school.config
+
+# ✅ 안전: 없으면 생성하여 반환
+config, created = SchoolConfig.objects.get_or_create(school=school)
+```
+
+> **사례 (2026-02-13)**: 서버 배포 환경에서 일부 `School` 데이터에 `SchoolConfig`가 매칭되지 않아 대시보드 접근 시 500 에러 발생. 모든 관련 뷰에 `get_or_create` 로직을 추가하여 해결.
 
 ---
 

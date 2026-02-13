@@ -51,7 +51,7 @@ def dashboard_landing(request):
         return redirect('reservations:admin_dashboard', school_slug=school.slug)
     
     # 사실 School 모델 정의 상 multi-school도 가능하지만 현재는 1인 1학교로 가정
-    return render(request, 'reservations/dashboard_landing.html')
+    return render(request, 'reservations/landing.html')
 
 def short_url_redirect(request, school_id):
     """ID 기반의 짧은 URL으로 접속하면 학교 페이지로 리다이렉트"""
@@ -70,9 +70,12 @@ def admin_dashboard(request, school_slug):
         messages.error(request, "해당 학교의 관리자 권한이 없습니다.")
         return redirect('reservations:dashboard_landing')
         
+    # Ensure config exists (OneToOne relationship safety)
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+    
     context = {
         'school': school,
-        'config': school.config,
+        'config': config,
         'rooms': school.specialroom_set.all(),
         'blackouts': school.blackoutdate_set.all().order_by('start_date'),
     }
@@ -134,7 +137,7 @@ def recurring_settings(request, school_slug):
     # 데이터 구조화: rooms_data = [ { 'room': room, 'matrix': [[sched or None, ...], ...] } ]
     # matrix[period-1][day] 형태로 접근 가능하게 (1교시가 0번 인덱스)
     
-    config = school.config
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
     period_labels = config.get_period_list()
     periods = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
     days = range(5) # 0~4 (월~금)
@@ -175,7 +178,7 @@ def update_config(request, school_slug):
     학교 설정 업데이트 (교시 이름 등)
     """
     school = get_object_or_404(School, slug=school_slug, owner=request.user)
-    config = school.config
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
     
     # 학교 기본 정보 변경 (이름)
     new_name = request.POST.get('school_name')
@@ -242,7 +245,7 @@ def reservation_index(request, school_slug):
     - HTMX Polling 대상
     """
     school = get_object_or_404(School, slug=school_slug)
-    config = school.config
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
     
     # 날짜 처리
     date_str = request.GET.get('date')

@@ -8,7 +8,7 @@
         selectedRoomId: null,
         selectedPeriod: null,
         selectedPeriodLabel: '',
-        selectedDate: '{{ target_date|date:'Y-m-d' }}', 
+        selectedDate: '{{ target_date|date:"Y-m-d" }}', 
         grade: '', classNo: '', name: '', memo: '',
         openBooking(roomId, roomName, period, date, periodLabel) { 
             this.selectedRoomId = roomId; 
@@ -70,7 +70,7 @@
                 </div>
 
                 {% if max_date and target_date >= max_date %}
-                <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:'Y-m-d' }}까지)')"
+                <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:"Y-m-d" }}까지)')"
                     class="w-8 h-8 md:w-10 md:h-10 text-gray-300 bg-gray-100 flex items-center justify-center rounded-full cursor-not-allowed">
                     <i class="fas fa-chevron-right"></i>
                 </button>

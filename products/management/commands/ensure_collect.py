@@ -45,7 +45,7 @@ class Command(BaseCommand):
             self.stdout.write(f'[OK] Created Collect product (ID: {product.id})')
 
         # Ensure ProductFeatures exist
-        product.features.all().delete()
+        # product.features.all().delete()
 
         features_data = [
             {
@@ -66,11 +66,14 @@ class Command(BaseCommand):
         ]
 
         for feature_data in features_data:
-            ProductFeature.objects.create(
+            feature, created = ProductFeature.objects.get_or_create(
                 product=product,
-                **feature_data
+                title=feature_data['title'],
+                defaults=feature_data
             )
-
-        self.stdout.write(f'[OK] Created {len(features_data)} features')
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  [OK] Created feature: {feature.title}'))
+            else:
+                self.stdout.write(f'  [-] Feature already exists: {feature.title}')
         self.stdout.write('=' * 70)
         self.stdout.write('[OK] Done!')
