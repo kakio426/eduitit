@@ -2670,6 +2670,8 @@
                     document.getElementById('resultContainer').classList.remove('hidden');
                     document.getElementById('shareSection').classList.remove('hidden');
                     document.getElementById('dailyFortuneSection').classList.remove('hidden');
+                    const chatCTA2 = document.getElementById('chatCTASection');
+                    if (chatCTA2) chatCTA2.classList.remove('hidden');
 
                     window.currentSajuState = {
                         natal_chart: data.chart,
@@ -2819,6 +2821,8 @@
                 document.getElementById('resultContainer').classList.remove('hidden');
                 document.getElementById('shareSection').classList.remove('hidden');
                 document.getElementById('dailyFortuneSection').classList.remove('hidden');
+                const chatCTA3 = document.getElementById('chatCTASection');
+                if (chatCTA3) chatCTA3.classList.remove('hidden');
                 // document.getElementById('saveSection').classList.remove('hidden');
 
                 // 결과 렌더링 (day_master 전달)
