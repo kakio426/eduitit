@@ -1206,4 +1206,87 @@ UI를 구현할 때는 항상 모바일 표준 너비인 360px에서 화면이 �
 
 ---
 
-**마지막 업데이트:** 2026-02-12 21:23
+## 60. JS Base64 해시 캐시 키 — 해시 길이와 키 순서에 의한 충돌 (CRITICAL)
+
+`btoa(encodeURIComponent(rawKey)).substring(0, N)` 으로 캐시 키를 생성할 때, **구분자(mode 등)가 키 뒤쪽에 배치되고 해시 길이(N)가 짧으면** 서로 다른 모드가 동일한 해시를 생성한다.
+
+Base64는 3바이트 → 4문자 변환이므로, `substring(0, 24)`는 입력의 **처음 18바이트만** 반영. 한글 이름(글자당 3바이트)과 생년월일이 이미 18바이트를 소진하면, 뒤쪽의 mode 차이(`teacher` vs `general`)가 해시에 반영되지 않는다.
+
+```javascript
+// ❌ mode가 마지막 + 해시 짧음 → 모드별 동일 해시 → 캐시 충돌
+const keyParts = [name, gender, year, month, day, hour, calendar, mode]; // mode가 뒤쪽
+const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 24); // 18바이트만
+
+// ✅ mode를 첫 번째로 + 해시 길이 충분히
+const keyParts = [mode, name, gender, year, month, day, hour, calendar]; // mode가 앞쪽
+const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 32); // 24바이트
+```
+
+**캐시 키 변경 시 체크리스트:**
+- [ ] 구분해야 할 필드(mode, type 등)를 키 배열의 **앞쪽**에 배치
+- [ ] 해시 길이를 전체 키의 고유성을 보장할 만큼 충분히 설정 (최소 32자 권장)
+- [ ] 캐시 키 접두사(prefix)를 버전업하여 기존 잘못된 캐시 무효화 (`v2_` → `v3_`)
+- [ ] 페이지 로드 시 구버전 캐시 자동 삭제 로직 추가
+
+> **사례 (2026-02-13)**: Fortune 앱에서 교사 사주(teacher)와 일반 사주(general) 결과가 동일한 localStorage 캐시 키로 저장되어, 일반 모드를 선택해도 교사 모드 결과가 반환됨. mode를 키 첫 번째로 이동 + 해시 32자로 확장 + `v2_` → `v3_` 접두사 변경으로 해결.
+
+## 61. Alpine.js CDN — unpkg 대신 jsdelivr 사용
+
+`unpkg.com`의 `@3.x.x` 같은 semver 와일드카드는 간헐적으로 해석 실패할 수 있다. Alpine.js가 로드되지 않으면 `x-data`, `@click`, `x-show` 등이 모두 작동하지 않아 UI 전체가 먹통이 된다.
+
+```html
+<!-- ❌ unpkg + 와일드카드 → 간헐적 로딩 실패 가능 -->
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<!-- ✅ jsdelivr + 안정적인 범위 지정 -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+```
+
+**Alpine.js 의존 UI에 대한 방어 전략:**
+- 핵심 네비게이션(로그인 드롭다운 등)은 `onclick` 속성으로 vanilla JS fallback 추가
+- `if(!window.Alpine){ fallbackFunction() }` 패턴 사용
+
+> **사례 (2026-02-13)**: PC 데스크톱 사용자 드롭다운 메뉴가 Alpine.js 미로드 시 클릭 무반응. jsdelivr CDN 변경 + vanilla JS fallback 추가로 해결.
+
+## 62. Django 템플릿에 dict vs object 속성 접근 주의
+
+Django 템플릿은 `{{ obj.attr }}` 구문으로 dict의 키와 object의 속성 모두 접근 가능하지만, **`{% if obj.role == 'user' %}` 같은 비교는 dict와 object 모두 작동하는 반면, `render_to_string`에 plain dict를 넘기면 `.created_at` 같은 추가 속성이 없어 다른 부분에서 에러**가 발생할 수 있다.
+
+```python
+# ❌ dict는 template에서 .role은 접근 가능하지만 .created_at이 없으면 에러
+return render(request, 'chat_message.html', {'message': {'role': 'system', 'content': '...'}})
+
+# ✅ SimpleNamespace로 속성 접근 보장
+from types import SimpleNamespace
+msg = SimpleNamespace(role='assistant', content='...', created_at=timezone.now())
+return render(request, 'chat_message.html', {'message': msg})
+```
+
+> **사례 (2026-02-13)**: 챗봇 턴 초과 시 dict를 넘겨 template에서 `message.created_at` 접근 시 빈 값 렌더링. SimpleNamespace로 교체하여 해결.
+
+## 63. HTMX 중복 로드 금지 (base.html과 자식 템플릿)
+
+`base.html`에서 이미 HTMX를 로드했는데, `{% block extra_js %}`에서 다시 `<script src="htmx.org">` 를 로드하면 HTMX가 두 번 초기화되어 이벤트 핸들러 중복, 예기치 않은 동작이 발생할 수 있다.
+
+> **사례 (2026-02-13)**: `home.html`에서 HTMX를 중복 로드하여 제거.
+
+---
+
+# Fortune 챗봇 아키텍처 (2026-02-13)
+
+## 챗봇 컨텍스트 참조 방식
+- 교사/일반 모드와 **별개** — 프로필의 사주 원국(natal_chart)만 기반
+- `build_system_prompt()` 참조 데이터: person_name, day_gan(일간), birth_year
+- DeepSeek-V3 모델 사용, StreamingHttpResponse로 실시간 응답
+- 세션당 최대 10회 질문, 7일 만료
+
+## 관련 파일
+- 모델: `fortune/models.py` (ChatSession, ChatMessage)
+- 뷰: `fortune/views_chat.py`
+- AI 통합: `fortune/utils/chat_ai.py` (DeepSeek streaming)
+- 시스템 프롬프트: `fortune/utils/chat_logic.py`
+- 템플릿: `fortune/templates/fortune/chat_main.html`, `partials/chat_room.html`, `partials/chat_message.html`
+
+---
+
+**마지막 업데이트:** 2026-02-13

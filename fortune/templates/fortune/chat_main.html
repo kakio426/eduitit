@@ -65,7 +65,7 @@
 
 {% block content %}
 <div class="chat-container pt-24 pb-20 px-4"> <!-- Added pt-24 for navbar spacing -->
-    <div class="max-w-4xl mx-auto h-[80vh] flex flex-col">
+    <div class="max-w-4xl mx-auto h-[80dvh] flex flex-col">
 
         <!-- Header -->
         <header class="flex justify-between items-center mb-4 px-2">
@@ -75,7 +75,7 @@
             
             {% if active_session %}
             <div class="flex gap-2">
-                <form hx-post="{% url 'fortune:save_chat_to_history' %}" hx-swap="none">
+                <form hx-post="{% url 'fortune:save_chat_to_history' %}" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.querySelector('button').innerHTML='<i class=\'fa-solid fa-check mr-1\'></i> 저장됨';this.querySelector('button').disabled=true;this.querySelector('button').classList.add('bg-green-500/30')}else{this.querySelector('button').innerHTML='<i class=\'fa-solid fa-xmark mr-1\'></i> 실패';setTimeout(()=>{this.querySelector('button').innerHTML='<i class=\'fa-solid fa-save mr-1\'></i> 저장'},2000)}">
                     {% csrf_token %}
                     <input type="hidden" name="session_id" value="{{ active_session.id }}">
                     <button type="submit" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">

@@ -158,13 +158,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- HTMX -->
-<script src="https://unpkg.com/htmx.org@1.9.10"></script>
-<script>
-    document.body.addEventListener('htmx:configRequest', (event) => {
-        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
-    });
-</script>
+<!-- HTMX already loaded in base.html -->
 <!-- Phosphor Icons -->
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script>

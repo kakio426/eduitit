@@ -3,11 +3,13 @@ from django.http import StreamingHttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
+from django.utils import timezone
 from .models import ChatSession, ChatMessage, UserSajuProfile, FortuneResult
 from .utils.chat_logic import build_system_prompt
 from .utils.chat_ai import get_ai_response_stream
 import json
 import logging
+from types import SimpleNamespace
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +70,19 @@ def send_chat_message(request):
     
     if not session.is_active:
         return JsonResponse({'error': 'Session expired'}, status=403)
+
+    if session.expires_at and timezone.now() > session.expires_at:
+        session.is_active = False
+        session.save(update_fields=['is_active'])
+        expired_msg = SimpleNamespace(role='assistant', content='이 상담 세션이 만료되었습니다. 새로운 세션을 시작해주세요!', created_at=timezone.now())
+        return render(request, 'fortune/partials/chat_message.html', {
+            'message': expired_msg
+        })
         
     if session.current_turns >= session.max_turns:
-        # Return partial for limit reached message?
+        limit_msg = SimpleNamespace(role='assistant', content='상담 횟수(10회)가 모두 소진되었습니다. 💜 새로운 세션을 시작해주세요!', created_at=timezone.now())
         return render(request, 'fortune/partials/chat_message.html', {
-            'message': {'role': 'system', 'content': '상담 횟수가 초과되었습니다.'}
+            'message': limit_msg
         })
     
     # Save User Message

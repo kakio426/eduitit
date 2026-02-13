@@ -43,11 +43,15 @@
 
     <!-- Input Area -->
     <div class="p-4 glass-card rounded-t-none border-t border-white/10 shrink-0 bg-black/20 backdrop-blur-xl">
-        <form hx-post="{% url 'fortune:send_chat_message' %}" 
-              hx-target="#new-messages" 
+        <div class="flex justify-between items-center mb-2 px-1">
+            <span class="text-xs text-gray-400">{{ session.profile.person_name }}님과 상담 중</span>
+            <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">{{ session.remaining_turns }}</span>회</span>
+        </div>
+        <form hx-post="{% url 'fortune:send_chat_message' %}"
+              hx-target="#new-messages"
               hx-swap="beforeend"
               hx-indicator="#loading-indicator"
-              hx-on::after-request="this.reset(); document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight;">
+              hx-on::after-request="this.reset(); document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight; var c=document.getElementById('turnCounter'); if(c){var n=parseInt(c.textContent)-1; c.textContent=Math.max(0,n)}">
             {% csrf_token %}
             <input type="hidden" name="session_id" value="{{ session.id }}">
             

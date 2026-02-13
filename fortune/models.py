@@ -225,6 +225,10 @@ class ChatSession(models.Model):
 
         super().save(*args, **kwargs)
 
+    @property
+    def remaining_turns(self):
+        return max(0, self.max_turns - self.current_turns)
+
     def __str__(self):
         status = "Active" if self.is_active else "Inactive"
         return f"ChatSession({self.user.username} - {status})"

@@ -1293,6 +1293,22 @@
             </div>
         </div>
 
+        <!-- 사주 선생님 챗봇 CTA -->
+        {% if user.is_authenticated %}
+        <div id="chatCTASection" class="{% if not result %}hidden{% endif %} mb-8 no-print">
+            <a href="{% url 'fortune:chat_main' %}" class="block clay-card p-6 md:p-8 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 hover:border-purple-400 transition-all group">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform">🧙‍♂️</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-black text-gray-800 mb-1">사주 선생님에게 더 물어보기</h3>
+                        <p class="text-gray-500 font-medium text-sm">AI 사주 선생님과 1:1 채팅으로 궁금한 점을 자세히 상담해보세요</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-purple-400 text-xl group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+
         <!-- 특정 날짜 운세 (일진) -->
         <div id="dailyFortuneSection"
             class="bg-indigo-50/50 rounded-3xl p-5 md:p-8 border border-indigo-100 mb-8 {% if not result %}hidden{% endif %}">
@@ -2141,8 +2157,8 @@
                 const key = localStorage.key(i);
                 if (!key) continue;
 
-                // 1. Clear ALL old v1 caches
-                if (key.startsWith('saju_result_cache_') || key.startsWith('daily_saju_cache_')) {
+                // 1. Clear ALL old v1/v2 caches (v2 had mode-collision bug)
+                if (key.startsWith('saju_result_cache_') || key.startsWith('daily_saju_cache_') || key.startsWith('saju_result_v2_')) {
                     localStorage.removeItem(key);
                     i--;
                     continue;
@@ -2450,6 +2466,8 @@
             document.getElementById('resultContainer').classList.remove('hidden');
             document.getElementById('shareSection').classList.remove('hidden');
             document.getElementById('dailyFortuneSection').classList.remove('hidden');
+            const chatCTA = document.getElementById('chatCTASection');
+            if (chatCTA) chatCTA.classList.remove('hidden');
             // document.getElementById('saveSection').classList.remove('hidden'); // Removed functionality
 
             updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
@@ -2559,21 +2577,22 @@
 
     // 사주 입력 데이터 기반 고유 캐시 키 생성 (이름, 성별, 생년월일시, 모드 포함)
     function getSajuCacheKey(formData) {
+        const mode = formData.get('mode') || 'teacher';
         const keyParts = [
+            mode,
             formData.get('name') || '',
             formData.get('gender') || '',
             formData.get('birth_year') || '',
             formData.get('birth_month') || '',
             formData.get('birth_day') || '',
             formData.get('birth_hour') || '',
-            formData.get('calendar_type') || '',
-            formData.get('mode') || 'teacher'
+            formData.get('calendar_type') || ''
         ];
-        console.log("Cache Key Generation - Mode:", formData.get('mode'));
+        console.log("Cache Key Generation - Mode:", mode);
         const rawKey = keyParts.join('|');
-        // 한글 포함 키를 안전하게 해싱 (Base64 활용)
-        const hash = btoa(unescape(encodeURIComponent(rawKey))).substring(0, 24);
-        return `saju_result_v2_${hash}`;
+        // 한글 포함 키를 안전하게 해싱 (Base64 활용) — mode를 첫 번째로 배치하여 모드별 구분 보장
+        const hash = btoa(unescape(encodeURIComponent(rawKey))).substring(0, 32);
+        return `saju_result_v3_${hash}`;
     }
 
     // 폼 제출 핸들러 (Premium Loading 적용)
