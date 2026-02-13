@@ -2,7 +2,7 @@
 {# 필터링 모드: 외부 래퍼에 grid span이 있으므로 내부는 순수 카드만 #}
 <div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
     role="button" tabindex="0" data-product-id="{{ product.id }}"
-    data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
+    data-aos="fade-up" data-aos-delay="0" data-aos-offset="0">
 
     <div class="relative z-10 flex flex-col h-full justify-between">
         <div class="space-y-2 md:space-y-3">
@@ -58,7 +58,7 @@
 {% else %}
 {# 기본 모드: 원래 구조 (다른 페이지에서 사용) #}
 <div class="{% if product.card_size == 'hero' and product.description|length > 100 %}col-span-2 md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}col-span-2 md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
-    data-aos="fade-up" data-aos-delay="{{ delay|default:'100' }}">
+    data-aos="fade-up" data-aos-delay="0" data-aos-offset="0">
     <div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
         role="button" tabindex="0" data-product-id="{{ product.id }}">
 

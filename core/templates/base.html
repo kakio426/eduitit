@@ -779,10 +779,13 @@
             document.addEventListener('DOMContentLoaded', function () {
                 AOS.init({
                     once: true,
-                    offset: 50,
+                    offset: 20,
                     duration: 800,
+                    easing: 'ease-out-cubic',
                 });
             });
+            window.addEventListener('load', () => AOS.refresh());
+            window.addEventListener('resize', () => AOS.refresh());
         </script>
         {% if user.is_authenticated %}
         <script>

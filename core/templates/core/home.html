@@ -189,7 +189,9 @@
 {% url 'prompt_lab' as prompt_lab_url %}
 {% url 'tool_guide' as tool_guide_url %}
 
-<div x-data="{ activeCategory: 'all' }" class="min-h-screen bg-[#E0E5EC]">
+<div x-data="{ activeCategory: 'all' }" 
+     x-init="$watch('activeCategory', value => { setTimeout(() => { AOS.refresh(); }, 100); })"
+     class="min-h-screen bg-[#E0E5EC]">
 
     <!-- PC: Flex Row / Mobile: Column -->
     <div class="flex flex-col md:flex-row pt-40 md:pt-48 max-w-[1920px] mx-auto">
