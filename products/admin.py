@@ -1,9 +1,31 @@
 from django.contrib import admin
-from .models import Product, UserOwnedProduct, ProductFeature
+from .models import Product, UserOwnedProduct, ProductFeature, ServiceManual, ManualSection
 
 class ProductFeatureInline(admin.TabularInline):
     model = ProductFeature
     extra = 3
+
+class ManualSectionInline(admin.StackedInline):
+    model = ManualSection
+    extra = 1
+    fieldsets = (
+        ('섹션 설정', {
+            'fields': ('title', 'layout_type', 'badge_text', 'display_order')
+        }),
+        ('콘텐츠', {
+            'fields': ('content', 'image', 'video_url')
+        }),
+    )
+
+@admin.register(ServiceManual)
+class ServiceManualAdmin(admin.ModelAdmin):
+    list_display = ('product', 'title', 'is_published', 'updated_at')
+    list_filter = ('is_published', 'product__service_type')
+    search_fields = ('title', 'product__title')
+    inlines = [ManualSectionInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('product')
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):

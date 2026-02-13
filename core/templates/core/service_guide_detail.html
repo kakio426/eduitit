@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ manual.title }} - Eduitit 매뉴얼{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prose img {
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .manual-content ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .manual-content ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-[#F3F4F6]">
+    <div class="max-w-5xl mx-auto">
+        <!-- Breadcrumb & Back -->
+        <div class="flex items-center gap-4 mb-8" data-aos="fade-down">
+            <a href="{% url 'service_guide_list' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-gray-400 hover:text-purple-600 hover:shadow-md transition">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <span class="text-sm font-bold text-gray-400">서비스 매뉴얼 > {{ manual.product.get_service_type_display }}</span>
+        </div>
+
+        <!-- Header -->
+        <div class="bg-white rounded-3xl p-8 md:p-12 shadow-sm mb-12 relative overflow-hidden ring-1 ring-gray-900/5" data-aos="fade-up">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-100/40 to-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+            
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-8">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-4">
+                            {% if manual.is_published %}
+                            <span class="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider border border-green-200">
+                                Published
+                            </span>
+                            {% else %}
+                            <span class="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold uppercase tracking-wider border border-yellow-200">
+                                Draft
+                            </span>
+                            {% endif %}
+                            <h2 class="text-lg font-bold text-gray-500 flex items-center gap-2">
+                                <i class="{{ manual.product.icon }} text-{{ manual.product.color_theme }}-500"></i>
+                                {{ manual.product.title }}
+                            </h2>
+                        </div>
+                        <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight font-title tracking-tight">
+                            {{ manual.title }}
+                        </h1>
+                        <p class="text-lg text-gray-600 max-w-2xl leading-relaxed whitespace-pre-line">
+                            {{ manual.description }}
+                        </p>
+                    </div>
+                    
+                    {% if manual.product.external_url %}
+                    <div class="flex-shrink-0 mt-2 md:mt-0">
+                        <a href="{{ manual.product.external_url }}" target="_blank" 
+                           class="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition transform group">
+                            서비스 열기 <i class="fa-solid fa-arrow-right-long ml-1 group-hover:translate-x-1 transition-transform"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections -->
+        <div class="space-y-16">
+            {% for section in sections %}
+            <div id="section-{{ section.id }}" class="scroll-mt-40" data-aos="fade-up" data-aos-delay="100">
+                
+                <!-- Section Title -->
+                {% if section.title %}
+                <div class="flex items-center gap-4 mb-6 ml-2">
+                    <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-white font-bold text-sm shadow-md">
+                        {{ section.display_order }}
+                    </span>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ section.title }}</h3>
+                    {% if section.badge_text %}
+                    <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full border border-indigo-200">
+                        {{ section.badge_text }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Content Body -->
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-200/60 ring-1 ring-gray-900/5">
+                    
+                    {% if section.layout_type == 'text_only' %}
+                        <div class="p-8 md:p-12 prose max-w-none text-gray-600 leading-relaxed manual-content">
+                            {{ section.content|linebreaks }}
+                        </div>
+
+                    {% elif section.layout_type == 'image_left' %}
+                        <div class="grid md:grid-cols-2 gap-0">
+                            <div class="relative bg-gray-50 min-h-[300px] border-b md:border-b-0 md:border-r border-gray-100">
+                                {% if section.image %}
+                                <img src="{{ section.image.url }}" alt="{{ section.title }}" class="absolute inset-0 w-full h-full object-cover">
+                                {% else %}
+                                <div class="absolute inset-0 flex items-center justify-center text-gray-300 bg-gray-100">
+                                    <div class="text-center">
+                                        <i class="fa-regular fa-image text-4xl mb-2 block"></i>
+                                        <span class="text-xs font-bold">이미지 없음</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="p-8 md:p-12 prose max-w-none flex flex-col justify-center manual-content">
+                                {{ section.content|linebreaks }}
+                            </div>
+                        </div>
+
+                    {% elif section.layout_type == 'image_right' %}
+                        <div class="grid md:grid-cols-2 gap-0">
+                            <div class="p-8 md:p-12 prose max-w-none flex flex-col justify-center order-2 md:order-1 manual-content">
+                                {{ section.content|linebreaks }}
+                            </div>
+                            <div class="relative bg-gray-50 min-h-[300px] border-t md:border-t-0 md:border-l border-gray-100 order-1 md:order-2">
+                                {% if section.image %}
+                                <img src="{{ section.image.url }}" alt="{{ section.title }}" class="absolute inset-0 w-full h-full object-cover">
+                                {% else %}
+                                <div class="absolute inset-0 flex items-center justify-center text-gray-300 bg-gray-100">
+                                    <div class="text-center">
+                                        <i class="fa-regular fa-image text-4xl mb-2 block"></i>
+                                        <span class="text-xs font-bold">이미지 없음</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    {% elif section.layout_type == 'full_visual' %}
+                        <div class="p-6 md:p-8 bg-gray-50">
+                            {% if section.video_url %}
+                            <div class="aspect-video rounded-2xl overflow-hidden shadow-lg bg-black mb-6 ring-1 ring-black/10">
+                                <iframe src="{{ section.video_url }}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            {% elif section.image %}
+                            <img src="{{ section.image.url }}" alt="{{ section.title }}" class="w-full rounded-2xl shadow-lg mb-6 ring-1 ring-black/5">
+                            {% endif %}
+                            
+                            {% if section.content %}
+                            <div class="prose max-w-3xl text-center mx-auto manual-content p-4">
+                                {{ section.content|linebreaks }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                    {% elif section.layout_type == 'card_carousel' %}
+                        <div class="p-8 md:p-10 bg-gradient-to-br from-indigo-50/50 to-blue-50/50">
+                            <div class="prose max-w-none mb-8 manual-content">
+                                {{ section.content|linebreaks }}
+                            </div>
+                            
+                            {% if section.image %}
+                            <!-- Image as a visual anchor if no real carousel yet -->
+                            <div class="rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                                <img src="{{ section.image.url }}" class="w-full h-auto">
+                            </div>
+                            {% else %}
+                             <div class="flex items-center justify-center h-48 bg-white/60 rounded-2xl border-2 border-dashed border-indigo-200 text-indigo-400 font-bold">
+                                Quick Start Visual Area
+                             </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Footer CTA -->
+        <div class="mt-20 text-center pb-10" data-aos="fade-up">
+            <h3 class="text-2xl font-bold text-gray-800 mb-8 font-title">이제 직접 사용해보세요!</h3>
+            {% if manual.product.external_url %}
+            <a href="{{ manual.product.external_url }}" target="_blank" class="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-bold text-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition transform group">
+                {{ manual.product.title }} 시작하기 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            </a>
+            {% else %}
+             <button disabled class="px-10 py-5 bg-gray-200 text-gray-400 rounded-full font-bold text-lg cursor-not-allowed">준비 중인 서비스입니다</button>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -59,6 +59,43 @@ class ProductFeature(models.Model):
     def __str__(self):
         return f"{self.product.title} - {self.title}"
 
+class ServiceManual(models.Model):
+    """Product specific manual/guide"""
+    product = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='manual')
+    title = models.CharField(max_length=200, help_text="매뉴얼 제목 (예: '선생님과 함께하는 000 시작하기')")
+    description = models.TextField(blank=True, help_text="매뉴얼 소개글")
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.product.title} 매뉴얼"
+
+class ManualSection(models.Model):
+    """Section of a service manual"""
+    LAYOUT_CHOICES = [
+        ('text_only', '텍스트 전용'),
+        ('image_left', '이미지 좌측 + 텍스트'),
+        ('image_right', '텍스트 + 이미지 우측'),
+        ('full_visual', '전체 너비 이미지/비디오'),
+        ('card_carousel', '카드 캐러셀 (Quick Start)'),
+    ]
+
+    manual = models.ForeignKey(ServiceManual, on_delete=models.CASCADE, related_name='sections')
+    title = models.CharField(max_length=200)
+    content = models.TextField(blank=True, help_text="Markdown 지원")
+    image = models.ImageField(upload_to='manuals/', null=True, blank=True)
+    video_url = models.URLField(blank=True, help_text="YouTube/Vimeo 임베드 URL")
+    layout_type = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='text_only')
+    badge_text = models.CharField(max_length=50, blank=True, help_text="섹션 배지 (예: Tip, 핵심, 주의)")
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+
+    def __str__(self):
+        return f"{self.manual.product.title} - {self.title}"
+
 class UserOwnedProduct(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_products')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

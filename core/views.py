@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
-from products.models import Product
+from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post, Comment, Feedback
 from django.contrib import messages
@@ -512,3 +512,27 @@ def feedback_view(request):
             status=200,
         )
     return redirect('home')
+
+def service_guide_list(request):
+    """List of all available service manuals"""
+    manuals = ServiceManual.objects.filter(
+        is_published=True, 
+        product__is_active=True
+    ).select_related('product').order_by('product__display_order')
+
+    return render(request, 'core/service_guide_list.html', {'manuals': manuals})
+
+def service_guide_detail(request, pk):
+    """Detailed view of a specific manual"""
+    manual = get_object_or_404(
+        ServiceManual.objects.select_related('product'), 
+        pk=pk,
+        is_published=True,
+        product__is_active=True
+    )
+    sections = manual.sections.all()
+    
+    return render(request, 'core/service_guide_detail.html', {
+        'manual': manual, 
+        'sections': sections
+    })

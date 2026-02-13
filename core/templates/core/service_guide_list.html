@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}서비스 매뉴얼 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 font-title">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">서비스 매뉴얼</span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 font-medium">
+                선생님을 위한 상세한 사용 가이드를 확인해보세요.
+            </p>
+        </div>
+
+        {% if manuals %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for manual in manuals %}
+                <a href="{% url 'service_guide_detail' manual.pk %}" class="block group h-full" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:'100' }}">
+                    <div class="clay-card p-6 h-full transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-xl flex flex-col justify-between border border-white/50">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-14 h-14 rounded-2xl bg-white shadow-inner flex items-center justify-center text-3xl group-hover:scale-110 transition-transform duration-300">
+                                    {% if manual.product.icon|length > 2 %}
+                                        <i class="{{ manual.product.icon }} text-{{ manual.product.color_theme }}-500"></i>
+                                    {% else %}
+                                        <span class="text-{{ manual.product.color_theme }}-500 text-3xl">{{ manual.product.icon }}</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{{ manual.product.get_service_type_display }}</span>
+                                    <h2 class="text-xl font-bold text-gray-800 leading-tight">{{ manual.product.title }}</h2>
+                                </div>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-700 mb-2 pl-1">{{ manual.title }}</h3>
+                            <p class="text-gray-500 line-clamp-3 mb-6 pl-1 text-sm leading-relaxed">
+                                {{ manual.description|default:"상세한 가이드를 확인하여 100% 활용해보세요." }}
+                            </p>
+                        </div>
+                        <div class="mt-auto pl-1">
+                            <span class="inline-flex items-center gap-2 text-{{ manual.product.color_theme }}-600 font-bold text-sm group-hover:gap-3 transition-all">
+                                가이드 보기 <i class="fa-solid fa-arrow-right"></i>
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-20 bg-white/50 rounded-3xl shadow-sm border border-white/60 backdrop-blur-sm" data-aos="fade-up">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fa-solid fa-book-open text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-600 mb-2">등록된 매뉴얼이 없습니다.</h3>
+                <p class="text-gray-400">곧 유용한 가이드가 업데이트될 예정입니다!</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
