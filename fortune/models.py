@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 # Create your models here.
 
@@ -199,3 +201,44 @@ class DailyFortuneLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.target_date}"
+
+class ChatSession(models.Model):
+    """Saju Chatbot Session"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions')
+    profile = models.ForeignKey(UserSajuProfile, on_delete=models.CASCADE, related_name='chat_sessions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    max_turns = models.IntegerField(default=10)
+    current_turns = models.IntegerField(default=0)
+    
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=7)
+        
+        # If this session is active, deactivate others for the same user
+        if self.is_active and not self.pk: # Only on creation or if explicitly set
+             ChatSession.objects.filter(user=self.user, is_active=True).update(is_active=False)
+        elif self.is_active and self.pk:
+             # If updating existing session to active, deactivate others excluding itself
+             ChatSession.objects.filter(user=self.user, is_active=True).exclude(pk=self.pk).update(is_active=False)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"ChatSession({self.user.username} - {status})"
+
+class ChatMessage(models.Model):
+    """Messages within a ChatSession"""
+    ROLE_CHOICES = [('user', 'User'), ('assistant', 'Assistant'), ('system', 'System')]
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.role}: {self.content}"[:50]

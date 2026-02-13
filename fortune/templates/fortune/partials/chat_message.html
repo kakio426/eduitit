@@ -1,0 +1,25 @@
+<div class="flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+    {% if message.role == 'user' %}
+    <!-- User Message -->
+    <div class="flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto">
+        <div class="glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right">
+            <p class="text-base leading-relaxed break-words whitespace-pre-wrap">{{ message.content }}</p>
+            <span class="text-[10px] text-indigo-200 mt-1 block opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1 right-2">{{ message.created_at|date:"A g:i" }}</span>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center">
+             <i class="fa-solid fa-user text-white text-sm"></i>
+        </div>
+    </div>
+    {% else %}
+    <!-- Saju Teacher Message -->
+    <div class="flex items-start gap-3 self-start max-w-[90%] mr-auto">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 relative top-1">
+            🧙‍♂️
+        </div>
+        <div class="glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
+            {{ message.content|safe }}
+            <span class="text-[10px] text-gray-400 mt-2 block opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1 left-4">{{ message.created_at|date:"A g:i" }}</span>
+        </div>
+    </div>
+    {% endif %}
+</div>

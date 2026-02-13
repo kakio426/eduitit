@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Modern Mystique & Glassmorphism Theme (Shared with Dashboard) */
+    :root {
+        --mystic-bg: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    body {
+        background: #f8fafc;
+    }
+
+    .chat-container {
+        background: radial-gradient(circle at 50% -20%, #2E1065, #0F172A);
+        min-height: 100vh;
+        color: white;
+        font-family: 'NanumSquareRound', sans-serif;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-radius: 24px;
+    }
+
+    .glass-input {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .glass-input:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: #A78BFA;
+        outline: none;
+    }
+
+    /* Message Bubbles */
+    .msg-teacher {
+        background: rgba(139, 92, 246, 0.2); /* Purple-ish */
+        border-radius: 1.5rem 1.5rem 1.5rem 0;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    
+    .msg-student {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem 1.5rem 0 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Typing Animation */
+    @keyframes blink { 50% { opacity: 0; } }
+    .cursor-blink { animation: blink 1s infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container pt-24 pb-20 px-4"> <!-- Added pt-24 for navbar spacing -->
+    <div class="max-w-4xl mx-auto h-[80vh] flex flex-col">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-4 px-2">
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                <i class="fa-solid fa-comments mr-2"></i>사주 선생님
+            </h1>
+            
+            {% if active_session %}
+            <div class="flex gap-2">
+                <form hx-post="{% url 'fortune:save_chat_to_history' %}" hx-swap="none">
+                    {% csrf_token %}
+                    <input type="hidden" name="session_id" value="{{ active_session.id }}">
+                    <button type="submit" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
+                        <i class="fa-solid fa-save mr-1"></i> 저장
+                    </button>
+                </form>
+                <!-- New Session Button (Reloads page to select profile) -->
+                <a href="{% url 'fortune:chat_main' %}" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
+                    <i class="fa-solid fa-plus mr-1"></i> 새로 시작
+                </a>
+            </div>
+            {% endif %}
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 glass-card overflow-hidden flex flex-col relative" id="chat-frame">
+            
+            {% if active_session %}
+                <!-- Chat Interface -->
+                {% include "fortune/partials/chat_room.html" with session=active_session %}
+            {% else %}
+                <!-- Profile Selection -->
+                <div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                    <div class="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center text-4xl mb-4 animate-bounce">
+                        🧙‍♂️
+                    </div>
+                    <h2 class="text-2xl font-bold text-white">누구의 사주를 상담할까요?</h2>
+                    <p class="text-purple-200 text-sm max-w-md">상담하고 싶은 프로필을 선택해주세요. 사주 선생님이 기다리고 있습니다.</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg mt-8">
+                        {% for profile in profiles %}
+                        <form hx-post="{% url 'fortune:create_chat_session' %}" hx-target="#chat-frame" hx-swap="innerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_id" value="{{ profile.id }}">
+                            <button type="submit" class="w-full glass-card p-6 hover:bg-white/10 transition group text-left relative overflow-hidden">
+                                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                                    <i class="fa-solid fa-user text-4xl"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-white mb-1">{{ profile.profile_name }}</h3>
+                                <p class="text-sm text-gray-400">{{ profile.person_name }} ({{ profile.get_gender_display }})</p>
+                            </button>
+                        </form>
+                        {% empty %}
+                        <div class="col-span-2 text-center py-8 text-gray-400">
+                            등록된 프로필이 없습니다. <br>
+                            <a href="{% url 'fortune:saju' %}" class="text-purple-300 underline mt-2 inline-block">먼저 사주를 분석해주세요.</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            
+        </main>
+
+    </div>
+</div>
+
+<!-- HTMX Helper for Auto-Scroll -->
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        // Find chat messages container
+        const chatContainer = document.getElementById('chat-messages-container');
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

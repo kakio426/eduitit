@@ -1,6 +1,6 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from . import views, views_zoo
+from . import views, views_zoo, views_chat
 
 app_name = 'fortune'
 
@@ -33,4 +33,10 @@ urlpatterns = [
     path('zoo/analyze/', RedirectView.as_view(url='/ssambti/analyze/', permanent=True), name='zoo_analyze'),
     path('zoo/history/', RedirectView.as_view(url='/ssambti/history/', permanent=True), name='zoo_history'),
     path('zoo/result/<int:pk>/', RedirectView.as_view(url='/ssambti/result/%(pk)s/', permanent=True), name='zoo_detail'),
+
+    # Chatbot
+    path('chat/', views_chat.chat_main_page, name='chat_main'),
+    path('chat/create/', views_chat.create_chat_session, name='create_chat_session'),
+    path('chat/send/', views_chat.send_chat_message, name='send_chat_message'),
+    path('chat/save/', views_chat.save_chat_to_history, name='save_chat_to_history'),
 ]

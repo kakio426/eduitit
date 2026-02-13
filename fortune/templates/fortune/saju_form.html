@@ -1099,17 +1099,17 @@
                         <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>상담 모드
                     </label>
                     <div class="mode-toggle">
-                        <button type="button" class="mode-btn active" data-mode="teacher" onclick="setMode('teacher')">
+                        <button type="button" class="mode-btn {% if mode == 'teacher' %}active{% endif %}" data-mode="teacher" onclick="setMode('teacher')">
                             <i class="fa-solid fa-chalkboard-user mr-2"></i>교사 모드
                             <span>학교생활, 학생 케미, 동료 관계</span>
                         </button>
-                        <button type="button" class="mode-btn" data-mode="general" onclick="setMode('general')">
+                        <button type="button" class="mode-btn {% if mode == 'general' %}active{% endif %}" data-mode="general" onclick="setMode('general')">
                             <i class="fa-solid fa-moon mr-2"></i>일반 모드
                             <span>재물, 연애, 건강, 직업운</span>
                         </button>
                     </div>
                 </div>
-                <input type="hidden" name="mode" id="modeInput" value="teacher">
+                <input type="hidden" name="mode" id="modeInput" value="{{ mode|default:'teacher' }}">
 
                 <!-- 이름 -->
                 <div class="mb-6">
@@ -2438,11 +2438,14 @@
             const hasCurrentResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
             if (hasCurrentResult) return;
 
-            // UI 전환
-            document.getElementById('formContainer').classList.add('hidden');
-            document.getElementById('resultContainer').classList.remove('hidden');
-            document.getElementById('shareSection').classList.remove('hidden');
-            document.getElementById('dailyFortuneSection').classList.remove('hidden');
+            // [FIX] 현재 선택된 모드와 데이터의 모드가 다르면 모드를 강제 동기화 (캐시 꼬임 및 오인 방지)
+            const modeInput = document.getElementById('modeInput');
+            if (data.mode && modeInput && data.mode !== modeInput.value) {
+                console.log(`Syncing mode for restoration: ${modeInput.value} -> ${data.mode}`);
+                setMode(data.mode);
+            }
+
+            // 결과 화면 표시
             document.getElementById('formContainer').classList.add('hidden');
             document.getElementById('resultContainer').classList.remove('hidden');
             document.getElementById('shareSection').classList.remove('hidden');
@@ -2481,8 +2484,10 @@
                 window.currentSajuState = {
                     natal_chart: data.chart,
                     mode: data.mode || 'teacher',
-                    savedId: null, // Reset saved ID on restore to potentially allow re-save if needed, or check DB?
-                    result_text: data.result
+                    savedId: null,
+                    result_text: data.result,
+                    name: data.name,
+                    gender: data.gender
                 };
 
                 // Trigger Auto-Save (if not already saved in session)
@@ -2494,7 +2499,9 @@
                     natal_chart: data.chart,
                     mode: data.mode || 'teacher',
                     savedId: null,
-                    result_text: data.result
+                    result_text: data.result,
+                    name: data.name,
+                    gender: data.gender
                 };
             }
 
@@ -2649,7 +2656,9 @@
                         natal_chart: data.chart,
                         mode: data.mode || 'teacher',
                         savedId: null,
-                        result_text: data.result
+                        result_text: data.result,
+                        name: data.name,
+                        gender: data.gender
                     };
 
                     setTimeout(() => {
@@ -2812,7 +2821,9 @@
                     natal_chart: data.chart,
                     mode: data.mode || 'teacher',
                     savedId: null,
-                    result_text: accumulatedText
+                    result_text: accumulatedText,
+                    name: data.name,
+                    gender: formData.get('gender')
                 };
 
                 // Trigger Auto-Save
@@ -3443,8 +3454,8 @@
                 body: JSON.stringify({
                     target_date: targetDate,
                     natal_chart: natalChart,
-                    name: "{{ name|default:'' }}",
-                    gender: "{{ gender|default:'female' }}",
+                    name: (window.currentSajuState && window.currentSajuState.name) ? window.currentSajuState.name : "{{ name|default:'' }}",
+                    gender: (window.currentSajuState && window.currentSajuState.gender) ? window.currentSajuState.gender : "{{ gender|default:'female' }}",
                     mode: currentMode
                 })
             });

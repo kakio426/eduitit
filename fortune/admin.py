@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.db.models import Count
 from .models import (
     Stem, Branch, SixtyJiazi, SajuProfile, NatalChart,
     InterpretationRule, FortuneResult, ZooResult,
     UserSajuProfile, FavoriteDate, DailyFortuneLog,
+    ChatSession, ChatMessage,
 )
 
 
@@ -136,3 +138,27 @@ class DailyFortuneLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'profile')
+
+
+class ChatMessageInline(admin.TabularInline):
+    model = ChatMessage
+    extra = 0
+    readonly_fields = ['created_at']
+
+
+@admin.register(ChatSession)
+class ChatSessionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'profile', 'is_active', 'created_at', 'expires_at', 'message_count']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['user__username', 'profile__person_name']
+    raw_id_fields = ['user', 'profile']
+    inlines = [ChatMessageInline]
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'profile').annotate(
+             _message_count=Count('messages')
+        )
+
+    def message_count(self, obj):
+        return obj._message_count
+    message_count.admin_order_field = '_message_count'
