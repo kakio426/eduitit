@@ -51,7 +51,58 @@
               hx-target="#new-messages"
               hx-swap="beforeend"
               hx-indicator="#loading-indicator"
-              hx-on::after-request="this.reset(); document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight; var c=document.getElementById('turnCounter'); if(c){var n=parseInt(c.textContent)-1; c.textContent=Math.max(0,n)}">
+              hx-on::before-request="
+                const input = this.querySelector('input[name=message]');
+                const val = input.value.trim();
+                const container = document.getElementById('new-messages');
+                if (val) {
+                    const tempId = 'temp-' + Date.now();
+                    const bubble = `
+                        <div class='flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500' id='${tempId}'>
+                            <div class='flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto'>
+                                <div class='glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right'>
+                                    <p class='text-base leading-relaxed break-words whitespace-pre-wrap'>${val}</p>
+                                    <span class='text-[10px] text-indigo-200 mt-1 block opacity-100 absolute bottom-1 right-2 status-text'>전송 중...</span>
+                                </div>
+                                <div class='w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center'>
+                                     <i class='fa-solid fa-user text-white text-sm'></i>
+                                </div>
+                            </div>
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', bubble);
+                    input.value = '';
+                    const scroller = document.getElementById('chat-messages-container');
+                    scroller.scrollTop = scroller.scrollHeight;
+                }
+              "
+              hx-on::after-request="
+                const scroller = document.getElementById('chat-messages-container');
+                scroller.scrollTop = scroller.scrollHeight;
+                
+                // Update optimistic bubble to finalized state
+                const optimistic = document.querySelector('[id^=\'temp-\']');
+                if (optimistic) {
+                    const status = optimistic.querySelector('.status-text');
+                    if (status) {
+                        const now = new Date();
+                        const hours = now.getHours();
+                        const minutes = now.getMinutes();
+                        const ampm = hours >= 12 ? '오후' : '오전';
+                        const h12 = hours % 12 || 12;
+                        const mStr = minutes < 10 ? '0' + minutes : minutes;
+                        status.textContent = `${ampm} ${h12}:${mStr}`;
+                        status.parentElement.classList.remove('opacity-100');
+                        status.parentElement.classList.add('opacity-0', 'group-hover:opacity-100');
+                    }
+                    optimistic.id = ''; // Remove temp ID
+                }
+
+                var c = document.getElementById('turnCounter'); 
+                if(c){
+                    var n = parseInt(c.textContent) - 1; 
+                    c.textContent = Math.max(0, n);
+                }
+              ">
             {% csrf_token %}
             <input type="hidden" name="session_id" value="{{ session.id }}">
             

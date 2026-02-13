@@ -103,10 +103,7 @@ def send_chat_message(request):
     user_html = render_to_string('fortune/partials/chat_message.html', {'message': user_msg_obj})
     
     def stream_response():
-        # 1. Yield User Message immediately
-        yield user_html
-        
-        # 2. Yield AI Message start structure (manually constructed based on template style)
+        # 1. Yield AI Message start structure (manually constructed based on template style)
         yield """
 <div class="flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
     <div class="flex items-start gap-3 self-start max-w-[90%] mr-auto">
