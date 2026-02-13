@@ -41,14 +41,18 @@
         <div class="clay-card p-6 history-card" id="item-{{ item.id }}">
             <div class="flex justify-between items-start mb-4">
                 <span
-                    class="mode-badge {% if item.mode == 'teacher' %}bg-purple-100 text-purple-600{% elif item.mode == 'daily' %}bg-indigo-100 text-indigo-600{% else %}bg-slate-100 text-slate-600{% endif %}">
-                    {{ item.get_mode_display }}
+                    class="mode-badge {% if item.target_date %}bg-indigo-100 text-indigo-600{% elif item.mode == 'teacher' %}bg-purple-100 text-purple-600{% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {% if item.target_date %}
+                        {{ item.get_mode_display }} (일진)
+                    {% else %}
+                        {{ item.get_mode_display }}
+                    {% endif %}
                 </span>
                 <span class="text-sm text-gray-400 font-bold">{{ item.created_at|date:"Y.m.d" }}</span>
             </div>
 
             <h3 class="text-xl font-bold text-gray-700 mb-4">
-                {% if item.mode == 'daily' %}
+                {% if item.target_date %}
                 📅 {{ item.target_date|date:"m월 d일" }}의 운세
                 {% else %}
                 ✨ 정통 사주 분석 ({{ item.natal_chart.day }})

@@ -353,6 +353,7 @@ def saju_api_view(request):
 
         data = form.cleaned_data
         mode = data['mode']
+        logger.info(f"Saju API Request - User: {request.user}, Mode: {mode}")
         
         # Logic Engine
         chart_context = get_chart_context(data)
@@ -373,7 +374,7 @@ def saju_api_view(request):
         prompt = get_prompt(mode, data, chart_context=chart_context)
 
         if existing_result:
-            logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini.")
+            logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini. Mode: {existing_result.mode}")
             response_text = existing_result.result_text
         else:
             # Wrap generator to maintain current sync behavior
@@ -529,12 +530,7 @@ def delete_history_api(request, pk):
     """보관함 항목 삭제"""
     from .models import FortuneResult
     item = get_object_or_404(FortuneResult, pk=pk, user=request.user)
-    # 같은 natal_chart + mode 캐시 레코드 모두 삭제
-    FortuneResult.objects.filter(
-        user=request.user,
-        natal_chart=item.natal_chart,
-        mode=item.mode
-    ).delete()
+    item.delete()
     return JsonResponse({'success': True})
 
 

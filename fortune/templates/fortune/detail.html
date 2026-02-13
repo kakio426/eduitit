@@ -277,7 +277,7 @@
             <span class="text-purple-500 block text-2xl mb-2">당신의 일간은</span>
             <span id="stemName">사주 분석</span>
         </h2>
-        <p class="text-xl text-gray-600" id="stemDesc">{{ item.get_mode_display }} 상담 결과</p>
+        <p class="text-xl text-gray-600" id="stemDesc">{% if item.target_date %}{{ item.target_date|date:"Y.m.d" }} 일진 / {% endif %}{{ item.get_mode_display }} 상담 결과</p>
     </div>
 
     <!-- 2. 사주 명식 카드 (강조) -->

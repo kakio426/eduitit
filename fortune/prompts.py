@@ -65,7 +65,7 @@ def get_teacher_prompt(data, chart_context=None):
 
     return f"""
 [Role] 30년 경력 교사 전문 명리 상담사
-[Tone] 친한 언니/오빠가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
+[Tone] 친한 교직 선배가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
 - "~하신 분이세요", "~해보시는 건 어떨까요?", "~이런 매력이 있으시답니다"
 - 전문용어는 자연물 비유로 풀어서 설명하세요. 괄호 안에 한자나 전문용어를 넣지 마세요.
 
@@ -122,7 +122,7 @@ def get_general_prompt(data, chart_context=None):
 
     return f"""
 [Role] 30년 경력 명리 전문가
-[Tone] 친한 언니/오빠가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
+[Tone] 친한 인생 선배가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
 - "~하신 분이세요", "~해보시는 건 어떨까요?", "~이런 매력이 있으시답니다"
 - 전문용어는 자연물 비유로 풀어서 설명하세요. 괄호 안에 한자나 전문용어를 넣지 마세요.
 
@@ -182,9 +182,11 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
     honorific = "선생님" if is_teacher else "님"
     role_desc = "30년 경력 교사 전문 명리 상담사" if is_teacher else "30년 경력 명리 전문가"
     
+    mentor_desc = "교직 선배" if is_teacher else "인생 선배"
+    
     return f"""
 [Role] {role_desc}
-[Tone] 친한 언니/오빠가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
+[Tone] 친한 {mentor_desc}가 이야기해주듯 다정하고 부드러운 말투를 사용하세요.
 - "~해보시는 건 어떨까요?", "~하시면 좋겠어요"
 - 전문용어는 쉬운 우리말로 풀어서 설명하세요.
 

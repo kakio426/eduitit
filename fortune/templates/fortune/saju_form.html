@@ -2562,6 +2562,7 @@
             formData.get('calendar_type') || '',
             formData.get('mode') || 'teacher'
         ];
+        console.log("Cache Key Generation - Mode:", formData.get('mode'));
         const rawKey = keyParts.join('|');
         // 한글 포함 키를 안전하게 해싱 (Base64 활용)
         const hash = btoa(unescape(encodeURIComponent(rawKey))).substring(0, 24);
@@ -3747,7 +3748,7 @@
                     'X-CSRFToken': csrfInput.value
                 },
                 body: JSON.stringify({
-                    mode: dailyText ? 'daily' : 'teacher',
+                    mode: document.getElementById('modeInput').value || 'teacher',
                     natal_chart: natalChart,
                     result_text: dailyText ? dailyText : resultText,
                     target_date: dailyText ? document.getElementById('targetDateInput')?.value : null
