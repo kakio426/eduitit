@@ -1,32 +1,24 @@
-# Git 속성 설정: UTF-8 파일 보호
-# antigravity 계정에서 push 시 파일 깨짐 방지
-
-# 텍스트 파일은 LF로 통일 (줄바꿈 자동 변환 방지)
+# Normalize text files to LF in repository.
 * text=auto eol=lf
 
-# Python 파일
-*.py text eol=lf
+# Explicit UTF-8 + LF policy for source and templates.
+*.py text eol=lf working-tree-encoding=UTF-8
+*.html text eol=lf working-tree-encoding=UTF-8
+*.css text eol=lf working-tree-encoding=UTF-8
+*.js text eol=lf working-tree-encoding=UTF-8
+*.json text eol=lf working-tree-encoding=UTF-8
+*.yml text eol=lf working-tree-encoding=UTF-8
+*.yaml text eol=lf working-tree-encoding=UTF-8
+*.toml text eol=lf working-tree-encoding=UTF-8
+*.txt text eol=lf working-tree-encoding=UTF-8
+*.md text eol=lf working-tree-encoding=UTF-8
+*.sh text eol=lf working-tree-encoding=UTF-8
+*.ps1 text eol=lf working-tree-encoding=UTF-8
 
-# HTML/CSS/JS 파일
-*.html text eol=lf
-*.css text eol=lf
-*.js text eol=lf
+# Environment files should remain text.
+.env* text eol=lf working-tree-encoding=UTF-8
 
-# Django 템플릿
-*.html text eol=lf encoding=utf-8
-
-# 설정 파일
-*.json text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-*.toml text eol=lf
-*.txt text eol=lf
-*.md text eol=lf
-
-# 환경 변수 파일
-.env* text eol=lf
-
-# 바이너리 파일
+# Binary assets.
 *.png binary
 *.jpg binary
 *.jpeg binary
