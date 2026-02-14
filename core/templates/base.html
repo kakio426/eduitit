@@ -297,8 +297,7 @@
                 {% else %}
                 <span>{{ banner_text }}</span>
                 {% endif %}
-                <button
-                    @click="show = false; document.getElementById('mainNav').classList.remove('top-[40px]'); document.getElementById('mainNav').classList.add('top-0');"
+                <button @click="show = false; setTimeout(() => window.syncGlobalBannerOffset && window.syncGlobalBannerOffset(), 0)"
                     class="ml-4 text-white/80 hover:text-white transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -308,9 +307,8 @@
 
         <!-- Navbar -->
         {% if not hide_navbar %}
-        <nav id="mainNav"
-            class="fixed w-full z-50 left-0 px-2 md:px-6 py-4 transition-all duration-300 {% if banner_active and banner_text %}top-[40px]{% else %}top-0{% endif %}"
-            style="will-change: transform, opacity;">
+        <nav id="mainNav" class="fixed w-full z-50 left-0 px-2 md:px-6 py-4 transition-all duration-300"
+            style="will-change: transform, opacity; top: var(--global-banner-height, 0px);">
             <div
                 class="max-w-7xl mx-auto clay-card px-3 md:px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 backdrop-blur-sm overflow-visible">
                 <div class="flex items-center gap-3">
@@ -468,7 +466,9 @@
             </div>
         </div>
 
-        {% block content %}{% endblock %}
+        <div id="pageContent" style="padding-top: var(--global-banner-height, 0px);">
+            {% block content %}{% endblock %}
+        </div>
 
         <!-- Floating Feedback Widget -->
         <div x-data="{ open: false }" class="fixed bottom-6 right-6 z-[90] hidden md:block">
@@ -775,6 +775,29 @@
 
         <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
         <script>
+            // Global banner offset sync (for nav + page content).
+            window.syncGlobalBannerOffset = function () {
+                const banner = document.getElementById('globalBanner');
+                let height = 0;
+                if (banner && window.getComputedStyle(banner).display !== 'none') {
+                    height = Math.ceil(banner.getBoundingClientRect().height);
+                }
+                document.documentElement.style.setProperty('--global-banner-height', `${height}px`);
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                window.syncGlobalBannerOffset();
+                const banner = document.getElementById('globalBanner');
+                if (banner) {
+                    const resizeObserver = new ResizeObserver(() => window.syncGlobalBannerOffset());
+                    resizeObserver.observe(banner);
+                    const mutationObserver = new MutationObserver(() => window.syncGlobalBannerOffset());
+                    mutationObserver.observe(banner, { attributes: true, attributeFilter: ['style', 'class'] });
+                }
+            });
+
+            window.addEventListener('resize', () => window.syncGlobalBannerOffset());
+
             // Initialize Animate On Scroll
             document.addEventListener('DOMContentLoaded', function () {
                 AOS.init({
