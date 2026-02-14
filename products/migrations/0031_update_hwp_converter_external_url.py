@@ -1,7 +1,7 @@
 ﻿from django.db import migrations
 
 OLD_URL = 'https://drive.google.com/file/d/1JfFn1WtkJyMBQ0OUleXPQPTf2t9ecgyq/view?usp=sharing'
-NEW_URL = 'https://drive.google.com/file/d/1mKZuOrkWQzDMSaghIYoWAhPK5rRDn02l/view?usp=sharing'
+NEW_URL = 'https://drive.google.com/file/d/11FIEgxWXV2q8fWNPc5CaAXwEQPCNr4VI/view?usp=sharing'
 PRODUCT_TITLE = 'HWP to PDF 변환기'
 
 
