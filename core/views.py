@@ -545,6 +545,7 @@ def service_guide_list(request):
     """List of all available service manuals"""
     active_products_qs = Product.objects.filter(is_active=True).order_by('display_order')
     active_products_count = active_products_qs.count()
+    manuals_all_qs = ServiceManual.objects.filter(product__is_active=True).select_related('product')
     manuals_qs = ServiceManual.objects.filter(
         is_published=True,
         product__is_active=True
@@ -559,9 +560,9 @@ def service_guide_list(request):
     featured_manual_ids = featured_manuals.values_list('id', flat=True)
     manuals = manuals_qs.exclude(id__in=featured_manual_ids)
     manual_count = manuals_qs.count()
-    missing_manual_count = max(active_products_count - manual_count, 0)
-    product_ids_with_manual = manuals_qs.values_list('product_id', flat=True)
-    products_without_manual = active_products_qs.exclude(id__in=product_ids_with_manual)
+    product_ids_with_any_manual = manuals_all_qs.values_list('product_id', flat=True)
+    products_without_manual = active_products_qs.exclude(id__in=product_ids_with_any_manual)
+    missing_manual_count = products_without_manual.count()
 
     return render(request, 'core/service_guide_list.html', {
         'manuals': manuals,
