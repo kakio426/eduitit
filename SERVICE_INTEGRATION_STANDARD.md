@@ -227,6 +227,20 @@ class Command(BaseCommand):
 ```
 
 ```
+```
+
+        # [SIS Rule] ServiceManual 자동 생성 (Rich Content)
+        from products.models import ServiceManual, ManualSection
+        manual, _ = ServiceManual.objects.get_or_create(
+            product=product,
+            defaults={'title': f'{product.title} 사용법', 'is_published': True}
+        )
+        if manual.sections.count() == 0:
+            ManualSection.objects.create(manual=manual, title='시작하기', content='...', display_order=1)
+            ManualSection.objects.create(manual=manual, title='주요 기능', content='...', display_order=2)
+            ManualSection.objects.create(manual=manual, title='활용 팁', content='...', display_order=3)
+
+```
 # Procfile 예시
 web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && python3 manage.py ensure_studentmbti && ...
 ```
@@ -278,6 +292,7 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] **[Efficiency]** 모든 로직 검증을 브라우저 실행 없이 터미널(`shell`, `check`)에서 완료했는가?
 - [ ] **[Infra]** 새로운 모델 추가 시 `makemigrations`를 수행했는가?
 - [ ] **[Richness]** `ProductFeature`가 최소 3개 이상 등록되어 모달이 풍성해 보이는가?
+- [ ] **[Manual]** `ServiceManual`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (빈 껍데기만 있으면 안 됨)
 - [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
 - [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
 - [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
