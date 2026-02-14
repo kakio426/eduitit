@@ -16,7 +16,7 @@ class PDFEngine(FPDF):
         self.font_available = os.path.exists(FONT_PATH)
         if self.font_available:
             try:
-                self.add_font("NanumGothic", "", FONT_PATH)
+                self.add_font("NanumGothic", "", FONT_PATH, uni=True)
                 self.font_available = True
             except Exception as e:
                 # Font loading failed (common on Windows with pickle encoding issues)
@@ -31,6 +31,12 @@ class PDFEngine(FPDF):
         # 상단 여백을 25mm로 설정하여 헤더(15mm)와 겹침 방지
         self.set_margins(10, 25, 10)
         self.set_auto_page_break(auto=True, margin=20)
+
+    def _safe_text(self, value):
+        text = str(value) if value is not None else ""
+        if self.font_available:
+            return text
+        return text.encode("latin-1", "replace").decode("latin-1")
         
     def header(self):
         # 표지가 아닐 때만 헤더 표시
@@ -45,7 +51,7 @@ class PDFEngine(FPDF):
                     self.set_font("NanumGothic", "", 10)
                     self.set_text_color(255, 255, 255)
 
-                    header_text = f"{self.school_name} 소식지"
+                    header_text = f"{self._safe_text(self.school_name)} 소식지"
                     self.text(12, 10, header_text)
 
                     import datetime
@@ -56,7 +62,7 @@ class PDFEngine(FPDF):
                     # ASCII만 사용
                     self.set_font("Arial", "", 10)
                     self.set_text_color(255, 255, 255)
-                    self.text(12, 10, f"{self.school_name} Newsletter")
+                    self.text(12, 10, f"{self._safe_text(self.school_name)} Newsletter")
 
                     import datetime
                     date_text = datetime.datetime.now().strftime("%Y.%m.%d")
@@ -85,7 +91,7 @@ class PDFEngine(FPDF):
         if self.font_available:
             self.set_font("NanumGothic", "", 42)
             self.set_text_color(*self.theme["main"])
-            self.cell(190, 30, self.school_name, align='C', ln=True)
+            self.cell(190, 30, self._safe_text(self.school_name), align='C', ln=True)
             
             self.set_y(130)
             self.set_font("NanumGothic", "", 22)
@@ -99,7 +105,7 @@ class PDFEngine(FPDF):
             self.set_text_color(*self.theme["main"])
             # Only output school name if it's ASCII-safe
             try:
-                self.cell(190, 30, self.school_name, align='C', ln=True)
+                self.cell(190, 30, self._safe_text(self.school_name), align='C', ln=True)
             except:
                 self.cell(190, 30, "Newsletter", align='C', ln=True)
         
@@ -147,7 +153,7 @@ class PDFEngine(FPDF):
         
         # 1. 제목 높이 (폰트 18, 줄높이 12)
         self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
-        title_lines = len(self.multi_cell(190, 12, str(article.get('title', '')), split_only=True))
+        title_lines = len(self.multi_cell(190, 12, self._safe_text(article.get('title', '')), split_only=True))
         h += (title_lines * 12) + 2 # ln(2)
         
         # 2. 메타데이터 바 높이 (8mm + ln(5)로 축소 예정)
@@ -174,7 +180,7 @@ class PDFEngine(FPDF):
         
         # 4. 본문 높이 (줄높이 7)
         self.set_font("NanumGothic", "", content_font_size) if self.font_available else self.set_font("Arial", "", content_font_size)
-        content_lines = len(self.multi_cell(190, 7, str(article.get('content', '')), split_only=True))
+        content_lines = len(self.multi_cell(190, 7, self._safe_text(article.get('content', '')), split_only=True))
         h += (content_lines * 7)
         
         return h
@@ -201,7 +207,7 @@ class PDFEngine(FPDF):
             self.set_xy(10, y_cursor)
             self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
             self.set_text_color(*self.theme["main"])
-            self.multi_cell(190, 10, str(article.get('title', '')))
+            self.multi_cell(190, 10, self._safe_text(article.get('title', '')))
             y_cursor = self.get_y() + 3
             
             # 2. 메타데이터 바 (8mm 고정)
@@ -211,13 +217,13 @@ class PDFEngine(FPDF):
 
             info_parts = []
             if self.font_available:
-                if article.get('date'): info_parts.append(f"일시: {article['date']}")
-                if article.get('location'): info_parts.append(f"장소: {article['location']}")
-                if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+                if article.get('date'): info_parts.append(f"일시: {self._safe_text(article.get('date'))}")
+                if article.get('location'): info_parts.append(f"장소: {self._safe_text(article.get('location'))}")
+                if article.get('grade'): info_parts.append(f"대상: {self._safe_text(article.get('grade'))}")
             else:
-                if article.get('date'): info_parts.append(f"Date: {article['date']}")
-                if article.get('location'): info_parts.append(f"Location: {article['location']}")
-                if article.get('grade'): info_parts.append(f"Grade: {article['grade']}")
+                if article.get('date'): info_parts.append(f"Date: {self._safe_text(article.get('date'))}")
+                if article.get('location'): info_parts.append(f"Location: {self._safe_text(article.get('location'))}")
+                if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
             self.set_fill_color(248, 248, 248)
@@ -278,7 +284,7 @@ class PDFEngine(FPDF):
             self.set_font("NanumGothic", "", 11) if self.font_available else self.set_font("Arial", "", 11)
             self.set_text_color(30, 30, 30)
             
-            content = str(article.get('content', ''))
+            content = self._safe_text(article.get('content', ''))
             
             # 본문이 남은 공간에 들어가는지 시뮬레이션
             test_lines = self.multi_cell(190, 7, content, split_only=True)
@@ -322,7 +328,7 @@ class PDFEngine(FPDF):
             self.set_x(10)
             self.set_font("NanumGothic", "", 18) if self.font_available else self.set_font("Arial", "", 18)
             self.set_text_color(*self.theme["main"])
-            self.multi_cell(190, 12, str(article.get('title', '')))
+            self.multi_cell(190, 12, self._safe_text(article.get('title', '')))
             self.ln(2)
             
             # 메타데이터
@@ -331,13 +337,13 @@ class PDFEngine(FPDF):
 
             info_parts = []
             if self.font_available:
-                if article.get('date'): info_parts.append(f"일시: {article['date']}")
-                if article.get('location'): info_parts.append(f"장소: {article['location']}")
-                if article.get('grade'): info_parts.append(f"대상: {article['grade']}")
+                if article.get('date'): info_parts.append(f"일시: {self._safe_text(article.get('date'))}")
+                if article.get('location'): info_parts.append(f"장소: {self._safe_text(article.get('location'))}")
+                if article.get('grade'): info_parts.append(f"대상: {self._safe_text(article.get('grade'))}")
             else:
-                if article.get('date'): info_parts.append(f"Date: {article['date']}")
-                if article.get('location'): info_parts.append(f"Location: {article['location']}")
-                if article.get('grade'): info_parts.append(f"Grade: {article['grade']}")
+                if article.get('date'): info_parts.append(f"Date: {self._safe_text(article.get('date'))}")
+                if article.get('location'): info_parts.append(f"Location: {self._safe_text(article.get('location'))}")
+                if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
             self.set_fill_color(248, 248, 248)
@@ -355,7 +361,7 @@ class PDFEngine(FPDF):
             self.set_x(10)
             self.set_font("NanumGothic", "", content_font_size) if self.font_available else self.set_font("Arial", "", content_font_size)
             self.set_text_color(30, 30, 30)
-            self.multi_cell(190, 7, str(article.get('content', '')))
+            self.multi_cell(190, 7, self._safe_text(article.get('content', '')))
             self.ln(10)
 
     def render_image_grid(self, imgs, scaling=1.0):
@@ -432,7 +438,7 @@ class PDFEngine(FPDF):
              self.set_font("Arial", "", 24)
         
         self.set_text_color(255, 255, 255)
-        self.text(12, 18, f"{self.school_name} 타임즈") # Newspaper Title
+        self.text(12, 18, f"{self._safe_text(self.school_name)} 타임즈") # Newspaper Title
         
         self.set_font("Arial", "", 12)
         import datetime

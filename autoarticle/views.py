@@ -346,6 +346,10 @@ class ArticleArchiveView(ListView):
                 pdf.add_article(art_data, is_booklet=True)
             
             pdf_data = pdf.output(dest='S')
+            if isinstance(pdf_data, bytearray):
+                pdf_data = bytes(pdf_data)
+            elif isinstance(pdf_data, str):
+                pdf_data = pdf_data.encode('latin-1')
             response = HttpResponse(pdf_data, content_type='application/pdf')
             response['Content-Disposition'] = 'attachment; filename="newsletter.pdf"'
             return response
@@ -538,13 +542,6 @@ class ArticlePDFDownloadView(View):
     """Single article PDF download (lazy generation)."""
     def get(self, request, pk):
         article = get_object_or_404(GeneratedArticle, pk=pk)
-
-        if article.pdf_file:
-            try:
-                return redirect(article.pdf_file.url)
-            except Exception:
-                pass
-
         try:
             theme = request.session.get('autoarticle_theme', ArticleCreateView.THEMES[0])
             pdf_engine = PDFEngine(theme, article.school_name)
@@ -560,15 +557,15 @@ class ArticlePDFDownloadView(View):
             }
             pdf_engine.add_article(article_data, is_booklet=True)
 
-            from django.core.files.base import ContentFile
             pdf_data = pdf_engine.output(dest='S')
-            if isinstance(pdf_data, str):
+            if isinstance(pdf_data, bytearray):
+                pdf_data = bytes(pdf_data)
+            elif isinstance(pdf_data, str):
                 pdf_data = pdf_data.encode('latin-1')
 
-            article.pdf_file.save(f"newsletter_{article.id}.pdf", ContentFile(pdf_data))
-            article.save()
-
-            return redirect(article.pdf_file.url)
+            response = HttpResponse(pdf_data, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="newsletter_{article.id}.pdf"'
+            return response
         except Exception as e:
             logger.error(f"Lazy PDF Generation failed: {e}", exc_info=True)
             messages.error(request, f"PDF generation failed: {str(e)}")
