@@ -17,12 +17,30 @@ class ManualSectionInline(admin.StackedInline):
         }),
     )
 
+class ServiceManualInline(admin.StackedInline):
+    model = ServiceManual
+    extra = 0
+    show_change_link = True
+    verbose_name = "서비스 이용방법 (매뉴얼)"
+    verbose_name_plural = "서비스 이용방법 (매뉴얼)"
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'description', 'is_published')
+        }),
+    )
+
 @admin.register(ServiceManual)
 class ServiceManualAdmin(admin.ModelAdmin):
-    list_display = ('product', 'title', 'is_published', 'updated_at')
+    list_display = ('product', 'title', 'is_published', 'display_order_display', 'updated_at')
     list_filter = ('is_published', 'product__service_type')
     search_fields = ('title', 'product__title')
+    list_editable = ('is_published',)
     inlines = [ManualSectionInline]
+
+    def display_order_display(self, obj):
+        return obj.product.display_order
+    display_order_display.short_description = '표시 순서(상품 기준)'
+    display_order_display.admin_order_field = 'product__display_order'
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('product')
@@ -33,7 +51,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'is_featured', 'service_type', 'color_theme')
     search_fields = ('title', 'description')
     list_editable = ('service_type', 'icon', 'color_theme', 'display_order', 'is_active', 'is_featured')
-    inlines = [ProductFeatureInline]
+    inlines = [ProductFeatureInline, ServiceManualInline]
 
     fieldsets = (
         ('기본 정보', {

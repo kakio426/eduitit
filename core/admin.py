@@ -63,7 +63,11 @@ class SiteConfigAdmin(admin.ModelAdmin):
         ('배너 설정', {
             'fields': ('banner_active', 'banner_text', 'banner_color', 'banner_link'),
         }),
+        ('이용방법 추천 설정', {
+            'fields': ('featured_manuals',),
+        }),
     )
+    filter_horizontal = ('featured_manuals',)
 
     def has_add_permission(self, request):
         # 싱글톤: 이미 존재하면 추가 불가

@@ -62,6 +62,13 @@ class SiteConfig(models.Model):
     banner_color = models.CharField(max_length=7, default='#7c3aed', verbose_name="배너 색상 (HEX)")
     banner_link = models.URLField(blank=True, default='', verbose_name="배너 링크 URL")
 
+    featured_manuals = models.ManyToManyField(
+        'products.ServiceManual', 
+        blank=True, 
+        verbose_name="추천 이용방법",
+        help_text="홈 화면이나 리스트 상단에 노출할 매뉴얼을 선택하세요."
+    )
+
 
     class Meta:
         verbose_name = "사이트 설정"

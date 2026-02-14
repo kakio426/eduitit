@@ -26,7 +26,7 @@
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#F3F4F6]">
     <div class="max-w-5xl mx-auto">
         <!-- Breadcrumb & Back -->
-        <div class="flex items-center gap-4 mb-8" data-aos="fade-down">
+        <div class="flex items-center gap-4 mb-8">
             <a href="{% url 'service_guide_list' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-gray-400 hover:text-purple-600 hover:shadow-md transition">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
@@ -34,7 +34,7 @@
         </div>
 
         <!-- Header -->
-        <div class="bg-white rounded-3xl p-8 md:p-12 shadow-sm mb-12 relative overflow-hidden ring-1 ring-gray-900/5" data-aos="fade-up">
+        <div class="bg-white rounded-3xl p-8 md:p-12 shadow-sm mb-12 relative overflow-hidden ring-1 ring-gray-900/5">
             <div class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-100/40 to-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
             
             <div class="relative z-10">
@@ -78,7 +78,7 @@
         <!-- Sections -->
         <div class="space-y-16">
             {% for section in sections %}
-            <div id="section-{{ section.id }}" class="scroll-mt-40" data-aos="fade-up" data-aos-delay="100">
+            <div id="section-{{ section.id }}" class="scroll-mt-40">
                 
                 <!-- Section Title -->
                 {% if section.title %}
@@ -183,7 +183,7 @@
         </div>
 
         <!-- Footer CTA -->
-        <div class="mt-20 text-center pb-10" data-aos="fade-up">
+        <div class="mt-20 text-center pb-10">
             <h3 class="text-2xl font-bold text-gray-800 mb-8 font-title">이제 직접 사용해보세요!</h3>
             {% if manual.product.external_url %}
             <a href="{{ manual.product.external_url }}" target="_blank" class="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-bold text-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition transform group">

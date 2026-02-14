@@ -6,7 +6,7 @@
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-12" data-aos="fade-up">
+        <div class="text-center mb-12">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 font-title">
                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">서비스 매뉴얼</span>
             </h1>
@@ -18,7 +18,7 @@
         {% if manuals %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for manual in manuals %}
-                <a href="{% url 'service_guide_detail' manual.pk %}" class="block group h-full" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:'100' }}">
+                <a href="{% url 'service_guide_detail' manual.pk %}" class="block group h-full">
                     <div class="clay-card p-6 h-full transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-xl flex flex-col justify-between border border-white/50">
                         <div>
                             <div class="flex items-center gap-3 mb-4">
@@ -49,7 +49,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="text-center py-20 bg-white/50 rounded-3xl shadow-sm border border-white/60 backdrop-blur-sm" data-aos="fade-up">
+            <div class="text-center py-20 bg-white/50 rounded-3xl shadow-sm border border-white/60 backdrop-blur-sm">
                 <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <i class="fa-solid fa-book-open text-4xl text-gray-400"></i>
                 </div>
