@@ -20,10 +20,20 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - `app/templates/app/...`
   - `app/static/app/...`
 - Keep `product.title` string exact across DB, ensure command, and template/view conditions.
+- When using title-based launch routing in templates (for example `products/templates/products/partials/preview_modal.html`), always add an explicit branch for the new service.
 - Ensure rich product content:
   - `lead_text`
   - detailed `description`
   - at least 3 `ProductFeature` items.
+
+## Launch Routing Guardrail
+- For internal services, set `external_url=''` and map the launch URL explicitly to Django route.
+- After adding a new product, validate click flow from dashboard modal:
+  - expected: service route opens
+  - failure pattern: redirects to `home` due to missing title branch.
+- First triage for "service click goes home":
+  - check `product.title` exact match (SSOT)
+  - check launch URL branch in `products/templates/products/partials/preview_modal.html`.
 
 ## Deployment Sync (All 4 Required)
 - Update `INSTALLED_APPS`.
