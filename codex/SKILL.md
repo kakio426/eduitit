@@ -60,3 +60,11 @@ description: Eduitit 서비스 개발/수정 작업 시 필수 가드레일과 �
   - `is_published=True`
   - `product.is_active=True`
 
+## Encoding Safety (Korean Text)
+- Treat all template/source files as UTF-8 without BOM.
+- Do not use shell pipelines that rewrite files for content edits (for example `Get-Content | Set-Content`) on Korean-heavy files.
+- Prefer `apply_patch` for edits; if using scripts/tools, force explicit UTF-8 read/write.
+- After editing Korean UI files, run a quick mojibake scan before commit:
+  - check for broken tokens like `?`, `�`, `媛`, `�쒕`, `?댁`.
+- If corruption is detected, restore from latest clean git revision first, then re-apply logical diffs.
+- Keep `.editorconfig` in repo root with UTF-8 defaults and do not remove it.
