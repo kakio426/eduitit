@@ -1,6 +1,6 @@
 ---
 name: eduitit-core
-description: Eduitit 서비스 개발/수정 작업 시 필수 가드레일과 배포 규칙을 적용한다. 신규 서비스 추가, 템플릿 수정, HTMX/Django 뷰 변경, ensure 커맨드 작성, ServiceManual/ManualSection 구성, 배포 동기화(Procfile/nixpacks/settings_production) 작업에서 사용한다.
+description: Core guardrails for Eduitit service development and maintenance, including Django/HTMX changes, ensure command safety, ServiceManual setup, and deployment sync rules.
 ---
 
 # Eduitit Core Guardrails
