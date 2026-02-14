@@ -168,6 +168,34 @@ def post_edit(request, pk):
         
     if request.method == 'POST':
         content = request.POST.get('content')
+        image = request.FILES.get('image')
+        
+        # 이미지 삭제 처리
+        if request.POST.get('remove_image') == 'true':
+            post.image = None
+            
+        # 이미지 수정 처리
+        if image:
+            MAX_SIZE = 10 * 1024 * 1024  # 10MB
+            ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+            if image.size > MAX_SIZE:
+                messages.error(request, '이미지 크기는 10MB 이하만 가능합니다.')
+                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+
+            if image.content_type not in ALLOWED_TYPES:
+                messages.error(request, '허용되지 않는 파일 형식입니다. (JPEG, PNG, GIF, WebP만 가능)')
+                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+
+            try:
+                img = Image.open(image)
+                img.verify()
+                image.seek(0)
+                post.image = image
+            except Exception:
+                messages.error(request, '올바른 이미지 파일이 아닙니다.')
+                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+
         if content:
             post.content = content
             post.save()

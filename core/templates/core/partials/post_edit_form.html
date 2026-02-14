@@ -1,5 +1,6 @@
 <form id="post-{{ post.id }}" hx-post="{% url 'post_edit' post.id %}" hx-target="#post-{{ post.id }}"
-    hx-swap="outerHTML" class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
+    hx-encoding="multipart/form-data" hx-swap="outerHTML"
+    class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
 
     <div class="mb-3">
         <label class="block text-xs font-bold text-slate-500 mb-1">내용 수정</label>
@@ -7,14 +8,31 @@
             class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-100 outline-none resize-none">{{ post.content }}</textarea>
     </div>
 
-    <!-- Image handling could be added here, but keeping it simple for now as text edit is primary -->
-    {% if post.image %}
-    <div class="mb-3 relative group">
-        <p class="text-xs text-slate-400 mb-1">현재 이미지:</p>
-        <img src="{{ post.image.url }}" class="h-20 w-auto rounded-lg border border-slate-100 object-cover">
-        <!-- Delete image option could go here -->
-    </div>
-    {% endif %}
+    <!-- Image handling -->
+    <div class="mb-3">
+        <label class="block text-xs font-bold text-slate-500 mb-2">이미지 수정</label>
+        
+        <input type="hidden" name="remove_image" id="remove-image-input-{{ post.id }}" value="false">
+        
+        <div id="edit-image-preview-container-{{ post.id }}" class="{% if not post.image %}hidden{% endif %} mb-3 relative group">
+            <img id="edit-image-preview-{{ post.id }}" src="{% if post.image %}{{ post.image.url }}{% endif %}" 
+                 class="h-32 w-full object-cover rounded-xl border border-slate-100 shadow-sm">
+            <button type="button" 
+                onclick="document.getElementById('edit-post-image-input-{{ post.id }}').value=''; document.getElementById('edit-image-preview-container-{{ post.id }}').classList.add('hidden'); document.getElementById('remove-image-input-{{ post.id }}').value='true';"
+                class="absolute top-2 right-2 bg-red-500/80 text-white w-7 h-7 rounded-full hover:bg-red-600 transition flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <input type="file" name="image" id="edit-post-image-input-{{ post.id }}" class="hidden" accept="image/*"
+            onchange="const file = this.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { const preview = document.getElementById('edit-image-preview-{{ post.id }}'); preview.src = e.target.result; document.getElementById('edit-image-preview-container-{{ post.id }}').classList.remove('hidden'); document.getElementById('remove-image-input-{{ post.id }}').value='false'; }; reader.readAsDataURL(file); }">
+        
+        <button type="button" onclick="document.getElementById('edit-post-image-input-{{ post.id }}').click()"
+            class="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-50 text-slate-600 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-600 transition-all text-sm font-medium">
+            <i class="ph ph-image text-lg"></i>
+            <span>이미지 {% if post.image %}변경{% else %}추가{% endif %}하기</span>
+        </button>
+    </input>
 
     <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
         <button type="button" hx-get="{% url 'post_detail_partial' post.id %}" hx-target="closest form"

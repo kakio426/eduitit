@@ -26,10 +26,12 @@
 - 하드코딩된 API 키 사용 금지
 - UI 오버랩(NavBar 가림) 방치 금지 → 모든 페이지 `pt-32` 준수
 - `ensure_*` management command에서 데이터 중복 생성 및 Admin 관리 데이터 덮어쓰기 금지 → `Procfile`이 매 배포마다 실행하므로 Admin 수정이 초기화되거나 데이터가 중복됨
+- **[Manual]** 신규 서비스 추가 시 `ServiceManual` 작성 누락 금지. 풍성한(3개 이상 섹션) 사용법이 없는 서비스는 배포 불가.
 
 ## 작업 완료 후 체크리스트
 - [ ] Django Check 통과 (`python manage.py check`)
 - [ ] console.log 및 debug print 제거
+- [ ] **[Manual]** 서비스 매뉴얼(`ServiceManual`) 데이터 및 레이아웃(Rich Content) 포함 여부 확인
 - [ ] 보안 검토 (API 키, 시크릿 노출 여부)
 - [ ] settings.py 변경 시 settings_production.py도 동기화
 

@@ -1,0 +1,21 @@
+Title: 반짝반짝 우리반 알림판, URL: /products/dutyticker/
+Title: 왁자지껄 교실 윷놀이, URL: /products/yut/
+Title: 토닥토닥 선생님 운세, URL: /fortune/
+Title: 가뿐하게 서명 톡, URL: /signatures/
+Title: 궁금해? 패들릿 봇, URL: /padlet/
+Title: 몽글몽글 미술 수업, URL: /artclass/
+Title: 글솜씨 뚝딱! 소식지, URL: /autoarticle/
+Title: 유튜브 탈알고리즘, URL: https://motube-woad.vercel.app/
+Title: 학교 통합 지원 스쿨잇, URL: https://schoolit.shop/
+Title: 인사이트, URL: /insights/
+Title: AI 도구 가이드, URL: /tools/
+Title: AI 프롬프트 레시피, URL: /prompts/
+Title: 학교폭력 사안 처리 비서, URL: /school_violence/
+Title: 쌤BTI, URL: 
+Title: 두뇌 풀가동! 교실 체스, URL: 
+Title: HWP to PDF 변환기, URL: https://drive.google.com/file/d/1JfFn1WtkJyMBQ0OUleXPQPTf2t9ecgyq/view?usp=sharing
+Title: 우리반 캐릭터 친구 찾기, URL: 
+Title: 교사 백과사전, URL: 
+Title: 간편 수합, URL: 
+Title: 학교 예약 시스템, URL: 
+Title: 선생님 사주, URL: 
