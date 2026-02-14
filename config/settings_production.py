@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
+    'version_manager.apps.VersionManagerConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -481,6 +482,7 @@ def run_startup_tasks():
         call_command('ensure_notebooklm')
         call_command('ensure_collect')
         call_command('ensure_reservations')
+        call_command('ensure_version_manager')
     except Exception as e:
         print(f"DEBUG: Startup product ensure tasks failed: {e}")
 
@@ -563,4 +565,3 @@ if SENTRY_DSN and not DEBUG:
         print(f"[SENTRY] ERROR: Init failed - {e}")
 else:
     print(f"[SENTRY] SKIPPED (DSN={'SET' if SENTRY_DSN else 'EMPTY'}, DEBUG={DEBUG})")
-

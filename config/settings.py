@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
+    'version_manager.apps.VersionManagerConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',

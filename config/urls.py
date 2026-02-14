@@ -40,9 +40,9 @@ urlpatterns = [
     path('collect/', include('collect.urls', namespace='collect')),
     path('reservations/', include('reservations.urls', namespace='reservations')),
     path('encyclopedia/', include('encyclopedia.urls', namespace='encyclopedia')),
+    path('version-manager/', include('version_manager.urls', namespace='version_manager')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

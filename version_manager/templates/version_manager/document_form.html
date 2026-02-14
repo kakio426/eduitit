@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}문서 생성 | 최신본 센터{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-3xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-700 font-title">문서 패키지 생성</h1>
+            <p class="text-gray-600 mt-2">문서명과 그룹만 정하면 이후에는 파일 드롭만으로 버전이 관리됩니다.</p>
+        </div>
+
+        <div class="clay-card p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label for="id_base_name" class="block text-sm font-semibold text-gray-700 mb-2">문서명</label>
+                    <input id="id_base_name" name="base_name" type="text" required class="w-full rounded-2xl px-4 py-3 shadow-clay-inner focus:outline-none bg-[#E0E5EC]" placeholder="예: 교육과정_3학년_국어_2단원">
+                </div>
+
+                <div>
+                    <label for="id_group" class="block text-sm font-semibold text-gray-700 mb-2">기존 그룹 선택</label>
+                    <select id="id_group" name="group_id" class="w-full rounded-2xl px-4 py-3 shadow-clay-inner focus:outline-none bg-[#E0E5EC]">
+                        <option value="">선택 안 함</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}">{{ group.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="id_new_group_name" class="block text-sm font-semibold text-gray-700 mb-2">새 그룹명 (선택)</label>
+                    <input id="id_new_group_name" name="new_group_name" type="text" class="w-full rounded-2xl px-4 py-3 shadow-clay-inner focus:outline-none bg-[#E0E5EC]" placeholder="예: 3학년 국어">
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="px-5 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:shadow-clay-hover transition-all">생성하기</button>
+                    <a href="{% url 'version_manager:document_list' %}" class="px-5 py-3 bg-gray-200 text-gray-700 rounded-full font-semibold">목록으로</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}최신본 센터{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-700 font-title">최신본 센터</h1>
+                <p class="text-gray-600 mt-2">문서 패키지별로 최신본과 배포본을 안전하게 관리합니다.</p>
+            </div>
+            <a href="{% url 'version_manager:document_create' %}" class="px-5 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:shadow-clay-hover transition-all">
+                새 문서
+            </a>
+        </div>
+
+        <form method="get" class="clay-card p-4 mb-6 grid md:grid-cols-4 gap-3">
+            <input type="text" name="q" value="{{ query }}" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none" placeholder="문서명/그룹 검색">
+            <select name="group" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none">
+                <option value="">전체 그룹</option>
+                {% for group in groups %}
+                <option value="{{ group.id }}"{% if selected_group == group.id|stringformat:'s' %} selected{% endif %}>{{ group.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="recent" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none">
+                <option value="">전체 기간</option>
+                <option value="7"{% if selected_recent == '7' %} selected{% endif %}>최근 7일</option>
+                <option value="30"{% if selected_recent == '30' %} selected{% endif %}>최근 30일</option>
+            </select>
+            <button type="submit" class="px-4 py-3 bg-purple-500 text-white rounded-full font-bold">필터 적용</button>
+        </form>
+
+        <div class="clay-card p-6 overflow-x-auto">
+            <table class="w-full min-w-[720px] text-left">
+                <thead>
+                    <tr class="text-gray-600 border-b border-gray-200">
+                        <th class="py-3">문서명</th>
+                        <th class="py-3">그룹</th>
+                        <th class="py-3">최근 업로드</th>
+                        <th class="py-3 text-right">이동</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-semibold text-gray-700">{{ document.base_name }}</td>
+                        <td class="py-4 text-gray-600">{{ document.group.name }}</td>
+                        <td class="py-4 text-gray-600">{% if document.latest_uploaded_at %}{{ document.latest_uploaded_at|date:'Y-m-d H:i' }}{% else %}-{% endif %}</td>
+                        <td class="py-4 text-right">
+                            <a href="{% url 'version_manager:document_detail' document.id %}" class="text-purple-600 font-semibold hover:underline">상세 보기</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-10 text-center text-gray-500">등록된 문서 패키지가 없습니다. 새 문서를 만들어 시작하세요.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
