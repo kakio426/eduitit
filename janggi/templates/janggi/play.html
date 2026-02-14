@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}장기 플레이 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .toast {
+        position: fixed;
+        top: 18%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-70px);
+        background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+        color: white;
+        padding: 0.9rem 1.6rem;
+        border-radius: 16px;
+        min-width: 260px;
+        max-width: 360px;
+        font-size: 0.95rem;
+        box-shadow: 0 10px 25px rgba(67, 56, 202, 0.35);
+        opacity: 0;
+        transition: all 0.35s ease;
+        z-index: 120;
+        pointer-events: none;
+        text-align: left;
+    }
+    .toast-title {
+        font-weight: 900;
+        font-size: 1.05rem;
+        margin-bottom: 0.2rem;
+    }
+    .toast-desc {
+        opacity: 0.95;
+        line-height: 1.35;
+    }
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    .result-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 130;
+        background: rgba(15, 23, 42, 0.52);
+        backdrop-filter: blur(2px);
+    }
+    .result-overlay.show {
+        display: flex;
+    }
+    .result-card {
+        width: min(460px, 92vw);
+        border-radius: 24px;
+        background: #ffffff;
+        padding: 26px 24px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        text-align: center;
+    }
+    .result-title {
+        font-size: 2rem;
+        font-weight: 900;
+        margin-bottom: 8px;
+    }
+    .result-title.win-red {
+        color: #b91c1c;
+    }
+    .result-title.win-blue {
+        color: #1e40af;
+    }
+    .result-title.draw {
+        color: #374151;
+    }
+    .result-desc {
+        color: #4b5563;
+        line-height: 1.45;
+        margin-bottom: 16px;
+    }
+    .janggi-board {
+        display: grid;
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+        gap: 4px;
+    }
+    .janggi-cell {
+        aspect-ratio: 1 / 1;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #374151;
+        font-size: 12px;
+        cursor: pointer;
+        user-select: none;
+    }
+    .janggi-cell.selected {
+        outline: 3px solid #7c3aed;
+        outline-offset: -2px;
+    }
+    .janggi-cell.hint {
+        box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.5);
+    }
+    .janggi-piece {
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        background: white;
+        font-size: 16px;
+        line-height: 1;
+    }
+    .janggi-piece-img {
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+        object-fit: cover;
+        display: block;
+    }
+    .piece-red {
+        color: #b91c1c;
+        border-color: rgba(185, 28, 28, 0.35);
+    }
+    .piece-blue {
+        color: #1e40af;
+        border-color: rgba(30, 64, 175, 0.35);
+    }
+    .engine-log {
+        max-height: 280px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        background: #0f172a;
+        color: #cbd5e1;
+        padding: 12px;
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="toast" class="toast"></div>
+<div id="gameResultOverlay" class="result-overlay">
+    <div class="result-card">
+        <div id="resultTitle" class="result-title">게임 종료</div>
+        <p id="resultDesc" class="result-desc"></p>
+        <div class="flex items-center justify-center gap-2">
+            <button id="retryResultBtn" class="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold">다시하기</button>
+            <button id="closeResultBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold">닫기</button>
+        </div>
+    </div>
+</div>
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black text-gray-700 font-title">
+                {% if mode == 'ai' %}🤖 AI 장기 대전{% else %}👥 로컬 장기 대전{% endif %}
+            </h1>
+            <p class="text-gray-500 mt-2">
+                {% if mode == 'ai' %}난이도: {{ difficulty }}{% else %}한 화면에서 번갈아 두세요.{% endif %}
+            </p>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div class="clay-card p-6">
+                    <h2 class="text-xl font-bold text-gray-700 mb-2">장기 보드 (10x9)</h2>
+                    <p class="text-sm text-gray-500 mb-4">기물을 클릭하고 이동 칸을 선택하세요.</p>
+                    <div id="janggiBoard" class="janggi-board"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 space-y-4">
+                <div class="clay-card p-5">
+                    <h2 class="text-lg font-bold text-gray-700 mb-3">엔진 상태</h2>
+                    <p id="engineStatus" class="text-sm text-gray-600">초기화 전</p>
+                    <div class="mt-3 flex gap-2">
+                        <button id="initEngineBtn" class="px-3 py-2 bg-blue-500 text-white rounded-xl text-sm font-bold">엔진 시작</button>
+                        <button id="askMoveBtn" class="px-3 py-2 bg-purple-500 text-white rounded-xl text-sm font-bold">AI 수 요청</button>
+                    </div>
+                </div>
+
+                <div class="clay-card p-5">
+                    <h2 class="text-lg font-bold text-gray-700 mb-3">게임 상태</h2>
+                    <p id="turnStatus" class="text-sm text-gray-600">차례: RED</p>
+                    <div class="mt-3 flex gap-2">
+                        <button id="resetBoardBtn" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-bold">초기화</button>
+                    </div>
+                </div>
+
+                <div class="clay-card p-5">
+                    <h2 class="text-lg font-bold text-gray-700 mb-3">UCI 로그</h2>
+                    <div id="engineLog" class="engine-log">[Janggi] ready.</div>
+                </div>
+
+                <div class="clay-card p-5">
+                    <h2 class="text-lg font-bold text-gray-700 mb-3">수순</h2>
+                    <div id="moveHistory" class="text-xs text-gray-700 max-h-56 overflow-y-auto whitespace-pre-wrap">-</div>
+                </div>
+
+                <a href="{% url 'janggi:index' %}" class="block text-center px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold">메인으로</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var JANGGI_ENGINE_PATH = "{% static 'janggi/js/engine/stockfish.js' %}";
+    var JANGGI_ENGINE_WORKER_PATH = "{% static 'janggi/js/engine/stockfish.worker.js' %}";
+    var JANGGI_STATIC_PIECE_BASE = "{% static 'janggi/images/pieces/' %}";
+    var JANGGI_IS_AI_MODE = "{% if mode == 'ai' %}1{% else %}0{% endif %}" === "1";
+    var JANGGI_DIFFICULTY = "{{ difficulty }}";
+    var JANGGI_MODE = "{{ mode }}";
+</script>
+<script src="{% static 'janggi/js/engine/stockfish.js' %}"></script>
+<script src="{% static 'janggi/js/janggi_ai.js' %}"></script>
+<script src="{% static 'janggi/js/janggi_board.js' %}"></script>
+{% endblock %}

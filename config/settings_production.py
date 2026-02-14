@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
+    'janggi.apps.JanggiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
@@ -478,6 +479,7 @@ def run_startup_tasks():
         from django.core.management import call_command
         call_command('ensure_ssambti')
         call_command('ensure_chess')
+        call_command('ensure_janggi')
         call_command('ensure_studentmbti')
         call_command('ensure_notebooklm')
         call_command('ensure_collect')

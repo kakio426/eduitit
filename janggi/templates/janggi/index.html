@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}교실 장기 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-12">
+            <div class="text-6xl mb-4">🧠</div>
+            <h1 class="text-5xl font-black text-gray-700 font-title">두뇌 풀가동! 교실 장기</h1>
+            <p class="text-xl text-gray-500 mt-4">로컬 대전과 AI 대전을 한 화면에서 시작합니다.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="clay-card p-8">
+                <h2 class="text-3xl font-bold text-gray-700 mb-3">👥 로컬 대전</h2>
+                <p class="text-gray-600 mb-6">같은 화면에서 두 명이 번갈아 장기를 둘 수 있습니다.</p>
+                <a href="{% url 'janggi:play' %}?mode=local" class="block w-full text-center py-4 bg-purple-600 text-white rounded-2xl font-bold">로컬 게임 시작</a>
+            </div>
+            <div class="clay-card p-8">
+                <h2 class="text-3xl font-bold text-gray-700 mb-3">🤖 AI 대전</h2>
+                <p class="text-gray-600 mb-6">Fairy-Stockfish 기반 UCI 엔진 연동 구조로 AI 수를 계산합니다.</p>
+                <div class="space-y-2">
+                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=easy" class="block w-full text-center py-3 bg-green-500 text-white rounded-xl font-bold">초급</a>
+                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=medium" class="block w-full text-center py-3 bg-blue-500 text-white rounded-xl font-bold">중급</a>
+                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=hard" class="block w-full text-center py-3 bg-orange-500 text-white rounded-xl font-bold">고급</a>
+                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=expert" class="block w-full text-center py-3 bg-red-500 text-white rounded-xl font-bold">최강</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-8">
+            <a href="{% url 'janggi:rules' %}" class="inline-flex items-center gap-2 px-8 py-4 clay-card text-gray-700 font-bold text-lg">
+                장기 규칙 보기 <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

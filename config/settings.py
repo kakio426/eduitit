@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
+    'janggi.apps.JanggiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
