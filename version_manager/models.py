@@ -3,22 +3,39 @@ import secrets
 
 from django.conf import settings
 from django.db import models
+from django.core.files.storage import default_storage
 from django.utils import timezone
 from django.utils.text import slugify
 
 
 def _normalize_base_name(value: str) -> str:
-    normalized = slugify(value, allow_unicode=True).replace('-', '_')
+    normalized = slugify(value).replace('-', '_')
     return normalized or 'document'
+
+
+def _normalize_path_slug(value: str, fallback: str) -> str:
+    slug = slugify(value)
+    return slug or fallback
 
 
 def document_version_upload_to(instance: "DocumentVersion", filename: str) -> str:
     today = timezone.localdate()
     ext = Path(filename).suffix.lower()
     doc_base = _normalize_base_name(instance.document.base_name)
+    group_slug = _normalize_path_slug(instance.document.group.slug, 'group')
     version_token = f"v{instance.version:02d}"
     stored_name = f"{today:%Y-%m-%d}_{doc_base}_{version_token}{ext}"
-    return f"documents/{instance.document.group.slug}/{today:%Y}/{today:%m}/{stored_name}"
+    return f"documents/{group_slug}/{today:%Y}/{today:%m}/{stored_name}"
+
+
+def get_raw_storage():
+    if getattr(settings, 'USE_CLOUDINARY', False):
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+            return RawMediaCloudinaryStorage()
+        except (ImportError, Exception):
+            return default_storage
+    return default_storage
 
 
 class DocumentGroup(models.Model):
@@ -138,7 +155,7 @@ class DocumentVersion(models.Model):
 
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='versions')
     version = models.PositiveIntegerField()
-    upload = models.FileField(upload_to=document_version_upload_to)
+    upload = models.FileField(upload_to=document_version_upload_to, storage=get_raw_storage)
     original_filename = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     uploaded_by_name = models.CharField(max_length=80, blank=True)
