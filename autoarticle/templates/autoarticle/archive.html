@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
@@ -7,8 +7,8 @@
 
         <!-- Header -->
         <div class="text-center" data-aos="fade-down">
-            <h1 class="text-5xl font-bold text-gray-800 mb-4 font-display">🗂️ 기사 보관함</h1>
-            <p class="text-2xl text-gray-500 font-hand">작성된 기사들을 관리하고 통합 뉴스레터를 발행하세요.</p>
+            <h1 class="text-5xl font-bold text-gray-800 mb-4 font-display">?뾺截?湲곗궗 蹂닿???/h1>
+            <p class="text-2xl text-gray-500 font-hand">?묒꽦??湲곗궗?ㅼ쓣 愿由ы븯怨??듯빀 ?댁뒪?덊꽣瑜?諛쒗뻾?섏꽭??</p>
         </div>
 
         <form method="post">
@@ -27,10 +27,10 @@
                                             <input type="checkbox" id="selectAll"
                                                 class="w-5 h-5 rounded-lg border-2 border-gray-200 text-purple-600 focus:ring-purple-500 transition-all">
                                         </th>
-                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm">기사 제목</th>
-                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm text-center">학년
+                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm">湲곗궗 ?쒕ぉ</th>
+                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm text-center">?숇뀈
                                         </th>
-                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm text-right">일시
+                                        <th class="py-4 px-4 font-bold uppercase tracking-widest text-sm text-right">?쇱떆
                                         </th>
                                     </tr>
                                 </thead>
@@ -44,7 +44,7 @@
                                                 class="w-6 h-6 rounded-xl border-2 border-gray-100 text-purple-600 focus:ring-4 focus:ring-purple-100 transition-all shadow-inner bg-gray-50">
                                         </td>
                                         <td class="py-6 px-4">
-                                            <a href="{% url 'autoarticle:detail' article.id %}"
+                                            <a href="{% url 'autoarticle:edit' article.id %}"
                                                 class="block group-hover:text-purple-600 transition-colors"
                                                 onclick="event.stopPropagation()">
                                                 <span class="text-2xl font-bold text-gray-700">{{ article.title|default:article.event_name }}</span>
@@ -68,10 +68,10 @@
                         {% else %}
                         <div class="text-center py-20 flex flex-col items-center">
                             <i class="fa-solid fa-folder-open text-gray-200 text-7xl mb-6"></i>
-                            <p class="text-gray-400 text-2xl font-hand">아직 보관된 기사가 없습니다.</p>
+                            <p class="text-gray-400 text-2xl font-hand">?꾩쭅 蹂닿???湲곗궗媛 ?놁뒿?덈떎.</p>
                             <a href="{% url 'autoarticle:create' %}"
                                 class="mt-8 px-8 py-3 bg-purple-100 text-purple-600 rounded-2xl font-bold hover:bg-purple-200 transition-all">
-                                첫 기사 작성하기
+                                泥?湲곗궗 ?묒꽦?섍린
                             </a>
                         </div>
                         {% endif %}
@@ -82,29 +82,35 @@
                 <div class="space-y-6" data-aos="fade-left">
                     <div class="clay-card p-8 bg-white/80 backdrop-blur-md sticky top-24 border-2 border-purple-100">
                         <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <i class="fa-solid fa-bolt-lightning text-yellow-500"></i> 뉴스레터 발행
+                            <i class="fa-solid fa-bolt-lightning text-yellow-500"></i> ?댁뒪?덊꽣 諛쒗뻾
                         </h3>
 
                         <p class="text-gray-500 mb-8 leading-relaxed font-hand text-lg">
-                            왼쪽 목록에서 포함할 기사들을 선택한 후, 아래 버튼을 눌러 통합 문서를 생성하세요.
+                            ?쇱そ 紐⑸줉?먯꽌 ?ы븿??湲곗궗?ㅼ쓣 ?좏깮???? ?꾨옒 踰꾪듉???뚮윭 ?듯빀 臾몄꽌瑜??앹꽦?섏꽭??
                         </p>
 
                         <div class="space-y-4">
                             <button type="submit" name="action" value="generate_pdf"
                                 class="w-full py-5 rounded-3xl bg-blue-600 text-white font-bold text-xl shadow-clay hover:bg-blue-700 transition-all flex items-center justify-center gap-3">
-                                <i class="fa-solid fa-file-pdf"></i> PDF 신문 발행
+                                <i class="fa-solid fa-file-pdf"></i> PDF ?좊Ц 諛쒗뻾
                             </button>
 
                             <button type="submit" name="action" value="generate_ppt"
                                 class="w-full py-5 rounded-3xl bg-orange-500 text-white font-bold text-xl shadow-clay hover:bg-orange-600 transition-all flex items-center justify-center gap-3">
-                                <i class="fa-solid fa-file-powerpoint"></i> 교육용 PPT 발행
+                                <i class="fa-solid fa-file-powerpoint"></i> 援먯쑁??PPT 諛쒗뻾
                             </button>
 
                             <button type="submit" name="action" value="generate_word"
                                 class="w-full py-5 rounded-3xl bg-indigo-500 text-white font-bold text-xl shadow-clay hover:bg-indigo-600 transition-all flex items-center justify-center gap-3">
-                                <i class="fa-solid fa-file-word"></i> Word 문서 발행
+                                <i class="fa-solid fa-file-word"></i> Word 臾몄꽌 諛쒗뻾
                             </button>
                         </div>
+
+                            <button type="submit" name="action" value="delete_selected"
+                                onclick="return confirm('선택한 기사를 삭제하시겠습니까? 연동된 이미지도 함께 삭제됩니다.');"
+                                class="w-full py-5 rounded-3xl bg-red-500 text-white font-bold text-xl shadow-clay hover:bg-red-600 transition-all flex items-center justify-center gap-3">
+                                <i class="fa-solid fa-trash"></i> 선택 기사 삭제
+                            </button>
 
                         <div class="mt-8 pt-8 border-t border-gray-100 text-center">
                             <span class="text-gray-400 text-xs font-bold uppercase tracking-widest">Selected: <span
