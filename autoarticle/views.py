@@ -533,3 +533,43 @@ class ArticlePPTDownloadView(View):
             logger.error(f"Lazy PPT Generation failed: {e}", exc_info=True)
             messages.error(request, f"PPT 생성 중 오류가 발생했습니다: {str(e)}")
             return redirect('autoarticle:detail', pk=pk)
+
+class ArticlePDFDownloadView(View):
+    """Single article PDF download (lazy generation)."""
+    def get(self, request, pk):
+        article = get_object_or_404(GeneratedArticle, pk=pk)
+
+        if article.pdf_file:
+            try:
+                return redirect(article.pdf_file.url)
+            except Exception:
+                pass
+
+        try:
+            theme = request.session.get('autoarticle_theme', ArticleCreateView.THEMES[0])
+            pdf_engine = PDFEngine(theme, article.school_name)
+            pdf_engine.draw_cover()
+
+            article_data = {
+                'title': article.title,
+                'content': article.full_text,
+                'date': article.event_date.strftime('%Y.%m.%d') if article.event_date else '',
+                'location': article.location,
+                'grade': article.grade,
+                'images': article.images or []
+            }
+            pdf_engine.add_article(article_data, is_booklet=True)
+
+            from django.core.files.base import ContentFile
+            pdf_data = pdf_engine.output(dest='S')
+            if isinstance(pdf_data, str):
+                pdf_data = pdf_data.encode('latin-1')
+
+            article.pdf_file.save(f"newsletter_{article.id}.pdf", ContentFile(pdf_data))
+            article.save()
+
+            return redirect(article.pdf_file.url)
+        except Exception as e:
+            logger.error(f"Lazy PDF Generation failed: {e}", exc_info=True)
+            messages.error(request, f"PDF generation failed: {str(e)}")
+            return redirect('autoarticle:detail', pk=pk)

@@ -110,15 +110,13 @@
                         </div>
                         <div>
                             <span class="block font-bold text-gray-800 text-xl">뉴스레터 PPT</span>
-                            <span class="text-sm text-gray-500">{% if article.ppt_file %}다운로드{% else %}생성 및 다운로드{% endif
-                                %}</span>
+                            <span class="text-sm text-gray-500">{% if article.ppt_file %}다운로드{% else %}생성 및 다운로드{% endif %}</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-orange-400 group-hover:translate-y-1 transition-transform"></i>
                 </a>
 
-                {% if article.pdf_file %}
-                <a href="{{ article.pdf_file.url }}"
+                <a href="{% url 'autoarticle:pdf_download' article.id %}"
                     class="p-6 rounded-3xl bg-blue-50 border-2 border-blue-100 flex items-center justify-between group hover:bg-blue-100 transition-all shadow-clay">
                     <div class="flex items-center gap-4">
                         <div
@@ -127,12 +125,11 @@
                         </div>
                         <div>
                             <span class="block font-bold text-gray-800 text-xl">기본 PDF 레포트</span>
-                            <span class="text-sm text-gray-500">배포용 기사 문서</span>
+                            <span class="text-sm text-gray-500">{% if article.pdf_file %}다운로드{% else %}생성 및 다운로드{% endif %}</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-download text-blue-400 group-hover:translate-y-1 transition-transform"></i>
                 </a>
-                {% endif %}
             </div>
 
             <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
