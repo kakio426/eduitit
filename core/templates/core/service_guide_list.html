@@ -1,21 +1,74 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}서비스 매뉴얼 - Eduitit{% endblock %}
+{% block title %}이용방법 - Eduitit{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 font-title">
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">서비스 매뉴얼</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">이용방법</span>
             </h1>
             <p class="text-lg md:text-xl text-gray-600 font-medium">
-                선생님을 위한 상세한 사용 가이드를 확인해보세요.
+                각 서비스를 교실에서 바로 쓸 수 있도록 실제 사용 흐름 중심으로 정리했습니다.
             </p>
+            <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <span class="px-4 py-2 rounded-full bg-white/80 text-sm font-bold text-gray-700 border border-white/70 shadow-sm">
+                    활성 서비스 {{ active_products_count }}개
+                </span>
+                <span class="px-4 py-2 rounded-full bg-white/80 text-sm font-bold text-gray-700 border border-white/70 shadow-sm">
+                    이용방법 제공 {{ manual_count }}개
+                </span>
+                {% if missing_manual_count > 0 %}
+                <span class="px-4 py-2 rounded-full bg-amber-50 text-sm font-bold text-amber-700 border border-amber-200 shadow-sm">
+                    준비 중 {{ missing_manual_count }}개
+                </span>
+                {% endif %}
+            </div>
         </div>
 
+        {% if featured_manuals %}
+            <div class="mb-8">
+                <h2 class="text-xl md:text-2xl font-extrabold text-gray-800 mb-4">추천 이용방법</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for manual in featured_manuals %}
+                    <a href="{% url 'service_guide_detail' manual.pk %}" class="block group h-full">
+                        <div class="clay-card p-6 h-full transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-xl flex flex-col justify-between border border-white/50">
+                            <div>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-14 h-14 rounded-2xl bg-white shadow-inner flex items-center justify-center text-3xl group-hover:scale-110 transition-transform duration-300">
+                                        {% if manual.product.icon|length > 2 %}
+                                            <i class="{{ manual.product.icon }} text-{{ manual.product.color_theme }}-500"></i>
+                                        {% else %}
+                                            <span class="text-{{ manual.product.color_theme }}-500 text-3xl">{{ manual.product.icon }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{{ manual.product.get_service_type_display }}</span>
+                                        <h3 class="text-xl font-bold text-gray-800 leading-tight">{{ manual.product.title }}</h3>
+                                    </div>
+                                </div>
+                                <p class="text-gray-500 line-clamp-3 mb-6 pl-1 text-sm leading-relaxed">
+                                    {{ manual.description|default:"핵심 기능부터 교실 적용 팁까지 한 번에 확인해보세요." }}
+                                </p>
+                            </div>
+                            <div class="mt-auto pl-1">
+                                <span class="inline-flex items-center gap-2 text-{{ manual.product.color_theme }}-600 font-bold text-sm group-hover:gap-3 transition-all">
+                                    가이드 보기 <i class="fa-solid fa-arrow-right"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
         {% if manuals %}
+            <div class="mb-4">
+                <h2 class="text-xl md:text-2xl font-extrabold text-gray-800">전체 이용방법</h2>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for manual in manuals %}
                 <a href="{% url 'service_guide_detail' manual.pk %}" class="block group h-full">
@@ -31,12 +84,12 @@
                                 </div>
                                 <div>
                                     <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{{ manual.product.get_service_type_display }}</span>
-                                    <h2 class="text-xl font-bold text-gray-800 leading-tight">{{ manual.product.title }}</h2>
+                                    <h3 class="text-xl font-bold text-gray-800 leading-tight">{{ manual.product.title }}</h3>
                                 </div>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-700 mb-2 pl-1">{{ manual.title }}</h3>
+                            <h4 class="text-lg font-bold text-gray-700 mb-2 pl-1">{{ manual.title }}</h4>
                             <p class="text-gray-500 line-clamp-3 mb-6 pl-1 text-sm leading-relaxed">
-                                {{ manual.description|default:"상세한 가이드를 확인하여 100% 활용해보세요." }}
+                                {{ manual.description|default:"서비스 목적과 실제 사용 순서를 빠르게 확인해보세요." }}
                             </p>
                         </div>
                         <div class="mt-auto pl-1">
@@ -48,13 +101,52 @@
                 </a>
                 {% endfor %}
             </div>
-        {% else %}
+        {% elif not featured_manuals %}
             <div class="text-center py-20 bg-white/50 rounded-3xl shadow-sm border border-white/60 backdrop-blur-sm">
                 <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <i class="fa-solid fa-book-open text-4xl text-gray-400"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-600 mb-2">등록된 매뉴얼이 없습니다.</h3>
-                <p class="text-gray-400">곧 유용한 가이드가 업데이트될 예정입니다!</p>
+                <h3 class="text-2xl font-bold text-gray-600 mb-2">등록된 이용방법이 없습니다.</h3>
+                <p class="text-gray-400">서비스별 가이드를 순차적으로 업데이트하고 있습니다.</p>
+            </div>
+        {% endif %}
+
+        {% if products_without_manual %}
+            <div class="mt-12 mb-4">
+                <h2 class="text-xl md:text-2xl font-extrabold text-gray-800">이용방법 준비 중 서비스</h2>
+                <p class="text-sm text-gray-500 mt-1">아래 서비스는 빠르게 사용할 수 있도록 요약 안내를 먼저 제공합니다.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for product in products_without_manual %}
+                <div class="clay-card p-6 h-full border border-white/50 flex flex-col">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-14 h-14 rounded-2xl bg-white shadow-inner flex items-center justify-center text-3xl">
+                            {% if product.icon|length > 2 %}
+                                <i class="{{ product.icon }} text-{{ product.color_theme }}-500"></i>
+                            {% else %}
+                                <span class="text-{{ product.color_theme }}-500 text-3xl">{{ product.icon }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{{ product.get_service_type_display }}</span>
+                            <h3 class="text-xl font-bold text-gray-800 leading-tight">{{ product.title }}</h3>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-4">
+                        {{ product.lead_text|default:product.description|default:"상세 이용방법을 준비 중입니다." }}
+                    </p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                            준비 중
+                        </span>
+                        {% if product.external_url %}
+                        <a href="{{ product.external_url }}" target="_blank" class="text-sm font-bold text-{{ product.color_theme }}-600 hover:underline">
+                            서비스 열기 <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         {% endif %}
     </div>

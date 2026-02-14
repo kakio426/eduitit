@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ manual.title }} - Eduitit 매뉴얼{% endblock %}
+{% block title %}{{ manual.title }} - Eduitit 이용방법{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -30,7 +30,7 @@
             <a href="{% url 'service_guide_list' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-gray-400 hover:text-purple-600 hover:shadow-md transition">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
-            <span class="text-sm font-bold text-gray-400">서비스 매뉴얼 > {{ manual.product.get_service_type_display }}</span>
+            <span class="text-sm font-bold text-gray-400">이용방법 > {{ manual.product.get_service_type_display }}</span>
         </div>
 
         <!-- Header -->
@@ -43,11 +43,11 @@
                         <div class="flex items-center gap-3 mb-4">
                             {% if manual.is_published %}
                             <span class="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider border border-green-200">
-                                Published
+                                공개중
                             </span>
                             {% else %}
                             <span class="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold uppercase tracking-wider border border-yellow-200">
-                                Draft
+                                작성중
                             </span>
                             {% endif %}
                             <h2 class="text-lg font-bold text-gray-500 flex items-center gap-2">

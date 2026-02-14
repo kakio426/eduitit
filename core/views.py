@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post, Comment, Feedback
+from .models import UserProfile, Post, Comment, Feedback, SiteConfig
 from django.contrib import messages
 from django.db.models import Count
 from PIL import Image
@@ -543,12 +543,34 @@ def feedback_view(request):
 
 def service_guide_list(request):
     """List of all available service manuals"""
-    manuals = ServiceManual.objects.filter(
-        is_published=True, 
+    active_products_qs = Product.objects.filter(is_active=True).order_by('display_order')
+    active_products_count = active_products_qs.count()
+    manuals_qs = ServiceManual.objects.filter(
+        is_published=True,
         product__is_active=True
     ).select_related('product').order_by('product__display_order')
 
-    return render(request, 'core/service_guide_list.html', {'manuals': manuals})
+    site_config = SiteConfig.load()
+    featured_manuals = site_config.featured_manuals.filter(
+        is_published=True,
+        product__is_active=True
+    ).select_related('product').order_by('product__display_order')
+
+    featured_manual_ids = featured_manuals.values_list('id', flat=True)
+    manuals = manuals_qs.exclude(id__in=featured_manual_ids)
+    manual_count = manuals_qs.count()
+    missing_manual_count = max(active_products_count - manual_count, 0)
+    product_ids_with_manual = manuals_qs.values_list('product_id', flat=True)
+    products_without_manual = active_products_qs.exclude(id__in=product_ids_with_manual)
+
+    return render(request, 'core/service_guide_list.html', {
+        'manuals': manuals,
+        'featured_manuals': featured_manuals,
+        'products_without_manual': products_without_manual,
+        'active_products_count': active_products_count,
+        'manual_count': manual_count,
+        'missing_manual_count': missing_manual_count,
+    })
 
 def service_guide_detail(request, pk):
     """Detailed view of a specific manual"""
