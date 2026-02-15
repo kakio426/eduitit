@@ -544,7 +544,7 @@ STORAGES = {
 # MaintenanceModeMiddleware가 superuser 외 모든 요청에 503 반환.
 # 롤백: Railway 환경변수에서 MAINTENANCE_MODE 제거 또는 False로 변경.
 # =============================================================================
-MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
+MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)
