@@ -16,6 +16,7 @@
         
         <div id="edit-image-preview-container-{{ post.id }}" class="{% if not post.image %}hidden{% endif %} mb-3 relative group">
             <img id="edit-image-preview-{{ post.id }}" src="{% if post.image %}{{ post.image.url }}{% endif %}" 
+                 alt="게시물 이미지"
                  class="h-32 w-full object-cover rounded-xl border border-slate-100 shadow-sm">
             <button type="button" 
                 onclick="document.getElementById('edit-post-image-input-{{ post.id }}').value=''; document.getElementById('edit-image-preview-container-{{ post.id }}').classList.add('hidden'); document.getElementById('remove-image-input-{{ post.id }}').value='true';"

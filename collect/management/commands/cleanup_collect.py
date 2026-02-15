@@ -101,18 +101,25 @@ class Command(BaseCommand):
                     self.stdout.write(f'  [요청 삭제] {req.title} (생성: {req.created_at.strftime("%Y-%m-%d")}, 제출 없음)')
                 # 남아있는 파일 정리
                 if not dry_run:
-                    for sub in req.submissions.filter(submission_type='file').exclude(file=''):
-                        if sub.file:
+                    try:
+                        for sub in req.submissions.filter(submission_type='file').exclude(file=''):
+                            if sub.file:
+                                try:
+                                    sub.file.delete(save=False)
+                                except Exception as e:
+                                    logger.error(f'파일 삭제 실패: {e}')
+                        if req.template_file:
                             try:
-                                sub.file.delete(save=False)
+                                req.template_file.delete(save=False)
                             except Exception as e:
-                                logger.error(f'파일 삭제 실패: {e}')
-                    if req.template_file:
-                        try:
-                            req.template_file.delete(save=False)
-                        except Exception as e:
-                            logger.error(f'양식 파일 삭제 실패: {e}')
-                    req.delete()
+                                logger.error(f'양식 파일 삭제 실패: {e}')
+                    except Exception as e:
+                        logger.error(f'요청 삭제 사전정리 실패 (id={req.id}, title={req.title}): {e}')
+                    try:
+                        req.delete()
+                    except Exception as e:
+                        logger.error(f'요청 삭제 실패 (id={req.id}, title={req.title}): {e}')
+                        continue
 
         self.stdout.write(f'[2단계] 만료 요청: {old_count}개 삭제 (첫 제출+30일 / 미제출+60일)')
         self.stdout.write('=' * 70)

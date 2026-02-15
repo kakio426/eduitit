@@ -1,11 +1,46 @@
-from .models import VisitorLog
-from django.utils import timezone
+import logging
+import time
+import uuid
+from urllib.parse import quote
+
 from django.shortcuts import redirect
 from django.urls import reverse
-from urllib.parse import quote
-import logging
+from django.utils import timezone
+
+from .logging_filters import clear_current_request_id, set_current_request_id
+from .models import VisitorLog
 
 logger = logging.getLogger(__name__)
+
+
+class RequestIDMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request_id = uuid.uuid4().hex[:12]
+        set_current_request_id(request_id)
+        request.request_id = request_id
+
+        start = time.perf_counter()
+        response = None
+        try:
+            response = self.get_response(request)
+            return response
+        finally:
+            latency_ms = int((time.perf_counter() - start) * 1000)
+            path = getattr(request, 'path', '')
+            if not any(path.startswith(p) for p in ['/static/', '/media/']):
+                status_code = getattr(response, 'status_code', 500)
+                logger.info(
+                    '[REQUEST] rid=%s method=%s path=%s status=%s latency_ms=%s',
+                    request_id,
+                    request.method,
+                    path,
+                    status_code,
+                    latency_ms,
+                )
+            clear_current_request_id()
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

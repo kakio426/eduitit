@@ -97,6 +97,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for static files
+    'core.middleware.RequestIDMiddleware',
     'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -564,9 +565,14 @@ FORTUNE_ASYNC_API_ENABLED = os.getenv('FORTUNE_ASYNC_API_ENABLED', 'False').lowe
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'request_id': {
+            '()': 'core.logging_filters.RequestIDFilter',
+        },
+    },
     'formatters': {
         'verbose': {
-            'format': '[{levelname}] {asctime} {name} - {message}',
+            'format': '[{levelname}] {asctime} [{request_id}] {name} - {message}',
             'style': '{',
         },
     },
@@ -574,6 +580,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['request_id'],
         },
     },
     'loggers': {

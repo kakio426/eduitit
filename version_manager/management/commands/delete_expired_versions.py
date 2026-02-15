@@ -1,10 +1,12 @@
 from datetime import timedelta
+import logging
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from django.utils import timezone
 
 from version_manager.models import Document, DocumentVersion
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -14,7 +16,6 @@ class Command(BaseCommand):
         parser.add_argument('--days', type=int, default=30, help='Retention days. Default is 30.')
         parser.add_argument('--dry-run', action='store_true', help='Show targets without deleting.')
 
-    @transaction.atomic
     def handle(self, *args, **options):
         days = options['days']
         dry_run = options['dry_run']
@@ -30,18 +31,26 @@ class Command(BaseCommand):
             if dry_run:
                 continue
 
-            if version.document.published_version_id == version.id:
-                Document.objects.filter(id=version.document_id).update(published_version=None)
+            try:
+                if version.document.published_version_id == version.id:
+                    Document.objects.filter(id=version.document_id).update(published_version=None)
 
-            if version.upload:
-                # Cloudinary backend uses destroy API; local backend removes file in MEDIA_ROOT.
-                version.upload.delete(save=False)
+                if version.upload:
+                    # Cloudinary backend uses destroy API; local backend removes file in MEDIA_ROOT.
+                    version.upload.delete(save=False)
 
-            version.delete()
-            deleted_count += 1
+                version.delete()
+                deleted_count += 1
+            except Exception as e:
+                logger.error(
+                    'Failed deleting document version (id=%s, document_id=%s, version=%s): %s',
+                    version.id,
+                    version.document_id,
+                    version.version,
+                    e,
+                )
 
         if dry_run:
             self.stdout.write(self.style.WARNING(f'[DRY-RUN] {total} versions would be deleted.'))
         else:
             self.stdout.write(self.style.SUCCESS(f'[DONE] Deleted {deleted_count} expired versions.'))
-

@@ -92,6 +92,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'core.middleware.RequestIDMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -371,9 +372,14 @@ LOGOUT_REDIRECT_URL = 'home'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'request_id': {
+            '()': 'core.logging_filters.RequestIDFilter',
+        },
+    },
     'formatters': {
         'verbose': {
-            'format': '[{levelname}] {asctime} {name} - {message}',
+            'format': '[{levelname}] {asctime} [{request_id}] {name} - {message}',
             'style': '{',
         },
     },
@@ -381,6 +387,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['request_id'],
         },
     },
     'loggers': {

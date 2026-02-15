@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static manual_extras %}
+{% load static manual_extras cloudinary_extras %}
 
 {% block title %}{{ manual.title }} - Eduitit 이용방법{% endblock %}
 
@@ -30,7 +30,7 @@
             <a href="{% url 'service_guide_list' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-gray-400 hover:text-purple-600 hover:shadow-md transition">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
-            <span class="text-sm font-bold text-gray-400">이용방법 > {{ manual.product.get_service_type_display }}</span>
+            <span class="text-sm font-bold text-gray-500">이용방법 > {{ manual.product.get_service_type_display }}</span>
         </div>
 
         <!-- Header -->
@@ -107,7 +107,7 @@
                         <div class="grid md:grid-cols-2 gap-0">
                             <div class="relative bg-gray-50 min-h-[300px] border-b md:border-b-0 md:border-r border-gray-100">
                                 {% if section.image %}
-                                <img src="{{ section.image.url }}" alt="{{ section.title }}" class="absolute inset-0 w-full h-full object-cover">
+                                <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
                                 {% else %}
                                 <div class="absolute inset-0 flex items-center justify-center text-gray-300 bg-gray-100">
                                     <div class="text-center">
@@ -129,7 +129,7 @@
                             </div>
                             <div class="relative bg-gray-50 min-h-[300px] border-t md:border-t-0 md:border-l border-gray-100 order-1 md:order-2">
                                 {% if section.image %}
-                                <img src="{{ section.image.url }}" alt="{{ section.title }}" class="absolute inset-0 w-full h-full object-cover">
+                                <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
                                 {% else %}
                                 <div class="absolute inset-0 flex items-center justify-center text-gray-300 bg-gray-100">
                                     <div class="text-center">
@@ -148,7 +148,7 @@
                                 <iframe src="{{ section.video_url }}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
                             </div>
                             {% elif section.image %}
-                            <img src="{{ section.image.url }}" alt="{{ section.title }}" class="w-full rounded-2xl shadow-lg mb-6 ring-1 ring-black/5">
+                            <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="w-full rounded-2xl shadow-lg mb-6 ring-1 ring-black/5">
                             {% endif %}
                             
                             {% if section.content %}
@@ -167,7 +167,7 @@
                             {% if section.image %}
                             <!-- Image as a visual anchor if no real carousel yet -->
                             <div class="rounded-2xl overflow-hidden shadow-lg border-4 border-white">
-                                <img src="{{ section.image.url }}" class="w-full h-auto">
+                                <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="w-full h-auto">
                             </div>
                             {% else %}
                              <div class="flex items-center justify-center h-48 bg-white/60 rounded-2xl border-2 border-dashed border-indigo-200 text-indigo-400 font-bold">

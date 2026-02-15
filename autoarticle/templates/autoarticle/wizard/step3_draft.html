@@ -29,10 +29,10 @@
                     {% for img_path in draft.images %}
                     <div class="relative w-32 h-32 rounded-2xl overflow-hidden shadow-clay bg-gray-200">
                         {% if img_path %}
-                            <img src="{{ img_path }}" class="w-full h-full object-cover" alt="첨부 이미지"
+                            <img src="{{ img_path }}" class="w-full h-full object-cover" alt="첨부 이미지" loading="lazy"
                                  onerror="console.error('Failed to load:', this.src)">
                         {% else %}
-                            <div class="w-full h-full flex items-center justify-center text-gray-400">이미지 없음</div>
+                            <div class="w-full h-full flex items-center justify-center text-gray-500">이미지 없음</div>
                         {% endif %}
                     </div>
                     {% endfor %}

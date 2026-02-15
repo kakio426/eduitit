@@ -65,7 +65,7 @@
             </div>
             
             <div class="mt-4 p-4 clay-inner bg-gray-50/50 rounded-xl">
-                <p class="text-xs text-gray-400 font-bold uppercase mb-1">복사될 내용 미리보기</p>
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">복사될 내용 미리보기</p>
                 <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans" x-text="getShareMessage()"></pre>
             </div>
         </div>
@@ -98,7 +98,7 @@
                     <div class="flex gap-2 items-stretch h-12">
                         <!-- Icon Select -->
                         <div class="relative w-20 flex-shrink-0 group">
-                            <select name="icon" class="w-full h-full shadow-clay-inner pl-3 pr-8 text-xl bg-[#E0E5EC] outline-none rounded-xl appearance-none cursor-pointer text-center font-emoji">
+                            <select name="icon" class="w-full h-full shadow-clay-inner pl-3 pr-8 text-xl bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300 rounded-xl appearance-none cursor-pointer text-center font-emoji">
                                 <option value="🏫">🏫</option>
                                 <option value="🔬">🔬</option>
                                 <option value="💻">💻</option>
@@ -118,7 +118,7 @@
                         <!-- Name Input -->
                         <div class="flex-1 min-w-0">
                             <input type="text" name="name" placeholder="특별실 이름"
-                                class="w-full h-full shadow-clay-inner px-4 text-sm md:text-base bg-[#E0E5EC] outline-none rounded-xl" required>
+                                class="w-full h-full shadow-clay-inner px-4 text-sm md:text-base bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300 rounded-xl" required>
                         </div>
                         
                         <!-- Submit Button -->
@@ -152,15 +152,15 @@
                     <input type="hidden" name="action" value="add">
                     <div class="flex flex-col gap-3">
                         <div class="flex gap-2">
-                            <input type="date" name="start_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none"
+                            <input type="date" name="start_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
                                 required>
                             <span class="self-center text-gray-400">~</span>
-                            <input type="date" name="end_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none"
+                            <input type="date" name="end_date" class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
                                 required>
                         </div>
                         <div class="flex gap-2">
                             <input type="text" name="reason" placeholder="사유 (예: 중간고사기간)"
-                                class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none" required>
+                                class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300" required>
                             <button type="submit"
                                 class="px-6 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors">
                                 추가
@@ -186,15 +186,15 @@
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">학교 이름</label>
                         <input type="text" name="school_name" value="{{ school.name }}"
-                            class="w-full shadow-clay-inner p-4 rounded-2xl font-bold bg-[#E0E5EC] outline-none" required>
+                            class="w-full shadow-clay-inner p-4 rounded-2xl font-bold bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300" required>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 구성 (순서대로 입력)</label>
                         <textarea name="period_labels" rows="3" 
-                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none"
+                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
                             placeholder="1교시,2교시,3교시,4교시,5교시,6교시">{{ school.config.period_labels }}</textarea>
-                        <p class="text-[10px] text-gray-400 mt-2 ml-2">
+                        <p class="text-[10px] text-gray-500 mt-2 ml-2">
                             * 교시 이름을 콤마(,)로 구분하여 입력하세요. 입력한 개수만큼 예약판의 행이 생깁니다.
                         </p>
                     </div>
