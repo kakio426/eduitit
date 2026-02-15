@@ -32,8 +32,6 @@ class VisitorTrackingMiddleware:
             session_key = f'visitor_recorded_{today}'
             already_recorded = request.session.get(session_key, False)
 
-            # DEBUG: print statement to check if middleware is running
-            print(f"[VISITOR DEBUG] Path: {request.path} | IP: {ip} | Already recorded: {already_recorded}")
             logger.info(f"[VISITOR] Path: {request.path} | IP: {ip} | Already recorded: {already_recorded}")
 
             if not already_recorded:
@@ -59,10 +57,8 @@ class VisitorTrackingMiddleware:
                         }
                     )
                     request.session[session_key] = True
-                    print(f"[VISITOR DEBUG] DB operation - Created: {created} | IP: {ip} | Bot: {is_bot} | Date: {today}")
                     logger.info(f"[VISITOR] DB operation - Created: {created} | IP: {ip} | Bot: {is_bot} | Date: {today}")
                 except Exception as e:
-                    print(f"[VISITOR DEBUG] Error: {e}")
                     logger.error(f"[VISITOR] Error: {e}", exc_info=True)
 
         response = self.get_response(request)

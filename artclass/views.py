@@ -156,8 +156,8 @@ def get_video_info(url):
     return title, transcript_text
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=False)
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=True)
 def generate_steps_api(request):
     """AI Step Generation API (Guest/Member Shared: 5/h, 10/d)"""
     if getattr(request, 'limited', False):

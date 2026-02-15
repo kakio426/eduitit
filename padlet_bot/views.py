@@ -78,7 +78,7 @@ def get_welcome_message() -> str:
     return "안녕하세요! 패들릿 내용에 대해 질문해 주세요."
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='GET', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='GET', block=True)
 def chat_view(request):
     """채팅 메인 뷰 (Guest: 3/h, Member: 10/h)"""
     # 세션에서 채팅 기록 가져오기 (최대 50개 유지)
@@ -116,8 +116,8 @@ def clear_chat(request):
     return JsonResponse({'success': False}, status=400)
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=False)
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=True)
 @require_POST
 def send_message(request):
     """메시지 전송 및 AI 응답 (통합 한도: 5/h, 10/d)"""

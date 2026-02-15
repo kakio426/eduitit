@@ -1,5 +1,6 @@
 import os
 import time
+import asyncio
 from google import genai
 from openai import OpenAI
 from django.shortcuts import render, get_object_or_404
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
+from django_ratelimit.core import is_ratelimited
+from asgiref.sync import sync_to_async
 from core.utils import ratelimit_key_for_master_only, has_personal_api_key
 from .forms import SajuForm
 from .prompts import get_prompt
@@ -57,6 +60,11 @@ def generate_ai_response(prompt, request):
     1순위: 사용자 개인 Gemini 키 (존재하는 경우)
     2순위: 마스터 DeepSeek 키 (환경변수)
     """
+    from .utils.circuit_breaker import ai_circuit_breaker
+
+    if not ai_circuit_breaker.can_execute():
+        raise Exception("AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.")
+
     user_gemini_key = get_user_gemini_key(request)
     
     # 1. 사용자 개인 Gemini API 키 사용
@@ -112,7 +120,8 @@ def generate_ai_response(prompt, request):
         try:
             client = OpenAI(
                 api_key=master_deepseek_key,
-                base_url=DEEPSEEK_BASE_URL
+                base_url=DEEPSEEK_BASE_URL,
+                timeout=60.0,
             )
             
             # DeepSeek Retry Logic
@@ -183,9 +192,55 @@ def serialize_chart_context(chart_context):
     }
 
 
+# ============================================
+# Async 헬퍼 함수
+# ============================================
+
+@sync_to_async
+def _check_saju_ratelimit(request):
+    """동기 ratelimit 체크를 async에서 호출하기 위한 래퍼"""
+    limited_h = is_ratelimited(
+        request, group='saju_service', key=ratelimit_key_for_master_only,
+        rate=fortune_rate_h, method='POST', increment=True
+    )
+    if limited_h:
+        return True
+    limited_d = is_ratelimited(
+        request, group='saju_service', key=ratelimit_key_for_master_only,
+        rate=fortune_rate_d, method='POST', increment=True
+    )
+    return limited_d
+
+
+async def _async_stream_ai(prompt, request):
+    """동기 generate_ai_response 제너레이터를 async 제너레이터로 변환"""
+    loop = asyncio.get_event_loop()
+    gen = generate_ai_response(prompt, request)
+    _next = next  # local ref for speed
+    while True:
+        try:
+            chunk = await loop.run_in_executor(None, _next, gen)
+            yield chunk
+        except StopIteration:
+            break
+
+
+@sync_to_async
+def _collect_ai_response(prompt, request):
+    """AI 응답을 동기적으로 수집 (async 뷰에서 사용)"""
+    from .utils.circuit_breaker import ai_circuit_breaker
+    try:
+        result = "".join(generate_ai_response(prompt, request))
+        ai_circuit_breaker.record_success()
+        return result
+    except Exception:
+        ai_circuit_breaker.record_failure()
+        raise
+
+
 @login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=True, group='saju_service')
+@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=True, group='saju_service')
 def saju_view(request):
     """사주 분석 메인 뷰"""
     if getattr(request, 'limited', False):
@@ -300,52 +355,49 @@ def saju_view(request):
 
 
 @login_required
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
-def saju_streaming_api(request):
-    """실시간 스트리밍 사주 분석 API"""
-    if getattr(request, 'limited', False):
-        return JsonResponse({'error': 'LIMIT_EXCEEDED'}, status=429)
-
+async def saju_streaming_api(request):
+    """실시간 스트리밍 사주 분석 API (async)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
+
+    # Manual ratelimit check (async 뷰에서는 데코레이터 대신 수동 체크)
+    if await _check_saju_ratelimit(request):
+        return JsonResponse({'error': 'LIMIT_EXCEEDED'}, status=429)
 
     form = SajuForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
     data = form.cleaned_data
-    chart_context = get_chart_context(data)
+    chart_context = await sync_to_async(get_chart_context)(data)
     prompt = get_prompt(data['mode'], data, chart_context=chart_context)
 
-    def stream_response():
+    async def stream_response():
         try:
-            # Yield initial metadata if needed (or just start spawning text)
-            for chunk in generate_ai_response(prompt, request):
+            async for chunk in _async_stream_ai(prompt, request):
                 yield chunk
         except Exception as e:
             logger.exception("Streaming error")
             yield f"\n\n[오류 발생: {str(e)}]"
 
     response = StreamingHttpResponse(stream_response(), content_type='text/plain; charset=utf-8')
-    response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx/Gunicorn
+    response['X-Accel-Buffering'] = 'no'
     return response
 
 @login_required
 @csrf_exempt
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
-def saju_api_view(request):
-    """사주 분석 API (5회/h, 10회/d)"""
+async def saju_api_view(request):
+    """사주 분석 API (async)"""
     try:
-        if getattr(request, 'limited', False):
-            return JsonResponse({
-                'error': 'LIMIT_EXCEEDED',
-                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
-            }, status=429)
-
         if request.method != 'POST':
             return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
+
+        # Manual ratelimit check
+        if await _check_saju_ratelimit(request):
+            return JsonResponse({
+                'error': 'LIMIT_EXCEEDED',
+                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
+            }, status=429)
 
         form = SajuForm(request.POST)
         if not form.is_valid():
@@ -354,22 +406,21 @@ def saju_api_view(request):
         data = form.cleaned_data
         mode = data['mode']
         logger.info(f"Saju API Request - User: {request.user}, Mode: {mode}")
-        
-        # Logic Engine
-        chart_context = get_chart_context(data)
-        
+
+        # Logic Engine (DB 조회 포함)
+        chart_context = await sync_to_async(get_chart_context)(data)
+
         # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
         from .models import FortuneResult
         existing_result = None
-        # JSONField 필터를 위해 객체를 문자열로 직렬화
         serialized_chart = serialize_chart_context(chart_context)
 
         if request.user.is_authenticated and serialized_chart:
-            existing_result = FortuneResult.objects.filter(
+            existing_result = await FortuneResult.objects.filter(
                 user=request.user,
                 mode=mode,
                 natal_chart=serialized_chart
-            ).order_by('-created_at').first()
+            ).order_by('-created_at').afirst()
 
         prompt = get_prompt(mode, data, chart_context=chart_context)
 
@@ -377,9 +428,8 @@ def saju_api_view(request):
             logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini. Mode: {existing_result.mode}")
             response_text = existing_result.result_text
         else:
-            # Wrap generator to maintain current sync behavior
-            response_text = "".join(generate_ai_response(prompt, request))
-        
+            response_text = await _collect_ai_response(prompt, request)
+
         return JsonResponse({
             'success': True,
             'result': response_text,
@@ -404,58 +454,61 @@ def saju_api_view(request):
         if "matching query does not exist" in error_str:
             return JsonResponse({'error': 'DATABASE_ERROR', 'message': '기본 사주 데이터가 없습니다. 서버 점검 중입니다.'}, status=500)
         if "503" in error_str:
-             return JsonResponse({'error': 'AI_OVERLOADED', 'message': '지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊'}, status=503)
+             return JsonResponse({'error': 'AI_OVERLOADED', 'message': '지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다.'}, status=503)
         if "Insufficient Balance" in error_str:
              return JsonResponse({'error': 'AI_LIMIT', 'message': '선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 개인 API 키를 등록해주세요!'}, status=429)
         return JsonResponse({'error': 'AI_ERROR', 'message': '분석 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}, status=500)
 
 
 @csrf_exempt
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=False, group='saju_service')
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
-def daily_fortune_api(request):
-    """특정 날짜의 일진(운세) 분석 API (5회/h, 10회/d)"""
+async def daily_fortune_api(request):
+    """특정 날짜의 일진(운세) 분석 API (async)"""
     try:
-        if getattr(request, 'limited', False):
+        # Manual ratelimit check
+        if await _check_saju_ratelimit(request):
             return JsonResponse({
                 'error': 'LIMIT_EXCEEDED',
-                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다! 😊'
+                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
             }, status=429)
 
         data = json.loads(request.body)
-        target_date_str = data.get('target_date') # YYYY-MM-DD
-        natal_data = data.get('natal_chart') # {year: '...', month: '...', day: '...', hour: '...'}
+        target_date_str = data.get('target_date')
+        natal_data = data.get('natal_chart')
         name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
-        mode = data.get('mode', 'teacher') # 'teacher' or 'general'
+        mode = data.get('mode', 'teacher')
 
         if not target_date_str:
             return JsonResponse({'error': 'Target date required'}, status=400)
 
-        # Parse target date and get its pillars
+        # Parse target date and get its pillars (DB 조회 포함)
         target_dt = datetime.strptime(target_date_str, '%Y-%m-%d')
         tz = pytz.timezone('Asia/Seoul')
-        target_dt = tz.localize(target_dt).replace(hour=12) # Noon check
-        target_context = calculator.get_pillars(target_dt)
+        target_dt = tz.localize(target_dt).replace(hour=12)
+        target_context = await sync_to_async(calculator.get_pillars)(target_dt)
 
         # Build Natal Context with objects to include element info
         from .models import Stem, Branch
-        def get_pillar_obj(ganji_str):
-            if not ganji_str or len(ganji_str) < 2:
-                return {'stem': None, 'branch': None}
-            s_char = ganji_str[:1]
-            b_char = ganji_str[1:]
+
+        @sync_to_async
+        def build_natal_context(natal_data):
+            def get_pillar_obj(ganji_str):
+                if not ganji_str or len(ganji_str) < 2:
+                    return {'stem': None, 'branch': None}
+                s_char = ganji_str[:1]
+                b_char = ganji_str[1:]
+                return {
+                    'stem': Stem.objects.filter(character=s_char).first(),
+                    'branch': Branch.objects.filter(character=b_char).first()
+                }
             return {
-                'stem': Stem.objects.filter(character=s_char).first(),
-                'branch': Branch.objects.filter(character=b_char).first()
+                'year': get_pillar_obj(natal_data.get('year')),
+                'month': get_pillar_obj(natal_data.get('month')),
+                'day': get_pillar_obj(natal_data.get('day')),
+                'hour': get_pillar_obj(natal_data.get('hour'))
             }
 
-        natal_context = {
-            'year': get_pillar_obj(natal_data.get('year')),
-            'month': get_pillar_obj(natal_data.get('month')),
-            'day': get_pillar_obj(natal_data.get('day')),
-            'hour': get_pillar_obj(natal_data.get('hour'))
-        }
+        natal_context = await build_natal_context(natal_data)
 
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'LOGIN_REQUIRED', 'message': '로그인이 필요합니다.'}, status=401)
@@ -466,21 +519,19 @@ def daily_fortune_api(request):
 
         # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효) - 모드 포함
         cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(str(natal_data).encode()).hexdigest()}_{mode}"
-        cached_response = cache.get(cache_key)
-        
+        cached_response = await sync_to_async(cache.get)(cache_key)
+
         if cached_response:
             logger.info(f"Found cached daily fortune for {name} ({mode}) on {target_date_str}, bypassing Gemini.")
             response_text = cached_response
         else:
-            # Wrap generator to maintain current sync behavior
-            response_text = "".join(generate_ai_response(prompt, request))
-            # 캐시 저장
-            cache.set(cache_key, response_text, 60*60*12) # 12시간
+            response_text = await _collect_ai_response(prompt, request)
+            await sync_to_async(cache.set)(cache_key, response_text, 60*60*12)
 
         # 통계용 로그 저장
         if request.user.is_authenticated:
             from .models import DailyFortuneLog
-            DailyFortuneLog.objects.create(
+            await DailyFortuneLog.objects.acreate(
                 user=request.user,
                 target_date=target_dt.date()
             )

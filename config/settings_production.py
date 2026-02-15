@@ -97,8 +97,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for static files
-    # TEMPORARILY DISABLED FOR DEBUGGING: CSP might be blocking admin static files
-    # 'csp.middleware.CSPMiddleware',  # Content Security Policy
+    'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -148,10 +147,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    # Debug: Log the received URL (masking password for security)
     import re
     safe_db_url = re.sub(r':([^:@]+)@', ':****@', DATABASE_URL)
-    print(f"DEBUG: Received DATABASE_URL: {safe_db_url}")
 
     # Clean up DATABASE_URL if it contains 'psql' command or extra quotes
     # Example issue: psql 'postgresql://...'
@@ -178,8 +175,7 @@ if DATABASE_URL:
             )
         }
     except ValueError as e:
-        print(f"DEBUG: Parsing failed. Original error: {e}")
-        raise ValueError(f"DATABASE_URL 형식이 올바르지 않습니다. 값: {safe_db_url}")
+        raise ValueError(f"DATABASE_URL 파싱 실패: {safe_db_url} (원인: {e})")
 else:
     # Fallback for local development
     DATABASES = {
@@ -188,6 +184,19 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+# Neon PostgreSQL(PgBouncer) 호환: 서버사이드 커서 비활성화
+DISABLE_SERVER_SIDE_CURSORS = True
+
+# =============================================================================
+# CACHE - Django DB Cache (worker간 공유, Redis 불필요)
+# =============================================================================
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache_table",
+    }
+}
 
 # =============================================================================
 # PASSWORD VALIDATION
@@ -267,17 +276,13 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
             api_secret=CLOUDINARY_STORAGE['API_SECRET'],
             secure=True
         )
-        # Initialization success
         USE_CLOUDINARY = True
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        print(f"DEBUG: Cloudinary initialized: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
 
     except Exception as e:
-        print(f"DEBUG: Cloudinary initialization failed: {e}")
         USE_CLOUDINARY = False
 else:
     USE_CLOUDINARY = False
-    print("DEBUG: Cloudinary NOT configured, using local storage.")
     # Local storage is already set in the global block above.
 
 # =============================================================================
@@ -440,6 +445,9 @@ CSP_OBJECT_SRC = ("'none'",)
 CSP_BASE_URI = ("'self'",)
 CSP_FORM_ACTION = ("'self'", "https://sharer.kakao.com")
 
+# Admin 경로는 CSP 제외 (정적 파일 차단 방지)
+CSP_EXCLUDE_URL_PREFIXES = ("/secret-admin-kakio/",)
+
 # =============================================================================
 # AUTO-FIX: Sync Site Domain with Production Host
 # =============================================================================
@@ -461,15 +469,11 @@ def sync_site_domain():
                 break
 
         if current_site.domain != production_domain:
-            print(f"DEBUG: SITE_ID {SITE_ID} 도메인을 {current_site.domain}에서 {production_domain}으로 업데이트합니다.")
             current_site.domain = production_domain
             current_site.name = "Eduitit Production"
             current_site.save()
-        else:
-            print(f"DEBUG: 현재 SITE_ID {SITE_ID} 도메인은 {current_site.domain}입니다.")
 
-    except Exception as e:
-        print(f"DEBUG: 자동 동기화/정리 실패: {str(e)}")
+    except Exception:
         pass
 
 def run_startup_tasks():
@@ -486,7 +490,7 @@ def run_startup_tasks():
         call_command('ensure_reservations')
         call_command('ensure_version_manager')
     except Exception as e:
-        print(f"DEBUG: Startup product ensure tasks failed: {e}")
+        pass  # ensure 실패는 Procfile에서 재시도됨
 
 # 서버 실행 시 자동 실행
 import threading
@@ -534,21 +538,18 @@ STORAGES = {
     },
 }
 
-print("="*60)
-print(f"DEBUG: STATIC_ROOT => {STATIC_ROOT}")
-print(f"DEBUG: STATICFILES_DIRS => {STATICFILES_DIRS}")
-print(f"DEBUG: STATICFILES_STORAGE => {STATICFILES_STORAGE}")
-print("="*60)
-
-# Maintenance Mode
-# 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
+# =============================================================================
+# MAINTENANCE MODE
+# Railway 대시보드에서 환경변수 MAINTENANCE_MODE=True 설정 시 즉시 활성화.
+# MaintenanceModeMiddleware가 superuser 외 모든 요청에 503 반환.
+# 롤백: Railway 환경변수에서 MAINTENANCE_MODE 제거 또는 False로 변경.
+# =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)
 # =============================================================================
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
-print(f"[SENTRY] DSN={'SET' if SENTRY_DSN else 'NOT SET'}, DEBUG={DEBUG}")
 if SENTRY_DSN and not DEBUG:
     try:
         import sentry_sdk
@@ -558,12 +559,9 @@ if SENTRY_DSN and not DEBUG:
             integrations=[DjangoIntegration()],
             traces_sample_rate=0.2,
             profiles_sample_rate=0.1,
-            send_default_pii=True,
+            send_default_pii=False,
         )
-        print("[SENTRY] Initialized successfully!")
-    except ImportError:
-        print("[SENTRY] ERROR: sentry-sdk package not installed!")
-    except Exception as e:
-        print(f"[SENTRY] ERROR: Init failed - {e}")
+    except Exception:
+        pass
 else:
-    print(f"[SENTRY] SKIPPED (DSN={'SET' if SENTRY_DSN else 'EMPTY'}, DEBUG={DEBUG})")
+    pass  # Sentry disabled (no DSN or DEBUG mode)

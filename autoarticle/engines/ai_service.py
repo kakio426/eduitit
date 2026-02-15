@@ -97,7 +97,7 @@ def generate_article_gemini(api_key, topic_data, style_service=None, is_master_k
 
     try:
         if is_master_key:
-            client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+            client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=60.0)
             resp = client.chat.completions.create(
                 model=DEEPSEEK_MODEL_NAME,
                 messages=[
@@ -152,7 +152,7 @@ def summarize_article_for_ppt(content, api_key=None, is_master_key=False):
 
     try:
         if is_master_key:
-            client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+            client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=60.0)
             resp = client.chat.completions.create(
                 model=DEEPSEEK_MODEL_NAME,
                 messages=[

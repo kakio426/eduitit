@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
@@ -584,6 +584,15 @@ def service_guide_detail(request, pk):
     sections = manual.sections.all()
     
     return render(request, 'core/service_guide_detail.html', {
-        'manual': manual, 
+        'manual': manual,
         'sections': sections
     })
+
+
+def health_check(request):
+    from django.db import connection
+    try:
+        connection.ensure_connection()
+        return JsonResponse({'status': 'ok', 'db': 'connected'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'db': str(e)}, status=503)

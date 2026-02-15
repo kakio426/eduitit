@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
+from asgiref.sync import sync_to_async
 from .libs import calculator
 from .models import FortuneResult, Stem, Branch
 import json
@@ -11,7 +12,7 @@ import pytz
 import hashlib
 
 # Re-use existing AI response logic if possible
-from .views import generate_ai_response, get_chart_context
+from .views import generate_ai_response, get_chart_context, _collect_ai_response, _check_saju_ratelimit
 
 logger = logging.getLogger(__name__)
 
@@ -87,23 +88,22 @@ def calculate_pillars_only(request):
 
 
 from django_ratelimit.decorators import ratelimit
+from django_ratelimit.core import is_ratelimited
 from .views import fortune_rate_h, fortune_rate_d
 from core.utils import ratelimit_key_for_master_only
 
 @login_required
 @csrf_exempt
-@ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=False, group='saju_service')
-def analyze_topic(request):
+async def analyze_topic(request):
     """
-    Step 2: 주제별 AI 분석 (DB 캐싱 적용)
-    - 로그인 유저는 한 번 본 내용을 자동으로 DB에 저장/로드
+    Step 2: 주제별 AI 분석 (DB 캐싱 적용, async)
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
 
-    # Rate Limit Check
-    if getattr(request, 'limited', False):
-         return JsonResponse({'error': 'LIMIT_EXCEEDED', 'message': '일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!'}, status=429)
+    # Manual ratelimit check
+    if await _check_saju_ratelimit(request):
+        return JsonResponse({'error': 'LIMIT_EXCEEDED', 'message': '일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!'}, status=429)
 
     try:
         data = json.loads(request.body)
@@ -112,15 +112,15 @@ def analyze_topic(request):
         name = data.get('name', '가입자')
         gender = data.get('gender', 'female')
         natal_hash = data.get('natal_hash') or get_natal_hash(pillars)
-        
+
         # 1. DB Cache Check (For Authenticated Users)
         if request.user.is_authenticated:
-            cached_result = FortuneResult.objects.filter(
+            cached_result = await FortuneResult.objects.filter(
                 user=request.user,
                 natal_hash=natal_hash,
                 topic=topic
-            ).first()
-            
+            ).afirst()
+
             if cached_result:
                 logger.info(f"Cache Hit: {request.user.username} - {topic}")
                 return JsonResponse({
@@ -133,12 +133,12 @@ def analyze_topic(request):
         # 2. Build Prompt
         prompt = build_focused_prompt(topic, pillars, name, gender)
 
-        # 3. Call AI
-        response_text = "".join(generate_ai_response(prompt, request))
+        # 3. Call AI (async)
+        response_text = await _collect_ai_response(prompt, request)
 
         # 4. Auto Save (Cache)
         if request.user.is_authenticated and response_text.strip():
-            FortuneResult.objects.create(
+            await FortuneResult.objects.acreate(
                 user=request.user,
                 topic=topic,
                 natal_hash=natal_hash,

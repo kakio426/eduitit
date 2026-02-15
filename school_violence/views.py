@@ -96,7 +96,7 @@ def get_system_prompt(mode_key: str) -> str:
         return DEFAULT_SYSTEM_PROMPTS.get(mode_key, DEFAULT_SYSTEM_PROMPTS['homeroom'])
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='GET', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='GET', block=True)
 def chat_view(request):
     """채팅 메인 뷰 (Guest: 3/h, Member: 10/h)"""
     if getattr(request, 'limited', False):
@@ -162,8 +162,8 @@ def clear_chat(request):
     return JsonResponse({'success': False}, status=400)
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=False)
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=False)
+@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=True)
+@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=True)
 @require_POST
 def send_message(request):
     """상담 메시지 전송 및 AI 응답 (통합 한도: 5/h, 10/d)"""
