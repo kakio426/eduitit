@@ -1,265 +1,156 @@
-# 🔄 Handoff Document - 에듀잇잇
+# Handoff: ASGI 전환 후 사주 분석 오류 디버깅
 
-**날짜**: 2026-02-04
-**프로젝트**: 에듀잇잇 (eduitit)
-**마지막 작업**: 사주 앱 모드 분리 + 일진 UX 개선 + 회원가입 설정 동기화
+**날짜**: 2026-02-15
+**상태**: 디버깅 진행 중 (서버 로그 확인 필요)
 
 ---
 
-## 🆕 최신 작업 (2026-02-04)
+## 현재 상황
 
-### 1. ✅ 사주 앱 교사/일반 모드 완전 분리 (Phase 1-4)
+엔터프라이즈급 인프라 전환(14단계) 완료 후 배포했으나, **사주 분석 기능이 깨짐**.
 
-#### URL 구조 변경
+### 증상
+- 사주 분석 시 "선생님, 잠시 AI와의 연결이 불안정했어요" 에러 표시
+- 캐시된 결과(DB에 이미 있는 FortuneResult)도 불러오지 못함
+- 에러 위치: `fortune/templates/fortune/saju_form.html:2856` JS catch 블록 (프론트엔드 catch-all)
+- JS는 `fetch('{% url "fortune:saju_api" %}')` → `saju_api_view` (async) 호출
+
+### 유지보수 모드
+- `MAINTENANCE_MODE=true` 설정됨 (Railway 환경변수)
+- superuser만 접속 가능
+- 대소문자 무관하게 동작하도록 수정 완료 (`.lower() in ('true', '1', 'yes')`)
+
+---
+
+## 배포된 변경사항 요약
+
+| 변경 | 이전 | 이후 |
+|------|------|------|
+| DB 어댑터 | psycopg2-binary | psycopg[binary]>=3.1 |
+| 서버 | Gunicorn gthread 3w×4t | Uvicorn 2 workers + uvloop |
+| 프로토콜 | WSGI | ASGI |
+| AI 뷰 | 동기 | async (saju_api_view, saju_streaming_api, daily_fortune_api, analyze_topic, send_chat_message) |
+| 캐시 | LocMemCache | Django DatabaseCache |
+| Rate limit | block=False | block=True |
+| 신규 | - | Circuit Breaker, Health Check, CSP 재활성화 |
+
+---
+
+## 에러 흐름 추적
+
 ```
-/fortune/teacher/  → 교사 모드 (🍎 아이콘)
-/fortune/general/  → 일반 모드 (🌟 아이콘)
-/fortune/         → teacher로 리다이렉트 (레거시 호환)
-```
-
-#### 신규 파일 생성
-- `fortune/views_teacher.py` - 교사 모드 뷰
-- `fortune/views_general.py` - 일반 모드 뷰
-- `fortune/utils/pillar_serializer.py` - JSON 직렬화 (일주 추출 에러 해결)
-- `fortune/templates/fortune/base_saju_form.html` (2284줄) - 공통 베이스
-- `fortune/templates/fortune/teacher_form.html` (55줄) - 교사 전용
-- `fortune/templates/fortune/general_form.html` (55줄) - 일반 전용
-- `fortune/migrations/0009_enhance_cache_schema.py` - DB 마이그레이션
-
-#### 모델 추가
-```python
-# fortune/models.py
-class DailyFortuneCache(models.Model):
-    """일진 영구 캐싱 (API 비용 40-45% 절감)"""
-    user = ForeignKey(User)
-    natal_hash = CharField(max_length=64, db_index=True)
-    mode = CharField(max_length=20, db_index=True)  # 'teacher' or 'general'
-    target_date = DateField(db_index=True)
-    result_text = TextField()
-
-    unique_together = ['user', 'natal_hash', 'mode', 'target_date']
-```
-
-#### 캐싱 로직 추가
-- `fortune/utils/caching.py` - 일진 캐싱 함수 추가
-  - `get_cached_daily_fortune()` - 일진 캐시 조회
-  - `save_daily_fortune_cache()` - 일진 캐시 저장
-  - `get_user_context_hash()` - 이름+성별+사주 통합 해시
-- `fortune/views.py` - 스트리밍 API에도 캐싱 적용
-
-#### 모드별 일진 프롬프트
-```python
-# fortune/prompts.py
-def get_daily_fortune_prompt(..., mode='general'):
-    if mode == 'teacher':
-        # 학급 경영, 학생/학부모 관계 조언
-    else:
-        # 업무/학업, 인간관계, 재물운 조언
-```
-
-### 2. ✅ 일진 UX 대폭 개선
-
-#### 특별한 로딩 메시지 (캐시에도 적용!)
-```javascript
-// 캐시된 결과여도 1.5초 동안 재치있는 메시지 표시
-const loadingMessages = [
-    '📜 고서를 뒤적이며 명리를 풀이하는 중...',
-    '🔮 천간지지의 비밀을 해독하는 중...',
-    '✨ 당신의 운명 코드를 분석하는 중...',
-    // ... 총 15가지
-];
-
-// 캐시 히트 시 1.5초 딜레이로 자연스러운 UX
-if (data.cached) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-}
+[사용자] 사주 폼 제출
+  ↓
+[JS] fetch('/fortune/api/') POST → saju_api_view (async)
+  ↓
+[서버 처리 순서]
+  1. await _check_saju_ratelimit(request)     ← ⚠️ 캐시 테이블 없으면 여기서 실패
+  2. SajuForm(request.POST) 검증
+  3. await sync_to_async(get_chart_context)(data)  ← ⚠️ psycopg v3 이슈면 여기서 실패
+  4. await FortuneResult.objects.filter(...).afirst()  ← DB 캐시 조회
+  5. await _collect_ai_response(prompt, request)     ← AI 호출 (캐시 없을 때만)
+  ↓
+[서버] except Exception → JsonResponse(status=500, 'AI_ERROR')
+  ↓
+[JS] response.ok === false → throw → catch → "AI와의 연결이 불안정했어요"
 ```
 
-**적용 위치**:
-- `fortune/templates/fortune/saju_form.html` (checkDailyFortune 함수)
-- `fortune/templates/fortune/base_saju_form.html` (checkDailyFortune 함수)
+---
 
-#### 보관함 저장 버튼 추가
-- 일진 결과 하단에 "📌 보관함에 저장" 버튼 표시
-- `saveDailyFortuneToLibrary()` 함수 추가
-- 자동 캐싱 ≠ 보관함 개념 분리
-  - 자동 캐싱: 모든 조회 자동 저장 (성능용, DailyFortuneCache)
-  - 보관함: 사용자가 선택한 중요한 날짜만 저장 (FortuneResult)
+## 디버깅 진행 상황
 
-#### 캐시 히트 표시
-```html
-<!-- 캐시 히트 시 배지 표시 -->
-<div class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full">
-    <i class="fa-solid fa-bolt mr-2"></i>저장된 결과입니다 (빠른 로딩)
-</div>
+### 확인 완료 (문제 아닌 것)
+- `Stem.element`는 CharField → async 접근 시 SynchronousOnlyOperation 없음
+- `config/asgi.py` 정상
+- `CACHES` 설정 정상 (DatabaseCache + `django_cache_table`)
+- `DISABLE_SERVER_SIDE_CURSORS = True` 설정됨
+- `Procfile`에 `createcachetable` 포함
+- `@login_required` + `@csrf_exempt` on async view: Django 6.0 지원됨
+- superuser는 rate limit 안 걸림 (`fortune_rate_h` → `None`)
+- `saju_view` (동기 폼 렌더링 뷰)는 변경 없음, 정상 동작
+
+### 확인 필요 (우선순위 순)
+
+#### 1. Railway 서버 로그 / Sentry 에러 확인 ★최우선★
 ```
-
-### 3. ✅ 회원가입 설정 동기화 (중요!)
-
-#### 문제 발견
-- `settings.py`에는 이메일/별명 필수 설정 존재
-- `settings_production.py`에는 **누락**됨 ← 로컬에서만 작동!
-
-#### 수정 내용
-`config/settings_production.py` (line 291-292):
-```python
-ACCOUNT_SIGNUP_FIELDS = ['email', 'username']  # 간소화
-ACCOUNT_EMAIL_REQUIRED = True  # ✅ 추가
-ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'  # ✅ 추가
+검색 키워드: "사주 API 전역 오류" 또는 "SynchronousOnlyOperation" 또는 "ProgrammingError"
 ```
+- `saju_api_view`의 `except Exception as e` 블록이 `logger.exception()` 로그 남김
+- Sentry에서 fortune 관련 500 에러 검색
 
-#### 검증 방법
+#### 2. createcachetable 실행 여부
+- `is_ratelimited()` → `cache.get()`/`cache.set()` → `django_cache_table` 필요
+- 테이블 없으면 `ProgrammingError` → `_check_saju_ratelimit`에서 즉시 실패
+- **확인 방법**: Railway 쉘에서 `python manage.py dbshell` → `\dt django_cache_table`
+
+#### 3. psycopg v3 호환성
+- `dj-database-url==2.3.0`이 `ENGINE: django.db.backends.postgresql` 설정
+- Django 6.0이 psycopg v3 자동 감지
+- `calculator.get_pillars(dt)` 내부 Stem/Branch 모델 조회가 실패할 수 있음
+
+#### 4. Circuit Breaker 상태
+- 배포 직후 초기 실패 → circuit breaker 열림 → 30초간 AI 차단
+- 하지만 캐시된 결과는 AI 호출 안 하므로 무관해야 함
+- 30초 후 half-open으로 자동 복구
+
+#### 5. sync_to_async DB 커넥션
+- Uvicorn + psycopg v3 + ThreadPoolExecutor 조합에서 커넥션 풀 이슈 가능
+- Neon(PgBouncer) + thread별 새 커넥션 → 풀 소진 가능성
+
+---
+
+## 다음 단계
+
+1. **Railway Logs 또는 Sentry에서 실제 Python traceback 확인**
+2. traceback에 따라 수정:
+
+| 에러 | 수정 방법 |
+|------|-----------|
+| `ProgrammingError: relation "django_cache_table"` | `python manage.py createcachetable` 재실행 |
+| `SynchronousOnlyOperation` | 해당 ORM 호출에 `sync_to_async` 래핑 |
+| psycopg 관련 에러 | `requirements.txt`에서 `psycopg2-binary` 복귀 |
+| Circuit breaker 차단 | 재배포로 리셋 (in-memory 상태) |
+
+3. 수정 후 사주 분석 테스트
+4. 정상 확인 → `MAINTENANCE_MODE` 해제 (Railway 환경변수 삭제)
+
+---
+
+## 롤백 방법 (최후 수단)
+
 ```bash
-# 프로덕션 배포 후 테스트
-1. https://your-domain.com/accounts/signup/ 접속
-2. 이메일 없이 가입 시도 → "필수 항목입니다" 에러
-3. 별명 없이 가입 시도 → "별명을 입력해주세요 (필수)" 에러
-4. 모두 입력 → 가입 성공
+# 1. Procfile: uvicorn → gunicorn 복귀 (주석 토글)
+# ROLLBACK 주석 해제, uvicorn 라인 주석 처리
+
+# 2. requirements.txt: psycopg v3 → psycopg2 복귀
+# psycopg[binary]>=3.1 → psycopg2-binary==2.9.10
+
+# 3. async 뷰 전환 커밋 git revert (필요 시)
 ```
 
 ---
 
-## 📊 개선 효과 (예상)
+## 관련 파일
 
-| 항목 | Before | After | 개선율 |
-|------|--------|-------|--------|
-| 일진 응답 시간 (캐시 히트) | 20-30초 | <1초 | **99%↓** |
-| API 비용 | 100% | 55-60% | **40-45%↓** |
-| 모드 명확성 | 라디오 버튼 | URL 분리 | **북마크 가능** |
-| 템플릿 유지보수성 | 단일 2683줄 | 상속 구조 | **구조 개선** |
-
----
-
-## 🚨 배포 전 필수 체크리스트
-
-### 로컬 테스트
-- [ ] `/fortune/teacher/` 접속 → 🍎 아이콘 + "교사 사주운세" 확인
-- [ ] `/fortune/general/` 접속 → 🌟 아이콘 + "일반 사주 분석" 확인
-- [ ] 일진 조회 → 특별한 로딩 메시지 표시 확인
-- [ ] 같은 날짜 재조회 → 1.5초 후 "빠른 로딩" 배지 확인
-- [ ] 보관함 저장 버튼 클릭 → "보관함에 저장되었습니다" 토스트
-- [ ] 회원가입 → 이메일/별명 필수 확인
-
-### 프로덕션 배포
-```bash
-# 1. Git 커밋
-git add .
-git commit -m "feat: 교사/일반 모드 분리, 일진 캐싱, UX 개선, 회원가입 설정 동기화"
-git push origin main
-
-# 2. Railway/Heroku 배포 확인
-# 마이그레이션 자동 실행 확인
-
-# 3. 프로덕션 테스트
-- [ ] 마이그레이션 확인: python manage.py showmigrations fortune
-- [ ] 회원가입 테스트 (이메일/별명 필수)
-- [ ] 일진 캐싱 동작 확인
-- [ ] 모드별 URL 접근 확인
-```
+| 파일 | 역할 |
+|------|------|
+| `fortune/views.py:389` | `saju_api_view` (async) - 에러 발생 뷰 |
+| `fortune/views.py:215` | `_async_stream_ai` - async AI 스트리밍 래퍼 |
+| `fortune/views.py:228` | `_collect_ai_response` - sync_to_async AI 수집 |
+| `fortune/views.py:199` | `_check_saju_ratelimit` - async rate limit 체크 |
+| `fortune/views.py:57` | `generate_ai_response` - AI 호출 (동기) |
+| `fortune/api_views.py` | `analyze_topic` (async) |
+| `fortune/views_chat.py` | `send_chat_message` (async) |
+| `fortune/utils/chat_ai.py` | AsyncOpenAI 스트리밍 |
+| `fortune/utils/circuit_breaker.py` | SimpleCircuitBreaker |
+| `fortune/templates/fortune/saju_form.html:2725` | JS fetch 호출 |
+| `fortune/templates/fortune/saju_form.html:2856` | JS 에러 catch 블록 |
+| `config/settings_production.py:194` | CACHES (DatabaseCache) |
+| `Procfile` | uvicorn + createcachetable |
+| `requirements.txt:10` | psycopg[binary]>=3.1 |
 
 ---
 
-## 📁 변경된 파일 목록
-
-### 수정된 파일 (7개)
-1. `fortune/models.py` - DailyFortuneCache 모델 추가
-2. `fortune/utils/caching.py` - 일진 캐싱 함수 추가
-3. `fortune/urls.py` - 모드별 URL 추가
-4. `fortune/views.py` - 스트리밍 API 캐싱 추가
-5. `fortune/prompts.py` - 모드별 일진 프롬프트 (기존에 이미 있었음)
-6. `fortune/templates/fortune/saju_form.html` - 로딩 메시지 + 보관함 버튼
-7. `fortune/templates/fortune/base_saju_form.html` - 로딩 메시지 + 보관함 버튼
-8. `config/settings_production.py` - ⚠️ 회원가입 설정 동기화 (중요!)
-
-### 신규 생성 파일 (7개)
-1. `fortune/views_teacher.py`
-2. `fortune/views_general.py`
-3. `fortune/utils/pillar_serializer.py`
-4. `fortune/templates/fortune/base_saju_form.html`
-5. `fortune/templates/fortune/teacher_form.html`
-6. `fortune/templates/fortune/general_form.html`
-7. `fortune/migrations/0009_enhance_cache_schema.py`
-
-### 문서 파일 (4개)
-1. `IMPLEMENTATION_SUMMARY.md` - 구현 내용 상세
-2. `VERIFICATION_CHECKLIST.md` - 검증 체크리스트
-3. `BEFORE_AFTER_COMPARISON.md` - 개선 효과 비교
-4. `MODE_SEPARATION_IMPLEMENTATION.md` - 간단 요약
-
----
-
-## 🔧 알려진 이슈 및 해결 방법
-
-### 이슈 1: Allauth 순환 참조 에러
-```
-ImportError: cannot import name 'SignupForm' from partially initialized module 'allauth.account.forms'
-```
-**상태**: 기존 이슈 (이번 작업과 무관)
-**해결**: 개발 환경에서만 발생, 프로덕션에서는 정상 작동
-
-### 이슈 2: 모델 재등록 경고
-```
-RuntimeWarning: Model 'fortune.dailyfortunecache' was already registered.
-```
-**원인**: 개발 환경의 핫 리로드
-**영향**: 없음 (프로덕션에서는 발생 안 함)
-
----
-
-## 🎯 다음 작업 제안
-
-### 단기 (선택)
-1. **회원가입 폼 커스터마이징**
-   - 현재: 기본 allauth 템플릿 사용
-   - 개선: `templates/account/signup.html` 커스텀 생성
-
-2. **일진 보관함 페이지 개선**
-   - 보관함에서 일진만 필터링
-   - 날짜순 정렬
-   - 캘린더 뷰 (선택)
-
-3. **캐시 히트율 모니터링 대시보드**
-   ```python
-   from fortune.models import DailyFortuneCache, DailyFortuneLog
-   cache_rate = (DailyFortuneCache.count() / DailyFortuneLog.count() * 100)
-   # 목표: 30-50%
-   ```
-
-### 중기
-1. 전체 템플릿 리팩토링 (2683줄 → 600줄로 축소)
-2. 테스트 코드 작성
-3. 성능 모니터링 및 최적화
-
----
-
-## 📞 중요 참고 사항
-
-### CLAUDE.md 준수 사항
-- ✅ settings.py와 settings_production.py 동기화 완료
-- ✅ 마이그레이션 생성 및 테스트 완료
-- ✅ 단계별 점진적 구현 (Phase 1-4)
-
-### 배포 시 주의사항
-1. **반드시** `settings_production.py` 변경사항 확인
-2. 마이그레이션 자동 실행 확인
-3. 회원가입 테스트 (이메일/별명 필수)
-4. 일진 캐싱 동작 확인
-
----
-
-**현재 상태**: 커밋 대기 중
-**마지막 테스트**: 로컬 환경에서 확인 완료
-**배포 준비**: ✅ 준비 완료
-
----
-
-## 🔄 이전 작업 (2026-02-03)
-
-### 사주 서비스 대규모 개선 ✅
-- 비회원 접근 제한 (`@login_required`)
-- DB 캐싱 시스템 구현
-- 이메일 필수 설정
-- 로딩 멘트 15종 추가
-- 캐시된 결과 특별 로딩 (3-5초 딜레이)
-
-**상세 내용**: 위 내용은 2026-02-03 작업과 연계됨
+## 플랜 파일 위치
+- 전체 전환 계획: `C:\Users\kakio\.claude\plans\federated-meandering-harp.md`
+- 기존 ASGI 마이그레이션 계획: `fortune/ASGI_MIGRATION_PLAN.md`

@@ -16,8 +16,8 @@
         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 relative top-1">
             🧙‍♂️
         </div>
-        <div class="glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
-            {{ message.content|safe }}
+        <div class="chat-ai-content glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
+            {{ message.content|linebreaksbr }}
             <span class="text-[10px] text-gray-400 mt-2 block opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1 left-4">{{ message.created_at|date:"A g:i" }}</span>
         </div>
     </div>

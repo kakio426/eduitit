@@ -1,52 +1,116 @@
-from datetime import datetime
+PILLARS = ("year", "month", "day", "hour")
+PILLAR_ALIASES = {"hour": ("hour", "time")}
 
 
-def build_system_prompt(profile, natal_chart):
-    # Extract Day Master (Day Gan)
-    day_gan = "Unknown"
-    
-    # Simple mapping for better context
-    STEM_MAP = {
-        'gap': '갑(甲)', 'eul': '을(乙)',
-        'pyeong': '병(丙)', 'jeong': '정(丁)', 
-        'mu': '무(戊)', 'gi': '기(己)',
-        'gyeong': '경(庚)', 'sin': '신(辛)', 
-        'im': '임(壬)', 'gye': '계(癸)'
-    }
+def normalize_natal_chart_payload(natal_chart):
+    """
+    Normalize different natal chart formats into:
+    {'year': {'stem': '甲', 'branch': '子'}, ...}
+    """
+    if not isinstance(natal_chart, dict):
+        return {}
 
-    # Check if natal_chart is dict or model instance
-    if isinstance(natal_chart, dict) and 'day' in natal_chart:
-         # Handle both simple dict and nested dict
-         if isinstance(natal_chart['day'], dict):
-             day_gan_val = natal_chart['day'].get('gan')
-             if day_gan_val:
-                 # Normalize and map
-                 raw_gan = str(day_gan_val).lower()
-                 day_gan = STEM_MAP.get(raw_gan, day_gan_val)
+    normalized = {}
+    for pillar in PILLARS:
+        keys = PILLAR_ALIASES.get(pillar, (pillar,))
+        raw = None
+        for key in keys:
+            if key in natal_chart:
+                raw = natal_chart.get(key)
+                break
+        stem = None
+        branch = None
 
-    elif hasattr(natal_chart, 'day_stem'):
-         day_gan = f"{natal_chart.day_stem.character}({natal_chart.day_stem.name})"
+        if isinstance(raw, dict):
+            stem = raw.get("stem") or raw.get("gan")
+            branch = raw.get("branch") or raw.get("ji")
+        elif isinstance(raw, (list, tuple)) and len(raw) >= 2:
+            stem, branch = raw[0], raw[1]
+        elif isinstance(raw, str) and len(raw) >= 2:
+            stem, branch = raw[:1], raw[1:]
 
-    person_name = getattr(profile, 'person_name', getattr(profile, 'name', 'Student'))
+        if stem and branch:
+            normalized[pillar] = {"stem": str(stem), "branch": str(branch)}
 
-    # Simple Vocabulary & Tone
+    return normalized
+
+
+def _extract_day_master(natal_chart):
+    normalized = normalize_natal_chart_payload(natal_chart)
+    day = normalized.get("day", {})
+    return day.get("stem", "Unknown")
+
+
+def _format_birth(profile):
+    year = getattr(profile, "birth_year", "")
+    month = getattr(profile, "birth_month", "")
+    day = getattr(profile, "birth_day", "")
+    hour = getattr(profile, "birth_hour", None)
+    minute = getattr(profile, "birth_minute", None)
+
+    if hour is None or minute is None:
+        return f"{year}-{month:02d}-{day:02d}" if month and day else str(year)
+    return f"{year}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}"
+
+
+def _compress_text(text, max_len=320):
+    if not text:
+        return ""
+    clean = " ".join(str(text).split())
+    if len(clean) <= max_len:
+        return clean
+    return clean[:max_len] + "..."
+
+
+def _build_general_history_block(general_results):
+    if not general_results:
+        return "None"
+
+    lines = []
+    for idx, item in enumerate(general_results, start=1):
+        created_at = item.get("created_at")
+        created_label = created_at.isoformat() if created_at else "unknown-time"
+        summary = _compress_text(item.get("result_text", ""))
+        if summary:
+            lines.append(f"{idx}. ({created_label}) {summary}")
+
+    return "\n".join(lines) if lines else "None"
+
+
+def build_system_prompt(profile, natal_chart, general_results=None):
+    person_name = getattr(profile, "person_name", getattr(profile, "name", "Student"))
+    gender = getattr(profile, "gender", "unknown")
+    day_master = _extract_day_master(natal_chart)
+    birth_text = _format_birth(profile)
+    prior_general = _build_general_history_block(general_results or [])
+
     prompt = f"""
-role: Saju Teacher (사주 선생님)
-tone: 친절한, 존댓말, 일반 사람들이 편하게 이해할 수 있는 부드러운 어휘 사용
-format: Plain Text (순수 텍스트)
-length: 3~4문장으로 짧게 답변
+role: Saju Teacher
+Language: Korean honorific
+Tone: warm, specific, and easy to understand
+Format: plain text only
+Length: 3-4 sentences
 
 [User Context]
 Name: {person_name}
-Day Master (Identity): {day_gan} (일간)
-Birth Year: {profile.birth_year}
+Gender: {gender}
+Birth Datetime: {birth_text}
+Day Master: {day_master}
+
+[Prior General Readings]
+Use these as references for consistency.
+If the user's new question conflicts with old readings, explain why briefly.
+{prior_general}
 
 [Instructions]
-1. 당신은 사주 선생님입니다. 사람들의 질문에 친절하고 정중한 존댓말(~요/습니다)로 답해주세요.
-2. 사람의 일간(Day Master)인 {day_gan}의 특성을 바탕으로 설명해주세요.
-3. 절대 어려운 한자어나 전문 용어를 쓰지 말고, 사주의 결과와 질문을 연관 지어서 어른들이 이해하기 쉽게 설명해주세요.
-4. 호칭은 반드시 '{person_name} 님'이라고 정중하게 불러주세요. 절대 '병주야'와 같은 반말 호칭이나 '-아/-야'를 쓰지 마세요.
-5. 마크다운(** 등)이나 특수문자를 절대 사용하지 말고 평범한 글자로만 답변하세요.
-6. 답변은 3~4문장 이내로 핵심만 말하세요.
+1. Address the user by "{person_name}" naturally.
+2. Day Master is fixed as "{day_master}". Never change or reinterpret this value.
+3. Base interpretation on that fixed Day Master and birth context.
+4. If prior general readings exist, keep interpretation consistent with them.
+5. If there is a conflict, explain the reason briefly without changing Day Master.
+6. Keep wording plain and avoid unnecessary jargon.
+7. Do not use markdown symbols like **, `, #, >, _, [, ] or headings.
+8. Never reveal or repeat full private birth data unless the user asks.
+9. Answer in Korean honorific style.
 """
     return prompt.strip()

@@ -1,5 +1,6 @@
 import os
 import logging
+import html
 from openai import AsyncOpenAI
 from ..models import ChatMessage
 from asgiref.sync import sync_to_async
@@ -9,6 +10,19 @@ logger = logging.getLogger(__name__)
 
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+MARKDOWN_CHARS = "*_`#>[]<"
+
+
+def _strip_markdown_chars(text):
+    if not text:
+        return ""
+    return "".join(ch for ch in text if ch not in MARKDOWN_CHARS)
+
+
+def _sanitize_stream_chunk(text):
+    # Streamed chunks are injected directly into HTML; escape to prevent XSS.
+    plain = _strip_markdown_chars(text)
+    return html.escape(plain, quote=False).replace("\n", "<br>")
 
 async def get_ai_response_stream(session, system_prompt, history, user_message):
     """
@@ -54,9 +68,9 @@ async def get_ai_response_stream(session, system_prompt, history, user_message):
 
         async for chunk in response:
             if chunk.choices and chunk.choices[0].delta.content:
-                content = chunk.choices[0].delta.content
-                full_response += content
-                yield content
+                plain_content = _strip_markdown_chars(chunk.choices[0].delta.content)
+                full_response += plain_content
+                yield _sanitize_stream_chunk(chunk.choices[0].delta.content)
 
     except Exception as e:
         ai_circuit_breaker.record_failure()

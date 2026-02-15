@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 from .models import ChatSession, ChatMessage, UserSajuProfile, FortuneResult
-from .utils.chat_logic import build_system_prompt
+from .utils.chat_logic import build_system_prompt, normalize_natal_chart_payload
 from .utils.chat_ai import get_ai_response_stream
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import is_ratelimited
@@ -16,6 +16,57 @@ import logging
 from types import SimpleNamespace
 
 logger = logging.getLogger(__name__)
+
+
+def _select_prior_general_results(user, profile_natal_chart, limit=2):
+    """
+    Select recent cached FortuneResult entries for chat grounding.
+    - mode='general' only
+    - Prefer entries matching current profile natal chart
+    - Fall back to latest general entries when profile chart is missing or no match exists
+    """
+    profile_chart_norm = normalize_natal_chart_payload(profile_natal_chart)
+    candidates = list(
+        FortuneResult.objects.filter(user=user, mode='general')
+        .order_by('-created_at')
+        .values('id', 'created_at', 'result_text', 'natal_chart')[:20]
+    )
+
+    if not candidates:
+        return []
+    if not profile_chart_norm:
+        return [
+            {
+                'id': item['id'],
+                'created_at': item['created_at'],
+                'result_text': item['result_text'],
+            }
+            for item in candidates[:limit]
+        ]
+
+    matched = []
+    for item in candidates:
+        result_chart_norm = normalize_natal_chart_payload(item.get('natal_chart'))
+        if result_chart_norm and result_chart_norm == profile_chart_norm:
+            matched.append(
+                {
+                    'id': item['id'],
+                    'created_at': item['created_at'],
+                    'result_text': item['result_text'],
+                }
+            )
+        if len(matched) >= limit:
+            break
+    if matched:
+        return matched
+    return [
+        {
+            'id': item['id'],
+            'created_at': item['created_at'],
+            'result_text': item['result_text'],
+        }
+        for item in candidates[:limit]
+    ]
 
 @login_required
 def chat_main_page(request):
@@ -115,7 +166,10 @@ async def send_chat_message(request):
     # Build context
     profile = await sync_to_async(lambda: session.profile)()
     natal_chart = await sync_to_async(lambda: profile.natal_chart or {})()
-    system_prompt = build_system_prompt(profile, natal_chart)
+    prior_general_results = await sync_to_async(_select_prior_general_results)(
+        request.user, natal_chart, 2
+    )
+    system_prompt = build_system_prompt(profile, natal_chart, prior_general_results)
 
     # Fetch history excluding current user message
     previous_history = ChatMessage.objects.filter(session=session).exclude(id=user_msg_obj.id).order_by('created_at')
@@ -128,7 +182,7 @@ async def send_chat_message(request):
         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 relative top-1">
             🧙\u200d♂️
         </div>
-        <div class="glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
+        <div class="chat-ai-content glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
 """
         # 2. Stream content from async AI generator
         async for chunk in get_ai_response_stream(session, system_prompt, previous_history, content):

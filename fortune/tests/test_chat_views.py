@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from fortune.models import ChatSession, ChatMessage, UserSajuProfile, FortuneResult
+from fortune.views_chat import _select_prior_general_results
 from unittest.mock import patch, MagicMock
 import sys
 
@@ -117,3 +118,93 @@ class TestChatViews(TestCase):
         result = FortuneResult.objects.first()
         self.assertIn('Hello', result.result_text)
         self.assertIn('Hi there', result.result_text)
+
+    def test_select_prior_general_results_excludes_teacher_and_prefers_matching_chart(self):
+        target_chart = {
+            "year": {"stem": "甲", "branch": "子"},
+            "month": {"stem": "乙", "branch": "丑"},
+            "day": {"stem": "丙", "branch": "寅"},
+            "hour": {"stem": "丁", "branch": "卯"},
+        }
+        self.profile.natal_chart = target_chart
+        self.profile.save(update_fields=["natal_chart"])
+
+        FortuneResult.objects.create(
+            user=self.user,
+            mode="teacher",
+            natal_chart=target_chart,
+            result_text="teacher result should not be included",
+        )
+        FortuneResult.objects.create(
+            user=self.user,
+            mode="general",
+            natal_chart={"day": ["丙", "寅"], "year": "甲子", "month": "乙丑", "hour": "丁卯"},
+            result_text="matching general result",
+        )
+        FortuneResult.objects.create(
+            user=self.user,
+            mode="general",
+            natal_chart={"day": {"stem": "庚", "branch": "午"}},
+            result_text="non matching general result",
+        )
+
+        results = _select_prior_general_results(self.user, self.profile.natal_chart, limit=2)
+
+        self.assertEqual(len(results), 1)
+        self.assertIn("matching general result", results[0]["result_text"])
+
+    def test_select_prior_general_results_falls_back_when_no_matching_chart(self):
+        self.profile.natal_chart = {
+            "year": {"stem": "甲", "branch": "子"},
+            "month": {"stem": "乙", "branch": "丑"},
+            "day": {"stem": "丙", "branch": "寅"},
+            "hour": {"stem": "丁", "branch": "卯"},
+        }
+        self.profile.save(update_fields=["natal_chart"])
+
+        FortuneResult.objects.create(
+            user=self.user,
+            mode="general",
+            natal_chart={"year": "庚午", "month": "辛未", "day": "壬申", "hour": "癸酉"},
+            result_text="other chart general result",
+        )
+
+        results = _select_prior_general_results(self.user, self.profile.natal_chart, limit=2)
+        self.assertEqual(len(results), 1)
+        self.assertIn("other chart general result", results[0]["result_text"])
+
+class TestChatViewsFallback(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='fallbackuser', password='password', email='fallback@example.com')
+
+    def test_returns_latest_general_when_no_match(self):
+        FortuneResult.objects.create(
+            user=self.user,
+            mode='general',
+            natal_chart={'year': 'ZZ', 'month': 'YY', 'day': 'XX', 'hour': 'WW'},
+            result_text='latest general fallback',
+        )
+        target_chart = {
+            'year': {'stem': 'A', 'branch': 'B'},
+            'month': {'stem': 'C', 'branch': 'D'},
+            'day': {'stem': 'E', 'branch': 'F'},
+            'hour': {'stem': 'G', 'branch': 'H'},
+        }
+
+        results = _select_prior_general_results(self.user, target_chart, limit=2)
+
+        self.assertEqual(len(results), 1)
+        self.assertIn('latest general fallback', results[0]['result_text'])
+
+    def test_returns_latest_general_when_profile_chart_missing(self):
+        FortuneResult.objects.create(
+            user=self.user,
+            mode='general',
+            natal_chart={'year': 'AA', 'month': 'BB', 'day': 'CC', 'hour': 'DD'},
+            result_text='latest without profile chart',
+        )
+
+        results = _select_prior_general_results(self.user, {}, limit=2)
+
+        self.assertEqual(len(results), 1)
+        self.assertIn('latest without profile chart', results[0]['result_text'])
