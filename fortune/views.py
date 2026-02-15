@@ -192,6 +192,77 @@ def serialize_chart_context(chart_context):
     }
 
 
+def chart_context_to_legacy_chart(chart_context):
+    """Legacy 프론트 저장 포맷([stem, branch])으로 변환"""
+    if not chart_context:
+        return None
+    return {
+        'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
+        'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
+        'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
+        'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
+    }
+
+
+def normalize_natal_chart_payload(natal_chart):
+    """
+    natal_chart를 canonical 포맷({'year': {'stem': '甲', 'branch': '子'}})으로 정규화.
+    레거시 포맷([stem, branch], '甲子')도 허용한다.
+    """
+    if not isinstance(natal_chart, dict):
+        return natal_chart
+
+    normalized = {}
+    for pillar in ('year', 'month', 'day', 'hour'):
+        raw_value = natal_chart.get(pillar)
+        stem = None
+        branch = None
+
+        if isinstance(raw_value, dict):
+            stem = raw_value.get('stem')
+            branch = raw_value.get('branch')
+        elif isinstance(raw_value, (list, tuple)) and len(raw_value) >= 2:
+            stem, branch = raw_value[0], raw_value[1]
+        elif isinstance(raw_value, str) and len(raw_value) >= 2:
+            stem, branch = raw_value[:1], raw_value[1:]
+
+        if stem and branch:
+            normalized[pillar] = {'stem': str(stem), 'branch': str(branch)}
+
+    return normalized or natal_chart
+
+
+def find_cached_fortune_result(user, mode, chart_context):
+    """
+    FortuneResult 캐시 조회.
+    1) canonical 포맷 조회
+    2) 과거 레거시 포맷 조회
+    """
+    from .models import FortuneResult
+
+    serialized_chart = serialize_chart_context(chart_context)
+    if not serialized_chart:
+        return None
+
+    result = FortuneResult.objects.filter(
+        user=user,
+        mode=mode,
+        natal_chart=serialized_chart
+    ).order_by('-created_at').first()
+    if result:
+        return result
+
+    legacy_chart = chart_context_to_legacy_chart(chart_context)
+    if not legacy_chart:
+        return None
+
+    return FortuneResult.objects.filter(
+        user=user,
+        mode=mode,
+        natal_chart=legacy_chart
+    ).order_by('-created_at').first()
+
+
 # ============================================
 # Async 헬퍼 함수
 # ============================================
@@ -268,17 +339,9 @@ def saju_view(request):
             logger.info(f"Calculated Chart: {chart_context}")
             
             # [SERVER CACHE] 중복 분석 방지
-            from .models import FortuneResult
             existing_result = None
-            # JSONField 필터를 위해 객체를 문자열로 직렬화
-            serialized_chart = serialize_chart_context(chart_context)
-            
-            if request.user.is_authenticated and serialized_chart:
-                existing_result = FortuneResult.objects.filter(
-                    user=request.user,
-                    mode=mode,
-                    natal_chart=serialized_chart
-                ).order_by('-created_at').first()
+            if request.user.is_authenticated:
+                existing_result = find_cached_fortune_result(request.user, mode, chart_context)
 
             prompt = get_prompt(mode, data, chart_context=chart_context)
 
@@ -411,16 +474,11 @@ async def saju_api_view(request):
         chart_context = await sync_to_async(get_chart_context)(data)
 
         # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
-        from .models import FortuneResult
         existing_result = None
-        serialized_chart = serialize_chart_context(chart_context)
-
-        if request.user.is_authenticated and serialized_chart:
-            existing_result = await FortuneResult.objects.filter(
-                user=request.user,
-                mode=mode,
-                natal_chart=serialized_chart
-            ).order_by('-created_at').afirst()
+        if request.user.is_authenticated:
+            existing_result = await sync_to_async(find_cached_fortune_result)(
+                request.user, mode, chart_context
+            )
 
         prompt = get_prompt(mode, data, chart_context=chart_context)
 
@@ -473,7 +531,7 @@ async def daily_fortune_api(request):
 
         data = json.loads(request.body)
         target_date_str = data.get('target_date')
-        natal_data = data.get('natal_chart')
+        natal_data = normalize_natal_chart_payload(data.get('natal_chart'))
         name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
         mode = data.get('mode', 'teacher')
@@ -492,20 +550,28 @@ async def daily_fortune_api(request):
 
         @sync_to_async
         def build_natal_context(natal_data):
-            def get_pillar_obj(ganji_str):
-                if not ganji_str or len(ganji_str) < 2:
+            def get_pillar_obj(pillar_value):
+                if not pillar_value:
                     return {'stem': None, 'branch': None}
-                s_char = ganji_str[:1]
-                b_char = ganji_str[1:]
+                if isinstance(pillar_value, dict):
+                    s_char = pillar_value.get('stem')
+                    b_char = pillar_value.get('branch')
+                elif isinstance(pillar_value, (list, tuple)) and len(pillar_value) >= 2:
+                    s_char, b_char = pillar_value[0], pillar_value[1]
+                elif isinstance(pillar_value, str) and len(pillar_value) >= 2:
+                    s_char, b_char = pillar_value[:1], pillar_value[1:]
+                else:
+                    return {'stem': None, 'branch': None}
+
                 return {
-                    'stem': Stem.objects.filter(character=s_char).first(),
-                    'branch': Branch.objects.filter(character=b_char).first()
+                    'stem': Stem.objects.filter(character=str(s_char)).first(),
+                    'branch': Branch.objects.filter(character=str(b_char)).first()
                 }
             return {
-                'year': get_pillar_obj(natal_data.get('year')),
-                'month': get_pillar_obj(natal_data.get('month')),
-                'day': get_pillar_obj(natal_data.get('day')),
-                'hour': get_pillar_obj(natal_data.get('hour'))
+                'year': get_pillar_obj((natal_data or {}).get('year')),
+                'month': get_pillar_obj((natal_data or {}).get('month')),
+                'day': get_pillar_obj((natal_data or {}).get('day')),
+                'hour': get_pillar_obj((natal_data or {}).get('hour'))
             }
 
         natal_context = await build_natal_context(natal_data)
@@ -518,7 +584,7 @@ async def daily_fortune_api(request):
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
 
         # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효) - 모드 포함
-        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(str(natal_data).encode()).hexdigest()}_{mode}"
+        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(json.dumps(natal_data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()}_{mode}"
         cached_response = await sync_to_async(cache.get)(cache_key)
 
         if cached_response:
@@ -554,10 +620,11 @@ def save_fortune_api(request):
         data = json.loads(request.body)
         from .models import FortuneResult
 
+        normalized_natal_chart = normalize_natal_chart_payload(data.get('natal_chart'))
         saved_result = FortuneResult.objects.create(
             user=request.user,
             mode=data.get('mode', 'teacher'),
-            natal_chart=data.get('natal_chart'),
+            natal_chart=normalized_natal_chart,
             result_text=data.get('result_text'),
             target_date=data.get('target_date') if data.get('target_date') else None
         )
