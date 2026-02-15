@@ -80,12 +80,19 @@ def generate_article_gemini(api_key, topic_data, style_service=None, is_master_k
 키워드: {topic_data.get('keywords', '')}
 톤: {topic_data.get('tone', '')}
 {style_prompt}
+
 요구사항:
 1. 제목 1줄 (형식: 제목: ...)
 2. 본문 400~600자
 3. 초등학생도 이해하기 쉬운 문장
 4. 문단 구분 명확하게 작성
 5. 마지막에 해시태그 5개 이내 (#태그)
+
+중요 규칙:
+- 마크다운 특수문자(*, #, **, ##, >, -, _, `, 등)를 절대 사용하지 마세요
+- 본문에 문맥에 맞는 이모티콘 2-3개를 자연스럽게 포함하세요 (예: 🎉, 📚, ⚽, 🎨, 🌟 등)
+- 순수한 텍스트 형식으로만 작성하세요
+- 강조가 필요한 부분은 이모티콘이나 느낌표로 표현하세요
 """
 
     try:
@@ -130,11 +137,14 @@ def summarize_article_for_ppt(content, api_key=None, is_master_key=False):
 
     prompt = f"""
 다음 기사 내용을 PPT용 핵심 요약으로 정리하세요.
+
 조건:
 - 3~5개 문장
 - 한 줄에 한 문장
 - 친근한 문체
 - 불필요한 설명 없이 요약 문장만 출력
+- 마크다운 특수문자(*, #, -, 등) 사용 금지
+- 이모티콘 1-2개 포함 가능
 
 기사:
 {content}
