@@ -60,6 +60,23 @@
 
 **VisitorLog 모델**: `user_agent`, `is_bot` 필드 보유. `get_visitor_stats(days, exclude_bots=True)`로 필터링.
 
+## 2. 문서 관리 UI 패턴 (Mobile-First)
+
+**목록 화면**: 데스크톱은 `<table>`, 모바일은 `Card Grid`
+- **구현**: `hidden md:block` (데스크톱) / `md:hidden` (모바일) 클래스로 분기
+- **필터**: 모바일에서는 세로 스택(`flex-col`), 데스크톱에서는 가로 배치(`flex-row`)
+
+**상세 화면**:
+- **모바일**: Alpine.js 탭 UI (`x-data="{ tab: 'history' }"`)
+  - 탭: [히스토리] [업로드] [설정]
+  - 스크롤 최소화 및 콘텐츠 분리
+- **데스크톱**: 2단 컬럼 레이아웃 (사이드바 + 메인)
+  - 탭 없이 한 화면에 표시 (`lg:grid-cols-3`)
+
+**입력 폼**:
+- **Touch Target**: 모바일에서 `py-3.5`, `text-base` 이상 확보
+- **Full Width**: 버튼 및 주요 입력창은 모바일에서 `w-full`
+
 ## UI 레이아웃 표준
 
 NavBar가 `fixed` 포지션이므로 모든 페이지에서 상단 여백 확보 필수.
@@ -1336,3 +1353,37 @@ config, created = SchoolConfig.objects.get_or_create(school=school)
 ---
 
 **마지막 업데이트:** 2026-02-13
+
+## 65. Enterprise Rollout Baseline (2026-02-15)
+
+This section captures implementation learnings from the full enterprise-grade rollout.
+Apply in addition to existing rules.
+
+### A. Platform and Runtime
+- Keep ASGI-first production runtime (`uvicorn`) and verify command parity across `Procfile` and `nixpacks.toml`.
+- Keep PostgreSQL pooler safety enabled (`DISABLE_SERVER_SIDE_CURSORS = True`) in production.
+- Keep startup commands idempotent; startup must be safe on repeated deploys.
+
+### B. Queue and Async Policy (DB Queue Standard)
+- Default queue backend is DB queue. Do not assume Redis exists.
+- Queue design must include retry budget, dead-letter policy (or failed-job table), and operator-visible failure reason.
+- Long-running/expensive jobs must be offloaded to DB queue workers, not synchronous request-response paths.
+
+### C. Reliability Pattern for AI Services
+- Use timeout + bounded retry for all external AI calls.
+- Circuit breaker must wrap the final consumer boundary for generator/stream patterns (record success/failure at consume point).
+- Fallback message must be user-safe and non-technical.
+
+### D. Security and Error Exposure
+- Never return raw exception strings to users.
+- Health endpoints must not expose internal DB/infra error details.
+- Keep detailed error context in server logs only.
+
+### E. Test and Verification Gate
+- `python manage.py check` is required before merge/deploy.
+- Maintain service health tests aligned with real URL/auth policy (200 or 302 where expected).
+- Add pre-deploy and post-deploy smoke checks for health endpoint and critical user journeys.
+
+### F. Observability Baseline
+- Log fields: `request_id`, `service`, `endpoint`, `status_code`, `latency_ms`.
+- Track AI failure rate and rate-limit hit rate as first-class operational metrics.

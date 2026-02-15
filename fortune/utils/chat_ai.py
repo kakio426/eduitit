@@ -75,7 +75,7 @@ async def get_ai_response_stream(session, system_prompt, history, user_message):
     except Exception as e:
         ai_circuit_breaker.record_failure()
         logger.error(f"[Fortune] Action: AI_STREAM, Status: FAIL, Error: {str(e)}")
-        yield f"죄송합니다. 오류가 발생했습니다: {str(e)}"
+        yield "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         return
 
     # Save Assistant Message

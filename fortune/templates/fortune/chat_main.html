@@ -9,6 +9,8 @@
         --glass-border: 1px solid rgba(255, 255, 255, 0.1);
         --glass-bg: rgba(255, 255, 255, 0.05);
         --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        --kb-offset: 0px;
+        --chat-input-h: 88px;
     }
 
     body {
@@ -96,12 +98,40 @@
         color: #e5e7eb;
         line-height: 1.75;
     }
+
+    .chat-room-shell {
+        min-height: 0;
+    }
+
+    .chat-scroll {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .chat-input-wrap {
+        position: sticky;
+        bottom: var(--kb-offset, 0px);
+        z-index: 20;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.25rem);
+    }
+
+    .chat-send-btn {
+        min-width: 3.25rem;
+        height: 3.25rem;
+    }
+
+    .chat-jump-btn {
+        position: absolute;
+        right: 0.75rem;
+        bottom: calc(var(--chat-input-h, 88px) + var(--kb-offset, 0px) + 0.75rem);
+        z-index: 15;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="chat-container pt-24 pb-20 px-4"> <!-- Added pt-24 for navbar spacing -->
-    <div class="max-w-4xl mx-auto h-[80dvh] flex flex-col">
+    <div class="max-w-4xl mx-auto h-[82dvh] md:h-[80dvh] flex flex-col">
 
         <!-- Header -->
         <header class="flex justify-between items-center mb-4 px-2">
@@ -169,13 +199,121 @@
     </div>
 </div>
 
-<!-- HTMX Helper for Auto-Scroll -->
+<!-- Chat UX Helper -->
 <script>
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
-        // Find chat messages container
-        const chatContainer = document.getElementById('chat-messages-container');
-        if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+    window.ChatUX = (function () {
+        let userPinnedToBottom = true;
+
+        function getScroller() {
+            return document.getElementById('chat-messages-container');
+        }
+
+        function getJumpButton() {
+            return document.getElementById('jump-latest-btn');
+        }
+
+        function nearBottom(scroller) {
+            const threshold = 120;
+            return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < threshold;
+        }
+
+        function syncInputSpacer() {
+            const scroller = getScroller();
+            const inputWrap = document.querySelector('.chat-input-wrap');
+            if (!scroller || !inputWrap) return;
+            const inputHeight = Math.max(72, Math.round(inputWrap.getBoundingClientRect().height));
+            document.documentElement.style.setProperty('--chat-input-h', `${inputHeight}px`);
+            scroller.style.paddingBottom = `${inputHeight + 12}px`;
+        }
+
+        function syncViewportInset() {
+            const vv = window.visualViewport;
+            if (!vv) return;
+            const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            document.documentElement.style.setProperty('--kb-offset', `${Math.round(inset)}px`);
+        }
+
+        function updateJumpButton() {
+            const scroller = getScroller();
+            const btn = getJumpButton();
+            if (!scroller || !btn) return;
+            if (nearBottom(scroller)) {
+                btn.classList.add('hidden');
+                userPinnedToBottom = true;
+            } else {
+                btn.classList.remove('hidden');
+                userPinnedToBottom = false;
+            }
+        }
+
+        function scrollToBottom(force = false) {
+            const scroller = getScroller();
+            if (!scroller) return;
+            if (force || userPinnedToBottom || nearBottom(scroller)) {
+                scroller.scrollTop = scroller.scrollHeight;
+                userPinnedToBottom = true;
+                updateJumpButton();
+            }
+        }
+
+        function attachScrollWatcher() {
+            const scroller = getScroller();
+            if (!scroller || scroller.dataset.watchBound === '1') return;
+            scroller.dataset.watchBound = '1';
+            scroller.addEventListener('scroll', updateJumpButton, { passive: true });
+            syncInputSpacer();
+            updateJumpButton();
+        }
+
+        function afterOutgoingMessage() {
+            userPinnedToBottom = true;
+            syncInputSpacer();
+            scrollToBottom(true);
+        }
+
+        function bindViewportWatcher() {
+            if (!window.visualViewport) return;
+            if (window.visualViewport.__chatBound) return;
+            window.visualViewport.__chatBound = true;
+            window.visualViewport.addEventListener('resize', () => {
+                syncViewportInset();
+                syncInputSpacer();
+                updateJumpButton();
+            }, { passive: true });
+            window.visualViewport.addEventListener('scroll', () => {
+                syncViewportInset();
+                syncInputSpacer();
+                updateJumpButton();
+            }, { passive: true });
+            syncViewportInset();
+        }
+
+        return {
+            attachScrollWatcher,
+            scrollToBottom,
+            afterOutgoingMessage,
+            updateJumpButton,
+            syncInputSpacer,
+            bindViewportWatcher,
+            syncViewportInset,
+        };
+    })();
+
+    document.body.addEventListener('htmx:afterSwap', function () {
+        if (window.ChatUX) {
+            window.ChatUX.attachScrollWatcher();
+            window.ChatUX.bindViewportWatcher();
+            window.ChatUX.syncInputSpacer();
+            window.ChatUX.scrollToBottom(false);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.ChatUX) {
+            window.ChatUX.attachScrollWatcher();
+            window.ChatUX.bindViewportWatcher();
+            window.ChatUX.syncInputSpacer();
+            window.ChatUX.scrollToBottom(true);
         }
     });
 </script>

@@ -145,3 +145,43 @@ For AI Assistant:
 1.  위 내용을 복사해서 `docs/plans/PLAN_integrated_services.md` (폴더가 없다면 만드세요)에 저장합니다.
 2.  이후 작업을 요청할 때 **"PLAN_integrated_services.md 파일을 읽고 Phase 1(윷놀이)부터 작업을 진행해줘"**라고만 하면 됩니다.
 3.  PlayAura의 경우, 구체적인 기존 코드가 있다면 Phase 3 단계에서 해당 코드 파일만 추가로 업로드해주면 됩니다.
+---
+
+## Service Integration Standard Addendum (Mandatory for New Services)
+
+This section adds mandatory baseline requirements for every new service integration.
+Keep all existing content above unchanged; apply these requirements in addition.
+
+### 1) Observability (MUST)
+- Structured logs: include `request_id`, `service`, `user_id` (if available), `latency_ms`, `status_code`.
+- Metrics: track error rate, p95 latency, p99 latency, and external API failure count.
+- Alerting: define at least one alert for sustained 5xx increase and one for latency degradation.
+
+### 2) Reliability (MUST)
+- External calls must have explicit timeout, retry policy (bounded), and fallback behavior.
+- Add idempotency protection for write/charge-like endpoints (`Idempotency-Key` or equivalent).
+- Implement graceful degradation when upstream AI/API is unavailable.
+
+### 3) Data Contract (MUST)
+- Validate request/response payloads with explicit schema.
+- Standardize error responses with stable error codes.
+- Use versioned APIs for externally consumed endpoints (`/v1/...`).
+
+### 4) Security & Privacy (MUST for personal data services)
+- Encrypt sensitive personal data at rest where applicable.
+- Define data retention/deletion rules per service.
+- Apply least-privilege access and keep access audit logs for admin actions.
+
+### 5) Scalability (SHOULD)
+- Move heavy or long-running tasks to async worker/queue.
+- Add cache strategy with explicit TTL and cache invalidation rule.
+- Apply rate limiting per endpoint class (anonymous/user/admin).
+
+### 6) Quality Gate (MUST)
+- Minimum tests: unit + integration for critical path and failure path.
+- CI gate: lint + test + migration safety check before merge.
+- Feature flags for staged rollout when risk is non-trivial.
+
+### 7) Definition of Done for New Service
+A service integration is not complete unless all MUST items above are satisfied and documented.
+

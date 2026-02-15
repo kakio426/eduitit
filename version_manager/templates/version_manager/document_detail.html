@@ -3,145 +3,301 @@
 {% block title %}{{ document.base_name }} | 최신본 센터{% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen">
+<section class="pt-32 pb-20 px-4 min-h-screen" x-data="{ tab: 'history' }">
     <div class="max-w-6xl mx-auto">
-        <div class="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div>
-                <a href="{% url 'version_manager:document_list' %}" class="text-sm text-purple-600 font-semibold hover:underline">목록으로</a>
-                <h1 class="text-4xl font-bold text-gray-700 font-title mt-2">{{ document.base_name }}</h1>
-                <p class="text-gray-600 mt-1">{{ document.group.name }}</p>
+                <a href="{% url 'version_manager:document_list' %}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-purple-600 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    목록으로
+                </a>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 break-keep leading-tight">{{ document.base_name }}</h1>
+                <span class="inline-block mt-2 px-2.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold font-mono">{{ document.group.name }}</span>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <a href="{% url 'version_manager:download_latest' document.id %}" class="px-4 py-2 bg-purple-500 text-white rounded-full font-semibold">최신본 다운로드</a>
+            
+            <div class="w-full md:w-auto flex flex-col gap-2">
+                <a href="{% url 'version_manager:download_latest' document.id %}" class="w-full md:w-auto px-6 py-3 bg-purple-500 text-white rounded-xl font-bold shadow-clay hover:shadow-clay-hover active:scale-95 transition-all text-center flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 12.75l-3.375-3.375M12 12.75l3.375-3.375M12 12.75V3" />
+                    </svg>
+                    최신본 받기
+                </a>
                 {% if published_version %}
-                <a href="{% url 'version_manager:download_published' document.id %}" class="px-4 py-2 bg-green-500 text-white rounded-full font-semibold">배포본 다운로드</a>
+                <a href="{% url 'version_manager:download_published' document.id %}" class="w-full md:w-auto px-6 py-3 bg-green-500 text-white rounded-xl font-bold shadow-clay hover:shadow-clay-hover active:scale-95 transition-all text-center flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    배포본 받기
+                </a>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Mobile Tabs Navigation -->
+        <div class="lg:hidden flex bg-white/50 p-1 rounded-xl mb-6 shadow-sm overflow-x-auto">
+            <button @click="tab = 'history'" 
+                :class="tab === 'history' ? 'bg-white shadow text-purple-600 font-bold' : 'text-gray-500 font-medium hover:bg-white/30'"
+                class="flex-1 py-2.5 px-4 rounded-lg text-sm transition-all whitespace-nowrap">
+                히스토리
+            </button>
+            <button @click="tab = 'upload'" 
+                :class="tab === 'upload' ? 'bg-white shadow text-purple-600 font-bold' : 'text-gray-500 font-medium hover:bg-white/30'"
+                class="flex-1 py-2.5 px-4 rounded-lg text-sm transition-all whitespace-nowrap">
+                업로드
+            </button>
+            <button @click="tab = 'settings'" 
+                :class="tab === 'settings' ? 'bg-white shadow text-purple-600 font-bold' : 'text-gray-500 font-medium hover:bg-white/30'"
+                class="flex-1 py-2.5 px-4 rounded-lg text-sm transition-all whitespace-nowrap">
+                설정
+            </button>
+        </div>
+
         <div class="grid lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-1">
-                <div class="clay-card p-6">
-                    <h2 class="text-xl font-bold text-gray-700 mb-4">버전 업로드</h2>
+            <!-- Left Sidebar (Upload & Settings) - Hidden on Mobile unless Tab Active -->
+            <div class="lg:block lg:col-span-1 space-y-6" :class="{'hidden': tab === 'history', 'block': tab !== 'history'}">
+                
+                <!-- Upload Box -->
+                <div x-show="tab === 'upload' || window.innerWidth >= 1024" class="clay-card p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-purple-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        새 버전 업로드
+                    </h2>
                     <form method="post" action="{% url 'version_manager:upload_version' document.id %}" enctype="multipart/form-data" class="space-y-4">
                         {% csrf_token %}
-                        <input type="file" name="file" required class="block w-full text-sm text-gray-700">
-                        <button type="submit" class="w-full px-4 py-3 bg-purple-500 text-white rounded-full font-bold">업로드</button>
+                        <div class="relative">
+                            <input type="file" name="file" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
+                        </div>
+                        <button type="submit" class="w-full px-4 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition-colors">
+                            업로드 하기
+                        </button>
                     </form>
-                    <p class="text-xs text-gray-500 mt-4">파일명/경로/버전은 자동으로 정리됩니다.</p>
+                    <p class="text-xs text-gray-400 mt-3 pl-1 leading-relaxed">
+                        * 파일명은 자동으로 'YYYY-MM-DD_문서명_vXX' 형식으로 변환됩니다.<br>
+                        * 버전 번호는 자동으로 증가합니다.
+                    </p>
                 </div>
 
-                <div class="clay-card p-6 mt-6">
-                    <h2 class="text-xl font-bold text-gray-700 mb-3">보호 문구</h2>
-                    <form method="post" action="{% url 'version_manager:add_protected_phrase' document.id %}" class="space-y-3">
+                <!-- Settings Box -->
+                <div x-show="tab === 'settings' || window.innerWidth >= 1024" class="clay-card p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-orange-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        보호 문구 관리
+                    </h2>
+                    <form method="post" action="{% url 'version_manager:add_protected_phrase' document.id %}" class="flex gap-2 mb-4">
                         {% csrf_token %}
-                        <input type="text" name="phrase" required class="w-full rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none" placeholder="예: 학교명, 학년명 등">
-                        <button type="submit" class="w-full px-4 py-3 bg-orange-500 text-white rounded-full font-bold">문구 추가</button>
+                        <input type="text" name="phrase" required class="flex-1 rounded-xl px-4 py-2.5 bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-orange-500 text-sm" placeholder="예: '학교명'">
+                        <button type="submit" class="px-4 py-2.5 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 whitespace-nowrap">추가</button>
                     </form>
-                    <div class="mt-4 space-y-2">
+                    
+                    <ul class="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                         {% for phrase in phrases %}
-                        <div class="flex items-center justify-between gap-2 text-sm">
-                            <span class="text-gray-700">{{ phrase.phrase }}</span>
+                        <li class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg group">
+                            <span class="text-sm text-gray-700 font-medium">{{ phrase.phrase }}</span>
                             <form method="post" action="{% url 'version_manager:remove_protected_phrase' document.id phrase.id %}">
                                 {% csrf_token %}
-                                <button type="submit" class="text-red-600 font-semibold hover:underline">제거</button>
+                                <button type="submit" class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="삭제">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </form>
-                        </div>
+                        </li>
                         {% empty %}
-                        <p class="text-xs text-gray-500">등록된 보호 문구가 없습니다.</p>
+                        <li class="text-center text-xs text-gray-400 py-2">등록된 보호 문구가 없습니다.</li>
                         {% endfor %}
-                    </div>
+                    </ul>
                 </div>
 
-                <div class="clay-card p-6 mt-6">
-                    <h2 class="text-xl font-bold text-gray-700 mb-3">공유 링크</h2>
+                <div x-show="tab === 'settings' || window.innerWidth >= 1024" class="clay-card p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                        </svg>
+                        공유 링크
+                    </h2>
                     <form method="post" action="{% url 'version_manager:create_share_link' document.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="w-full px-4 py-3 bg-blue-500 text-white rounded-full font-bold">공유 링크 생성</button>
+                        <button type="submit" class="w-full px-4 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-colors text-sm">
+                            + 새 공유 링크 생성
+                        </button>
                     </form>
+                    
                     <div class="mt-4 space-y-3">
                         {% for link in share_links %}
-                        <div class="text-xs text-gray-600 p-3 bg-white/40 rounded-xl">
-                            <p class="break-all">{{ link.url }}</p>
-                            <div class="mt-2 flex items-center justify-between">
-                                <span>{% if link.is_valid %}활성{% else %}비활성{% endif %}</span>
+                        <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                            <div class="text-xs text-gray-500 break-all bg-white p-2 rounded border border-gray-100 mb-2 font-mono select-all">{{ link.url }}</div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-bold {% if link.is_valid %}text-green-600{% else %}text-red-500{% endif %}">
+                                    {% if link.is_valid %}● 활성{% else %}● 비활성{% endif %}
+                                </span>
                                 <form method="post" action="{% url 'version_manager:toggle_share_link' document.id link.id %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="text-purple-600 font-semibold hover:underline">{% if link.is_active %}비활성화{% else %}활성화{% endif %}</button>
+                                    <button type="submit" class="text-blue-600 font-semibold hover:underline">
+                                        {% if link.is_active %}중지하기{% else %}재활성화{% endif %}
+                                    </button>
                                 </form>
                             </div>
                         </div>
                         {% empty %}
-                        <p class="text-xs text-gray-500">생성된 공유 링크가 없습니다.</p>
+                        <p class="text-center text-xs text-gray-400 py-2">생성된 공유 링크가 없습니다.</p>
                         {% endfor %}
                     </div>
                 </div>
             </div>
 
-            <div class="lg:col-span-2">
-                <div class="clay-card p-6 overflow-x-auto">
-                    <h2 class="text-xl font-bold text-gray-700 mb-4">버전 목록</h2>
-                    <table class="w-full min-w-[760px] text-left">
-                        <thead>
-                            <tr class="text-gray-600 border-b border-gray-200">
-                                <th class="py-3">버전</th>
-                                <th class="py-3">업로드 시간</th>
-                                <th class="py-3">업로더</th>
-                                <th class="py-3">상태</th>
-                                <th class="py-3 text-right">액션</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for version in versions %}
-                            <tr class="border-b border-gray-100">
-                                <td class="py-4 font-semibold text-gray-700">v{{ version.version|stringformat:'02d' }}</td>
-                                <td class="py-4 text-gray-600">{{ version.created_at|date:'Y-m-d H:i' }}</td>
-                                <td class="py-4 text-gray-600">{{ version.uploaded_by_name|default:'-' }}</td>
-                                <td class="py-4">
-                                    {% if published_version and version.id == published_version.id %}
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">published</span>
-                                    {% elif latest_version and version.id == latest_version.id %}
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">latest</span>
-                                    {% else %}
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">{{ version.status }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="py-4 text-right">
-                                    <div class="flex justify-end items-center gap-2">
-                                        <a href="{% url 'version_manager:download_version' document.id version.id %}" class="text-purple-600 text-sm font-semibold hover:underline">다운로드</a>
-                                        {% if version.missing_protected_phrases %}
-                                        <span class="text-orange-600 text-xs font-semibold">문구경고 {{ version.missing_protected_phrases|length }}</span>
+            <!-- Right Content (Version History) -->
+            <div class="lg:col-span-2" x-show="tab === 'history' || window.innerWidth >= 1024">
+                <div class="clay-card p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 hidden lg:block">버전 히스토리</h2>
+                    
+                    <!-- Desktop Table -->
+                    <div class="hidden lg:block overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-gray-500 border-b border-gray-200 text-sm">
+                                    <th class="py-3 font-medium">버전</th>
+                                    <th class="py-3 font-medium">날짜</th>
+                                    <th class="py-3 font-medium">업로더</th>
+                                    <th class="py-3 font-medium">상태</th>
+                                    <th class="py-3 text-right font-medium">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for version in versions %}
+                                <tr class="group hover:bg-gray-50 transition-colors">
+                                    <td class="py-4">
+                                        <div class="font-bold text-gray-700">v{{ version.version|stringformat:'02d' }}</div>
+                                    </td>
+                                    <td class="py-4 text-sm text-gray-600">
+                                        {{ version.created_at|date:'Y-m-d' }}<br>
+                                        <span class="text-xs text-gray-400">{{ version.created_at|date:'H:i' }}</span>
+                                    </td>
+                                    <td class="py-4 text-sm text-gray-600">{{ version.uploaded_by_name|default:'-' }}</td>
+                                    <td class="py-4">
+                                        {% if published_version and version.id == published_version.id %}
+                                        <span class="inline-flex px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold border border-green-200">Published</span>
+                                        {% elif latest_version and version.id == latest_version.id %}
+                                        <span class="inline-flex px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200">Latest</span>
+                                        {% else %}
+                                        <span class="inline-flex px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-medium border border-gray-200">{{ version.status|title }}</span>
                                         {% endif %}
-                                        {% if request.user.is_staff %}
-                                        <form method="post" action="{% url 'version_manager:set_published' document.id version.id %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="text-green-700 text-sm font-semibold hover:underline">배포본으로 지정</button>
-                                        </form>
-                                        {% endif %}
-                                        {% if request.user.is_staff or version.uploaded_by_id == request.user.id %}
-                                        <form method="post" action="{% url 'version_manager:delete_version' document.id version.id %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="text-red-600 text-sm font-semibold hover:underline">삭제</button>
-                                        </form>
+                                    </td>
+                                    <td class="py-4 text-right">
+                                        <div class="flex items-center justify-end gap-3 opacity-100 group-hover:opacity-100 transition-opacity">
+                                            <a href="{% url 'version_manager:download_version' document.id version.id %}" class="text-gray-400 hover:text-purple-600" title="다운로드">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 12.75l-3.375-3.375M12 12.75l3.375-3.375M12 12.75V3" />
+                                                </svg>
+                                            </a>
+                                            {% if request.user.is_staff %}
+                                            <form method="post" action="{% url 'version_manager:set_published' document.id version.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-gray-400 hover:text-green-600" title="배포본 지정">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            {% if request.user.is_staff or version.uploaded_by_id == request.user.id %}
+                                            <form method="post" action="{% url 'version_manager:delete_version' document.id version.id %}" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-gray-400 hover:text-red-600" title="삭제">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% if version.diff_supported and version.diff_summary %}
+                                <tr>
+                                    <td colspan="5" class="pb-4 pl-4 pr-4">
+                                        <details class="text-xs">
+                                            <summary class="text-blue-500 font-medium cursor-pointer hover:underline inline-block">변경 내역 (Diff) 보기</summary>
+                                            <div class="mt-2 p-3 bg-gray-50 rounded border border-gray-100 font-mono whitespace-pre-wrap text-[11px] text-gray-600">{{ version.diff_summary }}</div>
+                                        </details>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-12 text-center text-gray-400 bg-gray-50 rounded-lg">업로드된 버전이 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card List -->
+                    <div class="lg:hidden space-y-4">
+                        {% for version in versions %}
+                        <div class="relative pl-4 border-l-2 {% if published_version and version.id == published_version.id %}border-green-500{% elif latest_version and version.id == latest_version.id %}border-purple-500{% else %}border-gray-200{% endif %}">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-lg font-bold text-gray-800">v{{ version.version|stringformat:'02d' }}</span>
+                                        {% if published_version and version.id == published_version.id %}
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-100 px-1.5 py-0.5 rounded">Published</span>
+                                        {% elif latest_version and version.id == latest_version.id %}
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">Latest</span>
                                         {% endif %}
                                     </div>
-                                    {% if version.diff_supported and version.diff_summary %}
-                                    <details class="mt-3 text-left">
-                                        <summary class="text-xs text-blue-600 font-semibold cursor-pointer">변경 diff 보기</summary>
-                                        <pre class="mt-2 p-3 text-[11px] bg-white/50 rounded-lg whitespace-pre-wrap break-words">{{ version.diff_summary }}</pre>
-                                    </details>
-                                    {% elif version.diff_error %}
-                                    <p class="mt-2 text-xs text-gray-500">{{ version.diff_error }}</p>
+                                    <div class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                                        <span>{{ version.created_at|date:'Y-m-d H:i' }}</span>
+                                        <span>•</span>
+                                        <span>{{ version.uploaded_by_name|default:'-' }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <a href="{% url 'version_manager:download_version' document.id version.id %}" class="p-2 text-gray-400 hover:text-purple-600 bg-gray-50 rounded-full">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 12.75l-3.375-3.375M12 12.75l3.375-3.375M12 12.75V3" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions Row -->
+                            <div class="flex items-center justify-between mt-3">
+                                {% if version.diff_supported and version.diff_summary %}
+                                <details class="text-xs flex-1">
+                                    <summary class="text-blue-500 font-medium cursor-pointer">변경 내역</summary>
+                                    <div class="mt-2 p-2 bg-gray-50 rounded text-gray-600">{{ version.diff_summary|truncatechars:100 }}</div>
+                                </details>
+                                {% else %}
+                                <div></div>
+                                {% endif %}
+
+                                <div class="flex gap-2">
+                                    {% if request.user.is_staff %}
+                                    <form method="post" action="{% url 'version_manager:set_published' document.id version.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-bold text-green-600 hover:underline px-2 py-1 rounded hover:bg-green-50">배포지정</button>
+                                    </form>
                                     {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="py-10 text-center text-gray-500">아직 업로드된 버전이 없습니다.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    {% if request.user.is_staff or version.uploaded_by_id == request.user.id %}
+                                    <form method="post" action="{% url 'version_manager:delete_version' document.id version.id %}" onsubmit="return confirm('삭제하시겠습니까?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-bold text-red-500 hover:underline px-2 py-1 rounded hover:bg-red-50">삭제</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-gray-400 text-sm">기록이 없습니다.</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

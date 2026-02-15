@@ -87,7 +87,7 @@ class ArticleCreateView(View):
             try:
                 cls._style_rag = StyleRAGService()
             except Exception as e:
-                print(f"Failed to initialize StyleRAGService: {e}")
+                logger.warning(f"Failed to initialize StyleRAGService: {e}")
         return cls._style_rag
 
     def get(self, request):
@@ -140,7 +140,7 @@ class ArticleCreateView(View):
         ).count()
         return count >= 5
 
-    @method_decorator(ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=False))
+    @method_decorator(ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True))
     def post(self, request):
         if getattr(request, 'limited', False):
              messages.error(request, "무료 사용 한도에 도달했습니다. 가입하시면 더 많은 기사를 생성하고 파일로 다운로드할 수 있습니다! 😊")
@@ -277,7 +277,7 @@ class ArticleCreateView(View):
             # Save input data and images to session
             request.session['article_input'] = input_data
             request.session['article_images'] = image_paths
-            print(f"DEBUG: Saved {len(image_paths)} images to session: {image_paths}")
+            logger.debug(f"Saved {len(image_paths)} images to session: {image_paths}")
             return redirect(f"{reverse('autoarticle:create')}?step=2")
 
         elif step == '2':
@@ -300,7 +300,7 @@ class ArticleCreateView(View):
                 title, content, hashtags = generate_article_gemini(api_key, input_data, style_service=rag, is_master_key=is_master_key)
                 summary_points = summarize_article_for_ppt(content, api_key=api_key, is_master_key=is_master_key)
                 images_from_session = request.session.get('article_images', [])
-                print(f"DEBUG: Step 2 - Images from session: {images_from_session}")
+                logger.debug(f"Step 2 - Images from session: {images_from_session}")
                 draft = {
                     'input_data': input_data,
                     'title': title,
@@ -310,7 +310,7 @@ class ArticleCreateView(View):
                     'images': images_from_session,
                     'original_generated_content': content
                 }
-                print(f"DEBUG: Step 2 - Draft images: {draft['images']}")
+                logger.debug(f"Step 2 - Draft images: {draft['images']}")
                 request.session['article_draft'] = draft
                 # Clean up input data from session
                 if 'article_input' in request.session:
@@ -350,7 +350,7 @@ class ArticleCreateView(View):
                                 tags=draft['input_data']['tone']
                             )
                 except Exception as e:
-                    print(f"RAG Style Learning failed: {e}")
+                    logger.warning(f"RAG Style Learning failed: {e}")
 
                 article = GeneratedArticle.objects.create(
                     user=request.user,

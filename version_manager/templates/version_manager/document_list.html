@@ -5,33 +5,34 @@
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-6xl mx-auto">
-        <div class="flex items-center justify-between mb-8 gap-3">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
             <div>
-                <h1 class="text-4xl font-bold text-gray-700 font-title">최신본 센터</h1>
-                <p class="text-gray-600 mt-2">문서 패키지별로 최신본과 배포본을 안전하게 관리합니다.</p>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-700 font-title">최신본 센터</h1>
+                <p class="text-gray-600 mt-2 text-sm md:text-base">문서 패키지별로 최신본과 배포본을 안전하게 관리합니다.</p>
             </div>
-            <a href="{% url 'version_manager:document_create' %}" class="px-5 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:shadow-clay-hover transition-all">
+            <a href="{% url 'version_manager:document_create' %}" class="w-full md:w-auto text-center px-5 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:shadow-clay-hover transition-all">
                 새 문서
             </a>
         </div>
 
-        <form method="get" class="clay-card p-4 mb-6 grid md:grid-cols-4 gap-3">
-            <input type="text" name="q" value="{{ query }}" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none" placeholder="문서명/그룹 검색">
-            <select name="group" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none">
+        <form method="get" class="clay-card p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input type="text" name="q" value="{{ query }}" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none w-full" placeholder="문서명/그룹 검색">
+            <select name="group" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none w-full">
                 <option value="">전체 그룹</option>
                 {% for group in groups %}
                 <option value="{{ group.id }}"{% if selected_group == group.id|stringformat:'s' %} selected{% endif %}>{{ group.name }}</option>
                 {% endfor %}
             </select>
-            <select name="recent" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none">
+            <select name="recent" class="rounded-2xl px-4 py-3 shadow-clay-inner bg-[#E0E5EC] focus:outline-none w-full">
                 <option value="">전체 기간</option>
                 <option value="7"{% if selected_recent == '7' %} selected{% endif %}>최근 7일</option>
                 <option value="30"{% if selected_recent == '30' %} selected{% endif %}>최근 30일</option>
             </select>
-            <button type="submit" class="px-4 py-3 bg-purple-500 text-white rounded-full font-bold">필터 적용</button>
+            <button type="submit" class="w-full px-4 py-3 bg-purple-500 text-white rounded-full font-bold">필터 적용</button>
         </form>
 
-        <div class="clay-card p-6 overflow-x-auto">
+        <!-- Desktop Table View (Hidden on Mobile) -->
+        <div class="hidden md:block clay-card p-6 overflow-x-auto">
             <table class="w-full min-w-[720px] text-left">
                 <thead>
                     <tr class="text-gray-600 border-b border-gray-200">
@@ -43,12 +44,24 @@
                 </thead>
                 <tbody>
                     {% for document in documents %}
-                    <tr class="border-b border-gray-100">
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td class="py-4 font-semibold text-gray-700">{{ document.base_name }}</td>
-                        <td class="py-4 text-gray-600">{{ document.group.name }}</td>
-                        <td class="py-4 text-gray-600">{% if document.latest_uploaded_at %}{{ document.latest_uploaded_at|date:'Y-m-d H:i' }}{% else %}-{% endif %}</td>
+                        <td class="py-4 text-gray-600">
+                            <span class="inline-flex px-2 py-1 bg-gray-200 rounded text-xs text-gray-700">{{ document.group.name }}</span>
+                        </td>
+                        <td class="py-4 text-gray-600">
+                            {% if document.latest_uploaded_at %}
+                                {{ document.latest_uploaded_at|date:'Y-m-d H:i' }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
                         <td class="py-4 text-right">
-                            <a href="{% url 'version_manager:document_detail' document.id %}" class="text-purple-600 font-semibold hover:underline">상세 보기</a>
+                            <a href="{% url 'version_manager:document_detail' document.id %}" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                </svg>
+                            </a>
                         </td>
                     </tr>
                     {% empty %}
@@ -59,6 +72,38 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile Card View (Visible on Mobile) -->
+        <div class="md:hidden space-y-4">
+            {% for document in documents %}
+            <div class="clay-card p-5 flex flex-col gap-3">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="inline-block px-2 py-0.5 mb-2 bg-gray-200 rounded text-xs text-gray-600 font-medium">{{ document.group.name }}</span>
+                        <h3 class="text-lg font-bold text-gray-800 leading-tight">{{ document.base_name }}</h3>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between mt-2 pt-3 border-t border-gray-100">
+                    <div class="text-xs text-gray-500">
+                        {% if document.latest_uploaded_at %}
+                            최근: {{ document.latest_uploaded_at|date:'m.d H:i' }}
+                        {% else %}
+                            업로드 없음
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'version_manager:document_detail' document.id %}" class="px-4 py-2 bg-purple-100 text-purple-700 text-sm font-bold rounded-lg hover:bg-purple-200 transition-colors">
+                        상세보기
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="clay-card p-8 text-center text-gray-500">
+                <p>등록된 문서가 없습니다.</p>
+            </div>
+            {% endfor %}
+        </div>
+
     </div>
 </section>
 {% endblock %}

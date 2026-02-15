@@ -301,3 +301,43 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 
 ---
 **이 가이드는 `eduitit`의 바이브를 유지하며 가장 빠르게 서비스를 출시하기 위한 약속입니다.**
+
+## Addendum: Enterprise Implementation Learnings (2026-02-15)
+
+### 1) Runtime and Deployment (MUST)
+- Production runtime must be ASGI-compatible and startup commands must be consistent across deployment files.
+- Startup sequence must be idempotent (`migrate`, cache table setup, ensure commands) and safe to rerun.
+- Keep production DB pooler compatibility settings enabled.
+
+### 2) Queue Strategy (MUST)
+- Primary async job backend is DB queue.
+- New services must define:
+  - retry policy (max attempts + backoff)
+  - failure state persistence (failed-job record)
+  - reprocessing/repair workflow
+- Do not introduce Redis-only assumptions unless explicitly approved.
+
+### 3) AI Integration Reliability (MUST)
+- All AI clients require explicit timeout and bounded retries.
+- Circuit breaker must protect high-traffic AI paths.
+- For generator/stream responses, success/failure must be recorded at the response-consumer boundary.
+
+### 4) Error and Security Contract (MUST)
+- User-facing responses must never include raw internal exception text.
+- Health checks return stable status only (`ok`/`error`) without internals.
+- Full diagnostics remain in logs/monitoring only.
+
+### 5) Verification Standard (MUST)
+- Minimum gate:
+  - `python manage.py check`
+  - service health test suite
+  - syntax/compile check for changed Python modules
+- Endpoint health tests must follow actual product access policy (public/auth redirect behavior).
+
+### 6) Operational Readiness (SHOULD)
+- Maintain pre-deploy and post-deploy smoke scripts.
+- Track and alert on:
+  - 5xx ratio
+  - p95 latency
+  - AI upstream error ratio
+  - rate-limit rejection ratio

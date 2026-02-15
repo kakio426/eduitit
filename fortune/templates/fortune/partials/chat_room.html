@@ -1,36 +1,30 @@
-<div class="flex-1 flex flex-col h-full relative animate-in fade-in zoom-in duration-300" id="chat-room">
-    <!-- Messages Scroll Area -->
-    <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
-        <!-- System Greeting -->
+﻿<div class="chat-room-shell flex-1 flex flex-col h-full relative animate-in fade-in zoom-in duration-300" id="chat-room">
+    <div id="chat-messages-container" class="chat-scroll flex-1 overflow-y-auto p-3 md:p-4 space-y-5 scroll-smooth pb-6">
         <div class="flex flex-col space-y-2 fade-in slide-in-from-left-4 duration-500">
             <div class="flex items-start gap-3">
                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20">
-                    🧙‍♂️
+                    <i class="fa-solid fa-hat-wizard"></i>
                 </div>
-                <div class="glass-card p-4 max-w-[85%] rounded-tl-none text-gray-100 leading-relaxed shadow-lg backdrop-blur-md bg-white/5 border-l-4 border-l-purple-500">
-                    <p class="font-bold text-purple-300 mb-1 text-sm">사주 선생님</p>
-                    <p>안녕하세요, <strong>{{ session.profile.person_name }}</strong>님. <br>
-                    오늘의 운세와 고민에 대해 무엇이든 물어보세요.</p>
+                <div class="glass-card p-4 max-w-[88%] rounded-tl-none text-gray-100 leading-relaxed shadow-lg backdrop-blur-md bg-white/5 border-l-4 border-l-purple-500">
+                    <p class="font-bold text-purple-300 mb-1 text-sm">사주 상담사</p>
+                    <p>안녕하세요, <strong>{{ session.profile.person_name }}</strong>님.<br>궁금한 점을 편하게 물어보세요.</p>
                     <p class="text-xs text-gray-400 mt-2 border-t border-white/10 pt-2">
-                        남은 질문 횟수: <span class="text-yellow-400 font-bold">{{ session.remaining_turns }}</span>회
+                        남은 질문: <span class="text-yellow-400 font-bold">{{ session.remaining_turns }}</span>
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- History -->
         {% for message in session.messages.all %}
             {% include "fortune/partials/chat_message.html" %}
         {% endfor %}
-        
-        <!-- Live Messages Target -->
+
         <div id="new-messages"></div>
-        
-        <!-- Loading Indicator (Hidden by default, shown by HTMX) -->
+
         <div id="loading-indicator" class="htmx-indicator flex flex-col space-y-2">
             <div class="flex items-start gap-3">
-                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 animate-pulse">
-                    🧙‍♂️
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 animate-pulse">
+                    <i class="fa-solid fa-hat-wizard"></i>
                 </div>
                 <div class="glass-card p-4 rounded-tl-none bg-white/5 text-gray-300 flex items-center gap-2">
                     <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
@@ -41,79 +35,100 @@
         </div>
     </div>
 
-    <!-- Input Area -->
-    <div class="p-4 glass-card rounded-t-none border-t border-white/10 shrink-0 bg-black/20 backdrop-blur-xl">
+    <button id="jump-latest-btn"
+            type="button"
+            class="chat-jump-btn hidden rounded-full bg-purple-600/90 hover:bg-purple-500 text-white text-xs px-3 py-2 shadow-lg"
+            onclick="window.ChatUX && window.ChatUX.scrollToBottom(true)">
+        최신으로
+    </button>
+
+    <div class="chat-input-wrap p-3 md:p-4 glass-card rounded-t-none border-t border-white/10 shrink-0 bg-black/30 backdrop-blur-xl">
         <div class="flex justify-between items-center mb-2 px-1">
             <span class="text-xs text-gray-400">{{ session.profile.person_name }}님과 상담 중</span>
-            <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">{{ session.remaining_turns }}</span>회</span>
+            <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">{{ session.remaining_turns }}</span></span>
         </div>
+
         <form hx-post="{% url 'fortune:send_chat_message' %}"
               hx-target="#new-messages"
               hx-swap="beforeend"
               hx-indicator="#loading-indicator"
               hx-on::before-request="
-                const input = this.querySelector('input[name=message]');
+                const input = this.querySelector('textarea[name=message]');
                 const val = input.value.trim();
                 const container = document.getElementById('new-messages');
-                if (val) {
-                    const tempId = 'temp-' + Date.now();
-                    const bubble = `
-                        <div class='flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500' id='${tempId}'>
-                            <div class='flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto'>
-                                <div class='glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right'>
-                                    <p class='text-base leading-relaxed break-words whitespace-pre-wrap'>${val}</p>
-                                    <span class='text-[10px] text-indigo-200 mt-1 block opacity-100 absolute bottom-1 right-2 status-text'>전송 중...</span>
-                                </div>
-                                <div class='w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center'>
-                                     <i class='fa-solid fa-user text-white text-sm'></i>
-                                </div>
+                if (!val) { event.preventDefault(); return; }
+
+                const tempId = 'temp-' + Date.now();
+                this.dataset.pendingTempId = tempId;
+                const bubble = `
+                    <div class='flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500' id='${tempId}'>
+                        <div class='flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto'>
+                            <div class='glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right'>
+                                <p class='text-base leading-relaxed break-words whitespace-pre-wrap'>${val}</p>
+                                <span class='text-[10px] text-indigo-200 mt-1 block opacity-100 absolute bottom-1 right-2 status-text'>전송 중...</span>
                             </div>
-                        </div>`;
-                    container.insertAdjacentHTML('beforeend', bubble);
-                    input.value = '';
-                    const scroller = document.getElementById('chat-messages-container');
-                    scroller.scrollTop = scroller.scrollHeight;
+                            <div class='w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center'>
+                                 <i class='fa-solid fa-user text-white text-sm'></i>
+                            </div>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', bubble);
+                input.value = '';
+                input.style.height = 'auto';
+                if (window.ChatUX) {
+                    window.ChatUX.syncInputSpacer();
+                    window.ChatUX.afterOutgoingMessage();
                 }
               "
               hx-on::after-request="
-                const scroller = document.getElementById('chat-messages-container');
-                scroller.scrollTop = scroller.scrollHeight;
-                
-                // Update optimistic bubble to finalized state
-                const optimistic = document.querySelector('[id^=\'temp-\']');
+                if (window.ChatUX) {
+                    window.ChatUX.syncInputSpacer();
+                    window.ChatUX.scrollToBottom(false);
+                }
+
+                const pendingId = this.dataset.pendingTempId || '';
+                const optimistic = pendingId ? document.getElementById(pendingId) : null;
                 if (optimistic) {
                     const status = optimistic.querySelector('.status-text');
                     if (status) {
-                        const now = new Date();
-                        const hours = now.getHours();
-                        const minutes = now.getMinutes();
-                        const ampm = hours >= 12 ? '오후' : '오전';
-                        const h12 = hours % 12 || 12;
-                        const mStr = minutes < 10 ? '0' + minutes : minutes;
-                        status.textContent = `${ampm} ${h12}:${mStr}`;
-                        status.parentElement.classList.remove('opacity-100');
-                        status.parentElement.classList.add('opacity-0', 'group-hover:opacity-100');
+                        if (event.detail.successful) {
+                            const now = new Date();
+                            const hours = now.getHours();
+                            const minutes = now.getMinutes();
+                            const ampm = hours >= 12 ? '오후' : '오전';
+                            const h12 = hours % 12 || 12;
+                            const mStr = minutes < 10 ? '0' + minutes : minutes;
+                            status.textContent = `${ampm} ${h12}:${mStr}`;
+                            status.parentElement.classList.remove('opacity-100');
+                            status.parentElement.classList.add('opacity-0', 'group-hover:opacity-100');
+                        } else {
+                            status.textContent = '전송 실패';
+                            status.classList.add('text-red-300');
+                        }
                     }
-                    optimistic.id = ''; // Remove temp ID
+                    optimistic.id = '';
                 }
+                this.dataset.pendingTempId = '';
 
-                var c = document.getElementById('turnCounter'); 
-                if(c){
-                    var n = parseInt(c.textContent) - 1; 
+                var c = document.getElementById('turnCounter');
+                if (c && event.detail.successful) {
+                    var n = parseInt(c.textContent || '0') - 1;
                     c.textContent = Math.max(0, n);
                 }
               ">
             {% csrf_token %}
             <input type="hidden" name="session_id" value="{{ session.id }}">
-            
-            <div class="flex gap-2 relative">
-                <input type="text" name="message" 
-                       class="glass-input flex-1 px-5 py-4 rounded-2xl focus:ring-2 focus:ring-purple-500 placeholder-white/30 text-white text-lg shadow-inner"
-                       placeholder="궁금한 점을 자세히 적어주세요..." 
-                       autocomplete="off" required>
-                       
-                <button type="submit" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 rounded-2xl font-bold transition flex items-center justify-center shadow-lg shadow-purple-500/30 group w-16 md:w-auto">
-                    <span class="hidden md:inline mr-2">전송</span>
+
+            <div class="flex items-end gap-2 relative">
+                <textarea name="message" rows="1"
+                          class="glass-input flex-1 px-4 py-3 rounded-2xl focus:ring-2 focus:ring-purple-500 placeholder-white/40 text-white text-base shadow-inner resize-none leading-6 max-h-36"
+                          placeholder="궁금한 점을 입력하세요..."
+                          autocomplete="off" required
+                          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,144)+'px';if(window.ChatUX){window.ChatUX.syncInputSpacer();window.ChatUX.updateJumpButton();}"
+                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.form.requestSubmit();}"></textarea>
+
+                <button type="submit" class="chat-send-btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 rounded-2xl font-bold transition flex items-center justify-center shadow-lg shadow-purple-500/30 group">
+                    <span class="text-xs md:text-sm mr-1">전송</span>
                     <i class="fa-solid fa-paper-plane group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform"></i>
                 </button>
             </div>

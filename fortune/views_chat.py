@@ -122,7 +122,7 @@ async def send_chat_message(request):
     # Manual ratelimit check
     ratelimited = await sync_to_async(is_ratelimited)(
         request, group='fortune_chat', key=ratelimit_key_for_master_only,
-        rate='30/h', method='POST', increment=True
+        rate='15/h', method='POST', increment=True
     )
     if ratelimited:
         return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
@@ -195,8 +195,12 @@ async def send_chat_message(request):
     </div>
 </div>
 <script>
-    // Auto-scroll to bottom after message complete
-    document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight;
+    if (window.ChatUX) {
+        window.ChatUX.scrollToBottom(false);
+    } else {
+        const el = document.getElementById('chat-messages-container');
+        if (el) el.scrollTop = el.scrollHeight;
+    }
 </script>
 """
 

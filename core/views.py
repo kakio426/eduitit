@@ -8,6 +8,9 @@ from .models import UserProfile, Post, Comment, Feedback, SiteConfig
 from django.contrib import messages
 from django.db.models import Count
 from PIL import Image
+import logging
+
+logger = logging.getLogger(__name__)
 
 def home(request):
     # Order by display_order first, then by creation date
@@ -595,4 +598,5 @@ def health_check(request):
         connection.ensure_connection()
         return JsonResponse({'status': 'ok', 'db': 'connected'})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'db': str(e)}, status=503)
+        logger.exception("Health check DB connection failed: %s", e)
+        return JsonResponse({'status': 'error', 'db': 'unavailable'}, status=503)

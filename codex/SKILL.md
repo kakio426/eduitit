@@ -78,3 +78,39 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - check for broken tokens like `?`, `�`, `媛`, `�쒕`, `?댁`.
 - If corruption is detected, restore from latest clean git revision first, then re-apply logical diffs.
 - Keep `.editorconfig` in repo root with UTF-8 defaults and do not remove it.
+
+## Enterprise Delivery Pack (Add-on Workflow)
+
+Use this add-on workflow when requests involve enterprise hardening, async rollout, or service reliability upgrades.
+
+### Trigger Hints
+- "enterprise-grade", "production hardening", "async migration", "rollout", "stability", "SLO", "smoke check"
+
+### Required Execution Order
+1. Baseline scan
+- Confirm current deploy/runtime shape (`Procfile`, `nixpacks.toml`, settings parity).
+- Confirm queue backend assumptions (default: DB queue).
+
+2. Risk hardening
+- Remove raw exception leaks from user/API/health responses.
+- Ensure timeout/retry/circuit-breaker around external AI/API dependencies.
+
+3. Behavior validation
+- Align health/integration tests with real routing and auth behavior.
+- Verify critical endpoints for 200/302 expectations based on product policy.
+
+4. Deployment validation
+- Run `python manage.py check`.
+- Run relevant service health tests.
+- Run pre/post deploy smoke checks for critical flows.
+
+### DB Queue-Specific Rules
+- Assume DB queue as default backend; avoid Redis-only design assumptions.
+- Every queued job must define retry budget, terminal failure state, and operator recovery path.
+- Keep job payload minimal and deterministic; reference primary keys rather than large serialized objects.
+
+### Output Contract
+When applying this workflow, report:
+- what was hardened
+- what was validated
+- what remains as operational risk
