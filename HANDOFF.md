@@ -154,3 +154,43 @@
 ## 플랜 파일 위치
 - 전체 전환 계획: `C:\Users\kakio\.claude\plans\federated-meandering-harp.md`
 - 기존 ASGI 마이그레이션 계획: `fortune/ASGI_MIGRATION_PLAN.md`
+
+---
+
+# Handoff: 운영 사이트 진단 & CLAUDE.md 보완
+
+**날짜**: 2026-02-15
+**상태**: 완료
+
+---
+
+## 수행 내용
+
+6축 체크리스트(UI일관성, 접근성, 프론트구조, 성능, 운영유지, 보안)로 프로젝트를 진단하고, 부족한 영역을 `settings_production.py`와 `CLAUDE.md`에 보완함.
+
+### 변경 파일 및 내역
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `config/settings_production.py` | LOGGING 설정 추가 (settings.py와 동기화) | 완료 |
+| `config/settings_production.py` | 쿠키 보안 4줄 추가 (`SESSION_COOKIE_HTTPONLY`, `CSRF_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE`, `CSRF_COOKIE_SAMESITE`) | 완료 |
+| `CLAUDE.md` UI 레이아웃 섹션 | 반응형 브레이크포인트 표 추가 (Tailwind sm/md/lg/xl) | 완료 |
+| `CLAUDE.md` #66 | 접근성(A11y) 필수 규칙 — 모달 키보드, 포커스 스타일, 색 대비, alt 텍스트, 체크리스트 | 완료 |
+| `CLAUDE.md` #67 | 이미지 최적화 규칙 — lazy-load, Cloudinary f_auto,q_auto, `|optimize` 필터 참조 | 완료 |
+| `CLAUDE.md` #68 | 정적 파일 캐시 버스팅 로드맵 (향후: WhiteNoise CompressedManifest) | 완료 |
+| `CLAUDE.md` #69 | Tailwind CDN → 빌드 전환 로드맵 (Phase 1 병행, Phase 2 CDN 제거) | 완료 |
+
+### 이미 충족되어 있던 항목 (변경 불필요)
+- 규칙 #1의 "특히 주의할 설정"에 `LOGGING`이 이미 포함되어 있음
+- 프로덕션 보안 헤더 (HSTS, SSL Redirect, X-Frame-Options 등) 이미 설정됨
+- CSP (Content Security Policy) django-csp 미들웨어로 이미 적용됨
+- Cloudinary 최적화 템플릿 태그 (`|optimize`, `|thumbnail`) 이미 구현됨
+
+### 검증
+- `python manage.py check` — 0 issues
+- `settings_production.py` — Python 구문 검증 통과
+
+### 보완으로 채운 Gap 3가지
+1. **접근성(A11y)** — 강제 체크리스트 기반 규칙 신설 (#66)
+2. **이미지/성능 최적화** — lazy-load + Cloudinary 전역 규칙 (#67)
+3. **프로덕션 안전성** — LOGGING 동기화 + 쿠키 보안 명시 (settings_production.py)

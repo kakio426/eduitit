@@ -96,6 +96,15 @@ NavBar가 `fixed` 포지션이므로 모든 페이지에서 상단 여백 확보
 - **최소**: `pt-24` (Banner 없을 때)
 - 전체 화면 모드 시 `z-index: 50+` 필요
 
+### 반응형 브레이크포인트 (Tailwind 기본값)
+| 접두사 | 최소 너비 | 용도 |
+|--------|----------|------|
+| (없음) | 0px | 모바일 기본 |
+| `sm:` | 640px | 큰 모바일/소형 태블릿 |
+| `md:` | 768px | 태블릿 |
+| `lg:` | 1024px | 데스크톱 (SNS 사이드바 표시 기준) |
+| `xl:` | 1280px | 넓은 데스크톱 |
+
 ---
 
 # 반복 실수 방지 규칙
@@ -1387,3 +1396,104 @@ Apply in addition to existing rules.
 ### F. Observability Baseline
 - Log fields: `request_id`, `service`, `endpoint`, `status_code`, `latency_ms`.
 - Track AI failure rate and rate-limit hit rate as first-class operational metrics.
+
+---
+
+## 66. 접근성(A11y) 필수 규칙 (CRITICAL)
+
+### 66.1 모달/드롭다운 키보드 접근성
+- [ ] 모달 열릴 때 첫 번째 포커스 가능한 요소에 자동 포커스
+- [ ] ESC 키로 모달/드롭다운 닫기 (`@keydown.escape`)
+- [ ] 모달 외부 클릭으로 닫기 (`@click.outside`)
+- [ ] 모달 닫힐 때 트리거 요소로 포커스 복귀
+
+### 66.2 포커스 스타일
+모든 인터랙티브 요소에 `:focus-visible` 스타일 필수.
+`outline-none`을 쓸 때는 반드시 대체 포커스 표시를 함께 적용.
+
+```css
+/* base.html 전역 */
+:focus-visible {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 2px;
+}
+```
+
+### 66.3 색 대비 최소 기준
+- 본문 텍스트: `text-gray-700` 이상 (배경 `#E0E5EC` 기준)
+- 보조 텍스트: `text-gray-500` 이상
+- `text-gray-400`은 장식 요소(placeholder 등)에만 허용
+
+### 66.4 이미지 alt 텍스트 필수
+모든 `<img>` 태그에 `alt` 속성 필수. 장식용 이미지는 `alt=""`.
+
+### 작업 완료 후 A11y 체크리스트
+- [ ] 모달/드롭다운: ESC 닫기 + 포커스 트랩 동작 확인
+- [ ] Tab 키로 모든 인터랙티브 요소 순회 가능
+- [ ] 색 대비: `text-gray-400` 이하 본문 텍스트 없음
+- [ ] 이미지: alt 속성 누락 없음
+
+---
+
+## 67. 이미지 최적화 규칙
+
+### lazy-load 필수
+뷰포트 밖의 이미지는 반드시 `loading="lazy"` 적용.
+Above-the-fold(첫 화면) 이미지는 제외.
+
+```html
+<!-- ❌ -->
+<img src="..." alt="...">
+
+<!-- ✅ -->
+<img src="..." alt="..." loading="lazy">
+```
+
+### Cloudinary 자동 최적화
+Cloudinary URL 사용 시 `f_auto,q_auto` 변환 적용 권장.
+브라우저에 맞는 최적 포맷(WebP/AVIF)과 품질을 자동 선택.
+
+```python
+# ❌ 원본 URL 그대로
+image_url = "https://res.cloudinary.com/.../upload/v123/image.jpg"
+
+# ✅ 자동 최적화 변환 추가
+image_url = "https://res.cloudinary.com/.../upload/f_auto,q_auto/v123/image.jpg"
+```
+
+> **참고**: 프로젝트에 이미 `core/templatetags/cloudinary_extras.py`의 `|optimize` 필터가 존재하므로, 템플릿에서는 `{{ image_url|optimize }}` 사용 권장.
+
+---
+
+## 68. 정적 파일 캐시 버스팅 (향후 개선)
+
+현재: `StaticFilesStorage` (파일명 해시 없음)
+목표: `WhiteNoise CompressedManifestStaticFilesStorage` 전환
+
+### 전환 시 주의사항
+- collectstatic 실행 필수 (해시 파일명 생성)
+- 템플릿의 `{% static %}` 태그가 자동으로 해시 URL 생성
+- Tailwind CDN 사용 중이라 CSS는 해당 없음, JS/이미지에 적용
+
+---
+
+## 69. Tailwind CDN → 빌드 전환 로드맵 (향후)
+
+### Phase 1: 병행 운영
+- Tailwind CLI로 빌드된 CSS 파일 생성
+- base.html에서 CDN 스크립트와 빌드 CSS를 병행 로드
+- 2주간 운영하며 스타일 차이 확인
+
+### Phase 2: CDN 제거
+- CDN 스크립트 삭제
+- `tailwind.config.js`로 완전 전환
+- CSP에서 `unsafe-eval` 제거 가능
+
+### 기대 효과
+- 초기 로드 성능 향상 (런타임 컴파일 제거)
+- CSP 강화 (`unsafe-eval` 제거)
+- 빌드 산출물 크기 축소 (사용한 클래스만 포함)
+
+---
+
+**마지막 업데이트:** 2026-02-15

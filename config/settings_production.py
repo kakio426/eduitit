@@ -374,6 +374,12 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+    # Cookie security (Django defaults이지만 명시)
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True         # HTMX는 쿠키가 아닌 헤더로 CSRF 전송
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
 # =============================================================================
 # CONTENT SECURITY POLICY (CSP)
 # =============================================================================
@@ -551,6 +557,46 @@ MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1
 # - API: /fortune/api/, /fortune/api/daily/, analyze_topic 경로에서 async 수집 사용
 FORTUNE_ASYNC_STREAM_ENABLED = os.getenv('FORTUNE_ASYNC_STREAM_ENABLED', 'False').lower() in ('true', '1', 'yes')
 FORTUNE_ASYNC_API_ENABLED = os.getenv('FORTUNE_ASYNC_API_ENABLED', 'False').lower() in ('true', '1', 'yes')
+
+# =============================================================================
+# LOGGING (settings.py와 동기화)
+# =============================================================================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} - {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'core.middleware': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core.context_processors': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)
