@@ -7,12 +7,14 @@ from django.db.models import Count
 from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
+from asgiref.sync import sync_to_async
 import json
 import csv
 import qrcode
 from io import BytesIO
 import base64
 import logging
+import requests
 
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
@@ -21,6 +23,29 @@ from products.models import Product
 logger = logging.getLogger(__name__)
 
 MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024  # 30MB
+_STREAM_END = object()
+
+
+def _next_or_end(iterator):
+    return next(iterator, _STREAM_END)
+
+
+async def _async_wrap_sync_iterable(iterable):
+    """Adapt a sync iterable to an async iterator for ASGI StreamingHttpResponse."""
+    iterator = iter(iterable)
+    while True:
+        chunk = await sync_to_async(_next_or_end, thread_sensitive=True)(iterator)
+        if chunk is _STREAM_END:
+            break
+        yield chunk
+
+
+def _remote_file_chunks(file_url, chunk_size=8192):
+    with requests.get(file_url, stream=True, timeout=(5, 60)) as resp:
+        resp.raise_for_status()
+        for chunk in resp.iter_content(chunk_size=chunk_size):
+            if chunk:
+                yield chunk
 
 
 def get_collect_service():
@@ -467,18 +492,13 @@ def submission_download(request, submission_id):
     encoded_filename = urllib.parse.quote(safe_name)
 
     from django.http import StreamingHttpResponse
-    import requests
 
     file_url = submission.file.url
     
     if file_url.startswith('http'):
-        def stream_file():
-            with requests.get(file_url, stream=True) as r:
-                for chunk in r.iter_content(chunk_size=8192):
-                    yield chunk
-        response = StreamingHttpResponse(stream_file())
+        response = StreamingHttpResponse(_async_wrap_sync_iterable(_remote_file_chunks(file_url)))
     else:
-        response = StreamingHttpResponse(submission.file)
+        response = StreamingHttpResponse(_async_wrap_sync_iterable(submission.file.chunks()))
 
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
