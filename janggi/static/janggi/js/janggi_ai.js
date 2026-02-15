@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     var engine = null;
     var engineKind = null;
     var isReady = false;
@@ -6,6 +6,7 @@
     var logEl = null;
     var bestMoveHandler = null;
     var pendingMoves = [];
+    var pendingAsk = false;
     var variantSupportsJanggi = false;
 
     function log(line) {
@@ -49,13 +50,17 @@
         } else if (line.indexOf("readyok") !== -1) {
             isReady = true;
             if (variantSupportsJanggi) {
-                setStatus("엔진 준비 완료(" + engineKind + ")");
+                setStatus("?붿쭊 以鍮??꾨즺(" + engineKind + ")");
             } else {
-                setStatus("엔진 준비 완료(" + engineKind + ", janggi 옵션 미확인)");
-                log("[Janggi] UCI_Variant 목록에서 janggi를 확인하지 못했습니다.");
+                setStatus("?붿쭊 以鍮??꾨즺(" + engineKind + ", janggi ?듭뀡 誘명솗??");
+                log("[Janggi] UCI_Variant 紐⑸줉?먯꽌 janggi瑜??뺤씤?섏? 紐삵뻽?듬땲??");
+            }
+            if (pendingAsk) {
+                pendingAsk = false;
+                askMove();
             }
         } else if (line.indexOf("bestmove") === 0) {
-            setStatus("AI 수 계산 완료");
+            setStatus("AI ??怨꾩궛 ?꾨즺");
             var parts = line.split(/\s+/);
             var move = parts[1] || "";
             if (bestMoveHandler) bestMoveHandler(move);
@@ -64,7 +69,7 @@
 
     async function initByFactory() {
         if (typeof Stockfish !== "function") throw new Error("Stockfish factory unavailable.");
-        setStatus("엔진 시작 중(factory)...");
+        setStatus("?붿쭊 ?쒖옉 以?factory)...");
         engine = await Stockfish({
             locateFile: function (file) {
                 if (file === "stockfish.wasm") {
@@ -83,14 +88,14 @@
     }
 
     function initByWorker() {
-        setStatus("엔진 시작 중(worker)...");
+        setStatus("?붿쭊 ?쒖옉 以?worker)...");
         engine = new Worker(JANGGI_ENGINE_WORKER_PATH || JANGGI_ENGINE_PATH);
         engineKind = "worker";
         engine.onmessage = function (evt) {
             onEngineLine(evt.data);
         };
         engine.onerror = function () {
-            setStatus("엔진 오류");
+            setStatus("?붿쭊 ?ㅻ쪟");
             log("[Janggi] Worker init failed.");
         };
         send("uci");
@@ -116,14 +121,21 @@
 
     function askMove() {
         if (!JANGGI_IS_AI_MODE) {
-            log("[Janggi] local 모드에서는 AI 요청을 무시합니다.");
+            log("[Janggi] local 紐⑤뱶?먯꽌??AI ?붿껌??臾댁떆?⑸땲??");
             return;
         }
-        if (!engine || !isReady) {
-            log("[Janggi] 엔진 준비 전입니다.");
+        if (!engine) {
+            pendingAsk = true;
+            init();
+            log("[Janggi] Engine is starting. Your AI request is queued.");
             return;
         }
-        setStatus("AI 수 계산 중...");
+        if (!isReady) {
+            pendingAsk = true;
+            log("[Janggi] Engine is preparing. AI will move automatically when ready.");
+            return;
+        }
+        setStatus("AI ??怨꾩궛 以?..");
         if (!pendingMoves.length) {
             send("position startpos");
         } else {
@@ -144,7 +156,7 @@
         if (initBtn) initBtn.addEventListener("click", init);
         if (askBtn) askBtn.addEventListener("click", askMove);
         if (!JANGGI_IS_AI_MODE) {
-            setStatus("로컬 모드");
+            setStatus("濡쒖뺄 紐⑤뱶");
         }
     });
 
@@ -156,3 +168,4 @@
         isReady: function () { return isReady; },
     };
 })();
+

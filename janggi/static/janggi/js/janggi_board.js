@@ -14,6 +14,9 @@
     var moveHistory = [];
     var moveTokens = [];
     var board = [];
+    var undoStack = [];
+    var lastMove = null;
+    var aiRequestPending = false;
     var gameEnded = false;
 
     var pieceSourceBases = [
@@ -23,6 +26,34 @@
 
     function piece(type, side, label) {
         return { type: type, side: side, label: label };
+    }
+
+    function clonePiece(p) {
+        return p ? { type: p.type, side: p.side, label: p.label } : null;
+    }
+
+    function cloneBoardState(srcBoard) {
+        var cloned = [];
+        for (var r = 0; r < ROWS; r++) {
+            var row = [];
+            for (var c = 0; c < COLS; c++) {
+                row.push(clonePiece(srcBoard[r][c]));
+            }
+            cloned.push(row);
+        }
+        return cloned;
+    }
+
+    function pushUndoState() {
+        undoStack.push({
+            board: cloneBoardState(board),
+            currentTurn: currentTurn,
+            moveHistory: moveHistory.slice(),
+            moveTokens: moveTokens.slice(),
+            gameEnded: gameEnded,
+            lastMove: lastMove ? { from: { r: lastMove.from.r, c: lastMove.from.c }, to: { r: lastMove.to.r, c: lastMove.to.c } } : null
+        });
+        if (undoStack.length > 120) undoStack.shift();
     }
 
     function showToast(title, desc) {
@@ -55,6 +86,17 @@
     function pieceCode(p) {
         var prefix = p.side === "red" ? "r_" : "b_";
         return prefix + p.type + ".png";
+    }
+
+    function pieceText(p) {
+        if (p.type === "rook") return "차";
+        if (p.type === "horse") return "마";
+        if (p.type === "elephant") return "상";
+        if (p.type === "guard") return "사";
+        if (p.type === "king") return "궁";
+        if (p.type === "cannon") return "포";
+        if (p.type === "pawn") return p.side === "red" ? "병" : "졸";
+        return p.label || "?";
     }
 
     function pieceSvgData(p) {
@@ -365,6 +407,23 @@
         return false;
     }
 
+    function findFallbackMove(side) {
+        var candidates = [];
+        for (var r = 0; r < ROWS; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var p = getPiece(r, c);
+                if (!p || p.side !== side) continue;
+                var from = { r: r, c: c };
+                var targets = collectValidTargets(from, p);
+                for (var i = 0; i < targets.length; i++) {
+                    candidates.push({ from: from, to: targets[i] });
+                }
+            }
+        }
+        if (!candidates.length) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
     function squareName(pos) {
         return String.fromCharCode("a".charCodeAt(0) + pos.c) + String(pos.r);
     }
@@ -413,9 +472,11 @@
         var p = getPiece(from.r, from.c);
         if (!p) return false;
         if (!isLegalMove(from, to, p)) return false;
+        pushUndoState();
         var captured = getPiece(to.r, to.c);
         setPiece(to.r, to.c, p);
         setPiece(from.r, from.c, null);
+        lastMove = { from: { r: from.r, c: from.c }, to: { r: to.r, c: to.c } };
         if (!silent) recordMove(from, to, p, captured);
         evaluateAfterMove(p.side);
         toggleTurn();
@@ -451,9 +512,8 @@
         }
 
         var moved = movePiece(selected, { r: r, c: c }, false);
-        if (moved && !gameEnded && JANGGI_MODE === "ai" && currentTurn === "blue" && window.JanggiAI) {
-            window.JanggiAI.setPosition(moveTokens);
-            window.JanggiAI.askMove();
+        if (moved && !gameEnded && JANGGI_MODE === "ai" && currentTurn === "blue") {
+            requestAiMove();
         }
     }
 
@@ -467,16 +527,19 @@
                 cell.className = "janggi-cell";
                 if (selected && selected.r === r && selected.c === c) cell.classList.add("selected");
                 if (validTargets.some(function (v) { return v.r === r && v.c === c; })) cell.classList.add("hint");
+                if (lastMove && ((lastMove.from.r === r && lastMove.from.c === c) || (lastMove.to.r === r && lastMove.to.c === c))) {
+                    cell.classList.add("last-move");
+                }
                 (function (rr, cc) {
                     cell.addEventListener("click", function () { handleCellClick(rr, cc); });
                 })(r, c);
                 var p = getPiece(r, c);
                 if (p) {
-                    var img = document.createElement("img");
-                    img.className = "janggi-piece-img";
-                    img.alt = p.label;
-                    attachImageFallback(img, buildPieceSources(p));
-                    cell.appendChild(img);
+                    var token = document.createElement("div");
+                    token.className = "janggi-piece " + (p.side === "red" ? "piece-red" : "piece-blue");
+                    token.textContent = pieceText(p);
+                    token.setAttribute("aria-label", pieceText(p));
+                    cell.appendChild(token);
                 }
                 boardEl.appendChild(cell);
             }
@@ -488,14 +551,35 @@
         var from = { c: bestmove.charCodeAt(0) - "a".charCodeAt(0), r: Number(bestmove.charAt(1)) };
         var to = { c: bestmove.charCodeAt(2) - "a".charCodeAt(0), r: Number(bestmove.charAt(3)) };
         var p = getPiece(from.r, from.c);
-        if (!p || p.side !== currentTurn) return;
-        movePiece(from, to, false);
+        if (!p || p.side !== currentTurn) return false;
+        return movePiece(from, to, false);
+    }
+
+    function requestAiMove() {
+        if (aiRequestPending || gameEnded || currentTurn !== "blue") return;
+        aiRequestPending = true;
+        if (window.JanggiAI) {
+            window.JanggiAI.setPosition(moveTokens);
+            window.JanggiAI.askMove();
+        }
+        setTimeout(function () {
+            if (!aiRequestPending || gameEnded || currentTurn !== "blue") return;
+            var fallback = findFallbackMove("blue");
+            if (fallback) {
+                showToast("AI 대체 수", "엔진 응답이 지연되어 기본 AI가 수를 두었습니다.");
+                movePiece(fallback.from, fallback.to, false);
+            }
+            aiRequestPending = false;
+        }, 1400);
     }
 
     function resetAll() {
         currentTurn = "red";
         moveHistory = [];
         moveTokens = [];
+        undoStack = [];
+        lastMove = null;
+        aiRequestPending = false;
         selected = null;
         validTargets = [];
         gameEnded = false;
@@ -503,6 +587,29 @@
         if (turnEl) turnEl.textContent = "차례: RED";
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         initBoardState();
+        renderBoard();
+    }
+
+    function undoMove() {
+        if (!undoStack.length) {
+            showToast("알림", "되돌릴 수가 없습니다.");
+            return;
+        }
+        var prev = undoStack.pop();
+        board = cloneBoardState(prev.board);
+        currentTurn = prev.currentTurn;
+        moveHistory = prev.moveHistory.slice();
+        moveTokens = prev.moveTokens.slice();
+        gameEnded = prev.gameEnded;
+        lastMove = prev.lastMove ? {
+            from: { r: prev.lastMove.from.r, c: prev.lastMove.from.c },
+            to: { r: prev.lastMove.to.r, c: prev.lastMove.to.c }
+        } : null;
+        selected = null;
+        validTargets = [];
+        if (historyEl) historyEl.textContent = moveHistory.length ? moveHistory.join("\n") : "-";
+        if (turnEl) turnEl.textContent = "차례: " + currentTurn.toUpperCase();
+        if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         renderBoard();
     }
 
@@ -515,9 +622,11 @@
         resultTitleEl = document.getElementById("resultTitle");
         resultDescEl = document.getElementById("resultDesc");
         var resetBtn = document.getElementById("resetBoardBtn");
+        var undoBtn = document.getElementById("undoMoveBtn");
         var closeResultBtn = document.getElementById("closeResultBtn");
         var retryResultBtn = document.getElementById("retryResultBtn");
         if (resetBtn) resetBtn.addEventListener("click", resetAll);
+        if (undoBtn) undoBtn.addEventListener("click", undoMove);
         if (closeResultBtn) closeResultBtn.addEventListener("click", function () {
             if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         });
@@ -528,10 +637,14 @@
             if (JANGGI_MODE === "ai") window.JanggiAI.init();
             window.JanggiAI.onBestMove(function (bestmove) {
                 if (JANGGI_MODE === "ai" && currentTurn === "blue") {
-                    applyEngineMove(bestmove);
+                    var moved = applyEngineMove(bestmove);
+                    if (!moved) {
+                        var fallback = findFallbackMove("blue");
+                        if (fallback) movePiece(fallback.from, fallback.to, false);
+                    }
+                    aiRequestPending = false;
                 }
             });
         }
     });
 })();
-
