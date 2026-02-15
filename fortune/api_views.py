@@ -12,7 +12,7 @@ import pytz
 import hashlib
 
 # Re-use existing AI response logic if possible
-from .views import generate_ai_response, get_chart_context, _collect_ai_response, _check_saju_ratelimit
+from .views import get_chart_context, _collect_ai_response_async, _check_saju_ratelimit
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ async def analyze_topic(request):
         prompt = build_focused_prompt(topic, pillars, name, gender)
 
         # 3. Call AI (async)
-        response_text = await _collect_ai_response(prompt, request)
+        response_text = await _collect_ai_response_async(prompt, request)
 
         # 4. Auto Save (Cache)
         if request.user.is_authenticated and response_text.strip():

@@ -25,12 +25,12 @@ class HybridAPITest(unittest.TestCase):
         request.user.userprofile.gemini_api_key = 'SERVER_GEMINI_KEY'
 
         # Mock Response
-        mock_response = MagicMock()
-        mock_response.text = "Gemini Response"
+        mock_chunk = MagicMock()
+        mock_chunk.text = "Gemini Response"
         mock_inst = mock_genai_client.return_value
-        mock_inst.models.generate_content.return_value = mock_response
+        mock_inst.models.generate_content_stream.return_value = [mock_chunk]
 
-        response_text = generate_ai_response("Test Prompt", request)
+        response_text = "".join(generate_ai_response("Test Prompt", request))
 
         self.assertEqual(response_text, "Gemini Response")
         mock_genai_client.assert_called() # GenAI 호출 확인
@@ -44,15 +44,13 @@ class HybridAPITest(unittest.TestCase):
         request.user.is_authenticated = False # 비로그인 사용자 가정 (또는 키 없음)
         
         # Mock Response
-        mock_choice = MagicMock()
-        mock_choice.message.content = "DeepSeek Response"
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
+        mock_chunk = MagicMock()
+        mock_chunk.choices = [MagicMock(delta=MagicMock(content="DeepSeek Response"))]
         
         mock_client_inst = mock_openai.return_value
-        mock_client_inst.chat.completions.create.return_value = mock_response
+        mock_client_inst.chat.completions.create.return_value = [mock_chunk]
 
-        response_text = generate_ai_response("Test Prompt", request)
+        response_text = "".join(generate_ai_response("Test Prompt", request))
 
         self.assertEqual(response_text, "DeepSeek Response")
         mock_openai.assert_called() # OpenAI SDK 호출 확인
@@ -70,6 +68,6 @@ class HybridAPITest(unittest.TestCase):
         request.user.userprofile.gemini_api_key = None
 
         with self.assertRaises(Exception) as context:
-            generate_ai_response("Test Prompt", request)
+            list(generate_ai_response("Test Prompt", request))
         
         self.assertIn("API_KEY_MISSING", str(context.exception))

@@ -2,7 +2,7 @@ import os
 import time
 import asyncio
 from google import genai
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
@@ -30,6 +30,14 @@ logger = logging.getLogger(__name__)
 GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+
+
+def _should_use_async_ai_stream():
+    return getattr(settings, 'FORTUNE_ASYNC_STREAM_ENABLED', False)
+
+
+def _should_use_async_ai_api():
+    return getattr(settings, 'FORTUNE_ASYNC_API_ENABLED', False)
 
 def get_user_gemini_key(request):
     """사용자의 개인 Gemini API 키 반환"""
@@ -284,16 +292,75 @@ def _check_saju_ratelimit(request):
 
 
 async def _async_stream_ai(prompt, request):
-    """동기 generate_ai_response 제너레이터를 async 제너레이터로 변환"""
-    loop = asyncio.get_event_loop()
+    """스트리밍 응답을 async로 제공. 플래그 OFF 시 기존 threadpool 경로 유지."""
+    user_gemini_key = get_user_gemini_key(request)
+
+    # Async 경로는 현재 DeepSeek(master key) 호출에서 우선 적용한다.
+    if _should_use_async_ai_stream() and not user_gemini_key:
+        async for chunk in _async_stream_deepseek(prompt):
+            yield chunk
+        return
+
+    # Fallback: 기존 sync generator를 threadpool에서 실행
+    loop = asyncio.get_running_loop()
     gen = generate_ai_response(prompt, request)
-    _next = next  # local ref for speed
+    _next = next
     while True:
         try:
             chunk = await loop.run_in_executor(None, _next, gen)
             yield chunk
         except StopIteration:
             break
+
+
+async def _async_stream_deepseek(prompt):
+    """DeepSeek 스트리밍을 AsyncOpenAI로 직접 처리."""
+    from .utils.circuit_breaker import ai_circuit_breaker
+
+    if not ai_circuit_breaker.can_execute():
+        raise Exception("AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.")
+
+    api_key = os.environ.get('MASTER_DEEPSEEK_API_KEY')
+    if not api_key:
+        raise Exception("API_KEY_MISSING: API 키가 설정되지 않았습니다.")
+
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=DEEPSEEK_BASE_URL,
+        timeout=60.0,
+    )
+
+    max_retries = 2
+    for i in range(max_retries + 1):
+        try:
+            response = await client.chat.completions.create(
+                model=DEEPSEEK_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": "You are a professional Saju (Four Pillars of Destiny) master."},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=True,
+            )
+
+            chunk_count = 0
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    chunk_count += 1
+                    yield chunk.choices[0].delta.content
+
+            if chunk_count == 0:
+                logger.warning("DeepSeek stream yielded 0 chunks.")
+                raise Exception("DeepSeek API returned empty response")
+
+            ai_circuit_breaker.record_success()
+            return
+        except Exception as e:
+            if '503' in str(e) and i < max_retries:
+                await asyncio.sleep(1.5)
+                continue
+            ai_circuit_breaker.record_failure()
+            logger.exception(f"DeepSeek API Error (Async Master): {e}")
+            raise
 
 
 @sync_to_async
@@ -307,6 +374,22 @@ def _collect_ai_response(prompt, request):
     except Exception:
         ai_circuit_breaker.record_failure()
         raise
+
+
+async def _collect_ai_response_async(prompt, request):
+    """
+    async API용 수집 함수.
+    플래그 ON + DeepSeek 경로에서는 AsyncOpenAI를 사용하고,
+    그 외는 기존 sync collector를 재사용한다.
+    """
+    user_gemini_key = get_user_gemini_key(request)
+    if _should_use_async_ai_api() and not user_gemini_key:
+        chunks = []
+        async for chunk in _async_stream_deepseek(prompt):
+            chunks.append(chunk)
+        return "".join(chunks)
+
+    return await _collect_ai_response(prompt, request)
 
 
 @login_required
@@ -486,7 +569,7 @@ async def saju_api_view(request):
             logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini. Mode: {existing_result.mode}")
             response_text = existing_result.result_text
         else:
-            response_text = await _collect_ai_response(prompt, request)
+            response_text = await _collect_ai_response_async(prompt, request)
 
         return JsonResponse({
             'success': True,
@@ -591,7 +674,7 @@ async def daily_fortune_api(request):
             logger.info(f"Found cached daily fortune for {name} ({mode}) on {target_date_str}, bypassing Gemini.")
             response_text = cached_response
         else:
-            response_text = await _collect_ai_response(prompt, request)
+            response_text = await _collect_ai_response_async(prompt, request)
             await sync_to_async(cache.set)(cache_key, response_text, 60*60*12)
 
         # 통계용 로그 저장

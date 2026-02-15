@@ -546,6 +546,12 @@ STORAGES = {
 # =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
 
+# Fortune async rollout flags (safe default: OFF)
+# - STREAM: /fortune/api/streaming/ 경로에서 AsyncOpenAI 직접 사용
+# - API: /fortune/api/, /fortune/api/daily/, analyze_topic 경로에서 async 수집 사용
+FORTUNE_ASYNC_STREAM_ENABLED = os.getenv('FORTUNE_ASYNC_STREAM_ENABLED', 'False').lower() in ('true', '1', 'yes')
+FORTUNE_ASYNC_API_ENABLED = os.getenv('FORTUNE_ASYNC_API_ENABLED', 'False').lower() in ('true', '1', 'yes')
+
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)
 # =============================================================================
