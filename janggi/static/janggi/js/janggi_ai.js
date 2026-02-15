@@ -1,13 +1,19 @@
-﻿(function () {
+(function () {
     var engine = null;
     var engineKind = null;
-    var isReady = false;
+    var engineBooting = false;
+    var engineReady = false;
+    var variantSupportsJanggi = false;
+
     var statusEl = null;
     var logEl = null;
-    var bestMoveHandler = null;
-    var pendingMoves = [];
-    var pendingAsk = false;
-    var variantSupportsJanggi = false;
+
+    var pendingMoveCallback = null;
+    var pendingMoveTimer = null;
+
+    function setStatus(text) {
+        if (statusEl) statusEl.textContent = text;
+    }
 
     function log(line) {
         if (!logEl) return;
@@ -15,27 +21,37 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function setStatus(text) {
-        if (statusEl) statusEl.textContent = text;
-    }
-
     function send(cmd) {
-        if (!engine) {
-            log("[Janggi] Engine not initialized.");
-            return;
-        }
+        if (!engine) return;
         log(">> " + cmd);
         engine.postMessage(cmd);
     }
 
-    function applyDifficulty() {
-        var skill = 10;
-        if (JANGGI_DIFFICULTY === "easy") skill = 3;
-        else if (JANGGI_DIFFICULTY === "medium") skill = 8;
-        else if (JANGGI_DIFFICULTY === "hard") skill = 14;
-        else if (JANGGI_DIFFICULTY === "expert") skill = 20;
+    function getSkillByDifficulty() {
+        if (JANGGI_DIFFICULTY === "easy") return 4;
+        if (JANGGI_DIFFICULTY === "medium") return 9;
+        if (JANGGI_DIFFICULTY === "hard") return 14;
+        return 20;
+    }
+
+    function clearPendingMove() {
+        if (pendingMoveTimer) {
+            clearTimeout(pendingMoveTimer);
+            pendingMoveTimer = null;
+        }
+        pendingMoveCallback = null;
+    }
+
+    function resolvePendingMove(bestmove) {
+        if (!pendingMoveCallback) return;
+        var cb = pendingMoveCallback;
+        clearPendingMove();
+        cb(bestmove || null);
+    }
+
+    function applyEngineOptions() {
         send("setoption name Threads value 1");
-        send("setoption name Skill Level value " + skill);
+        send("setoption name Skill Level value " + getSkillByDifficulty());
         send("setoption name UCI_Variant value janggi");
         send("isready");
     }
@@ -43,129 +59,145 @@
     function onEngineLine(raw) {
         var line = String(raw || "");
         log("<< " + line);
+
+        if (line.indexOf("option name UCI_Variant") !== -1 && line.toLowerCase().indexOf("janggi") !== -1) {
+            variantSupportsJanggi = true;
+            return;
+        }
+
         if (line.indexOf("uciok") !== -1) {
-            applyDifficulty();
-        } else if (line.indexOf("option name UCI_Variant") !== -1) {
-            if (line.toLowerCase().indexOf("janggi") !== -1) variantSupportsJanggi = true;
-        } else if (line.indexOf("readyok") !== -1) {
-            isReady = true;
+            applyEngineOptions();
+            return;
+        }
+
+        if (line.indexOf("readyok") !== -1) {
+            engineReady = true;
             if (variantSupportsJanggi) {
-                setStatus("?붿쭊 以鍮??꾨즺(" + engineKind + ")");
+                setStatus("엔진 준비 완료");
             } else {
-                setStatus("?붿쭊 以鍮??꾨즺(" + engineKind + ", janggi ?듭뀡 誘명솗??");
-                log("[Janggi] UCI_Variant 紐⑸줉?먯꽌 janggi瑜??뺤씤?섏? 紐삵뻽?듬땲??");
+                setStatus("엔진 준비 완료 (장기 미지원)");
             }
-            if (pendingAsk) {
-                pendingAsk = false;
-                askMove();
-            }
-        } else if (line.indexOf("bestmove") === 0) {
-            setStatus("AI ??怨꾩궛 ?꾨즺");
-            var parts = line.split(/\s+/);
-            var move = parts[1] || "";
-            if (bestMoveHandler) bestMoveHandler(move);
+            return;
+        }
+
+        if (line.indexOf("bestmove") === 0) {
+            var parts = line.trim().split(/\s+/);
+            resolvePendingMove(parts[1] || null);
         }
     }
 
-    async function initByFactory() {
-        if (typeof Stockfish !== "function") throw new Error("Stockfish factory unavailable.");
-        setStatus("?붿쭊 ?쒖옉 以?factory)...");
-        engine = await Stockfish({
+    function initByFactory() {
+        if (typeof Stockfish !== "function") {
+            return Promise.reject(new Error("Stockfish factory unavailable"));
+        }
+        setStatus("엔진 시작 중...");
+        return Stockfish({
             locateFile: function (file) {
                 if (file === "stockfish.wasm") {
                     return JANGGI_ENGINE_PATH.replace("stockfish.js", "stockfish.wasm");
                 }
                 return file;
             }
-        });
-        engineKind = "factory";
-        if (typeof engine.addMessageListener === "function") {
+        }).then(function (instance) {
+            engine = instance;
+            engineKind = "factory";
+            if (typeof engine.addMessageListener !== "function") {
+                throw new Error("Factory addMessageListener API missing");
+            }
             engine.addMessageListener(onEngineLine);
-        } else {
-            throw new Error("addMessageListener API missing.");
-        }
-        send("uci");
+            send("uci");
+        });
     }
 
     function initByWorker() {
-        setStatus("?붿쭊 ?쒖옉 以?worker)...");
+        setStatus("엔진 시작 중...");
         engine = new Worker(JANGGI_ENGINE_WORKER_PATH || JANGGI_ENGINE_PATH);
         engineKind = "worker";
         engine.onmessage = function (evt) {
             onEngineLine(evt.data);
         };
         engine.onerror = function () {
-            setStatus("?붿쭊 ?ㅻ쪟");
+            setStatus("엔진 초기화 실패");
             log("[Janggi] Worker init failed.");
         };
         send("uci");
     }
 
-    async function init() {
-        if (engine) {
-            log("[Janggi] Engine already initialized.");
-            return;
-        }
-        isReady = false;
-        try {
-            await initByFactory();
-        } catch (err) {
-            log("[Janggi] Factory init failed: " + err.message);
-            initByWorker();
-        }
+    function init() {
+        if (engine || engineBooting) return;
+        engineBooting = true;
+        engineReady = false;
+        variantSupportsJanggi = false;
+
+        initByFactory()
+            .catch(function (err) {
+                log("[Janggi] Factory init failed: " + err.message);
+                initByWorker();
+            })
+            .finally(function () {
+                engineBooting = false;
+            });
     }
 
-    function setPositionMoves(moves) {
-        pendingMoves = Array.isArray(moves) ? moves.slice() : [];
+    function requestMove(moves, callback) {
+        if (typeof callback !== "function") return;
+
+        if (!engine || !engineReady || !variantSupportsJanggi) {
+            callback(null);
+            return;
+        }
+
+        clearPendingMove();
+        pendingMoveCallback = callback;
+        pendingMoveTimer = setTimeout(function () {
+            resolvePendingMove(null);
+        }, 1100);
+
+        if (!moves || !moves.length) {
+            send("position startpos");
+        } else {
+            send("position startpos moves " + moves.join(" "));
+        }
+        setStatus("엔진 수 계산 중...");
+        send("go movetime 650");
     }
 
     function askMove() {
-        if (!JANGGI_IS_AI_MODE) {
-            log("[Janggi] local 紐⑤뱶?먯꽌??AI ?붿껌??臾댁떆?⑸땲??");
-            return;
-        }
-        if (!engine) {
-            pendingAsk = true;
-            init();
-            log("[Janggi] Engine is starting. Your AI request is queued.");
-            return;
-        }
-        if (!isReady) {
-            pendingAsk = true;
-            log("[Janggi] Engine is preparing. AI will move automatically when ready.");
-            return;
-        }
-        setStatus("AI ??怨꾩궛 以?..");
-        if (!pendingMoves.length) {
-            send("position startpos");
-        } else {
-            send("position startpos moves " + pendingMoves.join(" "));
-        }
-        send("go movetime 800");
-    }
-
-    function onBestMove(fn) {
-        bestMoveHandler = fn;
+        if (!JANGGI_IS_AI_MODE) return;
+        if (!engine) init();
+        setStatus("AI 수 요청 중...");
     }
 
     document.addEventListener("DOMContentLoaded", function () {
         statusEl = document.getElementById("engineStatus");
         logEl = document.getElementById("engineLog");
+
         var initBtn = document.getElementById("initEngineBtn");
         var askBtn = document.getElementById("askMoveBtn");
         if (initBtn) initBtn.addEventListener("click", init);
         if (askBtn) askBtn.addEventListener("click", askMove);
+
         if (!JANGGI_IS_AI_MODE) {
-            setStatus("濡쒖뺄 紐⑤뱶");
+            setStatus("로컬 모드");
+        } else {
+            setStatus("내장 AI 준비 완료");
+            // Start booting engine in background; local AI keeps game responsive.
+            init();
         }
     });
 
     window.JanggiAI = {
         init: init,
-        askMove: askMove,
-        setPosition: setPositionMoves,
-        onBestMove: onBestMove,
-        isReady: function () { return isReady; },
+        requestMove: requestMove,
+        canUseEngine: function () {
+            return !!(engine && engineReady && variantSupportsJanggi);
+        },
+        getState: function () {
+            if (engine && engineReady && variantSupportsJanggi) return "ready";
+            if (engineBooting) return "booting";
+            if (engine && engineReady && !variantSupportsJanggi) return "unsupported";
+            if (engine && !engineReady) return "loading";
+            return "idle";
+        }
     };
 })();
-

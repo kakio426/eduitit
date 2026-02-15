@@ -16,8 +16,8 @@
         transform: translateX(-50%) translateY(-70px);
         background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
         color: white;
-        padding: 0.9rem 1.6rem;
-        border-radius: 16px;
+        padding: 0.9rem 1.2rem;
+        border-radius: 14px;
         min-width: 260px;
         max-width: 360px;
         font-size: 0.95rem;
@@ -26,11 +26,10 @@
         transition: all 0.35s ease;
         z-index: 120;
         pointer-events: none;
-        text-align: left;
     }
     .toast-title {
         font-weight: 900;
-        font-size: 1.05rem;
+        font-size: 1.02rem;
         margin-bottom: 0.2rem;
     }
     .toast-desc {
@@ -41,6 +40,7 @@
         opacity: 1;
         transform: translateX(-50%) translateY(0);
     }
+
     .result-overlay {
         position: fixed;
         inset: 0;
@@ -56,14 +56,14 @@
     }
     .result-card {
         width: min(460px, 92vw);
-        border-radius: 24px;
+        border-radius: 22px;
         background: #ffffff;
-        padding: 26px 24px;
+        padding: 24px 20px;
         box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
         text-align: center;
     }
     .result-title {
-        font-size: 2rem;
+        font-size: 1.9rem;
         font-weight: 900;
         margin-bottom: 8px;
     }
@@ -81,13 +81,14 @@
         line-height: 1.45;
         margin-bottom: 16px;
     }
+
     .janggi-board {
         display: grid;
         grid-template-columns: repeat(9, minmax(0, 1fr));
         gap: 0;
         width: min(100%, 640px);
         margin: 0 auto;
-        background: linear-gradient(180deg, #efd8a8 0%, #e4c58f 100%);
+        background: linear-gradient(180deg, #efdbb0 0%, #e5c996 100%);
         border: 2px solid #8b5a2b;
         border-radius: 12px;
         overflow: hidden;
@@ -100,51 +101,49 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        color: #374151;
-        font-size: 12px;
         cursor: pointer;
         user-select: none;
+        position: relative;
     }
     .janggi-cell.selected {
         outline: 3px solid #7c3aed;
         outline-offset: -2px;
     }
     .janggi-cell.hint {
-        box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.5);
+        box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.55);
     }
     .janggi-cell.last-move {
-        background: rgba(251, 191, 36, 0.25);
+        background: rgba(251, 191, 36, 0.24);
     }
+
     .janggi-piece {
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
         border-radius: 9999px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px solid rgba(0, 0, 0, 0.08);
-        background: white;
-        font-size: 16px;
+        font-size: 19px;
         line-height: 1;
-    }
-    .janggi-piece-img {
-        width: 34px;
-        height: 34px;
-        border-radius: 9999px;
-        object-fit: cover;
-        display: block;
+        font-weight: 800;
+        font-family: "Noto Serif KR", "Nanum Myeongjo", serif;
+        background:
+            radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%),
+            linear-gradient(180deg, #f4e4c2 0%, #e3c48d 100%);
+        border: 2px solid #8b5a2b;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }
     .piece-red {
         color: #b91c1c;
-        border-color: rgba(185, 28, 28, 0.35);
+        border-color: #9f1d1d;
     }
     .piece-blue {
         color: #1e40af;
-        border-color: rgba(30, 64, 175, 0.35);
+        border-color: #1d3a94;
     }
+
     .engine-log {
-        max-height: 280px;
+        max-height: 260px;
         overflow-y: auto;
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         font-size: 12px;
@@ -154,6 +153,7 @@
         padding: 12px;
         border-radius: 12px;
     }
+
     @media (max-width: 640px) {
         .toast {
             min-width: 0;
@@ -170,9 +170,9 @@
             font-size: 1.5rem;
         }
         .janggi-piece {
-            width: 28px;
-            height: 28px;
-            font-size: 13px;
+            width: 29px;
+            height: 29px;
+            font-size: 15px;
         }
         .engine-log {
             max-height: 180px;
@@ -185,7 +185,7 @@
 <div id="toast" class="toast"></div>
 <div id="gameResultOverlay" class="result-overlay">
     <div class="result-card">
-        <div id="resultTitle" class="result-title">게임 종료</div>
+        <div id="resultTitle" class="result-title">대국 종료</div>
         <p id="resultDesc" class="result-desc"></p>
         <div class="flex items-center justify-center gap-2">
             <button id="retryResultBtn" class="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold">다시하기</button>
@@ -193,11 +193,12 @@
         </div>
     </div>
 </div>
+
 <section class="pt-32 pb-20 px-3 sm:px-4 min-h-screen overflow-x-hidden">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-8">
             <h1 class="text-2xl sm:text-4xl font-black text-gray-700 font-title">
-                {% if mode == 'ai' %}🤖 AI 장기 대전{% else %}👥 로컬 장기 대전{% endif %}
+                {% if mode == 'ai' %}AI 장기 대전{% else %}로컬 장기 대전{% endif %}
             </h1>
             <p class="text-sm sm:text-base text-gray-500 mt-2">
                 {% if mode == 'ai' %}난이도: {{ difficulty }}{% else %}한 화면에서 번갈아 두세요.{% endif %}
@@ -208,7 +209,7 @@
             <div class="lg:col-span-2">
                 <div class="clay-card p-3 sm:p-6">
                     <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-2">장기 보드 (10x9)</h2>
-                    <p class="text-xs sm:text-sm text-gray-500 mb-4">기물을 클릭하고 이동 칸을 선택하세요.</p>
+                    <p class="text-xs sm:text-sm text-gray-500 mb-4">기물을 클릭한 뒤 이동 칸을 선택하세요.</p>
                     <div id="janggiBoard" class="janggi-board"></div>
                 </div>
             </div>
@@ -216,7 +217,7 @@
             <div class="lg:col-span-1 space-y-4">
                 <div class="clay-card p-4 sm:p-5">
                     <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">엔진 상태</h2>
-                    <p id="engineStatus" class="text-sm text-gray-600">초기화 전</p>
+                    <p id="engineStatus" class="text-sm text-gray-600">준비 중</p>
                     <div class="mt-3 flex flex-wrap sm:flex-nowrap gap-2">
                         <button id="initEngineBtn" class="flex-1 min-w-0 px-3 py-2 bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold">엔진 시작</button>
                         <button id="askMoveBtn" class="flex-1 min-w-0 px-3 py-2 bg-purple-500 text-white rounded-xl text-xs sm:text-sm font-bold">AI 수 요청</button>
@@ -233,7 +234,7 @@
                 </div>
 
                 <div class="clay-card p-4 sm:p-5">
-                    <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">UCI 로그</h2>
+                    <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">엔진 로그</h2>
                     <div id="engineLog" class="engine-log">[Janggi] ready.</div>
                 </div>
 
