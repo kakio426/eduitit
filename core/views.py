@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.urls import NoReverseMatch
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post, Comment, Feedback, SiteConfig
@@ -63,6 +64,33 @@ def get_purpose_sections(products_qs):
     return sections, games
 
 
+def _resolve_product_launch_url(product):
+    """Resolve direct launch URL for quick actions."""
+    if product.external_url:
+        return product.external_url, True
+
+    title_route_map = {
+        '쌤BTI': 'ssambti:main',
+        '두뇌 풀가동! 교실 체스': 'chess:index',
+        '두뇌 풀가동! 교실 장기': 'janggi:index',
+        '우리반 캐릭터 친구 찾기': 'studentmbti:landing',
+        'AI 도구 가이드': 'tool_guide',
+        'AI 프롬프트 레시피': 'prompt_lab',
+        '간편 수합': 'collect:landing',
+        '교사 백과사전': 'encyclopedia:landing',
+        '학교 예약 시스템': 'reservations:dashboard_landing',
+        '최신본 센터': 'version_manager:document_list',
+    }
+    route_name = title_route_map.get(product.title)
+    if route_name:
+        try:
+            return reverse(route_name), False
+        except NoReverseMatch:
+            logger.warning("Quick action route missing for product '%s' (%s).", product.title, route_name)
+
+    return reverse('product_detail', kwargs={'pk': product.pk}), False
+
+
 def _home_v2(request, products, posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = list(products)
@@ -81,11 +109,20 @@ def _home_v2(request, products, posts):
                     if len(quick_actions) >= 5:
                         break
 
+        quick_action_items = []
+        for product in quick_actions:
+            href, is_external = _resolve_product_launch_url(product)
+            quick_action_items.append({
+                'product': product,
+                'href': href,
+                'is_external': is_external,
+            })
+
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
             'sections': sections,
             'games': games,
-            'quick_actions': quick_actions,
+            'quick_actions': quick_action_items,
             'posts': posts,
         })
 

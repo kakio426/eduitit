@@ -93,13 +93,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 </h3>
                 <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
                     {% for qa in quick_actions %}
-                    <a href="{% if qa.external_url %}{{ qa.external_url }}{% else %}#{% endif %}"
-                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
-                        data-track="quick_action" data-track-label="{{ qa.title }}"
-                        onclick="{% if not qa.external_url %}event.preventDefault(); if(window.openModal) openModal({{ qa.id }});{% endif %}">
-                        <span class="text-lg">{% if "fa-" in qa.icon %}<i class="{{ qa.icon }} {% if qa.service_type == 'classroom' %}text-blue-500{% elif qa.service_type == 'work' %}text-emerald-500{% elif qa.service_type == 'game' %}text-red-500{% elif qa.service_type == 'counsel' %}text-violet-500{% elif qa.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.icon }}{% endif %}</span>
-                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.title }}</span>
-                    </a>
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <a href="{{ qa.href }}"
+                            {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                            class="flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
+                            data-track="quick_action" data-track-label="{{ qa.product.title }}">
+                            <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+                            <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
+                        </a>
+                        <button type="button"
+                            class="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition"
+                            title="{{ qa.product.title }} 소개 보기"
+                            aria-label="{{ qa.product.title }} 소개 보기"
+                            data-track="quick_action_info" data-track-label="{{ qa.product.title }}"
+                            onclick="if(window.openModal) openModal({{ qa.product.id }})">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
