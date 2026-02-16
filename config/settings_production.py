@@ -111,6 +111,7 @@ MIDDLEWARE = [
     # Custom Middleware
     'core.middleware.MaintenanceModeMiddleware',  # 점검 모드 (제일 위쪽 처리가 좋음)
     'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
+    'core.middleware.BlockKnownProbePathsMiddleware',
     'core.middleware.VisitorTrackingMiddleware',
 ]
 
@@ -597,6 +598,12 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
     'root': {

@@ -3,6 +3,7 @@ import time
 import uuid
 from urllib.parse import quote
 
+from django.http import HttpResponseNotFound
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +12,26 @@ from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import VisitorLog
 
 logger = logging.getLogger(__name__)
+
+
+class BlockKnownProbePathsMiddleware:
+    """
+    Block common WordPress probe paths that are irrelevant for this Django app.
+    Keeps scanners out of app logic and visitor tracking DB writes.
+    """
+
+    BLOCKED_EXACT = {"/wp-login.php", "/xmlrpc.php"}
+    BLOCKED_PREFIXES = ("/wordpress/",)
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path
+        if path in self.BLOCKED_EXACT or any(path.startswith(p) for p in self.BLOCKED_PREFIXES):
+            logger.info("[PROBE_BLOCK] path=%s ip=%s", path, get_client_ip(request) or "0.0.0.0")
+            return HttpResponseNotFound()
+        return self.get_response(request)
 
 
 class RequestIDMiddleware:
