@@ -3,9 +3,15 @@ from fpdf import FPDF
 from PIL import Image as PILImage
 import json
 import os
+import re
+import warnings
 
 from .constants import THEMES, FONT_PATH
 from .utils import get_valid_image_paths, cleanup_temp_files
+
+# Known noisy warnings from fpdf.ttfonts on some Korean font cmap tables.
+warnings.filterwarnings("ignore", message=r"missing glyph .*", module=r"fpdf\.ttfonts")
+warnings.filterwarnings("ignore", message=r"cmap value too big/small: .*", module=r"fpdf\.ttfonts")
 
 class PDFEngine(FPDF):
     def __init__(self, theme_name, school_name, layout_version="v1"):
@@ -35,6 +41,9 @@ class PDFEngine(FPDF):
 
     def _safe_text(self, value):
         text = str(value) if value is not None else ""
+        # Keep common Latin/Korean punctuation/characters; drop unusual symbols
+        # that may trigger missing-glyph warnings in subset embedding.
+        text = re.sub(r"[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\u024F\u1100-\u11FF\u3131-\u318E\uAC00-\uD7A3\u3000-\u303F]", "", text)
         if self.font_available:
             return text
         return text.encode("latin-1", "replace").decode("latin-1")
