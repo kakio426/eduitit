@@ -275,6 +275,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+if TESTING:
+    MEDIA_ROOT = BASE_DIR / "test_media"
 
 # Cloudinary 설정
 print("=" * 80)

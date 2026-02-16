@@ -483,7 +483,6 @@ class ArticleArchiveView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["export_layout_version"] = _get_export_layout_version(self.request)
-        context["preview_items"] = _build_export_preview_items(self.object)
         return context
 
     def post(self, request):
@@ -731,8 +730,12 @@ class ArticlePPTDownloadView(View):
                 article.ppt_file.delete(save=False)
                 article.ppt_file = None
                 article.save(update_fields=["ppt_file"])
-            except Exception:
-                pass
+            except Exception as cache_err:
+                logger.warning(
+                    "Failed to validate cached PPT for article %s (%s). Regenerating.",
+                    article.id,
+                    cache_err,
+                )
 
         # 2. 파일이 없으면 생성 시작
         try:
@@ -779,10 +782,12 @@ class ArticlePPTDownloadView(View):
             )
             
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Lazy PPT Generation failed: {e}", exc_info=True)
-            messages.error(request, f"PPT 생성 중 오류가 발생했습니다: {str(e)}")
+            logger.error("Lazy PPT Generation failed for article %s: %s", article.id, e, exc_info=True)
+            error_text = str(e)
+            if "not a valid pptx zip" in error_text.lower() or "zip" in error_text.lower():
+                messages.error(request, "PPT 파일 생성 결과가 손상되어 다시 시도해주세요.")
+            else:
+                messages.error(request, f"PPT 생성 중 오류가 발생했습니다: {error_text}")
             return redirect('autoarticle:detail', pk=pk)
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
