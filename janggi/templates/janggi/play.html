@@ -253,6 +253,7 @@
 {% block extra_js %}
 <script>
     var JANGGI_ENGINE_PATH = "{% static 'janggi/js/engine/stockfish.js' %}";
+    var JANGGI_ENGINE_WASM_PATH = "{% static 'janggi/js/engine/stockfish.wasm' %}";
     var JANGGI_ENGINE_WORKER_PATH = "{% static 'janggi/js/engine/stockfish.worker.js' %}";
     var JANGGI_STATIC_PIECE_BASE = "{% static 'janggi/images/pieces/' %}";
     var JANGGI_IS_AI_MODE = "{% if mode == 'ai' %}1{% else %}0{% endif %}" === "1";

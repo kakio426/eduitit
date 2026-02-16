@@ -94,7 +94,10 @@
         return Stockfish({
             locateFile: function (file) {
                 if (file === "stockfish.wasm") {
-                    return JANGGI_ENGINE_PATH.replace("stockfish.js", "stockfish.wasm");
+                    if (typeof JANGGI_ENGINE_WASM_PATH === "string" && JANGGI_ENGINE_WASM_PATH.length > 0) {
+                        return JANGGI_ENGINE_WASM_PATH;
+                    }
+                    return JANGGI_ENGINE_PATH.replace(/stockfish(?:\.[a-z0-9_-]+)?\.js$/i, "stockfish.wasm");
                 }
                 return file;
             }
@@ -109,20 +112,6 @@
         });
     }
 
-    function initByWorker() {
-        setStatus("엔진 시작 중...");
-        engine = new Worker(JANGGI_ENGINE_WORKER_PATH || JANGGI_ENGINE_PATH);
-        engineKind = "worker";
-        engine.onmessage = function (evt) {
-            onEngineLine(evt.data);
-        };
-        engine.onerror = function () {
-            setStatus("엔진 초기화 실패");
-            log("[Janggi] Worker init failed.");
-        };
-        send("uci");
-    }
-
     function init() {
         if (engine || engineBooting) return;
         engineBooting = true;
@@ -132,7 +121,7 @@
         initByFactory()
             .catch(function (err) {
                 log("[Janggi] Factory init failed: " + err.message);
-                initByWorker();
+                setStatus("Engine initialization failed");
             })
             .finally(function () {
                 engineBooting = false;
