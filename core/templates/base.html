@@ -755,6 +755,25 @@
                 }, 300);
             }
 
+            // Force reset modal UI state (useful for back/forward cache restore)
+            function resetUnifiedModalState() {
+                const modal = document.getElementById('unifiedModal');
+                const backdrop = document.getElementById('modalBackdrop');
+                const panel = document.getElementById('modalPanel');
+                const loading = document.getElementById('modalLoading');
+                const content = document.getElementById('modalContent');
+                if (!modal || !backdrop || !panel) return;
+
+                modal.classList.add('hidden');
+                backdrop.classList.add('opacity-0');
+                panel.classList.remove('scale-100', 'opacity-100');
+                panel.classList.add('scale-95', 'opacity-0');
+                document.body.style.overflow = 'auto';
+
+                if (loading) loading.classList.add('hidden');
+                if (content) content.innerHTML = '';
+            }
+
             // Close on escape key
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && !document.getElementById('unifiedModal').classList.contains('hidden')) {
@@ -770,6 +789,21 @@
                         e.stopPropagation();
                     });
                 }
+
+                // If user enters a service from modal, close modal first.
+                const content = document.getElementById('modalContent');
+                if (content) {
+                    content.addEventListener('click', function (e) {
+                        const anchor = e.target.closest('a[href]');
+                        if (!anchor) return;
+                        closeModal();
+                    });
+                }
+            });
+
+            // Handle browser back/forward cache restoring old open-modal state.
+            window.addEventListener('pageshow', function () {
+                resetUnifiedModalState();
             });
         </script>
 
