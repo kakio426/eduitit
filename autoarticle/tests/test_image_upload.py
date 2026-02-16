@@ -64,6 +64,8 @@ class AutoArticleImageUploadTest(TestCase):
             if path.startswith('http'):
                 self.assertIn('cloudinary', path.lower())
                 continue
+            if path.startswith(settings.MEDIA_URL):
+                path = path[len(settings.MEDIA_URL):]
             full_path = os.path.join(settings.MEDIA_ROOT, path)
             self.assertTrue(os.path.exists(full_path), f"File {full_path} was not created")
             # Cleanup

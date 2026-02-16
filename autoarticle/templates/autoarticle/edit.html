@@ -5,7 +5,6 @@
 <div class="min-h-screen bg-[#F0F2F5] pt-32 pb-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto space-y-8">
 
-        <!-- Header & Navigation -->
         <div class="flex items-center justify-between" data-aos="fade-down">
             <a href="{% url 'autoarticle:detail' article.id %}"
                 class="flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-colors font-bold text-lg">
@@ -13,61 +12,107 @@
             </a>
         </div>
 
-        <!-- Edit Form Card -->
         <div class="clay-card bg-white p-12" data-aos="fade-up">
             <h2 class="text-4xl font-bold text-gray-800 mb-8">기사 수정</h2>
 
-            <form method="post" action="{% url 'autoarticle:edit' article.id %}">
+            <form method="post" action="{% url 'autoarticle:edit' article.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 <div class="space-y-8">
-                    <!-- Title -->
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-3">제목</label>
                         <input type="text" name="title" value="{{ article.title }}"
                             class="w-full text-2xl font-bold p-5 border-2 border-gray-100 rounded-2xl bg-gray-50 focus:border-purple-400 focus:outline-none transition-colors">
                     </div>
 
-                    <!-- Content -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-3">학년</label>
+                            <select name="grade"
+                                class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl bg-gray-50 focus:border-purple-400 focus:outline-none transition-colors">
+                                <option value="전교생" {% if article.grade == '전교생' %}selected{% endif %}>전교생</option>
+                                <option value="1학년" {% if article.grade == '1학년' %}selected{% endif %}>1학년</option>
+                                <option value="2학년" {% if article.grade == '2학년' %}selected{% endif %}>2학년</option>
+                                <option value="3학년" {% if article.grade == '3학년' %}selected{% endif %}>3학년</option>
+                                <option value="4학년" {% if article.grade == '4학년' %}selected{% endif %}>4학년</option>
+                                <option value="5학년" {% if article.grade == '5학년' %}selected{% endif %}>5학년</option>
+                                <option value="6학년" {% if article.grade == '6학년' %}selected{% endif %}>6학년</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-3">반</label>
+                            <input type="text" name="class_name" value="{{ article.class_name }}" placeholder="예: 3반, 풀꽃반"
+                                class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl bg-gray-50 focus:border-purple-400 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-3">장소</label>
+                            <input type="text" name="location" value="{{ article.location }}"
+                                class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl bg-gray-50 focus:border-purple-400 focus:outline-none transition-colors">
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-3">본문</label>
                         <textarea name="content" rows="15"
                             class="w-full p-5 border-2 border-gray-100 rounded-2xl bg-gray-50 text-lg leading-relaxed focus:border-purple-400 focus:outline-none transition-colors">{{ article.full_text }}</textarea>
                     </div>
 
-                    <!-- Hashtags -->
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-3">해시태그</label>
-                        <input type="text" name="hashtags" value="{{ hashtags_str }}"
-                            placeholder="#태그1 #태그2 #태그3"
+                        <input type="text" name="hashtags" value="{{ hashtags_str }}" placeholder="#태그1 #태그2 #태그3"
                             class="w-full p-5 border-2 border-gray-100 rounded-2xl bg-gray-50 focus:border-purple-400 focus:outline-none transition-colors">
-                        <p class="mt-2 text-sm text-gray-400">띄어쓰기로 구분하여 입력하세요.</p>
+                        <p class="mt-2 text-sm text-gray-400">띄어쓰기로 구분해 입력하세요.</p>
                     </div>
 
-                    <!-- Info (Read-only) -->
+                    <div class="p-6 bg-gray-50 rounded-2xl border-2 border-gray-100 space-y-4">
+                        <h4 class="text-sm font-bold text-gray-500 uppercase">사진 교체</h4>
+
+                        {% if article.images %}
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {% for img_path in article.images %}
+                            <label class="block rounded-2xl overflow-hidden border-2 border-gray-200 bg-white cursor-pointer">
+                                <img src="{{ img_path }}" alt="첨부 이미지" class="w-full h-32 object-cover" loading="lazy">
+                                <div class="p-2 text-xs text-gray-600 flex items-center gap-2">
+                                    <input type="checkbox" name="remove_image_indexes" value="{{ forloop.counter0 }}">
+                                    이 사진 제거
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500">현재 저장된 사진이 없습니다.</p>
+                        {% endif %}
+
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">새 사진 추가 (최대 5장)</label>
+                            <input type="file" name="images" multiple accept="image/*"
+                                class="w-full px-4 py-3 rounded-2xl border-2 border-dashed border-gray-200 hover:border-purple-400 bg-white transition-colors cursor-pointer">
+                            <p class="mt-2 text-sm text-gray-400">체크한 사진은 삭제되고, 새 사진은 추가됩니다.</p>
+                        </div>
+                    </div>
+
                     <div class="p-6 bg-gray-50 rounded-2xl border-2 border-gray-100">
-                        <h4 class="text-sm font-bold text-gray-500 uppercase mb-4">기사 정보 (수정 불가)</h4>
+                        <h4 class="text-sm font-bold text-gray-500 uppercase mb-4">기사 정보</h4>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-gray-600">
                             <div>
                                 <span class="block text-xs text-gray-400">학교명</span>
                                 <span class="font-bold">{{ article.school_name }}</span>
                             </div>
                             <div>
-                                <span class="block text-xs text-gray-400">학년</span>
-                                <span class="font-bold">{{ article.grade }}</span>
+                                <span class="block text-xs text-gray-400">대상</span>
+                                <span class="font-bold">{{ article.audience_label }}</span>
                             </div>
                             <div>
                                 <span class="block text-xs text-gray-400">일시</span>
                                 <span class="font-bold">{{ article.event_date }}</span>
                             </div>
                             <div>
-                                <span class="block text-xs text-gray-400">장소</span>
-                                <span class="font-bold">{{ article.location }}</span>
+                                <span class="block text-xs text-gray-400">행사명</span>
+                                <span class="font-bold">{{ article.event_name }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Actions -->
                     <div class="flex gap-4 pt-6">
                         <button type="submit"
                             class="flex-1 py-5 rounded-3xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold text-xl shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-95 transition-all">

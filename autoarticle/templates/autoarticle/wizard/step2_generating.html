@@ -8,17 +8,17 @@
         <div class='mb-6 text-7xl animate-bounce-slow'>
             ✍️
         </div>
-        
+
         <!-- Creative Loading Message -->
         <h3 class='text-3xl font-bold text-gray-800 mb-4 font-display' id='loadingMessage'>
             베테랑 기자 AI가 열심히 취재 중이에요
         </h3>
-        
+
         <!-- Subtext -->
         <p class='text-lg text-gray-500 font-hand mb-6'>
-            평균 10초 정도 소요됩니다
+            잠시만 기다려주세요
         </p>
-        
+
         <!-- Progress Dots -->
         <div class='flex justify-center gap-2'>
             <div class='w-3 h-3 bg-purple-500 rounded-full animate-pulse' style='animation-delay: 0s'></div>
@@ -42,10 +42,10 @@
         '독자들이 좋아할 표현을 찾고 있어요',
         '마지막 퇴고 작업 중이에요'
     ];
-    
+
     let messageIndex = 0;
     const messageElement = document.getElementById('loadingMessage');
-    
+
     // Rotate messages every 2 seconds
     const messageInterval = setInterval(() => {
         messageIndex = (messageIndex + 1) % messages.length;
@@ -55,7 +55,7 @@
             messageElement.classList.remove('opacity-0');
         }, 300);
     }, 2000);
-    
+
     // Submit form after 500ms
     window.onload = function() {
         setTimeout(() => {
@@ -76,7 +76,7 @@
             transform: scale(1);
         }
     }
-    
+
     @keyframes bounce-slow {
         0%, 100% {
             transform: translateY(0);
@@ -85,19 +85,19 @@
             transform: translateY(-10px);
         }
     }
-    
+
     .animate-fade-in {
         animation: fade-in 0.3s ease-out;
     }
-    
+
     .animate-bounce-slow {
         animation: bounce-slow 2s ease-in-out infinite;
     }
-    
+
     #loadingMessage {
         transition: opacity 0.3s ease-in-out;
     }
-    
+
     .clay-card {
         box-shadow: 20px 20px 60px #d1d9e6, -20px -20px 60px #ffffff;
     }

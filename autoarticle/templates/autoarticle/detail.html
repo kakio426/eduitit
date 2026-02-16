@@ -33,7 +33,7 @@
                         <i class="fa-solid fa-location-dot"></i> {{ article.location }}
                     </span>
                     <span class="flex items-center gap-2">
-                        <i class="fa-solid fa-graduation-cap"></i> {{ article.grade }}
+                        <i class="fa-solid fa-graduation-cap"></i> {{ article.audience_label }}
                     </span>
                     <span class="flex items-center gap-2">
                         <i class="fa-solid fa-school"></i> {{ article.school_name }}
@@ -100,6 +100,36 @@
         <!-- Download & Tools Card -->
         <div class="clay-card bg-white p-8 border-2 border-purple-100" data-aos="fade-up" data-aos-delay="100">
             <h3 class="text-2xl font-bold text-gray-800 mb-6">📂 자동 생성된 파일 다운로드</h3>
+            <form method="post" action="{% url 'autoarticle:export_layout' %}" class="mb-6 flex items-center gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <label class="text-sm font-bold text-gray-600">출력 디자인</label>
+                <select name="layout_version" class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                    <option value="v1" {% if export_layout_version == 'v1' %}selected{% endif %}>v1 클래식</option>
+                    <option value="v2" {% if export_layout_version == 'v2' %}selected{% endif %}>v2 클린</option>
+                    <option value="v3" {% if export_layout_version == 'v3' %}selected{% endif %}>v3 매거진</option>
+                </select>
+                <button type="submit" class="px-3 py-2 rounded-xl bg-gray-800 text-white text-sm font-bold">적용</button>
+            </form>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                {% for p in preview_items %}
+                <a href="{{ p.href }}" class="group rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                    <div class="relative h-24">
+                        {% if p.bg_url %}
+                        <img src="{{ p.bg_url }}" alt="{{ p.name }} preview" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/35"></div>
+                        {% else %}
+                        <div class="w-full h-full bg-gradient-to-br {{ p.tone }}"></div>
+                        {% endif %}
+                        <span class="absolute top-2 left-2 px-2 py-1 rounded-lg bg-white/90 text-[11px] font-black text-gray-700">{{ p.name }}</span>
+                    </div>
+                    <div class="px-3 py-2">
+                        <p class="text-xs text-gray-500">{{ p.subtitle }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <a href="{% url 'autoarticle:ppt_download' article.id %}"
                     class="p-6 rounded-3xl bg-orange-50 border-2 border-orange-100 flex items-center justify-between group hover:bg-orange-100 transition-all shadow-clay">

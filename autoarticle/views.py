@@ -17,7 +17,6 @@ from .engines.pdf_engine import PDFEngine
 from .engines.card_engine import CardNewsEngine
 from .engines.word_engine import WordEngine
 from .engines.rag_service import StyleRAGService
-from .engines.rag_service import StyleRAGService
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
@@ -71,6 +70,142 @@ def _delete_article_assets(article):
             article.pdf_file.delete(save=False)
     except Exception as e:
         logger.warning(f"Failed to delete pdf file for article {article.id}: {e}")
+
+
+def _build_audience_label(grade, class_name):
+    grade = (grade or "").strip()
+    class_name = (class_name or "").strip()
+
+    if grade and class_name and grade != "전교생":
+        return f"{grade} {class_name}"
+    if class_name and (not grade or grade == "전교생"):
+        return class_name
+    return grade or "전교생"
+
+
+def _delete_image_asset(img_path):
+    if not isinstance(img_path, str):
+        return
+
+    try:
+        if "cloudinary.com" in img_path:
+            public_id = _extract_cloudinary_public_id(img_path)
+            if public_id:
+                import cloudinary.uploader
+
+                cloudinary.uploader.destroy(public_id, resource_type="image", invalidate=True)
+            return
+
+        if img_path.startswith(settings.MEDIA_URL):
+            relative = img_path[len(settings.MEDIA_URL) :]
+            local_path = os.path.join(settings.MEDIA_ROOT, relative)
+            if os.path.exists(local_path):
+                os.remove(local_path)
+    except Exception as e:
+        logger.warning(f"Failed to delete image asset: {img_path} ({e})")
+
+
+def _upload_images(uploaded_images, max_count=5):
+    import uuid
+
+    image_paths = []
+    upload_errors = []
+    allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    max_image_size = 10 * 1024 * 1024  # 10MB
+    use_cloudinary = getattr(settings, "USE_CLOUDINARY", False)
+
+    if not uploaded_images:
+        return image_paths, upload_errors
+
+    logger.info(f"Processing {len(uploaded_images)} images. USE_CLOUDINARY={use_cloudinary}")
+    for idx, img in enumerate(uploaded_images[:max_count]):
+        ext = os.path.splitext(img.name)[1].lower()
+
+        if ext not in allowed_extensions:
+            upload_errors.append(f"{img.name}: 지원하지 않는 파일 형식")
+            continue
+        if img.size > max_image_size:
+            upload_errors.append(f"{img.name}: 파일 크기 초과 (최대 10MB)")
+            continue
+
+        try:
+            if use_cloudinary:
+                import cloudinary.uploader
+
+                result = cloudinary.uploader.upload(
+                    img,
+                    folder="autoarticle/images",
+                    public_id=str(uuid.uuid4()),
+                    resource_type="image",
+                )
+                secure_url = result.get("secure_url")
+                if secure_url:
+                    image_paths.append(secure_url)
+                else:
+                    upload_errors.append(f"{img.name}: Cloudinary URL 없음")
+            else:
+                from django.core.files.storage import FileSystemStorage
+
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, "autoarticle/images"))
+                filename = f"{uuid.uuid4()}{ext}"
+                name = fs.save(filename, img)
+                image_paths.append(f"{settings.MEDIA_URL}autoarticle/images/{name}")
+        except Exception as e:
+            upload_errors.append(f"{img.name}: 업로드 중 오류 - {str(e)}")
+            logger.error(f"Image upload failed: {img.name}", exc_info=True)
+
+    return image_paths, upload_errors
+
+
+def _get_export_layout_version(request):
+    session_value = request.session.get("autoarticle_export_layout")
+    if session_value in {"v1", "v2", "v3"}:
+        return session_value
+    return getattr(settings, "AUTOARTICLE_EXPORT_LAYOUT", "v1")
+
+
+def _build_export_preview_items(article):
+    first_image = (article.images or [None])[0]
+    tone_map = {
+        "pdf": "from-blue-500 to-cyan-500",
+        "ppt": "from-orange-500 to-amber-500",
+        "word": "from-indigo-500 to-violet-500",
+        "card": "from-emerald-500 to-teal-500",
+    }
+    return [
+        {
+            "id": "pdf",
+            "name": "PDF",
+            "subtitle": "인쇄형 리포트",
+            "href": reverse("autoarticle:pdf_download", kwargs={"pk": article.pk}),
+            "bg_url": first_image,
+            "tone": tone_map["pdf"],
+        },
+        {
+            "id": "ppt",
+            "name": "PPT",
+            "subtitle": "수업 발표 자료",
+            "href": reverse("autoarticle:ppt_download", kwargs={"pk": article.pk}),
+            "bg_url": first_image,
+            "tone": tone_map["ppt"],
+        },
+        {
+            "id": "word",
+            "name": "WORD",
+            "subtitle": "편집 가능한 문서",
+            "href": reverse("autoarticle:word", kwargs={"pk": article.pk}),
+            "bg_url": first_image,
+            "tone": tone_map["word"],
+        },
+        {
+            "id": "card",
+            "name": "CARD PNG",
+            "subtitle": "SNS 카드뉴스",
+            "href": reverse("autoarticle:cardnews", kwargs={"pk": article.pk}),
+            "bg_url": first_image,
+            "tone": tone_map["card"],
+        },
+    ]
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
 class ArticleCreateView(View):
@@ -164,6 +299,11 @@ class ArticleCreateView(View):
             input_data = {
                 'school': request.POST.get('school_name', '스쿨잇 초등학교'),
                 'grade': request.POST.get('grade', '전교생'),
+                'class_name': request.POST.get('class_name', ''),
+                'audience': _build_audience_label(
+                    request.POST.get('grade', '전교생'),
+                    request.POST.get('class_name', ''),
+                ),
                 'event_name': request.POST.get('event_name'),
                 'location': request.POST.get('location'),
                 'date': request.POST.get('date'),
@@ -188,91 +328,13 @@ class ArticleCreateView(View):
                         image_paths.append(url)
                 logger.info(f"Received {len(image_paths)} direct URLs from client.")
 
-            # 2. 서버를 통한 파일 업로드 처리 (기존 방식 유지)
-            if uploaded_images:
-                import uuid
-
-                ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-                MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-                use_cloudinary = getattr(settings, 'USE_CLOUDINARY', False)
-                
-                # [DEBUG] Cloudinary 설정 상태 강제 출력
-                try:
-                    debug_cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', 'Not Set')
-                    debug_api_key = settings.CLOUDINARY_STORAGE.get('API_KEY', 'Not Set')
-                    # API Key는 보안상 일부만 출력
-                    if len(debug_api_key) > 5:
-                        debug_api_key_masked = debug_api_key[:5] + "***"
-                    else:
-                        debug_api_key_masked = debug_api_key
-
-                    logger.info(f"🔍 DEBUG: USE_CLOUDINARY={use_cloudinary}")
-                    logger.info(f"🔍 DEBUG: CLOUDINARY_STORAGE CloudName={debug_cloud_name}, APIKey={debug_api_key_masked}")
-                except Exception as e:
-                    logger.error(f"🔍 DEBUG LOGGING FAILED: {e}")
-
-                logger.info(f"Processing {len(uploaded_images)} images. USE_CLOUDINARY={use_cloudinary}")
-
-                for idx, img in enumerate(uploaded_images[:5]):
-                    ext = os.path.splitext(img.name)[1].lower()
-
-                    # Validate file
-                    if ext not in ALLOWED_IMAGE_EXTENSIONS:
-                        upload_errors.append(f"{img.name}: 지원하지 않는 파일 형식")
-                        continue
-                    if img.size > MAX_IMAGE_SIZE:
-                        upload_errors.append(f"{img.name}: 파일 크기 초과 (최대 10MB)")
-                        continue
-
-                    try:
-                        if use_cloudinary:
-                            # Cloudinary upload (REQUIRED for production)
-                            try:
-                                import cloudinary.uploader
-                                logger.info(f"Uploading image {idx+1} to Cloudinary: {img.name}")
-
-                                result = cloudinary.uploader.upload(
-                                    img,
-                                    folder='autoarticle/images',
-                                    public_id=str(uuid.uuid4()),
-                                    resource_type='image'
-                                )
-
-                                secure_url = result.get('secure_url')
-                                if secure_url:
-                                    image_paths.append(secure_url)
-                                    logger.info(f"SUCCESS: Uploaded to {secure_url}")
-                                else:
-                                    error_msg = f"{img.name}: Cloudinary URL 없음"
-                                    upload_errors.append(error_msg)
-                                    logger.error(error_msg)
-
-                            except Exception as cloud_err:
-                                error_msg = f"{img.name}: Cloudinary 업로드 실패 - {str(cloud_err)}"
-                                upload_errors.append(error_msg)
-                                logger.error(error_msg, exc_info=True)
-                        else:
-                            # Local filesystem (for development only)
-                            from django.core.files.storage import FileSystemStorage
-                            fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'autoarticle/images'))
-                            filename = f"{uuid.uuid4()}{ext}"
-                            name = fs.save(filename, img)
-                            url = f"{settings.MEDIA_URL}autoarticle/images/{name}"
-                            image_paths.append(url)
-                            logger.info(f"Saved locally: {url}")
-
-                    except Exception as e:
-                        error_msg = f"{img.name}: 업로드 중 오류 - {str(e)}"
-                        upload_errors.append(error_msg)
-                        logger.error(error_msg, exc_info=True)
-
-                # Alert user if there were errors
-                if upload_errors:
-                    for error in upload_errors:
-                        messages.warning(request, error)
-                        logger.warning(error)
-
-                logger.info(f"Image upload complete: {len(image_paths)} succeeded, {len(upload_errors)} failed")
+            # 2. 서버를 통한 파일 업로드 처리
+            uploaded_paths, upload_errors = _upload_images(uploaded_images, max_count=5)
+            image_paths.extend(uploaded_paths)
+            if upload_errors:
+                for error in upload_errors:
+                    messages.warning(request, error)
+                    logger.warning(error)
             
             # Save input data and images to session
             request.session['article_input'] = input_data
@@ -356,6 +418,7 @@ class ArticleCreateView(View):
                     user=request.user,
                     school_name=draft['input_data']['school'],
                     grade=draft['input_data']['grade'],
+                    class_name=draft['input_data'].get('class_name', ''),
                     event_name=draft['input_data']['event_name'],
                     location=draft['input_data']['location'],
                     event_date=draft['input_data']['date'],
@@ -393,6 +456,12 @@ class ArticleArchiveView(ListView):
     def get_queryset(self):
         return GeneratedArticle.objects.filter(user=self.request.user).order_by('-event_date', '-created_at')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["export_layout_version"] = _get_export_layout_version(self.request)
+        context["preview_items"] = _build_export_preview_items(self.object)
+        return context
+
     def post(self, request):
         action = request.POST.get('action')
         selected_ids = request.POST.getlist('selected_articles')
@@ -404,9 +473,10 @@ class ArticleArchiveView(ListView):
         articles = GeneratedArticle.objects.filter(id__in=selected_ids, user=request.user)
         school_name = request.session.get('autoarticle_school', '스쿨잇 초등학교')
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
+        layout_version = _get_export_layout_version(request)
 
         if action == 'generate_pdf':
-            pdf = PDFEngine(theme, school_name)
+            pdf = PDFEngine(theme, school_name, layout_version=layout_version)
             pdf.draw_cover()
             for art in articles:
                 art_data = {
@@ -414,7 +484,7 @@ class ArticleArchiveView(ListView):
                     'content': art.full_text,
                     'date': str(art.event_date),
                     'location': art.location,
-                    'grade': art.grade,
+                    'grade': art.audience_label,
                     'images': art.images or []
                 }
                 pdf.add_article(art_data, is_booklet=True)
@@ -429,7 +499,7 @@ class ArticleArchiveView(ListView):
             return response
 
         elif action == 'generate_ppt':
-            ppt_engine = PPTEngine(theme, school_name)
+            ppt_engine = PPTEngine(theme, school_name, layout_version=layout_version)
             ppt_articles = []
             for art in articles:
                 ppt_articles.append({
@@ -437,6 +507,7 @@ class ArticleArchiveView(ListView):
                     'content': art.content_summary_list,
                     'date': str(art.event_date),
                     'location': art.location,
+                    'grade': art.audience_label,
                     'images': art.images or []
                 })
 
@@ -446,7 +517,7 @@ class ArticleArchiveView(ListView):
             return response
 
         elif action == 'generate_word':
-            word_engine = WordEngine(theme, school_name)
+            word_engine = WordEngine(theme, school_name, layout_version=layout_version)
             word_articles = []
             for art in articles:
                 word_articles.append({
@@ -454,7 +525,7 @@ class ArticleArchiveView(ListView):
                     'content': art.full_text,
                     'date': str(art.event_date),
                     'location': art.location,
-                    'grade': art.grade,
+                    'grade': art.audience_label,
                     'images': art.images or []
                 })
 
@@ -483,18 +554,24 @@ class ArticleDetailView(DetailView):
     def get_queryset(self):
         return GeneratedArticle.objects.filter(user=self.request.user)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["export_layout_version"] = _get_export_layout_version(self.request)
+        return context
+
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
 class ArticleCardNewsView(View):
     def get(self, request, pk):
         article = get_object_or_404(GeneratedArticle, pk=pk, user=request.user)
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
+        layout_version = _get_export_layout_version(request)
 
-        engine = CardNewsEngine(theme)
+        engine = CardNewsEngine(theme, layout_version=layout_version)
         card = engine.create_card(
             title=article.title,
             date=str(article.event_date),
             location=article.location,
-            grade=article.grade,
+            grade=article.audience_label,
             hashtags=article.hashtags,
             images=article.images
         )
@@ -513,14 +590,15 @@ class ArticleWordView(View):
     def get(self, request, pk):
         article = get_object_or_404(GeneratedArticle, pk=pk, user=request.user)
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
+        layout_version = _get_export_layout_version(request)
 
-        word_engine = WordEngine(theme, article.school_name)
+        word_engine = WordEngine(theme, article.school_name, layout_version=layout_version)
         article_data = {
             'title': article.title,
             'content': article.full_text,
             'date': str(article.event_date),
             'location': article.location,
-            'grade': article.grade,
+            'grade': article.audience_label,
             'images': article.images or []
         }
 
@@ -542,6 +620,22 @@ class ArticleDeleteView(View):
 
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
+class ArticleExportLayoutView(View):
+    """출력물 디자인 버전 선택 (세션 저장)"""
+
+    def post(self, request):
+        version = request.POST.get("layout_version", "").strip()
+        if version in {"v1", "v2", "v3"}:
+            request.session["autoarticle_export_layout"] = version
+            messages.success(request, f"출력물 디자인을 {version.upper()}로 변경했습니다.")
+        else:
+            messages.warning(request, "지원하지 않는 디자인 버전입니다.")
+
+        next_url = request.POST.get("next") or reverse("autoarticle:archive")
+        return redirect(next_url)
+
+
+@method_decorator(login_required(login_url='account_login'), name='dispatch')
 class ArticleEditView(View):
     """기사 수정"""
     def get(self, request, pk):
@@ -557,13 +651,38 @@ class ArticleEditView(View):
 
         article.title = request.POST.get('title', article.title)
         article.full_text = request.POST.get('content', article.full_text)
+        article.grade = request.POST.get('grade', article.grade).strip() or article.grade
+        article.class_name = request.POST.get('class_name', article.class_name).strip()
+        article.location = request.POST.get('location', article.location).strip()
 
         hashtags_str = request.POST.get('hashtags', '')
-        if hashtags_str:
-            article.hashtags = [t.strip('#').strip() for t in hashtags_str.split() if t.strip()]
+        article.hashtags = [t.strip('#').strip() for t in hashtags_str.split() if t.strip()]
+
+        # 이미지 처리: 기본은 유지, 선택 삭제 + 신규 업로드 추가
+        current_images = list(article.images or [])
+        remove_indexes = request.POST.getlist('remove_image_indexes')
+        remove_index_set = set()
+        for idx in remove_indexes:
+            if idx.isdigit():
+                remove_index_set.add(int(idx))
+
+        kept_images = []
+        for idx, path in enumerate(current_images):
+            if idx in remove_index_set:
+                _delete_image_asset(path)
+            else:
+                kept_images.append(path)
+
+        uploaded_images = request.FILES.getlist('images')
+        new_paths, upload_errors = _upload_images(uploaded_images, max_count=5)
+        for error in upload_errors:
+            messages.warning(request, error)
+
+        max_images = 5
+        article.images = (kept_images + new_paths)[:max_images]
 
         article.save()
-        messages.success(request, "기사가 수정되었습니다.")
+        messages.success(request, "기사가 수정되었습니다. 사진 변경사항도 반영되었습니다.")
         return redirect('autoarticle:detail', pk=pk)
 
 
@@ -596,13 +715,15 @@ class ArticlePPTDownloadView(View):
 
             # PPT 생성
             theme = request.session.get('autoarticle_theme', ArticleCreateView.THEMES[0])
-            ppt_engine = PPTEngine(theme, article.school_name)
+            layout_version = _get_export_layout_version(request)
+            ppt_engine = PPTEngine(theme, article.school_name, layout_version=layout_version)
             
             article_data = {
                 'title': article.title,
                 'content': summary_points,
                 'date': article.event_date.strftime('%Y.%m.%d') if article.event_date else '',
                 'location': article.location,
+                'grade': article.audience_label,
                 'images': article.images or []
             }
             
@@ -627,7 +748,8 @@ class ArticlePDFDownloadView(View):
         article = get_object_or_404(GeneratedArticle, pk=pk, user=request.user)
         try:
             theme = request.session.get('autoarticle_theme', ArticleCreateView.THEMES[0])
-            pdf_engine = PDFEngine(theme, article.school_name)
+            layout_version = _get_export_layout_version(request)
+            pdf_engine = PDFEngine(theme, article.school_name, layout_version=layout_version)
             pdf_engine.draw_cover()
 
             article_data = {
@@ -635,7 +757,7 @@ class ArticlePDFDownloadView(View):
                 'content': article.full_text,
                 'date': article.event_date.strftime('%Y.%m.%d') if article.event_date else '',
                 'location': article.location,
-                'grade': article.grade,
+                'grade': article.audience_label,
                 'images': article.images or []
             }
             pdf_engine.add_article(article_data, is_booklet=True)

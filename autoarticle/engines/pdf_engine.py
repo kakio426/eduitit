@@ -8,10 +8,11 @@ from .constants import THEMES, FONT_PATH
 from .utils import get_valid_image_paths, cleanup_temp_files
 
 class PDFEngine(FPDF):
-    def __init__(self, theme_name, school_name):
+    def __init__(self, theme_name, school_name, layout_version="v1"):
         super().__init__()
         self.theme = THEMES.get(theme_name, THEMES["웜 & 플레이풀"])
         self.school_name = school_name
+        self.layout_version = layout_version
         # Ensure font exists or fallback
         self.font_available = os.path.exists(FONT_PATH)
         if self.font_available:
@@ -83,6 +84,39 @@ class PDFEngine(FPDF):
     def draw_cover(self):
         self.is_cover_page = True
         self.add_page()
+        if self.layout_version in {"v2", "v3"}:
+            self.set_fill_color(250, 250, 250)
+            self.rect(0, 0, 210, 297, 'F')
+            if self.layout_version == "v3":
+                self.set_fill_color(26, 30, 40)
+            else:
+                self.set_fill_color(*self.theme["main"])
+            self.rect(0, 0, 210, 22, 'F')
+
+            self.set_y(95)
+            if self.font_available:
+                self.set_font("NanumGothic", "", 40)
+            else:
+                self.set_font("Arial", "", 34)
+            self.set_text_color(30, 30, 30)
+            self.cell(190, 25, self._safe_text(self.school_name), align='C', ln=True)
+
+            self.set_y(122)
+            if self.font_available:
+                self.set_font("NanumGothic", "", 18)
+            else:
+                self.set_font("Arial", "", 16)
+            if self.layout_version == "v3":
+                self.set_text_color(26, 30, 40)
+            else:
+                self.set_text_color(*self.theme["main"])
+            import datetime
+            now = datetime.datetime.now()
+            self.cell(190, 15, f"{now.year}학년도 {now.month}월 뉴스레터", align='C', ln=True)
+            self.set_draw_color(230, 230, 230)
+            self.line(35, 155, 175, 155)
+            self.cover_drawn = True
+            return
         # 표지는 상단 여백을 무시하고 전체 배경색 칠함
         self.set_fill_color(*self.theme["sub"])
         self.rect(0, 0, 210, 297, 'F')
@@ -226,13 +260,16 @@ class PDFEngine(FPDF):
                 if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
-            self.set_fill_color(248, 248, 248)
+            if self.layout_version in {"v2", "v3"}:
+                self.set_fill_color(244, 246, 250)
+            else:
+                self.set_fill_color(248, 248, 248)
             self.set_draw_color(220, 220, 220)
             self.cell(190, 8, meta_info, border=1, fill=True, align='L')
             y_cursor += 15
             
             # 3. 이미지 영역 (최대 100mm) - URL 및 로컬 파일 모두 지원
-            valid_img_paths = get_valid_image_paths(imgs, max_count=2)
+            valid_img_paths = get_valid_image_paths(imgs, max_count=4)
             temp_files = [p for p in valid_img_paths if p not in (imgs if isinstance(imgs, list) else [])]
 
             if valid_img_paths:
@@ -257,21 +294,34 @@ class PDFEngine(FPDF):
                         y_cursor += img_h + 10
                     except:
                         y_cursor += 10
-                else:
-                    # 사진 2개 이상: 좌우 나란히 고정 크기 (각 90mm 너비)
+                elif img_count == 2:
+                    # 사진 2개: 좌우 나란히
                     fixed_w = 90
-                    fixed_h = 70  # 고정 높이
+                    fixed_h = 70
                     gap = 10
-
                     try:
-                        # 왼쪽 사진
                         self.image(valid_img_paths[0], x=10, y=y_cursor, w=fixed_w, h=fixed_h)
-
-                        # 오른쪽 사진
-                        if len(valid_img_paths) > 1:
-                            self.image(valid_img_paths[1], x=10 + fixed_w + gap, y=y_cursor, w=fixed_w, h=fixed_h)
-
+                        self.image(valid_img_paths[1], x=10 + fixed_w + gap, y=y_cursor, w=fixed_w, h=fixed_h)
                         y_cursor += fixed_h + 10
+                    except:
+                        y_cursor += 10
+                else:
+                    # 사진 3~4개: 2x2 그리드
+                    grid_w = 90
+                    grid_h = 46
+                    gap_x = 10
+                    gap_y = 8
+                    positions = [
+                        (10, y_cursor),
+                        (10 + grid_w + gap_x, y_cursor),
+                        (10, y_cursor + grid_h + gap_y),
+                        (10 + grid_w + gap_x, y_cursor + grid_h + gap_y),
+                    ]
+                    try:
+                        for idx, path in enumerate(valid_img_paths[:4]):
+                            x, y = positions[idx]
+                            self.image(path, x=x, y=y, w=grid_w, h=grid_h)
+                        y_cursor += (grid_h * 2) + gap_y + 10
                     except:
                         y_cursor += 10
 
@@ -346,7 +396,10 @@ class PDFEngine(FPDF):
                 if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
-            self.set_fill_color(248, 248, 248)
+            if self.layout_version in {"v2", "v3"}:
+                self.set_fill_color(244, 246, 250)
+            else:
+                self.set_fill_color(248, 248, 248)
             self.set_draw_color(220, 220, 220)
             self.set_x(10)
             self.cell(190, 8, meta_info, border=1, fill=True, align='L')

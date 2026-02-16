@@ -2,12 +2,14 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 from .constants import FONT_PATH, THEMES
+from .utils import get_valid_images
 
 class CardNewsEngine:
-    def __init__(self, theme_name):
+    def __init__(self, theme_name, layout_version="v1"):
         self.theme = THEMES[theme_name]
         self.size = (1080, 1080)
         self.font_path = FONT_PATH
+        self.layout_version = layout_version
         
     def _get_font(self, size, bold=False):
         return ImageFont.truetype(self.font_path, size)
@@ -45,6 +47,11 @@ class CardNewsEngine:
         return int(y)
 
     def create_card(self, title, date, location, grade, hashtags, images):
+        if self.layout_version == "v3":
+            return self._create_card_v3(title, date, location, grade, hashtags, images)
+        if self.layout_version == "v2":
+            return self._create_card_v2(title, date, location, grade, hashtags, images)
+
         canvas = Image.new("RGB", self.size, (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
         
@@ -85,17 +92,81 @@ class CardNewsEngine:
         
         return canvas
 
+    def _create_card_v2(self, title, date, location, grade, hashtags, images):
+        canvas = Image.new("RGB", self.size, (250, 250, 247))
+        draw = ImageDraw.Draw(canvas)
+
+        main_rgb = self.theme["main"]
+        accent_rgb = self.theme["accent"]
+
+        draw.rounded_rectangle((40, 40, 1040, 1040), radius=32, fill=(255, 255, 255), outline=(235, 235, 235), width=3)
+        draw.rectangle((40, 40, 1040, 125), fill=main_rgb)
+        draw.text((70, 68), "SCHOOL NEWS", font=self._get_font(24), fill=(255, 255, 255))
+        draw.text((890, 68), date or "", font=self._get_font(22), fill=(255, 255, 255))
+
+        audience = grade if grade else "소식"
+        draw.rounded_rectangle((70, 150, 260, 196), radius=20, fill=(243, 247, 255))
+        draw.text((84, 162), audience, font=self._get_font(20), fill=main_rgb)
+
+        title_y = 220
+        next_y = self._draw_wrapped_text(draw, title, (70, title_y), self._get_font(48), 940, (24, 24, 24), max_lines=2)
+
+        loc_y = next_y + 8
+        if location:
+            draw.text((70, loc_y), f"📍 {location}", font=self._get_font(24), fill=accent_rgb)
+            img_y = loc_y + 50
+        else:
+            img_y = loc_y + 18
+
+        img_w = 940
+        img_h = 520
+        img_box = (70, int(img_y), 70 + img_w, int(img_y + img_h))
+        draw.rounded_rectangle((68, int(img_y - 2), 72 + img_w, int(img_y + img_h + 2)), radius=18, fill=(246, 246, 246))
+
+        if images:
+            self._render_image_grid(canvas, images, img_box)
+
+        tag_y = img_y + img_h + 24
+        tag_str = " ".join([f"#{t}" for t in hashtags])
+        self._draw_wrapped_text(draw, tag_str, (70, tag_y), self._get_font(30), 940, main_rgb, max_lines=2)
+        draw.text((820, 1000), "AI School Story", font=self._get_font(18), fill=(205, 205, 205))
+        return canvas
+
+    def _create_card_v3(self, title, date, location, grade, hashtags, images):
+        canvas = Image.new("RGB", self.size, (247, 245, 240))
+        draw = ImageDraw.Draw(canvas)
+        main_rgb = self.theme["main"]
+        accent_rgb = self.theme["accent"]
+
+        draw.rectangle((0, 0, 1080, 90), fill=(20, 24, 32))
+        draw.text((50, 30), "MONTHLY SCHOOL MAGAZINE", font=self._get_font(22), fill=(255, 255, 255))
+        draw.text((900, 30), date or "", font=self._get_font(20), fill=(230, 230, 230))
+
+        draw.text((50, 120), title, font=self._get_font(46), fill=(24, 24, 24))
+        if grade:
+            draw.text((50, 180), grade, font=self._get_font(26), fill=main_rgb)
+        if location:
+            draw.text((220, 180), f"• {location}", font=self._get_font(26), fill=accent_rgb)
+
+        img_box = (50, 230, 1030, 820)
+        draw.rectangle((48, 228, 1032, 822), outline=(220, 220, 220), width=2)
+        if images:
+            self._render_image_grid(canvas, images, img_box)
+
+        tag_str = " ".join([f"#{t}" for t in hashtags])
+        self._draw_wrapped_text(draw, tag_str, (50, 850), self._get_font(30), 980, main_rgb, max_lines=2)
+        draw.text((820, 1010), "AI School Story", font=self._get_font(18), fill=(160, 160, 160))
+        return canvas
+
     def _render_image_grid(self, canvas, image_paths, box):
         x, y, x2, y2 = box
         w, h = x2 - x, y2 - y
         
         imgs = []
-        for p in image_paths[:4]:
+        for p in get_valid_images(image_paths, max_count=4):
             try:
-                if isinstance(p, str):
-                    imgs.append(Image.open(p))
-                else:
-                    imgs.append(Image.open(io.BytesIO(p.getbuffer()) if hasattr(p, 'getbuffer') else p))
+                img = Image.open(io.BytesIO(p.getbuffer()) if hasattr(p, 'getbuffer') else p).convert("RGB")
+                imgs.append(img)
             except: continue
             
         if not imgs: return

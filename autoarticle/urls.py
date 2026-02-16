@@ -11,6 +11,7 @@ urlpatterns = [
     path('result/<int:pk>/word/', views.ArticleWordView.as_view(), name='word'),
     path('result/<int:pk>/pdf/', views.ArticlePDFDownloadView.as_view(), name='pdf_download'),
     path('result/<int:pk>/ppt/', views.ArticlePPTDownloadView.as_view(), name='ppt_download'),
+    path('exports/layout/', views.ArticleExportLayoutView.as_view(), name='export_layout'),
     path('result/<int:pk>/delete/', views.ArticleDeleteView.as_view(), name='delete'),
     path('result/<int:pk>/edit/', views.ArticleEditView.as_view(), name='edit'),
 ]

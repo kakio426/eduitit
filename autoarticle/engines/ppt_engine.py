@@ -13,10 +13,11 @@ from .constants import THEMES
 from .utils import get_valid_images
 
 class PPTEngine:
-    def __init__(self, theme_name, school_name):
+    def __init__(self, theme_name, school_name, layout_version="v1"):
         self.theme_name = theme_name
         self.theme = THEMES.get(theme_name, THEMES["웜 & 플레이풀"])
         self.school_name = school_name
+        self.layout_version = layout_version
         self.prs = Presentation()
         # Set slide size to 16:9 (13.333 x 7.5 inches)
         self.prs.slide_width = Inches(13.333)
@@ -42,6 +43,10 @@ class PPTEngine:
             return buffer
 
     def _add_title_slide(self):
+        if self.layout_version == "v3":
+            return self._add_title_slide_v3()
+        if self.layout_version == "v2":
+            return self._add_title_slide_v2()
         """Adds a professional main title slide."""
         slide = self.prs.slides.add_slide(self.prs.slide_layouts[6]) # Blank layout
         
@@ -85,7 +90,73 @@ class PPTEngine:
         p.font.size = Pt(24)
         p.font.color.rgb = RGBColor(80, 80, 80)
 
+    def _add_title_slide_v2(self):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        background = slide.background
+        fill = background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor(248, 249, 251)
+
+        accent = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.35), self.prs.slide_height)
+        accent.fill.solid()
+        accent.fill.fore_color.rgb = RGBColor(*self.theme["main"])
+        accent.line.fill.background()
+
+        title_box = slide.shapes.add_textbox(Inches(1.2), Inches(2.2), Inches(11.5), Inches(2.2))
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = self.school_name
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(54)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(36, 36, 36)
+
+        p2 = tf.add_paragraph()
+        now = datetime.datetime.now()
+        p2.text = f"{now.year}학년도 {now.month}월 뉴스레터"
+        p2.font.name = "Malgun Gothic"
+        p2.font.size = Pt(24)
+        p2.font.color.rgb = RGBColor(*self.theme["main"])
+
+    def _add_title_slide_v3(self):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(242, 239, 232)
+
+        header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), self.prs.slide_width, Inches(1.1))
+        header.fill.solid()
+        header.fill.fore_color.rgb = RGBColor(26, 30, 40)
+        header.line.fill.background()
+
+        tb = slide.shapes.add_textbox(Inches(0.8), Inches(0.25), Inches(12), Inches(0.6))
+        p = tb.text_frame.paragraphs[0]
+        p.text = "SCHOOL MAGAZINE"
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(20)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(255, 255, 255)
+
+        title = slide.shapes.add_textbox(Inches(0.9), Inches(2.4), Inches(12), Inches(1.4))
+        t = title.text_frame.paragraphs[0]
+        t.text = self.school_name
+        t.font.name = "Malgun Gothic"
+        t.font.size = Pt(56)
+        t.font.bold = True
+        t.font.color.rgb = RGBColor(20, 20, 20)
+
+        now = datetime.datetime.now()
+        sub = title.text_frame.add_paragraph()
+        sub.text = f"{now.year}학년도 {now.month}월 뉴스레터"
+        sub.font.name = "Malgun Gothic"
+        sub.font.size = Pt(24)
+        sub.font.color.rgb = RGBColor(*self.theme["main"])
+
     def _add_article_slide(self, article):
+        if self.layout_version == "v3":
+            return self._add_article_slide_v3(article)
+        if self.layout_version == "v2":
+            return self._add_article_slide_v2(article)
         """Adds a content slide with 2-column layout (Text Left, Image Right)."""
         slide = self.prs.slides.add_slide(self.prs.slide_layouts[6]) # Blank layout
         
@@ -125,6 +196,7 @@ class PPTEngine:
         info_parts = []
         if article.get('date'): info_parts.append(f"{article['date']}")
         if article.get('location'): info_parts.append(f"{article['location']}")
+        if article.get('grade'): info_parts.append(f"{article['grade']}")
         p.text = " | ".join(info_parts)
         p.font.size = Pt(14)
         p.font.color.rgb = RGBColor(128, 128, 128)
@@ -152,44 +224,166 @@ class PPTEngine:
             p.font.size = Pt(18)
             p.font.name = "Malgun Gothic"
             
-        # --- Right Column: Image ---
+        # --- Right Column: Images (1~4) ---
         imgs_raw = article.get('images', [])
-        valid_imgs = get_valid_images(imgs_raw, max_count=1)
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=7.2, top=1.5, width=5.5, height=5.0)
 
-        if valid_imgs:
-            # Place first image
-            img_data = valid_imgs[0]
+    def _add_image_grid(self, slide, images, left, top, width, height):
+        if not images:
+            return
+
+        # (l, t, w, h) in inches
+        gap = 0.08
+        count = len(images)
+
+        if count == 1:
+            rects = [(left, top, width, height)]
+        elif count == 2:
+            half_w = (width - gap) / 2
+            rects = [
+                (left, top, half_w, height),
+                (left + half_w + gap, top, half_w, height),
+            ]
+        elif count == 3:
+            big_w = (width * 0.64) - (gap / 2)
+            small_w = width - big_w - gap
+            half_h = (height - gap) / 2
+            rects = [
+                (left, top, big_w, height),
+                (left + big_w + gap, top, small_w, half_h),
+                (left + big_w + gap, top + half_h + gap, small_w, half_h),
+            ]
+        else:
+            half_w = (width - gap) / 2
+            half_h = (height - gap) / 2
+            rects = [
+                (left, top, half_w, half_h),
+                (left + half_w + gap, top, half_w, half_h),
+                (left, top + half_h + gap, half_w, half_h),
+                (left + half_w + gap, top + half_h + gap, half_w, half_h),
+            ]
+
+        for img_data, (l, t, w, h) in zip(images, rects):
             try:
-                # Add picture from BytesIO
-                pic = slide.shapes.add_picture(img_data, Inches(7.2), Inches(1.5))
-                
-                # Resize logic (Fit within 5.5" W x 5.0" H)
-                max_w = 5.5
-                max_h = 5.0
-                
-                # Aspect ratio check happens automatically if we set only width or height?
-                # No, we need to calculate. pptx creates with native size if no args.
-                # But we passed pos. Let's adjust size.
-                
-                # Get current size
-                img_w = pic.width.inches
-                img_h = pic.height.inches
-                aspect = img_w / img_h
-                
-                # Target
-                if aspect > (max_w / max_h):
-                    # Too wide, limit by width
-                    pic.width = Inches(max_w)
-                    pic.height = Inches(max_w / aspect)
+                pic = slide.shapes.add_picture(img_data, Inches(l), Inches(t))
+                aspect = pic.width.inches / pic.height.inches
+                target_aspect = w / h
+                if aspect > target_aspect:
+                    pic.height = Inches(h)
+                    pic.width = Inches(h * aspect)
                 else:
-                    # Too tall, limit by height
-                    pic.height = Inches(max_h)
-                    pic.width = Inches(max_h * aspect)
-                    
-                # Add nice border
-                line = pic.line
-                line.color.rgb = RGBColor(200, 200, 200)
-                line.width = Pt(1)
-                
-            except Exception as e:
-                print(f"Error adding image: {e}")
+                    pic.width = Inches(w)
+                    pic.height = Inches(w / aspect)
+
+                pic.left = Inches(l + max((w - pic.width.inches) / 2, 0))
+                pic.top = Inches(t + max((h - pic.height.inches) / 2, 0))
+                pic.line.color.rgb = RGBColor(200, 200, 200)
+                pic.line.width = Pt(1)
+            except Exception:
+                continue
+
+    def _add_article_slide_v2(self, article):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(250, 250, 250)
+
+        title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(11.8), Inches(1.1))
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = article.get("title", "제목 없음")
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(30)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(28, 28, 28)
+
+        meta_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.45), Inches(6.2), Inches(0.5))
+        mt = meta_box.text_frame
+        info_parts = []
+        if article.get("date"):
+            info_parts.append(article["date"])
+        if article.get("location"):
+            info_parts.append(article["location"])
+        if article.get("grade"):
+            info_parts.append(article["grade"])
+        m = mt.paragraphs[0]
+        m.text = "  |  ".join(info_parts)
+        m.font.name = "Malgun Gothic"
+        m.font.size = Pt(13)
+        m.font.color.rgb = RGBColor(110, 110, 110)
+
+        left_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.0), Inches(6.2), Inches(4.9))
+        tf = left_box.text_frame
+        tf.word_wrap = True
+        content_text = article.get("content", "")
+        if isinstance(content_text, list):
+            for item in content_text:
+                cp = tf.add_paragraph()
+                cp.text = f"• {item}"
+                cp.font.name = "Malgun Gothic"
+                cp.font.size = Pt(20)
+                cp.space_after = Pt(8)
+        else:
+            cp = tf.add_paragraph()
+            cp.text = content_text[:320] + ("..." if len(content_text) > 320 else "")
+            cp.font.name = "Malgun Gothic"
+            cp.font.size = Pt(18)
+
+        imgs_raw = article.get("images", [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=7.3, top=2.0, width=5.1, height=4.9)
+
+    def _add_article_slide_v3(self, article):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(246, 244, 239)
+
+        top = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), self.prs.slide_width, Inches(0.9))
+        top.fill.solid()
+        top.fill.fore_color.rgb = RGBColor(26, 30, 40)
+        top.line.fill.background()
+
+        head = top.text_frame.paragraphs[0]
+        head.text = article.get("title", "제목 없음")
+        head.font.name = "Malgun Gothic"
+        head.font.size = Pt(24)
+        head.font.bold = True
+        head.font.color.rgb = RGBColor(255, 255, 255)
+
+        meta_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.1), Inches(12), Inches(0.5))
+        info = []
+        if article.get("date"):
+            info.append(article["date"])
+        if article.get("location"):
+            info.append(article["location"])
+        if article.get("grade"):
+            info.append(article["grade"])
+        mp = meta_box.text_frame.paragraphs[0]
+        mp.text = " | ".join(info)
+        mp.font.name = "Malgun Gothic"
+        mp.font.size = Pt(13)
+        mp.font.color.rgb = RGBColor(90, 90, 90)
+
+        left_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(6.1), Inches(5.3))
+        tf = left_box.text_frame
+        tf.word_wrap = True
+        content_text = article.get("content", "")
+        if isinstance(content_text, list):
+            for item in content_text:
+                p = tf.add_paragraph()
+                p.text = f"- {item}"
+                p.font.name = "Malgun Gothic"
+                p.font.size = Pt(20)
+                p.space_after = Pt(10)
+        else:
+            p = tf.add_paragraph()
+            p.text = content_text[:320] + ("..." if len(content_text) > 320 else "")
+            p.font.name = "Malgun Gothic"
+            p.font.size = Pt(18)
+
+        imgs_raw = article.get("images", [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=7.2, top=1.8, width=5.3, height=5.3)

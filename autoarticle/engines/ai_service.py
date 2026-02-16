@@ -74,6 +74,8 @@ def generate_article_gemini(api_key, topic_data, style_service=None, is_master_k
 
 학교: {topic_data.get('school', '')}
 학년: {topic_data.get('grade', '')}
+반: {topic_data.get('class_name', '')}
+대상: {topic_data.get('audience', topic_data.get('grade', ''))}
 행사명: {topic_data.get('event_name', '')}
 장소: {topic_data.get('location', '')}
 일시: {topic_data.get('date', '')}

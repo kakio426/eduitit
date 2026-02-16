@@ -14,9 +14,10 @@ from .constants import THEMES
 from .utils import get_valid_images
 
 class WordEngine:
-    def __init__(self, theme_name, school_name):
+    def __init__(self, theme_name, school_name, layout_version="v1"):
         self.theme = THEMES.get(theme_name, THEMES["웜 & 플레이풀"])
         self.school_name = school_name
+        self.layout_version = layout_version
 
     def generate(self, articles):
         doc = Document()
@@ -98,7 +99,7 @@ class WordEngine:
         title = doc.add_heading(level=0)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = title.add_run(self.school_name)
-        run.font.size = Pt(44)
+        run.font.size = Pt(40 if self.layout_version in {"v2", "v3"} else 44)
         run.font.color.rgb = RGBColor(*self.theme["main"])
         run.font.bold = True
         
@@ -107,8 +108,8 @@ class WordEngine:
         subtitle = doc.add_paragraph()
         subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = subtitle.add_run(f"{now.year}학년도 {now.month}월 뉴스레터")
-        run.font.size = Pt(20)
-        run.font.color.rgb = RGBColor(100, 100, 100)
+        run.font.size = Pt(18 if self.layout_version in {"v2", "v3"} else 20)
+        run.font.color.rgb = RGBColor(90, 90, 90 if self.layout_version != "v3" else 70)
         
         # 장식 구분선
         doc.add_paragraph()
@@ -134,7 +135,7 @@ class WordEngine:
         title = doc.add_heading(level=1)
         title.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run = title.add_run(str(article.get('title', '')))
-        run.font.size = Pt(22)
+        run.font.size = Pt(20 if self.layout_version in {"v2", "v3"} else 22)
         run.font.color.rgb = RGBColor(*self.theme["main"])
         run.font.bold = True
         
@@ -146,7 +147,10 @@ class WordEngine:
         
         # 셀 배경색
         shading_elm = OxmlElement('w:shd')
-        shading_elm.set(qn('w:fill'), 'F5F5F5')
+        shading_elm.set(
+            qn('w:fill'),
+            'EFEFE8' if self.layout_version == "v3" else ('F2F6FC' if self.layout_version == "v2" else 'F5F5F5')
+        )
         cell._element.get_or_add_tcPr().append(shading_elm)
         
         # 메타 정보
@@ -167,7 +171,7 @@ class WordEngine:
 
         # 이미지 처리 (URL 및 로컬 파일 모두 지원)
         imgs_raw = article.get('images', [])
-        valid_imgs = get_valid_images(imgs_raw, max_count=2)
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
 
         if valid_imgs:
             img_count = len(valid_imgs)
@@ -194,7 +198,7 @@ class WordEngine:
                     tcBorders.append(border)
                 tcPr.append(tcBorders)
 
-            else:
+            elif img_count == 2:
                 # 2개 이미지: 좌우 배치
                 img_table = doc.add_table(rows=1, cols=2)
                 img_table.autofit = False
@@ -208,6 +212,29 @@ class WordEngine:
                     run.add_picture(valid_imgs[i], width=Inches(3.2))
 
                     # 셀 패딩
+                    tcPr = cell._element.get_or_add_tcPr()
+                    tcMar = OxmlElement('w:tcMar')
+                    for margin in ['top', 'left', 'bottom', 'right']:
+                        node = OxmlElement(f'w:{margin}')
+                        node.set(qn('w:w'), '100')
+                        node.set(qn('w:type'), 'dxa')
+                        tcMar.append(node)
+                    tcPr.append(tcMar)
+            else:
+                # 3~4개 이미지: 2x2 그리드
+                img_table = doc.add_table(rows=2, cols=2)
+                img_table.autofit = False
+                img_table.allow_autofit = False
+
+                for idx, img in enumerate(valid_imgs[:4]):
+                    row = idx // 2
+                    col = idx % 2
+                    cell = img_table.cell(row, col)
+                    p = cell.paragraphs[0]
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    run = p.add_run()
+                    run.add_picture(img, width=Inches(2.8))
+
                     tcPr = cell._element.get_or_add_tcPr()
                     tcMar = OxmlElement('w:tcMar')
                     for margin in ['top', 'left', 'bottom', 'right']:

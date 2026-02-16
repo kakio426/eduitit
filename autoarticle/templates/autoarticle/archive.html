@@ -54,7 +54,7 @@
                                         <td class="py-6 px-4 text-center">
                                             <span
                                                 class="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-sm font-bold uppercase tracking-tighter">
-                                                {{ article.grade }}
+                                                {{ article.audience_label }}
                                             </span>
                                         </td>
                                         <td class="py-6 px-4 text-right font-bold text-gray-400 font-mono">
@@ -88,6 +88,21 @@
                         <p class="text-gray-500 mb-8 leading-relaxed font-hand text-lg">
                             왼쪽 목록에서 포함할 기사들을 선택한 후, 아래 버튼을 눌러 통합 문서를 생성하세요.
                         </p>
+
+                        <div class="mb-6 space-y-2">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <label class="text-sm font-bold text-gray-600">출력 디자인</label>
+                            <div class="flex gap-2">
+                                <select name="layout_version" class="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm">
+                                    <option value="v1" {% if export_layout_version == 'v1' %}selected{% endif %}>v1 클래식</option>
+                                    <option value="v2" {% if export_layout_version == 'v2' %}selected{% endif %}>v2 클린</option>
+                                    <option value="v3" {% if export_layout_version == 'v3' %}selected{% endif %}>v3 매거진</option>
+                                </select>
+                                <button type="submit" formaction="{% url 'autoarticle:export_layout' %}" formmethod="post"
+                                    class="px-3 py-2 rounded-xl bg-gray-800 text-white text-sm font-bold">적용</button>
+                            </div>
+                            <p class="text-xs text-gray-400">문제 발생 시 v1로 즉시 롤백할 수 있습니다.</p>
+                        </div>
 
                         <div class="space-y-4">
                             <button type="submit" name="action" value="generate_pdf"

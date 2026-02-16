@@ -553,6 +553,8 @@ STORAGES = {
 # 롤백: Railway 환경변수에서 MAINTENANCE_MODE 제거 또는 False로 변경.
 # =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
+AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
+ONBOARDING_EXEMPT_PATH_PREFIXES = []
 
 # Fortune async rollout flags (safe default: OFF)
 # - STREAM: /fortune/api/streaming/ 경로에서 AsyncOpenAI 직접 사용

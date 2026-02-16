@@ -132,6 +132,8 @@ class OnboardingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        from django.conf import settings
+
         if request.user.is_authenticated:
             profile = getattr(request.user, 'userprofile', None)
             
@@ -160,6 +162,7 @@ class OnboardingMiddleware:
                     '/static/',
                     '/media/',
                 ]
+                allowed_paths.extend(getattr(settings, 'ONBOARDING_EXEMPT_PATH_PREFIXES', []))
 
                 if not any(request.path.startswith(path) for path in allowed_paths):
                     return redirect(f"{reverse('update_email')}?next={quote(request.get_full_path())}")

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
@@ -39,6 +40,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-only-chang
 
 # SECURITY: DEBUG from environment (default False for safety)
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+TESTING = 'test' in sys.argv
 
 # SECURITY: ALLOWED_HOSTS from environment
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
@@ -421,6 +423,8 @@ LOGGING = {
 # Maintenance Mode
 # 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
+AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
+ONBOARDING_EXEMPT_PATH_PREFIXES = ['/autoarticle/'] if TESTING else []
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)
