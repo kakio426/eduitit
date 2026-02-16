@@ -1,33 +1,156 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
+from django.contrib.auth.models import User
 from products.models import Product
+from core.models import UserProfile
+
+
+def _create_onboarded_user(username, email=None, nickname=None):
+    """온보딩 완료 상태의 테스트 유저 생성"""
+    email = email or f'{username}@test.com'
+    nickname = nickname or username
+    user = User.objects.create_user(username, email, 'pass1234')
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.nickname = nickname
+    profile.role = 'school'
+    profile.save()
+    return user
+
 
 class HomeViewTest(TestCase):
     def setUp(self):
         self.client = Client()
-        # Clean up existing products from migrations to have a clean state if needed,
-        # or just rely on containing checks.
-        # But data migrations run. So '🐎 온라인 윷놀이' might already exist.
-        
-        # Determine if Yut needed to be created
-        if not Product.objects.filter(title="🐎 온라인 윷놀이").exists():
-            Product.objects.create(title="🐎 온라인 윷놀이", description="Game", price=0, is_active=True)
-            
-        # Create a standard product
-        self.std_product = Product.objects.create(title="Standard Tool", description="Desc", price=100, is_active=True)
+        self.product = Product.objects.create(
+            title="테스트 서비스", description="설명", price=0,
+            is_active=True, service_type='classroom',
+        )
 
-    def test_home_view_context_and_links(self):
+    def test_home_anonymous_200(self):
+        """비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
-        content = response.content.decode('utf-8')
 
-        # Check Yut Noli presence and Instant Access Link
-        self.assertIn("🐎 온라인 윷놀이", content)
-        # Should link to yut_game directly
-        self.assertIn("href='/products/yut/'", content)
-        
-        # Check Standard Product behavior
-        self.assertIn("Standard Tool", content)
-        # Should link to detail page
-        expected_url = f"/products/{self.std_product.pk}/"
-        self.assertIn(f"href='{expected_url}'", content)
+    def test_home_anonymous_contains_product(self):
+        """비로그인 홈에 서비스 카드가 표시됨"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('테스트 서비스', content)
+        self.assertIn(f'data-product-id="{self.product.id}"', content)
+
+    def test_home_authenticated_200(self):
+        """로그인 홈 200 응답"""
+        _create_onboarded_user('testuser')
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+
+
+@override_settings(HOME_V2_ENABLED=True)
+class HomeV2ViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.p1 = Product.objects.create(
+            title="수업 도구", description="수업용", price=0,
+            is_active=True, service_type='classroom', is_featured=True,
+            solve_text='수업을 준비해요',
+        )
+        self.p2 = Product.objects.create(
+            title="행정 도구", description="행정용", price=0,
+            is_active=True, service_type='work',
+        )
+        self.p3 = Product.objects.create(
+            title="테스트 게임", description="게임", price=0,
+            is_active=True, service_type='game',
+        )
+
+    def _login(self, username='v2user', nickname=None):
+        user = _create_onboarded_user(username, nickname=nickname)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_v2_anonymous_200(self):
+        """V2 비로그인 홈 200 응답"""
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_v2_anonymous_has_sections(self):
+        """V2 비로그인 홈에 목적별 섹션 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('수업 준비', content)
+        self.assertIn('문서·행정', content)
+
+    def test_v2_anonymous_has_login_cta(self):
+        """V2 비로그인 홈에 로그인 CTA 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('로그인하고 시작하기', content)
+
+    def test_v2_anonymous_has_game_banner(self):
+        """V2 비로그인 홈에 게임 배너 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('쉬는 시간', content)
+        self.assertIn('테스트 게임', content)
+
+    def test_v2_anonymous_has_show_all_toggle(self):
+        """V2 비로그인 홈에 전체 서비스 보기 토글 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-track="show_all_toggle"', content)
+
+    def test_v2_authenticated_200(self):
+        """V2 로그인 홈 200 응답"""
+        self._login('authuser')
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_v2_authenticated_has_greeting(self):
+        """V2 로그인 홈에 인사말 존재"""
+        self._login('greetuser', nickname='홍길동')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('홍길동', content)
+        self.assertIn('선생님, 안녕하세요', content)
+
+    def test_v2_authenticated_has_quick_actions(self):
+        """V2 로그인 홈에 퀵 액션 존재"""
+        self._login('qauser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-track="quick_action"', content)
+        self.assertIn('추천 빠른 실행', content)
+
+    def test_v2_authenticated_has_sections(self):
+        """V2 로그인 홈에 목적별 섹션 존재"""
+        self._login('secuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('수업 준비', content)
+        self.assertIn('문서·행정', content)
+
+    def test_v2_mini_card_has_data_product_id(self):
+        """V2 미니 카드에 data-product-id 속성 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn(f'data-product-id="{self.p1.id}"', content)
+
+    def test_v2_mini_card_shows_solve_text(self):
+        """V2 미니 카드에 solve_text 표시"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('수업을 준비해요', content)
+
+    def test_v2_context_sections_count(self):
+        """V2 컨텍스트에 sections 존재"""
+        response = self.client.get(reverse('home'))
+        sections = response.context.get('sections', [])
+        self.assertGreaterEqual(len(sections), 2)
+
+    def test_v2_context_quick_actions_max_5(self):
+        """V2 퀵 액션 최대 5개"""
+        self._login('maxuser')
+        response = self.client.get(reverse('home'))
+        quick_actions = response.context.get('quick_actions', [])
+        self.assertLessEqual(len(quick_actions), 5)
+        self.assertGreaterEqual(len(quick_actions), 1)
