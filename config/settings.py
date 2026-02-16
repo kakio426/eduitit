@@ -129,6 +129,7 @@ TEMPLATES = [
                 'core.context_processors.toast_messages',
                 'core.context_processors.site_config',
                 'core.context_processors.seo_meta',
+                'core.context_processors.search_products',
             ],
         },
     },

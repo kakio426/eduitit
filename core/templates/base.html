@@ -936,6 +936,193 @@
         {% endif %}
 
 
+        <!-- Ctrl+K 검색 모달 (V2) -->
+        {% if search_products_json %}
+        <div id="searchModal" class="fixed inset-0 z-[110] hidden" role="dialog" aria-modal="true" aria-label="서비스 검색">
+            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closeSearchModal()"></div>
+            <div class="fixed inset-x-0 top-[15vh] z-10 flex justify-center px-4">
+                <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+                    <!-- 검색 입력 -->
+                    <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                        <input id="searchInput" type="text" placeholder="서비스 검색..." autocomplete="off" class="flex-1 text-base outline-none bg-transparent text-gray-800 placeholder-gray-400" />
+                        <kbd class="hidden sm:inline-block px-2 py-0.5 text-xs font-bold text-gray-400 bg-gray-100 rounded border border-gray-200">ESC</kbd>
+                    </div>
+                    <!-- 검색 결과 -->
+                    <div id="searchResults" class="max-h-[50vh] overflow-y-auto py-2">
+                    </div>
+                    <!-- 하단 안내 -->
+                    <div class="flex items-center gap-4 px-5 py-2.5 border-t border-gray-100 text-xs text-gray-400">
+                        <span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-bold border border-gray-200">↑↓</kbd> 이동</span>
+                        <span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-bold border border-gray-200">Enter</kbd> 열기</span>
+                        <span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-bold border border-gray-200">ESC</kbd> 닫기</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function() {
+            var products = {{ search_products_json|safe }};
+            var modal = document.getElementById('searchModal');
+            var input = document.getElementById('searchInput');
+            var results = document.getElementById('searchResults');
+            var activeIdx = -1;
+            var filteredItems = [];
+            var RECENT_KEY = 'eduitit_recent_searches';
+            var MAX_RECENT = 5;
+
+            var typeColors = {
+                classroom: 'text-blue-500', work: 'text-emerald-500', game: 'text-red-500',
+                counsel: 'text-violet-500', edutech: 'text-cyan-500', etc: 'text-slate-500'
+            };
+
+            function getRecent() {
+                try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
+            }
+            function addRecent(id) {
+                var list = getRecent().filter(function(r) { return r !== id; });
+                list.unshift(id);
+                if (list.length > MAX_RECENT) list = list.slice(0, MAX_RECENT);
+                localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+            }
+
+            function renderItems(items, label) {
+                if (!items.length) {
+                    results.innerHTML = '<div class="px-5 py-8 text-center text-sm text-gray-400">검색 결과가 없습니다</div>';
+                    filteredItems = [];
+                    activeIdx = -1;
+                    return;
+                }
+                filteredItems = items;
+                activeIdx = -1;
+                var html = '';
+                if (label) html += '<div class="px-5 py-1.5 text-xs font-bold text-gray-400">' + label + '</div>';
+                items.forEach(function(p, i) {
+                    var iconHtml = (p.icon && p.icon.indexOf('fa-') !== -1)
+                        ? '<i class="' + p.icon + ' ' + (typeColors[p.service_type] || 'text-slate-500') + '"></i>'
+                        : '<span>' + (p.icon || '📦') + '</span>';
+                    var sub = p.solve_text || p.description;
+                    html += '<div class="search-result-item flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-indigo-50 transition-colors" data-idx="' + i + '" data-id="' + p.id + '">'
+                        + '<span class="text-lg w-6 text-center flex-shrink-0">' + iconHtml + '</span>'
+                        + '<div class="flex-1 min-w-0">'
+                        + '<div class="font-bold text-sm text-gray-800 truncate">' + p.title + '</div>'
+                        + (sub ? '<div class="text-xs text-gray-400 truncate">' + sub + '</div>' : '')
+                        + '</div>'
+                        + '</div>';
+                });
+                results.innerHTML = html;
+                results.querySelectorAll('.search-result-item').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        selectItem(parseInt(this.dataset.idx));
+                    });
+                });
+            }
+
+            function highlightActive() {
+                results.querySelectorAll('.search-result-item').forEach(function(el, i) {
+                    if (i === activeIdx) {
+                        el.classList.add('bg-indigo-50');
+                        el.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        el.classList.remove('bg-indigo-50');
+                    }
+                });
+            }
+
+            function selectItem(idx) {
+                if (idx < 0 || idx >= filteredItems.length) return;
+                var p = filteredItems[idx];
+                addRecent(p.id);
+                closeSearchModal();
+                if (window.openModal) window.openModal(p.id);
+            }
+
+            function doSearch(q) {
+                q = q.trim().toLowerCase();
+                if (!q) {
+                    var recentIds = getRecent();
+                    if (recentIds.length) {
+                        var recentItems = recentIds.map(function(id) { return products.find(function(p) { return p.id === id; }); }).filter(Boolean);
+                        renderItems(recentItems, '최근 검색');
+                    } else {
+                        renderItems(products.slice(0, 8), '전체 서비스');
+                    }
+                    return;
+                }
+                var filtered = products.filter(function(p) {
+                    return p.title.toLowerCase().indexOf(q) !== -1
+                        || (p.solve_text && p.solve_text.toLowerCase().indexOf(q) !== -1)
+                        || (p.description && p.description.toLowerCase().indexOf(q) !== -1);
+                });
+                renderItems(filtered, null);
+            }
+
+            window.openSearchModal = function() {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                input.value = '';
+                doSearch('');
+                setTimeout(function() { input.focus(); }, 50);
+            };
+
+            window.closeSearchModal = function() {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            };
+
+            input.addEventListener('input', function() { doSearch(this.value); });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (filteredItems.length) { activeIdx = (activeIdx + 1) % filteredItems.length; highlightActive(); }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (filteredItems.length) { activeIdx = activeIdx <= 0 ? filteredItems.length - 1 : activeIdx - 1; highlightActive(); }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIdx >= 0) selectItem(activeIdx);
+                    else if (filteredItems.length === 1) selectItem(0);
+                } else if (e.key === 'Escape') {
+                    closeSearchModal();
+                }
+            });
+
+            // Ctrl+K / Cmd+K 글로벌 단축키
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    if (modal.classList.contains('hidden')) { openSearchModal(); } else { closeSearchModal(); }
+                }
+            });
+
+            function getCsrfToken() {
+                var el = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (el) return el.value;
+                var match = document.cookie.match(/csrftoken=([^;]+)/);
+                return match ? match[1] : '';
+            }
+
+            // 사용 기록 전송 (검색에서 선택 시)
+            var origSelectItem = selectItem;
+            selectItem = function(idx) {
+                if (idx >= 0 && idx < filteredItems.length) {
+                    var p = filteredItems[idx];
+                    var token = getCsrfToken();
+                    if (token) {
+                        fetch('/api/track-usage/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                            body: JSON.stringify({ product_id: p.id, action: 'search', source: 'search' })
+                        }).catch(function() {});
+                    }
+                }
+                origSelectItem(idx);
+            };
+        })();
+        </script>
+        {% endif %}
+
         {% block extra_js %}{% endblock %}
     </div><!-- #app-root -->
 </body>

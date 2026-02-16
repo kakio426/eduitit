@@ -6,7 +6,7 @@ from django.conf import settings
 from django.urls import NoReverseMatch
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post, Comment, Feedback, SiteConfig
+from .models import UserProfile, Post, Comment, Feedback, SiteConfig, ProductUsageLog
 from django.contrib import messages
 from django.db.models import Count
 from PIL import Image
@@ -91,6 +91,45 @@ def _resolve_product_launch_url(product):
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
+def _get_usage_based_quick_actions(user, product_list, limit=5):
+    """사용 빈도 기반 퀵 액션 목록 생성. 기록 없으면 featured 기반 폴백."""
+    from django.utils import timezone
+    from datetime import timedelta
+
+    since = timezone.now() - timedelta(days=14)
+    usage_qs = (
+        ProductUsageLog.objects
+        .filter(user=user, created_at__gte=since, product__is_active=True)
+        .values('product_id')
+        .annotate(cnt=Count('product_id'))
+        .order_by('-cnt')[:limit]
+    )
+    usage_ids = [row['product_id'] for row in usage_qs]
+    product_map = {p.id: p for p in product_list}
+
+    quick_actions = [product_map[pid] for pid in usage_ids if pid in product_map]
+
+    # 사용 기록이 부족하면 featured → display_order 보충
+    if len(quick_actions) < limit:
+        seen = {p.id for p in quick_actions}
+        for p in product_list:
+            if p.is_featured and p.id not in seen:
+                quick_actions.append(p)
+                seen.add(p.id)
+                if len(quick_actions) >= limit:
+                    break
+    if len(quick_actions) < limit:
+        seen = {p.id for p in quick_actions}
+        for p in product_list:
+            if p.id not in seen:
+                quick_actions.append(p)
+                seen.add(p.id)
+                if len(quick_actions) >= limit:
+                    break
+
+    return quick_actions
+
+
 def _home_v2(request, products, posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = list(products)
@@ -99,15 +138,8 @@ def _home_v2(request, products, posts):
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
 
-        # 퀵 액션: featured 우선, 부족하면 display_order 보충
-        quick_actions = [p for p in product_list if p.is_featured][:5]
-        if len(quick_actions) < 5:
-            ids = {p.id for p in quick_actions}
-            for p in product_list:
-                if p.id not in ids:
-                    quick_actions.append(p)
-                    if len(quick_actions) >= 5:
-                        break
+        # 퀵 액션: 사용 빈도 기반 (폴백: featured → display_order)
+        quick_actions = _get_usage_based_quick_actions(request.user, product_list)
 
         quick_action_items = []
         for product in quick_actions:
@@ -717,6 +749,46 @@ def service_guide_detail(request, pk):
         'manual': manual,
         'sections': sections
     })
+
+
+@require_POST
+def track_product_usage(request):
+    """서비스 사용 기록 API (로그인 사용자 전용)."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'ignored'}, status=200)
+
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'invalid json'}, status=400)
+
+    product_id = data.get('product_id')
+    action = data.get('action', 'launch')
+    source = data.get('source', 'other')
+
+    if not product_id:
+        return JsonResponse({'error': 'product_id required'}, status=400)
+
+    valid_actions = [c[0] for c in ProductUsageLog.ACTION_CHOICES]
+    valid_sources = [c[0] for c in ProductUsageLog.SOURCE_CHOICES]
+    if action not in valid_actions:
+        action = 'launch'
+    if source not in valid_sources:
+        source = 'other'
+
+    try:
+        product = Product.objects.get(pk=product_id, is_active=True)
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'product not found'}, status=404)
+
+    ProductUsageLog.objects.create(
+        user=request.user,
+        product=product,
+        action=action,
+        source=source,
+    )
+    return JsonResponse({'status': 'ok'})
 
 
 def health_check(request):

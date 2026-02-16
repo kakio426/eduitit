@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import UserProfile, Post, SiteConfig, Feedback
+from .models import UserProfile, Post, SiteConfig, Feedback, ProductUsageLog
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -88,3 +88,15 @@ class FeedbackAdmin(admin.ModelAdmin):
     def message_summary(self, obj):
         return obj.message[:60] + "..." if len(obj.message) > 60 else obj.message
     message_summary.short_description = '내용 요약'
+
+
+@admin.register(ProductUsageLog)
+class ProductUsageLogAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'action', 'source', 'created_at']
+    list_filter = ['action', 'source', 'created_at']
+    search_fields = ['user__username', 'product__title']
+    readonly_fields = ['created_at']
+    raw_id_fields = ['user', 'product']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'product')

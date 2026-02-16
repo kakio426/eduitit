@@ -26,4 +26,5 @@ urlpatterns = [
     path('delete-account/', views.delete_account, name='delete_account'),
     path('feedback/', views.feedback_view, name='feedback'),
     path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
+    path('api/track-usage/', views.track_product_usage, name='track_product_usage'),
 ]

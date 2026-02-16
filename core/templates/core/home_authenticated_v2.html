@@ -56,10 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 클릭 계측
+    // 클릭 계측 + 사용 기록
     document.addEventListener('click', function(e) {
         const el = e.target.closest('[data-track]');
-        if (el) console.log('[Track]', el.dataset.track, el.dataset.trackLabel);
+        if (!el) return;
+        const track = el.dataset.track;
+        const productId = el.dataset.productId || el.closest('[data-product-id]')?.dataset?.productId;
+        if (productId) {
+            const token = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            if (token) {
+                const sourceMap = { quick_action: 'home_quick', mini_card: 'home_section', game_card: 'home_game', show_all_toggle: 'home_grid' };
+                fetch('/api/track-usage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                    body: JSON.stringify({ product_id: parseInt(productId), action: 'launch', source: sourceMap[track] || 'other' })
+                }).catch(function() {});
+            }
+        }
     });
 });
 </script>
@@ -77,12 +90,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- 메인 콘텐츠 -->
         <main class="flex-1 p-4 md:px-10 lg:px-12 pt-0 md:pt-0">
 
-            <!-- 인사말 -->
-            <div class="mb-6">
-                <h2 class="text-xl md:text-2xl font-bold text-slate-800">
-                    {% if request.user.userprofile and request.user.userprofile.nickname %}{{ request.user.userprofile.nickname }}{% else %}{{ request.user.username }}{% endif %} 선생님, 안녕하세요!
-                </h2>
-                <p class="text-sm text-slate-500 mt-1">오늘도 스마트한 하루를 시작해 보세요.</p>
+            <!-- 인사말 + 검색 -->
+            <div class="mb-6 flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-800">{% if request.user.userprofile and request.user.userprofile.nickname %}{{ request.user.userprofile.nickname }}{% else %}{{ request.user.username }}{% endif %} 선생님, 안녕하세요!</h2>
+                    <p class="text-sm text-slate-500 mt-1">오늘도 스마트한 하루를 시작해 보세요.</p>
+                </div>
+                {% if search_products_json %}
+                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm" title="Ctrl+K">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    <span class="hidden sm:inline">검색</span>
+                    <kbd class="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">⌘K</kbd>
+                </button>
+                {% endif %}
             </div>
 
             <!-- 추천 빠른 실행 -->
@@ -93,23 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </h3>
                 <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
                     {% for qa in quick_actions %}
-                    <div class="flex-shrink-0 flex items-center gap-2">
-                        <a href="{{ qa.href }}"
-                            {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                            class="flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
-                            data-track="quick_action" data-track-label="{{ qa.product.title }}">
-                            <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
-                            <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
-                        </a>
-                        <button type="button"
-                            class="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition"
-                            title="{{ qa.product.title }} 소개 보기"
-                            aria-label="{{ qa.product.title }} 소개 보기"
-                            data-track="quick_action_info" data-track-label="{{ qa.product.title }}"
-                            onclick="if(window.openModal) openModal({{ qa.product.id }})">
-                            <i class="fa-solid fa-circle-info"></i>
-                        </button>
-                    </div>
+                    <a href="{{ qa.href }}"
+                        {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
+                        data-track="quick_action" data-track-label="{{ qa.product.title }}">
+                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
+                    </a>
                     {% endfor %}
                 </div>
             </div>

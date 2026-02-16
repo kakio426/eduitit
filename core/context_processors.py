@@ -69,6 +69,32 @@ def site_config(request):
         }
 
 
+def search_products(request):
+    """Ctrl+K 검색 모달용 서비스 목록 JSON 제공."""
+    from django.conf import settings as django_settings
+    if not getattr(django_settings, 'HOME_V2_ENABLED', False):
+        return {}
+
+    from products.models import Product
+    import json
+
+    try:
+        products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        items = []
+        for p in products:
+            items.append({
+                'id': p.id,
+                'title': p.title,
+                'description': (p.description or '')[:80],
+                'solve_text': p.solve_text or '',
+                'icon': p.icon or '',
+                'service_type': p.service_type or '',
+            })
+        return {'search_products_json': json.dumps(items, ensure_ascii=False)}
+    except Exception:
+        return {'search_products_json': '[]'}
+
+
 def seo_meta(request):
     """
     기본 OpenGraph 메타태그 제공.

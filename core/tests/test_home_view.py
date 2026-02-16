@@ -154,3 +154,75 @@ class HomeV2ViewTest(TestCase):
         quick_actions = response.context.get('quick_actions', [])
         self.assertLessEqual(len(quick_actions), 5)
         self.assertGreaterEqual(len(quick_actions), 1)
+
+    def test_v2_has_search_button(self):
+        """V2 홈에 검색 버튼 존재"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('openSearchModal', content)
+
+    def test_v2_search_products_json_in_context(self):
+        """V2 홈에 search_products_json 컨텍스트 존재"""
+        response = self.client.get(reverse('home'))
+        self.assertIn('search_products_json', response.context)
+
+    def test_v2_usage_based_quick_actions(self):
+        """V2 사용 기록 기반 퀵 액션 반영"""
+        from core.models import ProductUsageLog
+        user = self._login('usageuser')
+        # p2(행정 도구)를 많이 사용
+        for _ in range(5):
+            ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+        response = self.client.get(reverse('home'))
+        quick_actions = response.context.get('quick_actions', [])
+        # 가장 많이 사용한 p2가 첫 번째
+        self.assertEqual(quick_actions[0]['product'].id, self.p2.id)
+
+
+@override_settings(HOME_V2_ENABLED=True)
+class TrackUsageAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.product = Product.objects.create(
+            title="테스트 서비스", description="설명", price=0,
+            is_active=True, service_type='classroom',
+        )
+
+    def _login(self, username='apiuser'):
+        user = _create_onboarded_user(username)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_track_usage_anonymous_ignored(self):
+        """비로그인 사용자 추적 무시"""
+        import json
+        response = self.client.post(
+            reverse('track_product_usage'),
+            data=json.dumps({'product_id': self.product.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_track_usage_authenticated(self):
+        """로그인 사용자 사용 기록 생성"""
+        from core.models import ProductUsageLog
+        import json
+        self._login('trackuser')
+        response = self.client.post(
+            reverse('track_product_usage'),
+            data=json.dumps({'product_id': self.product.id, 'action': 'launch', 'source': 'home_quick'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ProductUsageLog.objects.filter(user__username='trackuser').count(), 1)
+
+    def test_track_usage_invalid_product(self):
+        """존재하지 않는 서비스 ID는 404"""
+        import json
+        self._login('invaliduser')
+        response = self.client.post(
+            reverse('track_product_usage'),
+            data=json.dumps({'product_id': 99999}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 404)

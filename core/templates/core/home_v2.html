@@ -78,6 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-sm md:text-lg lg:text-xl text-gray-500 max-w-3xl mx-auto leading-relaxed break-keep font-bold px-4">
                     AI로 더 똑똑하게, 더 즐겁게<span class="hidden md:inline">. 수업 준비부터 행정 업무까지</span>
                 </p>
+                {% if search_products_json %}
+                <div class="mt-4 flex justify-center">
+                    <button onclick="if(window.openSearchModal) openSearchModal()" class="flex items-center gap-3 bg-white rounded-2xl px-5 py-3 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>서비스 검색...</span>
+                        <kbd class="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">Ctrl+K</kbd>
+                    </button>
+                </div>
+                {% endif %}
             </div>
 
             <!-- 목적별 섹션 -->

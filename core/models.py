@@ -110,6 +110,41 @@ class Feedback(models.Model):
         return f"[{self.get_category_display()}] {self.name} - {self.created_at:%Y-%m-%d}"
 
 
+class ProductUsageLog(models.Model):
+    """서비스 사용 기록 — 개인화 퀵 액션 및 검색 추천에 활용"""
+    ACTION_CHOICES = [
+        ('launch', '서비스 실행'),
+        ('search', '검색 클릭'),
+        ('quick_action', '퀵 액션'),
+        ('modal_open', '모달 열기'),
+    ]
+    SOURCE_CHOICES = [
+        ('home_quick', '홈 퀵 액션'),
+        ('home_section', '홈 목적별 섹션'),
+        ('home_game', '홈 게임 배너'),
+        ('home_grid', '홈 전체 서비스'),
+        ('search', '검색 모달'),
+        ('other', '기타'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_usage_logs')
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='usage_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, default='launch')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='other')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'product']),
+        ]
+        verbose_name = "서비스 사용 기록"
+        verbose_name_plural = "서비스 사용 기록"
+
+    def __str__(self):
+        return f"{self.user.username} → {self.product.title} ({self.action})"
+
+
 class VisitorLog(models.Model):
     ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
     user_agent = models.TextField(blank=True, null=True, verbose_name="User Agent")
