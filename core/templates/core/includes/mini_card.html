@@ -1,0 +1,23 @@
+{# 미니 서비스 카드 - V2 홈 목적별 섹션용 #}
+{# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
+<div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group"
+    data-product-id="{{ product.id }}" data-track="mini_card" data-track-label="{{ product.title }}"
+    onclick="if(window.openModal) openModal({{ product.id }})" role="button" tabindex="0"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+    <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+            {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{{ product.title }}</h4>
+            <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">{% if product.solve_text %}{{ product.solve_text }}{% else %}{{ product.description|truncatechars:40 }}{% endif %}</p>
+            {% if product.result_text or product.time_text %}
+            <div class="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400">
+                {% if product.result_text %}<span class="flex items-center gap-0.5"><i class="fa-solid fa-check text-emerald-400"></i> {{ product.result_text }}</span>{% endif %}
+                {% if product.time_text %}<span class="flex items-center gap-0.5"><i class="fa-regular fa-clock"></i> {{ product.time_text }}</span>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-indigo-400 transition-colors mt-1 flex-shrink-0"></i>
+    </div>
+</div>

@@ -426,6 +426,7 @@ LOGGING = {
 # 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
+HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'False').lower() == 'true'
 ONBOARDING_EXEMPT_PATH_PREFIXES = ['/autoarticle/'] if TESTING else []
 
 # =============================================================================

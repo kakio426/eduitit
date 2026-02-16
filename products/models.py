@@ -43,7 +43,12 @@ class Product(models.Model):
     display_order = models.IntegerField(default=0, help_text="Order in which to display (lower numbers first)")
     service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='etc', help_text="서비스 카테고리")
     external_url = models.URLField(blank=True, help_text="External URL for services hosted elsewhere")
-    
+
+    # V2 홈 목적별 섹션용 필드
+    solve_text = models.CharField(max_length=100, blank=True, help_text="무엇을 해결? (예: '학생 파일을 한곳에 모아요')")
+    result_text = models.CharField(max_length=100, blank=True, help_text="결과물 (예: '엑셀 정리표')")
+    time_text = models.CharField(max_length=50, blank=True, help_text="소요시간 (예: '3분')")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

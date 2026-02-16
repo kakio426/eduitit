@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
+from django.conf import settings
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post, Comment, Feedback, SiteConfig
@@ -11,6 +12,91 @@ from PIL import Image
 import logging
 
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# V2 홈 목적별 섹션 매핑
+# =============================================================================
+PURPOSE_SECTIONS = [
+    {
+        'key': 'lesson',
+        'title': '수업 준비',
+        'subtitle': '수업을 더 풍성하게',
+        'icon': 'fa-solid fa-book-open',
+        'color': 'blue',
+        'types': ['classroom'],
+    },
+    {
+        'key': 'admin',
+        'title': '문서·행정',
+        'subtitle': '반복 업무를 줄여요',
+        'icon': 'fa-solid fa-file-lines',
+        'color': 'emerald',
+        'types': ['work'],
+    },
+    {
+        'key': 'consult',
+        'title': '상담·진단',
+        'subtitle': '학생을 더 깊이 이해해요',
+        'icon': 'fa-solid fa-hand-holding-heart',
+        'color': 'violet',
+        'types': ['counsel'],
+    },
+    {
+        'key': 'ai',
+        'title': 'AI 생성·에듀테크',
+        'subtitle': 'AI로 콘텐츠를 만들어요',
+        'icon': 'fa-solid fa-wand-magic-sparkles',
+        'color': 'cyan',
+        'types': ['edutech', 'etc'],
+    },
+]
+
+
+def get_purpose_sections(products_qs):
+    """Product queryset → 목적별 섹션 + 게임 분리."""
+    sections = []
+    for sec in PURPOSE_SECTIONS:
+        items = [p for p in products_qs if p.service_type in sec['types']]
+        if items:
+            sections.append({**sec, 'products': items})
+    games = [p for p in products_qs if p.service_type == 'game']
+    return sections, games
+
+
+def _home_v2(request, products, posts):
+    """Feature flag on 시 호출되는 V2 홈."""
+    product_list = list(products)
+    sections, games = get_purpose_sections(product_list)
+
+    if request.user.is_authenticated:
+        UserProfile.objects.get_or_create(user=request.user)
+
+        # 퀵 액션: featured 우선, 부족하면 display_order 보충
+        quick_actions = [p for p in product_list if p.is_featured][:5]
+        if len(quick_actions) < 5:
+            ids = {p.id for p in quick_actions}
+            for p in product_list:
+                if p.id not in ids:
+                    quick_actions.append(p)
+                    if len(quick_actions) >= 5:
+                        break
+
+        return render(request, 'core/home_authenticated_v2.html', {
+            'products': products,
+            'sections': sections,
+            'games': games,
+            'quick_actions': quick_actions,
+            'posts': posts,
+        })
+
+    featured_product = next((p for p in product_list if p.is_featured), product_list[0] if product_list else None)
+    return render(request, 'core/home_v2.html', {
+        'products': products,
+        'featured_product': featured_product,
+        'sections': sections,
+        'games': games,
+        'posts': posts,
+    })
 
 def home(request):
     # Order by display_order first, then by creation date
@@ -29,6 +115,10 @@ def home(request):
         likes_count_annotated=Count('likes', distinct=True),
         comments_count_annotated=Count('comments', distinct=True)
     ).order_by('-created_at')
+
+    # V2 홈: Feature flag on 시 분기
+    if settings.HOME_V2_ENABLED:
+        return _home_v2(request, products, posts)
 
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:

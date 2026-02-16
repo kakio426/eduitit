@@ -65,6 +65,11 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('service_type', 'external_url'),
             'description': '카테고리를 선택하면 홈 화면 탭 필터에 반영됩니다.'
         }),
+        ('V2 홈 목적별 섹션', {
+            'fields': ('solve_text', 'result_text', 'time_text'),
+            'description': '홈 V2 미니 카드에 표시될 텍스트. 비워두면 description이 fallback으로 표시됩니다.',
+            'classes': ('collapse',),
+        }),
         ('상태', {
             'fields': ('is_active', 'is_featured', 'is_guest_allowed')
         }),

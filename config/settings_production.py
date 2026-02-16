@@ -554,6 +554,7 @@ STORAGES = {
 # =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
+HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'False').lower() == 'true'
 ONBOARDING_EXEMPT_PATH_PREFIXES = []
 
 # Fortune async rollout flags (safe default: OFF)
