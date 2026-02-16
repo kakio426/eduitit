@@ -160,7 +160,7 @@ def _upload_images(uploaded_images, max_count=5):
 
 def _get_export_layout_version(request):
     session_value = request.session.get("autoarticle_export_layout")
-    if session_value in {"v1", "v2", "v3"}:
+    if session_value in {"v1", "v2", "v3", "v4", "v5", "v6"}:
         return session_value
     return getattr(settings, "AUTOARTICLE_EXPORT_LAYOUT", "v1")
 
@@ -649,7 +649,7 @@ class ArticleExportLayoutView(View):
 
     def post(self, request):
         version = request.POST.get("layout_version", "").strip()
-        if version in {"v1", "v2", "v3"}:
+        if version in {"v1", "v2", "v3", "v4", "v5", "v6"}:
             request.session["autoarticle_export_layout"] = version
             messages.success(request, f"출력물 디자인을 {version.upper()}로 변경했습니다.")
         else:

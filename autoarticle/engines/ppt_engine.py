@@ -43,6 +43,12 @@ class PPTEngine:
             return buffer
 
     def _add_title_slide(self):
+        if self.layout_version == "v6":
+            return self._add_title_slide_v6()
+        if self.layout_version == "v5":
+            return self._add_title_slide_v5()
+        if self.layout_version == "v4":
+            return self._add_title_slide_v4()
         if self.layout_version == "v3":
             return self._add_title_slide_v3()
         if self.layout_version == "v2":
@@ -152,7 +158,98 @@ class PPTEngine:
         sub.font.size = Pt(24)
         sub.font.color.rgb = RGBColor(*self.theme["main"])
 
+    def _add_title_slide_v4(self):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(247, 247, 247)
+
+        masthead = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), self.prs.slide_width, Inches(0.95))
+        masthead.fill.solid()
+        masthead.fill.fore_color.rgb = RGBColor(20, 20, 20)
+        masthead.line.fill.background()
+
+        head = masthead.text_frame.paragraphs[0]
+        head.text = "SCHOOL NEWSPAPER"
+        head.font.name = "Malgun Gothic"
+        head.font.size = Pt(20)
+        head.font.bold = True
+        head.font.color.rgb = RGBColor(255, 255, 255)
+
+        title = slide.shapes.add_textbox(Inches(0.9), Inches(2.1), Inches(11.8), Inches(1.5))
+        p = title.text_frame.paragraphs[0]
+        p.text = self.school_name
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(56)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(24, 24, 24)
+
+        now = datetime.datetime.now()
+        sub = title.text_frame.add_paragraph()
+        sub.text = now.strftime("%Y.%m")
+        sub.font.name = "Malgun Gothic"
+        sub.font.size = Pt(24)
+        sub.font.color.rgb = RGBColor(85, 85, 85)
+
+    def _add_title_slide_v5(self):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(243, 239, 232)
+
+        band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(1.35), self.prs.slide_width, Inches(1.2))
+        band.fill.solid()
+        band.fill.fore_color.rgb = RGBColor(*self.theme["main"])
+        band.line.fill.background()
+
+        title = slide.shapes.add_textbox(Inches(0.8), Inches(2.8), Inches(12), Inches(1.6))
+        p = title.text_frame.paragraphs[0]
+        p.text = self.school_name
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(54)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(28, 28, 28)
+
+        now = datetime.datetime.now()
+        s = title.text_frame.add_paragraph()
+        s.text = f"{now.year}.{now.month} Monthly Story"
+        s.font.name = "Malgun Gothic"
+        s.font.size = Pt(22)
+        s.font.color.rgb = RGBColor(*self.theme["main"])
+
+    def _add_title_slide_v6(self):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(255, 255, 255)
+
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0.5), self.prs.slide_width, Inches(0.06))
+        line.fill.solid()
+        line.fill.fore_color.rgb = RGBColor(*self.theme["main"])
+        line.line.fill.background()
+
+        title = slide.shapes.add_textbox(Inches(1.0), Inches(2.4), Inches(11.2), Inches(1.4))
+        t = title.text_frame.paragraphs[0]
+        t.text = self.school_name
+        t.font.name = "Malgun Gothic"
+        t.font.size = Pt(58)
+        t.font.bold = True
+        t.font.color.rgb = RGBColor(20, 20, 20)
+
+        now = datetime.datetime.now()
+        sub = title.text_frame.add_paragraph()
+        sub.text = now.strftime("%Y-%m")
+        sub.font.name = "Malgun Gothic"
+        sub.font.size = Pt(20)
+        sub.font.color.rgb = RGBColor(110, 110, 110)
+
     def _add_article_slide(self, article):
+        if self.layout_version == "v6":
+            return self._add_article_slide_v6(article)
+        if self.layout_version == "v5":
+            return self._add_article_slide_v5(article)
+        if self.layout_version == "v4":
+            return self._add_article_slide_v4(article)
         if self.layout_version == "v3":
             return self._add_article_slide_v3(article)
         if self.layout_version == "v2":
@@ -387,3 +484,144 @@ class PPTEngine:
         imgs_raw = article.get("images", [])
         valid_imgs = get_valid_images(imgs_raw, max_count=4)
         self._add_image_grid(slide, valid_imgs, left=7.2, top=1.8, width=5.3, height=5.3)
+
+    def _add_article_slide_v4(self, article):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(247, 247, 247)
+
+        top = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), self.prs.slide_width, Inches(0.75))
+        top.fill.solid()
+        top.fill.fore_color.rgb = RGBColor(20, 20, 20)
+        top.line.fill.background()
+
+        head = top.text_frame.paragraphs[0]
+        head.text = article.get("title", "Untitled")
+        head.font.name = "Malgun Gothic"
+        head.font.size = Pt(22)
+        head.font.bold = True
+        head.font.color.rgb = RGBColor(255, 255, 255)
+
+        meta = slide.shapes.add_textbox(Inches(0.8), Inches(0.95), Inches(12), Inches(0.45))
+        meta_parts = [p for p in [article.get("date"), article.get("location"), article.get("grade")] if p]
+        mp = meta.text_frame.paragraphs[0]
+        mp.text = " | ".join(meta_parts)
+        mp.font.name = "Malgun Gothic"
+        mp.font.size = Pt(13)
+        mp.font.color.rgb = RGBColor(95, 95, 95)
+
+        body = slide.shapes.add_textbox(Inches(0.8), Inches(1.55), Inches(6.0), Inches(5.6))
+        bt = body.text_frame
+        bt.word_wrap = True
+        content_text = article.get("content", "")
+        if isinstance(content_text, list):
+            for item in content_text:
+                p = bt.add_paragraph()
+                p.text = f"- {item}"
+                p.font.name = "Malgun Gothic"
+                p.font.size = Pt(18)
+                p.space_after = Pt(8)
+        else:
+            p = bt.add_paragraph()
+            p.text = content_text[:360] + ("..." if len(content_text) > 360 else "")
+            p.font.name = "Malgun Gothic"
+            p.font.size = Pt(17)
+
+        imgs_raw = article.get("images", [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=7.0, top=1.55, width=5.5, height=5.6)
+
+    def _add_article_slide_v5(self, article):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(243, 239, 232)
+
+        title_box = slide.shapes.add_textbox(Inches(0.9), Inches(0.55), Inches(11.8), Inches(1.1))
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = article.get("title", "Untitled")
+        p.font.name = "Malgun Gothic"
+        p.font.size = Pt(32)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(26, 26, 26)
+
+        info = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.9), Inches(1.6), Inches(11.8), Inches(0.5))
+        info.fill.solid()
+        info.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        info.line.color.rgb = RGBColor(218, 218, 218)
+        info.line.width = Pt(1)
+        ip = info.text_frame.paragraphs[0]
+        ip.text = " | ".join([p for p in [article.get("date"), article.get("location"), article.get("grade")] if p])
+        ip.font.name = "Malgun Gothic"
+        ip.font.size = Pt(13)
+        ip.font.color.rgb = RGBColor(95, 95, 95)
+
+        body = slide.shapes.add_textbox(Inches(0.9), Inches(2.3), Inches(5.7), Inches(4.8))
+        bt = body.text_frame
+        bt.word_wrap = True
+        content_text = article.get("content", "")
+        if isinstance(content_text, list):
+            for item in content_text:
+                p = bt.add_paragraph()
+                p.text = f"- {item}"
+                p.font.name = "Malgun Gothic"
+                p.font.size = Pt(18)
+                p.space_after = Pt(8)
+        else:
+            p = bt.add_paragraph()
+            p.text = content_text[:340] + ("..." if len(content_text) > 340 else "")
+            p.font.name = "Malgun Gothic"
+            p.font.size = Pt(17)
+
+        imgs_raw = article.get("images", [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=6.85, top=2.3, width=5.65, height=4.8)
+
+    def _add_article_slide_v6(self, article):
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+        bg = slide.background.fill
+        bg.solid()
+        bg.fore_color.rgb = RGBColor(255, 255, 255)
+
+        bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0.35), self.prs.slide_width, Inches(0.05))
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = RGBColor(*self.theme["main"])
+        bar.line.fill.background()
+
+        title = slide.shapes.add_textbox(Inches(0.8), Inches(0.75), Inches(12), Inches(1.0))
+        tp = title.text_frame.paragraphs[0]
+        tp.text = article.get("title", "Untitled")
+        tp.font.name = "Malgun Gothic"
+        tp.font.size = Pt(34)
+        tp.font.bold = True
+        tp.font.color.rgb = RGBColor(20, 20, 20)
+
+        meta = slide.shapes.add_textbox(Inches(0.8), Inches(1.72), Inches(12), Inches(0.45))
+        mp = meta.text_frame.paragraphs[0]
+        mp.text = " | ".join([p for p in [article.get("date"), article.get("location"), article.get("grade")] if p])
+        mp.font.name = "Malgun Gothic"
+        mp.font.size = Pt(12)
+        mp.font.color.rgb = RGBColor(120, 120, 120)
+
+        imgs_raw = article.get("images", [])
+        valid_imgs = get_valid_images(imgs_raw, max_count=4)
+        self._add_image_grid(slide, valid_imgs, left=0.8, top=2.2, width=6.0, height=4.8)
+
+        body = slide.shapes.add_textbox(Inches(7.0), Inches(2.2), Inches(5.4), Inches(4.8))
+        bt = body.text_frame
+        bt.word_wrap = True
+        content_text = article.get("content", "")
+        if isinstance(content_text, list):
+            for item in content_text:
+                p = bt.add_paragraph()
+                p.text = f"- {item}"
+                p.font.name = "Malgun Gothic"
+                p.font.size = Pt(17)
+                p.space_after = Pt(7)
+        else:
+            p = bt.add_paragraph()
+            p.text = content_text[:320] + ("..." if len(content_text) > 320 else "")
+            p.font.name = "Malgun Gothic"
+            p.font.size = Pt(16)

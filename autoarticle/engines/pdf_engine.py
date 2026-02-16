@@ -47,6 +47,30 @@ class PDFEngine(FPDF):
         if self.font_available:
             return text
         return text.encode("latin-1", "replace").decode("latin-1")
+
+    def _cover_palette(self):
+        if self.layout_version == "v6":
+            return (255, 255, 255), (255, 255, 255), self.theme["main"], (95, 95, 95)
+        if self.layout_version == "v5":
+            return (243, 239, 232), self.theme["main"], (28, 28, 28), self.theme["main"]
+        if self.layout_version == "v4":
+            return (247, 247, 247), (20, 20, 20), (30, 30, 30), (90, 90, 90)
+        if self.layout_version == "v3":
+            return (250, 250, 250), (26, 30, 40), (30, 30, 30), (26, 30, 40)
+        if self.layout_version == "v2":
+            return (250, 250, 250), self.theme["main"], (30, 30, 30), self.theme["main"]
+        return self.theme["sub"], self.theme["sub"], self.theme["main"], (70, 70, 70)
+
+    def _meta_fill_color(self):
+        if self.layout_version == "v6":
+            return (250, 250, 250)
+        if self.layout_version == "v5":
+            return (244, 241, 236)
+        if self.layout_version == "v4":
+            return (242, 242, 242)
+        if self.layout_version in {"v2", "v3"}:
+            return (244, 246, 250)
+        return (248, 248, 248)
         
     def header(self):
         # 표지가 아닐 때만 헤더 표시
@@ -93,13 +117,11 @@ class PDFEngine(FPDF):
     def draw_cover(self):
         self.is_cover_page = True
         self.add_page()
-        if self.layout_version in {"v2", "v3"}:
-            self.set_fill_color(250, 250, 250)
+        if self.layout_version in {"v2", "v3", "v4", "v5", "v6"}:
+            bg_rgb, top_rgb, title_rgb, subtitle_rgb = self._cover_palette()
+            self.set_fill_color(*bg_rgb)
             self.rect(0, 0, 210, 297, 'F')
-            if self.layout_version == "v3":
-                self.set_fill_color(26, 30, 40)
-            else:
-                self.set_fill_color(*self.theme["main"])
+            self.set_fill_color(*top_rgb)
             self.rect(0, 0, 210, 22, 'F')
 
             self.set_y(95)
@@ -107,7 +129,7 @@ class PDFEngine(FPDF):
                 self.set_font("NanumGothic", "", 40)
             else:
                 self.set_font("Arial", "", 34)
-            self.set_text_color(30, 30, 30)
+            self.set_text_color(*title_rgb)
             self.cell(190, 25, self._safe_text(self.school_name), align='C', ln=True)
 
             self.set_y(122)
@@ -115,10 +137,7 @@ class PDFEngine(FPDF):
                 self.set_font("NanumGothic", "", 18)
             else:
                 self.set_font("Arial", "", 16)
-            if self.layout_version == "v3":
-                self.set_text_color(26, 30, 40)
-            else:
-                self.set_text_color(*self.theme["main"])
+            self.set_text_color(*subtitle_rgb)
             import datetime
             now = datetime.datetime.now()
             self.cell(190, 15, f"{now.year}학년도 {now.month}월 뉴스레터", align='C', ln=True)
@@ -269,10 +288,7 @@ class PDFEngine(FPDF):
                 if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
-            if self.layout_version in {"v2", "v3"}:
-                self.set_fill_color(244, 246, 250)
-            else:
-                self.set_fill_color(248, 248, 248)
+            self.set_fill_color(*self._meta_fill_color())
             self.set_draw_color(220, 220, 220)
             self.cell(190, 8, meta_info, border=1, fill=True, align='L')
             y_cursor += 15
@@ -405,10 +421,7 @@ class PDFEngine(FPDF):
                 if article.get('grade'): info_parts.append(f"Grade: {self._safe_text(article.get('grade'))}")
             meta_info = "  |  ".join(info_parts)
             
-            if self.layout_version in {"v2", "v3"}:
-                self.set_fill_color(244, 246, 250)
-            else:
-                self.set_fill_color(248, 248, 248)
+            self.set_fill_color(*self._meta_fill_color())
             self.set_draw_color(220, 220, 220)
             self.set_x(10)
             self.cell(190, 8, meta_info, border=1, fill=True, align='L')

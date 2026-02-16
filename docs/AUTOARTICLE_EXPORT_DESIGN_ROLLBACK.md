@@ -5,6 +5,9 @@
   - `v1` (legacy)
   - `v2` (clean)
   - `v3` (magazine)
+  - `v4` (A: newspaper)
+  - `v5` (B: feature magazine)
+  - `v6` (C: minimal brief)
 - Applies to:
   - CardNews PNG
   - PPT
@@ -23,6 +26,9 @@
 ## New design intent
 - `v2`: Cleaner spacing and lower visual noise
 - `v3`: Magazine-like hierarchy with stronger title/header contrast
+- `v4`: Newspaper masthead and dense editorial framing
+- `v5`: Warm feature-style magazine composition
+- `v6`: Minimal brief with strong whitespace and thin accent lines
 - Better metadata readability (date/location/대상)
 - Consistent 1~4 image handling across all exports
 

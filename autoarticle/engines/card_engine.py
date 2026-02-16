@@ -47,6 +47,12 @@ class CardNewsEngine:
         return int(y)
 
     def create_card(self, title, date, location, grade, hashtags, images):
+        if self.layout_version == "v6":
+            return self._create_card_v6(title, date, location, grade, hashtags, images)
+        if self.layout_version == "v5":
+            return self._create_card_v5(title, date, location, grade, hashtags, images)
+        if self.layout_version == "v4":
+            return self._create_card_v4(title, date, location, grade, hashtags, images)
         if self.layout_version == "v3":
             return self._create_card_v3(title, date, location, grade, hashtags, images)
         if self.layout_version == "v2":
@@ -156,6 +162,88 @@ class CardNewsEngine:
         tag_str = " ".join([f"#{t}" for t in hashtags])
         self._draw_wrapped_text(draw, tag_str, (50, 850), self._get_font(30), 980, main_rgb, max_lines=2)
         draw.text((820, 1010), "AI School Story", font=self._get_font(18), fill=(160, 160, 160))
+        return canvas
+
+    def _create_card_v4(self, title, date, location, grade, hashtags, images):
+        canvas = Image.new("RGB", self.size, (247, 247, 247))
+        draw = ImageDraw.Draw(canvas)
+        main_rgb = self.theme["main"]
+        accent_rgb = self.theme["accent"]
+
+        draw.rectangle((0, 0, 1080, 120), fill=(20, 20, 20))
+        draw.text((52, 32), "SCHOOL NEWSPAPER", font=self._get_font(26), fill=(255, 255, 255))
+        draw.text((880, 34), date or "", font=self._get_font(20), fill=(220, 220, 220))
+
+        label = grade if grade else "학급"
+        draw.rounded_rectangle((52, 146, 260, 196), radius=20, fill=(230, 230, 230))
+        draw.text((70, 160), label, font=self._get_font(22), fill=(40, 40, 40))
+
+        next_y = self._draw_wrapped_text(draw, title, (52, 220), self._get_font(48), 976, (20, 20, 20), max_lines=2)
+        if location:
+            draw.text((52, next_y + 8), location, font=self._get_font(24), fill=accent_rgb)
+            img_y = next_y + 52
+        else:
+            img_y = next_y + 20
+
+        img_box = (52, int(img_y), 1028, int(img_y + 520))
+        draw.rectangle((50, int(img_y - 2), 1030, int(img_y + 522)), outline=(210, 210, 210), width=2)
+        if images:
+            self._render_image_grid(canvas, images, img_box)
+
+        tag_str = " ".join([f"#{t}" for t in hashtags])
+        self._draw_wrapped_text(draw, tag_str, (52, img_y + 540), self._get_font(30), 976, main_rgb, max_lines=2)
+        draw.text((820, 1010), "AI School Story", font=self._get_font(18), fill=(155, 155, 155))
+        return canvas
+
+    def _create_card_v5(self, title, date, location, grade, hashtags, images):
+        canvas = Image.new("RGB", self.size, (243, 239, 232))
+        draw = ImageDraw.Draw(canvas)
+        main_rgb = self.theme["main"]
+        accent_rgb = self.theme["accent"]
+
+        draw.rounded_rectangle((36, 36, 1044, 1044), radius=34, fill=(255, 255, 255), outline=(230, 230, 230), width=3)
+        draw.rectangle((36, 36, 1044, 74), fill=main_rgb)
+        draw.text((58, 44), "FEATURE NOTE", font=self._get_font(20), fill=(255, 255, 255))
+        draw.text((900, 44), date or "", font=self._get_font(18), fill=(255, 255, 255))
+
+        draw.text((72, 110), title, font=self._get_font(44), fill=(28, 28, 28))
+        if grade:
+            draw.text((72, 168), grade, font=self._get_font(24), fill=main_rgb)
+        if location:
+            draw.text((240, 168), location, font=self._get_font(24), fill=accent_rgb)
+
+        img_box = (72, 214, 1008, 782)
+        draw.rounded_rectangle((70, 212, 1010, 784), radius=20, fill=(245, 245, 245))
+        if images:
+            self._render_image_grid(canvas, images, img_box)
+
+        tag_str = " ".join([f"#{t}" for t in hashtags])
+        self._draw_wrapped_text(draw, tag_str, (72, 816), self._get_font(30), 936, main_rgb, max_lines=2)
+        draw.text((808, 1000), "AI School Story", font=self._get_font(18), fill=(165, 165, 165))
+        return canvas
+
+    def _create_card_v6(self, title, date, location, grade, hashtags, images):
+        canvas = Image.new("RGB", self.size, (255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
+        main_rgb = self.theme["main"]
+
+        draw.rectangle((0, 0, 1080, 6), fill=main_rgb)
+        draw.text((52, 38), date or "", font=self._get_font(18), fill=(120, 120, 120))
+        if grade:
+            draw.text((52, 68), grade, font=self._get_font(22), fill=(40, 40, 40))
+        if location:
+            draw.text((210, 68), location, font=self._get_font(22), fill=(100, 100, 100))
+
+        next_y = self._draw_wrapped_text(draw, title, (52, 120), self._get_font(52), 976, (20, 20, 20), max_lines=2)
+        img_y = next_y + 24
+        img_box = (52, int(img_y), 1028, int(img_y + 560))
+        draw.rectangle((52, int(img_y), 1028, int(img_y + 560)), outline=(220, 220, 220), width=1)
+        if images:
+            self._render_image_grid(canvas, images, img_box)
+
+        tag_str = " ".join([f"#{t}" for t in hashtags])
+        self._draw_wrapped_text(draw, tag_str, (52, img_y + 586), self._get_font(28), 976, main_rgb, max_lines=2)
+        draw.text((840, 1014), "AI School Story", font=self._get_font(16), fill=(190, 190, 190))
         return canvas
 
     def _render_image_grid(self, canvas, image_paths, box):

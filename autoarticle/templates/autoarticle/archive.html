@@ -97,6 +97,9 @@
                                     <option value="v1" {% if export_layout_version == 'v1' %}selected{% endif %}>v1 클래식</option>
                                     <option value="v2" {% if export_layout_version == 'v2' %}selected{% endif %}>v2 클린</option>
                                     <option value="v3" {% if export_layout_version == 'v3' %}selected{% endif %}>v3 매거진</option>
+                                    <option value="v4" {% if export_layout_version == 'v4' %}selected{% endif %}>v4 A안 (신문형)</option>
+                                    <option value="v5" {% if export_layout_version == 'v5' %}selected{% endif %}>v5 B안 (매거진+)</option>
+                                    <option value="v6" {% if export_layout_version == 'v6' %}selected{% endif %}>v6 C안 (미니멀)</option>
                                 </select>
                                 <button type="submit" formaction="{% url 'autoarticle:export_layout' %}" formmethod="post"
                                     class="px-3 py-2 rounded-xl bg-gray-800 text-white text-sm font-bold">적용</button>
