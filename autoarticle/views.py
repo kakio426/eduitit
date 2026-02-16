@@ -9,7 +9,8 @@ import json
 import datetime
 import io
 import re
-from django.http import HttpResponse
+import zipfile
+from django.http import HttpResponse, FileResponse
 from django.conf import settings
 from .engines.ai_service import generate_article_gemini, summarize_article_for_ppt
 from .engines.ppt_engine import PPTEngine
@@ -206,6 +207,29 @@ def _build_export_preview_items(article):
             "tone": tone_map["card"],
         },
     ]
+
+
+def _is_valid_pptx_field(file_field):
+    """Validate stored pptx field before reusing cached file."""
+    if not file_field:
+        return False
+
+    try:
+        with file_field.open("rb") as f:
+            data = f.read()
+        if not data:
+            return False
+
+        bio = io.BytesIO(data)
+        if not zipfile.is_zipfile(bio):
+            return False
+
+        bio.seek(0)
+        with zipfile.ZipFile(bio) as zf:
+            names = set(zf.namelist())
+            return {"[Content_Types].xml", "ppt/presentation.xml"}.issubset(names)
+    except Exception:
+        return False
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
 class ArticleCreateView(View):
@@ -692,11 +716,21 @@ class ArticlePPTDownloadView(View):
     def get(self, request, pk):
         article = get_object_or_404(GeneratedArticle, pk=pk, user=request.user)
         
-        # 1. 이미 파일이 있으면 즉시 반환
+        # 1. 기존 파일이 있고 정상 pptx면 즉시 반환
         if article.ppt_file:
             try:
-                # FileField의 url이 absolute인 경우와 relative인 경우 처리
-                return redirect(article.ppt_file.url)
+                if _is_valid_pptx_field(article.ppt_file):
+                    article.ppt_file.open("rb")
+                    return FileResponse(
+                        article.ppt_file,
+                        as_attachment=True,
+                        filename=f"newsletter_{article.id}.pptx",
+                        content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    )
+                logger.warning(f"Invalid cached PPT detected for article {article.id}. Regenerating.")
+                article.ppt_file.delete(save=False)
+                article.ppt_file = None
+                article.save(update_fields=["ppt_file"])
             except Exception:
                 pass
 
@@ -729,10 +763,20 @@ class ArticlePPTDownloadView(View):
             
             from django.core.files.base import ContentFile
             ppt_buffer = ppt_engine.create_presentation([article_data])
-            article.ppt_file.save(f"newsletter_{article.id}.pptx", ContentFile(ppt_buffer.getvalue()))
+            ppt_bytes = ppt_buffer.getvalue()
+            if not zipfile.is_zipfile(io.BytesIO(ppt_bytes)):
+                raise ValueError("Generated PPT is not a valid pptx zip.")
+
+            article.ppt_file.save(f"newsletter_{article.id}.pptx", ContentFile(ppt_bytes))
             article.save()
-            
-            return redirect(article.ppt_file.url)
+
+            article.ppt_file.open("rb")
+            return FileResponse(
+                article.ppt_file,
+                as_attachment=True,
+                filename=f"newsletter_{article.id}.pptx",
+                content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            )
             
         except Exception as e:
             import logging
