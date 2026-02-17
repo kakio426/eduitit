@@ -107,10 +107,10 @@
 
 {% block extra_js %}
 <script>
-    const FAIRY_VARIANT = "{{ variant }}";
-    const FAIRY_MODE = "{{ mode }}";
-    const FAIRY_DIFFICULTY = "{{ difficulty }}";
-    const FAIRY_ENGINE_WASM_PATH = "{% static 'janggi/js/engine/stockfish.wasm' %}";
+    window.FAIRY_VARIANT = "{{ variant }}";
+    window.FAIRY_MODE = "{{ mode }}";
+    window.FAIRY_DIFFICULTY = "{{ difficulty }}";
+    window.FAIRY_ENGINE_WASM_PATH = "{% static 'janggi/js/engine/stockfish.wasm' %}";
 </script>
 <script src="{% static 'janggi/js/engine/stockfish.js' %}"></script>
 <script src="{% static 'fairy_games/js/fairy_engine.js' %}"></script>
