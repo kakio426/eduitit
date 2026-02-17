@@ -80,6 +80,7 @@ def _resolve_product_launch_url(product):
         '교사 백과사전': 'encyclopedia:landing',
         '학교 예약 시스템': 'reservations:dashboard_landing',
         '최신본 센터': 'version_manager:document_list',
+        '최종최최종은 이제그만': 'version_manager:document_list',
     }
     route_name = title_route_map.get(product.title)
     if route_name:

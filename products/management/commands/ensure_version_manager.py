@@ -4,13 +4,13 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 
 
 class Command(BaseCommand):
-    help = 'Ensure 최신본 센터 product exists in database'
+    help = 'Ensure 최종최최종은 이제그만 product exists in database'
 
     def handle(self, *args, **options):
-        title = '최신본 센터'
+        title = '최종최최종은 이제그만'
         defaults = {
             'lead_text': '업로드 한 번으로 최신본과 배포본을 분리 관리하세요.',
-            'description': '최신본 센터는 교실 문서를 버전 단위로 자동 정리해 최신본과 공식 배포본을 분리 관리합니다. 선생님은 파일명을 신경 쓰지 않고 드롭만 하면 되고, 필요한 시점에 배포본 지정 버튼 한 번으로 공식본을 확정할 수 있습니다.',
+            'description': '최종최최종은 이제그만은 교실 문서를 버전 단위로 자동 정리해 최신본과 공식 배포본을 분리 관리합니다. 선생님은 파일명을 신경 쓰지 않고 드롭만 하면 되고, 필요한 시점에 배포본 지정 버튼 한 번으로 공식본을 확정할 수 있습니다.',
             'price': 0.00,
             'is_active': True,
             'is_featured': False,
@@ -74,7 +74,7 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                'title': '최신본 센터 사용법',
+                'title': '최종최최종은 이제그만 사용법',
                 'description': '문서 생성부터 최신본/배포본 다운로드까지의 핵심 흐름을 안내합니다.',
                 'is_published': True,
             },
@@ -125,5 +125,4 @@ class Command(BaseCommand):
                 if changed:
                     section.save(update_fields=changed)
 
-        self.stdout.write(self.style.SUCCESS('최신본 센터 ensure 작업 완료'))
-
+        self.stdout.write(self.style.SUCCESS('최종최최종은 이제그만 ensure 작업 완료'))
