@@ -18,10 +18,8 @@
             </ol>
 
             <div class="mt-8 flex flex-wrap gap-3">
-                <a href="{% url 'fairy_games:play' variant %}?mode=local"
+                <a href="{% url 'fairy_games:play' variant %}"
                    class="px-5 py-3 rounded-xl bg-purple-600 text-white font-bold">로컬 대결 시작</a>
-                <a href="{% url 'fairy_games:play' variant %}?mode=ai&difficulty=medium"
-                   class="px-5 py-3 rounded-xl bg-blue-600 text-white font-bold">AI 대결 시작</a>
                 <a href="{% url 'fairy_games:index' %}"
                    class="px-5 py-3 rounded-xl bg-gray-100 text-gray-800 font-bold">목록으로</a>
             </div>

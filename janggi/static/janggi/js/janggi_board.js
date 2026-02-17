@@ -9,6 +9,7 @@
     var resultOverlayEl = null;
     var resultTitleEl = null;
     var resultDescEl = null;
+    var rulesOverlayEl = null;
 
     var selected = null;
     var validTargets = [];
@@ -716,12 +717,16 @@
         resultOverlayEl = document.getElementById("gameResultOverlay");
         resultTitleEl = document.getElementById("resultTitle");
         resultDescEl = document.getElementById("resultDesc");
+        rulesOverlayEl = document.getElementById("janggiRulesOverlay");
 
         var resetBtn = document.getElementById("resetBoardBtn");
         var undoBtn = document.getElementById("undoMoveBtn");
         var closeResultBtn = document.getElementById("closeResultBtn");
         var retryResultBtn = document.getElementById("retryResultBtn");
         var askMoveBtn = document.getElementById("askMoveBtn");
+        var flipBoardBtn = document.getElementById("flipBoardBtn");
+        var openRulesBtn = document.getElementById("openRulesBtn");
+        var closeRulesBtn = document.getElementById("closeRulesBtn");
 
         if (resetBtn) resetBtn.addEventListener("click", resetAll);
         if (undoBtn) undoBtn.addEventListener("click", undoMove);
@@ -731,6 +736,18 @@
         if (retryResultBtn) retryResultBtn.addEventListener("click", resetAll);
         if (askMoveBtn) askMoveBtn.addEventListener("click", function () {
             if (JANGGI_MODE === "ai" && currentTurn === "blue") requestAiMove();
+        });
+        if (flipBoardBtn) flipBoardBtn.addEventListener("click", function () {
+            if (boardEl) boardEl.classList.toggle("flipped");
+        });
+        if (openRulesBtn) openRulesBtn.addEventListener("click", function () {
+            if (rulesOverlayEl) rulesOverlayEl.classList.add("show");
+        });
+        if (closeRulesBtn) closeRulesBtn.addEventListener("click", function () {
+            if (rulesOverlayEl) rulesOverlayEl.classList.remove("show");
+        });
+        if (rulesOverlayEl) rulesOverlayEl.addEventListener("click", function (e) {
+            if (e.target === rulesOverlayEl) rulesOverlayEl.classList.remove("show");
         });
 
         resetAll();

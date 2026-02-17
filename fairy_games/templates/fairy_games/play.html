@@ -11,10 +11,7 @@
             radial-gradient(circle at 90% 10%, rgba(125, 211, 252, 0.22), transparent 40%),
             linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #ecfeff 100%);
     }
-    .fg-title {
-        letter-spacing: -0.02em;
-        text-shadow: 0 2px 0 rgba(255, 255, 255, 0.75);
-    }
+    .fg-title { letter-spacing: -0.02em; text-shadow: 0 2px 0 rgba(255, 255, 255, 0.75); }
     .fg-layout { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     .fg-board-wrap {
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
@@ -32,7 +29,10 @@
         margin: 0 auto;
         border-radius: 10px;
         padding: 2px;
+        transition: transform 0.2s ease;
+        transform-origin: center;
     }
+    .fg-board-grid.flipped { transform: rotate(180deg); }
     .fg-cell {
         width: 52px;
         height: 52px;
@@ -49,8 +49,7 @@
     .fg-cell.sel { outline: 3px solid #7c3aed; outline-offset: -3px; }
     .fg-cell.hint { box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.55); }
     .fg-cell.blocked {
-        background:
-            repeating-linear-gradient(45deg, #111827, #111827 6px, #1f2937 6px, #1f2937 12px);
+        background: repeating-linear-gradient(45deg, #111827, #111827 6px, #1f2937 6px, #1f2937 12px);
         color: #111827;
     }
     .fg-disc-wrap {
@@ -66,8 +65,6 @@
     .fg-disc { width: 36px; height: 36px; border-radius: 999px; box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.35), 0 3px 8px rgba(15, 23, 42, 0.25); }
     .fg-red { background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%); color: #fff; }
     .fg-blue { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; }
-    .fg-green { background: linear-gradient(180deg, #22c55e 0%, #15803d 100%); color: #fff; }
-    .fg-gray { background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%); color: #fff; }
     .fg-hand { display: flex; flex-wrap: wrap; gap: 8px; }
     .fg-hand button {
         border: 1px solid rgba(148, 163, 184, 0.3);
@@ -77,15 +74,12 @@
         cursor: pointer;
         background: #ffffff;
         box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
-        transition: transform 0.12s ease;
     }
-    .fg-hand button:hover { transform: translateY(-1px); }
     .fg-hand button.sel { background: #7c3aed; color: #fff; border-color: #6d28d9; }
     .fg-panel {
         border-radius: 16px;
         border: 1px solid rgba(148, 163, 184, 0.2);
         background: rgba(255, 255, 255, 0.88);
-        backdrop-filter: blur(4px);
         box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
     }
     .fg-lesson {
@@ -93,49 +87,25 @@
         border: 1px dashed rgba(59, 130, 246, 0.4);
         background: rgba(239, 246, 255, 0.8);
     }
-    .fg-mission-title {
-        font-size: 0.78rem;
-        font-weight: 800;
-        color: #1e3a8a;
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
+    .fg-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 120;
+        padding: 16px;
     }
-    .fg-mission-body {
-        font-size: 0.92rem;
-        color: #1f2937;
-        font-weight: 700;
+    .fg-modal-backdrop.show { display: flex; }
+    .fg-modal {
+        width: min(520px, 92vw);
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.35);
     }
-
-    .fg-stage.fg-variant-dobutsu {
-        background:
-            radial-gradient(circle at 12% 22%, rgba(254, 240, 138, 0.32), transparent 32%),
-            radial-gradient(circle at 85% 14%, rgba(187, 247, 208, 0.28), transparent 34%),
-            linear-gradient(135deg, #fffbeb 0%, #fefce8 46%, #ecfdf5 100%);
-    }
-    .fg-stage.fg-variant-cfour {
-        background:
-            radial-gradient(circle at 14% 18%, rgba(191, 219, 254, 0.34), transparent 30%),
-            radial-gradient(circle at 86% 20%, rgba(254, 202, 202, 0.24), transparent 36%),
-            linear-gradient(135deg, #eff6ff 0%, #e0e7ff 45%, #fef2f2 100%);
-    }
-    .fg-stage.fg-variant-isolation {
-        background:
-            radial-gradient(circle at 16% 20%, rgba(226, 232, 240, 0.55), transparent 34%),
-            radial-gradient(circle at 86% 16%, rgba(148, 163, 184, 0.3), transparent 36%),
-            linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
-    }
-    .fg-stage.fg-variant-ataxx {
-        background:
-            radial-gradient(circle at 11% 22%, rgba(252, 165, 165, 0.3), transparent 34%),
-            radial-gradient(circle at 87% 18%, rgba(125, 211, 252, 0.26), transparent 35%),
-            linear-gradient(135deg, #fff7ed 0%, #fee2e2 44%, #ecfeff 100%);
-    }
-    .fg-stage.fg-variant-breakthrough {
-        background:
-            radial-gradient(circle at 13% 20%, rgba(190, 242, 100, 0.32), transparent 32%),
-            radial-gradient(circle at 87% 18%, rgba(253, 230, 138, 0.26), transparent 35%),
-            linear-gradient(135deg, #f7fee7 0%, #ecfccb 45%, #fef9c3 100%);
-    }
+    .fg-modal h2 { font-size: 1.5rem; font-weight: 900; margin-bottom: 8px; color: #111827; }
 
     .fg-stage.fg-variant-dobutsu .fg-board-grid { background: linear-gradient(180deg, #92400e 0%, #78350f 100%); }
     .fg-stage.fg-variant-cfour .fg-board-grid { background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%); }
@@ -143,9 +113,7 @@
     .fg-stage.fg-variant-ataxx .fg-board-grid { background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%); }
     .fg-stage.fg-variant-breakthrough .fg-board-grid { background: linear-gradient(180deg, #166534 0%, #14532d 100%); }
 
-    @media (min-width: 1024px) {
-        .fg-layout { grid-template-columns: 2fr 1fr; }
-    }
+    @media (min-width: 1024px) { .fg-layout { grid-template-columns: 2fr 1fr; } }
 </style>
 {% endblock %}
 
@@ -154,17 +122,8 @@
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-6">
             <div class="text-5xl mb-2">{{ game.emoji }}</div>
-            <h1 class="fg-title text-3xl sm:text-4xl font-black text-gray-800">
-                {{ game.title }}
-                {% if mode == 'ai' %}AI 대결{% else %}로컬 대결{% endif %}
-            </h1>
-            <p class="text-gray-600 mt-2">
-                {% if mode == 'ai' %}
-                난이도: {{ difficulty }} (easy / medium / hard / expert)
-                {% else %}
-                같은 화면에서 번갈아 두는 로컬 모드
-                {% endif %}
-            </p>
+            <h1 class="fg-title text-3xl sm:text-4xl font-black text-gray-800">{{ game.title }} 로컬 대결</h1>
+            <p class="text-gray-600 mt-2">친구와 마주보고 번갈아 두세요. 필요하면 보드를 뒤집어 사용하세요.</p>
         </div>
 
         <div class="fg-layout">
@@ -175,32 +134,26 @@
             </div>
 
             <aside class="space-y-4">
-                {% if mode == 'ai' %}
-                <div class="fg-panel p-4">
-                    <h2 class="text-lg font-black text-gray-800 mb-2">AI 동작 정보</h2>
-                    <p id="fg-ai-source" class="text-sm text-gray-700 font-semibold">최근 수: 준비 중</p>
-                    <p id="fg-ai-stats" class="text-xs text-gray-500 mt-1">엔진 0회 / 폴백 0회</p>
-                </div>
-                {% endif %}
-
                 <div class="fg-panel p-4">
                     <h2 class="text-lg font-black text-gray-800 mb-2">게임 상태</h2>
                     <p id="fg-status" class="text-gray-700 font-bold">준비 중</p>
-                    <div class="mt-3 flex flex-wrap gap-2">
+                    <div class="mt-3 grid grid-cols-2 gap-2">
                         <button id="fg-reset" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-bold">초기화</button>
                         <button id="fg-undo" class="px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold">되돌리기</button>
+                        <button id="fg-flip" class="px-4 py-2 rounded-xl bg-indigo-100 text-indigo-700 font-bold">보드 뒤집기</button>
+                        <button id="fg-open-rules" class="px-4 py-2 rounded-xl bg-sky-100 text-sky-700 font-bold">규칙 팝업</button>
                     </div>
                 </div>
 
                 <div class="fg-lesson p-4">
-                    <p class="fg-mission-title mb-1">오늘의 미션</p>
-                    <p id="fg-mission" class="fg-mission-body">상대보다 한 수 앞서 생각해 보세요.</p>
-                    <p id="fg-tip" class="text-xs text-gray-600 mt-2">팁: 선택한 말이 갈 수 있는 칸이 파란 힌트로 표시됩니다.</p>
+                    <p class="text-xs font-extrabold text-blue-900 mb-1">오늘의 미션</p>
+                    <p id="fg-mission" class="text-sm text-gray-800 font-bold">상대보다 한 수 앞서 생각해 보세요.</p>
+                    <p id="fg-tip" class="text-xs text-gray-600 mt-2">선택한 말이 갈 수 있는 칸은 힌트로 표시됩니다.</p>
                 </div>
 
                 <div class="fg-panel p-4">
                     <h2 class="text-lg font-black text-gray-800 mb-2">게임 규칙 요약</h2>
-                    <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                    <ul id="fg-rules-list" class="text-sm text-gray-700 space-y-1 list-disc list-inside">
                         {% for rule in game.rules %}
                         <li>{{ rule }}</li>
                         {% endfor %}
@@ -212,33 +165,42 @@
                     <pre id="fg-history" class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap">-</pre>
                 </div>
 
-                {% if mode == 'ai' %}
-                <div class="fg-panel p-4">
-                    <h2 class="text-lg font-black text-gray-800 mb-2">난이도 변경</h2>
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <a class="text-center py-2 rounded-lg bg-green-100 text-green-700 font-bold" href="?mode=ai&difficulty=easy">easy</a>
-                        <a class="text-center py-2 rounded-lg bg-blue-100 text-blue-700 font-bold" href="?mode=ai&difficulty=medium">medium</a>
-                        <a class="text-center py-2 rounded-lg bg-orange-100 text-orange-700 font-bold" href="?mode=ai&difficulty=hard">hard</a>
-                        <a class="text-center py-2 rounded-lg bg-red-100 text-red-700 font-bold" href="?mode=ai&difficulty=expert">expert</a>
-                    </div>
-                </div>
-                {% endif %}
-
                 <a href="{% url 'fairy_games:index' %}" class="block text-center py-3 rounded-xl bg-gray-100 text-gray-800 font-bold">목록으로</a>
             </aside>
         </div>
     </div>
 </section>
+
+<div id="fg-result-modal" class="fg-modal-backdrop" aria-hidden="true">
+    <div class="fg-modal">
+        <h2 id="fg-result-title">대결 종료</h2>
+        <p id="fg-result-desc" class="text-gray-700 mb-4">결과를 확인하세요.</p>
+        <div class="grid grid-cols-2 gap-2">
+            <button id="fg-result-restart" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-bold">다시하기</button>
+            <button id="fg-result-close" class="px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold">닫기</button>
+        </div>
+    </div>
+</div>
+
+<div id="fg-rules-modal" class="fg-modal-backdrop" aria-hidden="true">
+    <div class="fg-modal">
+        <h2>{{ game.title }} 규칙</h2>
+        <p class="text-gray-600 mb-3">승리 조건: {{ game.goal }}</p>
+        <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1 mb-4">
+            {% for rule in game.rules %}
+            <li>{{ rule }}</li>
+            {% endfor %}
+        </ol>
+        <button id="fg-rules-close" class="w-full px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold">닫기</button>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     window.FAIRY_VARIANT = "{{ variant }}";
-    window.FAIRY_MODE = "{{ mode }}";
-    window.FAIRY_DIFFICULTY = "{{ difficulty }}";
-    window.FAIRY_ENGINE_WASM_PATH = "{% static 'janggi/js/engine/stockfish.wasm' %}";
+    window.FAIRY_MODE = "local";
+    window.FAIRY_DIFFICULTY = "none";
 </script>
-<script src="{% static 'janggi/js/engine/stockfish.js' %}"></script>
-<script src="{% static 'fairy_games/js/fairy_engine.js' %}"></script>
 <script src="{% static 'fairy_games/js/fairy_games.js' %}"></script>
 {% endblock %}

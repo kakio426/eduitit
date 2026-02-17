@@ -29,13 +29,9 @@ def play(request, variant):
     if not game:
         raise Http404("Unknown game variant")
 
-    mode = request.GET.get("mode", "local")
-    if mode not in ("local", "ai"):
-        mode = "local"
-
-    difficulty = request.GET.get("difficulty", "medium")
-    if difficulty not in ("easy", "medium", "hard", "expert"):
-        difficulty = "medium"
+    # 전략 게임 5종은 현재 로컬 대결만 지원
+    mode = "local"
+    difficulty = "none"
 
     return render(
         request,
@@ -47,4 +43,3 @@ def play(request, variant):
             "difficulty": difficulty,
         },
     )
-

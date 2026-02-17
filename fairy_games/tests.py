@@ -1,4 +1,4 @@
-﻿from django.core.management import call_command
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
@@ -17,16 +17,17 @@ class FairyGamesRoutingTests(TestCase):
             response = self.client.get(reverse("fairy_games:rules", kwargs={"variant": variant}))
             self.assertEqual(response.status_code, 200, msg=f"rules failed: {variant}")
 
-    def test_play_pages_local_and_ai(self):
+    def test_play_pages_local_only(self):
         for variant in ["dobutsu", "cfour", "isolation", "ataxx", "breakthrough"]:
-            response_local = self.client.get(reverse("fairy_games:play", kwargs={"variant": variant}) + "?mode=local")
-            response_ai = self.client.get(
+            response_default = self.client.get(reverse("fairy_games:play", kwargs={"variant": variant}))
+            response_ai_query = self.client.get(
                 reverse("fairy_games:play", kwargs={"variant": variant}) + "?mode=ai&difficulty=medium"
             )
-            self.assertEqual(response_local.status_code, 200, msg=f"local failed: {variant}")
-            self.assertEqual(response_ai.status_code, 200, msg=f"ai failed: {variant}")
-            self.assertContains(response_local, "로컬 대결")
-            self.assertContains(response_ai, "AI 대결")
+            self.assertEqual(response_default.status_code, 200, msg=f"default failed: {variant}")
+            self.assertEqual(response_ai_query.status_code, 200, msg=f"ai query failed: {variant}")
+            self.assertContains(response_default, "로컬 대결")
+            self.assertNotContains(response_default, "AI 대결")
+            self.assertContains(response_ai_query, "로컬 대결")
 
     def test_invalid_variant_returns_404(self):
         response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "invalid-variant"}))

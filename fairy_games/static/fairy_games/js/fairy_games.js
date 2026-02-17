@@ -4,50 +4,73 @@
   const historyEl = document.getElementById('fg-history');
   const resetBtn = document.getElementById('fg-reset');
   const undoBtn = document.getElementById('fg-undo');
+  const flipBtn = document.getElementById('fg-flip');
+  const openRulesBtn = document.getElementById('fg-open-rules');
   const topEl = document.getElementById('fg-extra-top');
   const bottomEl = document.getElementById('fg-extra-bottom');
-  const aiSourceEl = document.getElementById('fg-ai-source');
-  const aiStatsEl = document.getElementById('fg-ai-stats');
+  const rulesListEl = document.getElementById('fg-rules-list');
   const stageEl = document.getElementById('fg-stage');
   const missionEl = document.getElementById('fg-mission');
   const tipEl = document.getElementById('fg-tip');
+  const resultModalEl = document.getElementById('fg-result-modal');
+  const resultTitleEl = document.getElementById('fg-result-title');
+  const resultDescEl = document.getElementById('fg-result-desc');
+  const resultRestartBtn = document.getElementById('fg-result-restart');
+  const resultCloseBtn = document.getElementById('fg-result-close');
+  const rulesModalEl = document.getElementById('fg-rules-modal');
+  const rulesCloseBtn = document.getElementById('fg-rules-close');
 
-  const MODE = (window.FAIRY_MODE || 'local').toLowerCase();
+  const MODE = 'local';
   const VARIANT = (window.FAIRY_VARIANT || 'cfour').toLowerCase();
   const LEVEL = (window.FAIRY_DIFFICULTY || 'medium').toLowerCase();
-
-  const ENGINE_VARIANTS = { cfour: 'cfour', ataxx: 'ataxx', breakthrough: 'breakthrough', dobutsu: 'dobutsu' };
 
   let game = null;
   let state = null;
   let undoStack = [];
   let handPick = null;
-  const aiStats = { engine: 0, fallback: 0, last: 'none' };
+  let boardFlipped = false;
+  let resultShown = false;
 
   const copy = (o) => JSON.parse(JSON.stringify(o));
   const sideName = (s) => (s === 1 ? '초(빨강)' : '한(파랑)');
   const other = (s) => (s === 1 ? 2 : 1);
-  const aiActive = () => MODE === 'ai' && state && !state.gameOver && state.turn === 2;
+  const aiActive = () => false;
   const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const setStatus = (text) => { statusEl.textContent = text; };
   const setHistory = (arr) => { historyEl.textContent = arr.length ? arr.join('\n') : '-'; };
   const pushUndo = () => { undoStack.push(copy(state)); if (undoStack.length > 150) undoStack.shift(); };
-  function updateAiStats(reason) {
-    if (aiSourceEl) {
-      if (aiStats.last === 'engine') aiSourceEl.textContent = '최근 수: 엔진';
-      else if (aiStats.last === 'fallback') aiSourceEl.textContent = '최근 수: 로컬 폴백';
-      else aiSourceEl.textContent = '최근 수: 준비 중';
-      if (reason) aiSourceEl.textContent += ` (${reason})`;
-    }
-    if (aiStatsEl) aiStatsEl.textContent = `엔진 ${aiStats.engine}회 / 폴백 ${aiStats.fallback}회`;
-  }
 
   function popUndo() {
     if (!undoStack.length) return;
     state = undoStack.pop();
     handPick = null;
     render();
-    aiTurn();
+  }
+
+  function setBoardFlip(active) {
+    boardFlipped = !!active;
+    if (!boardEl) return;
+    boardEl.classList.toggle('flipped', boardFlipped);
+  }
+
+  function setRulesModal(open) {
+    if (!rulesModalEl) return;
+    rulesModalEl.classList.toggle('show', !!open);
+    rulesModalEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  function setResultModal(open) {
+    if (!resultModalEl) return;
+    resultModalEl.classList.toggle('show', !!open);
+    resultModalEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  function maybeShowResult() {
+    if (!state || !state.gameOver || resultShown) return;
+    resultShown = true;
+    if (resultTitleEl) resultTitleEl.textContent = state.winner ? `${sideName(state.winner)} 승리` : '무승부';
+    if (resultDescEl) resultDescEl.textContent = state.winner ? '축하합니다! 다시 도전해 보세요.' : '승부가 나지 않았어요. 다시 해볼까요?';
+    setResultModal(true);
   }
 
   function posToken(r, c) { return String.fromCharCode(97 + c) + String(r); }
@@ -508,7 +531,10 @@
 
   const games = { cfour, isolation, ataxx, breakthrough, dobutsu };
 
-  function render() { game.render(state); }
+  function render() {
+    game.render(state);
+    maybeShowResult();
+  }
 
   function ensureTurnPlayable() {
     if (!state || state.gameOver) return false;
@@ -520,55 +546,9 @@
     return true;
   }
 
-  function localAiFallback(reason) {
-      aiStats.fallback += 1;
-      aiStats.last = 'fallback';
-      updateAiStats(reason || 'engine unavailable');
-      setTimeout(() => {
-      const mv = game.ai(state);
-      if (mv) {
-        pushUndo();
-        game.apply(state, mv);
-        render();
-        if (aiActive()) setTimeout(aiTurn, 80);
-      }
-      }, 150);
-  }
-
   function aiTurn() {
-    if (!aiActive()) return;
-    if (ensureTurnPlayable()) {
-      if (aiActive()) setTimeout(aiTurn, 80);
-      return;
-    }
-    setStatus('AI가 생각 중...');
-
-    const engineVariant = ENGINE_VARIANTS[VARIANT];
-    const canUseEngine = !!(
-      engineVariant &&
-      window.FairyEngine &&
-      typeof window.FairyEngine.requestMove === 'function' &&
-      typeof window.FairyEngine.canUseEngine === 'function' &&
-      window.FairyEngine.canUseEngine() &&
-      state.tokens &&
-      typeof game.parseEngineMove === 'function'
-    );
-    if (!canUseEngine) { localAiFallback('engine not configured'); return; }
-
-    window.FairyEngine.requestMove(state.tokens.slice(), function (bestmove) {
-      const m = game.parseEngineMove(state, bestmove);
-      if (m) {
-        aiStats.engine += 1;
-        aiStats.last = 'engine';
-        updateAiStats();
-        pushUndo();
-        game.apply(state, m);
-        render();
-        if (aiActive()) setTimeout(aiTurn, 80);
-        return;
-      }
-      localAiFallback('engine move parse failed');
-    });
+    // 로컬 2인 대결 전용: AI 비활성
+    return;
   }
 
   function init() {
@@ -577,18 +557,32 @@
     state = game.init();
     undoStack = [];
     handPick = null;
-    aiStats.engine = 0;
-    aiStats.fallback = 0;
-    aiStats.last = 'none';
-    updateAiStats();
-
-    if (MODE === 'ai' && window.FairyEngine && typeof window.FairyEngine.init === 'function') {
-      const engineVariant = ENGINE_VARIANTS[VARIANT];
-      if (engineVariant) window.FairyEngine.init(engineVariant, LEVEL);
-    }
+    resultShown = false;
+    setResultModal(false);
 
     render();
     aiTurn();
+  }
+
+  if (flipBtn) {
+    flipBtn.addEventListener('click', function () {
+      setBoardFlip(!boardFlipped);
+    });
+  }
+  if (openRulesBtn) openRulesBtn.addEventListener('click', function () { setRulesModal(true); });
+  if (rulesCloseBtn) rulesCloseBtn.addEventListener('click', function () { setRulesModal(false); });
+  if (resultCloseBtn) resultCloseBtn.addEventListener('click', function () { setResultModal(false); });
+  if (resultRestartBtn) resultRestartBtn.addEventListener('click', function () { init(); });
+
+  if (resultModalEl) {
+    resultModalEl.addEventListener('click', function (e) {
+      if (e.target === resultModalEl) setResultModal(false);
+    });
+  }
+  if (rulesModalEl) {
+    rulesModalEl.addEventListener('click', function (e) {
+      if (e.target === rulesModalEl) setRulesModal(false);
+    });
   }
 
   resetBtn.addEventListener('click', init);
