@@ -1,4 +1,4 @@
-"""
+﻿"""
 Django Production Settings for Render + Neon deployment.
 
 This settings module extends the base settings and configures:
@@ -488,22 +488,8 @@ def sync_site_domain():
         pass
 
 def run_startup_tasks():
+    # keep this hook lightweight; ensure_* runs in bootstrap_runtime
     sync_site_domain()
-    # Also ensure Ssambti and Chess products exist/are updated
-    try:
-        from django.core.management import call_command
-        call_command('ensure_ssambti')
-        call_command('ensure_chess')
-        call_command('ensure_janggi')
-        call_command('ensure_fairy_games')
-        call_command('ensure_studentmbti')
-        call_command('ensure_notebooklm')
-        call_command('ensure_collect')
-        call_command('ensure_reservations')
-        call_command('ensure_version_manager')
-        call_command('ensure_happy_seed')
-    except Exception as e:
-        pass  # ensure 실패는 Procfile에서 재시도됨
 
 # 서버 실행 시 자동 실행
 import threading
