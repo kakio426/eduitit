@@ -21,6 +21,11 @@
                         {{ form.name }}
                     </div>
                     <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">보상 선택 확률 (%)</label>
+                        {{ form.win_rate_percent }}
+                        <p class="text-xs text-gray-400 mt-1">당첨 시 이 보상이 선택되는 상대 확률입니다.</p>
+                    </div>
+                    <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">수량 (비우면 무제한)</label>
                         {{ form.total_quantity }}
                     </div>
@@ -43,6 +48,7 @@
                     <tr class="bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase">
                         <th class="px-4 py-3">보상</th>
                         <th class="px-4 py-3">설명</th>
+                        <th class="px-4 py-3">선택 확률(%)</th>
                         <th class="px-4 py-3">수량</th>
                         <th class="px-4 py-3">상태</th>
                     </tr>
@@ -52,6 +58,7 @@
                     <tr class="border-t border-gray-100">
                         <td class="px-4 py-3 font-bold text-gray-800">{{ prize.name }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ prize.description|default:"-" }}</td>
+                        <td class="px-4 py-3 text-sm">{{ prize.win_rate_percent }}%</td>
                         <td class="px-4 py-3 text-sm">{% if prize.total_quantity is not None %}{{ prize.remaining_quantity }}/{{ prize.total_quantity }}{% else %}무제한{% endif %}</td>
                         <td class="px-4 py-3">
                             {% if prize.is_available %}<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">사용가능</span>{% else %}<span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">소진</span>{% endif %}

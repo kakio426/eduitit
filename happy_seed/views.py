@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -42,6 +43,11 @@ def get_teacher_classroom(request, classroom_id):
 
 def landing(request):
     return render(request, "happy_seed/landing.html")
+
+
+@login_required
+def teacher_manual(request):
+    return render(request, "happy_seed/teacher_manual.html")
 
 
 @login_required
@@ -198,14 +204,67 @@ def student_edit(request, student_id):
 def consent_manage(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
     students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+    sign_talk_url = ""
+    for student in students:
+        consent = getattr(student, "consent", None)
+        if consent and consent.external_url:
+            sign_talk_url = consent.external_url
+            break
     return render(
         request,
         "happy_seed/consent_manage.html",
         {
             "classroom": classroom,
             "students": students,
+            "sign_talk_url": sign_talk_url,
         },
     )
+
+
+@login_required
+@require_POST
+def consent_request_via_sign_talk(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+
+    from signatures.models import TrainingSession
+
+    now = timezone.now()
+    title = f"[행복의 씨앗] {classroom.name} 보호자 동의"
+
+    session = TrainingSession.objects.filter(
+        created_by=request.user,
+        title=title,
+        is_active=True,
+    ).order_by("-created_at").first()
+
+    if session is None:
+        session = TrainingSession.objects.create(
+            title=title,
+            instructor=request.user.get_full_name() or request.user.username,
+            datetime=now,
+            location=classroom.school_name or classroom.name,
+            description=(
+                f"{classroom.name} 보호자 동의를 위한 서명톡 페이지입니다. "
+                "보호자 성함과 서명을 제출해 주세요."
+            ),
+            created_by=request.user,
+            is_active=True,
+        )
+
+    sign_url = request.build_absolute_uri(
+        reverse("signatures:sign", kwargs={"uuid": session.uuid})
+    )
+
+    HSGuardianConsent.objects.filter(
+        student__classroom=classroom,
+        student__is_active=True,
+    ).update(
+        external_url=sign_url,
+        requested_at=now,
+    )
+
+    messages.success(request, "서명톡 동의 링크를 생성하고 학생 동의 항목에 연동했습니다.")
+    return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
 @login_required

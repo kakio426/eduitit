@@ -12,6 +12,27 @@
 
         <p class="text-sm text-gray-500 mb-6 break-keep">미동의 학생은 기록 저장 및 보상 지급이 불가합니다. 동의 철회 시 해당 학생은 즉시 비활성됩니다.</p>
 
+        <div class="clay-card p-5 rounded-2xl mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="font-bold text-gray-800">서명톡 연계</h2>
+                    <p class="text-sm text-gray-500 mt-1">버튼 1회로 보호자 동의용 서명 링크를 생성해 학생 동의 항목에 연결합니다.</p>
+                </div>
+                <form method="post" action="{% url 'happy_seed:consent_request_via_sign_talk' classroom_id=classroom.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
+                        서명톡 링크 생성
+                    </button>
+                </form>
+            </div>
+            {% if sign_talk_url %}
+            <div class="mt-4 p-3 bg-gray-50 rounded-xl">
+                <div class="text-xs text-gray-500 mb-1">현재 공유 링크</div>
+                <a href="{{ sign_talk_url }}" target="_blank" class="text-sm text-green-700 break-all hover:underline">{{ sign_talk_url }}</a>
+            </div>
+            {% endif %}
+        </div>
+
         <div class="clay-card rounded-2xl overflow-hidden">
             <table class="w-full">
                 <thead>
@@ -19,6 +40,7 @@
                         <th class="px-4 py-3">번호</th>
                         <th class="px-4 py-3">이름</th>
                         <th class="px-4 py-3">동의 상태</th>
+                        <th class="px-4 py-3">서명 링크</th>
                         <th class="px-4 py-3">변경</th>
                     </tr>
                 </thead>

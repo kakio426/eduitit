@@ -78,7 +78,7 @@ class HSGuardianConsentAdmin(admin.ModelAdmin):
 
 @admin.register(HSPrize)
 class HSPrizeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'classroom_name', 'total_quantity', 'remaining_quantity', 'is_active', 'display_order']
+    list_display = ['name', 'classroom_name', 'win_rate_percent', 'total_quantity', 'remaining_quantity', 'is_active', 'display_order']
     list_filter = ['is_active']
     raw_id_fields = ['classroom']
 

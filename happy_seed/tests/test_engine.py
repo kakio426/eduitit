@@ -3,7 +3,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from happy_seed.models import HSClassroom, HSClassroomConfig, HSGuardianConsent, HSStudent
+from happy_seed.models import HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent
 from happy_seed.services.engine import (
     ConsentRequiredError,
     add_seeds,
@@ -43,3 +43,26 @@ class HappySeedEngineTests(TestCase):
         draw1 = execute_bloom_draw(self.student, self.classroom, self.teacher, request_id=request_id)
         draw2 = execute_bloom_draw(self.student, self.classroom, self.teacher, request_id=request_id)
         self.assertEqual(draw1.id, draw2.id)
+
+    def test_execute_bloom_draw_uses_prize_win_rate_percent(self):
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="역할 보상",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="희귀 보상",
+            win_rate_percent=0,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
+        self.student.ticket_count = 1
+        self.student.pending_forced_win = True
+        self.student.save(update_fields=["ticket_count", "pending_forced_win"])
+        draw = execute_bloom_draw(self.student, self.classroom, self.teacher, request_id=uuid.uuid4())
+        self.assertTrue(draw.is_win)
+        self.assertIsNotNone(draw.prize)
+        self.assertEqual(draw.prize.name, "역할 보상")

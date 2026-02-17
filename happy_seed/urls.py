@@ -7,6 +7,7 @@ app_name = 'happy_seed'
 urlpatterns = [
     # Landing (public)
     path('', views.landing, name='landing'),
+    path('manual/teacher/', views.teacher_manual, name='teacher_manual'),
 
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
@@ -23,6 +24,7 @@ urlpatterns = [
 
     # Consent
     path('<uuid:classroom_id>/consent/', views.consent_manage, name='consent_manage'),
+    path('<uuid:classroom_id>/consent/request-sign-talk/', views.consent_request_via_sign_talk, name='consent_request_via_sign_talk'),
     path('student/<uuid:student_id>/consent/update/', views.consent_update, name='consent_update'),
 
     # Prize

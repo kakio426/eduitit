@@ -11,6 +11,7 @@
                 {% if classroom.school_name %}<p class="text-sm text-gray-400">{{ classroom.school_name }}</p>{% endif %}
             </div>
             <div class="flex gap-2">
+                <a href="{% url 'happy_seed:teacher_manual' %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">교사용 설명서</a>
                 <a href="{% url 'happy_seed:classroom_settings' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">설정</a>
                 <a href="{% url 'happy_seed:prize_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">보상</a>
                 <a href="{% url 'happy_seed:consent_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">동의</a>

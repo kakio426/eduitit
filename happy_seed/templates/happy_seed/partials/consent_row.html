@@ -14,6 +14,13 @@
         <span class="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">{{ student.consent.get_status_display }}</span>
         {% endif %}
     </td>
+    <td class="px-4 py-3 text-sm">
+        {% if student.consent.external_url %}
+        <a href="{{ student.consent.external_url }}" target="_blank" class="text-green-700 hover:underline">열기</a>
+        {% else %}
+        <span class="text-gray-400">-</span>
+        {% endif %}
+    </td>
     <td class="px-4 py-3">
         <div class="flex gap-1">
             <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">

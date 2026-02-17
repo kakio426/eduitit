@@ -9,10 +9,16 @@
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800">🌱 행복의 씨앗</h1>
                 <p class="text-gray-500 mt-1">내 교실 목록</p>
             </div>
-            <a href="{% url 'happy_seed:classroom_create' %}"
-               class="px-5 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-colors">
-                + 새 교실 만들기
-            </a>
+            <div class="flex gap-2">
+                <a href="{% url 'happy_seed:teacher_manual' %}"
+                   class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                    교사용 설명서
+                </a>
+                <a href="{% url 'happy_seed:classroom_create' %}"
+                   class="px-5 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-colors">
+                    + 새 교실 만들기
+                </a>
+            </div>
         </div>
 
         {% if classrooms %}

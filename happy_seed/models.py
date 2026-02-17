@@ -128,6 +128,13 @@ class HSPrize(models.Model):
     )
     name = models.CharField('보상 이름', max_length=200)
     description = models.TextField('설명', blank=True)
+    win_rate_percent = models.DecimalField(
+        '보상 선택 확률(%)',
+        max_digits=5,
+        decimal_places=2,
+        default=100,
+        help_text='당첨 시 이 보상이 선택되는 상대 확률입니다. (예: 70, 20, 10)',
+    )
     total_quantity = models.IntegerField('총 수량', null=True, blank=True, help_text='비워두면 무제한')
     remaining_quantity = models.IntegerField('남은 수량', null=True, blank=True)
     is_active = models.BooleanField(default=True)

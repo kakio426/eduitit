@@ -97,7 +97,7 @@ class HSStudentForm(forms.ModelForm):
 class HSPrizeForm(forms.ModelForm):
     class Meta:
         model = HSPrize
-        fields = ["name", "description", "total_quantity", "display_order"]
+        fields = ["name", "description", "win_rate_percent", "total_quantity", "display_order"]
         widgets = {
             "name": forms.TextInput(
                 attrs={
@@ -110,6 +110,15 @@ class HSPrizeForm(forms.ModelForm):
                     "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
                     "rows": "2",
                     "placeholder": "보상 설명 (선택)",
+                }
+            ),
+            "win_rate_percent": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
+                    "min": "0",
+                    "max": "100",
+                    "step": "0.01",
+                    "placeholder": "예: 70",
                 }
             ),
             "total_quantity": forms.NumberInput(

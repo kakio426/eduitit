@@ -283,7 +283,7 @@ def _calculate_balance_adjustment(student, config):
 
 def _select_prize(classroom):
     """
-    사용 가능한 보상 중 랜덤 선택 후 재고 차감
+    사용 가능한 보상 중 가중치(%) 기반 랜덤 선택 후 재고 차감
     """
     available_prizes = list(
         HSPrize.objects.filter(
@@ -298,23 +298,26 @@ def _select_prize(classroom):
     if not available_prizes:
         return None
 
-    prize = random.choice(available_prizes)
+    weighted_pool = [p for p in available_prizes if p.win_rate_percent and p.win_rate_percent > 0]
+    if not weighted_pool:
+        return None
 
-    if prize.total_quantity is not None:
+    while weighted_pool:
+        weights = [float(p.win_rate_percent) for p in weighted_pool]
+        prize = random.choices(weighted_pool, weights=weights, k=1)[0]
+
+        if prize.total_quantity is None:
+            return prize
+
         updated = HSPrize.objects.filter(
             id=prize.id,
             remaining_quantity__gt=0,
         ).update(remaining_quantity=F("remaining_quantity") - 1)
 
-        if updated == 0:
-            remaining = [p for p in available_prizes if p.id != prize.id and p.is_available]
-            if not remaining:
-                return None
-            prize = random.choice(remaining)
-            if prize.total_quantity is not None:
-                HSPrize.objects.filter(
-                    id=prize.id,
-                    remaining_quantity__gt=0,
-                ).update(remaining_quantity=F("remaining_quantity") - 1)
+        if updated == 1:
+            return prize
 
-    return prize
+        # 동시성 충돌/재고 소진 시 해당 보상을 풀에서 제외 후 재시도
+        weighted_pool = [p for p in weighted_pool if p.id != prize.id and p.is_available]
+
+    return None
