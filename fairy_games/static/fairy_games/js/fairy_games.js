@@ -8,6 +8,9 @@
   const bottomEl = document.getElementById('fg-extra-bottom');
   const aiSourceEl = document.getElementById('fg-ai-source');
   const aiStatsEl = document.getElementById('fg-ai-stats');
+  const stageEl = document.getElementById('fg-stage');
+  const missionEl = document.getElementById('fg-mission');
+  const tipEl = document.getElementById('fg-tip');
 
   const MODE = (window.FAIRY_MODE || 'local').toLowerCase();
   const VARIANT = (window.FAIRY_VARIANT || 'cfour').toLowerCase();
@@ -65,6 +68,51 @@
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) boardEl.appendChild(make(r, c));
   }
 
+  function variantUiMeta(variant) {
+    if (variant === 'dobutsu') return {
+      cls: 'fg-variant-dobutsu',
+      mission: '사자를 지키고 상대 사자를 먼저 잡아 보세요.',
+      tip: '팁: 손패를 눌러 빈칸에 드롭하면 흐름을 바꿀 수 있어요.'
+    };
+    if (variant === 'cfour') return {
+      cls: 'fg-variant-cfour',
+      mission: '가로, 세로, 대각선으로 4개를 먼저 이어 보세요.',
+      tip: '팁: 가운데 열을 먼저 잡으면 공격과 방어가 쉬워집니다.'
+    };
+    if (variant === 'isolation') return {
+      cls: 'fg-variant-isolation',
+      mission: '이동 후 칸을 막아 상대를 고립시켜 보세요.',
+      tip: '팁: 이동 단계와 칸 막기 단계를 번갈아 확인하세요.'
+    };
+    if (variant === 'ataxx') return {
+      cls: 'fg-variant-ataxx',
+      mission: '복제와 점프로 내 색을 넓게 퍼뜨려 보세요.',
+      tip: '팁: 상대 돌 옆으로 이동하면 한 번에 여러 칸이 바뀝니다.'
+    };
+    if (variant === 'breakthrough') return {
+      cls: 'fg-variant-breakthrough',
+      mission: '한 말만 끝줄에 도착시켜도 승리입니다.',
+      tip: '팁: 양쪽 날개로 동시에 전진하면 막기 어려워집니다.'
+    };
+    return { cls: '', mission: '상대보다 한 수 앞서 생각해 보세요.', tip: '' };
+  }
+
+  function applyVariantUi() {
+    const meta = variantUiMeta(VARIANT);
+    if (stageEl) {
+      stageEl.classList.remove(
+        'fg-variant-dobutsu',
+        'fg-variant-cfour',
+        'fg-variant-isolation',
+        'fg-variant-ataxx',
+        'fg-variant-breakthrough'
+      );
+      if (meta.cls) stageEl.classList.add(meta.cls);
+    }
+    if (missionEl) missionEl.textContent = meta.mission;
+    if (tipEl) tipEl.textContent = meta.tip;
+  }
+
   function lineWin(board, r, c, side, need) {
     const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
     for (const [dr, dc] of dirs) {
@@ -110,10 +158,12 @@
     },
     render(s) {
       topEl.innerHTML = ''; bottomEl.innerHTML = '';
+      const legalCols = this.moves(s);
       drawGrid(6, 7, (r, c) => {
         const v = s.b[r][c];
         const disk = v ? `<div class='fg-disc ${v === 1 ? 'fg-red' : 'fg-blue'}'></div>` : '';
-        return cell((r + c) % 2 ? 'dark' : '', `<div class='fg-disc-wrap'>${disk}</div>`, () => {
+        const cls = `${(r + c) % 2 ? 'dark' : ''} ${(!s.gameOver && !aiActive() && legalCols.includes(c) && r === 5) ? 'hint' : ''}`.trim();
+        return cell(cls, `<div class='fg-disc-wrap'>${disk}</div>`, () => {
           if (aiActive() || s.gameOver) return;
           pushUndo(); this.apply(s, c); render(); aiTurn();
         });
@@ -174,8 +224,11 @@
     },
     render(s) {
       topEl.innerHTML = ''; bottomEl.innerHTML = '';
+      const moveHints = s.phase === 'move' && s.sel ? this.moves(s, s.turn) : [];
       drawGrid(s.n, s.n, (r, c) => {
         let cls = (r + c) % 2 ? 'dark' : '', txt = '';
+        if (s.phase === 'move' && s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
+        if (moveHints.some(v => v[0] === r && v[1] === c)) cls += ' hint';
         if (s.blk[this.key(r, c)]) { cls += ' blocked'; txt = 'X'; }
         else if (s.p1[0] === r && s.p1[1] === c) txt = '🔴';
         else if (s.p2[0] === r && s.p2[1] === c) txt = '🔵';
@@ -264,14 +317,20 @@
     },
     render(s) {
       topEl.innerHTML = ''; bottomEl.innerHTML = '';
-      drawGrid(7, 7, (r, c) => cell((r + c) % 2 ? 'dark' : '', s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
+      const moveHints = s.sel ? this.moves(s, s.turn).filter(v => v.fr === s.sel[0] && v.fc === s.sel[1]) : [];
+      drawGrid(7, 7, (r, c) => {
+        let cls = (r + c) % 2 ? 'dark' : '';
+        if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
+        if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
+        return cell(cls, s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
         if (aiActive() || s.gameOver) return;
         if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
         if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
         const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
         if (!m) return;
         pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
-      }));
+      });
+      });
       const [a, b] = this.count(s);
       setStatus(s.gameOver ? (s.winner ? `${sideName(s.winner)} 승리` : '무승부') : `차례: ${sideName(s.turn)} / 점수 ${a}:${b}`);
       setHistory(s.h);
@@ -322,14 +381,20 @@
     },
     render(s) {
       topEl.innerHTML = ''; bottomEl.innerHTML = '';
-      drawGrid(8, 8, (r, c) => cell((r + c) % 2 ? 'dark' : '', s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
+      const moveHints = s.sel ? this.moves(s, s.turn).filter(v => v.fr === s.sel[0] && v.fc === s.sel[1]) : [];
+      drawGrid(8, 8, (r, c) => {
+        let cls = (r + c) % 2 ? 'dark' : '';
+        if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
+        if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
+        return cell(cls, s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
         if (aiActive() || s.gameOver) return;
         if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
         if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
         const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
         if (!m) return;
         pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
-      }));
+      });
+      });
       setStatus(s.gameOver ? `${sideName(s.winner)} 승리` : `차례: ${sideName(s.turn)}`);
       setHistory(s.h);
     }
@@ -420,9 +485,13 @@
     },
     render(s) {
       this.drawHands(s);
+      const moveHints = s.sel ? this.moves(s, s.turn).filter(v => v.k === 'm' && v.fr === s.sel[0] && v.fc === s.sel[1]) : [];
       drawGrid(4, 3, (r, c) => {
         const p = s.b[r][c];
-        return cell((r + c) % 2 ? 'dark' : '', p ? this.icon(p) : '', () => {
+        let cls = (r + c) % 2 ? 'dark' : '';
+        if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
+        if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
+        return cell(cls, p ? this.icon(p) : '', () => {
           if (aiActive() || s.gameOver) return;
           if (handPick && handPick.side === s.turn && !p) { pushUndo(); this.apply(s, { k: 'd', i: handPick.idx, t: handPick.t, tr: r, tc: c }); handPick = null; render(); aiTurn(); return; }
           if (!s.sel) { if (p && p.s === s.turn) s.sel = [r, c]; render(); return; }
@@ -504,6 +573,7 @@
 
   function init() {
     game = games[VARIANT] || cfour;
+    applyVariantUi();
     state = game.init();
     undoStack = [];
     handPick = null;
