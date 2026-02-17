@@ -1,12 +1,11 @@
 import uuid
-from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSStudent
+from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent
 
 
 User = get_user_model()
@@ -25,6 +24,13 @@ class HappySeedFlowTests(TestCase):
         )
         self.classroom = HSClassroom.objects.create(teacher=self.teacher, name="6-1", school_name="행복초")
         HSClassroomConfig.objects.create(classroom=self.classroom, seeds_per_bloom=10, base_win_rate=5)
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="기본 보상",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
 
     def test_teacher_core_flow_end_to_end(self):
         self.client.login(username="teacher_flow", password="pw12345")
@@ -50,14 +56,13 @@ class HappySeedFlowTests(TestCase):
         draw_url = reverse("happy_seed:bloom_draw", kwargs={"student_id": student.id})
         draw_res = self.client.post(draw_url, {"request_id": str(uuid.uuid4())})
         self.assertEqual(draw_res.status_code, 302)
-        parsed = urlparse(draw_res.url)
-        query = parse_qs(parsed.query)
-        self.assertIn("token", query)
-
-        celebrate_res = self.client.get(draw_res.url)
-        self.assertEqual(celebrate_res.status_code, 200)
+        self.assertIn("/bloom/run/", draw_res.url)
+        self.assertIn("draw=", draw_res.url)
 
         draw = HSBloomDraw.objects.get(student=student)
+        celebrate_url = reverse("happy_seed:celebration", kwargs={"draw_id": draw.id})
+        celebrate_res = self.client.get(f"{celebrate_url}?token={draw.celebration_token}")
+        self.assertEqual(celebrate_res.status_code, 200)
         close_url = reverse("happy_seed:close_celebration", kwargs={"draw_id": draw.id})
         close_res = self.client.post(close_url)
         self.assertEqual(close_res.status_code, 302)

@@ -36,6 +36,13 @@ class HappySeedEngineTests(TestCase):
             grant_tickets(student2, "participation", 1, "성실 참여")
 
     def test_execute_bloom_draw_idempotent_by_request_id(self):
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="기본 보상",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
         self.student.ticket_count = 1
         self.student.pending_forced_win = True
         self.student.save(update_fields=["ticket_count", "pending_forced_win"])

@@ -14,6 +14,13 @@
         <span class="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">{{ student.consent.get_status_display }}</span>
         {% endif %}
     </td>
+    <td class="px-4 py-3 text-xs text-gray-500">
+        {% if student.consent.requested_at %}
+        {{ student.consent.requested_at|date:"Y-m-d H:i" }}
+        {% else %}
+        -
+        {% endif %}
+    </td>
     <td class="px-4 py-3 text-sm">
         {% if student.consent.external_url %}
         <a href="{{ student.consent.external_url }}" target="_blank" class="text-green-700 hover:underline">열기</a>
@@ -32,6 +39,10 @@
                 {% csrf_token %}
                 <input type="hidden" name="status" value="pending">
                 <button type="submit" class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold hover:bg-yellow-200" style="min-height: 44px;">대기</button>
+            </form>
+            <form method="post" action="{% url 'happy_seed:consent_resend' student_id=student.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold hover:bg-blue-200" style="min-height: 44px;">재발송</button>
             </form>
             <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">
                 {% csrf_token %}

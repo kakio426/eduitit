@@ -49,10 +49,19 @@
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">보정 계수 (epsilon)</label>
                     {{ form.balance_epsilon }}
+                    <p class="text-xs text-gray-400 mt-1">권장 범위: 0.03 ~ 0.07 (0.10 초과 비권장)</p>
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">보정 기간 (일)</label>
                     {{ form.balance_lookback_days }}
+                </div>
+                <div class="pt-2">
+                    <p class="text-xs font-bold text-gray-600 mb-2">빠른 추천값 (상위권 흥미 저하 방지를 위해 작은 변화 권장)</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="document.getElementById('id_balance_epsilon').value='0.03';document.getElementById('id_balance_lookback_days').value='30';" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200">보수형(추천) ε=0.03/30일</button>
+                        <button type="button" onclick="document.getElementById('id_balance_epsilon').value='0.05';document.getElementById('id_balance_lookback_days').value='30';" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200">균형형 ε=0.05/30일</button>
+                        <button type="button" onclick="document.getElementById('id_balance_epsilon').value='0.07';document.getElementById('id_balance_lookback_days').value='21';" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200">회복형 ε=0.07/21일</button>
+                    </div>
                 </div>
             </div>
 

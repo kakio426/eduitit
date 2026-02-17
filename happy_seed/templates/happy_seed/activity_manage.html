@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-6">
+            <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
+            <h1 class="text-2xl font-bold text-gray-800 mt-2">📝 활동 운영</h1>
+            <p class="text-sm text-gray-500 mt-1">성실참여 기본 지급 + 점수 기반 추가 지급을 활동 단위로 처리합니다.</p>
+            <p class="text-xs text-gray-500 mt-1">오프라인 확인 후 점수 입력 없이도 학생별 <strong>직접 추가 지급</strong> 체크로 보너스를 줄 수 있습니다.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 clay-card p-5 rounded-2xl">
+                <h2 class="font-bold text-gray-800 mb-4">활동 만들기 및 지급 적용</h2>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>{{ form.title }}</div>
+                    <div>{{ form.description }}</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-500 mb-1 block">우수 기준 점수</label>
+                            {{ form.threshold_score }}
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 mb-1 block">우수 추가 지급 수</label>
+                            {{ form.extra_bloom_count }}
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs text-gray-500 border-b border-gray-100">
+                                    <th class="py-2">학생</th>
+                                    <th class="py-2">동의</th>
+                                    <th class="py-2">성실참여</th>
+                                    <th class="py-2">점수</th>
+                                    <th class="py-2">직접추가</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr class="border-b border-gray-50">
+                                    <td class="py-2 font-bold text-gray-700">{{ student.name }}</td>
+                                    <td class="py-2">
+                                        {% if student.consent.status == 'approved' %}
+                                        <span class="text-green-700">완료</span>
+                                        {% else %}
+                                        <span class="text-gray-400">미완료</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-2">
+                                        <input type="checkbox" name="diligent_{{ student.id }}" {% if student.consent.status == 'approved' %}checked{% else %}disabled{% endif %}>
+                                    </td>
+                                    <td class="py-2">
+                                        <input type="number" name="score_{{ student.id }}" min="0" max="100" class="w-24 px-2 py-1 rounded-lg border border-gray-200" {% if student.consent.status != 'approved' %}disabled{% endif %}>
+                                    </td>
+                                    <td class="py-2">
+                                        <input type="checkbox" name="bonus_manual_{{ student.id }}" {% if student.consent.status != 'approved' %}disabled{% endif %}>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="px-5 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600">저장 + 지급 적용</button>
+                </form>
+            </div>
+
+            <div class="clay-card p-5 rounded-2xl">
+                <h2 class="font-bold text-gray-800 mb-3">최근 활동</h2>
+                <div class="space-y-2 text-sm">
+                    {% for activity in activities %}
+                    <div class="p-3 bg-gray-50 rounded-xl">
+                        <div class="font-bold text-gray-700">{{ activity.title }}</div>
+                        <div class="text-xs text-gray-500">기준 {{ activity.threshold_score }} / 추가 {{ activity.extra_bloom_count }}</div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-400">아직 활동이 없습니다.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

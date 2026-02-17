@@ -18,12 +18,20 @@
                     <h2 class="font-bold text-gray-800">서명톡 연계</h2>
                     <p class="text-sm text-gray-500 mt-1">버튼 1회로 보호자 동의용 서명 링크를 생성해 학생 동의 항목에 연결합니다.</p>
                 </div>
-                <form method="post" action="{% url 'happy_seed:consent_request_via_sign_talk' classroom_id=classroom.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="px-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
-                        서명톡 링크 생성
-                    </button>
-                </form>
+                <div class="flex gap-2">
+                    <form method="post" action="{% url 'happy_seed:consent_request_via_sign_talk' classroom_id=classroom.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="px-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
+                            서명톡 링크 생성
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'happy_seed:consent_sync_from_sign_talk' classroom_id=classroom.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+                            서명 결과 동기화
+                        </button>
+                    </form>
+                </div>
             </div>
             {% if sign_talk_url %}
             <div class="mt-4 p-3 bg-gray-50 rounded-xl">
@@ -33,6 +41,29 @@
             {% endif %}
         </div>
 
+        {% if unmatched_signatures %}
+        <div class="clay-card p-5 rounded-2xl mb-6">
+            <h2 class="font-bold text-gray-800 mb-2">수동 확인 승인(명단 미일치 서명)</h2>
+            <p class="text-xs text-gray-500 mb-3">서명 이름과 학생명이 정확히 일치하지 않을 때, 교사가 확인 후 직접 승인하세요.</p>
+            <div class="space-y-2">
+                {% for signer in unmatched_signatures %}
+                <form method="post" action="{% url 'happy_seed:consent_manual_approve' classroom_id=classroom.id %}" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="signer_name" value="{{ signer }}">
+                    <div class="px-3 py-2 bg-gray-50 rounded-xl text-sm text-gray-700">서명자: {{ signer }}</div>
+                    <select name="student_id" class="px-3 py-2 rounded-xl border border-gray-200 text-sm" required>
+                        <option value="">학생 선택</option>
+                        {% for s in pending_students %}
+                        <option value="{{ s.id }}">{{ s.number }}번 {{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-bold hover:bg-blue-600">확인 후 승인</button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="clay-card rounded-2xl overflow-hidden">
             <table class="w-full">
                 <thead>
@@ -40,6 +71,7 @@
                         <th class="px-4 py-3">번호</th>
                         <th class="px-4 py-3">이름</th>
                         <th class="px-4 py-3">동의 상태</th>
+                        <th class="px-4 py-3">발송일</th>
                         <th class="px-4 py-3">서명 링크</th>
                         <th class="px-4 py-3">변경</th>
                     </tr>

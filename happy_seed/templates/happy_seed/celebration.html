@@ -105,15 +105,9 @@
             </p>
         </div>
 
-        <!-- 교사 닫기 버튼 -->
-        {% if request.user.is_authenticated %}
-        <form method="post" action="{% url 'happy_seed:close_celebration' draw_id=draw.id %}" class="mt-8">
-            {% csrf_token %}
-            <button type="submit" class="px-8 py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors" style="min-height: 44px;">
-                닫기 (교사 전용)
-            </button>
-        </form>
-        {% endif %}
+        <div class="mt-8 text-xs text-gray-500">
+            이 화면은 디스플레이 전용입니다. 종료는 교사용 라이브 패널에서 진행하세요.
+        </div>
     </div>
 
     {% else %}

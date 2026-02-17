@@ -7,6 +7,7 @@ from .models import (
     HSBloomDraw,
     HSClassroom,
     HSClassroomConfig,
+    HSClassEventLog,
     HSGuardianConsent,
     HSInterventionLog,
     HSPrize,
@@ -148,3 +149,10 @@ class HSInterventionLogAdmin(admin.ModelAdmin):
     def created_by_name(self, obj):
         return obj.created_by.username if obj.created_by else '-'
     created_by_name.short_description = '실행자'
+
+
+@admin.register(HSClassEventLog)
+class HSClassEventLogAdmin(admin.ModelAdmin):
+    list_display = ['timestamp', 'class_ref', 'type', 'student']
+    list_filter = ['type', 'class_ref']
+    raw_id_fields = ['class_ref', 'student', 'group']

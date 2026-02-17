@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import HSClassroom, HSClassroomConfig, HSPrize, HSStudent
+from .models import HSActivity, HSClassroom, HSClassroomConfig, HSPrize, HSStudent
 
 
 class HSClassroomForm(forms.ModelForm):
@@ -61,7 +61,7 @@ class HSClassroomConfigForm(forms.ModelForm):
                     "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
                     "step": "0.01",
                     "min": "0",
-                    "max": "1",
+                    "max": "0.10",
                 }
             ),
             "balance_lookback_days": forms.NumberInput(
@@ -72,6 +72,14 @@ class HSClassroomConfigForm(forms.ModelForm):
                 }
             ),
         }
+
+    def clean_balance_epsilon(self):
+        epsilon = float(self.cleaned_data["balance_epsilon"])
+        if epsilon < 0:
+            raise forms.ValidationError("epsilon은 0 이상이어야 합니다.")
+        if epsilon > 0.10:
+            raise forms.ValidationError("epsilon은 0.10 이하로 설정해 주세요. (과도한 변화를 방지합니다)")
+        return epsilon
 
 
 class HSStudentForm(forms.ModelForm):
@@ -180,3 +188,38 @@ class StudentBulkAddForm(forms.Form):
             else:
                 students.append({"number": i, "name": line})
         return students
+
+
+class HSActivityForm(forms.ModelForm):
+    class Meta:
+        model = HSActivity
+        fields = ["title", "description", "threshold_score", "extra_bloom_count"]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
+                    "placeholder": "예: 3월 수학 단원평가",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
+                    "rows": "2",
+                    "placeholder": "활동 설명 (선택)",
+                }
+            ),
+            "threshold_score": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
+                    "min": "0",
+                    "max": "100",
+                }
+            ),
+            "extra_bloom_count": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300",
+                    "min": "1",
+                    "max": "10",
+                }
+            ),
+        }

@@ -21,6 +21,13 @@
             </div>
         </div>
 
+        <div class="clay-card p-4 rounded-2xl mb-6">
+            <div class="text-sm text-gray-600">
+                빠른 이동:
+                <a href="{% url 'happy_seed:teacher_manual' %}" class="text-green-700 font-bold hover:underline ml-1">교사용 설명서</a>
+            </div>
+        </div>
+
         {% if classrooms %}
         <div class="grid gap-4">
             {% for classroom in classrooms %}

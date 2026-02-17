@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from happy_seed.models import (
     HSBloomDraw,
+    HSClassEventLog,
     HSClassroomConfig,
     HSPrize,
     HSSeedLedger,
@@ -27,6 +28,16 @@ class InsufficientTicketsError(Exception):
 
 class NoPrizeAvailableError(Exception):
     pass
+
+
+def log_class_event(classroom, event_type, student=None, group=None, meta=None):
+    HSClassEventLog.objects.create(
+        class_ref=classroom,
+        type=event_type,
+        student=student,
+        group=group,
+        meta=meta or {},
+    )
 
 
 def execute_bloom_draw(student, classroom, created_by, request_id=None):
@@ -51,6 +62,8 @@ def execute_bloom_draw(student, classroom, created_by, request_id=None):
 
         if student.ticket_count < 1:
             raise InsufficientTicketsError("티켓이 부족합니다.")
+        if not classroom.has_available_rewards:
+            raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
         student.ticket_count -= 1
 
         is_forced = student.pending_forced_win
@@ -74,6 +87,8 @@ def execute_bloom_draw(student, classroom, created_by, request_id=None):
         prize = None
         if is_win:
             prize = _select_prize(classroom)
+            if prize is None:
+                raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
         else:
             _add_seeds_internal(student, 1, "no_win", "미당첨 보정", config)
 
@@ -103,6 +118,19 @@ def execute_bloom_draw(student, classroom, created_by, request_id=None):
             request_id=request_id,
             created_by=created_by,
         )
+        log_class_event(classroom, "DRAW_EXECUTED", student=student, meta={"request_id": str(request_id)})
+        if is_win:
+            log_class_event(
+                classroom,
+                "DRAW_WIN",
+                student=student,
+                meta={"prize_id": str(prize.id) if prize else None, "prize_name": prize.name if prize else None},
+            )
+        else:
+            log_class_event(classroom, "DRAW_LOSE", student=student)
+            log_class_event(classroom, "SEED_AUTO_FROM_LOSS", student=student, meta={"amount": 1})
+        if is_forced:
+            log_class_event(classroom, "TEACHER_OVERRIDE_USED", student=student)
         return draw
 
 
@@ -158,6 +186,12 @@ def _add_seeds_internal(student, amount, reason, detail, config, request_id=None
             amount=1,
             detail=f"씨앗 {seeds_per_bloom}개 누적 자동 전환",
             balance_after=student.ticket_count,
+        )
+        log_class_event(
+            student.classroom,
+            "TOKEN_AUTO_FROM_SEEDS_THRESHOLD",
+            student=student,
+            meta={"threshold": seeds_per_bloom},
         )
 
     student.save()

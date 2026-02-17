@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSStudent
+from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSStudent, HSStudentGroup
 
 
 User = get_user_model()
@@ -58,3 +58,48 @@ class HappySeedViewTests(TestCase):
         consent = HSGuardianConsent.objects.get(student=self.student)
         self.assertTrue(consent.external_url)
         self.assertIn("/signatures/sign/", consent.external_url)
+
+    def test_group_mission_success_grants_ticket_to_random_member(self):
+        self.client.login(username="teacher2", password="pw12345")
+        student2 = HSStudent.objects.create(classroom=self.classroom, name="하랑", number=2, ticket_count=0)
+        HSGuardianConsent.objects.create(student=student2, status="approved")
+        group = HSStudentGroup.objects.create(classroom=self.classroom, name="1모둠")
+        group.members.add(self.student, student2)
+        url = reverse("happy_seed:group_mission_success", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(url, {"group_id": str(group.id), "draw_count": "1"})
+        self.assertEqual(res.status_code, 302)
+        self.student.refresh_from_db()
+        student2.refresh_from_db()
+        self.assertEqual(self.student.ticket_count + student2.ticket_count, 2)
+
+    def test_group_manage_page_open(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:group_manage", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+
+    def test_consent_manual_approve(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:consent_manual_approve", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(url, {"student_id": str(self.student.id), "signer_name": "보호자"})
+        self.assertEqual(res.status_code, 302)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.consent.status, "approved")
+
+    def test_activity_manage_manual_bonus_grant_without_score(self):
+        self.client.login(username="teacher2", password="pw12345")
+        before = self.student.ticket_count
+        url = reverse("happy_seed:activity_manage", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            {
+                "title": "오프라인 확인 활동",
+                "description": "",
+                "threshold_score": "90",
+                "extra_bloom_count": "1",
+                f"bonus_manual_{self.student.id}": "on",
+            },
+        )
+        self.assertEqual(res.status_code, 302)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.ticket_count, before + 1)

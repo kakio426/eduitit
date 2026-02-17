@@ -36,6 +36,10 @@ class HSClassroom(models.Model):
             self.slug = uuid.uuid4().hex[:8]
         super().save(*args, **kwargs)
 
+    @property
+    def has_available_rewards(self):
+        return self.prizes.filter(is_active=True).exclude(remaining_quantity=0).exists()
+
 
 class HSClassroomConfig(models.Model):
     """교실 설정 (Classroom과 분리)"""
@@ -422,3 +426,55 @@ class HSInterventionLog(models.Model):
 
     def __str__(self):
         return f"{self.student.name} - {self.get_action_display()}"
+
+
+class HSClassEventLog(models.Model):
+    """표준 이벤트 로그 (분석/감사 용)"""
+    TYPE_CHOICES = [
+        ("TOKEN_GRANTED_DILIGENT", "성실참여 꽃피움권 지급"),
+        ("TOKEN_GRANTED_SCORE_BONUS", "우수성취 추가 꽃피움권 지급"),
+        ("SEED_GRANTED_MANUAL", "교사 수동 씨앗 지급"),
+        ("DRAW_EXECUTED", "꽃피움 실행"),
+        ("DRAW_WIN", "꽃피움 당첨"),
+        ("DRAW_LOSE", "꽃피움 미당첨"),
+        ("SEED_AUTO_FROM_LOSS", "미당첨 씨앗 자동적립"),
+        ("TOKEN_AUTO_FROM_SEEDS_THRESHOLD", "씨앗 누적 자동 전환"),
+        ("TEACHER_OVERRIDE_SET", "교사 개입 예약"),
+        ("TEACHER_OVERRIDE_USED", "교사 개입 사용"),
+        ("GROUP_MISSION_REWARD", "모둠 미션 랜덤 지급"),
+        ("WARM_BALANCE_MODE_TOGGLED", "균형모드 토글"),
+        ("CONSENT_REQUEST_SENT", "동의 요청 발송"),
+        ("CONSENT_SIGNED", "동의 완료"),
+    ]
+
+    class_ref = models.ForeignKey(
+        HSClassroom,
+        on_delete=models.CASCADE,
+        related_name="event_logs",
+        verbose_name="반",
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    type = models.CharField("유형", max_length=40, choices=TYPE_CHOICES)
+    student = models.ForeignKey(
+        HSStudent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_logs",
+    )
+    group = models.ForeignKey(
+        HSStudentGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_logs",
+    )
+    meta = models.JSONField("부가정보", default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "반 이벤트 로그"
+        verbose_name_plural = "반 이벤트 로그 목록"
+
+    def __str__(self):
+        return f"{self.class_ref.name} - {self.type} - {self.timestamp}"
