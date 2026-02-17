@@ -946,7 +946,13 @@
                     <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                         <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                         <input id="searchInput" type="text" placeholder="서비스 검색..." autocomplete="off" class="flex-1 text-base outline-none bg-transparent text-gray-800 placeholder-gray-400" />
-                        <kbd class="hidden sm:inline-block px-2 py-0.5 text-xs font-bold text-gray-400 bg-gray-100 rounded border border-gray-200">ESC</kbd>
+                        <button type="button"
+                                onclick="closeSearchModal()"
+                                class="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 hover:bg-gray-200 transition-colors"
+                                aria-label="검색 닫기"
+                                title="닫기 (Esc)">
+                            ESC
+                        </button>
                     </div>
                     <!-- 검색 결과 -->
                     <div id="searchResults" class="max-h-[50vh] overflow-y-auto py-2">
@@ -970,6 +976,7 @@
             var filteredItems = [];
             var RECENT_KEY = 'eduitit_recent_searches';
             var MAX_RECENT = 5;
+            var prevBodyOverflow = null;
 
             var typeColors = {
                 classroom: 'text-blue-500', work: 'text-emerald-500', game: 'text-red-500',
@@ -1057,7 +1064,18 @@
                 renderItems(filtered, null);
             }
 
+            function isSearchModalOpen() {
+                return !modal.classList.contains('hidden');
+            }
+
+            function isUnifiedModalOpen() {
+                var unifiedModal = document.getElementById('unifiedModal');
+                return unifiedModal && !unifiedModal.classList.contains('hidden');
+            }
+
             window.openSearchModal = function() {
+                if (isSearchModalOpen() || isUnifiedModalOpen()) return;
+                prevBodyOverflow = document.body.style.overflow;
                 modal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
                 input.value = '';
@@ -1066,8 +1084,10 @@
             };
 
             window.closeSearchModal = function() {
+                if (!isSearchModalOpen()) return;
                 modal.classList.add('hidden');
-                document.body.style.overflow = 'auto';
+                document.body.style.overflow = prevBodyOverflow || '';
+                prevBodyOverflow = null;
             };
 
             input.addEventListener('input', function() { doSearch(this.value); });
@@ -1083,7 +1103,8 @@
                     e.preventDefault();
                     if (activeIdx >= 0) selectItem(activeIdx);
                     else if (filteredItems.length === 1) selectItem(0);
-                } else if (e.key === 'Escape') {
+                } else if (e.key === 'Escape' && isSearchModalOpen()) {
+                    e.preventDefault();
                     closeSearchModal();
                 }
             });
@@ -1092,9 +1113,18 @@
             document.addEventListener('keydown', function(e) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                     e.preventDefault();
+                    if (isUnifiedModalOpen()) return;
                     if (modal.classList.contains('hidden')) { openSearchModal(); } else { closeSearchModal(); }
                 }
             });
+
+            // 입력창 포커스와 무관하게 Esc로 검색 모달 닫기 (검색 모달이 열린 경우에만)
+            document.addEventListener('keydown', function(e) {
+                if (e.key !== 'Escape') return;
+                if (!isSearchModalOpen()) return;
+                e.preventDefault();
+                closeSearchModal();
+            }, true);
 
             function getCsrfToken() {
                 var el = document.querySelector('[name=csrfmiddlewaretoken]');
