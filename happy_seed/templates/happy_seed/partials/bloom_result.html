@@ -1,0 +1,13 @@
+<div class="p-6 text-center">
+    {% if draw.is_win %}
+    <div class="text-5xl mb-3">🌸</div>
+    <p class="font-bold text-pink-700 text-lg">당첨!</p>
+    {% if draw.prize %}
+    <p class="text-pink-600 mt-1">🎁 {{ draw.prize.name }}</p>
+    {% endif %}
+    {% else %}
+    <div class="text-5xl mb-3">🌱</div>
+    <p class="font-bold text-green-700 text-lg">씨앗이 자랐어요!</p>
+    <p class="text-green-600 text-sm mt-1">다음 꽃피움을 준비했어요.</p>
+    {% endif %}
+</div>

@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
     'version_manager.apps.VersionManagerConfig',
+    'happy_seed.apps.HappySeedConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',

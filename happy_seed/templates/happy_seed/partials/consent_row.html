@@ -1,0 +1,36 @@
+<tr class="border-t border-gray-100" id="consent-row-{{ student.id }}">
+    <td class="px-4 py-3 text-sm text-gray-700">{{ student.number }}</td>
+    <td class="px-4 py-3 font-bold text-gray-800">{{ student.name }}</td>
+    <td class="px-4 py-3">
+        {% if student.consent.status == 'approved' %}
+        <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">동의완료</span>
+        {% elif student.consent.status == 'pending' %}
+        <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">대기중</span>
+        {% elif student.consent.status == 'rejected' %}
+        <span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">거부</span>
+        {% elif student.consent.status == 'withdrawn' %}
+        <span class="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">철회</span>
+        {% else %}
+        <span class="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">{{ student.consent.get_status_display }}</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3">
+        <div class="flex gap-1">
+            <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="approved">
+                <button type="submit" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold hover:bg-green-200" style="min-height: 44px;">동의</button>
+            </form>
+            <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="pending">
+                <button type="submit" class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold hover:bg-yellow-200" style="min-height: 44px;">대기</button>
+            </form>
+            <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="withdrawn">
+                <button type="submit" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold hover:bg-red-200" style="min-height: 44px;">철회</button>
+            </form>
+        </div>
+    </td>
+</tr>

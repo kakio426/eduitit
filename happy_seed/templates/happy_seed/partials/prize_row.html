@@ -1,0 +1,8 @@
+<tr class="border-t border-gray-100">
+    <td class="px-4 py-3 font-bold text-gray-800">{{ prize.name }}</td>
+    <td class="px-4 py-3 text-sm text-gray-500">{{ prize.description|default:"-" }}</td>
+    <td class="px-4 py-3 text-sm">{% if prize.total_quantity is not None %}{{ prize.remaining_quantity }}/{{ prize.total_quantity }}{% else %}무제한{% endif %}</td>
+    <td class="px-4 py-3">
+        {% if prize.is_available %}<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">사용가능</span>{% else %}<span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">소진</span>{% endif %}
+    </td>
+</tr>

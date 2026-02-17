@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+
+        <div class="mb-8">
+            <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">📋 보호자 동의 관리</h1>
+
+        <p class="text-sm text-gray-500 mb-6 break-keep">미동의 학생은 기록 저장 및 보상 지급이 불가합니다. 동의 철회 시 해당 학생은 즉시 비활성됩니다.</p>
+
+        <div class="clay-card rounded-2xl overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-3">번호</th>
+                        <th class="px-4 py-3">이름</th>
+                        <th class="px-4 py-3">동의 상태</th>
+                        <th class="px-4 py-3">변경</th>
+                    </tr>
+                </thead>
+                <tbody id="consent-body">
+                    {% for student in students %}
+                    {% include 'happy_seed/partials/consent_row.html' %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

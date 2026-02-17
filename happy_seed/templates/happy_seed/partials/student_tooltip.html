@@ -1,0 +1,9 @@
+<div class="p-3 bg-white rounded-xl shadow-lg text-sm max-w-xs">
+    <div class="font-bold text-gray-800 mb-1">{{ student.name }} ({{ student.number }}번)</div>
+    <div class="space-y-1 text-gray-500">
+        <div>🌰 씨앗: {{ student.seed_count }}개</div>
+        <div>🌸 티켓: {{ student.ticket_count }}장</div>
+        <div>🏆 당첨: {{ student.total_wins }}회</div>
+        <div class="text-xs text-gray-400 mt-1">블룸 전환: {{ config.seeds_per_bloom }}개 = 1티켓</div>
+    </div>
+</div>

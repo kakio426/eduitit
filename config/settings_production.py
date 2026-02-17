@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'collect.apps.CollectConfig',
     'encyclopedia.apps.EncyclopediaConfig',
     'version_manager.apps.VersionManagerConfig',
+    'happy_seed.apps.HappySeedConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -500,6 +501,7 @@ def run_startup_tasks():
         call_command('ensure_collect')
         call_command('ensure_reservations')
         call_command('ensure_version_manager')
+        call_command('ensure_happy_seed')
     except Exception as e:
         pass  # ensure 실패는 Procfile에서 재시도됨
 

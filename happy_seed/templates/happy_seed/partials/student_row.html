@@ -1,0 +1,41 @@
+<div class="clay-card p-4 rounded-xl text-center" x-data="{ showActions: false }">
+    <!-- Consent badge -->
+    {% if student.consent.status == 'approved' %}
+    <div class="text-2xl mb-1">{% include 'happy_seed/partials/seed_badge.html' %}</div>
+    {% else %}
+    <div class="text-2xl mb-1">⏳</div>
+    <div class="text-[10px] text-yellow-600 mb-1">대기중</div>
+    {% endif %}
+
+    <div class="font-bold text-sm text-gray-800 truncate">{{ student.name }}</div>
+    <div class="text-xs text-gray-400">{{ student.number }}번</div>
+
+    {% if student.consent.status == 'approved' %}
+    <div class="flex items-center justify-center gap-1 mt-2 text-xs">
+        <span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">🌰{{ student.seed_count }}</span>
+        <span class="px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded">🌸{{ student.ticket_count }}</span>
+    </div>
+
+    <button @click="showActions = !showActions" class="mt-2 text-xs text-gray-400 hover:text-gray-600">
+        <span x-text="showActions ? '접기' : '관리'"></span>
+    </button>
+
+    <div x-show="showActions" x-transition class="mt-2 space-y-1.5">
+        <!-- Seed grant -->
+        <form hx-post="{% url 'happy_seed:seed_grant' student_id=student.id %}" hx-target="#student-grid" hx-swap="innerHTML" class="flex gap-1">
+            {% csrf_token %}
+            <input type="hidden" name="amount" value="1">
+            <input type="hidden" name="detail" value="교사 부여">
+            <button type="submit" class="flex-1 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors" style="min-height: 44px;">🌰+1</button>
+        </form>
+        <!-- Bloom grant -->
+        <form method="post" action="{% url 'happy_seed:bloom_grant' classroom_id=classroom.id %}" class="flex gap-1">
+            {% csrf_token %}
+            <input type="hidden" name="student_id" value="{{ student.id }}">
+            <input type="hidden" name="source" value="participation">
+            <input type="hidden" name="amount" value="1">
+            <button type="submit" class="flex-1 py-1.5 bg-pink-100 text-pink-700 rounded-lg text-xs font-bold hover:bg-pink-200 transition-colors" style="min-height: 44px;">🌸+1</button>
+        </form>
+    </div>
+    {% endif %}
+</div>

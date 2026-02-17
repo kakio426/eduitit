@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 꽃피움!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes bloom-in {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+        .bloom-in { animation: bloom-in 1s ease-out forwards; }
+        .sparkle { animation: sparkle 2s ease-in-out infinite; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .confetti, .bloom-in, .sparkle {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden
+    {% if draw.is_win %}bg-gradient-to-b from-pink-100 to-rose-200{% else %}bg-gradient-to-b from-green-50 to-emerald-100{% endif %}">
+
+    {% if not closed %}
+    <!-- Confetti (당첨 시만) -->
+    {% if draw.is_win %}
+    <div id="confetti-container">
+        <script>
+            (function() {
+                var colors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4'];
+                var container = document.getElementById('confetti-container');
+                for (var i = 0; i < 50; i++) {
+                    var c = document.createElement('div');
+                    c.className = 'confetti';
+                    c.style.left = Math.random() * 100 + 'vw';
+                    c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    c.style.animationDelay = Math.random() * 2 + 's';
+                    c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    container.appendChild(c);
+                }
+            })();
+        </script>
+    </div>
+    {% endif %}
+
+    <div class="text-center px-6 max-w-lg mx-auto z-10">
+        {% if draw.is_win %}
+        <!-- 당첨 -->
+        <div class="bloom-in">
+            <div class="text-8xl md:text-[120px] mb-6">🌸</div>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-pink-700 mb-4 break-keep" style="font-size: max(28px, 2.5vw);">
+            축하합니다!
+        </h1>
+        <p class="text-lg md:text-xl text-pink-600 mb-3 break-keep" style="font-size: max(20px, 1.5vw);">
+            {{ draw.student.name }}의 작은 행동들이 모여,<br>오늘 꽃을 피웠습니다.
+        </p>
+        {% if draw.prize %}
+        <div class="inline-block px-6 py-3 bg-white/80 rounded-2xl shadow-lg mb-4">
+            <p class="text-xl font-bold text-pink-700" style="font-size: max(20px, 1.5vw);">🎁 {{ draw.prize.name }}</p>
+        </div>
+        {% endif %}
+        <p class="text-base text-pink-500 break-keep" style="font-size: max(16px, 1.2vw);">
+            우리 반은 {{ draw.student.name }}의 노력을 응원합니다.
+        </p>
+        {% else %}
+        <!-- 미당첨 -->
+        <div class="bloom-in">
+            <div class="text-8xl md:text-[120px] mb-6">🌱</div>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-green-700 mb-4 break-keep" style="font-size: max(28px, 2.5vw);">
+            씨앗이 자랐어요!
+        </h1>
+        <p class="text-lg md:text-xl text-green-600 mb-3 break-keep" style="font-size: max(20px, 1.5vw);">
+            이번엔 씨앗이 자랐어요.<br>다음 꽃피움을 준비했어요.
+        </p>
+        <p class="text-base text-green-500 break-keep" style="font-size: max(16px, 1.2vw);">
+            {{ draw.student.name }}의 노력은 계속됩니다.
+        </p>
+        {% endif %}
+
+        <!-- 철학 문구 (항상 표시) -->
+        <div class="mt-10 p-4 bg-white/50 rounded-xl">
+            <p class="text-sm text-gray-600 italic break-keep" style="font-size: max(14px, 1vw);">
+                "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다."
+            </p>
+        </div>
+
+        <!-- 교사 닫기 버튼 -->
+        {% if request.user.is_authenticated %}
+        <form method="post" action="{% url 'happy_seed:close_celebration' draw_id=draw.id %}" class="mt-8">
+            {% csrf_token %}
+            <button type="submit" class="px-8 py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors" style="min-height: 44px;">
+                닫기 (교사 전용)
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- 닫힌 화면 -->
+    <div class="text-center px-6">
+        <div class="text-6xl mb-4">🌱</div>
+        <p class="text-xl text-gray-500">이 축하 화면은 종료되었습니다.</p>
+    </div>
+    {% endif %}
+
+</body>
+</html>

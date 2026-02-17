@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+
+        <div class="mb-8">
+            <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">🎁 보상 관리</h1>
+
+        <!-- Add Prize Form -->
+        <div class="clay-card p-6 rounded-2xl mb-6">
+            <h2 class="font-bold text-gray-700 mb-4">새 보상 추가</h2>
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">보상 이름 *</label>
+                        {{ form.name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">수량 (비우면 무제한)</label>
+                        {{ form.total_quantity }}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">설명</label>
+                    {{ form.description }}
+                </div>
+                <button type="submit" class="px-6 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-colors">
+                    보상 추가
+                </button>
+            </form>
+        </div>
+
+        <!-- Prize List -->
+        {% if prizes %}
+        <div class="clay-card rounded-2xl overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-3">보상</th>
+                        <th class="px-4 py-3">설명</th>
+                        <th class="px-4 py-3">수량</th>
+                        <th class="px-4 py-3">상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prize in prizes %}
+                    <tr class="border-t border-gray-100">
+                        <td class="px-4 py-3 font-bold text-gray-800">{{ prize.name }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">{{ prize.description|default:"-" }}</td>
+                        <td class="px-4 py-3 text-sm">{% if prize.total_quantity is not None %}{{ prize.remaining_quantity }}/{{ prize.total_quantity }}{% else %}무제한{% endif %}</td>
+                        <td class="px-4 py-3">
+                            {% if prize.is_available %}<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">사용가능</span>{% else %}<span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">소진</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="clay-card p-8 rounded-2xl text-center">
+            <p class="text-gray-500">등록된 보상이 없습니다. 위에서 보상을 추가해주세요.</p>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

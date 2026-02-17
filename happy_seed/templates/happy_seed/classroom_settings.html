@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-lg mx-auto">
+
+        <div class="mb-8">
+            <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">⚙️ 교실 설정</h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="clay-card p-6 rounded-2xl space-y-4">
+                <h2 class="font-bold text-gray-700">기본 정보</h2>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">학급 이름</label>
+                    {{ classroom_form.name }}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">학교명</label>
+                    {{ classroom_form.school_name }}
+                </div>
+            </div>
+
+            <div class="clay-card p-6 rounded-2xl space-y-4">
+                <h2 class="font-bold text-gray-700">씨앗/블룸 설정</h2>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">블룸 전환 기준 (씨앗 개수)</label>
+                    {{ form.seeds_per_bloom }}
+                    <p class="text-xs text-gray-400 mt-1">씨앗이 이 수만큼 모이면 자동으로 블룸 티켓 1장으로 전환됩니다.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">기본 당첨 확률 (%)</label>
+                    {{ form.base_win_rate }}
+                    <p class="text-xs text-gray-400 mt-1">꽃피움 추첨 시 기본 당첨 확률입니다.</p>
+                </div>
+            </div>
+
+            <div class="clay-card p-6 rounded-2xl space-y-4">
+                <h2 class="font-bold text-gray-700">따뜻한 균형 모드</h2>
+                <div class="flex items-center gap-3">
+                    {{ form.balance_mode_enabled }}
+                    <label class="text-sm font-bold text-gray-700">균형 모드 활성화</label>
+                </div>
+                <p class="text-xs text-gray-400">활성화하면 당첨이 적은 학생의 확률이 소폭 증가하고, 당첨이 많은 학생은 소폭 감소합니다.</p>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">보정 계수 (epsilon)</label>
+                    {{ form.balance_epsilon }}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">보정 기간 (일)</label>
+                    {{ form.balance_lookback_days }}
+                </div>
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 bg-green-500 text-white rounded-xl font-bold text-base hover:bg-green-600 transition-colors">
+                설정 저장
+            </button>
+        </form>
+
+    </div>
+</section>
+{% endblock %}

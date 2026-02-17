@@ -1,0 +1,22 @@
+{% if flowers %}
+<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4 p-6">
+    {% for flower in flowers %}
+    <div class="text-center relative cursor-pointer"
+         style="transform: translate({{ flower.offset_x }}px, {{ flower.offset_y }}px);"
+         hx-get="{% url 'happy_seed:student_tooltip_partial' student_id=flower.student_id %}"
+         hx-target="#tooltip-area"
+         hx-swap="innerHTML"
+         hx-trigger="click">
+        <div class="text-3xl md:text-4xl mb-1 transition-transform hover:scale-110" style="font-size: max(28px, 2.5vw);">{{ flower.icon }}</div>
+        <div class="text-xs text-gray-600 truncate max-w-[60px] mx-auto" style="font-size: max(12px, 0.8vw);">{{ flower.name }}</div>
+    </div>
+    {% endfor %}
+</div>
+<div id="tooltip-area" class="flex justify-center mt-4"></div>
+{% else %}
+<div class="text-center py-16">
+    <div class="text-6xl mb-4">🌍</div>
+    <p class="text-gray-400 text-lg">아직 비어있는 정원입니다.</p>
+    <p class="text-gray-400 text-sm mt-1">씨앗을 심어 꽃밭을 만들어보세요!</p>
+</div>
+{% endif %}

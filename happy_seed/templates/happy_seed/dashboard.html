@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">🌱 행복의 씨앗</h1>
+                <p class="text-gray-500 mt-1">내 교실 목록</p>
+            </div>
+            <a href="{% url 'happy_seed:classroom_create' %}"
+               class="px-5 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-colors">
+                + 새 교실 만들기
+            </a>
+        </div>
+
+        {% if classrooms %}
+        <div class="grid gap-4">
+            {% for classroom in classrooms %}
+            <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}"
+               class="clay-card p-6 rounded-2xl flex justify-between items-center hover:bg-white transition-all group">
+                <div>
+                    <div class="font-bold text-lg text-gray-800 group-hover:text-green-600">{{ classroom.name }}</div>
+                    {% if classroom.school_name %}
+                    <div class="text-sm text-gray-400 mt-0.5">{{ classroom.school_name }}</div>
+                    {% endif %}
+                    <div class="text-xs text-gray-400 mt-1">공개 정원: /happy-seed/garden/{{ classroom.slug }}/</div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-green-400"></i>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="clay-card p-12 rounded-2xl text-center">
+            <div class="text-5xl mb-4">🌱</div>
+            <p class="text-gray-500 mb-6">아직 교실이 없습니다. 첫 교실을 만들어보세요!</p>
+            <a href="{% url 'happy_seed:classroom_create' %}"
+               class="inline-block px-6 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors">
+                교실 만들기
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
