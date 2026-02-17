@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen">
+<section id="PAGE_LIVE" class="pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-4xl mx-auto">
 
         <div class="mb-8">
@@ -41,7 +41,7 @@
                     </select>
                 </div>
                 <div>
-                    <button type="submit" class="w-full py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600">
+                    <button id="BTN_GROUP_MISSION_SUCCESS" type="submit" class="w-full py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600">
                         모둠 미션 성공 처리
                     </button>
                 </div>
@@ -105,7 +105,7 @@
                 </div>
 
                 <div x-show="!confirming" class="mt-4">
-                    <button @click="confirming = true"
+                    <button id="BTN_EXECUTE_DRAW_NEXT__{{ student.id }}" @click="confirming = true"
                             {% if not has_rewards or student.consent.status != 'approved' %}disabled{% endif %}
                             class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all">
                         추첨하기

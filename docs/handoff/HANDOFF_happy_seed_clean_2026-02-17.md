@@ -12,18 +12,23 @@ Status: Official handoff document (approved)
 ### Step A Foundation: 완료
 - `happy_seed/__init__.py`
 - `happy_seed/apps.py`
-- `happy_seed/models.py` (MVP1 8개 + MVP2 6개)
+- `happy_seed/models.py` (MVP1 8개 + MVP2 6개 + `HSClassEventLog`)
 - `happy_seed/admin.py`
 - `happy_seed/forms.py`
 - `happy_seed/urls.py`
-- `happy_seed/views.py` (MVP1 21개 FBV)
+- `happy_seed/views.py` (MVP1 + 확장 FBV)
 - `happy_seed/services/__init__.py`
 - `happy_seed/services/engine.py`
 - `happy_seed/services/analytics.py`
 
 ### Step B Templates: 완료
-- 메인 템플릿 11개 + partial 8개 작성 완료
+- 메인 템플릿 14개 + partial 8개 작성 완료
 - 핵심 레이아웃 가드레일 반영: `pt-32 pb-20 px-4 min-h-screen`
+- 신규 화면:
+  - `happy_seed/templates/happy_seed/activity_manage.html`
+  - `happy_seed/templates/happy_seed/analysis_dashboard.html`
+  - `happy_seed/templates/happy_seed/group_manage.html`
+  - `happy_seed/templates/happy_seed/teacher_manual.html`
 
 ### Step C Integration: 완료
 - `config/settings.py`: `happy_seed.apps.HappySeedConfig` 추가
@@ -41,12 +46,37 @@ Status: Official handoff document (approved)
 - `python manage.py check`
 - `python manage.py ensure_happy_seed`
 - `python manage.py makemigrations --check`
+- 추가 마이그레이션 반영:
+  - `happy_seed/migrations/0002_hsprize_win_rate_percent.py`
+  - `happy_seed/migrations/0003_hsclasseventlog.py`
+  - `happy_seed/migrations/0004_alter_hsclasseventlog_type.py`
 
 ## 2) 추가 반영 사항
 
-- 축하 화면 접근 토큰 흐름 보강 (`happy_seed/views.py`)
-  - 추첨 후 축하 URL에 `?token=` 포함 이동
-  - 닫기 시 토큰 무효화
+- 보상별 상대 확률(가중치) 지원
+  - `HSPrize.win_rate_percent` 추가
+  - 당첨 시 보상 선택은 상대비율 기반 추첨(합계 100 강제 없음)
+
+- 라이브 운영 가드레일 강화
+  - 보상 미등록/재고 없음 시 추첨 차단
+  - 미동의 학생 추첨 비활성 안내
+  - 최근 실행 결과 패널 + 디스플레이 분리
+
+- 동의 연동 강화
+  - 서명톡 링크 생성/재발송/동기화
+  - 명단 미일치 건은 교사 수동 확인 승인 플로우 추가
+
+- 모둠 UX 확장
+  - 모둠 편성 UI(생성/삭제/멤버 저장)
+  - 라이브에서 모둠 미션 성공 시 랜덤 1~2명 티켓 지급
+
+- 활동/분석 확장
+  - 활동 화면: 성실참여 기본 지급 + 점수 기준 추가 지급 + 점수 없이 수동 추가 지급 체크
+  - 분석 화면: 장기 미당첨/편중/정체 알림 + 개입 예약
+
+- 이벤트 로그 표준화
+  - `HSClassEventLog` 기반으로 핵심 이벤트 기록
+  - 지급/추첨/미당첨씨앗/자동전환/개입/동의 이벤트 추적
 
 - 테스트 보강
   - `happy_seed/tests/test_engine.py`
@@ -56,8 +86,8 @@ Status: Official handoff document (approved)
 
 ## 3) 최신 검증 결과
 
-- `python manage.py test happy_seed.tests.test_flow happy_seed.tests.test_engine happy_seed.tests.test_views happy_seed.tests.test_permissions`
-  - 결과: 9 tests, OK
+- `python manage.py test happy_seed`
+  - 결과: 16 tests, OK
 - `python manage.py check`
   - 결과: OK
 - `python manage.py makemigrations --check`
@@ -66,14 +96,15 @@ Status: Official handoff document (approved)
 ## 4) 필수/권장 후속 작업
 
 필수 작업:
-- 없음 (MVP1 구현 + 통합 + 검증 완료)
+- 없음 (MVP1 + 핵심 확장 구현 + 통합 + 검증 완료)
 
 권장 작업:
-1. 레거시 문서/템플릿의 한글 깨짐 텍스트 정리
-2. 실운영 시나리오 수동 점검 1회
+1. 실운영 시나리오 수동 점검 1회
    - 교사: 생성 -> 학생등록 -> 동의 -> 지급 -> 추첨 -> 축하 닫기
+   - 모둠: 편성 -> 모둠 성공 -> 랜덤 1~2명 지급 검증
+   - 동의: 서명 동기화 -> 미일치 수동 승인 검증
    - 공개 꽃밭: 비로그인 접근 + 프로젝터 가독성 확인
-3. PR 직전 재검증
+2. PR 직전 재검증
    - `python manage.py test happy_seed`
    - `python manage.py check`
    - `python manage.py makemigrations --check`
@@ -133,3 +164,5 @@ Status: Official handoff document (approved)
 
 - 기능 통합 기준: `e53e9a6`
 - 배포 최적화 기준: `8fc5692`
+- 기능 확장(설명서/보상가중치/서명연동): `e7a4198`
+- 기능 확장(라이브가드/모둠/동의수동승인/활동수동보너스): `83fcf73`

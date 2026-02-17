@@ -61,4 +61,9 @@ urlpatterns = [
     path('<uuid:classroom_id>/partials/student-grid/', views.student_grid_partial, name='student_grid_partial'),
     path('<uuid:classroom_id>/partials/garden/', views.garden_partial, name='garden_partial'),
     path('student/<uuid:student_id>/partials/tooltip/', views.student_tooltip_partial, name='student_tooltip_partial'),
+
+    # API v1 (additive, existing UI flow 유지)
+    path('api/v1/classes/<uuid:classroom_id>/live:execute-draw', views.api_execute_draw, name='api_execute_draw'),
+    path('api/v1/classes/<uuid:classroom_id>/live:group-mission-success', views.api_group_mission_success, name='api_group_mission_success'),
+    path('api/v1/classes/<uuid:classroom_id>/consents:sync-sign-talk', views.api_consent_sync_sign_talk, name='api_consent_sync_sign_talk'),
 ]

@@ -30,13 +30,19 @@ class NoPrizeAvailableError(Exception):
     pass
 
 
+def _to_ev_name(event_type: str) -> str:
+    return event_type if event_type.startswith("EV_") else f"EV_{event_type}"
+
+
 def log_class_event(classroom, event_type, student=None, group=None, meta=None):
+    payload = dict(meta or {})
+    payload.setdefault("event_code", _to_ev_name(event_type))
     HSClassEventLog.objects.create(
         class_ref=classroom,
         type=event_type,
         student=student,
         group=group,
-        meta=meta or {},
+        meta=payload,
     )
 
 

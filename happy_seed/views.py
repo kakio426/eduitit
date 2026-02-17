@@ -2,10 +2,11 @@ import uuid
 import random
 import re
 from uuid import UUID
+import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -41,6 +42,29 @@ from .services.engine import (
     grant_tickets,
     log_class_event,
 )
+
+
+def _request_id(request):
+    return request.headers.get("X-Request-Id") or str(uuid.uuid4())
+
+
+def _api_ok(request, data, status=200):
+    return JsonResponse(
+        {"ok": True, "data": data, "error": None, "request_id": _request_id(request)},
+        status=status,
+    )
+
+
+def _api_err(request, code, message, status=400, details=None):
+    return JsonResponse(
+        {
+            "ok": False,
+            "data": None,
+            "error": {"code": code, "message": message, "details": details or {}},
+            "request_id": _request_id(request),
+        },
+        status=status,
+    )
 
 
 def get_teacher_classroom(request, classroom_id):
@@ -842,6 +866,131 @@ def group_mission_success(request, classroom_id):
 
     messages.success(request, f"모둠 미션 성공: {group.name}에서 {', '.join(winner_names)} 학생에게 티켓 +1 지급")
     return redirect("happy_seed:bloom_run", classroom_id=classroom.id)
+
+
+@login_required
+@require_POST
+def api_execute_draw(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return _api_err(request, "ERR_INVALID_REQUEST", "요청 본문(JSON)을 확인해 주세요.", status=400)
+
+    student_id = body.get("student_id")
+    if not student_id:
+        return _api_err(request, "ERR_INVALID_REQUEST", "student_id가 필요합니다.", status=400)
+    student = HSStudent.objects.filter(id=student_id, classroom=classroom).first()
+    if not student:
+        return _api_err(request, "ERR_NOT_FOUND", "학생을 찾을 수 없습니다.", status=404)
+
+    raw_key = request.headers.get("Idempotency-Key") or body.get("idempotency_key") or str(uuid.uuid4())
+    try:
+        request_id = uuid.UUID(str(raw_key))
+    except ValueError:
+        request_id = uuid.uuid4()
+
+    try:
+        draw = execute_bloom_draw(student, classroom, request.user, request_id=request_id)
+    except ConsentRequiredError:
+        return _api_err(request, "ERR_CONSENT_REQUIRED", "동의 완료 후 사용할 수 있습니다.", status=400)
+    except InsufficientTicketsError:
+        return _api_err(request, "ERR_TOKEN_INSUFFICIENT", "꽃피움권이 부족합니다.", status=400)
+    except NoPrizeAvailableError:
+        return _api_err(request, "ERR_REWARD_EMPTY", "사용 가능한 보상이 없습니다.", status=400)
+
+    student.refresh_from_db()
+    return _api_ok(
+        request,
+        {
+            "event_id": str(draw.id),
+            "result": "WIN" if draw.is_win else "LOSE",
+            "reward": (
+                {"reward_id": str(draw.prize.id), "title_text": draw.prize.name}
+                if draw.prize
+                else None
+            ),
+            "student_state": {
+                "student_id": str(student.id),
+                "tokens_available": student.ticket_count,
+                "seeds_balance": student.seed_count,
+            },
+            "display_overlay": {
+                "show": True,
+                "student_name": student.name,
+                "message_footer": "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.",
+            },
+        },
+    )
+
+
+@login_required
+@require_POST
+def api_group_mission_success(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return _api_err(request, "ERR_INVALID_REQUEST", "요청 본문(JSON)을 확인해 주세요.", status=400)
+
+    group_id = body.get("group_id")
+    winners_count = int(body.get("winners_count", 1))
+    winners_count = 1 if winners_count < 1 else 2 if winners_count > 2 else winners_count
+    group = HSStudentGroup.objects.filter(classroom=classroom, id=group_id).prefetch_related("members__consent").first()
+    if not group:
+        return _api_err(request, "ERR_NOT_FOUND", "모둠을 찾을 수 없습니다.", status=404)
+
+    eligible = [
+        m for m in group.members.all()
+        if m.is_active and getattr(m, "consent", None) and m.consent.status == "approved"
+    ]
+    if len(eligible) < winners_count:
+        return _api_err(
+            request,
+            "ERR_GROUP_TOO_SMALL",
+            "모둠 인원이 부족합니다.",
+            status=400,
+            details={"eligible_count": len(eligible), "requested_count": winners_count},
+        )
+
+    winners = random.sample(eligible, winners_count)
+    for student in winners:
+        grant_tickets(student, "group_draw", 1, detail=f"[{group.name}] 모둠 미션 성공")
+        log_class_event(
+            classroom,
+            "GROUP_MISSION_REWARD",
+            student=student,
+            group=group,
+            meta={"group_name": group.name, "draw_count": winners_count},
+        )
+    return _api_ok(
+        request,
+        {
+            "group_id": str(group.id),
+            "group_name": group.name,
+            "winner_student_ids": [str(s.id) for s in winners],
+            "winner_names": [s.name for s in winners],
+        },
+    )
+
+
+@login_required
+@require_POST
+def api_consent_sync_sign_talk(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    before = HSGuardianConsent.objects.filter(student__classroom=classroom, status="approved").count()
+    response = consent_sync_from_sign_talk(request, classroom_id)
+    after = HSGuardianConsent.objects.filter(student__classroom=classroom, status="approved").count()
+    if isinstance(response, JsonResponse):
+        return response
+    return _api_ok(
+        request,
+        {
+            "approved_before": before,
+            "approved_after": after,
+            "approved_delta": max(0, after - before),
+        },
+    )
 
 
 @login_required

@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSStudent, HSStudentGroup
+from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent, HSStudentGroup
 
 
 User = get_user_model()
@@ -103,3 +103,35 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(res.status_code, 302)
         self.student.refresh_from_db()
         self.assertEqual(self.student.ticket_count, before + 1)
+
+    def test_api_execute_draw_returns_envelope_error_code(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:api_execute_draw", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data='{"student_id":"%s"}' % self.student.id,
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": "req-test-1", "HTTP_IDEMPOTENCY_KEY": str(self.student.id)},
+        )
+        self.assertEqual(res.status_code, 400)
+        payload = res.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["code"], "ERR_REWARD_EMPTY")
+
+    def test_api_group_mission_success_returns_envelope_ok(self):
+        self.client.login(username="teacher2", password="pw12345")
+        student2 = HSStudent.objects.create(classroom=self.classroom, name="하람", number=3, ticket_count=0)
+        HSGuardianConsent.objects.create(student=student2, status="approved")
+        group = HSStudentGroup.objects.create(classroom=self.classroom, name="2모둠")
+        group.members.add(self.student, student2)
+        url = reverse("happy_seed:api_group_mission_success", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data='{"group_id":"%s","winners_count":1}' % group.id,
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": "req-test-2"},
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["data"]["group_name"], "2모둠")

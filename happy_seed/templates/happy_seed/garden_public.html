@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen">
+<section id="PAGE_DISPLAY_GARDEN" class="pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-5xl mx-auto">
 
         <div class="text-center mb-8">
@@ -11,7 +11,7 @@
             {% endif %}
         </div>
 
-        <div id="garden-area" hx-get="{% url 'happy_seed:garden_partial' classroom_id=classroom.id %}" hx-trigger="every 30s" hx-swap="innerHTML">
+        <div id="COMP_GARDEN_CANVAS" hx-get="{% url 'happy_seed:garden_partial' classroom_id=classroom.id %}" hx-trigger="every 30s" hx-swap="innerHTML">
             {% include 'happy_seed/partials/garden_flowers.html' %}
         </div>
 
