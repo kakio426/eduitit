@@ -1,3 +1,104 @@
+# Handoff: 홈페이지 V2 UX 리디자인 Phase 1
+
+**날짜**: 2026-02-17
+**상태**: Phase 1 구현 완료 (커밋 `8007741`)
+**플래그**: `HOME_V2_ENABLED=False` (기본 꺼짐)
+
+---
+
+## 완료된 작업
+
+### 구현 완료 항목
+
+| # | 항목 | 파일 | 상태 |
+|---|------|------|------|
+| 1 | Feature Flag `HOME_V2_ENABLED` | `config/settings.py`, `config/settings_production.py` | ✅ |
+| 2 | Product 모델 필드 (`solve_text`, `result_text`, `time_text`) | `products/models.py` | ✅ |
+| 3 | Admin에 새 필드 노출 (collapsible) | `products/admin.py` | ✅ |
+| 4 | 데이터 마이그레이션 + idempotent 백필 | `products/migrations/0032_add_v2_home_fields.py` | ✅ |
+| 5 | `PURPOSE_SECTIONS` 매핑 + `get_purpose_sections()` | `core/views.py` | ✅ |
+| 6 | `_home_v2()` 뷰 함수 + `home()` flag 분기 | `core/views.py` | ✅ |
+| 7 | 목적별 섹션 컴포넌트 | `core/includes/purpose_sections.html` | ✅ |
+| 8 | 미니 카드 컴포넌트 (`openModal` 호출) | `core/includes/mini_card.html` | ✅ |
+| 9 | 게임 배너 컴포넌트 | `core/includes/game_banner.html` | ✅ |
+| 10 | 로그인 V2 홈 (인사말 + 퀵액션 + 섹션 + 게임 + 전체보기 토글) | `core/home_authenticated_v2.html` | ✅ |
+| 11 | 비로그인 V2 홈 (Hero + 섹션 + CTA + 전체보기 토글) | `core/home_v2.html` | ✅ |
+| 12 | 클릭 계측 (`data-track` / `data-track-label`) | V2 템플릿 내 JS | ✅ |
+| 13 | `python manage.py check` 통과 | - | ✅ |
+
+### 기존 파일 무수정 확인
+- `home.html`, `home_authenticated.html`, `card_product.html`, `base.html`, `sns_widget.html`, `sns_widget_mobile.html` — 변경 없음
+
+---
+
+## 아직 구현 안 된 것들
+
+### Phase 1 잔여 (배포 전 확인 필요)
+
+| # | 항목 | 설명 | 우선도 |
+|---|------|------|--------|
+| 1 | **프로덕션 데이터 백필 확인** | 마이그레이션이 프로덕션 DB에 적용되면 title 매칭 여부 확인 필요. 프로덕션 Product title이 백필 딕셔너리와 다르면 solve_text가 비어있을 수 있음 → Admin에서 수동 입력 또는 title 수정 | 높음 |
+| 2 | **퀵 액션 URL 직접 이동** | 현재 `external_url` 있으면 직접 이동, 없으면 `openModal()` 호출. 일부 서비스는 `preview_modal.html`의 시작 버튼 분기에 의존 → 퀵 액션에서 모달 거치지 않고 바로 서비스 URL로 이동하려면 각 서비스별 URL 매핑 필요 | 중간 |
+| 3 | **반응형 360px 검증** | 360px 모바일에서 목적별 섹션 1열 표시, 퀵액션 가로 스크롤 정상 동작 확인 필요 | 높음 |
+| 4 | **내부 계정 테스트** | Railway에서 `HOME_V2_ENABLED=True` 설정 후 superuser로 먼저 테스트 | 높음 |
+
+### Phase 2: Ctrl+K 전역 검색 모달 (미착수)
+
+| # | 항목 | 설명 |
+|---|------|------|
+| 1 | 검색 모달 UI | `Ctrl+K` 또는 `/` 키로 열리는 검색 모달 |
+| 2 | 서비스 검색 | Product title, description, solve_text 기반 실시간 필터링 |
+| 3 | 키보드 네비게이션 | 화살표 키 + Enter로 서비스 선택/이동 |
+| 4 | 최근 검색 기록 | localStorage 기반 최근 검색어 5개 |
+
+### Phase 3: 개인화 (미착수)
+
+| # | 항목 | 설명 |
+|---|------|------|
+| 1 | 최근 사용 서비스 | `UserServiceLog` 모델 → 최근 사용 3개 표시 |
+| 2 | 즐겨찾기 | 별표 토글 → `UserFavoriteProduct` 모델 |
+| 3 | 역할 기반 추천 | `UserProfile.role`에 따라 퀵 액션 자동 정렬 (학교 → 수업 도구 우선, 강사 → 행정 도구 우선) |
+| 4 | 퀵 액션 usage 기반 전환 | Phase 1의 `is_featured` 기반 → usage 빈도 기반으로 교체 |
+
+### Phase 4: 온보딩 가이드 (미착수)
+
+| # | 항목 | 설명 |
+|---|------|------|
+| 1 | "3분 시나리오" 카드 | 신규 사용자에게 서비스 활용 시나리오 3개 제시 |
+| 2 | 진행률 표시 | 온보딩 완료율 프로그레스 바 |
+| 3 | 스킵 가능 | "다시 보지 않기" 체크박스 → `UserProfile.onboarding_done` |
+
+---
+
+## 배포 순서
+
+1. **현재**: 코드 배포 완료 + `HOME_V2_ENABLED=False` (기존 홈 100%)
+2. **다음**: Railway에서 `HOME_V2_ENABLED=True` → superuser로 테스트
+3. **이후**: 문제 없으면 전체 오픈
+4. **롤백**: `HOME_V2_ENABLED=False` 환경변수 1줄로 즉시 복구
+
+---
+
+## 관련 파일 목록
+
+| 파일 | 역할 |
+|------|------|
+| `config/settings.py` | `HOME_V2_ENABLED` flag |
+| `config/settings_production.py` | `HOME_V2_ENABLED` flag (동기화) |
+| `core/views.py` | `PURPOSE_SECTIONS`, `get_purpose_sections()`, `_home_v2()`, `home()` flag 분기 |
+| `products/models.py` | `solve_text`, `result_text`, `time_text` 필드 |
+| `products/admin.py` | V2 필드 Admin 노출 |
+| `products/migrations/0032_add_v2_home_fields.py` | 스키마 + 백필 마이그레이션 |
+| `core/templates/core/includes/purpose_sections.html` | 목적별 4개 섹션 루프 |
+| `core/templates/core/includes/mini_card.html` | 미니 서비스 카드 |
+| `core/templates/core/includes/game_banner.html` | 게임 배너 |
+| `core/templates/core/home_authenticated_v2.html` | 로그인 V2 홈 |
+| `core/templates/core/home_v2.html` | 비로그인 V2 홈 |
+
+---
+
+---
+
 # Handoff: ASGI 전환 후 사주 분석 오류 디버깅
 
 **날짜**: 2026-02-15

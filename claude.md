@@ -1,56 +1,94 @@
-# Eduitit 프로젝트 - Claude Code 설정
+﻿## [Canonical Top Summary] 2026-02-17
+- Declare UI scope before edits: global/app/page
+- Preserve stable service UI language by default
+- Validate behavior parity first (routing, modal close, ESC, focus)
+- If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
+- Run python manage.py check (and node --check for changed JS)
 
-## 개인 정보
-- 이름: 유병주 (Byungju Yu)
+---
+
+## [Canonical Body v2] 2026-02-17
+이 문서는 현재 운영 기준의 우선 순위를 정의한다. 기존 본문과 충돌할 경우 본 섹션을 먼저 따른다.
+
+### 1) UI 변경 원칙
+- 변경 시작 전에 범위를 명시한다: `global` / `app-level` / `single-page`.
+- 범위 외 변경(특히 공용 레이아웃/공용 스크립트)은 금지한다.
+- 기존 서비스가 정상 동작하면 시각 통일보다 동작 안정성을 우선한다.
+
+### 2) 한국어 깨짐 사고 원인 분석 (2026-02-17)
+- 직접 원인:
+  - Windows 터미널 표시 인코딩과 실제 파일 인코딩이 불일치한 상태에서 수정 반복
+  - 한글 포함 파일을 넓은 범위 치환/재저장하면서 일부 블록이 재인코딩됨
+- 구조적 원인:
+  - 기능 수정과 텍스트 정규화를 분리하지 않고 동시에 진행
+  - 문서 기준(우선 규칙)이 분산되어 작업자가 즉시 참조하기 어려움
+- 재발 방지:
+  - 한글 이상 징후 발견 시 기능 수정 중단 -> 텍스트 복구 -> 기능 재적용 순서 고정
+  - 대량 치환보다 `apply_patch` 기반의 국소 수정 우선
+  - 정책 변경 시 `claude.md`, `SERVICE_INTEGRATION_STANDARD.md`, `codex/SKILL.md` 동시 반영
+
+### 3) 서비스 진화 시 점검 체크리스트
+- 기존 핵심 플로우 회귀 점검:
+  - 대시보드 진입
+  - 모달 열기/닫기(배경 클릭, ESC)
+  - 서비스 라우팅
+- 신규 기능은 "기능 정확성 -> 사용성 -> 시각 개선" 순서로 적용한다.
+- 삭제가 필요한 변경은 사용자 승인 후에만 수행한다.
+
+---
+## [Legacy Reference Notice]
+- 아래 본문은 과거 운영/분석 기록(레거시)이며 일부 텍스트 깨짐이 포함될 수 있다.
+- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v2`를 우선 적용한다.
+- 레거시 본문은 삭제하지 않고 보존한다.
+
+# Eduitit ?꾨줈?앺듃 - Claude Code ?ㅼ젙
+
+## 媛쒖씤 ?뺣낫
+- ?대쫫: ?좊퀝二?(Byungju Yu)
 - GitHub: yb941213
-- 회사: SCHOOL
+- ?뚯궗: SCHOOL
 
-## 기술 스택
-| 영역 | 기술 |
+## 湲곗닠 ?ㅽ깮
+| ?곸뿭 | 湲곗닠 |
 |------|------|
 | Backend | Django (Python 3.10+), Django Template Language |
 | Frontend | Vanilla JS, Alpine.js, HTMX, Tailwind CSS |
 | Infra | Railway, Neon PostgreSQL, Cloudinary |
 | Monitoring | Sentry (production only) |
 
-## 코딩 규칙
-- 한국어로 주석과 커밋 메시지 작성
-- Django 표준 준수: 명확한 URL 네이밍, Service Layer/Utils 활용
-- Frontend: Alpine.js + HTMX 우선, 가볍고 빠른 반응형
-- CSS: Tailwind CSS 클래스 우선 (커스텀 CSS 최소화)
-- 커밋 형식: `[타입] 제목` (feat, fix, docs, style, refactor, test, chore)
+## 肄붾뵫 洹쒖튃
+- ?쒓뎅?대줈 二쇱꽍怨?而ㅻ컠 硫붿떆吏 ?묒꽦
+- Django ?쒖? 以?? 紐낇솗??URL ?ㅼ씠諛? Service Layer/Utils ?쒖슜
+- Frontend: Alpine.js + HTMX ?곗꽑, 媛蹂띻퀬 鍮좊Ⅸ 諛섏쓳??- CSS: Tailwind CSS ?대옒???곗꽑 (而ㅼ뒪? CSS 理쒖냼??
+- 而ㅻ컠 ?뺤떇: `[??? ?쒕ぉ` (feat, fix, docs, style, refactor, test, chore)
 
-## 금지 사항
-- Production settings 직접 수정 금지 (settings_production.py는 신중히)
-- `.env` 파일이나 민감한 정보 커밋 금지
-- 하드코딩된 API 키 사용 금지
-- UI 오버랩(NavBar 가림) 방치 금지 → 모든 페이지 `pt-32` 준수
-- `ensure_*` management command에서 데이터 중복 생성 및 Admin 관리 데이터 덮어쓰기 금지 → `Procfile`이 매 배포마다 실행하므로 Admin 수정이 초기화되거나 데이터가 중복됨
-- **[Manual]** 신규 서비스 추가 시 `ServiceManual` 작성 누락 금지. 풍성한(3개 이상 섹션) 사용법이 없는 서비스는 배포 불가.
+## 湲덉? ?ы빆
+- Production settings 吏곸젒 ?섏젙 湲덉? (settings_production.py???좎쨷??
+- `.env` ?뚯씪?대굹 誘쇨컧???뺣낫 而ㅻ컠 湲덉?
+- ?섎뱶肄붾뵫??API ???ъ슜 湲덉?
+- UI ?ㅻ쾭??NavBar 媛由? 諛⑹튂 湲덉? ??紐⑤뱺 ?섏씠吏 `pt-32` 以??- `ensure_*` management command?먯꽌 ?곗씠??以묐났 ?앹꽦 諛?Admin 愿由??곗씠????뼱?곌린 湲덉? ??`Procfile`??留?諛고룷留덈떎 ?ㅽ뻾?섎?濡?Admin ?섏젙??珥덇린?붾릺嫄곕굹 ?곗씠?곌? 以묐났??- **[Manual]** ?좉퇋 ?쒕퉬??異붽? ??`ServiceManual` ?묒꽦 ?꾨씫 湲덉?. ?띿꽦??3媛??댁긽 ?뱀뀡) ?ъ슜踰뺤씠 ?녿뒗 ?쒕퉬?ㅻ뒗 諛고룷 遺덇?.
 
-## 작업 완료 후 체크리스트
-- [ ] Django Check 통과 (`python manage.py check`)
-- [ ] console.log 및 debug print 제거
-- [ ] **[Manual]** 서비스 매뉴얼(`ServiceManual`) 데이터 및 레이아웃(Rich Content) 포함 여부 확인
-- [ ] 보안 검토 (API 키, 시크릿 노출 여부)
-- [ ] settings.py 변경 시 settings_production.py도 동기화
-
+## ?묒뾽 ?꾨즺 ??泥댄겕由ъ뒪??- [ ] Django Check ?듦낵 (`python manage.py check`)
+- [ ] console.log 諛?debug print ?쒓굅
+- [ ] **[Manual]** ?쒕퉬??留ㅻ돱??`ServiceManual`) ?곗씠??諛??덉씠?꾩썐(Rich Content) ?ы븿 ?щ? ?뺤씤
+- [ ] 蹂댁븞 寃??(API ?? ?쒗겕由??몄텧 ?щ?)
+- [ ] settings.py 蹂寃???settings_production.py???숆린??
 ---
 
-# 핵심 아키텍처
+# ?듭떖 ?꾪궎?띿쿂
 
-## 서비스 인프라 구조
+## ?쒕퉬???명봽??援ъ“
 
-| 기능 | 파일 | 비고 |
+| 湲곕뒫 | ?뚯씪 | 鍮꾧퀬 |
 |------|------|------|
-| Toast 알림 | `core/context_processors.py` → `toast_messages()` | Django messages + Alpine.js |
-| 글로벌 배너 | `core/models.py` → `SiteConfig` (싱글톤) | Admin에서 관리 |
-| SEO 메타태그 | `core/context_processors.py` → `seo_meta()` | view context로 override 가능 |
-| 피드백 위젯 | `core/models.py` → `Feedback`, `/feedback/` | HTMX + 플로팅 버튼 |
-| 관리자 대시보드 | `/admin-dashboard/` | superuser 전용, 봇/사람 구분 |
-| DB 백업 | `python manage.py backup_db` | dumpdata JSON, Cron 가능 |
+| Toast ?뚮┝ | `core/context_processors.py` ??`toast_messages()` | Django messages + Alpine.js |
+| 湲濡쒕쾶 諛곕꼫 | `core/models.py` ??`SiteConfig` (?깃??? | Admin?먯꽌 愿由?|
+| SEO 硫뷀??쒓렇 | `core/context_processors.py` ??`seo_meta()` | view context濡?override 媛??|
+| ?쇰뱶諛??꾩젽 | `core/models.py` ??`Feedback`, `/feedback/` | HTMX + ?뚮줈??踰꾪듉 |
+| 愿由ъ옄 ??쒕낫??| `/admin-dashboard/` | superuser ?꾩슜, 遊??щ엺 援щ텇 |
+| DB 諛깆뾽 | `python manage.py backup_db` | dumpdata JSON, Cron 媛??|
 
-**context_processors 등록 순서** (두 settings 파일 모두 동일해야 함):
+**context_processors ?깅줉 ?쒖꽌** (??settings ?뚯씪 紐⑤몢 ?숈씪?댁빞 ??:
 ```python
 'core.context_processors.visitor_counts',
 'core.context_processors.toast_messages',
@@ -58,133 +96,131 @@
 'core.context_processors.seo_meta',
 ```
 
-**VisitorLog 모델**: `user_agent`, `is_bot` 필드 보유. `get_visitor_stats(days, exclude_bots=True)`로 필터링.
+**VisitorLog 紐⑤뜽**: `user_agent`, `is_bot` ?꾨뱶 蹂댁쑀. `get_visitor_stats(days, exclude_bots=True)`濡??꾪꽣留?
 
-## 2. 문서 관리 UI 패턴 (Mobile-First)
+## 2. 臾몄꽌 愿由?UI ?⑦꽩 (Mobile-First)
 
-**목록 화면**: 데스크톱은 `<table>`, 모바일은 `Card Grid`
-- **구현**: `hidden md:block` (데스크톱) / `md:hidden` (모바일) 클래스로 분기
-- **필터**: 모바일에서는 세로 스택(`flex-col`), 데스크톱에서는 가로 배치(`flex-row`)
+**紐⑸줉 ?붾㈃**: ?곗뒪?ы넲? `<table>`, 紐⑤컮?쇱? `Card Grid`
+- **援ы쁽**: `hidden md:block` (?곗뒪?ы넲) / `md:hidden` (紐⑤컮?? ?대옒?ㅻ줈 遺꾧린
+- **?꾪꽣**: 紐⑤컮?쇱뿉?쒕뒗 ?몃줈 ?ㅽ깮(`flex-col`), ?곗뒪?ы넲?먯꽌??媛濡?諛곗튂(`flex-row`)
 
-**상세 화면**:
-- **모바일**: Alpine.js 탭 UI (`x-data="{ tab: 'history' }"`)
-  - 탭: [히스토리] [업로드] [설정]
-  - 스크롤 최소화 및 콘텐츠 분리
-- **데스크톱**: 2단 컬럼 레이아웃 (사이드바 + 메인)
-  - 탭 없이 한 화면에 표시 (`lg:grid-cols-3`)
+**?곸꽭 ?붾㈃**:
+- **紐⑤컮??*: Alpine.js ??UI (`x-data="{ tab: 'history' }"`)
+  - ?? [?덉뒪?좊━] [?낅줈?? [?ㅼ젙]
+  - ?ㅽ겕濡?理쒖냼??諛?肄섑뀗痢?遺꾨━
+- **?곗뒪?ы넲**: 2??而щ읆 ?덉씠?꾩썐 (?ъ씠?쒕컮 + 硫붿씤)
+  - ???놁씠 ???붾㈃???쒖떆 (`lg:grid-cols-3`)
 
-**입력 폼**:
-- **Touch Target**: 모바일에서 `py-3.5`, `text-base` 이상 확보
-- **Full Width**: 버튼 및 주요 입력창은 모바일에서 `w-full`
+**?낅젰 ??*:
+- **Touch Target**: 紐⑤컮?쇱뿉??`py-3.5`, `text-base` ?댁긽 ?뺣낫
+- **Full Width**: 踰꾪듉 諛?二쇱슂 ?낅젰李쎌? 紐⑤컮?쇱뿉??`w-full`
 
-## UI 레이아웃 표준
+## UI ?덉씠?꾩썐 ?쒖?
 
-NavBar가 `fixed` 포지션이므로 모든 페이지에서 상단 여백 확보 필수.
+NavBar媛 `fixed` ?ъ??섏씠誘濡?紐⑤뱺 ?섏씠吏?먯꽌 ?곷떒 ?щ갚 ?뺣낫 ?꾩닔.
 
 ```html
-<!-- 표준 페이지 구조 -->
+<!-- ?쒖? ?섏씠吏 援ъ“ -->
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-7xl mx-auto">
-        <!-- 콘텐츠 -->
+        <!-- 肄섑뀗痢?-->
     </div>
 </section>
 {% endblock %}
 ```
 
-- **표준**: `pt-32` (128px) - 모든 페이지
-- **최소**: `pt-24` (Banner 없을 때)
-- 전체 화면 모드 시 `z-index: 50+` 필요
+- **?쒖?**: `pt-32` (128px) - 紐⑤뱺 ?섏씠吏
+- **理쒖냼**: `pt-24` (Banner ?놁쓣 ??
+- ?꾩껜 ?붾㈃ 紐⑤뱶 ??`z-index: 50+` ?꾩슂
 
-### 반응형 브레이크포인트 (Tailwind 기본값)
-| 접두사 | 최소 너비 | 용도 |
+### 諛섏쓳??釉뚮젅?댄겕?ъ씤??(Tailwind 湲곕낯媛?
+| ?묐몢??| 理쒖냼 ?덈퉬 | ?⑸룄 |
 |--------|----------|------|
-| (없음) | 0px | 모바일 기본 |
-| `sm:` | 640px | 큰 모바일/소형 태블릿 |
-| `md:` | 768px | 태블릿 |
-| `lg:` | 1024px | 데스크톱 (SNS 사이드바 표시 기준) |
-| `xl:` | 1280px | 넓은 데스크톱 |
+| (?놁쓬) | 0px | 紐⑤컮??湲곕낯 |
+| `sm:` | 640px | ??紐⑤컮???뚰삎 ?쒕툝由?|
+| `md:` | 768px | ?쒕툝由?|
+| `lg:` | 1024px | ?곗뒪?ы넲 (SNS ?ъ씠?쒕컮 ?쒖떆 湲곗?) |
+| `xl:` | 1280px | ?볦? ?곗뒪?ы넲 |
 
 ---
 
-# 반복 실수 방지 규칙
+# 諛섎났 ?ㅼ닔 諛⑹? 洹쒖튃
 
-## 1. Django 설정 파일 동기화 (CRITICAL)
+## 1. Django ?ㅼ젙 ?뚯씪 ?숆린??(CRITICAL)
 
-로컬(`settings.py`)과 프로덕션(`settings_production.py`)은 반드시 동기화.
+濡쒖뺄(`settings.py`)怨??꾨줈?뺤뀡(`settings_production.py`)? 諛섎뱶???숆린??
 
-**특히 주의할 설정**: `MIDDLEWARE`, `INSTALLED_APPS`, `TEMPLATES > context_processors`, `LOGGING`
+**?뱁엳 二쇱쓽???ㅼ젙**: `MIDDLEWARE`, `INSTALLED_APPS`, `TEMPLATES > context_processors`, `LOGGING`
 
 ```bash
 diff config/settings.py config/settings_production.py
 ```
 
-> **사례 (2026-02-02)**: 방문자 카운터가 계속 0명. 코드는 정상이었으나 `settings_production.py`에 미들웨어/context processor 누락이 원인.
+> **?щ? (2026-02-02)**: 諛⑸Ц??移댁슫?곌? 怨꾩냽 0紐? 肄붾뱶???뺤긽?댁뿀?쇰굹 `settings_production.py`??誘몃뱾?⑥뼱/context processor ?꾨씫???먯씤.
 
-## 2. Django views.py 필수 체크
+## 2. Django views.py ?꾩닔 泥댄겕
 
-500 에러의 3대 원인:
+500 ?먮윭??3? ?먯씤:
 
-1. **`from django.conf import settings` import 누락** → `NameError`
-2. **상수를 함수보다 아래에 정의** → `NameError` (상수는 파일 상단에)
-3. **view 함수에서 `return` 문 누락** → `None` 반환 → 500 에러
+1. **`from django.conf import settings` import ?꾨씫** ??`NameError`
+2. **?곸닔瑜??⑥닔蹂대떎 ?꾨옒???뺤쓽** ??`NameError` (?곸닔???뚯씪 ?곷떒??
+3. **view ?⑥닔?먯꽌 `return` 臾??꾨씫** ??`None` 諛섑솚 ??500 ?먮윭
 
-> **사례 (ssambti 앱)**: 위 3가지가 동시 발생. import 추가 + 함수 순서 재배치 + return 문 추가로 해결.
+> **?щ? (ssambti ??**: ??3媛吏媛 ?숈떆 諛쒖깮. import 異붽? + ?⑥닔 ?쒖꽌 ?щ같移?+ return 臾?異붽?濡??닿껐.
 
-> **사례 (2026-02-09, fortune 앱)**: `has_personal_api_key`를 `fortune/views.py`에서 import 없이 `@ratelimit` 콜백(`fortune_rate_h`, `fortune_rate_d`)에서 사용 → 일반 유저 요청 시 `NameError` → 500 에러. **superuser는 `or` 단축 평가로 해당 함수가 호출되지 않아 재현 불가**했음. 교훈: 데코레이터 콜백 안의 import 누락은 특정 조건에서만 터지므로, 코드 작성 시 **모든 함수 참조의 import 여부를 반드시 확인**할 것.
+> **?щ? (2026-02-09, fortune ??**: `has_personal_api_key`瑜?`fortune/views.py`?먯꽌 import ?놁씠 `@ratelimit` 肄쒕갚(`fortune_rate_h`, `fortune_rate_d`)?먯꽌 ?ъ슜 ???쇰컲 ?좎? ?붿껌 ??`NameError` ??500 ?먮윭. **superuser??`or` ?⑥텞 ?됯?濡??대떦 ?⑥닔媛 ?몄텧?섏? ?딆븘 ?ы쁽 遺덇?**?덉쓬. 援먰썕: ?곗퐫?덉씠??肄쒕갚 ?덉쓽 import ?꾨씫? ?뱀젙 議곌굔?먯꽌留??곗?誘濡? 肄붾뱶 ?묒꽦 ??**紐⑤뱺 ?⑥닔 李몄“??import ?щ?瑜?諛섎뱶???뺤씤**??寃?
 
-## 3. Railway 배포 환경 제약
+## 3. Railway 諛고룷 ?섍꼍 ?쒖빟
 
-- **`pg_dump` 없음** → `dumpdata` JSON 백업 사용 (`core/management/commands/backup_db.py`)
-- **Neon PostgreSQL = PgBouncer** → `DISABLE_SERVER_SIDE_CURSORS = True` 설정 필요
-- **Cron Job = 별도 컨테이너** → `raise` 대신 `sys.exit(0/1)` 사용
-- **패키지 추가 시**: `requirements.txt` 즉시 반영, 시스템 바이너리 의존성 확인 → `nixpacks.toml`에 추가
+- **`pg_dump` ?놁쓬** ??`dumpdata` JSON 諛깆뾽 ?ъ슜 (`core/management/commands/backup_db.py`)
+- **Neon PostgreSQL = PgBouncer** ??`DISABLE_SERVER_SIDE_CURSORS = True` ?ㅼ젙 ?꾩슂
+- **Cron Job = 蹂꾨룄 而⑦뀒?대꼫** ??`raise` ???`sys.exit(0/1)` ?ъ슜
+- **?⑦궎吏 異붽? ??*: `requirements.txt` 利됱떆 諛섏쁺, ?쒖뒪??諛붿씠?덈━ ?섏〈???뺤씤 ??`nixpacks.toml`??異붽?
 
-## 4. select_related와 선택적 관계
-
+## 4. select_related? ?좏깮??愿怨?
 ```python
-# ❌ UserProfile이 없는 User가 있으면 에러
+# ??UserProfile???녿뒗 User媛 ?덉쑝硫??먮윭
 .select_related('author__userprofile')
 
-# ✅ 필수 관계만 select_related
+# ???꾩닔 愿怨꾨쭔 select_related
 .select_related('author')
-# 선택적 관계는 템플릿에서: {% if post.author.userprofile %}
+# ?좏깮??愿怨꾨뒗 ?쒗뵆由우뿉?? {% if post.author.userprofile %}
 ```
 
-> **사례 (2026-02-04)**: 프로덕션에서 UserProfile 없는 User 존재 → 500 에러. 로컬에서는 재현 안 됨.
+> **?щ? (2026-02-04)**: ?꾨줈?뺤뀡?먯꽌 UserProfile ?녿뒗 User 議댁옱 ??500 ?먮윭. 濡쒖뺄?먯꽌???ы쁽 ????
 
-## 5. Alpine.js `<template x-if>` 안에 HTMX 넣지 않기
+## 5. Alpine.js `<template x-if>` ?덉뿉 HTMX ?ｌ? ?딄린
 
-`<template x-if>`는 조건에 따라 DOM을 완전히 제거/추가하므로, 그 안의 HTMX 속성(`hx-trigger`, `hx-get` 등)이 제대로 초기화되지 않을 수 있다.
+`<template x-if>`??議곌굔???곕씪 DOM???꾩쟾???쒓굅/異붽??섎?濡? 洹??덉쓽 HTMX ?띿꽦(`hx-trigger`, `hx-get` ?????쒕?濡?珥덇린?붾릺吏 ?딆쓣 ???덈떎.
 
 ```html
-<!-- ❌ HTMX 폴링이 작동하지 않음 -->
+<!-- ??HTMX ?대쭅???묐룞?섏? ?딆쓬 -->
 <template x-if="showFullscreen">
     <div hx-get="/api/data/" hx-trigger="every 5s">...</div>
 </template>
 
-<!-- ✅ HTMX를 template 밖에 두기 -->
+<!-- ??HTMX瑜?template 諛뽰뿉 ?먭린 -->
 <div x-show="showFullscreen">
     <div hx-get="/api/data/" hx-trigger="every 5s">...</div>
 </div>
 ```
 
-> **사례 (2026-02-08)**: studentmbti 세션 상세 페이지에서 전체화면 모드의 실시간 학생 목록이 항상 0명으로 표시. `<template x-if>` 안의 HTMX 폴링이 작동하지 않았음.
+> **?щ? (2026-02-08)**: studentmbti ?몄뀡 ?곸꽭 ?섏씠吏?먯꽌 ?꾩껜?붾㈃ 紐⑤뱶???ㅼ떆媛??숈깮 紐⑸줉????긽 0紐낆쑝濡??쒖떆. `<template x-if>` ?덉쓽 HTMX ?대쭅???묐룞?섏? ?딆븯??
 
-## 6. JSON 파싱 시 HTML 에러 페이지 감지
+## 6. JSON ?뚯떛 ??HTML ?먮윭 ?섏씠吏 媛먯?
 
-Django가 에러를 반환할 때 JSON 대신 HTML 에러 페이지를 보낼 수 있다. `JSON.parse()`에 HTML을 넘기면 `Unexpected token '<'` 에러 발생.
+Django媛 ?먮윭瑜?諛섑솚????JSON ???HTML ?먮윭 ?섏씠吏瑜?蹂대궪 ???덈떎. `JSON.parse()`??HTML???섍린硫?`Unexpected token '<'` ?먮윭 諛쒖깮.
 
 ```javascript
-// ❌ 위험: HTML 에러 페이지 파싱 시 크래시
-const data = JSON.parse(element.textContent);
+// ???꾪뿕: HTML ?먮윭 ?섏씠吏 ?뚯떛 ???щ옒??const data = JSON.parse(element.textContent);
 
-// ✅ 안전: HTML 감지 및 fallback
+// ???덉쟾: HTML 媛먯? 諛?fallback
 function safeJSONParse(text, fallback = null) {
     if (!text) return fallback;
     const trimmed = text.trim();
     
-    // HTML 에러 페이지 감지
+    // HTML ?먮윭 ?섏씠吏 媛먯?
     if (trimmed.startsWith('<')) {
         console.error("HTML detected instead of JSON");
         return fallback;
@@ -198,194 +234,185 @@ function safeJSONParse(text, fallback = null) {
     }
 }
 
-// 사용
+// ?ъ슜
 const data = safeJSONParse(element.textContent, {});
 ```
 
-**Django 템플릿에서 JSON 전달 시 주의사항**:
+**Django ?쒗뵆由우뿉??JSON ?꾨떖 ??二쇱쓽?ы빆**:
 ```django
-{# ✅ json_script 필터 사용 #}
+{# ??json_script ?꾪꽣 ?ъ슜 #}
 {{ chart|json_script:"chart-data" }}
 
-{# ✅ View에서 chart가 None일 수 있으므로 항상 생성 #}
+{# ??View?먯꽌 chart媛 None?????덉쑝誘濡???긽 ?앹꽦 #}
 chart_data = {...} if chart_context else None
 ```
 
-> **사례 (2026-02-08)**: Fortune 앱에서 캐싱된 사주 결과 불러온 후 일진 확인 시 `Unexpected token '<'` 에러. 원인: 캐싱 시 `chart` 데이터가 재생성되지 않아 템플릿에서 `None` → `json_script`가 빈 값 생성 → JavaScript에서 파싱 실패. 해결: (1) View에서 캐싱 여부와 관계없이 `chart_data` 항상 생성, (2) 모든 `JSON.parse()` → `safeJSONParse()`로 교체.
+> **?щ? (2026-02-08)**: Fortune ?깆뿉??罹먯떛???ъ＜ 寃곌낵 遺덈윭?????쇱쭊 ?뺤씤 ??`Unexpected token '<'` ?먮윭. ?먯씤: 罹먯떛 ??`chart` ?곗씠?곌? ?ъ깮?깅릺吏 ?딆븘 ?쒗뵆由우뿉??`None` ??`json_script`媛 鍮?媛??앹꽦 ??JavaScript?먯꽌 ?뚯떛 ?ㅽ뙣. ?닿껐: (1) View?먯꽌 罹먯떛 ?щ?? 愿怨꾩뾾??`chart_data` ??긽 ?앹꽦, (2) 紐⑤뱺 `JSON.parse()` ??`safeJSONParse()`濡?援먯껜.
 
-## 7. 초등학생 대상 콘텐츠 어휘 수준
+## 7. 珥덈벑?숈깮 ???肄섑뀗痢??댄쐶 ?섏?
 
-학생에게 보여지는 텍스트에서 다음과 같은 어려운 단어 사용 금지:
-- **한자어/전문용어**: 사색가, 통찰력, 유일무이, 조망, 적재적소, 카리스마, 비전, 본능적, 전략적, 효율성, 역산
-- **현실과 맞지 않는 표현**: 기말고사(시험을 보지 않는 학교가 많음)
-- **대체 방식**: 쉬운 우리말로 풀어쓰기 (조망→한눈에 보기, 적재적소→딱 맞는 순간, 역산→거꾸로 계산)
+?숈깮?먭쾶 蹂댁뿬吏???띿뒪?몄뿉???ㅼ쓬怨?媛숈? ?대젮???⑥뼱 ?ъ슜 湲덉?:
+- **?쒖옄???꾨Ц?⑹뼱**: ?ъ깋媛, ?듭같?? ?좎씪臾댁씠, 議곕쭩, ?곸옱?곸냼, 移대━?ㅻ쭏, 鍮꾩쟾, 蹂몃뒫?? ?꾨왂?? ?⑥쑉?? ??궛
+- **?꾩떎怨?留욎? ?딅뒗 ?쒗쁽**: 湲곕쭚怨좎궗(?쒗뿕??蹂댁? ?딅뒗 ?숆탳媛 留롮쓬)
+- **?泥?諛⑹떇**: ?ъ슫 ?곕━留먮줈 ??댁벐湲?(議곕쭩?믫븳?덉뿉 蹂닿린, ?곸옱?곸냼?믩뵳 留욌뒗 ?쒓컙, ??궛?믨굅袁몃줈 怨꾩궛)
 
-> **사례 (2026-02-08)**: studentmbti 결과지에서 초등학생이 이해하기 어려운 단어 다수 발견. 12개 이상의 어휘 순화 작업 진행.
+> **?щ? (2026-02-08)**: studentmbti 寃곌낵吏?먯꽌 珥덈벑?숈깮???댄빐?섍린 ?대젮???⑥뼱 ?ㅼ닔 諛쒓껄. 12媛??댁긽???댄쐶 ?쒗솕 ?묒뾽 吏꾪뻾.
 
-## 8. SNS Sidebar 통합 패턴
+## 8. SNS Sidebar ?듯빀 ?⑦꽩
 
-다른 서비스에 SNS sidebar 추가 시:
+?ㅻⅨ ?쒕퉬?ㅼ뿉 SNS sidebar 異붽? ??
 
-**템플릿**: `max-w-7xl` 외부 컨테이너 → `flex flex-col lg:flex-row gap-6 items-start` → 메인(`flex-1 lg:max-w-3xl`) + 사이드바(`hidden lg:block w-[380px] flex-shrink-0`)
+**?쒗뵆由?*: `max-w-7xl` ?몃? 而⑦뀒?대꼫 ??`flex flex-col lg:flex-row gap-6 items-start` ??硫붿씤(`flex-1 lg:max-w-3xl`) + ?ъ씠?쒕컮(`hidden lg:block w-[380px] flex-shrink-0`)
 
-**뷰**: `from core.models import Post` import → `select_related('author')` + `prefetch_related('comments__author', 'likes')` + `annotate(like_count, comment_count)` → context에 `'posts': posts` 전달
+**酉?*: `from core.models import Post` import ??`select_related('author')` + `prefetch_related('comments__author', 'likes')` + `annotate(like_count, comment_count)` ??context??`'posts': posts` ?꾨떖
 
 ---
 
-# 앱별 이슈 분석 기록
+# ?깅퀎 ?댁뒋 遺꾩꽍 湲곕줉
 
-## Fortune 앱 - 500 에러 분석 (2026-02-04)
+## Fortune ??- 500 ?먮윭 遺꾩꽍 (2026-02-04)
 
 ### CRITICAL
 
-**1. chart_context None 접근 (빈도: 40-50%)**
-- 위치: `fortune/views.py:279-282, 389`
-- 원인: 딕셔너리 생성이 삼항 연산자(`if chart_context`) 체크보다 먼저 평가됨
-- 수정: `if chart_context is not None else None` 으로 명시적 체크
+**1. chart_context None ?묎렐 (鍮덈룄: 40-50%)**
+- ?꾩튂: `fortune/views.py:279-282, 389`
+- ?먯씤: ?뺤뀛?덈━ ?앹꽦???쇳빆 ?곗궛??`if chart_context`) 泥댄겕蹂대떎 癒쇱? ?됯???- ?섏젙: `if chart_context is not None else None` ?쇰줈 紐낆떆??泥댄겕
 ```python
-# ❌ dict 생성이 먼저 평가 → TypeError
+# ??dict ?앹꽦??癒쇱? ?됯? ??TypeError
 'chart': { chart_context['year']... } if chart_context else None
 
-# ✅ None 체크를 먼저
+# ??None 泥댄겕瑜?癒쇱?
 if chart_context is not None:
     chart = { ... }
 else:
     chart = None
 ```
 
-**2. 데이터 구조 불일치 (빈도: 30-40%)**
-- 위치: `fortune/views.py:206`, `fortune/utils/caching.py:21`
-- `get_chart_context()` 반환값과 `get_natal_hash()` 기대값이 다른 구조
-- 캐시 미스, DB 오염, 중복 방지 실패 유발
+**2. ?곗씠??援ъ“ 遺덉씪移?(鍮덈룄: 30-40%)**
+- ?꾩튂: `fortune/views.py:206`, `fortune/utils/caching.py:21`
+- `get_chart_context()` 諛섑솚媛믨낵 `get_natal_hash()` 湲곕?媛믪씠 ?ㅻⅨ 援ъ“
+- 罹먯떆 誘몄뒪, DB ?ㅼ뿼, 以묐났 諛⑹? ?ㅽ뙣 ?좊컻
 
 ### HIGH
 
-**3. 입력 검증 누락 (빈도: 3-5%)**
-- 위치: `fortune/views.py:152-172`
-- 날짜 범위 체크 없음 (month 13 등) → `ValueError` → `None` 반환 → 연쇄 에러
+**3. ?낅젰 寃利??꾨씫 (鍮덈룄: 3-5%)**
+- ?꾩튂: `fortune/views.py:152-172`
+- ?좎쭨 踰붿쐞 泥댄겕 ?놁쓬 (month 13 ?? ??`ValueError` ??`None` 諛섑솚 ???곗뇙 ?먮윭
 
-**4. API 에러 핸들링 부실 (빈도: 5-10%)**
-- API 키 누락 시 generic exception, 빈 AI 응답 미처리, 503 미전파, 문자열 파싱 의존
+**4. API ?먮윭 ?몃뱾留?遺??(鍮덈룄: 5-10%)**
+- API ???꾨씫 ??generic exception, 鍮?AI ?묐떟 誘몄쿂由? 503 誘몄쟾?? 臾몄옄???뚯떛 ?섏〈
 
 ### MEDIUM
 
-**5. 템플릿 구문 에러** - `saju_form.html:1319` if/endif 짝 불일치
-**6. 중복 함수 정의** - `caching.py`에 `get_user_context_hash()`, `get_cached_daily_fortune()` 2번씩 정의
-**7. AI 타임아웃/빈 응답** - 타임아웃 없음, 빈 응답을 유효 결과로 저장
+**5. ?쒗뵆由?援щЦ ?먮윭** - `saju_form.html:1319` if/endif 吏?遺덉씪移?**6. 以묐났 ?⑥닔 ?뺤쓽** - `caching.py`??`get_user_context_hash()`, `get_cached_daily_fortune()` 2踰덉뵫 ?뺤쓽
+**7. AI ??꾩븘??鍮??묐떟** - ??꾩븘???놁쓬, 鍮??묐떟???좏슚 寃곌낵濡????
+### ?먮윭 ?⑦꽩 鍮좊Ⅸ 李몄“
 
-### 에러 패턴 빠른 참조
-
-| 에러 | 위치 | 원인 | 수정 |
+| ?먮윭 | ?꾩튂 | ?먯씤 | ?섏젙 |
 |------|------|------|------|
-| `TypeError: 'NoneType' not subscriptable` | views.py:279,389 | chart_context None인데 dict 접근 | None 체크 선행 |
-| 빈 natal_hash → 캐시 미스 | views.py:206, caching.py:21 | 데이터 구조 불일치 | 구조 표준화 |
-| `ValueError` from invalid date | views.py:156-170 | 날짜 검증 없음 | 범위 검증 추가 |
-| Generic 500 from AI failure | views.py:395-406 | 에러 핸들링 부실 | 타입별 예외 처리 |
+| `TypeError: 'NoneType' not subscriptable` | views.py:279,389 | chart_context None?몃뜲 dict ?묎렐 | None 泥댄겕 ?좏뻾 |
+| 鍮?natal_hash ??罹먯떆 誘몄뒪 | views.py:206, caching.py:21 | ?곗씠??援ъ“ 遺덉씪移?| 援ъ“ ?쒖???|
+| `ValueError` from invalid date | views.py:156-170 | ?좎쭨 寃利??놁쓬 | 踰붿쐞 寃利?異붽? |
+| Generic 500 from AI failure | views.py:395-406 | ?먮윭 ?몃뱾留?遺??| ??낅퀎 ?덉쇅 泥섎━ |
 
-### 수정 우선순위
-1. chart_context null 체크 → 2. 데이터 구조 표준화 → 3. 템플릿 구문 → 4. 입력 검증 → 5. 에러 전파 → 6. 중복 함수 제거 → 7. 타임아웃
-
-### 관련 파일
-- `fortune/views.py` (779줄) - chart_context 버그
-- `fortune/utils/caching.py` (246줄) - 중복/구조 불일치
-- `fortune/api_views.py` (222줄) - API 엔드포인트
-- `fortune/templates/fortune/saju_form.html` (2788줄) - 템플릿 구문 에러
-- `fortune/models.py` (266줄)
+### ?섏젙 ?곗꽑?쒖쐞
+1. chart_context null 泥댄겕 ??2. ?곗씠??援ъ“ ?쒖?????3. ?쒗뵆由?援щЦ ??4. ?낅젰 寃利???5. ?먮윭 ?꾪뙆 ??6. 以묐났 ?⑥닔 ?쒓굅 ??7. ??꾩븘??
+### 愿???뚯씪
+- `fortune/views.py` (779以? - chart_context 踰꾧렇
+- `fortune/utils/caching.py` (246以? - 以묐났/援ъ“ 遺덉씪移?- `fortune/api_views.py` (222以? - API ?붾뱶?ъ씤??- `fortune/templates/fortune/saju_form.html` (2788以? - ?쒗뵆由?援щЦ ?먮윭
+- `fortune/models.py` (266以?
 
 ---
 
-## Fortune 앱 - 프롬프트/캐시/UI 이슈 (2026-02-08)
+## Fortune ??- ?꾨＼?꾪듃/罹먯떆/UI ?댁뒋 (2026-02-08)
 
-### 9. AI 프롬프트 SSOT 지시에는 반드시 볼드 유지
+### 9. AI ?꾨＼?꾪듃 SSOT 吏?쒖뿉??諛섎뱶??蹂쇰뱶 ?좎?
 
-프롬프트 톤을 부드럽게 바꾸더라도, **SSOT 정체성 규칙에는 `**볼드**`를 유지**해야 AI가 강하게 따른다.
+?꾨＼?꾪듃 ?ㅼ쓣 遺?쒕읇寃?諛붽씀?붾씪?? **SSOT ?뺤껜??洹쒖튃?먮뒗 `**蹂쇰뱶**`瑜??좎?**?댁빞 AI媛 媛뺥븯寃??곕Ⅸ??
 
 ```
-# ❌ 볼드 제거 → AI가 일간 오행을 무시하고 엉뚱한 비유 사용
-선생님의 정체성은 반드시 상단 [SSOT Data]의 'Day' 첫 글자입니다.
+# ??蹂쇰뱶 ?쒓굅 ??AI媛 ?쇨컙 ?ㅽ뻾??臾댁떆?섍퀬 ?됰슧??鍮꾩쑀 ?ъ슜
+?좎깮?섏쓽 ?뺤껜?깆? 諛섎뱶???곷떒 [SSOT Data]??'Day' 泥?湲?먯엯?덈떎.
 
-# ✅ 볼드 유지 → AI가 정확히 일간 기준으로 해석
-**정체성 고정**: 선생님의 정체성은 반드시 **[SSOT Data]의 일주(Day) 첫 글자(천간)**입니다.
+# ??蹂쇰뱶 ?좎? ??AI媛 ?뺥솗???쇨컙 湲곗??쇰줈 ?댁꽍
+**?뺤껜??怨좎젙**: ?좎깮?섏쓽 ?뺤껜?깆? 諛섎뱶??**[SSOT Data]???쇱＜(Day) 泥?湲??泥쒓컙)**?낅땲??
 ```
 
-또한 출력 템플릿에서 "자연물 비유"라고만 쓰면 AI가 아무 자연물이나 매칭한다. **"일간 오행에 맞는 자연물"**이라고 제약을 걸어야 함.
+?먰븳 異쒕젰 ?쒗뵆由우뿉??"?먯뿰臾?鍮꾩쑀"?쇨퀬留??곕㈃ AI媛 ?꾨Т ?먯뿰臾쇱씠??留ㅼ묶?쒕떎. **"?쇨컙 ?ㅽ뻾??留욌뒗 ?먯뿰臾?**?대씪怨??쒖빟??嫄몄뼱????
 
-> **사례**: 신금(辛金)인데 "맑은 샘물"로 묘사 → 출력 템플릿에 "일간 오행에 맞는" 제약이 빠졌기 때문. 오행-자연물 매핑(`금=보석/쇠, 수=물/비`)을 명시하여 해결.
+> **?щ?**: ?좉툑(渦쏃뇫)?몃뜲 "留묒? ?섎Ъ"濡?臾섏궗 ??異쒕젰 ?쒗뵆由우뿉 "?쇨컙 ?ㅽ뻾??留욌뒗" ?쒖빟??鍮좎죱湲??뚮Ц. ?ㅽ뻾-?먯뿰臾?留ㅽ븨(`湲?蹂댁꽍/?? ??臾?鍮?)??紐낆떆?섏뿬 ?닿껐.
 
-### 10. detail.html `const` 재할당 크래시 (마크다운 미렌더링)
+### 10. detail.html `const` ?ы븷???щ옒??(留덊겕?ㅼ슫 誘몃젋?붾쭅)
 
 ```javascript
-// ❌ const 변수에 재할당 → TypeError → 마크다운 렌더링 전체 실패
+// ??const 蹂?섏뿉 ?ы븷????TypeError ??留덊겕?ㅼ슫 ?뚮뜑留??꾩껜 ?ㅽ뙣
 const rawText = outputArea.innerText;
-rawText = rawText.replace(...);  // try/catch 밖이라 크래시
-
-// ✅ escapejs로 순수 문자열 전달 (saju_form.html과 동일 방식)
+rawText = rawText.replace(...);  // try/catch 諛뽰씠???щ옒??
+// ??escapejs濡??쒖닔 臾몄옄???꾨떖 (saju_form.html怨??숈씪 諛⑹떇)
 const rawMarkdown = "{{ item.result_text|escapejs }}";
 marked.parse(rawMarkdown);
 ```
 
-> **사례**: 보관함 상세 페이지에서 마크다운이 raw 텍스트로 보임. `const` 재할당 에러가 `try/catch` 밖에서 발생하여 스크립트 전체 중단.
+> **?щ?**: 蹂닿????곸꽭 ?섏씠吏?먯꽌 留덊겕?ㅼ슫??raw ?띿뒪?몃줈 蹂댁엫. `const` ?ы븷???먮윭媛 `try/catch` 諛뽰뿉??諛쒖깮?섏뿬 ?ㅽ겕由쏀듃 ?꾩껜 以묐떒.
 
-### 11. 보관함 삭제 시 localStorage 캐시 동기화 필수
+### 11. 蹂닿?????젣 ??localStorage 罹먯떆 ?숆린???꾩닔
 
-DB에서 `FortuneResult`를 삭제해도 브라우저 `localStorage`의 사주 캐시는 남아있어서, 같은 조건으로 분석하면 옛 결과가 반환된다.
+DB?먯꽌 `FortuneResult`瑜???젣?대룄 釉뚮씪?곗? `localStorage`???ъ＜ 罹먯떆???⑥븘?덉뼱?? 媛숈? 議곌굔?쇰줈 遺꾩꽍?섎㈃ ??寃곌낵媛 諛섑솚?쒕떎.
 
-**삭제 시 함께 제거해야 할 캐시 키 패턴**:
+**??젣 ???④퍡 ?쒓굅?댁빞 ??罹먯떆 ???⑦꽩**:
 - `saju_result_cache_*`, `saju_result_v2_*`
 - `daily_saju_cache_*`, `daily_saju_v2_*`
 - `pendingSajuResult`, `lastSajuInput`
 
-> **사례**: 프롬프트를 개선했는데 캐시된 옛 결과만 계속 표시됨. 보관함 삭제 시 localStorage 캐시도 함께 삭제하도록 수정.
+> **?щ?**: ?꾨＼?꾪듃瑜?媛쒖꽑?덈뒗??罹먯떆????寃곌낵留?怨꾩냽 ?쒖떆?? 蹂닿?????젣 ??localStorage 罹먯떆???④퍡 ??젣?섎룄濡??섏젙.
 
-### 12. AI 프롬프트에서 "제목 쓰지 마세요" 지시는 `## ` 헤더까지 생략시킴
+### 12. AI ?꾨＼?꾪듃?먯꽌 "?쒕ぉ ?곗? 留덉꽭?? 吏?쒕뒗 `## ` ?ㅻ뜑源뚯? ?앸왂?쒗궡
 
-프롬프트에 "별도 제목은 쓰지 마세요"라고 쓰면 AI가 출력 템플릿의 `## ` 섹션 헤더까지 모두 생략한다. 서론만 금지하고 싶으면 명확히 분리해야 함.
+?꾨＼?꾪듃??"蹂꾨룄 ?쒕ぉ? ?곗? 留덉꽭???쇨퀬 ?곕㈃ AI媛 異쒕젰 ?쒗뵆由우쓽 `## ` ?뱀뀡 ?ㅻ뜑源뚯? 紐⑤몢 ?앸왂?쒕떎. ?쒕줎留?湲덉??섍퀬 ?띠쑝硫?紐낇솗??遺꾨━?댁빞 ??
 
 ```
-# ❌ AI가 ## 헤더를 모두 생략 → 결과 글에 중간 제목 없음
-서론이나 별도 제목은 쓰지 마세요.
+# ??AI媛 ## ?ㅻ뜑瑜?紐⑤몢 ?앸왂 ??寃곌낵 湲??以묎컙 ?쒕ぉ ?놁쓬
+?쒕줎?대굹 蹂꾨룄 ?쒕ぉ? ?곗? 留덉꽭??
 
-# ✅ 서론만 금지, 섹션 헤더는 필수로 지시
-서론을 쓰지 마세요. 각 섹션은 반드시 아래 출력 템플릿의 `## ` 제목을 그대로 포함하세요.
+# ???쒕줎留?湲덉?, ?뱀뀡 ?ㅻ뜑???꾩닔濡?吏???쒕줎???곗? 留덉꽭?? 媛??뱀뀡? 諛섎뱶???꾨옒 異쒕젰 ?쒗뵆由우쓽 `## ` ?쒕ぉ??洹몃?濡??ы븿?섏꽭??
 ```
 
-> **사례 (2026-02-08)**: 일반사주 결과에 핵심 요약, 원국 분석, 기질/성격 등 중간 제목이 전혀 표시되지 않음. "별도 제목은 쓰지 마세요" 지시가 원인.
+> **?щ? (2026-02-08)**: ?쇰컲?ъ＜ 寃곌낵???듭떖 ?붿빟, ?먭뎅 遺꾩꽍, 湲곗쭏/?깃꺽 ??以묎컙 ?쒕ぉ???꾪? ?쒖떆?섏? ?딆쓬. "蹂꾨룄 ?쒕ぉ? ?곗? 留덉꽭?? 吏?쒓? ?먯씤.
 
-### 13. JS `element.className = ...` 전체 교체 시 레이아웃 클래스 유실
+### 13. JS `element.className = ...` ?꾩껜 援먯껜 ???덉씠?꾩썐 ?대옒???좎떎
 
-`className`을 통째로 교체하면 원래 HTML에 있던 `inline-flex`, `items-center`, `gap-1` 등 레이아웃 클래스가 사라진다. `classList.add/remove`를 쓰거나, 전체 교체 시 레이아웃 클래스를 반드시 포함해야 함.
+`className`???듭㎏濡?援먯껜?섎㈃ ?먮옒 HTML???덈뜕 `inline-flex`, `items-center`, `gap-1` ???덉씠?꾩썐 ?대옒?ㅺ? ?щ씪吏꾨떎. `classList.add/remove`瑜??곌굅?? ?꾩껜 援먯껜 ???덉씠?꾩썐 ?대옒?ㅻ? 諛섎뱶???ы븿?댁빞 ??
 
 ```javascript
-// ❌ 레이아웃 클래스 유실 → 텍스트 중앙 정렬 깨짐
+// ???덉씠?꾩썐 ?대옒???좎떎 ???띿뒪??以묒븰 ?뺣젹 源⑥쭚
 badge.className = `text-sm py-1 px-3 rounded-full ${colorClass}`;
 
-// ✅ 레이아웃 클래스 포함
+// ???덉씠?꾩썐 ?대옒???ы븿
 badge.className = `inline-flex items-center justify-center gap-1 text-sm py-1 px-3 rounded-full ${colorClass}`;
 ```
 
-> **사례 (2026-02-08)**: 신금(辛金) 배지 텍스트가 중앙 정렬되지 않음. JS에서 `badge.className`을 교체하면서 `items-center`, `gap-1` 등이 빠진 것이 원인.
+> **?щ? (2026-02-08)**: ?좉툑(渦쏃뇫) 諛곗? ?띿뒪?멸? 以묒븰 ?뺣젹?섏? ?딆쓬. JS?먯꽌 `badge.className`??援먯껜?섎㈃??`items-center`, `gap-1` ?깆씠 鍮좎쭊 寃껋씠 ?먯씤.
 
-### 14. Django Admin N+1 쿼리 — 새 모델 추가 시 반드시 체크
+### 14. Django Admin N+1 荑쇰━ ????紐⑤뜽 異붽? ??諛섎뱶??泥댄겕
 
-`ModelAdmin`에서 `list_display`에 FK 필드나 `.count()` 메서드를 넣으면 행마다 쿼리가 발생한다.
+`ModelAdmin`?먯꽌 `list_display`??FK ?꾨뱶??`.count()` 硫붿꽌?쒕? ?ｌ쑝硫??됰쭏??荑쇰━媛 諛쒖깮?쒕떎.
 
 ```python
-# ❌ list_display에 FK 필드 → 행마다 SELECT
+# ??list_display??FK ?꾨뱶 ???됰쭏??SELECT
 list_display = ['user', 'product', 'created_at']
-# 결과: N+1 쿼리 (100행이면 200+ 쿼리)
+# 寃곌낵: N+1 荑쇰━ (100?됱씠硫?200+ 荑쇰━)
 
-# ✅ get_queryset에 select_related 추가
+# ??get_queryset??select_related 異붽?
 def get_queryset(self, request):
     return super().get_queryset(request).select_related('user', 'product')
 ```
 
 ```python
-# ❌ .count() 메서드 → 행마다 COUNT 쿼리
+# ??.count() 硫붿꽌?????됰쭏??COUNT 荑쇰━
 def like_count(self, obj):
     return obj.likes.count()
 
-# ✅ annotate로 단일 쿼리 집계 + admin_order_field로 정렬 지원
-def get_queryset(self, request):
+# ??annotate濡??⑥씪 荑쇰━ 吏묎퀎 + admin_order_field濡??뺣젹 吏??def get_queryset(self, request):
     return super().get_queryset(request).annotate(
         _like_count=Count('likes', distinct=True)
     )
@@ -395,36 +422,36 @@ def like_count_display(self, obj):
 like_count_display.admin_order_field = '_like_count'
 ```
 
-**새 앱/모델 추가 시 체크리스트**:
-- [ ] `list_display`에 FK 필드가 있으면 → `get_queryset`에 `select_related` 추가
-- [ ] `list_display`에 `.count()` 메서드가 있으면 → `annotate` + `_display` 메서드로 교체
-- [ ] User FK에는 `raw_id_fields` 사용 (드롭다운 대신 ID 입력)
-- [ ] 규칙 4번 주의: `author__userprofile` 같은 선택적 관계는 `select_related` 금지
+**????紐⑤뜽 異붽? ??泥댄겕由ъ뒪??*:
+- [ ] `list_display`??FK ?꾨뱶媛 ?덉쑝硫???`get_queryset`??`select_related` 異붽?
+- [ ] `list_display`??`.count()` 硫붿꽌?쒓? ?덉쑝硫???`annotate` + `_display` 硫붿꽌?쒕줈 援먯껜
+- [ ] User FK?먮뒗 `raw_id_fields` ?ъ슜 (?쒕∼?ㅼ슫 ???ID ?낅젰)
+- [ ] 洹쒖튃 4踰?二쇱쓽: `author__userprofile` 媛숈? ?좏깮??愿怨꾨뒗 `select_related` 湲덉?
 
-> **사례 (2026-02-08)**: 10개 앱의 admin에 select_related/annotate 일괄 적용. Fortune 앱 11개 모델 신규 등록 시에도 동일 패턴 적용.
+> **?щ? (2026-02-08)**: 10媛??깆쓽 admin??select_related/annotate ?쇨큵 ?곸슜. Fortune ??11媛?紐⑤뜽 ?좉퇋 ?깅줉 ?쒖뿉???숈씪 ?⑦꽩 ?곸슜.
 
-### 관련 파일
-- `fortune/prompts.py` - AI 프롬프트 (원본: `prompts_backup.py`)
-- `fortune/templates/fortune/detail.html` - 보관함 상세 (마크다운 렌더링, 이미지 저장)
-- `fortune/templates/fortune/history.html` - 보관함 목록 (삭제 + 캐시)
-- `fortune/templates/fortune/saju_form.html` - 사주 입력/결과 화면
+### 愿???뚯씪
+- `fortune/prompts.py` - AI ?꾨＼?꾪듃 (?먮낯: `prompts_backup.py`)
+- `fortune/templates/fortune/detail.html` - 蹂닿????곸꽭 (留덊겕?ㅼ슫 ?뚮뜑留? ?대?吏 ???
+- `fortune/templates/fortune/history.html` - 蹂닿???紐⑸줉 (??젣 + 罹먯떆)
+- `fortune/templates/fortune/saju_form.html` - ?ъ＜ ?낅젰/寃곌낵 ?붾㈃
 
 ---
 
-## SNS Sidebar 통합 상세 가이드 (2026-02-04)
+## SNS Sidebar ?듯빀 ?곸꽭 媛?대뱶 (2026-02-04)
 
-### 올바른 레이아웃 구조
+### ?щ컮瑜??덉씠?꾩썐 援ъ“
 
 ```html
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col lg:flex-row gap-6 items-start">
-            <!-- 메인 콘텐츠 -->
+            <!-- 硫붿씤 肄섑뀗痢?-->
             <div class="flex-1 w-full lg:max-w-3xl">
-                {{ 메인 콘텐츠 }}
+                {{ 硫붿씤 肄섑뀗痢?}}
             </div>
-            <!-- SNS 사이드바 (데스크톱만) -->
+            <!-- SNS ?ъ씠?쒕컮 (?곗뒪?ы넲留? -->
             <div class="hidden lg:block w-[380px] flex-shrink-0">
                 <div class="relative">
                     {% include 'core/partials/sns_widget.html' %}
@@ -436,13 +463,13 @@ like_count_display.admin_order_field = '_like_count'
 {% endblock %}
 ```
 
-### 올바른 뷰 쿼리
+### ?щ컮瑜?酉?荑쇰━
 
 ```python
 from core.models import Post
 from django.db.models import Count
 
-# 선택적 관계(UserProfile)는 select_related 제외
+# ?좏깮??愿怨?UserProfile)??select_related ?쒖쇅
 try:
     posts = Post.objects.select_related(
         'author'
@@ -459,140 +486,128 @@ except Exception as e:
 context['posts'] = posts
 ```
 
-### 흔한 실수 5가지
+### ?뷀븳 ?ㅼ닔 5媛吏
 
-1. **Flex 구조 없이 위젯만 추가** → 레이아웃 깨짐 → Flex 컨테이너로 감싸기
-2. **context에 `posts` 누락** → 위젯 빈 화면 → `'posts': posts` 추가
-3. **N+1 쿼리** → `Post.objects.all()[:20]` → select_related/prefetch_related 사용
-4. **`items-start` 누락** → 사이드바 stretch → 추가
-5. **모바일 반응형 미처리** → `hidden lg:block` 추가
+1. **Flex 援ъ“ ?놁씠 ?꾩젽留?異붽?** ???덉씠?꾩썐 源⑥쭚 ??Flex 而⑦뀒?대꼫濡?媛먯떥湲?2. **context??`posts` ?꾨씫** ???꾩젽 鍮??붾㈃ ??`'posts': posts` 異붽?
+3. **N+1 荑쇰━** ??`Post.objects.all()[:20]` ??select_related/prefetch_related ?ъ슜
+4. **`items-start` ?꾨씫** ???ъ씠?쒕컮 stretch ??異붽?
+5. **紐⑤컮??諛섏쓳??誘몄쿂由?* ??`hidden lg:block` 異붽?
 
-### 관련 파일
-- SNS 위젯: `core/templates/core/partials/sns_widget.html`
-- 게시글: `core/templates/core/partials/post_list.html`, `post_item.html`
-- 모델/뷰: `core/models.py` (Post, Comment), `core/views.py`
-- HTMX: 작성(`hx-post="/post/create/"`), 좋아요(`hx-post="/post/<id>/like/"`), 댓글(`hx-post="/post/<id>/comment/"`)
+### 愿???뚯씪
+- SNS ?꾩젽: `core/templates/core/partials/sns_widget.html`
+- 寃뚯떆湲: `core/templates/core/partials/post_list.html`, `post_item.html`
+- 紐⑤뜽/酉? `core/models.py` (Post, Comment), `core/views.py`
+- HTMX: ?묒꽦(`hx-post="/post/create/"`), 醫뗭븘??`hx-post="/post/<id>/like/"`), ?볤?(`hx-post="/post/<id>/comment/"`)
 
-### 적용 현황
-- 쌤BTI: 완료 (커밋 3223af2, 92e5f44, hotfix 6b90179)
-- Fortune: 미적용
-
-### 향후 개선
-- Post 모델에 `service` 필드 추가 → 서비스별 게시글 필터링
-- HTMX 무한 스크롤 페이지네이션
-
+### ?곸슜 ?꾪솴
+- ?짟TI: ?꾨즺 (而ㅻ컠 3223af2, 92e5f44, hotfix 6b90179)
+- Fortune: 誘몄쟻??
+### ?ν썑 媛쒖꽑
+- Post 紐⑤뜽??`service` ?꾨뱶 異붽? ???쒕퉬?ㅻ퀎 寃뚯떆湲 ?꾪꽣留?- HTMX 臾댄븳 ?ㅽ겕濡??섏씠吏?ㅼ씠??
 ---
 
-# 스킬 & 워크플로우
-
-## 설치된 스킬
+# ?ㅽ궗 & ?뚰겕?뚮줈??
+## ?ㅼ튂???ㅽ궗
 
 ### Frontend
-| 스킬 | 용도 |
+| ?ㅽ궗 | ?⑸룄 |
 |------|------|
-| `alpinejs-best-practices` | Alpine.js 상태 관리 및 DOM 조작 |
-| `htmx-power-usage` | HTMX 비동기 통신 및 부분 렌더링 |
-| `vanilla-js-dom-master` | 순수 JS 기술 |
-| `tailwind-design-system` | Tailwind 컴포넌트 설계 |
-| `ui-ux-pro-max` | UX 디자인 원칙 및 애니메이션 |
-| `web-design-guidelines` | UI 가이드라인 및 웹 접근성 |
+| `alpinejs-best-practices` | Alpine.js ?곹깭 愿由?諛?DOM 議곗옉 |
+| `htmx-power-usage` | HTMX 鍮꾨룞湲??듭떊 諛?遺遺??뚮뜑留?|
+| `vanilla-js-dom-master` | ?쒖닔 JS 湲곗닠 |
+| `tailwind-design-system` | Tailwind 而댄룷?뚰듃 ?ㅺ퀎 |
+| `ui-ux-pro-max` | UX ?붿옄???먯튃 諛??좊땲硫붿씠??|
+| `web-design-guidelines` | UI 媛?대뱶?쇱씤 諛????묎렐??|
 
 ### Backend
-| 스킬 | 용도 |
+| ?ㅽ궗 | ?⑸룄 |
 |------|------|
-| `django-architecture-pro` | Service Layer 및 Fat Model 분리 |
-| `api-design-principles` | REST/HTMX 대응 API 설계 |
-| `async-python-django` | 비동기 View 및 Celery 패턴 |
-| `python-testing-django` | PyTest-Django 테스트 패턴 |
+| `django-architecture-pro` | Service Layer 諛?Fat Model 遺꾨━ |
+| `api-design-principles` | REST/HTMX ???API ?ㅺ퀎 |
+| `async-python-django` | 鍮꾨룞湲?View 諛?Celery ?⑦꽩 |
+| `python-testing-django` | PyTest-Django ?뚯뒪???⑦꽩 |
 
-## 에이전트
-| 에이전트 | 용도 |
+## ?먯씠?꾪듃
+| ?먯씠?꾪듃 | ?⑸룄 |
 |----------|------|
-| `planner` | 복잡한 기능 계획 (DB 마이그레이션 등) |
-| `django-specialist` | Django View, Model, Template 전문 |
+| `planner` | 蹂듭옟??湲곕뒫 怨꾪쉷 (DB 留덉씠洹몃젅?댁뀡 ?? |
+| `django-specialist` | Django View, Model, Template ?꾨Ц |
 | `frontend-developer` | Alpine.js, HTMX, Tailwind UI |
-| `code-reviewer` | 코드 품질 및 Django 보안 리뷰 |
+| `code-reviewer` | 肄붾뱶 ?덉쭏 諛?Django 蹂댁븞 由щ럭 |
 
-## 워크플로우
-```
-# 프론트엔드
-/frontend [요청사항] → frontend-developer → /verify
+## ?뚰겕?뚮줈??```
+# ?꾨줎?몄뿏??/frontend [?붿껌?ы빆] ??frontend-developer ??/verify
 
-# 백엔드
-/plan [요청사항] → Django 구현 → /verify
+# 諛깆뿏??/plan [?붿껌?ы빆] ??Django 援ы쁽 ??/verify
 ```
 
-## 커맨드
-| 커맨드 | 용도 |
+## 而ㅻ㎤??| 而ㅻ㎤??| ?⑸룄 |
 |--------|------|
-| `/plan` | 작업 계획 수립 |
-| `/commit-push-pr` | 커밋→푸시→PR |
-| `/verify` | `python manage.py check` 및 검증 |
-| `/review` | 보안 및 Performance 리뷰 |
-| `/simplify` | 복잡한 로직 단순화 |
-| `/handoff` | 세션 종료 시 갈무리 |
+| `/plan` | ?묒뾽 怨꾪쉷 ?섎┰ |
+| `/commit-push-pr` | 而ㅻ컠?믫뫖?쒋넂PR |
+| `/verify` | `python manage.py check` 諛?寃利?|
+| `/review` | 蹂댁븞 諛?Performance 由щ럭 |
+| `/simplify` | 蹂듭옟??濡쒖쭅 ?⑥닚??|
+| `/handoff` | ?몄뀡 醫낅즺 ??媛덈Т由?|
 
 ---
 
-# 임시 비활성화 기능
+# ?꾩떆 鍮꾪솢?깊솕 湲곕뒫
 
-## Fortune 앱 - 일반 모드(general) (2026-02-09 비활성화 → 2026-02-13 복구)
+## Fortune ??- ?쇰컲 紐⑤뱶(general) (2026-02-09 鍮꾪솢?깊솕 ??2026-02-13 蹂듦뎄)
 
-**상태:** 활성화 (교사 모드 + 일반 모드 모두 노출)
+**?곹깭:** ?쒖꽦??(援먯궗 紐⑤뱶 + ?쇰컲 紐⑤뱶 紐⑤몢 ?몄텧)
 
-**이력:**
-- 2026-02-09: 일반 모드 임시 비활성화 (커밋 15b5737)
-- 2026-02-13: 일반 모드 복구 완료 (UI 주석 해제 + views.py 3곳 원복)
+**?대젰:**
+- 2026-02-09: ?쇰컲 紐⑤뱶 ?꾩떆 鍮꾪솢?깊솕 (而ㅻ컠 15b5737)
+- 2026-02-13: ?쇰컲 紐⑤뱶 蹂듦뎄 ?꾨즺 (UI 二쇱꽍 ?댁젣 + views.py 3怨??먮났)
 
 ---
 
-## Chess 앱 - JS 게임 로직 주의사항 (2026-02-09)
+## Chess ??- JS 寃뚯엫 濡쒖쭅 二쇱쓽?ы빆 (2026-02-09)
 
-### 15. JS `var` 호이스팅 — 같은 함수 내 변수 재선언 금지
+### 15. JS `var` ?몄씠?ㅽ똿 ??媛숈? ?⑥닔 ??蹂???ъ꽑??湲덉?
 
-`var`로 같은 이름을 재선언하면 호이스팅에 의해 하나의 변수로 합쳐져, 이후 분기에서 예상과 다른 값을 참조한다.
+`var`濡?媛숈? ?대쫫???ъ꽑?명븯硫??몄씠?ㅽ똿???섑빐 ?섎굹??蹂?섎줈 ?⑹퀜?? ?댄썑 遺꾧린?먯꽌 ?덉긽怨??ㅻⅨ 媛믪쓣 李몄“?쒕떎.
 
 ```javascript
-// ❌ var piece가 2번 선언 → 호이스팅으로 하나로 합쳐짐
-function onSquareClick(square) {
-    var piece = game.get(square);         // 클릭한 칸
-    if (selectedSquare) {
-        var piece = game.get(selectedSquare); // 이전 선택 칸으로 덮어씀
-        // move 실패 시 fall-through...
+// ??var piece媛 2踰??좎뼵 ???몄씠?ㅽ똿?쇰줈 ?섎굹濡??⑹퀜吏?function onSquareClick(square) {
+    var piece = game.get(square);         // ?대┃??移?    if (selectedSquare) {
+        var piece = game.get(selectedSquare); // ?댁쟾 ?좏깮 移몄쑝濡???뼱?
+        // move ?ㅽ뙣 ??fall-through...
     }
-    // 여기서 piece는 selectedSquare 기준 → 잘못된 값
-    if (!piece || piece.color !== game.turn()) { ... }
+    // ?ш린??piece??selectedSquare 湲곗? ???섎せ??媛?    if (!piece || piece.color !== game.turn()) { ... }
 }
 
-// ✅ 다른 이름 사용
+// ???ㅻⅨ ?대쫫 ?ъ슜
 var selectedPiece = game.get(selectedSquare);
 ```
 
-> **사례 (2026-02-09)**: 체스 앱에서 기물 선택 후 잘못된 칸 클릭 → 새 기물 선택이 안 되는 버그. `var piece` 재선언이 원인.
+> **?щ? (2026-02-09)**: 泥댁뒪 ?깆뿉??湲곕Ъ ?좏깮 ???섎せ??移??대┃ ????湲곕Ъ ?좏깮?????섎뒗 踰꾧렇. `var piece` ?ъ꽑?몄씠 ?먯씤.
 
-### 16. Undo/Reset 시 모든 파생 상태 동기화 필수
+### 16. Undo/Reset ??紐⑤뱺 ?뚯깮 ?곹깭 ?숆린???꾩닔
 
-게임에서 `undo()` 또는 `reset()` 호출 시, 핵심 상태뿐 아니라 **파생 UI 상태**도 반드시 동기화해야 한다.
+寃뚯엫?먯꽌 `undo()` ?먮뒗 `reset()` ?몄텧 ?? ?듭떖 ?곹깭肉??꾨땲??**?뚯깮 UI ?곹깭**??諛섎뱶???숆린?뷀빐???쒕떎.
 
-**체크리스트** (체스 기준):
-- [ ] `capturedPieces` 배열에서 되돌린 기물 제거 + `renderCapturedPieces()` 호출
-- [ ] `lastMove` 갱신 (남은 기록의 마지막 수 또는 null) + `highlightLastMove()` 호출
-- [ ] `moveHistory` 배열 pop + `updateMoveHistory()` 호출
-- [ ] Reset 시 `renderCapturedPieces()` 호출 (initGame이 배열만 비우고 DOM은 안 건드림)
+**泥댄겕由ъ뒪??* (泥댁뒪 湲곗?):
+- [ ] `capturedPieces` 諛곗뿴?먯꽌 ?섎룎由?湲곕Ъ ?쒓굅 + `renderCapturedPieces()` ?몄텧
+- [ ] `lastMove` 媛깆떊 (?⑥? 湲곕줉??留덉?留????먮뒗 null) + `highlightLastMove()` ?몄텧
+- [ ] `moveHistory` 諛곗뿴 pop + `updateMoveHistory()` ?몄텧
+- [ ] Reset ??`renderCapturedPieces()` ?몄텧 (initGame??諛곗뿴留?鍮꾩슦怨?DOM? ??嫄대뱶由?
 
-> **사례 (2026-02-09)**: 되돌리기 후 잡은 기물 패널에 이미 돌아간 기물이 표시되고, 하이라이트가 잘못된 칸에 남아있었음.
+> **?щ? (2026-02-09)**: ?섎룎由ш린 ???≪? 湲곕Ъ ?⑤꼸???대? ?뚯븘媛?湲곕Ъ???쒖떆?섍퀬, ?섏씠?쇱씠?멸? ?섎せ??移몄뿉 ?⑥븘?덉뿀??
 
-### 17. Web Audio API — AudioContext 공유 필수
+### 17. Web Audio API ??AudioContext 怨듭쑀 ?꾩닔
 
-`playSound()` 호출마다 `new AudioContext()`를 생성하면 브라우저 제한(보통 6개)에 도달하여 사운드가 멈춘다. 전역에 하나를 생성하고 `suspended` 상태일 때 `resume()` 호출.
+`playSound()` ?몄텧留덈떎 `new AudioContext()`瑜??앹꽦?섎㈃ 釉뚮씪?곗? ?쒗븳(蹂댄넻 6媛????꾨떖?섏뿬 ?ъ슫?쒓? 硫덉텣?? ?꾩뿭???섎굹瑜??앹꽦?섍퀬 `suspended` ?곹깭????`resume()` ?몄텧.
 
 ```javascript
-// ❌ 매번 생성
+// ??留ㅻ쾲 ?앹꽦
 function playSound() {
     var ctx = new AudioContext();
 }
 
-// ✅ 전역 공유
+// ???꾩뿭 怨듭쑀
 var sharedAudioContext = null;
 function getAudioContext() {
     if (!sharedAudioContext) {
@@ -603,198 +618,193 @@ function getAudioContext() {
 }
 ```
 
-### 관련 파일
-- `chess/static/chess/js/chess_logic.js` - 게임 로직 전체
-- `chess/templates/chess/play.html` - 게임 UI (모달, 하이라이트 CSS)
-- `chess/templates/chess/index.html` - 로비 페이지
+### 愿???뚯씪
+- `chess/static/chess/js/chess_logic.js` - 寃뚯엫 濡쒖쭅 ?꾩껜
+- `chess/templates/chess/play.html` - 寃뚯엫 UI (紐⑤떖, ?섏씠?쇱씠??CSS)
+- `chess/templates/chess/index.html` - 濡쒕퉬 ?섏씠吏
 
-### 18. CSS `transform` 충돌 — 전역 hover가 모달 centering을 파괴
+### 18. CSS `transform` 異⑸룎 ???꾩뿭 hover媛 紐⑤떖 centering???뚭눼
 
-`base.html`의 `.clay-card:hover { transform: translateY(-4px) scale(1.005) }`처럼 전역 hover 스타일이 있으면, `fixed` + `transform: translate(-50%, -50%)`로 중앙 정렬된 모달의 위치를 **완전히 덮어쓴다**. CSS `transform`은 개별 값이 아닌 **전체가 교체**되기 때문이다.
+`base.html`??`.clay-card:hover { transform: translateY(-4px) scale(1.005) }`泥섎읆 ?꾩뿭 hover ?ㅽ??쇱씠 ?덉쑝硫? `fixed` + `transform: translate(-50%, -50%)`濡?以묒븰 ?뺣젹??紐⑤떖???꾩튂瑜?**?꾩쟾????뼱?대떎**. CSS `transform`? 媛쒕퀎 媛믪씠 ?꾨땶 **?꾩껜媛 援먯껜**?섍린 ?뚮Ц?대떎.
 
-**증상**: 모달 위에 마우스를 올리면 오른쪽 아래로 튀어나가고, 마우스가 벗어나면 돌아오면서 반짝거림(flicker) 발생.
+**利앹긽**: 紐⑤떖 ?꾩뿉 留덉슦?ㅻ? ?щ━硫??ㅻⅨ履??꾨옒濡???대굹媛怨? 留덉슦?ㅺ? 踰쀬뼱?섎㈃ ?뚯븘?ㅻ㈃??諛섏쭩嫄곕┝(flicker) 諛쒖깮.
 
 ```css
-/* ❌ base.html 전역 스타일이 모달 centering을 파괴 */
+/* ??base.html ?꾩뿭 ?ㅽ??쇱씠 紐⑤떖 centering???뚭눼 */
 .clay-card:hover {
-    transform: translateY(-4px) scale(1.005);  /* translate(-50%,-50%) 사라짐 */
+    transform: translateY(-4px) scale(1.005);  /* translate(-50%,-50%) ?щ씪吏?*/
 }
 
-/* ✅ 모달에 고유 클래스 부여 후 hover transform 고정 */
+/* ??紐⑤떖??怨좎쑀 ?대옒??遺????hover transform 怨좎젙 */
 .tool-modal.clay-card:hover {
     transform: translate(-50%, -50%) !important;
 }
 ```
 
-**체크리스트** (fixed + transform 중앙 정렬 모달 만들 때):
-- [ ] 모달에 `clay-card`, `clay-btn` 등 전역 hover transform이 있는 클래스를 사용하고 있는가?
-- [ ] 사용한다면, 모달 전용 클래스로 hover transform을 `translate(-50%, -50%)`로 고정했는가?
+**泥댄겕由ъ뒪??* (fixed + transform 以묒븰 ?뺣젹 紐⑤떖 留뚮뱾 ??:
+- [ ] 紐⑤떖??`clay-card`, `clay-btn` ???꾩뿭 hover transform???덈뒗 ?대옒?ㅻ? ?ъ슜?섍퀬 ?덈뒗媛?
+- [ ] ?ъ슜?쒕떎硫? 紐⑤떖 ?꾩슜 ?대옒?ㅻ줈 hover transform??`translate(-50%, -50%)`濡?怨좎젙?덈뒗媛?
 
-> **사례 (2026-02-09)**: tools 페이지 모달이 `.clay-card:hover`의 `translateY(-4px)`에 의해 centering이 깨지면서 반짝거림 발생. `.tool-modal.clay-card:hover`로 transform 고정하여 해결.
+> **?щ? (2026-02-09)**: tools ?섏씠吏 紐⑤떖??`.clay-card:hover`??`translateY(-4px)`???섑빐 centering??源⑥?硫댁꽌 諛섏쭩嫄곕┝ 諛쒖깮. `.tool-modal.clay-card:hover`濡?transform 怨좎젙?섏뿬 ?닿껐.
 
 ---
 
-## 소셜 로그인 / Gunicorn / allauth 이슈 (2026-02-10)
+## ?뚯뀥 濡쒓렇??/ Gunicorn / allauth ?댁뒋 (2026-02-10)
 
-### 19. allauth ACCOUNT_SIGNUP_FORM_CLASS vs SOCIALACCOUNT_FORMS 구분 (CRITICAL)
+### 19. allauth ACCOUNT_SIGNUP_FORM_CLASS vs SOCIALACCOUNT_FORMS 援щ텇 (CRITICAL)
 
-allauth 65.x에서 커스텀 가입 폼을 만들 때, **`SOCIALACCOUNT_FORMS`를 사용하면 안 된다.**
+allauth 65.x?먯꽌 而ㅼ뒪? 媛???쇱쓣 留뚮뱾 ?? **`SOCIALACCOUNT_FORMS`瑜??ъ슜?섎㈃ ???쒕떎.**
 
 ```python
-# ❌ SOCIALACCOUNT_FORMS로 폼을 교체하면 try_save()/save() 없어서 500 에러
+# ??SOCIALACCOUNT_FORMS濡??쇱쓣 援먯껜?섎㈃ try_save()/save() ?놁뼱??500 ?먮윭
 SOCIALACCOUNT_FORMS = {
     'signup': 'core.signup_forms.CustomSignupForm',
 }
 
-# ❌ allauth.socialaccount.forms.SignupForm을 직접 상속하면 순환 import → 크래시
-from allauth.socialaccount.forms import SignupForm as SocialSignupForm
+# ??allauth.socialaccount.forms.SignupForm??吏곸젒 ?곸냽?섎㈃ ?쒗솚 import ???щ옒??from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 class CustomSignupForm(SocialSignupForm): ...
 
-# ✅ ACCOUNT_SIGNUP_FORM_CLASS만 사용 (allauth가 자동 상속 체인 구성)
+# ??ACCOUNT_SIGNUP_FORM_CLASS留??ъ슜 (allauth媛 ?먮룞 ?곸냽 泥댁씤 援ъ꽦)
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
-# → allauth 내부: SignupForm(BaseSignupForm(CustomSignupForm))
-# → try_save() → save() → custom_signup() → signup() 정상 작동
+# ??allauth ?대?: SignupForm(BaseSignupForm(CustomSignupForm))
+# ??try_save() ??save() ??custom_signup() ??signup() ?뺤긽 ?묐룞
 ```
 
-**CustomSignupForm은 `forms.Form`을 상속하고, 추가 필드 + `signup(request, user)` 메서드만 정의:**
+**CustomSignupForm? `forms.Form`???곸냽?섍퀬, 異붽? ?꾨뱶 + `signup(request, user)` 硫붿꽌?쒕쭔 ?뺤쓽:**
 ```python
 class CustomSignupForm(forms.Form):
     nickname = forms.CharField(...)
     def signup(self, request, user):
-        # 추가 프로필 저장 로직
+        # 異붽? ?꾨줈?????濡쒖쭅
 ```
 
-> **사례**: `SOCIALACCOUNT_FORMS`로 `forms.Form` 기반 폼을 지정 → allauth가 `form.try_save()` 호출 → `AttributeError` → 500. 직접 상속으로 우회 시도 → 순환 import → 서버 크래시. `ACCOUNT_SIGNUP_FORM_CLASS`만 사용하여 해결.
+> **?щ?**: `SOCIALACCOUNT_FORMS`濡?`forms.Form` 湲곕컲 ?쇱쓣 吏????allauth媛 `form.try_save()` ?몄텧 ??`AttributeError` ??500. 吏곸젒 ?곸냽?쇰줈 ?고쉶 ?쒕룄 ???쒗솚 import ???쒕쾭 ?щ옒?? `ACCOUNT_SIGNUP_FORM_CLASS`留??ъ슜?섏뿬 ?닿껐.
 
-### 20. Gunicorn sync worker 고갈 — AI API 호출 시 필수 설정
+### 20. Gunicorn sync worker 怨좉컝 ??AI API ?몄텧 ???꾩닔 ?ㅼ젙
 
-기본 Gunicorn 설정(`gunicorn config.wsgi`)은 **worker 1개 + sync 모드**. AI API처럼 30~60초 걸리는 동기 호출이 있으면 그 동안 **서버 전체가 먹통**.
+湲곕낯 Gunicorn ?ㅼ젙(`gunicorn config.wsgi`)? **worker 1媛?+ sync 紐⑤뱶**. AI API泥섎읆 30~60珥?嫄몃━???숆린 ?몄텧???덉쑝硫?洹??숈븞 **?쒕쾭 ?꾩껜媛 癒뱁넻**.
 
 ```bash
-# ❌ 기본 설정 (worker 1개) — AI 1건 처리 중 모든 요청 499
+# ??湲곕낯 ?ㅼ젙 (worker 1媛? ??AI 1嫄?泥섎━ 以?紐⑤뱺 ?붿껌 499
 gunicorn config.wsgi --timeout 120
 
-# ✅ gthread 모드 (동시 12개 요청 처리)
+# ??gthread 紐⑤뱶 (?숈떆 12媛??붿껌 泥섎━)
 gunicorn config.wsgi --workers 3 --threads 4 --worker-class gthread --timeout 120
 ```
 
-**증상**: `/fortune` POST 처리 중 `/accounts/login/`, `/accounts/kakao/login/callback/` 등 모든 경로에서 499 에러 발생.
+**利앹긽**: `/fortune` POST 泥섎━ 以?`/accounts/login/`, `/accounts/kakao/login/callback/` ??紐⑤뱺 寃쎈줈?먯꽌 499 ?먮윭 諛쒖깮.
 
-> **사례**: 사주 분석 API가 54초간 worker를 점유 → 같은 시간대 모든 요청(로그인, 가입, 다른 서비스)이 499로 실패.
+> **?щ?**: ?ъ＜ 遺꾩꽍 API媛 54珥덇컙 worker瑜??먯쑀 ??媛숈? ?쒓컙? 紐⑤뱺 ?붿껌(濡쒓렇?? 媛?? ?ㅻⅨ ?쒕퉬????499濡??ㅽ뙣.
 
-### 21. OnboardingMiddleware — OAuth 콜백 경로 허용 필수
+### 21. OnboardingMiddleware ??OAuth 肄쒕갚 寃쎈줈 ?덉슜 ?꾩닔
 
-`OnboardingMiddleware`의 `allowed_paths`에 `/accounts/` 전체를 포함해야 소셜 로그인 콜백이 차단되지 않음.
+`OnboardingMiddleware`??`allowed_paths`??`/accounts/` ?꾩껜瑜??ы븿?댁빞 ?뚯뀥 濡쒓렇??肄쒕갚??李⑤떒?섏? ?딆쓬.
 
 ```python
-# ❌ /accounts/logout/ 만 허용 → OAuth 콜백 차단
+# ??/accounts/logout/ 留??덉슜 ??OAuth 肄쒕갚 李⑤떒
 allowed_paths = ['/accounts/logout/', ...]
 
-# ✅ /accounts/ 전체 허용
+# ??/accounts/ ?꾩껜 ?덉슜
 allowed_paths = ['/accounts/', ...]
 ```
 
-> **사례**: 카카오/네이버 로그인 콜백(`/accounts/kakao/login/callback/`)이 `allowed_paths`에 없어서, 인증 완료 후 `/update-email/`로 강제 리다이렉트 → 가입 실패.
+> **?щ?**: 移댁뭅???ㅼ씠踰?濡쒓렇??肄쒕갚(`/accounts/kakao/login/callback/`)??`allowed_paths`???놁뼱?? ?몄쬆 ?꾨즺 ??`/update-email/`濡?媛뺤젣 由щ떎?대젆????媛???ㅽ뙣.
 
-### 22. 커스텀 가입 폼 widget readonly — 소셜 제공자 이메일 미제공 시 입력 불가
+### 22. 而ㅼ뒪? 媛????widget readonly ???뚯뀥 ?쒓났???대찓??誘몄젣怨????낅젰 遺덇?
 
 ```python
-# ❌ 기본 widget에 readonly → 이메일 없으면 빈 칸 + 입력 불가 → 가입 불가
+# ??湲곕낯 widget??readonly ???대찓???놁쑝硫?鍮?移?+ ?낅젰 遺덇? ??媛??遺덇?
 email = forms.EmailField(widget=forms.EmailInput(attrs={'readonly': 'readonly'}))
 
-# ✅ 기본은 편집 가능, 소셜 이메일 있을 때만 __init__에서 readonly 설정
+# ??湲곕낯? ?몄쭛 媛?? ?뚯뀥 ?대찓???덉쓣 ?뚮쭔 __init__?먯꽌 readonly ?ㅼ젙
 email = forms.EmailField(widget=forms.EmailInput(attrs={...}))
-# __init__에서:
+# __init__?먯꽌:
 if self.sociallogin and self.sociallogin.user.email:
     self.fields['email'].widget.attrs['readonly'] = True
 ```
 
-> **사례**: 카카오 로그인 시 이메일 미제공 → 가입 폼 이메일 칸이 readonly + 빈 값 → 필수 필드라 제출 불가 → 모든 신규 가입 차단.
+> **?щ?**: 移댁뭅??濡쒓렇?????대찓??誘몄젣怨???媛?????대찓??移몄씠 readonly + 鍮?媛????꾩닔 ?꾨뱶???쒖텧 遺덇? ??紐⑤뱺 ?좉퇋 媛??李⑤떒.
 
-### 23. settings_production.py 서버 시작 시 DB 조작 주의
+### 23. settings_production.py ?쒕쾭 ?쒖옉 ??DB 議곗옉 二쇱쓽
 
-`sync_site_domain()` 같은 시작 시 실행 함수에서 `SocialApp.objects.all().delete()` 등 **전체 삭제 쿼리**를 넣지 않기. 매 배포마다 불필요한 DB 조작이 발생하고, 레이스 컨디션 위험.
+`sync_site_domain()` 媛숈? ?쒖옉 ???ㅽ뻾 ?⑥닔?먯꽌 `SocialApp.objects.all().delete()` ??**?꾩껜 ??젣 荑쇰━**瑜??ｌ? ?딄린. 留?諛고룷留덈떎 遺덊븘?뷀븳 DB 議곗옉??諛쒖깮?섍퀬, ?덉씠??而⑤뵒???꾪뿕.
 
-### 24. SESSION_SAVE_EVERY_REQUEST 성능 영향
+### 24. SESSION_SAVE_EVERY_REQUEST ?깅뒫 ?곹뼢
 
-`SESSION_SAVE_EVERY_REQUEST = True`는 **모든 HTTP 요청마다 DB write**를 발생시킴. 트래픽이 많은 서비스에서는 `False`로 설정하고, `SESSION_COOKIE_AGE`를 충분히 길게(24시간+) 설정.
+`SESSION_SAVE_EVERY_REQUEST = True`??**紐⑤뱺 HTTP ?붿껌留덈떎 DB write**瑜?諛쒖깮?쒗궡. ?몃옒?쎌씠 留롮? ?쒕퉬?ㅼ뿉?쒕뒗 `False`濡??ㅼ젙?섍퀬, `SESSION_COOKIE_AGE`瑜?異⑸텇??湲멸쾶(24?쒓컙+) ?ㅼ젙.
 
-### 관련 파일
-- `core/signup_forms.py` — 소셜 가입 커스텀 폼 (nickname + signup)
-- `core/middleware.py` — OnboardingMiddleware (allowed_paths)
-- `config/settings_production.py` — allauth, 세션, Gunicorn 관련 설정
-- `Procfile`, `nixpacks.toml` — Gunicorn worker 설정
+### 愿???뚯씪
+- `core/signup_forms.py` ???뚯뀥 媛??而ㅼ뒪? ??(nickname + signup)
+- `core/middleware.py` ??OnboardingMiddleware (allowed_paths)
+- `config/settings_production.py` ??allauth, ?몄뀡, Gunicorn 愿???ㅼ젙
+- `Procfile`, `nixpacks.toml` ??Gunicorn worker ?ㅼ젙
 
 ---
 
-## 홈 화면 레이아웃 & 카테고리 시스템 (2026-02-10)
+## ???붾㈃ ?덉씠?꾩썐 & 移댄뀒怨좊━ ?쒖뒪??(2026-02-10)
 
-### 25. Django 템플릿 태그 `{% %}` 안에 줄바꿈 금지
+### 25. Django ?쒗뵆由??쒓렇 `{% %}` ?덉뿉 以꾨컮轅?湲덉?
 
-`{% if ... %}` 태그의 조건이 길어도 **절대 줄바꿈하면 안 된다**. Django 템플릿 파서는 `{%`와 `%}` 사이의 줄바꿈을 인식하지 못해 `TemplateSyntaxError: Invalid block tag 'endif'`를 발생시킨다.
+`{% if ... %}` ?쒓렇??議곌굔??湲몄뼱??**?덈? 以꾨컮轅덊븯硫????쒕떎**. Django ?쒗뵆由??뚯꽌??`{%`? `%}` ?ъ씠??以꾨컮轅덉쓣 ?몄떇?섏? 紐삵빐 `TemplateSyntaxError: Invalid block tag 'endif'`瑜?諛쒖깮?쒗궓??
 
 ```html
-<!-- ❌ 줄바꿈 → TemplateSyntaxError -->
+<!-- ??以꾨컮轅???TemplateSyntaxError -->
 {% if user.is_authenticated and
     user.userprofile.nickname %}
 
-<!-- ✅ 한 줄로 -->
+<!-- ????以꾨줈 -->
 {% if user.is_authenticated and user.userprofile.nickname %}
 ```
 
-> **사례 (2026-02-10)**: `base.html` 피드백 위젯의 `{% if %}` 태그가 두 줄에 걸쳐 있어 홈 페이지 전체가 500 에러. git rebase 충돌 해결 과정에서 기존에 우연히 동작하던 줄바꿈이 깨짐.
+> **?щ? (2026-02-10)**: `base.html` ?쇰뱶諛??꾩젽??`{% if %}` ?쒓렇媛 ??以꾩뿉 嫄몄퀜 ?덉뼱 ???섏씠吏 ?꾩껜媛 500 ?먮윭. git rebase 異⑸룎 ?닿껐 怨쇱젙?먯꽌 湲곗〈???곗뿰???숈옉?섎뜕 以꾨컮轅덉씠 源⑥쭚.
 
-### 26. 홈 화면 레이아웃 구조 (모바일/PC 분리)
+### 26. ???붾㈃ ?덉씠?꾩썐 援ъ“ (紐⑤컮??PC 遺꾨━)
 
-**모바일**: 서비스 카드 above the fold → SNS 미리보기(최신 2개) → "소통창 열기" 아코디언
-**PC**: SNS 사이드바(왼쪽, sticky) + 메인 콘텐츠(오른쪽)
+**紐⑤컮??*: ?쒕퉬??移대뱶 above the fold ??SNS 誘몃━蹂닿린(理쒖떊 2媛? ??"?뚰넻李??닿린" ?꾩퐫?붿뼵
+**PC**: SNS ?ъ씠?쒕컮(?쇱そ, sticky) + 硫붿씤 肄섑뀗痢??ㅻⅨ履?
 
 ```
-모바일 스크롤 간섭 해결 핵심:
-- SNS를 별도 스크롤 컨테이너(overflow-auto)에 넣지 않기
-- 페이지 본문 흐름에 통합 (overflow-visible)
-- 아코디언으로 펼치기/접기 → x-show + x-transition 사용
+紐⑤컮???ㅽ겕濡?媛꾩꽠 ?닿껐 ?듭떖:
+- SNS瑜?蹂꾨룄 ?ㅽ겕濡?而⑦뀒?대꼫(overflow-auto)???ｌ? ?딄린
+- ?섏씠吏 蹂몃Ц ?먮쫫???듯빀 (overflow-visible)
+- ?꾩퐫?붿뼵?쇰줈 ?쇱튂湲??묎린 ??x-show + x-transition ?ъ슜
 ```
 
-**관련 파일:**
-- `core/templates/core/home.html` — 비로그인 홈
-- `core/templates/core/home_authenticated.html` — 로그인 홈
-- `core/templates/core/partials/sns_widget.html` — PC 전용 사이드바
-- `core/templates/core/partials/sns_widget_mobile.html` — 모바일 전용 (아코디언 내부)
+**愿???뚯씪:**
+- `core/templates/core/home.html` ??鍮꾨줈洹몄씤 ??- `core/templates/core/home_authenticated.html` ??濡쒓렇????- `core/templates/core/partials/sns_widget.html` ??PC ?꾩슜 ?ъ씠?쒕컮
+- `core/templates/core/partials/sns_widget_mobile.html` ??紐⑤컮???꾩슜 (?꾩퐫?붿뼵 ?대?)
 
-### 27. 서비스 카테고리 시스템
+### 27. ?쒕퉬??移댄뀒怨좊━ ?쒖뒪??
+`products/models.py`??`SERVICE_CHOICES`濡?愿由? Django Admin `list_editable`濡?諛붾줈 ?섏젙 媛??
 
-`products/models.py`의 `SERVICE_CHOICES`로 관리. Django Admin `list_editable`로 바로 수정 가능.
-
-| 코드 | 이름 | 탭 색상 | 아이콘 색상 |
+| 肄붾뱶 | ?대쫫 | ???됱긽 | ?꾩씠肄??됱긽 |
 |------|------|---------|------------|
-| `classroom` | 운영과 수업 | 파란색 | `text-blue-500` |
-| `work` | 업무경감 | 초록색 | `text-emerald-500` |
-| `game` | 게임모음 | 빨간색 | `text-red-500` |
-| `counsel` | 상담·운세 | 보라색 | `text-violet-500` |
-| `edutech` | 에듀테크 | 시안색 | `text-cyan-500` |
-| `etc` | 기타 | 회색 | `text-slate-500` |
+| `classroom` | ?댁쁺怨??섏뾽 | ?뚮???| `text-blue-500` |
+| `work` | ?낅Т寃쎄컧 | 珥덈줉??| `text-emerald-500` |
+| `game` | 寃뚯엫紐⑥쓬 | 鍮④컙??| `text-red-500` |
+| `counsel` | ?곷떞쨌?댁꽭 | 蹂대씪??| `text-violet-500` |
+| `edutech` | ?먮??뚰겕 | ?쒖븞??| `text-cyan-500` |
+| `etc` | 湲고? | ?뚯깋 | `text-slate-500` |
 
-**카테고리 추가/변경 시 수정 필요한 파일 (4곳):**
-1. `products/models.py` — `SERVICE_CHOICES` + 마이그레이션
-2. `core/templates/core/home.html` — CSS `.cat-{code}` + 탭 버튼
-3. `core/templates/core/home_authenticated.html` — 위와 동일
-4. `core/templates/core/includes/card_product.html` — 아이콘/라벨 색상 분기
+**移댄뀒怨좊━ 異붽?/蹂寃????섏젙 ?꾩슂???뚯씪 (4怨?:**
+1. `products/models.py` ??`SERVICE_CHOICES` + 留덉씠洹몃젅?댁뀡
+2. `core/templates/core/home.html` ??CSS `.cat-{code}` + ??踰꾪듉
+3. `core/templates/core/home_authenticated.html` ???꾩? ?숈씪
+4. `core/templates/core/includes/card_product.html` ???꾩씠肄??쇰꺼 ?됱긽 遺꾧린
 
-**카드 컴포넌트 `card_product.html`:**
-- `is_filtered=True` 전달 시: 외부 `x-show` 래퍼와 함께 사용 (Alpine.js 필터링 모드)
-- 미전달 시: 원래 구조 유지 (다른 페이지 호환)
-- `{{ product.get_service_type_display }}` — 한글 카테고리명 표시
+**移대뱶 而댄룷?뚰듃 `card_product.html`:**
+- `is_filtered=True` ?꾨떖 ?? ?몃? `x-show` ?섑띁? ?④퍡 ?ъ슜 (Alpine.js ?꾪꽣留?紐⑤뱶)
+- 誘몄쟾???? ?먮옒 援ъ“ ?좎? (?ㅻⅨ ?섏씠吏 ?명솚)
+- `{{ product.get_service_type_display }}` ???쒓? 移댄뀒怨좊━紐??쒖떆
 
-### 28. DB 데이터 변경 시 반드시 데이터 마이그레이션 작성
+### 28. DB ?곗씠??蹂寃???諛섎뱶???곗씠??留덉씠洹몃젅?댁뀡 ?묒꽦
 
-Django shell로 로컬 DB만 수동 수정하면 **프로덕션에는 반영되지 않는다**. DB 데이터를 변경할 때는 반드시 `RunPython` 데이터 마이그레이션을 함께 작성해야 한다.
+Django shell濡?濡쒖뺄 DB留??섎룞 ?섏젙?섎㈃ **?꾨줈?뺤뀡?먮뒗 諛섏쁺?섏? ?딅뒗??*. DB ?곗씠?곕? 蹂寃쏀븷 ?뚮뒗 諛섎뱶??`RunPython` ?곗씠??留덉씠洹몃젅?댁뀡???④퍡 ?묒꽦?댁빞 ?쒕떎.
 
 ```python
-# ❌ Django shell로만 변경 → 프로덕션 미반영
-Product.objects.filter(id=121).update(service_type='classroom')
+# ??Django shell濡쒕쭔 蹂寃????꾨줈?뺤뀡 誘몃컲??Product.objects.filter(id=121).update(service_type='classroom')
 
-# ✅ 데이터 마이그레이션 작성
+# ???곗씠??留덉씠洹몃젅?댁뀡 ?묒꽦
 # python manage.py makemigrations products --empty --name update_xxx_data
 def update_data(apps, schema_editor):
     Product = apps.get_model('products', 'Product')
@@ -803,70 +813,67 @@ def update_data(apps, schema_editor):
 migrations.RunPython(update_data, migrations.RunPython.noop)
 ```
 
-**적용 대상:** 카테고리 변경, 기본값 일괄 변경, 필드명 변경에 따른 기존 데이터 매핑 등 모든 DB 레코드 수정
+**?곸슜 ???** 移댄뀒怨좊━ 蹂寃? 湲곕낯媛??쇨큵 蹂寃? ?꾨뱶紐?蹂寃쎌뿉 ?곕Ⅸ 湲곗〈 ?곗씠??留ㅽ븨 ??紐⑤뱺 DB ?덉퐫???섏젙
 
-### 29. git rebase 충돌 해결 시 주의사항
+### 29. git rebase 異⑸룎 ?닿껐 ??二쇱쓽?ы빆
 
-충돌 해결 후 반드시:
-1. `{% if %}` / `{% endif %}` 밸런스 확인
-2. 줄바꿈으로 분리된 템플릿 태그가 없는지 확인
-3. `python manage.py check` + 실제 페이지 렌더링 테스트
+異⑸룎 ?닿껐 ??諛섎뱶??
+1. `{% if %}` / `{% endif %}` 諛몃윴???뺤씤
+2. 以꾨컮轅덉쑝濡?遺꾨━???쒗뵆由??쒓렇媛 ?녿뒗吏 ?뺤씤
+3. `python manage.py check` + ?ㅼ젣 ?섏씠吏 ?뚮뜑留??뚯뒪??
+### 30. Procfile ensure_* 紐낅졊????Admin 愿由??꾨뱶 ??뼱?곌린 湲덉? (CRITICAL)
 
-### 30. Procfile ensure_* 명령어 — Admin 관리 필드 덮어쓰기 금지 (CRITICAL)
+Procfile??`ensure_*` 紐낅졊?대뒗 **留?諛고룷(git push)留덈떎 ?ㅽ뻾**?쒕떎. ??紐낅졊???덉뿉??`service_type`, `display_order`, `color_theme` ??**Admin?먯꽌 ?섎룞 愿由ы븯???꾨뱶瑜?媛뺤젣 蹂寃쏀븯硫? 諛고룷???뚮쭏??Admin ?섏젙 ?댁슜??珥덇린??*?쒕떎.
 
-Procfile의 `ensure_*` 명령어는 **매 배포(git push)마다 실행**된다. 이 명령어 안에서 `service_type`, `display_order`, `color_theme` 등 **Admin에서 수동 관리하는 필드를 강제 변경하면, 배포할 때마다 Admin 수정 내용이 초기화**된다.
-
-**단, 초기 개발 중 서비스 카테고리(`service_type`)가 변경되거나 치명적인 오류가 있는 경우에는 조건부 보정 로직을 포함해야 한다.**
+**?? 珥덇린 媛쒕컻 以??쒕퉬??移댄뀒怨좊━(`service_type`)媛 蹂寃쎈릺嫄곕굹 移섎챸?곸씤 ?ㅻ쪟媛 ?덈뒗 寃쎌슦?먮뒗 議곌굔遺 蹂댁젙 濡쒖쭅???ы븿?댁빞 ?쒕떎.**
 
 ```python
-# ❌ 매 배포마다 service_type 덮어씀 → Admin 수정 무효화
-if ssambti.service_type != 'game':
+# ??留?諛고룷留덈떎 service_type ??뼱? ??Admin ?섏젙 臾댄슚??if ssambti.service_type != 'game':
     ssambti.service_type = 'game'
 
-# ❌ 조건 없이 무조건 save → Admin 변경 전부 리셋
+# ??議곌굔 ?놁씠 臾댁“嫄?save ??Admin 蹂寃??꾨? 由ъ뀑
 product.service_type = 'tool'
 product.save()
 
-# ✅ ensure 명령어는 "존재 보장"만 담당, Admin 관리 필드는 건드리지 않기
+# ??ensure 紐낅졊?대뒗 "議댁옱 蹂댁옣"留??대떦, Admin 愿由??꾨뱶??嫄대뱶由ъ? ?딄린
 if not product.is_active:
     product.is_active = True
     needs_update = True
 if needs_update:
     product.save()
 
-# ✅ 단, 초기 개발 중 서비스 카테고리(service_type)가 변경되거나 치명적인 오류가 있는 경우에는 조건부 보정 로직을 포함해야 한다.
-if product.service_type != 'counsel':  # 잘못된 값일 때만 수정
+# ???? 珥덇린 媛쒕컻 以??쒕퉬??移댄뀒怨좊━(service_type)媛 蹂寃쎈릺嫄곕굹 移섎챸?곸씤 ?ㅻ쪟媛 ?덈뒗 寃쎌슦?먮뒗 議곌굔遺 蹂댁젙 濡쒖쭅???ы븿?댁빞 ?쒕떎.
+if product.service_type != 'counsel':  # ?섎せ??媛믪씪 ?뚮쭔 ?섏젙
     product.service_type = 'counsel'
     product.save()
 ```
 
-**ensure_* 명령어 작성 규칙:**
-- 상품이 없을 때 **생성**하는 것만 담당
-- 이미 존재하는 상품의 `service_type`, `display_order`, `color_theme` 등은 **절대 덮어쓰지 않기**
-- `is_active`, `external_url` 등 기능적 필수값만 조건부로 보정
+**ensure_* 紐낅졊???묒꽦 洹쒖튃:**
+- ?곹뭹???놁쓣 ??**?앹꽦**?섎뒗 寃껊쭔 ?대떦
+- ?대? 議댁옱?섎뒗 ?곹뭹??`service_type`, `display_order`, `color_theme` ?깆? **?덈? ??뼱?곗? ?딄린**
+- `is_active`, `external_url` ??湲곕뒫???꾩닔媛믩쭔 議곌굔遺濡?蹂댁젙
 
-**현재 Procfile 실행 순서:**
+**?꾩옱 Procfile ?ㅽ뻾 ?쒖꽌:**
 ```
-migrate --noinput → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → check_visitors → gunicorn
+migrate --noinput ??ensure_ssambti ??ensure_studentmbti ??ensure_notebooklm ??check_visitors ??gunicorn
 ```
 
-> **사례 (2026-02-10)**: `ensure_ssambti`가 매 배포마다 `service_type='game'`으로, `ensure_studentmbti`가 `service_type='tool'`로 강제 변경 → Admin에서 카테고리를 수정해도 다음 push에서 원복됨. service_type 강제 변경 로직 제거로 해결.
+> **?щ? (2026-02-10)**: `ensure_ssambti`媛 留?諛고룷留덈떎 `service_type='game'`?쇰줈, `ensure_studentmbti`媛 `service_type='tool'`濡?媛뺤젣 蹂寃???Admin?먯꽌 移댄뀒怨좊━瑜??섏젙?대룄 ?ㅼ쓬 push?먯꽌 ?먮났?? service_type 媛뺤젣 蹂寃?濡쒖쭅 ?쒓굅濡??닿껐.
 
-### 31. management command 데이터 구성 시 `get_or_create` 필수 (CRITICAL)
+### 31. management command ?곗씠??援ъ꽦 ??`get_or_create` ?꾩닔 (CRITICAL)
 
-`ensure_*` 형태의 관리 명령어는 배포 시마다 실행되므로, 기존 데이터를 무조건 삭제하고 다시 생성(`delete()` 후 `create()`)하면 안 된다.
+`ensure_*` ?뺥깭??愿由?紐낅졊?대뒗 諛고룷 ?쒕쭏???ㅽ뻾?섎?濡? 湲곗〈 ?곗씠?곕? 臾댁“嫄???젣?섍퀬 ?ㅼ떆 ?앹꽦(`delete()` ??`create()`)?섎㈃ ???쒕떎.
 
-**문제점**:
-1.  **데이터 유실**: 관리자 페이지(Admin)에서 수동으로 수정한 설명이나 추가한 항목이 배포 때마다 사라짐.
-2.  **데이터 중복**: 여러 명령어가 동시에 실행되거나 로직 오류 시 똑같은 항목이 여러 번 생성됨.
+**臾몄젣??*:
+1.  **?곗씠???좎떎**: 愿由ъ옄 ?섏씠吏(Admin)?먯꽌 ?섎룞?쇰줈 ?섏젙???ㅻ챸?대굹 異붽?????ぉ??諛고룷 ?뚮쭏???щ씪吏?
+2.  **?곗씠??以묐났**: ?щ윭 紐낅졊?닿? ?숈떆???ㅽ뻾?섍굅??濡쒖쭅 ?ㅻ쪟 ???묎컳? ??ぉ???щ윭 踰??앹꽦??
 
 ```python
-# ❌ 절대 금지: 기존 데이터 삭제 후 재생성
-product.features.all().delete()
+# ???덈? 湲덉?: 湲곗〈 ?곗씠????젣 ???ъ깮??product.features.all().delete()
 for feat in features:
     ProductFeature.objects.create(product=product, **feat)
 
-# ✅ 권장: get_or_create를 사용하여 존재 여부 확인 후 생성
+# ??沅뚯옣: get_or_create瑜??ъ슜?섏뿬 議댁옱 ?щ? ?뺤씤 ???앹꽦
 for feat in features_data:
     obj, created = ProductFeature.objects.get_or_create(
         product=product,
@@ -875,129 +882,128 @@ for feat in features_data:
     )
 ```
 
-> **사례 (2026-02-13)**: '학교 예약 시스템' 등 주요 서비스의 Key Features 항목이 배포 때마다 중복 생성되거나 Admin 수정본이 초기화되는 문제 발생. 모든 `ensure_*` 명령어를 `get_or_create` 로직으로 전수 수정함.
+> **?щ? (2026-02-13)**: '?숆탳 ?덉빟 ?쒖뒪?? ??二쇱슂 ?쒕퉬?ㅼ쓽 Key Features ??ぉ??諛고룷 ?뚮쭏??以묐났 ?앹꽦?섍굅??Admin ?섏젙蹂몄씠 珥덇린?붾릺??臾몄젣 諛쒖깮. 紐⑤뱺 `ensure_*` 紐낅졊?대? `get_or_create` 濡쒖쭅?쇰줈 ?꾩닔 ?섏젙??
 
 ---
 
-## 새 서비스(앱) 추가 시 체크리스트 (2026-02-10)
+## ???쒕퉬???? 異붽? ??泥댄겕由ъ뒪??(2026-02-10)
 
-### 31. 서비스 시작 버튼 URL 라우팅 — preview_modal.html 수정 필수
+### 31. ?쒕퉬???쒖옉 踰꾪듉 URL ?쇱슦????preview_modal.html ?섏젙 ?꾩닔
 
-`products/templates/products/partials/preview_modal.html`의 "시작하기" 버튼은 **product.title 기반 조건문**으로 URL을 결정한다. 새 서비스를 추가할 때 여기에 `{% elif %}` 분기를 추가하지 않으면, 시작 버튼을 눌러도 홈으로 돌아간다.
+`products/templates/products/partials/preview_modal.html`??"?쒖옉?섍린" 踰꾪듉? **product.title 湲곕컲 議곌굔臾?*?쇰줈 URL??寃곗젙?쒕떎. ???쒕퉬?ㅻ? 異붽??????ш린??`{% elif %}` 遺꾧린瑜?異붽??섏? ?딆쑝硫? ?쒖옉 踰꾪듉???뚮윭???덉쑝濡??뚯븘媛꾨떎.
 
 ```html
-<!-- preview_modal.html 라인 86 — 한 줄로 작성해야 함 (규칙 25) -->
-{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '간편 수합' %}{% url 'collect:landing' %}{% elif product.title == '교사 백과사전' %}{% url 'encyclopedia:landing' %}{% else %}{% url 'home' %}{% endif %}
+<!-- preview_modal.html ?쇱씤 86 ????以꾨줈 ?묒꽦?댁빞 ??(洹쒖튃 25) -->
+{% if product.external_url %}{{ product.external_url }}{% elif product.title == '?짟TI' %}{% url 'ssambti:main' %}{% elif product.title == '媛꾪렪 ?섑빀' %}{% url 'collect:landing' %}{% elif product.title == '援먯궗 諛깃낵?ъ쟾' %}{% url 'encyclopedia:landing' %}{% else %}{% url 'home' %}{% endif %}
 ```
 
-**새 서비스 추가 시:**
-- [ ] `{% elif product.title == '서비스명' %}{% url 'app:landing' %}` 분기 추가
-- [ ] `external_url` 사용하는 외부 서비스는 분기 불필요 (첫 번째 조건에서 처리됨)
+**???쒕퉬??異붽? ??**
+- [ ] `{% elif product.title == '?쒕퉬?ㅻ챸' %}{% url 'app:landing' %}` 遺꾧린 異붽?
+- [ ] `external_url` ?ъ슜?섎뒗 ?몃? ?쒕퉬?ㅻ뒗 遺꾧린 遺덊븘??(泥?踰덉㎏ 議곌굔?먯꽌 泥섎━??
 
-> **사례 (2026-02-12)**: '간편 수합', '교사 백과사전', '학교 예약 시스템' 등 새 서비스를 추가할 때 `preview_modal.html`에 등록을 누락하여 시작 버튼이 작동하지 않는 현상이 반복됨. 신규 앱 생성 시 체크리스트 5번 항목(`preview_modal.html` 분기 추가)을 반드시 준수할 것. (현재: '학교 예약 시스템' -> `reservations:reservation_index`)
+> **?щ? (2026-02-12)**: '媛꾪렪 ?섑빀', '援먯궗 諛깃낵?ъ쟾', '?숆탳 ?덉빟 ?쒖뒪?? ?????쒕퉬?ㅻ? 異붽?????`preview_modal.html`???깅줉???꾨씫?섏뿬 ?쒖옉 踰꾪듉???묐룞?섏? ?딅뒗 ?꾩긽??諛섎났?? ?좉퇋 ???앹꽦 ??泥댄겕由ъ뒪??5踰???ぉ(`preview_modal.html` 遺꾧린 異붽?)??諛섎뱶??以?섑븷 寃? (?꾩옱: '?숆탳 ?덉빟 ?쒖뒪?? -> `reservations:reservation_index`)
 
-### 32. ensure_* 명령어 — defaults의 service_type은 반드시 SERVICE_CHOICES 값 사용
+### 32. ensure_* 紐낅졊????defaults??service_type? 諛섎뱶??SERVICE_CHOICES 媛??ъ슜
 
-`get_or_create(defaults={...})`에서 `service_type`을 지정할 때, 반드시 `products/models.py`의 `SERVICE_CHOICES`에 있는 값을 사용해야 한다.
+`get_or_create(defaults={...})`?먯꽌 `service_type`??吏?뺥븷 ?? 諛섎뱶??`products/models.py`??`SERVICE_CHOICES`???덈뒗 媛믪쓣 ?ъ슜?댁빞 ?쒕떎.
 
-**현재 유효한 값:** `classroom`, `work`, `game`, `counsel`, `edutech`, `etc`
+**?꾩옱 ?좏슚??媛?** `classroom`, `work`, `game`, `counsel`, `edutech`, `etc`
 
 ```python
-# ❌ SERVICE_CHOICES에 없는 값 → Admin에서 표시 이상
-'service_type': 'guide',    # ← 없는 값!
-'service_type': 'tool',     # ← 없는 값!
+# ??SERVICE_CHOICES???녿뒗 媛???Admin?먯꽌 ?쒖떆 ?댁긽
+'service_type': 'guide',    # ???녿뒗 媛?
+'service_type': 'tool',     # ???녿뒗 媛?
 
-# ✅ 유효한 값만 사용
-'service_type': 'edutech',  # ← SERVICE_CHOICES에 존재
+# ???좏슚??媛믩쭔 ?ъ슜
+'service_type': 'edutech',  # ??SERVICE_CHOICES??議댁옱
 ```
 
-> **사례 (2026-02-10)**: `ensure_notebooklm`이 `service_type='guide'`로 생성 → Admin에서 카테고리가 빈 값으로 표시. 데이터 마이그레이션으로 `'edutech'`로 수정.
+> **?щ? (2026-02-10)**: `ensure_notebooklm`??`service_type='guide'`濡??앹꽦 ??Admin?먯꽌 移댄뀒怨좊━媛 鍮?媛믪쑝濡??쒖떆. ?곗씠??留덉씠洹몃젅?댁뀡?쇰줈 `'edutech'`濡??섏젙.
 
-### 33. 새 Django 앱 추가 시 전체 체크리스트
-
-| 단계 | 파일 | 작업 |
+### 33. ??Django ??異붽? ???꾩껜 泥댄겕由ъ뒪??
+| ?④퀎 | ?뚯씪 | ?묒뾽 |
 |------|------|------|
-| 1 | 앱 디렉토리 | `models.py`, `views.py`, `urls.py`, `forms.py`, `admin.py`, `apps.py` 생성 |
-| 2 | `config/settings.py` | `INSTALLED_APPS`에 추가 |
-| 3 | `config/settings_production.py` | `INSTALLED_APPS`에 동일하게 추가 (규칙 1) |
-| 4 | `config/urls.py` | `path('앱/', include('앱.urls', namespace='앱'))` 추가 |
-| 5 | `preview_modal.html` | 시작 버튼 URL 분기 추가 (규칙 31) |
-| 6 | `ensure_*` 명령어 | Product 생성 보장, Admin 필드 덮어쓰기 금지 (규칙 30) |
-| 7 | `settings_production.py` | `run_startup_tasks()`에 `call_command('ensure_*')` 추가 |
-| 8 | `Procfile` | `ensure_*` 명령어 체인에 추가 |
-| 9 | `nixpacks.toml` | Procfile과 동기화 |
-| 10 | `admin.py` | `select_related` + `annotate` + `raw_id_fields` (규칙 14) |
-| 11 | 마이그레이션 | `makemigrations` + `migrate` |
-| 12 | 검증 | `python manage.py check` |
+| 1 | ???붾젆?좊━ | `models.py`, `views.py`, `urls.py`, `forms.py`, `admin.py`, `apps.py` ?앹꽦 |
+| 2 | `config/settings.py` | `INSTALLED_APPS`??異붽? |
+| 3 | `config/settings_production.py` | `INSTALLED_APPS`???숈씪?섍쾶 異붽? (洹쒖튃 1) |
+| 4 | `config/urls.py` | `path('??', include('??urls', namespace='??))` 異붽? |
+| 5 | `preview_modal.html` | ?쒖옉 踰꾪듉 URL 遺꾧린 異붽? (洹쒖튃 31) |
+| 6 | `ensure_*` 紐낅졊??| Product ?앹꽦 蹂댁옣, Admin ?꾨뱶 ??뼱?곌린 湲덉? (洹쒖튃 30) |
+| 7 | `settings_production.py` | `run_startup_tasks()`??`call_command('ensure_*')` 異붽? |
+| 8 | `Procfile` | `ensure_*` 紐낅졊??泥댁씤??異붽? |
+| 9 | `nixpacks.toml` | Procfile怨??숆린??|
+| 10 | `admin.py` | `select_related` + `annotate` + `raw_id_fields` (洹쒖튃 14) |
+| 11 | 留덉씠洹몃젅?댁뀡 | `makemigrations` + `migrate` |
+| 12 | 寃利?| `python manage.py check` |
 
-**현재 Procfile 실행 순서:**
+**?꾩옱 Procfile ?ㅽ뻾 ?쒖꽌:**
 ```
-migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensure_collect → ensure_reservations → check_visitors → gunicorn
+migrate ??ensure_ssambti ??ensure_studentmbti ??ensure_notebooklm ??ensure_collect ??ensure_reservations ??check_visitors ??gunicorn
 ```
 
-### 34. 새로운 서비스 개발 시 로컬 데이터베이스 데이터 확인
+### 34. ?덈줈???쒕퉬??媛쒕컻 ??濡쒖뺄 ?곗씠?곕쿋?댁뒪 ?곗씠???뺤씤
 
-로컬 환경에서는 데이터베이스(`db.sqlite3`)가 비어 있거나 개발 환경마다 데이터가 다를 수 있다. 새로운 서비스를 개발할 때 소스 코드만 작성하고 DB 레코드(`Product` 모델 등)를 생성하지 않으면, UI에서 해당 서비스가 아예 보이지 않거나 오류가 발생할 수 있다.
+濡쒖뺄 ?섍꼍?먯꽌???곗씠?곕쿋?댁뒪(`db.sqlite3`)媛 鍮꾩뼱 ?덇굅??媛쒕컻 ?섍꼍留덈떎 ?곗씠?곌? ?ㅻ? ???덈떎. ?덈줈???쒕퉬?ㅻ? 媛쒕컻?????뚯뒪 肄붾뱶留??묒꽦?섍퀬 DB ?덉퐫??`Product` 紐⑤뜽 ??瑜??앹꽦?섏? ?딆쑝硫? UI?먯꽌 ?대떦 ?쒕퉬?ㅺ? ?꾩삁 蹂댁씠吏 ?딄굅???ㅻ쪟媛 諛쒖깮?????덈떎.
 
-- **증상**: 앱 코드는 존재하지만 홈 화면이나 상세 페이지에서 서비스 정보가 표시되지 않음.
-- **원인**: `get_collect_service()`와 같은 함수가 DB에서 데이터를 찾지 못해 `None`을 반환함.
-- **해결**: 개발 초기 단계에서 `create_xxx_data.py` 같은 임시 스크립트를 작성하여 로컬 DB에 필수 데이터를 넣거나, `python manage.py ensure_xxx` 명령어를 실행하여 데이터를 생성할 것.
+- **利앹긽**: ??肄붾뱶??議댁옱?섏?留????붾㈃?대굹 ?곸꽭 ?섏씠吏?먯꽌 ?쒕퉬???뺣낫媛 ?쒖떆?섏? ?딆쓬.
+- **?먯씤**: `get_collect_service()`? 媛숈? ?⑥닔媛 DB?먯꽌 ?곗씠?곕? 李얠? 紐삵빐 `None`??諛섑솚??
+- **?닿껐**: 媛쒕컻 珥덇린 ?④퀎?먯꽌 `create_xxx_data.py` 媛숈? ?꾩떆 ?ㅽ겕由쏀듃瑜??묒꽦?섏뿬 濡쒖뺄 DB???꾩닔 ?곗씠?곕? ?ｊ굅?? `python manage.py ensure_xxx` 紐낅졊?대? ?ㅽ뻾?섏뿬 ?곗씠?곕? ?앹꽦??寃?
 
-### 35. Django 템플릿의 변수 명명 규칙 제한 (CRITICAL)
+### 35. Django ?쒗뵆由우쓽 蹂??紐낅챸 洹쒖튃 ?쒗븳 (CRITICAL)
 
-Django 템플릿 엔진은 **언더바(`_`)로 시작하는 속성이나 변수에 대한 직접 접근을 허용하지 않는다.** 파이썬의 관례상 `_`로 시작하는 멤버는 Private으로 간주되기 때문이다.
+Django ?쒗뵆由??붿쭊? **?몃뜑諛?`_`)濡??쒖옉?섎뒗 ?띿꽦?대굹 蹂?섏뿉 ???吏곸젒 ?묎렐???덉슜?섏? ?딅뒗??** ?뚯씠?ъ쓽 愿濡??`_`濡??쒖옉?섎뒗 硫ㅻ쾭??Private?쇰줈 媛꾩＜?섍린 ?뚮Ц?대떎.
 
-- **증상**: `TemplateSyntaxError: Variables and attributes may not begin with underscores` 발생.
-- **원인**: View에서 `.annotate(_count=Count(...))`와 같이 언더바로 시작하는 이름으로 데이터를 넘기고, 템플릿에서 `{{ obj._count }}`로 접근하려 할 때 발생.
-- **해결**: 템플릿에서 사용할 변수나 속성 이름에는 절대 언더바를 접두어로 사용하지 말 것. (예: `_submission_count` 대신 `num_submissions` 또는 `submission_count` 사용)
+- **利앹긽**: `TemplateSyntaxError: Variables and attributes may not begin with underscores` 諛쒖깮.
+- **?먯씤**: View?먯꽌 `.annotate(_count=Count(...))`? 媛숈씠 ?몃뜑諛붾줈 ?쒖옉?섎뒗 ?대쫫?쇰줈 ?곗씠?곕? ?섍린怨? ?쒗뵆由우뿉??`{{ obj._count }}`濡??묎렐?섎젮 ????諛쒖깮.
+- **?닿껐**: ?쒗뵆由우뿉???ъ슜??蹂?섎굹 ?띿꽦 ?대쫫?먮뒗 ?덈? ?몃뜑諛붾? ?묐몢?대줈 ?ъ슜?섏? 留?寃? (?? `_submission_count` ???`num_submissions` ?먮뒗 `submission_count` ?ъ슜)
 
-### 36. Alpine.js 상태 초기화와 Django 폼 에러 연동
+### 36. Alpine.js ?곹깭 珥덇린?붿? Django ???먮윭 ?곕룞
 
-Alpine.js로 UI 상태(모달, 아코디언 등)를 관리할 때, 폼 제출 후 에러가 발생하면 **UI가 열린 상태로 유지**되어야 사용자가 에러를 인지할 수 있다.
+Alpine.js濡?UI ?곹깭(紐⑤떖, ?꾩퐫?붿뼵 ??瑜?愿由ы븷 ?? ???쒖텧 ???먮윭媛 諛쒖깮?섎㈃ **UI媛 ?대┛ ?곹깭濡??좎?**?섏뼱???ъ슜?먭? ?먮윭瑜??몄??????덈떎.
 
 ```html
-<!-- ❌ 에러가 있어도 닫힘 → 사용자는 "왜 안 되지?" 혼란 -->
+<!-- ???먮윭媛 ?덉뼱???ロ옒 ???ъ슜?먮뒗 "?????섏??" ?쇰? -->
 <div x-data="{ open: false }">
 
-<!-- ✅ 에러가 있으면 열린 상태로 초기화 -->
+<!-- ???먮윭媛 ?덉쑝硫??대┛ ?곹깭濡?珥덇린??-->
 <div x-data="{ open: {% if form.errors %}true{% else %}false{% endif %} }">
 ```
 
-> **사례 (2026-02-11)**: 수합 요청 생성 폼이 에러 발생 시 닫힌 채로 리로드되어, 사용자가 요청이 생성되지 않은 이유를 알 수 없었음.
+> **?щ? (2026-02-11)**: ?섑빀 ?붿껌 ?앹꽦 ?쇱씠 ?먮윭 諛쒖깮 ???ロ엺 梨꾨줈 由щ줈?쒕릺?? ?ъ슜?먭? ?붿껌???앹꽦?섏? ?딆? ?댁쑀瑜??????놁뿀??
 
-### 37. ModelForm 필수 필드 누락 주의
+### 37. ModelForm ?꾩닔 ?꾨뱶 ?꾨씫 二쇱쓽
 
-`forms.py`의 `ModelForm`에서 `fields` 리스트에 포함된 필드가 **템플릿(HTML)에서 렌더링되지 않으면**, 사용자는 입력할 방법이 없는데 서버는 `required` 에러를 낸다.
+`forms.py`??`ModelForm`?먯꽌 `fields` 由ъ뒪?몄뿉 ?ы븿???꾨뱶媛 **?쒗뵆由?HTML)?먯꽌 ?뚮뜑留곷릺吏 ?딆쑝硫?*, ?ъ슜?먮뒗 ?낅젰??諛⑸쾿???녿뒗???쒕쾭??`required` ?먮윭瑜??몃떎.
 
-**해결책**:
-1. 사용자에게 입력을 받을 필요가 없는 필드(예: `max_file_size_mb`)는 `fields` 리스트에서 **제거**하거나 `exclude` 처리.
-2. 반드시 필요하지만 사용자 입력이 불필요하면 `HiddenInput` 위젯 사용 또는 모델 `default` 값 활용.
+**?닿껐梨?*:
+1. ?ъ슜?먯뿉寃??낅젰??諛쏆쓣 ?꾩슂媛 ?녿뒗 ?꾨뱶(?? `max_file_size_mb`)??`fields` 由ъ뒪?몄뿉??**?쒓굅**?섍굅??`exclude` 泥섎━.
+2. 諛섎뱶???꾩슂?섏?留??ъ슜???낅젰??遺덊븘?뷀븯硫?`HiddenInput` ?꾩젽 ?ъ슜 ?먮뒗 紐⑤뜽 `default` 媛??쒖슜.
 
 ```python
-# ❌ 폼 필드엔 있는데 HTML엔 없음 → 유효성 검사 실패
+# ?????꾨뱶???덈뒗??HTML???놁쓬 ???좏슚??寃???ㅽ뙣
 fields = ['title', 'max_file_size_mb'] 
 
-# ✅ 사용자 입력 불필요하면 필드 제거 (모델 default 사용)
+# ???ъ슜???낅젰 遺덊븘?뷀븯硫??꾨뱶 ?쒓굅 (紐⑤뜽 default ?ъ슜)
 fields = ['title']
 ```
 
-> **사례 (2026-02-11)**: `max_file_size_mb`가 폼 필드에는 있었으나 템플릿에 없어, "필수 항목입니다" 에러와 함께 생성 실패. 사용자에게 굳이 입력받을 필요 없는 기술적 설정이라 폼 필드에서 제거하여 해결.
+> **?щ? (2026-02-11)**: `max_file_size_mb`媛 ???꾨뱶?먮뒗 ?덉뿀?쇰굹 ?쒗뵆由우뿉 ?놁뼱, "?꾩닔 ??ぉ?낅땲?? ?먮윭? ?④퍡 ?앹꽦 ?ㅽ뙣. ?ъ슜?먯뿉寃?援녹씠 ?낅젰諛쏆쓣 ?꾩슂 ?녿뒗 湲곗닠???ㅼ젙?대씪 ???꾨뱶?먯꽌 ?쒓굅?섏뿬 ?닿껐.
 
-### 38. 사용자에게 기술적 설정 강요 금지 (Sensible Defaults)
+### 38. ?ъ슜?먯뿉寃?湲곗닠???ㅼ젙 媛뺤슂 湲덉? (Sensible Defaults)
 
-사용자(특히 비개발자)에게 "파일 최대 크기(MB)", "청크 사이즈" 같은 기술적 설정을 묻지 말 것. 시스템이 합리적인 기본값(Sensible Default)을 제공하고, 꼭 필요한 경우에만 고급 설정으로 숨겨서 제공한다.
+?ъ슜???뱁엳 鍮꾧컻諛쒖옄)?먭쾶 "?뚯씪 理쒕? ?ш린(MB)", "泥?겕 ?ъ씠利? 媛숈? 湲곗닠???ㅼ젙??臾살? 留?寃? ?쒖뒪?쒖씠 ?⑸━?곸씤 湲곕낯媛?Sensible Default)???쒓났?섍퀬, 瑗??꾩슂??寃쎌슦?먮쭔 怨좉툒 ?ㅼ젙?쇰줈 ?④꺼???쒓났?쒕떎.
 
-> **사례 (2026-02-11)**: 교사들에게 "파일당 최대 크기"를 입력하게 하는 것은 불필요한 인지 부하. 기본값 30MB로 고정하고 입력란 제거.
+> **?щ? (2026-02-11)**: 援먯궗?ㅼ뿉寃?"?뚯씪??理쒕? ?ш린"瑜??낅젰?섍쾶 ?섎뒗 寃껋? 遺덊븘?뷀븳 ?몄? 遺?? 湲곕낯媛?30MB濡?怨좎젙?섍퀬 ?낅젰? ?쒓굅.
 
-### 39. 모바일 카드 오버플로우 — `box-sizing` + 그림자 + `.clay-card` 제약 (CRITICAL)
+### 39. 紐⑤컮??移대뱶 ?ㅻ쾭?뚮줈????`box-sizing` + 洹몃┝??+ `.clay-card` ?쒖빟 (CRITICAL)
 
-모바일 브라우저에서 Tailwind CDN의 preflight(`box-sizing: border-box`)가 미적용되어 `padding`과 `border`가 요소 크기에 추가되거나, 깊은 `box-shadow`가 뷰포트 너비를 초과하여 오버플로우를 유발할 수 있다.
+紐⑤컮??釉뚮씪?곗??먯꽌 Tailwind CDN??preflight(`box-sizing: border-box`)媛 誘몄쟻?⑸릺??`padding`怨?`border`媛 ?붿냼 ?ш린??異붽??섍굅?? 源딆? `box-shadow`媛 酉고룷???덈퉬瑜?珥덇낵?섏뿬 ?ㅻ쾭?뚮줈?곕? ?좊컻?????덈떎.
 
-**해결 (`base.html`에 적용):**
+**?닿껐 (`base.html`???곸슜):**
 
-1. **전역 `box-sizing: border-box` 명시** — 상단에 별도 `<style>`로 선언
-2. **모바일 그림자 최적화** — 모바일에서는 좌우 그림자 오프셋을 0으로 설정(`box-shadow: 0 4px 12px ...`)
-3. **`.clay-card`에 `max-width: 100%; overflow: hidden;`** — 부모 너비를 넘지 못하게 강제
+1. **?꾩뿭 `box-sizing: border-box` 紐낆떆** ???곷떒??蹂꾨룄 `<style>`濡??좎뼵
+2. **紐⑤컮??洹몃┝??理쒖쟻??* ??紐⑤컮?쇱뿉?쒕뒗 醫뚯슦 洹몃┝???ㅽ봽?뗭쓣 0?쇰줈 ?ㅼ젙(`box-shadow: 0 4px 12px ...`)
+3. **`.clay-card`??`max-width: 100%; overflow: hidden;`** ??遺紐??덈퉬瑜??섏? 紐삵븯寃?媛뺤젣
 
 ```css
 /* base.html */
@@ -1006,7 +1012,7 @@ fields = ['title']
 .clay-card {
     max-width: 100%;
     overflow: hidden;
-    /* 모바일: 좌우 오프셋 0으로 뷰포트 확장 방지 */
+    /* 紐⑤컮?? 醫뚯슦 ?ㅽ봽??0?쇰줈 酉고룷???뺤옣 諛⑹? */
     box-shadow: 0 4px 12px rgba(163, 177, 198, 0.4), 0 -2px 8px rgba(255, 255, 255, 0.6);
 }
 
@@ -1015,73 +1021,72 @@ fields = ['title']
 }
 ```
 
-> **사례 (2026-02-11)**: studentmbti, collect 모바일 랜딩에서 카드가 오른쪽으로 튀어남. 근본 원인은 `content-box` 동작과 넓은 수평 그림자였음.
+> **?щ? (2026-02-11)**: studentmbti, collect 紐⑤컮???쒕뵫?먯꽌 移대뱶媛 ?ㅻⅨ履쎌쑝濡???대궓. 洹쇰낯 ?먯씤? `content-box` ?숈옉怨??볦? ?섑룊 洹몃┝?먯???
 
 ---
 
-## 40. AI 로깅 표준 가이드 (Monitoring)
+## 40. AI 濡쒓퉭 ?쒖? 媛?대뱶 (Monitoring)
 
-사후 추적 및 AI 에이전트의 자가 수복을 용이하게 하기 위해 모든 주요 액션은 표준화된 포맷으로 로깅한다.
+?ы썑 異붿쟻 諛?AI ?먯씠?꾪듃???먭? ?섎났???⑹씠?섍쾶 ?섍린 ?꾪빐 紐⑤뱺 二쇱슂 ?≪뀡? ?쒖??붾맂 ?щ㎎?쇰줈 濡쒓퉭?쒕떎.
 
-**표준 포맷:** `[AppName] Action: ACTION_NAME, Status: SUCCESS/FAIL, Key: Value, ...`
+**?쒖? ?щ㎎:** `[AppName] Action: ACTION_NAME, Status: SUCCESS/FAIL, Key: Value, ...`
 
 ```python
-# ✅ 예시: 세션 생성 로깅
+# ???덉떆: ?몄뀡 ?앹꽦 濡쒓퉭
 logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}, Type: {test_type}")
 ```
 
-## 41. 메인 컴포넌트 디자인 (Claymorphism)
+## 41. 硫붿씤 而댄룷?뚰듃 ?붿옄??(Claymorphism)
 
-Eduitit의 메인 서비스 페이지(퀴즈, 대시보드 메인 카드 등)는 **Claymorphism** 디자인을 기본으로 한다.
+Eduitit??硫붿씤 ?쒕퉬???섏씠吏(?댁쫰, ??쒕낫??硫붿씤 移대뱶 ????**Claymorphism** ?붿옄?몄쓣 湲곕낯?쇰줈 ?쒕떎.
 
-- **클래스**: `.clay-card` 필수 적용
-- **여백**: SIS Rule 8.271에 따라 모바일과 데스크톱 패딩 구분 (`p-6 md:p-14`)
-- **그림자**: 전역 태그의 hover 효과 활용 (`.clay-card:hover`)
+- **?대옒??*: `.clay-card` ?꾩닔 ?곸슜
+- **?щ갚**: SIS Rule 8.271???곕씪 紐⑤컮?쇨낵 ?곗뒪?ы넲 ?⑤뵫 援щ텇 (`p-6 md:p-14`)
+- **洹몃┝??*: ?꾩뿭 ?쒓렇??hover ?④낵 ?쒖슜 (`.clay-card:hover`)
 
-## 42. Django Template filter와 whitespace 주의
+## 42. Django Template filter? whitespace 二쇱쓽
 
-JavaScript 안에서 Django 템플릿 변수를 사용할 때, 필터(`|`) 주위에 공백을 넣으면(예: `{{ var | length }}`) 일부 JS 린터나 에디터에서 구문 오류로 오인할 수 있다.
+JavaScript ?덉뿉??Django ?쒗뵆由?蹂?섎? ?ъ슜???? ?꾪꽣(`|`) 二쇱쐞??怨듬갚???ｌ쑝硫??? `{{ var | length }}`) ?쇰? JS 由고꽣???먮뵒?곗뿉??援щЦ ?ㅻ쪟濡??ㅼ씤?????덈떎.
 
-- **권장**: `{{ questions|length }}` (공백 없이 밀착)
-- **이유**: 문자열 주입 시 linter의 불필요한 노이즈 제거 및 코드 간결성 확보
+- **沅뚯옣**: `{{ questions|length }}` (怨듬갚 ?놁씠 諛李?
+- **?댁쑀**: 臾몄옄??二쇱엯 ??linter??遺덊븘?뷀븳 ?몄씠利??쒓굅 諛?肄붾뱶 媛꾧껐???뺣낫
 
 ---
 
-## 43. 스크립트 중복 방지 및 JS 데이터 전달 표준
+## 43. ?ㅽ겕由쏀듃 以묐났 諛⑹? 諛?JS ?곗씠???꾨떖 ?쒖?
 
-### 43.1 라이브러리 중복 로드 금지 (Duplication)
-`base.html`에서 로드된 라이브러리(HTMX, Alpine.js 등)를 자식 템플릿이나 Partial에서 다시 로드하지 않는다.
-- **증상**: 모달 내용 중복, 이벤트 리스너 중복 바인딩, UI 오동작 (예: 모달이 두 번 열림).
-- **해결**: 모든 공통 라이브러리는 `base.html` 상단에서만 관리한다.
+### 43.1 ?쇱씠釉뚮윭由?以묐났 濡쒕뱶 湲덉? (Duplication)
+`base.html`?먯꽌 濡쒕뱶???쇱씠釉뚮윭由?HTMX, Alpine.js ??瑜??먯떇 ?쒗뵆由우씠??Partial?먯꽌 ?ㅼ떆 濡쒕뱶?섏? ?딅뒗??
+- **利앹긽**: 紐⑤떖 ?댁슜 以묐났, ?대깽??由ъ뒪??以묐났 諛붿씤?? UI ?ㅻ룞??(?? 紐⑤떖????踰??대┝).
+- **?닿껐**: 紐⑤뱺 怨듯넻 ?쇱씠釉뚮윭由щ뒗 `base.html` ?곷떒?먯꽌留?愿由ы븳??
 
-### 43.2 JS 데이터 전달: `json_script` 활용
-템플릿 태그(`{% for %}` 등)를 `<script>` 블록 안에 직접 써서 데이터를 구성하지 않는다. 이는 IDE 린트 에러를 유발하고 보안상 취약할 수 있다.
-- **해석**: `{{ data|json_script:"id" }}`를 사용하여 HTML에 JSON을 심고, JS에서 `JSON.parse(document.getElementById('id').textContent)`로 가져온다.
+### 43.2 JS ?곗씠???꾨떖: `json_script` ?쒖슜
+?쒗뵆由??쒓렇(`{% for %}` ??瑜?`<script>` 釉붾줉 ?덉뿉 吏곸젒 ?⑥꽌 ?곗씠?곕? 援ъ꽦?섏? ?딅뒗?? ?대뒗 IDE 由고듃 ?먮윭瑜??좊컻?섍퀬 蹂댁븞??痍⑥빟?????덈떎.
+- **?댁꽍**: `{{ data|json_script:"id" }}`瑜??ъ슜?섏뿬 HTML??JSON???ш퀬, JS?먯꽌 `JSON.parse(document.getElementById('id').textContent)`濡?媛?몄삩??
 
-### 43.3 인라인 스타일의 템플릿 태그 지양
-HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 문법 오류로 인식한다.
-- **해결**: Alpine.js의 `:style` 바인딩을 사용하거나, CSS 변수를 활용한다.
+### 43.3 ?몃씪???ㅽ??쇱쓽 ?쒗뵆由??쒓렇 吏??HTML `style` ?띿꽦 ?덉뿉 `{{ var }}`瑜?吏곸젒 ?ｌ쑝硫??먮뵒???뚯꽌媛 臾몃쾿 ?ㅻ쪟濡??몄떇?쒕떎.
+- **?닿껐**: Alpine.js??`:style` 諛붿씤?⑹쓣 ?ъ슜?섍굅?? CSS 蹂?섎? ?쒖슜?쒕떎.
 
 ```html
-<!-- ✅ 권장 패턴 -->
+<!-- ??沅뚯옣 ?⑦꽩 -->
 <div x-data="{ color: '{{ theme_color|escapejs }}' }" :style="{ backgroundColor: color }">...</div>
 ```
 
-## 44. Django Template Tag Fragmentation 및 줄바꿈 금지 (Critical)
+## 44. Django Template Tag Fragmentation 諛?以꾨컮轅?湲덉? (Critical)
 
-에이전트가 가독성을 위해 Django 템플릿 태그(`{% %}`, `{{ }}`)의 앞뒤나 내부를 임의로 줄바꿈하여 로직을 깨뜨리는 행위를 엄격히 금지한다.
+?먯씠?꾪듃媛 媛?낆꽦???꾪빐 Django ?쒗뵆由??쒓렇(`{% %}`, `{{ }}`)???욌뮘???대?瑜??꾩쓽濡?以꾨컮轅덊븯??濡쒖쭅??源⑤쑉由щ뒗 ?됱쐞瑜??꾧꺽??湲덉??쒕떎.
 
-- **증상**: `{% if %}`와 `{{ var }}` 사이를 줄바꿈하여 텍스트가 깨지거나, HTML 속성/JavaScript 내부에서 구문 오류(500 에러) 유발.
-- **해결**: 복잡한 로직이 포함된 템플릿 태그는 가급적 **한 줄(One-liner)**로 유지하며, 에디터의 자동 줄바꿈 기능에 의존하지 않고 원본의 연속성을 보존한다.
-- **예시**:
-    *   ❌ (나쁜 예):
+- **利앹긽**: `{% if %}`? `{{ var }}` ?ъ씠瑜?以꾨컮轅덊븯???띿뒪?멸? 源⑥?嫄곕굹, HTML ?띿꽦/JavaScript ?대??먯꽌 援щЦ ?ㅻ쪟(500 ?먮윭) ?좊컻.
+- **?닿껐**: 蹂듭옟??濡쒖쭅???ы븿???쒗뵆由??쒓렇??媛湲됱쟻 **??以?One-liner)**濡??좎??섎ŉ, ?먮뵒?곗쓽 ?먮룞 以꾨컮轅?湲곕뒫???섏〈?섏? ?딄퀬 ?먮낯???곗냽?깆쓣 蹂댁〈?쒕떎.
+- **?덉떆**:
+    *   ??(?섏걶 ??:
         ```html
         <span>
           {% if user.nickname %}{{ user.nickname }} {% else %}{{ user.username
            }}{% endif %}
         </span>
         ```
-    *   ✅ (좋은 예):
+    *   ??(醫뗭? ??:
         ```html
         <span>{% if user.nickname %}{{ user.nickname }}{% else %}{{ user.username }}{% endif %}</span>
         ```
@@ -1090,278 +1095,275 @@ HTML `style` 속성 안에 `{{ var }}`를 직접 넣으면 에디터 파서가 �
 
 ---
 
-**마지막 업데이트:** 2026-02-12 12:30
+**留덉?留??낅뜲?댄듃:** 2026-02-12 12:30
 
-## 45. 비회원 관리 접근 권한 — 세션 대신 UUID(Management ID) 사용 (CRITICAL)
+## 45. 鍮꾪쉶??愿由??묎렐 沅뚰븳 ???몄뀡 ???UUID(Management ID) ?ъ슜 (CRITICAL)
 
-비회원이 제출한 데이터(예: 간편 수합)를 나중에 다시 수정/삭제해야 할 때, **세션(Session) 기반 권한은 브라우저를 닫으면 증발**한다.
+鍮꾪쉶?먯씠 ?쒖텧???곗씠???? 媛꾪렪 ?섑빀)瑜??섏쨷???ㅼ떆 ?섏젙/??젣?댁빞 ???? **?몄뀡(Session) 湲곕컲 沅뚰븳? 釉뚮씪?곗?瑜??レ쑝硫?利앸컻**?쒕떎.
 
-**해결 패턴**:
-1. 모델에 고유한 `management_id` (UUID) 필드를 추가한다.
-2. 관리 페이지 URL에 이 UUID를 포함한다: `/manage/<uuid:management_id>/`
-3. 뷰에서는 세션 체크 대신 이 UUID의 존재 여부만으로 권한을 위임한다 (URL 자체가 토큰 역할).
-4. 사용자에게 **"이 주소를 복사해두면 나중에 다시 와서 관리할 수 있다"**고 안내하고 '주소 복사' 버튼을 제공한다.
+**?닿껐 ?⑦꽩**:
+1. 紐⑤뜽??怨좎쑀??`management_id` (UUID) ?꾨뱶瑜?異붽??쒕떎.
+2. 愿由??섏씠吏 URL????UUID瑜??ы븿?쒕떎: `/manage/<uuid:management_id>/`
+3. 酉곗뿉?쒕뒗 ?몄뀡 泥댄겕 ?????UUID??議댁옱 ?щ?留뚯쑝濡?沅뚰븳???꾩엫?쒕떎 (URL ?먯껜媛 ?좏겙 ??븷).
+4. ?ъ슜?먯뿉寃?**"??二쇱냼瑜?蹂듭궗?대몢硫??섏쨷???ㅼ떆 ???愿由ы븷 ???덈떎"**怨??덈궡?섍퀬 '二쇱냼 蹂듭궗' 踰꾪듉???쒓났?쒕떎.
 
-> **사례 (2026-02-12)**: 간편 수합(Collect) 앱에서 브라우저를 닫으면 수정이 불가능하던 문제를 세션에서 UUID(management_id) 기반으로 전환하여 해결.
+> **?щ? (2026-02-12)**: 媛꾪렪 ?섑빀(Collect) ?깆뿉??釉뚮씪?곗?瑜??レ쑝硫??섏젙??遺덇??ν븯??臾몄젣瑜??몄뀡?먯꽌 UUID(management_id) 湲곕컲?쇰줈 ?꾪솚?섏뿬 ?닿껐.
 
-## 46. Alpine.js를 이용한 간편한 UI 피드백 (주소 복사 등)
+## 46. Alpine.js瑜??댁슜??媛꾪렪??UI ?쇰뱶諛?(二쇱냼 蹂듭궗 ??
 
-텍스트 복사 후 "복사됨!" 메시지를 잠시 보여주는 등의 작은 피드백은 Alpine.js의 `x-data`와 `setTimeout`을 활용하면 간결하게 구현 가능하다.
+?띿뒪??蹂듭궗 ??"蹂듭궗??" 硫붿떆吏瑜??좎떆 蹂댁뿬二쇰뒗 ?깆쓽 ?묒? ?쇰뱶諛깆? Alpine.js??`x-data`? `setTimeout`???쒖슜?섎㈃ 媛꾧껐?섍쾶 援ы쁽 媛?ν븯??
 
 ```html
 <div x-data="{ copied: false }">
     <button @click="navigator.clipboard.writeText(window.location.href); copied = true; setTimeout(() => copied = false, 2000)">
-        <span x-show="!copied">주소 복사</span>
-        <span x-show="copied">복사됨!</span>
+        <span x-show="!copied">二쇱냼 蹂듭궗</span>
+        <span x-show="copied">蹂듭궗??</span>
     </button>
 </div>
 ```
 
-> **사례 (2026-02-12)**: 제출물 관리 페이지에서 관리용 URL 복사 기능을 제공하여 사용자 편의성을 높임.
+> **?щ? (2026-02-12)**: ?쒖텧臾?愿由??섏씠吏?먯꽌 愿由ъ슜 URL 蹂듭궗 湲곕뒫???쒓났?섏뿬 ?ъ슜???몄쓽?깆쓣 ?믪엫.
 
-## 47. Cloudinary 비이미지 파일 처리 (resource_type='raw') (CRITICAL)
+## 47. Cloudinary 鍮꾩씠誘몄? ?뚯씪 泥섎━ (resource_type='raw') (CRITICAL)
 
-Cloudinary 기본 설정은 `resource_type='image'`입니다. HWP, XLSX, PDF, ZIP 등 이미지가 아닌 일반 파일을 업로드하려면 **`RawMediaCloudinaryStorage`**를 사용해야 합니다.
+Cloudinary 湲곕낯 ?ㅼ젙? `resource_type='image'`?낅땲?? HWP, XLSX, PDF, ZIP ???대?吏媛 ?꾨땶 ?쇰컲 ?뚯씪???낅줈?쒗븯?ㅻ㈃ **`RawMediaCloudinaryStorage`**瑜??ъ슜?댁빞 ?⑸땲??
 
 ```python
-# ❌ Invalid image file 에러 발생 (이미지로 처리를 시도함)
-from cloudinary_storage.storage import VideoMediaCloudinaryStorage # 또는 기본 Storage
+# ??Invalid image file ?먮윭 諛쒖깮 (?대?吏濡?泥섎━瑜??쒕룄??
+from cloudinary_storage.storage import VideoMediaCloudinaryStorage # ?먮뒗 湲곕낯 Storage
 file = models.FileField(storage=VideoMediaCloudinaryStorage())
 
-# ✅ 일반 파일용 스토리지 사용
+# ???쇰컲 ?뚯씪???ㅽ넗由ъ? ?ъ슜
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
 file = models.FileField(storage=RawMediaCloudinaryStorage())
 ```
 
-> **사례 (2026-02-11)**: 간편 수합 서비스에서 한글(hwp)이나 엑셀 파일을 올릴 때 "Invalid image file" 에러와 함께 500 에러 발생. `RawMediaCloudinaryStorage`로 교체하여 해결.
+> **?щ? (2026-02-11)**: 媛꾪렪 ?섑빀 ?쒕퉬?ㅼ뿉???쒓?(hwp)?대굹 ?묒? ?뚯씪???щ┫ ??"Invalid image file" ?먮윭? ?④퍡 500 ?먮윭 諛쒖깮. `RawMediaCloudinaryStorage`濡?援먯껜?섏뿬 ?닿껐.
 
-## 48. JS 내 Django 템플릿 태그 사용 시 공백/필터 주의
+## 48. JS ??Django ?쒗뵆由??쒓렇 ?ъ슜 ??怨듬갚/?꾪꽣 二쇱쓽
 
-JavaScript 코드 안에서 `{{ value }}`를 사용할 때, 필터나 공백 처리가 잘못되면 JS 문법 에러(`SyntaxError`)가 발생하여 해당 블록 전체가 작동하지 않을 수 있습니다.
+JavaScript 肄붾뱶 ?덉뿉??`{{ value }}`瑜??ъ슜???? ?꾪꽣??怨듬갚 泥섎━媛 ?섎せ?섎㈃ JS 臾몃쾿 ?먮윭(`SyntaxError`)媛 諛쒖깮?섏뿬 ?대떦 釉붾줉 ?꾩껜媛 ?묐룞?섏? ?딆쓣 ???덉뒿?덈떎.
 
 ```javascript
-/* ❌ 줄바꿈이나 공백이 JS 문법을 파괴할 수 있음 */
+/* ??以꾨컮轅덉씠??怨듬갚??JS 臾몃쾿???뚭눼?????덉쓬 */
 var maxSize = {{ req.max_file_size_mb |default: 30 }}; 
 
-/* ✅ 괄호나 따옴표로 감싸거나, 간단한 필터만 사용 */
+/* ??愿꾪샇???곗샂?쒕줈 媛먯떥嫄곕굹, 媛꾨떒???꾪꽣留??ъ슜 */
 const maxMB = parseInt('{{ req.max_file_size_mb|default:30 }}');
 ```
 
-> **사례 (2026-02-11)**: 제출 페이지에서 JS 문법 에러로 Alpine.js 초기화가 중단되어 버튼이 비활성화되는 버그 발생. 템플릿 태그를 한 줄로 정리하여 해결.
+> **?щ? (2026-02-11)**: ?쒖텧 ?섏씠吏?먯꽌 JS 臾몃쾿 ?먮윭濡?Alpine.js 珥덇린?붽? 以묐떒?섏뼱 踰꾪듉??鍮꾪솢?깊솕?섎뒗 踰꾧렇 諛쒖깮. ?쒗뵆由??쒓렇瑜???以꾨줈 ?뺣━?섏뿬 ?닿껐.
 
 ---
 
-# 앱별 이슈 분석 기록 (계속)
+# ?깅퀎 ?댁뒋 遺꾩꽍 湲곕줉 (怨꾩냽)
 
-## Reservations 앱 - 커스텀 교시 및 보안 URL (2026-02-12)
+## Reservations ??- 而ㅼ뒪? 援먯떆 諛?蹂댁븞 URL (2026-02-12)
 
-### 49. 공공용 URL의 무작위성 확보 (Security/Random Slugs)
+### 49. 怨듦났??URL??臾댁옉?꾩꽦 ?뺣낫 (Security/Random Slugs)
 
-사용자(교사)가 직접 주소를 정하게 하면 `hyunam`, `seoul` 등 추측하기 쉬운 단어를 사용하여 타인이 무단으로 접속하거나 장난을 칠 우려가 있다.
+?ъ슜??援먯궗)媛 吏곸젒 二쇱냼瑜??뺥븯寃??섎㈃ `hyunam`, `seoul` ??異붿륫?섍린 ?ъ슫 ?⑥뼱瑜??ъ슜?섏뿬 ??몄씠 臾대떒?쇰줈 ?묒냽?섍굅???λ궃??移??곕젮媛 ?덈떎.
 
-- **증상**: 학교 이름을 슬러그로 쓸 때 타 학교 학생이 주소를 맞혀서 예약을 엉망으로 만듦.
-- **해결**: `models.py`의 `save()` 메서드에서 `uuid.uuid4().hex[:8]`를 사용해 추측 불가능한 슬러그를 자동 생성하고, UI에서 사용자의 직접 수정을 제한한다.
-- **Short URL**: 보안 URL이 길어 불편하므로 `/go/<id>/` 형태의 짧은 전용 리다이렉트 링크를 제공한다.
+- **利앹긽**: ?숆탳 ?대쫫???щ윭洹몃줈 ????? ?숆탳 ?숈깮??二쇱냼瑜?留욏????덉빟???됰쭩?쇰줈 留뚮벀.
+- **?닿껐**: `models.py`??`save()` 硫붿꽌?쒖뿉??`uuid.uuid4().hex[:8]`瑜??ъ슜??異붿륫 遺덇??ν븳 ?щ윭洹몃? ?먮룞 ?앹꽦?섍퀬, UI?먯꽌 ?ъ슜?먯쓽 吏곸젒 ?섏젙???쒗븳?쒕떎.
+- **Short URL**: 蹂댁븞 URL??湲몄뼱 遺덊렪?섎?濡?`/go/<id>/` ?뺥깭??吏㏃? ?꾩슜 由щ떎?대젆??留곹겕瑜??쒓났?쒕떎.
 
-### 50. 커스텀 교시(Period Labels) 관리 전략
+### 50. 而ㅼ뒪? 援먯떆(Period Labels) 愿由??꾨왂
 
-학교마다 "1교시", "5교시A", "특강팀" 등 사용하는 이름과 교시 수가 다르다.
+?숆탳留덈떎 "1援먯떆", "5援먯떆A", "?밴컯?" ???ъ슜?섎뒗 ?대쫫怨?援먯떆 ?섍? ?ㅻⅤ??
 
-- **패턴**: `SchoolConfig` 모델에 `period_labels` (TextField, CSV) 필드를 추가.
-- **작동**: 콤마(`,`)로 구분된 문자열을 `get_period_list()` 메서드로 리스트화하여, 예약 그리드(Row)를 동적으로 생성.
-- **주의**: 그리드 렌더링 시 "몇 번째 교시"라는 숫자 대신 "Label과 ID"를 매칭하여 렌더링해야 함. (`{% if s.period == p.id %}`)
+- **?⑦꽩**: `SchoolConfig` 紐⑤뜽??`period_labels` (TextField, CSV) ?꾨뱶瑜?異붽?.
+- **?묐룞**: 肄ㅻ쭏(`,`)濡?援щ텇??臾몄옄?댁쓣 `get_period_list()` 硫붿꽌?쒕줈 由ъ뒪?명솕?섏뿬, ?덉빟 洹몃━??Row)瑜??숈쟻?쇰줈 ?앹꽦.
+- **二쇱쓽**: 洹몃━???뚮뜑留???"紐?踰덉㎏ 援먯떆"?쇰뒗 ?レ옄 ???"Label怨?ID"瑜?留ㅼ묶?섏뿬 ?뚮뜑留곹빐???? (`{% if s.period == p.id %}`)
 
-### 51. allauth v65.x+ 설정 마이그레이션 (Monitoring)
+### 51. allauth v65.x+ ?ㅼ젙 留덉씠洹몃젅?댁뀡 (Monitoring)
 
-서버 구동 시 또는 마이그레이션 시 Deprecation 경고 및 Critical Error 발생 대응.
+?쒕쾭 援щ룞 ???먮뒗 留덉씠洹몃젅?댁뀡 ??Deprecation 寃쎄퀬 諛?Critical Error 諛쒖깮 ???
 
 -   `ACCOUNT_LOGIN_METHODS = {'email', 'username'}`
--   `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*']` (**필수 필드는 `*`를 붙여야 함**)
--   프로덕션 `settings_production.py`와 로컬 `settings.py` 모두 동기화 필수.
+-   `ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*']` (**?꾩닔 ?꾨뱶??`*`瑜?遺숈뿬????*)
+-   ?꾨줈?뺤뀡 `settings_production.py`? 濡쒖뺄 `settings.py` 紐⑤몢 ?숆린???꾩닔.
 
 ---
 
-## 52. JS/Alpine 속성 내 Django 템플릿 태그 따옴표 중복 처리 (CRITICAL)
+## 52. JS/Alpine ?띿꽦 ??Django ?쒗뵆由??쒓렇 ?곗샂??以묐났 泥섎━ (CRITICAL)
 
-JavaScript 또는 Alpine.js 속성(예: `@click`, `:class`) 내부에 Django 템플릿 태그를 사용할 때, 내부 필터 인자의 따옴표가 외부 JavaScript 문자열의 따옴표와 충돌하면 구문 오류(SyntaxError)가 발생하여 500 에러나 JS 실행 중단을 유발한다.
+JavaScript ?먮뒗 Alpine.js ?띿꽦(?? `@click`, `:class`) ?대???Django ?쒗뵆由??쒓렇瑜??ъ슜???? ?대? ?꾪꽣 ?몄옄???곗샂?쒓? ?몃? JavaScript 臾몄옄?댁쓽 ?곗샂?쒖? 異⑸룎?섎㈃ 援щЦ ?ㅻ쪟(SyntaxError)媛 諛쒖깮?섏뿬 500 ?먮윭??JS ?ㅽ뻾 以묐떒???좊컻?쒕떎.
 
 ```javascript
-/* ❌ 500 에러 유발: 문자열 리터럴('...') 내부에서 date 필터의 작은따옴표('...')가 충돌 */
+/* ??500 ?먮윭 ?좊컻: 臾몄옄??由ы꽣??'...') ?대??먯꽌 date ?꾪꽣???묒??곗샂??'...')媛 異⑸룎 */
 @click="openBooking(..., '{{ target_date|date:'Y-m-d' }}', ...)"
 
-/* ✅ 해결: 내부 인자에는 쌍따옴표(") 사용 */
+/* ???닿껐: ?대? ?몄옄?먮뒗 ?띾뵲?댄몴(") ?ъ슜 */
 @click="openBooking(..., '{{ target_date|date:"Y-m-d" }}', ...)"
 ```
 
-**증상**: 브라우저 콘솔에는 `SyntaxError: Unexpected token`이 나타나며, 서버 로그에는 `TemplateSyntaxError`가 찍힐 수 있다. 특히 PC에서는 잘 되고 모바일 전용 블록(`lg:hidden`) 내부에서만 이 실수가 있을 경우 원인을 찾기 매우 어렵다.
+**利앹긽**: 釉뚮씪?곗? 肄섏넄?먮뒗 `SyntaxError: Unexpected token`???섑??섎ŉ, ?쒕쾭 濡쒓렇?먮뒗 `TemplateSyntaxError`媛 李랁옄 ???덈떎. ?뱁엳 PC?먯꽌?????섍퀬 紐⑤컮???꾩슜 釉붾줉(`lg:hidden`) ?대??먯꽌留????ㅼ닔媛 ?덉쓣 寃쎌슦 ?먯씤??李얘린 留ㅼ슦 ?대졄??
 
-**사례 (2026-02-12)**: 예약 시스템 모바일 레이아웃 작업 중 `@click` 핸들러 내 `date:'Y-m-d'`의 작은따옴표 중복 사용으로 인해 모바일에서만 500 에러 발생.
+**?щ? (2026-02-12)**: ?덉빟 ?쒖뒪??紐⑤컮???덉씠?꾩썐 ?묒뾽 以?`@click` ?몃뱾????`date:'Y-m-d'`???묒??곗샂??以묐났 ?ъ슜?쇰줈 ?명빐 紐⑤컮?쇱뿉?쒕쭔 500 ?먮윭 諛쒖깮.
 
-## 53. HTMX 단독 버튼의 데이터 전송 (hx-vals 사용)
+## 53. HTMX ?⑤룆 踰꾪듉???곗씠???꾩넚 (hx-vals ?ъ슜)
 
-HTMX 버튼이 `<form>` 태그 밖에 단독으로 있을 때는 내부의 `<input type="hidden">` 값을 자동으로 인식하지 못한다. 이 경우 반드시 `hx-vals` 속성을 사용하여 데이터를 명시적으로 전송해야 한다.
+HTMX 踰꾪듉??`<form>` ?쒓렇 諛뽰뿉 ?⑤룆?쇰줈 ?덉쓣 ?뚮뒗 ?대???`<input type="hidden">` 媛믪쓣 ?먮룞?쇰줈 ?몄떇?섏? 紐삵븳?? ??寃쎌슦 諛섎뱶??`hx-vals` ?띿꽦???ъ슜?섏뿬 ?곗씠?곕? 紐낆떆?곸쑝濡??꾩넚?댁빞 ?쒕떎.
 
--   **옳은 예**: `<button hx-post="..." hx-vals='{"room_id": "{{ room.id }}"}'>`
--   **나쁜 예**: `<button hx-post="..."><input type="hidden" name="name" value="..."></button>`
+-   **?녹? ??*: `<button hx-post="..." hx-vals='{"room_id": "{{ room.id }}"}'>`
+-   **?섏걶 ??*: `<button hx-post="..."><input type="hidden" name="name" value="..."></button>`
 
-## 54. 부분 템플릿(Partial) 렌더링 시 컨텍스트 관리
+## 54. 遺遺??쒗뵆由?Partial) ?뚮뜑留???而⑦뀓?ㅽ듃 愿由?
+HTMX ?붿껌?쇰줈 洹몃━?쒕굹 紐⑸줉留?蹂꾨룄濡??낅뜲?댄듃(?뚮뜑留????? ?대떦 ?쒗뵆由??덉뿉???ъ슜?섎뒗 紐⑤뱺 蹂???? `school`, `config` ??瑜?酉?View)??`render()` ?몄텧 ?쒖젏??諛섎뱶???ы븿?댁빞 ?쒕떎. 蹂?섍? ?꾨씫?섎㈃ URL ?앹꽦 ?ㅻ쪟媛 ?섍굅???붾㈃???쒕?濡?洹몃젮吏吏 ?딅뒗??
 
-HTMX 요청으로 그리드나 목록만 별도로 업데이트(렌더링)할 때, 해당 템플릿 안에서 사용되는 모든 변수(예: `school`, `config` 등)를 뷰(View)의 `render()` 호출 시점에 반드시 포함해야 한다. 변수가 누락되면 URL 생성 오류가 나거나 화면이 제대로 그려지지 않는다.
+## 55. 紐⑤컮???덉씠?꾩썐 寃利?(360px 湲곗?)
 
-## 55. 모바일 레이아웃 검증 (360px 기준)
+UI瑜?援ы쁽???뚮뒗 ??긽 紐⑤컮???쒖? ?덈퉬??360px?먯꽌 ?붾㈃??源⑥?嫄곕굹 ?붿냼媛 寃뱀튂吏 ?딅뒗吏 癒쇱? ?뺤씤?쒕떎. `flex-1`, `min-w-0`, `truncate`? 媛숈? CSS ?대옒?ㅻ? ?곸젅???ъ슜?섏뿬 醫곸? ?붾㈃?먯꽌???덉씠?꾩썐???좎뿰?섍쾶 ??묓븯?꾨줉 ?ㅺ퀎?쒕떎.
 
-UI를 구현할 때는 항상 모바일 표준 너비인 360px에서 화면이 깨지거나 요소가 겹치지 않는지 먼저 확인한다. `flex-1`, `min-w-0`, `truncate`와 같은 CSS 클래스를 적절히 사용하여 좁은 화면에서도 레이아웃이 유연하게 대응하도록 설계한다.
+## 56. HTMX 蹂댁븞 ?좏겙(CSRF) ?꾩뿭 泥섎━ 諛??댁쨷 寃利?(CRITICAL)
 
-## 56. HTMX 보안 토큰(CSRF) 전역 처리 및 이중 검증 (CRITICAL)
+?κ퀬??蹂댁븞 ?뺤콉??紐⑤뱺 `POST` ?붿껌?먮뒗 CSRF ?좏겙???꾩닔?? HTMX ?⑤룆 踰꾪듉 ?깆뿉???좏겙 ?꾨씫?쇰줈 ?명븳 403 Forbidden ?먮윭瑜?諛⑹??섍린 ?꾪빐 ?ㅼ쓬 ?먯튃???꾧꺽??以?섑븳??
 
-장고의 보안 정책상 모든 `POST` 요청에는 CSRF 토큰이 필수다. HTMX 단독 버튼 등에서 토큰 누락으로 인한 403 Forbidden 에러를 방지하기 위해 다음 원칙을 엄격히 준수한다.
-
-1.  **전역 처리 (base.html)**: `document.addEventListener('htmx:configRequest', ...)`를 사용하여 모든 HTMX 요청 헤더에 `X-CSRFToken`을 자동 주입한다.
-    *   **주의**: `document.body`에 리스너를 걸면 body가 로드되기 전 시점에 에러가 발생하므로 반드시 **`document` 레벨**에 걸어야 한다.
-2.  **이중 검증 (결정적 조치)**: 블랙아웃 삭제, 예약 취소와 같이 **데이터가 삭제되는 중요 버튼**은 전역 설정을 100% 신뢰하지 말고 `hx-vals`에 `csrfmiddlewaretoken`을 명시적으로 포함하여 "실패 없는 삭제"를 보장한다.
+1.  **?꾩뿭 泥섎━ (base.html)**: `document.addEventListener('htmx:configRequest', ...)`瑜??ъ슜?섏뿬 紐⑤뱺 HTMX ?붿껌 ?ㅻ뜑??`X-CSRFToken`???먮룞 二쇱엯?쒕떎.
+    *   **二쇱쓽**: `document.body`??由ъ뒪?덈? 嫄몃㈃ body媛 濡쒕뱶?섍린 ???쒖젏???먮윭媛 諛쒖깮?섎?濡?諛섎뱶??**`document` ?덈꺼**??嫄몄뼱???쒕떎.
+2.  **?댁쨷 寃利?(寃곗젙??議곗튂)**: 釉붾옓?꾩썐 ??젣, ?덉빟 痍⑥냼? 媛숈씠 **?곗씠?곌? ??젣?섎뒗 以묒슂 踰꾪듉**? ?꾩뿭 ?ㅼ젙??100% ?좊ː?섏? 留먭퀬 `hx-vals`??`csrfmiddlewaretoken`??紐낆떆?곸쑝濡??ы븿?섏뿬 "?ㅽ뙣 ?녿뒗 ??젣"瑜?蹂댁옣?쒕떎.
     ```html
-    /* ✅ 중요 버튼 예시: 전역 설정 외에 hx-vals로 한 번 더 확실하게 처리 */
+    /* ??以묒슂 踰꾪듉 ?덉떆: ?꾩뿭 ?ㅼ젙 ?몄뿉 hx-vals濡???踰????뺤떎?섍쾶 泥섎━ */
     <button hx-post="..." hx-vals='{"item_id": "1", "csrfmiddlewaretoken": "{{ csrf_token }}"}'>
     ```
-3.  **컨테이너 전략**: 대시보드와 같이 HTMX 작업이 많은 곳은 부모 컨테이너(`div`)에 `hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'`를 미리 선언하여 자식 요소들이 자동으로 토큰을 상속받게 설계한다.
+3.  **而⑦뀒?대꼫 ?꾨왂**: ??쒕낫?쒖? 媛숈씠 HTMX ?묒뾽??留롮? 怨녹? 遺紐?而⑦뀒?대꼫(`div`)??`hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'`瑜?誘몃━ ?좎뼵?섏뿬 ?먯떇 ?붿냼?ㅼ씠 ?먮룞?쇰줈 ?좏겙???곸냽諛쏄쾶 ?ㅺ퀎?쒕떎.
 
-- **사례 (2026-02-12)**: `document.body` 리스너의 타이밍 문제와 전역 설정 누락으로 인해 삭제 버튼이 무반응이었던 문제를 이 삼중 방어(전역 + 컨테이너 + 개별) 전략으로 최종 해결.
+- **?щ? (2026-02-12)**: `document.body` 由ъ뒪?덉쓽 ??대컢 臾몄젣? ?꾩뿭 ?ㅼ젙 ?꾨씫?쇰줈 ?명빐 ??젣 踰꾪듉??臾대컲?묒씠?덈뜕 臾몄젣瑜????쇱쨷 諛⑹뼱(?꾩뿭 + 而⑦뀒?대꼫 + 媛쒕퀎) ?꾨왂?쇰줈 理쒖쥌 ?닿껐.
 
-## 57. 전체 데이터 생애주기(CRUD) 완결성 준수 (CRITICAL)
+## 57. ?꾩껜 ?곗씠???앹븷二쇨린(CRUD) ?꾧껐??以??(CRITICAL)
 
-기능을 구현할 때는 '생성'뿐만 아니라 '수정'과 '삭제'가 포함된 전체 생애주기를 반드시 고려한다. "삭제 후 다시 등록하세요"와 같은 방식은 지양하고, 해당 페이지 내에서 즉시 수정/삭제가 가능하도록 설계한다.
+湲곕뒫??援ы쁽???뚮뒗 '?앹꽦'肉먮쭔 ?꾨땲??'?섏젙'怨?'??젣'媛 ?ы븿???꾩껜 ?앹븷二쇨린瑜?諛섎뱶??怨좊젮?쒕떎. "??젣 ???ㅼ떆 ?깅줉?섏꽭??? 媛숈? 諛⑹떇? 吏?묓븯怨? ?대떦 ?섏씠吏 ?댁뿉??利됱떆 ?섏젙/??젣媛 媛?ν븯?꾨줉 ?ㅺ퀎?쒕떎.
 
-- **원칙**: 모든 데이터 관리 기능에는 **[등록 - 조회 - 수정 - 삭제]**가 하나의 세트로 구현되어야 한다.
-- **수정(Update)**: 파일 업로드 서비스의 경우, 삭제 후 재등록이 아닌 **새 파일 선택 시 즉시 교체**되는 로직을 지원한다.
-- **삭제(Delete)**: 사용자가 실수로 등록했을 때를 대비해, 수정 화면이나 상세 화면에는 반드시 명확한 **삭제 버튼(확인 모달 포함)**을 배치한다.
-- **사례 (2026-02-12)**: `collect` 앱의 제출물 수정 페이지에서 파일 교체 로직과 삭제 버튼이 누락되어 사용자가 불편을 겪었던 사례를 바탕으로 이 규칙을 강화함.
+- **?먯튃**: 紐⑤뱺 ?곗씠??愿由?湲곕뒫?먮뒗 **[?깅줉 - 議고쉶 - ?섏젙 - ??젣]**媛 ?섎굹???명듃濡?援ы쁽?섏뼱???쒕떎.
+- **?섏젙(Update)**: ?뚯씪 ?낅줈???쒕퉬?ㅼ쓽 寃쎌슦, ??젣 ???щ벑濡앹씠 ?꾨땶 **???뚯씪 ?좏깮 ??利됱떆 援먯껜**?섎뒗 濡쒖쭅??吏?먰븳??
+- **??젣(Delete)**: ?ъ슜?먭? ?ㅼ닔濡??깅줉?덉쓣 ?뚮? ?鍮꾪빐, ?섏젙 ?붾㈃?대굹 ?곸꽭 ?붾㈃?먮뒗 諛섎뱶??紐낇솗??**??젣 踰꾪듉(?뺤씤 紐⑤떖 ?ы븿)**??諛곗튂?쒕떎.
+- **?щ? (2026-02-12)**: `collect` ?깆쓽 ?쒖텧臾??섏젙 ?섏씠吏?먯꽌 ?뚯씪 援먯껜 濡쒖쭅怨???젣 踰꾪듉???꾨씫?섏뼱 ?ъ슜?먭? 遺덊렪??寃れ뿀???щ?瑜?諛뷀깢?쇰줈 ??洹쒖튃??媛뺥솕??
 
-## 58. 초기 데이터 생성 및 화면 렌더링 시 중복 방지 (CRITICAL)
+## 58. 珥덇린 ?곗씠???앹꽦 諛??붾㈃ ?뚮뜑留???以묐났 諛⑹? (CRITICAL)
 
-`ensure_` 커맨드나 초기화 로직을 통해 데이터를 생성할 때, 중복 실행으로 인한 데이터 누적을 원천 봉쇄해야 한다. 또한, 뷰(View) 레벨에서도 예기치 않은 중복 데이터가 섞여 들어오지 않도록 방어 로직을 갖춘다.
+`ensure_` 而ㅻ㎤?쒕굹 珥덇린??濡쒖쭅???듯빐 ?곗씠?곕? ?앹꽦???? 以묐났 ?ㅽ뻾?쇰줈 ?명븳 ?곗씠???꾩쟻???먯쿇 遊됱뇙?댁빞 ?쒕떎. ?먰븳, 酉?View) ?덈꺼?먯꽌???덇린移??딆? 以묐났 ?곗씠?곌? ?욎뿬 ?ㅼ뼱?ㅼ? ?딅룄濡?諛⑹뼱 濡쒖쭅??媛뽰텣??
 
-- **멱등성(Idempotency) 보장**: 초기 데이터 생성 스크립트(`management/commands`)는 여러 번 실행해도 결과가 동일해야 한다. `feature.objects.create(...)` 대신 반드시 `get_or_create` 또는 `update_or_create`를 사용한다. 필요하다면 기존 데이터를 `clear()` 하고 다시 생성한다.
-- **뷰 레벨 방어**: DB에 이미 중복 데이터가 쌓였을 가능성을 대비하여, `landing` 페이지나 목록 조회 뷰에서는 **중복 제거(deduplication) 로직**을 통해 화면에 동일한 내용이 반복 출력되는 참사를 막는다.
-- **사례 (2026-02-12)**: `Collect` 앱 랜딩 페이지의 [주요 기능] 섹션이 이유 없이 2번씩 반복 출력되는 현상 발생. 뷰에서 `title` 기반 중복 제거 로직을 추가하여 해결함.
-
----
-
-## 59. 데이터 수합 시 보안 및 책임 안내 의무화 (CRITICAL)
-
-파일, 링크, 텍스트 등 외부로부터 데이터를 수합하는 기능을 구현할 때는 개인정보 보호뿐만 아니라 공문서, 내부 자료 등 보안이 필요한 데이터의 유출을 방지하기 위해 명시적인 경고와 **서비스 면책(Disclaimer)** 문구를 반드시 포함해야 한다.
-
-- **안내 배치**: 데이터 제출 화면(`submit`) 및 서비스 소개 페이지(`landing`)에 눈에 띄는 색상(Red 계열)과 경고 아이콘을 사용하여 배치한다.
-- **문구 포함**: 
-    1. **개인정보**: 주민번호, 연락처 등 민감 정보 포함 지양 안내.
-    2. **보안자료**: 외부 유출이 금지된 **공문서, 내부 대외비 자료** 수합 지양 및 주의 촉구.
-    3. **면책문구**: 데이터 관리 및 유출에 대한 책임은 당사자(요청자/제출자)에게 있으며 서비스는 책임을 지지 않는다는 점을 명시.
-- **사례 (2026-02-12)**: `Collect` 앱에 개인정보 및 공문서 유출 주의, 서비스 면책 안내를 추가하여 법적/운영적 리스크를 최소화함.
+- **硫깅벑??Idempotency) 蹂댁옣**: 珥덇린 ?곗씠???앹꽦 ?ㅽ겕由쏀듃(`management/commands`)???щ윭 踰??ㅽ뻾?대룄 寃곌낵媛 ?숈씪?댁빞 ?쒕떎. `feature.objects.create(...)` ???諛섎뱶??`get_or_create` ?먮뒗 `update_or_create`瑜??ъ슜?쒕떎. ?꾩슂?섎떎硫?湲곗〈 ?곗씠?곕? `clear()` ?섍퀬 ?ㅼ떆 ?앹꽦?쒕떎.
+- **酉??덈꺼 諛⑹뼱**: DB???대? 以묐났 ?곗씠?곌? ?볦???媛?μ꽦???鍮꾪븯?? `landing` ?섏씠吏??紐⑸줉 議고쉶 酉곗뿉?쒕뒗 **以묐났 ?쒓굅(deduplication) 濡쒖쭅**???듯빐 ?붾㈃???숈씪???댁슜??諛섎났 異쒕젰?섎뒗 李몄궗瑜?留됰뒗??
+- **?щ? (2026-02-12)**: `Collect` ???쒕뵫 ?섏씠吏??[二쇱슂 湲곕뒫] ?뱀뀡???댁쑀 ?놁씠 2踰덉뵫 諛섎났 異쒕젰?섎뒗 ?꾩긽 諛쒖깮. 酉곗뿉??`title` 湲곕컲 以묐났 ?쒓굅 濡쒖쭅??異붽??섏뿬 ?닿껐??
 
 ---
 
-## 60. JS Base64 해시 캐시 키 — 해시 길이와 키 순서에 의한 충돌 (CRITICAL)
+## 59. ?곗씠???섑빀 ??蹂댁븞 諛?梨낆엫 ?덈궡 ?섎Т??(CRITICAL)
 
-`btoa(encodeURIComponent(rawKey)).substring(0, N)` 으로 캐시 키를 생성할 때, **구분자(mode 등)가 키 뒤쪽에 배치되고 해시 길이(N)가 짧으면** 서로 다른 모드가 동일한 해시를 생성한다.
+?뚯씪, 留곹겕, ?띿뒪?????몃?濡쒕????곗씠?곕? ?섑빀?섎뒗 湲곕뒫??援ы쁽???뚮뒗 媛쒖씤?뺣낫 蹂댄샇肉먮쭔 ?꾨땲??怨듬Ц?? ?대? ?먮즺 ??蹂댁븞???꾩슂???곗씠?곗쓽 ?좎텧??諛⑹??섍린 ?꾪빐 紐낆떆?곸씤 寃쎄퀬? **?쒕퉬??硫댁콉(Disclaimer)** 臾멸뎄瑜?諛섎뱶???ы븿?댁빞 ?쒕떎.
 
-Base64는 3바이트 → 4문자 변환이므로, `substring(0, 24)`는 입력의 **처음 18바이트만** 반영. 한글 이름(글자당 3바이트)과 생년월일이 이미 18바이트를 소진하면, 뒤쪽의 mode 차이(`teacher` vs `general`)가 해시에 반영되지 않는다.
+- **?덈궡 諛곗튂**: ?곗씠???쒖텧 ?붾㈃(`submit`) 諛??쒕퉬???뚭컻 ?섏씠吏(`landing`)???덉뿉 ?꾨뒗 ?됱긽(Red 怨꾩뿴)怨?寃쎄퀬 ?꾩씠肄섏쓣 ?ъ슜?섏뿬 諛곗튂?쒕떎.
+- **臾멸뎄 ?ы븿**: 
+    1. **媛쒖씤?뺣낫**: 二쇰?踰덊샇, ?곕씫泥???誘쇨컧 ?뺣낫 ?ы븿 吏???덈궡.
+    2. **蹂댁븞?먮즺**: ?몃? ?좎텧??湲덉???**怨듬Ц?? ?대? ??몃퉬 ?먮즺** ?섑빀 吏??諛?二쇱쓽 珥됯뎄.
+    3. **硫댁콉臾멸뎄**: ?곗씠??愿由?諛??좎텧?????梨낆엫? ?뱀궗???붿껌???쒖텧???먭쾶 ?덉쑝硫??쒕퉬?ㅻ뒗 梨낆엫??吏吏 ?딅뒗?ㅻ뒗 ?먯쓣 紐낆떆.
+- **?щ? (2026-02-12)**: `Collect` ?깆뿉 媛쒖씤?뺣낫 諛?怨듬Ц???좎텧 二쇱쓽, ?쒕퉬??硫댁콉 ?덈궡瑜?異붽??섏뿬 踰뺤쟻/?댁쁺??由ъ뒪?щ? 理쒖냼?뷀븿.
+
+---
+
+## 60. JS Base64 ?댁떆 罹먯떆 ?????댁떆 湲몄씠? ???쒖꽌???섑븳 異⑸룎 (CRITICAL)
+
+`btoa(encodeURIComponent(rawKey)).substring(0, N)` ?쇰줈 罹먯떆 ?ㅻ? ?앹꽦???? **援щ텇??mode ??媛 ???ㅼそ??諛곗튂?섍퀬 ?댁떆 湲몄씠(N)媛 吏㏃쑝硫?* ?쒕줈 ?ㅻⅨ 紐⑤뱶媛 ?숈씪???댁떆瑜??앹꽦?쒕떎.
+
+Base64??3諛붿씠????4臾몄옄 蹂?섏씠誘濡? `substring(0, 24)`???낅젰??**泥섏쓬 18諛붿씠?몃쭔** 諛섏쁺. ?쒓? ?대쫫(湲?먮떦 3諛붿씠??怨??앸뀈?붿씪???대? 18諛붿씠?몃? ?뚯쭊?섎㈃, ?ㅼそ??mode 李⑥씠(`teacher` vs `general`)媛 ?댁떆??諛섏쁺?섏? ?딅뒗??
 
 ```javascript
-// ❌ mode가 마지막 + 해시 짧음 → 모드별 동일 해시 → 캐시 충돌
-const keyParts = [name, gender, year, month, day, hour, calendar, mode]; // mode가 뒤쪽
-const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 24); // 18바이트만
+// ??mode媛 留덉?留?+ ?댁떆 吏㏃쓬 ??紐⑤뱶蹂??숈씪 ?댁떆 ??罹먯떆 異⑸룎
+const keyParts = [name, gender, year, month, day, hour, calendar, mode]; // mode媛 ?ㅼそ
+const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 24); // 18諛붿씠?몃쭔
 
-// ✅ mode를 첫 번째로 + 해시 길이 충분히
-const keyParts = [mode, name, gender, year, month, day, hour, calendar]; // mode가 앞쪽
-const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 32); // 24바이트
-```
+// ??mode瑜?泥?踰덉㎏濡?+ ?댁떆 湲몄씠 異⑸텇??const keyParts = [mode, name, gender, year, month, day, hour, calendar]; // mode媛 ?욎そ
+const hash = btoa(unescape(encodeURIComponent(keyParts.join('|')))).substring(0, 32); // 24諛붿씠??```
 
-**캐시 키 변경 시 체크리스트:**
-- [ ] 구분해야 할 필드(mode, type 등)를 키 배열의 **앞쪽**에 배치
-- [ ] 해시 길이를 전체 키의 고유성을 보장할 만큼 충분히 설정 (최소 32자 권장)
-- [ ] 캐시 키 접두사(prefix)를 버전업하여 기존 잘못된 캐시 무효화 (`v2_` → `v3_`)
-- [ ] 페이지 로드 시 구버전 캐시 자동 삭제 로직 추가
+**罹먯떆 ??蹂寃???泥댄겕由ъ뒪??**
+- [ ] 援щ텇?댁빞 ???꾨뱶(mode, type ??瑜???諛곗뿴??**?욎そ**??諛곗튂
+- [ ] ?댁떆 湲몄씠瑜??꾩껜 ?ㅼ쓽 怨좎쑀?깆쓣 蹂댁옣??留뚰겮 異⑸텇???ㅼ젙 (理쒖냼 32??沅뚯옣)
+- [ ] 罹먯떆 ???묐몢??prefix)瑜?踰꾩쟾?낇븯??湲곗〈 ?섎せ??罹먯떆 臾댄슚??(`v2_` ??`v3_`)
+- [ ] ?섏씠吏 濡쒕뱶 ??援щ쾭??罹먯떆 ?먮룞 ??젣 濡쒖쭅 異붽?
 
-> **사례 (2026-02-13)**: Fortune 앱에서 교사 사주(teacher)와 일반 사주(general) 결과가 동일한 localStorage 캐시 키로 저장되어, 일반 모드를 선택해도 교사 모드 결과가 반환됨. mode를 키 첫 번째로 이동 + 해시 32자로 확장 + `v2_` → `v3_` 접두사 변경으로 해결.
+> **?щ? (2026-02-13)**: Fortune ?깆뿉??援먯궗 ?ъ＜(teacher)? ?쇰컲 ?ъ＜(general) 寃곌낵媛 ?숈씪??localStorage 罹먯떆 ?ㅻ줈 ??λ릺?? ?쇰컲 紐⑤뱶瑜??좏깮?대룄 援먯궗 紐⑤뱶 寃곌낵媛 諛섑솚?? mode瑜???泥?踰덉㎏濡??대룞 + ?댁떆 32?먮줈 ?뺤옣 + `v2_` ??`v3_` ?묐몢??蹂寃쎌쑝濡??닿껐.
 
-## 61. Alpine.js CDN — unpkg 대신 jsdelivr 사용
+## 61. Alpine.js CDN ??unpkg ???jsdelivr ?ъ슜
 
-`unpkg.com`의 `@3.x.x` 같은 semver 와일드카드는 간헐적으로 해석 실패할 수 있다. Alpine.js가 로드되지 않으면 `x-data`, `@click`, `x-show` 등이 모두 작동하지 않아 UI 전체가 먹통이 된다.
+`unpkg.com`??`@3.x.x` 媛숈? semver ??쇰뱶移대뱶??媛꾪뿉?곸쑝濡??댁꽍 ?ㅽ뙣?????덈떎. Alpine.js媛 濡쒕뱶?섏? ?딆쑝硫?`x-data`, `@click`, `x-show` ?깆씠 紐⑤몢 ?묐룞?섏? ?딆븘 UI ?꾩껜媛 癒뱁넻???쒕떎.
 
 ```html
-<!-- ❌ unpkg + 와일드카드 → 간헐적 로딩 실패 가능 -->
+<!-- ??unpkg + ??쇰뱶移대뱶 ??媛꾪뿉??濡쒕뵫 ?ㅽ뙣 媛??-->
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-<!-- ✅ jsdelivr + 안정적인 범위 지정 -->
+<!-- ??jsdelivr + ?덉젙?곸씤 踰붿쐞 吏??-->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 ```
 
-**Alpine.js 의존 UI에 대한 방어 전략:**
-- 핵심 네비게이션(로그인 드롭다운 등)은 `onclick` 속성으로 vanilla JS fallback 추가
-- `if(!window.Alpine){ fallbackFunction() }` 패턴 사용
+**Alpine.js ?섏〈 UI?????諛⑹뼱 ?꾨왂:**
+- ?듭떖 ?ㅻ퉬寃뚯씠??濡쒓렇???쒕∼?ㅼ슫 ??? `onclick` ?띿꽦?쇰줈 vanilla JS fallback 異붽?
+- `if(!window.Alpine){ fallbackFunction() }` ?⑦꽩 ?ъ슜
 
-> **사례 (2026-02-13)**: PC 데스크톱 사용자 드롭다운 메뉴가 Alpine.js 미로드 시 클릭 무반응. jsdelivr CDN 변경 + vanilla JS fallback 추가로 해결.
+> **?щ? (2026-02-13)**: PC ?곗뒪?ы넲 ?ъ슜???쒕∼?ㅼ슫 硫붾돱媛 Alpine.js 誘몃줈?????대┃ 臾대컲?? jsdelivr CDN 蹂寃?+ vanilla JS fallback 異붽?濡??닿껐.
 
-## 62. Django 템플릿에 dict vs object 속성 접근 주의
+## 62. Django ?쒗뵆由우뿉 dict vs object ?띿꽦 ?묎렐 二쇱쓽
 
-Django 템플릿은 `{{ obj.attr }}` 구문으로 dict의 키와 object의 속성 모두 접근 가능하지만, **`{% if obj.role == 'user' %}` 같은 비교는 dict와 object 모두 작동하는 반면, `render_to_string`에 plain dict를 넘기면 `.created_at` 같은 추가 속성이 없어 다른 부분에서 에러**가 발생할 수 있다.
+Django ?쒗뵆由우? `{{ obj.attr }}` 援щЦ?쇰줈 dict???ㅼ? object???띿꽦 紐⑤몢 ?묎렐 媛?ν븯吏留? **`{% if obj.role == 'user' %}` 媛숈? 鍮꾧탳??dict? object 紐⑤몢 ?묐룞?섎뒗 諛섎㈃, `render_to_string`??plain dict瑜??섍린硫?`.created_at` 媛숈? 異붽? ?띿꽦???놁뼱 ?ㅻⅨ 遺遺꾩뿉???먮윭**媛 諛쒖깮?????덈떎.
 
 ```python
-# ❌ dict는 template에서 .role은 접근 가능하지만 .created_at이 없으면 에러
+# ??dict??template?먯꽌 .role? ?묎렐 媛?ν븯吏留?.created_at???놁쑝硫??먮윭
 return render(request, 'chat_message.html', {'message': {'role': 'system', 'content': '...'}})
 
-# ✅ SimpleNamespace로 속성 접근 보장
+# ??SimpleNamespace濡??띿꽦 ?묎렐 蹂댁옣
 from types import SimpleNamespace
 msg = SimpleNamespace(role='assistant', content='...', created_at=timezone.now())
 return render(request, 'chat_message.html', {'message': msg})
 ```
 
-> **사례 (2026-02-13)**: 챗봇 턴 초과 시 dict를 넘겨 template에서 `message.created_at` 접근 시 빈 값 렌더링. SimpleNamespace로 교체하여 해결.
+> **?щ? (2026-02-13)**: 梨쀫큸 ??珥덇낵 ??dict瑜??섍꺼 template?먯꽌 `message.created_at` ?묎렐 ??鍮?媛??뚮뜑留? SimpleNamespace濡?援먯껜?섏뿬 ?닿껐.
 
-## 63. HTMX 중복 로드 금지 (base.html과 자식 템플릿)
+## 63. HTMX 以묐났 濡쒕뱶 湲덉? (base.html怨??먯떇 ?쒗뵆由?
 
-`base.html`에서 이미 HTMX를 로드했는데, `{% block extra_js %}`에서 다시 `<script src="htmx.org">` 를 로드하면 HTMX가 두 번 초기화되어 이벤트 핸들러 중복, 예기치 않은 동작이 발생할 수 있다.
+`base.html`?먯꽌 ?대? HTMX瑜?濡쒕뱶?덈뒗?? `{% block extra_js %}`?먯꽌 ?ㅼ떆 `<script src="htmx.org">` 瑜?濡쒕뱶?섎㈃ HTMX媛 ??踰?珥덇린?붾릺???대깽???몃뱾??以묐났, ?덇린移??딆? ?숈옉??諛쒖깮?????덈떎.
 
-> **사례 (2026-02-13)**: `home.html`에서 HTMX를 중복 로드하여 제거.
-
----
-
-# Fortune 챗봇 아키텍처 (2026-02-13)
-
-## 챗봇 컨텍스트 참조 방식
-- 교사/일반 모드와 **별개** — 프로필의 사주 원국(natal_chart)만 기반
-- `build_system_prompt()` 참조 데이터: person_name, day_gan(일간), birth_year
-- DeepSeek-V3 모델 사용, StreamingHttpResponse로 실시간 응답
-- 세션당 최대 10회 질문, 7일 만료
-
-## 관련 파일
-- 모델: `fortune/models.py` (ChatSession, ChatMessage)
-- 뷰: `fortune/views_chat.py`
-- AI 통합: `fortune/utils/chat_ai.py` (DeepSeek streaming)
-- 시스템 프롬프트: `fortune/utils/chat_logic.py`
-- 템플릿: `fortune/templates/fortune/chat_main.html`, `partials/chat_room.html`, `partials/chat_message.html`
+> **?щ? (2026-02-13)**: `home.html`?먯꽌 HTMX瑜?以묐났 濡쒕뱶?섏뿬 ?쒓굅.
 
 ---
 
-## 64. OneToOneField 접근 시 존재 보장 (Safety First)
+# Fortune 梨쀫큸 ?꾪궎?띿쿂 (2026-02-13)
 
-`OneToOneField` (예: `School` - `SchoolConfig`) 관계에서 대상 객체가 어떤 이유로든 누락되었을 경우, 속성 접근(`school.config`) 시 `DoesNotExist` 에러가 발생하여 500 에러를 유발할 수 있다.
+## 梨쀫큸 而⑦뀓?ㅽ듃 李몄“ 諛⑹떇
+- 援먯궗/?쇰컲 紐⑤뱶? **蹂꾧컻** ???꾨줈?꾩쓽 ?ъ＜ ?먭뎅(natal_chart)留?湲곕컲
+- `build_system_prompt()` 李몄“ ?곗씠?? person_name, day_gan(?쇨컙), birth_year
+- DeepSeek-V3 紐⑤뜽 ?ъ슜, StreamingHttpResponse濡??ㅼ떆媛??묐떟
+- ?몄뀡??理쒕? 10??吏덈Ц, 7??留뚮즺
 
-**해결 패턴**:
-- 뷰(View)에서 속성에 직접 접근하기보다 `get_or_create()`를 사용하여 존재를 보장한 뒤 사용한다.
+## 愿???뚯씪
+- 紐⑤뜽: `fortune/models.py` (ChatSession, ChatMessage)
+- 酉? `fortune/views_chat.py`
+- AI ?듯빀: `fortune/utils/chat_ai.py` (DeepSeek streaming)
+- ?쒖뒪???꾨＼?꾪듃: `fortune/utils/chat_logic.py`
+- ?쒗뵆由? `fortune/templates/fortune/chat_main.html`, `partials/chat_room.html`, `partials/chat_message.html`
+
+---
+
+## 64. OneToOneField ?묎렐 ??議댁옱 蹂댁옣 (Safety First)
+
+`OneToOneField` (?? `School` - `SchoolConfig`) 愿怨꾩뿉?????媛앹껜媛 ?대뼡 ?댁쑀濡쒕뱺 ?꾨씫?섏뿀??寃쎌슦, ?띿꽦 ?묎렐(`school.config`) ??`DoesNotExist` ?먮윭媛 諛쒖깮?섏뿬 500 ?먮윭瑜??좊컻?????덈떎.
+
+**?닿껐 ?⑦꽩**:
+- 酉?View)?먯꽌 ?띿꽦??吏곸젒 ?묎렐?섍린蹂대떎 `get_or_create()`瑜??ъ슜?섏뿬 議댁옱瑜?蹂댁옣?????ъ슜?쒕떎.
 
 ```python
-# ❌ 위험: config가 없으면 DoesNotExist 에러 발생
+# ???꾪뿕: config媛 ?놁쑝硫?DoesNotExist ?먮윭 諛쒖깮
 config = school.config
 
-# ✅ 안전: 없으면 생성하여 반환
+# ???덉쟾: ?놁쑝硫??앹꽦?섏뿬 諛섑솚
 config, created = SchoolConfig.objects.get_or_create(school=school)
 ```
 
-> **사례 (2026-02-13)**: 서버 배포 환경에서 일부 `School` 데이터에 `SchoolConfig`가 매칭되지 않아 대시보드 접근 시 500 에러 발생. 모든 관련 뷰에 `get_or_create` 로직을 추가하여 해결.
+> **?щ? (2026-02-13)**: ?쒕쾭 諛고룷 ?섍꼍?먯꽌 ?쇰? `School` ?곗씠?곗뿉 `SchoolConfig`媛 留ㅼ묶?섏? ?딆븘 ??쒕낫???묎렐 ??500 ?먮윭 諛쒖깮. 紐⑤뱺 愿??酉곗뿉 `get_or_create` 濡쒖쭅??異붽??섏뿬 ?닿껐.
 
 ---
 
-**마지막 업데이트:** 2026-02-13
+**留덉?留??낅뜲?댄듃:** 2026-02-13
 
 ## 65. Enterprise Rollout Baseline (2026-02-15)
 
@@ -1399,101 +1401,151 @@ Apply in addition to existing rules.
 
 ---
 
-## 66. 접근성(A11y) 필수 규칙 (CRITICAL)
+## 66. ?묎렐??A11y) ?꾩닔 洹쒖튃 (CRITICAL)
 
-### 66.1 모달/드롭다운 키보드 접근성
-- [ ] 모달 열릴 때 첫 번째 포커스 가능한 요소에 자동 포커스
-- [ ] ESC 키로 모달/드롭다운 닫기 (`@keydown.escape`)
-- [ ] 모달 외부 클릭으로 닫기 (`@click.outside`)
-- [ ] 모달 닫힐 때 트리거 요소로 포커스 복귀
+### 66.1 紐⑤떖/?쒕∼?ㅼ슫 ?ㅻ낫???묎렐??- [ ] 紐⑤떖 ?대┫ ??泥?踰덉㎏ ?ъ빱??媛?ν븳 ?붿냼???먮룞 ?ъ빱??- [ ] ESC ?ㅻ줈 紐⑤떖/?쒕∼?ㅼ슫 ?リ린 (`@keydown.escape`)
+- [ ] 紐⑤떖 ?몃? ?대┃?쇰줈 ?リ린 (`@click.outside`)
+- [ ] 紐⑤떖 ?ロ옄 ???몃━嫄??붿냼濡??ъ빱??蹂듦?
 
-### 66.2 포커스 스타일
-모든 인터랙티브 요소에 `:focus-visible` 스타일 필수.
-`outline-none`을 쓸 때는 반드시 대체 포커스 표시를 함께 적용.
+### 66.2 ?ъ빱???ㅽ???紐⑤뱺 ?명꽣?숉떚釉??붿냼??`:focus-visible` ?ㅽ????꾩닔.
+`outline-none`?????뚮뒗 諛섎뱶???泥??ъ빱???쒖떆瑜??④퍡 ?곸슜.
 
 ```css
-/* base.html 전역 */
+/* base.html ?꾩뿭 */
 :focus-visible {
     outline: 2px solid #8b5cf6;
     outline-offset: 2px;
 }
 ```
 
-### 66.3 색 대비 최소 기준
-- 본문 텍스트: `text-gray-700` 이상 (배경 `#E0E5EC` 기준)
-- 보조 텍스트: `text-gray-500` 이상
-- `text-gray-400`은 장식 요소(placeholder 등)에만 허용
+### 66.3 ???鍮?理쒖냼 湲곗?
+- 蹂몃Ц ?띿뒪?? `text-gray-700` ?댁긽 (諛곌꼍 `#E0E5EC` 湲곗?)
+- 蹂댁“ ?띿뒪?? `text-gray-500` ?댁긽
+- `text-gray-400`? ?μ떇 ?붿냼(placeholder ???먮쭔 ?덉슜
 
-### 66.4 이미지 alt 텍스트 필수
-모든 `<img>` 태그에 `alt` 속성 필수. 장식용 이미지는 `alt=""`.
+### 66.4 ?대?吏 alt ?띿뒪???꾩닔
+紐⑤뱺 `<img>` ?쒓렇??`alt` ?띿꽦 ?꾩닔. ?μ떇???대?吏??`alt=""`.
 
-### 작업 완료 후 A11y 체크리스트
-- [ ] 모달/드롭다운: ESC 닫기 + 포커스 트랩 동작 확인
-- [ ] Tab 키로 모든 인터랙티브 요소 순회 가능
-- [ ] 색 대비: `text-gray-400` 이하 본문 텍스트 없음
-- [ ] 이미지: alt 속성 누락 없음
+### ?묒뾽 ?꾨즺 ??A11y 泥댄겕由ъ뒪??- [ ] 紐⑤떖/?쒕∼?ㅼ슫: ESC ?リ린 + ?ъ빱???몃옪 ?숈옉 ?뺤씤
+- [ ] Tab ?ㅻ줈 紐⑤뱺 ?명꽣?숉떚釉??붿냼 ?쒗쉶 媛??- [ ] ???鍮? `text-gray-400` ?댄븯 蹂몃Ц ?띿뒪???놁쓬
+- [ ] ?대?吏: alt ?띿꽦 ?꾨씫 ?놁쓬
 
 ---
 
-## 67. 이미지 최적화 규칙
+## 67. ?대?吏 理쒖쟻??洹쒖튃
 
-### lazy-load 필수
-뷰포트 밖의 이미지는 반드시 `loading="lazy"` 적용.
-Above-the-fold(첫 화면) 이미지는 제외.
+### lazy-load ?꾩닔
+酉고룷??諛뽰쓽 ?대?吏??諛섎뱶??`loading="lazy"` ?곸슜.
+Above-the-fold(泥??붾㈃) ?대?吏???쒖쇅.
 
 ```html
-<!-- ❌ -->
+<!-- ??-->
 <img src="..." alt="...">
 
-<!-- ✅ -->
+<!-- ??-->
 <img src="..." alt="..." loading="lazy">
 ```
 
-### Cloudinary 자동 최적화
-Cloudinary URL 사용 시 `f_auto,q_auto` 변환 적용 권장.
-브라우저에 맞는 최적 포맷(WebP/AVIF)과 품질을 자동 선택.
+### Cloudinary ?먮룞 理쒖쟻??Cloudinary URL ?ъ슜 ??`f_auto,q_auto` 蹂???곸슜 沅뚯옣.
+釉뚮씪?곗???留욌뒗 理쒖쟻 ?щ㎎(WebP/AVIF)怨??덉쭏???먮룞 ?좏깮.
 
 ```python
-# ❌ 원본 URL 그대로
-image_url = "https://res.cloudinary.com/.../upload/v123/image.jpg"
+# ???먮낯 URL 洹몃?濡?image_url = "https://res.cloudinary.com/.../upload/v123/image.jpg"
 
-# ✅ 자동 최적화 변환 추가
+# ???먮룞 理쒖쟻??蹂??異붽?
 image_url = "https://res.cloudinary.com/.../upload/f_auto,q_auto/v123/image.jpg"
 ```
 
-> **참고**: 프로젝트에 이미 `core/templatetags/cloudinary_extras.py`의 `|optimize` 필터가 존재하므로, 템플릿에서는 `{{ image_url|optimize }}` 사용 권장.
+> **李멸퀬**: ?꾨줈?앺듃???대? `core/templatetags/cloudinary_extras.py`??`|optimize` ?꾪꽣媛 議댁옱?섎?濡? ?쒗뵆由우뿉?쒕뒗 `{{ image_url|optimize }}` ?ъ슜 沅뚯옣.
 
 ---
 
-## 68. 정적 파일 캐시 버스팅 (향후 개선)
+## 68. ?뺤쟻 ?뚯씪 罹먯떆 踰꾩뒪??(?ν썑 媛쒖꽑)
 
-현재: `StaticFilesStorage` (파일명 해시 없음)
-목표: `WhiteNoise CompressedManifestStaticFilesStorage` 전환
+?꾩옱: `StaticFilesStorage` (?뚯씪紐??댁떆 ?놁쓬)
+紐⑺몴: `WhiteNoise CompressedManifestStaticFilesStorage` ?꾪솚
 
-### 전환 시 주의사항
-- collectstatic 실행 필수 (해시 파일명 생성)
-- 템플릿의 `{% static %}` 태그가 자동으로 해시 URL 생성
-- Tailwind CDN 사용 중이라 CSS는 해당 없음, JS/이미지에 적용
-
----
-
-## 69. Tailwind CDN → 빌드 전환 로드맵 (향후)
-
-### Phase 1: 병행 운영
-- Tailwind CLI로 빌드된 CSS 파일 생성
-- base.html에서 CDN 스크립트와 빌드 CSS를 병행 로드
-- 2주간 운영하며 스타일 차이 확인
-
-### Phase 2: CDN 제거
-- CDN 스크립트 삭제
-- `tailwind.config.js`로 완전 전환
-- CSP에서 `unsafe-eval` 제거 가능
-
-### 기대 효과
-- 초기 로드 성능 향상 (런타임 컴파일 제거)
-- CSP 강화 (`unsafe-eval` 제거)
-- 빌드 산출물 크기 축소 (사용한 클래스만 포함)
+### ?꾪솚 ??二쇱쓽?ы빆
+- collectstatic ?ㅽ뻾 ?꾩닔 (?댁떆 ?뚯씪紐??앹꽦)
+- ?쒗뵆由우쓽 `{% static %}` ?쒓렇媛 ?먮룞?쇰줈 ?댁떆 URL ?앹꽦
+- Tailwind CDN ?ъ슜 以묒씠??CSS???대떦 ?놁쓬, JS/?대?吏???곸슜
 
 ---
 
-**마지막 업데이트:** 2026-02-15
+## 69. Tailwind CDN ??鍮뚮뱶 ?꾪솚 濡쒕뱶留?(?ν썑)
+
+### Phase 1: 蹂묓뻾 ?댁쁺
+- Tailwind CLI濡?鍮뚮뱶??CSS ?뚯씪 ?앹꽦
+- base.html?먯꽌 CDN ?ㅽ겕由쏀듃? 鍮뚮뱶 CSS瑜?蹂묓뻾 濡쒕뱶
+- 2二쇨컙 ?댁쁺?섎ŉ ?ㅽ???李⑥씠 ?뺤씤
+
+### Phase 2: CDN ?쒓굅
+- CDN ?ㅽ겕由쏀듃 ??젣
+- `tailwind.config.js`濡??꾩쟾 ?꾪솚
+- CSP?먯꽌 `unsafe-eval` ?쒓굅 媛??
+### 湲곕? ?④낵
+- 珥덇린 濡쒕뱶 ?깅뒫 ?μ긽 (?고???而댄뙆???쒓굅)
+- CSP 媛뺥솕 (`unsafe-eval` ?쒓굅)
+- 鍮뚮뱶 ?곗텧臾??ш린 異뺤냼 (?ъ슜???대옒?ㅻ쭔 ?ы븿)
+
+---
+
+**留덉?留??낅뜲?댄듃:** 2026-02-15
+
+## [Encoding Incident] Korean Text Corruption Guardrail (2026-02-17)
+- Problem pattern:
+  - Korean UI strings were partially corrupted during iterative edits.
+  - Display encoding and file encoding were confused during terminal-based verification.
+- Root cause summary:
+  - Terminal mojibake was mistaken for source truth.
+  - Broad rewrite operations introduced/propagated corruption.
+  - Functional edits were mixed with encoding recovery in the same pass.
+- Mandatory procedure:
+  1. Freeze feature edits.
+  2. Normalize files to UTF-8 (no BOM) first.
+  3. Restore Korean UI strings from known-good text.
+  4. Re-apply logic/style changes.
+  5. Run `node --check` and `python manage.py check`.
+- Prevention:
+  - Prefer small `apply_patch` diffs over bulk rewrites for Korean-heavy files.
+  - Keep one canonical text representation per file (plain UTF-8 or escapes), not mixed.
+  - If mojibake appears, recover text first, then continue feature work.
+
+## [UI Change Control] Existing Service Protection Rule (2026-02-17)
+- 紐⑹쟻:
+  - ?쇰? ?붾㈃ 媛쒖꽑???ㅻⅨ ?쒕퉬??UI源뚯? ?붾뱾吏 ?딅룄濡?蹂寃?踰붿쐞瑜??듭젣?쒕떎.
+
+- ?먯튃:
+  1. 蹂寃??쒖옉 ??踰붿쐞瑜?紐낆떆?쒕떎 (`global` / `app` / `page`).
+  2. 湲곗〈 ?쒕퉬?ㅼ쓽 ?뺣┰??UI ?몄뼱??議댁쨷?섎ŉ 媛뺤젣 ?듭씪?섏? ?딅뒗??
+  3. 怨듭슜 ?ㅽ???base, shared component) ?섏젙? ?꾩슂 理쒖냼濡??쒗븳?쒕떎.
+  4. UI 蹂寃???湲곕뒫 ?숈옉 ?뚭?瑜?癒쇱? ?뺤씤?쒕떎 (紐⑤떖 ?ロ옒, ?쇱슦?? ESC, ?ъ빱??.
+
+- 臾몄꽌??
+  - 蹂寃????  - 蹂寃??댁쑀
+  - 鍮꾨????곹뼢 ?놁쓬) 寃利?寃곌낵
+
+- ?몄퐫???곌퀎 洹쒖튃:
+  - ?쒓뎅??源⑥쭚 諛쒓껄 ??UI 媛쒖꽑蹂대떎 ?몄퐫??蹂듦뎄瑜??곗꽑?쒕떎.
+  - 蹂듦뎄 ?쒖꽌: ?몄퐫???뺤긽??-> 臾멸뎄 蹂듦뎄 -> 湲곕뒫/?붿옄??諛섏쁺.
+
+## [Canonical Priority] Maintenance Baseline (2026-02-17)
+?꾨옒 ??ぉ? 湲곗〈 臾몄꽌 ??援ъ떇/異⑸룎 洹쒖튃蹂대떎 ?곗꽑?⑸땲??
+
+1. UI 蹂寃?踰붿쐞 癒쇱? ?좎뼵
+- `global` / `app` / `page` 踰붿쐞瑜?紐낆떆?????묒뾽?쒕떎.
+- 踰붿쐞 諛?怨듭슜 ?ㅽ????섏젙? 湲덉??쒕떎.
+
+2. 湲곗〈 ?쒕퉬??UI 蹂댁〈
+- ?댁쁺 以묒씤 ?쒕퉬?ㅼ쓽 ?쒓컖 ?몄뼱??湲곕낯?곸쑝濡??좎??쒕떎.
+- ?꾨㈃ 媛쒗렪? 紐낆떆 ?붿껌???덉쓣 ?뚮쭔 ?섑뻾?쒕떎.
+
+3. ?숈옉 ?뚭? ?곗꽑 ?먭?
+- UI 蹂寃???諛섎뱶???먭?:
+  - 留곹겕/?쇱슦??  - 紐⑤떖 ?ロ옒(諛곌꼍 ?대┃, ESC)
+  - ?ㅻ낫???ъ빱???먮쫫
+
+4. ?쒓? ?띿뒪??蹂댁쟾
+- ?쒓? 源⑥쭚 諛쒓껄 ??湲곕뒫 蹂寃쎈낫???띿뒪??蹂듦뎄瑜??곗꽑?쒕떎.
+- 蹂듦뎄 ??湲곕뒫/?붿옄??蹂寃쎌쓣 ?ъ쟻?⑺븳??
+

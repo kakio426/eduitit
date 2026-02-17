@@ -939,7 +939,7 @@
         <!-- Ctrl+K 검색 모달 (V2) -->
         {% if search_products_json %}
         <div id="searchModal" class="fixed inset-0 z-[110] hidden" role="dialog" aria-modal="true" aria-label="서비스 검색">
-            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closeSearchModal()"></div>
+            <div id="searchModalBackdrop" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
             <div class="fixed inset-x-0 top-[15vh] z-10 flex justify-center px-4">
                 <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                     <!-- 검색 입력 -->
@@ -971,6 +971,7 @@
             var products = {{ search_products_json|safe }};
             var modal = document.getElementById('searchModal');
             var input = document.getElementById('searchInput');
+            var backdrop = document.getElementById('searchModalBackdrop');
             var results = document.getElementById('searchResults');
             var activeIdx = -1;
             var filteredItems = [];
@@ -1089,6 +1090,18 @@
                 document.body.style.overflow = prevBodyOverflow || '';
                 prevBodyOverflow = null;
             };
+
+            if (backdrop) {
+                backdrop.addEventListener('click', function() {
+                    closeSearchModal();
+                });
+            }
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal || e.target === backdrop) {
+                    closeSearchModal();
+                }
+            });
 
             input.addEventListener('input', function() { doSearch(this.value); });
 

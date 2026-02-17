@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ game.title }} 규칙 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+        <div class="clay-card p-8">
+            <div class="text-5xl mb-4">{{ game.emoji }}</div>
+            <h1 class="text-4xl font-black text-gray-800">{{ game.title }} 규칙</h1>
+            <p class="text-gray-600 mt-2">{{ game.subtitle }}</p>
+            <p class="text-gray-700 mt-4 font-bold">승리 조건: {{ game.goal }}</p>
+
+            <ol class="mt-6 space-y-3 text-gray-700 list-decimal list-inside">
+                {% for rule in game.rules %}
+                <li>{{ rule }}</li>
+                {% endfor %}
+            </ol>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="{% url 'fairy_games:play' variant %}?mode=local"
+                   class="px-5 py-3 rounded-xl bg-purple-600 text-white font-bold">로컬 대결 시작</a>
+                <a href="{% url 'fairy_games:play' variant %}?mode=ai&difficulty=medium"
+                   class="px-5 py-3 rounded-xl bg-blue-600 text-white font-bold">AI 대결 시작</a>
+                <a href="{% url 'fairy_games:index' %}"
+                   class="px-5 py-3 rounded-xl bg-gray-100 text-gray-800 font-bold">목록으로</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

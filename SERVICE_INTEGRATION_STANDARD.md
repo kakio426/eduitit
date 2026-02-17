@@ -1,75 +1,124 @@
-# 🛠️ Eduitit Service Integration Standard (SIS)
-
-이 문서는 `eduitit` 서비스에 새로운 기능을 추가할 때 사용하는 **공통 표준 가이드**입니다. 이 문석의 규격을 따름으로써 코드의 일관성을 유지하고, 버그를 최소화하며, AI가 즉시 실행 가능한 코드를 생성할 수 있도록 돕습니다.
-
----
-
-## 1. 서비스 소개 표준 (Blueprint)
-새로운 서비스를 정의할 때 아래 요소를 포함하여 기술합니다.
-
-- **아이콘 & 테마**: 이모지(예: 🎨) + 메인 컬러(`purple`, `green`, `red`, `blue`, `orange`)
-- **App 위치 (독립성)**: 새로운 대형 서비스는 반드시 별도의 Django App으로 구성합니다. 독립적인 `models.py`, `views.py`, `urls.py`는 필수입니다.
-- **모달 풍성함 (Rich Content)**: 서비스를 `Product` 모델에 등록할 때, 다음 요소를 반드시 포함하여 프리뷰 모달이 "빈약해" 보이지 않게 합니다.
-  - **Lead Text**: 서비스의 핵심 가치를 담은 매력적인 한 줄 문구.
-  - **Description**: 서비스 사용법과 기대 효과를 포함한 2~3문장 이상의 설명.
-  - **ProductFeatures**: 최소 3개 이상의 핵심 기능(아이콘+제목+설명)을 등록해야 합니다.
-- **용어 표현 (Kid-Friendly)**: 학생용 서비스인 경우 MBTI, 진단 등 딱딱한 용어 대신 '캐릭터', '친구 찾기' 등 학생 친화적인 용어를 사용합니다.
-- **Title 일관성 (SSOT)**: 템플릿이나 뷰에서 `product.title`을 조건문이나 검색어로 사용할 경우, 반드시 `products/management/commands/ensure_<app_name>.py`에 정의된 공식 타이틀과 100% 일치해야 합니다. (잘못된 예: DB에는 '우리반 캐릭터'인데 코드에는 '학교생활 캐릭터'로 적는 경우)
+﻿## [Canonical Top Summary] 2026-02-17
+- Declare UI change scope first: global/app/page
+- Do not force one style on all services; preserve existing stable UI
+- Prioritize behavior parity over visual polish
+- Recover Korean text integrity before continuing feature work
+- Validate with python manage.py check (+ node --check when JS changes)
 
 ---
 
-## 2. 인프라 및 기술 스택 표준 (Infrastructure Stack)
-본 프로젝트는 다음의 SSOT(Single Source of Truth) 기술 스택을 기반으로 합니다.
+## [Canonical Body v2] 2026-02-17
+이 섹션은 서비스 통합 작업 시 우선 적용하는 최신 기준이다. 아래 기준과 기존 본문이 충돌하면 이 섹션을 우선한다.
 
-- **Framework**: **Django Vanilla (4.2+)** - 복잡한 의존성 없이 장고의 기본 기능을 우선 활용합니다.
-- **Deployment**: **Railway** - `Procfile` 기반의 배포를 준수하며, 모든 설정은 환경 변수(`env`)로 관리합니다.
-- **Database**: **Neon (Postgres)** - 서버리스 DB 환경이므로, 배포 전 반드시 `makemigrations`를 완료하고 배포 시 자동으로 실행되도록 설정합니다.
-- **Dependency Management**: 새로운 라이브러리(예: `qrcode`, `openpyxl`)를 로컬에서 설치한 경우, 반드시 즉시 `requirements.txt`에 추가해야 합니다. 배포 환경(Railway)은 이 파일을 기준으로 빌드되므로, 누락 시 배포 실패의 원인이 됩니다.
-- **Admin Path**: 보안을 위해 `secret-admin-kakio/` 경로를 사용합니다.
+### 1) 변경 범위 선언
+- 모든 UI 변경은 작업 시작 전에 범위를 선언한다: `global`, `app-level`, `single-page`.
+- 범위가 `global`이 아니면 공통 레이아웃(`base.html`, 공용 CSS/JS)은 변경하지 않는다.
+
+### 2) 기존 서비스 보호
+- 이미 안정적으로 운영 중인 서비스의 UI 언어/동작은 기본적으로 유지한다.
+- 신규 서비스 추가 때문에 기존 서비스를 동일 스타일로 강제 통합하지 않는다.
+- 시각 개선보다 동작 보존(라우팅, 모달 닫기, ESC, 포커스 복귀)을 우선한다.
+
+### 3) 한국어 텍스트 무결성
+- 모든 파일은 UTF-8(무 BOM)으로 유지한다.
+- 한글이 많은 파일에서 파이프 기반 파일 재기록(`Get-Content | Set-Content`)을 금지한다.
+- 텍스트 손상(깨짐/모지바케) 의심 시 기능 작업을 중단하고, 텍스트 복구 후 기능 변경을 재적용한다.
+
+### 4) 장기/게임형 서비스 기준
+- 룰 정확성(정석 규칙)과 상태 일관성을 최우선으로 검증한다.
+- 보드/말 스타일 개선은 규칙 정확성 검증 이후 단계적으로 적용한다.
+- 상호작용 UI(선택/강조/취소)는 초등학생 사용성 기준(명확한 시각 피드백, 충분한 터치 영역)으로 검수한다.
+
+### 5) 배포 전 필수 검증
+- `python manage.py check`
+- JS 변경 시 `node --check <changed_file.js>`
+- 대시보드 진입 -> 서비스 모달 -> 서비스 실행 경로 수동 점검
+
+### 6) 문서 동기화 규칙
+- 아래 문서 3종은 같은 날짜 기준으로 동기화한다.
+- `claude.md`
+- `SERVICE_INTEGRATION_STANDARD.md`
+- `codex/SKILL.md`
+- 기능/정책 변경 시 3개 문서의 충돌 여부를 함께 점검한다.
+
+---
+## [Legacy Reference Notice]
+- 아래 본문은 과거 운영/기록 내용(레거시)이며 일부 텍스트 깨짐이 포함될 수 있다.
+- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v2`를 우선 적용한다.
+- 레거시 본문은 삭제하지 않고 보존한다.
+
+# ?썱截?Eduitit Service Integration Standard (SIS)
+
+??臾몄꽌??`eduitit` ?쒕퉬?ㅼ뿉 ?덈줈??湲곕뒫??異붽??????ъ슜?섎뒗 **怨듯넻 ?쒖? 媛?대뱶**?낅땲?? ??臾몄꽍??洹쒓꺽???곕쫫?쇰줈??肄붾뱶???쇨??깆쓣 ?좎??섍퀬, 踰꾧렇瑜?理쒖냼?뷀븯硫? AI媛 利됱떆 ?ㅽ뻾 媛?ν븳 肄붾뱶瑜??앹꽦?????덈룄濡??뺤뒿?덈떎.
 
 ---
 
-## 3. 기술적 격리 표준 (Technical Isolation Rules)
-각 서비스가 '기생'하지 않고 독립적으로 작동하도록 다음 구조를 반드시 준수합니다.
+## 1. ?쒕퉬???뚭컻 ?쒖? (Blueprint)
+?덈줈???쒕퉬?ㅻ? ?뺤쓽?????꾨옒 ?붿냼瑜??ы븿?섏뿬 湲곗닠?⑸땲??
 
-- **URL Namespace**: `config/urls.py`에 등록 시 반드시 `namespace`를 지정합니다.
-  - 예: `path('ssambti/', include('ssambti.urls', namespace='ssambti'))`
-- **Template Scoping**: 템플릿 파일은 반드시 `app_name/templates/app_name/` 폴더 안에 위치해야 합니다. 
+- **?꾩씠肄?& ?뚮쭏**: ?대え吏(?? ?렓) + 硫붿씤 而щ윭(`purple`, `green`, `red`, `blue`, `orange`)
+- **App ?꾩튂 (?낅┰??**: ?덈줈??????쒕퉬?ㅻ뒗 諛섎뱶??蹂꾨룄??Django App?쇰줈 援ъ꽦?⑸땲?? ?낅┰?곸씤 `models.py`, `views.py`, `urls.py`???꾩닔?낅땲??
+- **紐⑤떖 ?띿꽦??(Rich Content)**: ?쒕퉬?ㅻ? `Product` 紐⑤뜽???깅줉???? ?ㅼ쓬 ?붿냼瑜?諛섎뱶???ы븿?섏뿬 ?꾨━酉?紐⑤떖??"鍮덉빟?? 蹂댁씠吏 ?딄쾶 ?⑸땲??
+  - **Lead Text**: ?쒕퉬?ㅼ쓽 ?듭떖 媛移섎? ?댁? 留ㅻ젰?곸씤 ??以?臾멸뎄.
+  - **Description**: ?쒕퉬???ъ슜踰뺢낵 湲곕? ?④낵瑜??ы븿??2~3臾몄옣 ?댁긽???ㅻ챸.
+  - **ProductFeatures**: 理쒖냼 3媛??댁긽???듭떖 湲곕뒫(?꾩씠肄??쒕ぉ+?ㅻ챸)???깅줉?댁빞 ?⑸땲??
+- **?⑹뼱 ?쒗쁽 (Kid-Friendly)**: ?숈깮???쒕퉬?ㅼ씤 寃쎌슦 MBTI, 吏꾨떒 ???깅뵳???⑹뼱 ???'罹먮┃??, '移쒓뎄 李얘린' ???숈깮 移쒗솕?곸씤 ?⑹뼱瑜??ъ슜?⑸땲??
+- **Title ?쇨???(SSOT)**: ?쒗뵆由우씠??酉곗뿉??`product.title`??議곌굔臾몄씠??寃?됱뼱濡??ъ슜??寃쎌슦, 諛섎뱶??`products/management/commands/ensure_<app_name>.py`???뺤쓽??怨듭떇 ??댄?怨?100% ?쇱튂?댁빞 ?⑸땲?? (?섎せ???? DB?먮뒗 '?곕━諛?罹먮┃???몃뜲 肄붾뱶?먮뒗 '?숆탳?앺솢 罹먮┃??濡??곷뒗 寃쎌슦)
+
+---
+
+## 2. ?명봽??諛?湲곗닠 ?ㅽ깮 ?쒖? (Infrastructure Stack)
+蹂??꾨줈?앺듃???ㅼ쓬??SSOT(Single Source of Truth) 湲곗닠 ?ㅽ깮??湲곕컲?쇰줈 ?⑸땲??
+
+- **Framework**: **Django Vanilla (4.2+)** - 蹂듭옟???섏〈???놁씠 ?κ퀬??湲곕낯 湲곕뒫???곗꽑 ?쒖슜?⑸땲??
+- **Deployment**: **Railway** - `Procfile` 湲곕컲??諛고룷瑜?以?섑븯硫? 紐⑤뱺 ?ㅼ젙? ?섍꼍 蹂??`env`)濡?愿由ы빀?덈떎.
+- **Database**: **Neon (Postgres)** - ?쒕쾭由ъ뒪 DB ?섍꼍?대?濡? 諛고룷 ??諛섎뱶??`makemigrations`瑜??꾨즺?섍퀬 諛고룷 ???먮룞?쇰줈 ?ㅽ뻾?섎룄濡??ㅼ젙?⑸땲??
+- **Dependency Management**: ?덈줈???쇱씠釉뚮윭由??? `qrcode`, `openpyxl`)瑜?濡쒖뺄?먯꽌 ?ㅼ튂??寃쎌슦, 諛섎뱶??利됱떆 `requirements.txt`??異붽??댁빞 ?⑸땲?? 諛고룷 ?섍꼍(Railway)? ???뚯씪??湲곗??쇰줈 鍮뚮뱶?섎?濡? ?꾨씫 ??諛고룷 ?ㅽ뙣???먯씤???⑸땲??
+- **Admin Path**: 蹂댁븞???꾪빐 `secret-admin-kakio/` 寃쎈줈瑜??ъ슜?⑸땲??
+
+---
+
+## 3. 湲곗닠??寃⑸━ ?쒖? (Technical Isolation Rules)
+媛??쒕퉬?ㅺ? '湲곗깮'?섏? ?딄퀬 ?낅┰?곸쑝濡??묐룞?섎룄濡??ㅼ쓬 援ъ“瑜?諛섎뱶??以?섑빀?덈떎.
+
+- **URL Namespace**: `config/urls.py`???깅줉 ??諛섎뱶??`namespace`瑜?吏?뺥빀?덈떎.
+  - ?? `path('ssambti/', include('ssambti.urls', namespace='ssambti'))`
+- **Template Scoping**: ?쒗뵆由??뚯씪? 諛섎뱶??`app_name/templates/app_name/` ?대뜑 ?덉뿉 ?꾩튂?댁빞 ?⑸땲?? 
   - (O) `ssambti/templates/ssambti/main.html`
-  - [Rule] 절대 타 앱의 템플릿(예: `fortune/zoo_main.html`)을 빌려 쓰지 마십시오.
-- **Static Scoping**: 정적 파일은 반드시 `app_name/static/app_name/` 경로를 준수하여 타 앱과의 파일명 충돌을 방지합니다. (예: `studentmbti/static/studentmbti/images/`)
-- **Data Isolation**: 대량의 정적 매핑 데이터(예: 캐릭터 결과 문구)는 `views.py`에 두지 않고 별도의 `student_mbti_data.py` (또는 `constants.py`)로 분리하여 임포트합니다.
+  - [Rule] ?덈? ? ?깆쓽 ?쒗뵆由??? `fortune/zoo_main.html`)??鍮뚮젮 ?곗? 留덉떗?쒖삤.
+- **Static Scoping**: ?뺤쟻 ?뚯씪? 諛섎뱶??`app_name/static/app_name/` 寃쎈줈瑜?以?섑븯??? ?깃낵???뚯씪紐?異⑸룎??諛⑹??⑸땲?? (?? `studentmbti/static/studentmbti/images/`)
+- **Data Isolation**: ??됱쓽 ?뺤쟻 留ㅽ븨 ?곗씠???? 罹먮┃??寃곌낵 臾멸뎄)??`views.py`???먯? ?딄퀬 蹂꾨룄??`student_mbti_data.py` (?먮뒗 `constants.py`)濡?遺꾨━?섏뿬 ?꾪룷?명빀?덈떎.
 
 ---
 
-## 3.1. 교실용 서비스 운영 표준 (Teacher-Student Interaction)
+## 3.1. 援먯떎???쒕퉬???댁쁺 ?쒖? (Teacher-Student Interaction)
 
-학급 전체가 참여하는 서비스(예: 검사, 퀴즈)는 다음의 **와이어프레임 구조**를 표준으로 합니다.
+?숆툒 ?꾩껜媛 李몄뿬?섎뒗 ?쒕퉬???? 寃?? ?댁쫰)???ㅼ쓬??**??댁뼱?꾨젅??援ъ“**瑜??쒖??쇰줈 ?⑸땲??
 
-1. **교사 (Manager Profile)**: 로그인 상태에서 세션(Session/UUID)을 생성하고 실시간 대시보드를 확인합니다.
-2. **학생 (Guest Flow)**: 별도의 회원가입/로그인 없이, 교사가 생성한 QR 코드나 URL(UUID 포함)을 통해 즉시 활동에 참여합니다. 
-3. **참여 방식**: 학생은 이름(닉네임)과 번호 정도의 최소 정보만 입력 후 결과까지 비로그인 상태로 유지됩니다.
-4. **결과 영속성**: 학생의 결과는 `models.py`에 저장되나, 학생 개인은 세션 브라우저 종료 시 권한이 만료되므로 교사가 대시보드에서 관리해 주어야 합니다.
+1. **援먯궗 (Manager Profile)**: 濡쒓렇???곹깭?먯꽌 ?몄뀡(Session/UUID)???앹꽦?섍퀬 ?ㅼ떆媛???쒕낫?쒕? ?뺤씤?⑸땲??
+2. **?숈깮 (Guest Flow)**: 蹂꾨룄???뚯썝媛??濡쒓렇???놁씠, 援먯궗媛 ?앹꽦??QR 肄붾뱶??URL(UUID ?ы븿)???듯빐 利됱떆 ?쒕룞??李몄뿬?⑸땲?? 
+3. **李몄뿬 諛⑹떇**: ?숈깮? ?대쫫(?됰꽕??怨?踰덊샇 ?뺣룄??理쒖냼 ?뺣낫留??낅젰 ??寃곌낵源뚯? 鍮꾨줈洹몄씤 ?곹깭濡??좎??⑸땲??
+4. **寃곌낵 ?곸냽??*: ?숈깮??寃곌낵??`models.py`????λ릺?? ?숈깮 媛쒖씤? ?몄뀡 釉뚮씪?곗? 醫낅즺 ??沅뚰븳??留뚮즺?섎?濡?援먯궗媛 ??쒕낫?쒖뿉??愿由ы빐 二쇱뼱???⑸땲??
 
-## 4. 디자인 시스템 (UI/UX Standard)
+## 4. ?붿옄???쒖뒪??(UI/UX Standard)
 
-### A. Claymorphism 규격
-모든 카드는 `clay-card` 클래스를 사용하며, 배경색은 `#E0E5EC`를 기본으로 합니다.
+### A. Claymorphism 洹쒓꺽
+紐⑤뱺 移대뱶??`clay-card` ?대옒?ㅻ? ?ъ슜?섎ŉ, 諛곌꼍?됱? `#E0E5EC`瑜?湲곕낯?쇰줈 ?⑸땲??
 
 ```html
-<!-- 표준 카드 레이아웃 -->
+<!-- ?쒖? 移대뱶 ?덉씠?꾩썐 -->
 <div class="clay-card p-8 group hover:shadow-clay-hover transition-all duration-300">
-    <!-- 아이콘 영역 -->
+    <!-- ?꾩씠肄??곸뿭 -->
     <div class="w-20 h-20 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 float-icon">
-        🎨
+        ?렓
     </div>
-    <!-- 텍스트 영역 -->
-    <h3 class="text-3xl font-bold text-gray-700 mb-2 font-title">서비스 제목</h3>
-    <p class="text-xl text-gray-500">설명 문구 (표준 폰트 적용 - Dongle 금지)</p>
+    <!-- ?띿뒪???곸뿭 -->
+    <h3 class="text-3xl font-bold text-gray-700 mb-2 font-title">?쒕퉬???쒕ぉ</h3>
+    <p class="text-xl text-gray-500">?ㅻ챸 臾멸뎄 (?쒖? ?고듃 ?곸슜 - Dongle 湲덉?)</p>
 </div>
 ```
 
-### B. 컬러 가이드 (Tailwind)
+### B. 而щ윭 媛?대뱶 (Tailwind)
 - **Background**: `bg-[#E0E5EC]`
 - **Primary**: `text-purple-600` / `bg-purple-500`
 - **Success**: `text-green-600` / `bg-green-500`
@@ -77,10 +126,10 @@
 
 ---
 
-## 4. 코드 아키텍처 (Code Pattern)
+## 4. 肄붾뱶 ?꾪궎?띿쿂 (Code Pattern)
 
-### A. View: 비즈니스 로직 (Python)
-유지보수가 쉽도록 전용 함수와 공통 믹스인을 활용합니다.
+### A. View: 鍮꾩쫰?덉뒪 濡쒖쭅 (Python)
+?좎?蹂댁닔媛 ?쎈룄濡??꾩슜 ?⑥닔? 怨듯넻 誘뱀뒪?몄쓣 ?쒖슜?⑸땲??
 
 ```python
 from django.shortcuts import render
@@ -91,21 +140,21 @@ from products.models import Product
 def service_main_view(request):
     """
     [Rule]
-    1. Product 모델에서 서비스 정보를 가져와 context에 포함 (아이콘/컬러 동기화)
-    2. 에러 처리는 try-except로 감싸고 사용자에게 친절한 메시지 반환
+    1. Product 紐⑤뜽?먯꽌 ?쒕퉬???뺣낫瑜?媛?몄? context???ы븿 (?꾩씠肄?而щ윭 ?숆린??
+    2. ?먮윭 泥섎━??try-except濡?媛먯떥怨??ъ슜?먯뿉寃?移쒖젅??硫붿떆吏 諛섑솚
     """
-    service = Product.objects.filter(title__icontains="서비스명").first()
+    service = Product.objects.filter(title__icontains="?쒕퉬?ㅻ챸").first()
     
     context = {
         'service': service,
-        'title': service.title if service else "서비스명",
+        'title': service.title if service else "?쒕퉬?ㅻ챸",
         'is_premium': request.user.owned_products.filter(product=service).exists()
     }
     return render(request, 'app_name/service_template.html', context)
 ```
 
-### B. Template: 레이아웃 (HTML + HTMX)
-단일 페이지 경험(SPA)을 위해 **HTMX**를 적극 활용합니다.
+### B. Template: ?덉씠?꾩썐 (HTML + HTMX)
+?⑥씪 ?섏씠吏 寃쏀뿕(SPA)???꾪빐 **HTMX**瑜??곴레 ?쒖슜?⑸땲??
 
 ```html
 {% extends 'base.html' %}
@@ -113,33 +162,33 @@ def service_main_view(request):
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen">
     <div class="max-w-5xl mx-auto">
-        <!-- 상단 헤더 섹션 -->
+        <!-- ?곷떒 ?ㅻ뜑 ?뱀뀡 -->
         <div class="text-center mb-12" data-aos="fade-up">
             <div class="text-7xl mb-4 float-icon">{{ service.icon }}</div>
             <h1 class="text-5xl font-bold text-gray-700 font-title">{{ title }}</h1>
         </div>
 
-        <!-- 메인 액션 영역 -->
+        <!-- 硫붿씤 ?≪뀡 ?곸뿭 -->
         <div class="clay-card p-10" data-aos="zoom-in">
             <form hx-post="{% url 'api_endpoint' %}" 
                   hx-target="#result-area" 
                   hx-indicator="#loading-spinner">
                 {% csrf_token %}
                 <textarea name="content" class="w-full clay-inner p-6 rounded-3xl text-2xl mb-6 focus:outline-none" 
-                          placeholder="여기에 내용을 입력하세요..."></textarea>
+                          placeholder="?ш린???댁슜???낅젰?섏꽭??.."></textarea>
                 
                 <button type="submit" class="w-full py-5 bg-purple-500 text-white rounded-full text-2xl font-bold shadow-clay hover:shadow-clay-hover transition-all transform active:scale-95">
-                    실행하기
+                    ?ㅽ뻾?섍린
                 </button>
             </form>
         </div>
 
-        <!-- 결과 표시 영역 -->
+        <!-- 寃곌낵 ?쒖떆 ?곸뿭 -->
         <div id="result-area" class="mt-12">
-            <!-- HTMX로 로드될 부분 -->
+            <!-- HTMX濡?濡쒕뱶??遺遺?-->
         </div>
 
-        <!-- 로딩 스피너 -->
+        <!-- 濡쒕뵫 ?ㅽ뵾??-->
         <div id="loading-spinner" class="htmx-indicator fixed inset-0 z-[100] flex items-center justify-center bg-white/50 backdrop-blur-sm">
             <i class="fa-solid fa-circle-notch fa-spin text-6xl text-purple-500"></i>
         </div>
@@ -147,17 +196,17 @@ def service_main_view(request):
 </section>
 {% endblock %}
 
-### C. Models: 데이터 영속성 (Persistence Standard)
-사용자의 활동 기록이나 결과(예: 테스트 결과, 생성된 아티클)를 저장해야 하는 서비스는 반드시 전용 `models.py`를 정의하여 DB 레이어를 구현합니다.
+### C. Models: ?곗씠???곸냽??(Persistence Standard)
+?ъ슜?먯쓽 ?쒕룞 湲곕줉?대굹 寃곌낵(?? ?뚯뒪??寃곌낵, ?앹꽦???꾪떚??瑜???ν빐???섎뒗 ?쒕퉬?ㅻ뒗 諛섎뱶???꾩슜 `models.py`瑜??뺤쓽?섏뿬 DB ?덉씠?대? 援ы쁽?⑸땲??
 
 ```python
 from django.db import models
 from django.contrib.auth.models import User
 
 class ServiceResult(models.Model):
-    """[Rule] 서비스별 결과 저장 모델 구성 필수"""
+    """[Rule] ?쒕퉬?ㅻ퀎 寃곌낵 ???紐⑤뜽 援ъ꽦 ?꾩닔"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='service_results')
-    # ... 필드 정의 ...
+    # ... ?꾨뱶 ?뺤쓽 ...
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -167,42 +216,40 @@ class ServiceResult(models.Model):
 
 ---
 
-## 5. AI 연동 표준 (Gemini Hybrid API)
-`fortune` 앱의 검증된 로직을 재사용합니다.
+## 5. AI ?곕룞 ?쒖? (Gemini Hybrid API)
+`fortune` ?깆쓽 寃利앸맂 濡쒖쭅???ъ궗?⑺빀?덈떎.
 
 ```python
 from fortune.views import generate_ai_response
 
 def process_with_ai(request):
     user_input = request.POST.get('content')
-    prompt = f"선생님 관점에서 다음 내용을 분석해줘: {user_input}"
+    prompt = f"?좎깮??愿?먯뿉???ㅼ쓬 ?댁슜??遺꾩꽍?댁쨾: {user_input}"
     
-    # [SIS Rule] 반드시 request를 인자로 넘겨 사용자 개인 키 사용 여부를 체크함
-    response_text = generate_ai_response(prompt, request)
+    # [SIS Rule] 諛섎뱶??request瑜??몄옄濡??섍꺼 ?ъ슜??媛쒖씤 ???ъ슜 ?щ?瑜?泥댄겕??    response_text = generate_ai_response(prompt, request)
     
     return render(request, 'app_name/partials/result.html', {'result': response_text})
 ```
 
 ---
 
-## 6. 와이어프레임 & 네비게이션
-1. **대시보드 노출**: `Product` 모델에 `is_active=True`로 등록.
-2. **진입 경로**: `dashboard.html`에서 클릭 시 `unifiedModal`을 통해 프리뷰 노출 후 이동.
-3. **뒤로가기**: 항상 상단 네비게이션의 로고를 통해 홈으로 이동 가능하도록 `base.html` 준수.
+## 6. ??댁뼱?꾨젅??& ?ㅻ퉬寃뚯씠??1. **??쒕낫???몄텧**: `Product` 紐⑤뜽??`is_active=True`濡??깅줉.
+2. **吏꾩엯 寃쎈줈**: `dashboard.html`?먯꽌 ?대┃ ??`unifiedModal`???듯빐 ?꾨━酉??몄텧 ???대룞.
+3. **?ㅻ줈媛湲?*: ??긽 ?곷떒 ?ㅻ퉬寃뚯씠?섏쓽 濡쒓퀬瑜??듯빐 ?덉쑝濡??대룞 媛?ν븯?꾨줉 `base.html` 以??
 
-### 6.1. Product 자동 등록 표준 (ensure_* Management Command)
-새로운 서비스를 추가할 때, 대시보드에 노출되려면 `Product` 테이블에 데이터가 존재해야 합니다. **코드만 배포하고 Product 등록을 누락하면 서비스가 대시보드에 나타나지 않습니다.**
+### 6.1. Product ?먮룞 ?깅줉 ?쒖? (ensure_* Management Command)
+?덈줈???쒕퉬?ㅻ? 異붽????? ??쒕낫?쒖뿉 ?몄텧?섎젮硫?`Product` ?뚯씠釉붿뿉 ?곗씠?곌? 議댁옱?댁빞 ?⑸땲?? **肄붾뱶留?諛고룷?섍퀬 Product ?깅줉???꾨씫?섎㈃ ?쒕퉬?ㅺ? ??쒕낫?쒖뿉 ?섑??섏? ?딆뒿?덈떎.**
 
-- **Rule**: 모든 신규 서비스는 반드시 `ensure_<app_name>` management command를 생성해야 합니다.
-- **위치**: `products/management/commands/ensure_<app_name>.py` (통일 위치. 앱 내부 `management/`에 두지 말 것)
-- **4곳 동시 등록 (누락 시 502 에러 발생)**:
-  1. `config/settings_production.py` → `INSTALLED_APPS`에 앱 추가
-  2. `Procfile` → `migrate` 이후에 `ensure_<app_name>` 커맨드 추가
-  3. `nixpacks.toml` → `[phases.start]` 명령에 동일하게 추가 (Procfile과 동기화)
-  4. `config/settings_production.py` → `run_startup_tasks()`에 `call_command('ensure_<app_name>')` 추가
+- **Rule**: 紐⑤뱺 ?좉퇋 ?쒕퉬?ㅻ뒗 諛섎뱶??`ensure_<app_name>` management command瑜??앹꽦?댁빞 ?⑸땲??
+- **?꾩튂**: `products/management/commands/ensure_<app_name>.py` (?듭씪 ?꾩튂. ???대? `management/`???먯? 留?寃?
+- **4怨??숈떆 ?깅줉 (?꾨씫 ??502 ?먮윭 諛쒖깮)**:
+  1. `config/settings_production.py` ??`INSTALLED_APPS`????異붽?
+  2. `Procfile` ??`migrate` ?댄썑??`ensure_<app_name>` 而ㅻ㎤??異붽?
+  3. `nixpacks.toml` ??`[phases.start]` 紐낅졊???숈씪?섍쾶 異붽? (Procfile怨??숆린??
+  4. `config/settings_production.py` ??`run_startup_tasks()`??`call_command('ensure_<app_name>')` 異붽?
 
 ```python
-# 표준 ensure 커맨드 구조
+# ?쒖? ensure 而ㅻ㎤??援ъ“
 from django.core.management.base import BaseCommand
 from products.models import Product, ProductFeature
 
@@ -211,37 +258,37 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         product, created = Product.objects.get_or_create(
-            title='서비스 제목',
+            title='?쒕퉬???쒕ぉ',
             defaults={
-                'lead_text': '매력적인 한 줄 문구',
-                'description': '2~3문장 이상의 설명',
+                'lead_text': '留ㅻ젰?곸씤 ??以?臾멸뎄',
+                'description': '2~3臾몄옣 ?댁긽???ㅻ챸',
                 'price': 0.00,
                 'is_active': True,
-                'icon': '🎨',
+                'icon': '?렓',
                 'color_theme': 'purple',
                 'card_size': 'small',
                 'service_type': 'tool',
             }
         )
-        # ProductFeature 최소 3개 등록 (SIS Rule)
+        # ProductFeature 理쒖냼 3媛??깅줉 (SIS Rule)
 ```
 
 ```
 ```
 
-        # [SIS Rule] ServiceManual 자동 생성 (Rich Content)
+        # [SIS Rule] ServiceManual ?먮룞 ?앹꽦 (Rich Content)
         from products.models import ServiceManual, ManualSection
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
-            defaults={'title': f'{product.title} 사용법', 'is_published': True}
+            defaults={'title': f'{product.title} ?ъ슜踰?, 'is_published': True}
         )
         if manual.sections.count() == 0:
-            ManualSection.objects.create(manual=manual, title='시작하기', content='...', display_order=1)
-            ManualSection.objects.create(manual=manual, title='주요 기능', content='...', display_order=2)
-            ManualSection.objects.create(manual=manual, title='활용 팁', content='...', display_order=3)
+            ManualSection.objects.create(manual=manual, title='?쒖옉?섍린', content='...', display_order=1)
+            ManualSection.objects.create(manual=manual, title='二쇱슂 湲곕뒫', content='...', display_order=2)
+            ManualSection.objects.create(manual=manual, title='?쒖슜 ??, content='...', display_order=3)
 
 ```
-# Procfile 예시
+# Procfile ?덉떆
 web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && python3 manage.py ensure_studentmbti && ...
 ```
 
@@ -249,58 +296,56 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 
 ---
 
-## 7. 바이브 코딩 및 에이전트 표준 (2026 Vibe Coding Standards)
-2026년 에이전트 중심 개발(Software 3.0)의 권위 있는 지침을 본 프로젝트에 이식합니다.
+## 7. 諛붿씠釉?肄붾뵫 諛??먯씠?꾪듃 ?쒖? (2026 Vibe Coding Standards)
+2026???먯씠?꾪듃 以묒떖 媛쒕컻(Software 3.0)??沅뚯쐞 ?덈뒗 吏移⑥쓣 蹂??꾨줈?앺듃???댁떇?⑸땲??
 
-### A. 의도 기반 계획 (Intent-First Planning)
-- **Rule**: 코드를 작성하기 전, 에이전트는 반드시 `Implementation Plan`을 제안하고 사용자의 승인을 받아야 합니다.
-- **Focus**: 기능의 구현 방식보다 "사용자가 느낄 경험(Vibe)"과 "비즈니스 논리"에 집중하여 설명합니다.
+### A. ?섎룄 湲곕컲 怨꾪쉷 (Intent-First Planning)
+- **Rule**: 肄붾뱶瑜??묒꽦?섍린 ?? ?먯씠?꾪듃??諛섎뱶??`Implementation Plan`???쒖븞?섍퀬 ?ъ슜?먯쓽 ?뱀씤??諛쏆븘???⑸땲??
+- **Focus**: 湲곕뒫??援ы쁽 諛⑹떇蹂대떎 "?ъ슜?먭? ?먮굜 寃쏀뿕(Vibe)"怨?"鍮꾩쫰?덉뒪 ?쇰━"??吏묒쨷?섏뿬 ?ㅻ챸?⑸땲??
 
-### B. 에이전트 가독성 로그 (AI-Ready Logging)
-- **Rule**: 모든 주요 비즈니스 로직에는 에이전트가 사후에 버그를 추적하기 용이하도록 상세 로그를 남깁니다.
-- **Standard**: `logger.info(f"[Service_Name] Action: {action}, Status: SUCCESS, Context: {context}")` 형식을 권장합니다.
+### B. ?먯씠?꾪듃 媛?낆꽦 濡쒓렇 (AI-Ready Logging)
+- **Rule**: 紐⑤뱺 二쇱슂 鍮꾩쫰?덉뒪 濡쒖쭅?먮뒗 ?먯씠?꾪듃媛 ?ы썑??踰꾧렇瑜?異붿쟻?섍린 ?⑹씠?섎룄濡??곸꽭 濡쒓렇瑜??④퉩?덈떎.
+- **Standard**: `logger.info(f"[Service_Name] Action: {action}, Status: SUCCESS, Context: {context}")` ?뺤떇??沅뚯옣?⑸땲??
 
-### C. 터미널 중심 검증 (Terminal-First Verification)
-- **Rule**: 브라우저를 열어 확인하기 전, 반드시 터미널 도구를 사용하여 1차 검증을 완료합니다. 브라우저 에이전트 사용은 토큰 낭비가 심하므로 최후의 수단으로만 사용합니다.
+### C. ?곕???以묒떖 寃利?(Terminal-First Verification)
+- **Rule**: 釉뚮씪?곗?瑜??댁뼱 ?뺤씤?섍린 ?? 諛섎뱶???곕????꾧뎄瑜??ъ슜?섏뿬 1李?寃利앹쓣 ?꾨즺?⑸땲?? 釉뚮씪?곗? ?먯씠?꾪듃 ?ъ슜? ?좏겙 ??퉬媛 ?ы븯誘濡?理쒗썑???섎떒?쇰줈留??ъ슜?⑸땲??
 - **Tools**: 
-  - `python manage.py check`: 시스템 설정 및 모델 무결성 확인
-  - `python manage.py shell`: 비즈니스 로직(AI 프롬프트 생성, 데이터 계산 등)의 단위 테스트
-- **Vibe Check**: 제작된 HTML/CSS 코드를 정적으로 분석하여 디자인 가이드(Claymorphism) 준수 여부를 확인하며, 실제 렌더링은 사용자가 직접 확인하는 것을 원칙으로 합니다.
+  - `python manage.py check`: ?쒖뒪???ㅼ젙 諛?紐⑤뜽 臾닿껐???뺤씤
+  - `python manage.py shell`: 鍮꾩쫰?덉뒪 濡쒖쭅(AI ?꾨＼?꾪듃 ?앹꽦, ?곗씠??怨꾩궛 ?????⑥쐞 ?뚯뒪??- **Vibe Check**: ?쒖옉??HTML/CSS 肄붾뱶瑜??뺤쟻?쇰줈 遺꾩꽍?섏뿬 ?붿옄??媛?대뱶(Claymorphism) 以???щ?瑜??뺤씤?섎ŉ, ?ㅼ젣 ?뚮뜑留곸? ?ъ슜?먭? 吏곸젒 ?뺤씤?섎뒗 寃껋쓣 ?먯튃?쇰줈 ?⑸땲??
 
 ---
 
-## 8. 서비스 이관 및 리팩토링 가이드 (Refactoring Guide)
-잘못된 위치(예: 타 앱의 내부)에 구현된 서비스를 독립 앱으로 분리할 때의 절차입니다.
+## 8. ?쒕퉬???닿? 諛?由ы뙥?좊쭅 媛?대뱶 (Refactoring Guide)
+?섎せ???꾩튂(?? ? ?깆쓽 ?대?)??援ы쁽???쒕퉬?ㅻ? ?낅┰ ?깆쑝濡?遺꾨━???뚯쓽 ?덉감?낅땲??
 
-1. **상태 백업**: 기존 DB에 데이터가 있다면 `python manage.py dumpdata fortune.ZooResult > backup.json` 등으로 백업합니다.
-2. **코드 물리적 이동**: 파일들을 새 앱으로 이동 후, `AppConfig`의 `name`을 확인합니다.
-3. **참조 수정**: `views.py` 내의 `from .models` 등 상대 경로 및 절대 경로 임포트를 전수 조사하여 수정합니다.
-4. **마이그레이션 정리**: 기존 앱의 `models.py`에서 관련 클래스를 삭제하고 `makemigrations`를 수행하여 DB 관계를 끊습니다.
+1. **?곹깭 諛깆뾽**: 湲곗〈 DB???곗씠?곌? ?덈떎硫?`python manage.py dumpdata fortune.ZooResult > backup.json` ?깆쑝濡?諛깆뾽?⑸땲??
+2. **肄붾뱶 臾쇰━???대룞**: ?뚯씪?ㅼ쓣 ???깆쑝濡??대룞 ?? `AppConfig`??`name`???뺤씤?⑸땲??
+3. **李몄“ ?섏젙**: `views.py` ?댁쓽 `from .models` ???곷? 寃쎈줈 諛??덈? 寃쎈줈 ?꾪룷?몃? ?꾩닔 議곗궗?섏뿬 ?섏젙?⑸땲??
+4. **留덉씠洹몃젅?댁뀡 ?뺣━**: 湲곗〈 ?깆쓽 `models.py`?먯꽌 愿???대옒?ㅻ? ??젣?섍퀬 `makemigrations`瑜??섑뻾?섏뿬 DB 愿怨꾨? ?딆뒿?덈떎.
 
-## 8. 오류 방지 체크리스트 (Bug-Free Checklist)
-- [ ] `{% csrf_token %}`이 모든 POST 폼에 포함되었는가?
-- [ ] HTMX 사용 시 `HX-Request` 헤더를 체크하여 Partial Template을 반환하는가?
-- [ ] 정적 파일(JS/CSS) 사용 시 `{% static %}` 태그를 사용했는가?
-- [ ] 사용자 프로필(`UserProfile`)이 없는 경우를 대비해 `hasattr` 체크를 하는가?
-- [ ] 모바일 뷰에서 `clay-card`의 패딩이 너무 넓지 않은가? (md:p-14, p-6 분리)
-- [ ] **[중요]** 해당 서비스가 독자적인 Django App으로 분리되어 있으며, 전용 `models.py`를 통해 데이터 영속성이 구현되었는가?
-- [ ] AI 로깅이 포함되어 있어 추후 에이전트가 자가 수복(Self-healing)하기 용이한가?
-- [ ] **[Design]** `Dongle` 폰트가 사용되지 않았으며, 나눔스퀘어라운드/Inter를 사용하는가?
-- [ ] **[Design]** "마케팅 용도" 등 불필요한 개인정보 수집 문구가 삭제되었는가?
-- [ ] **[UI]** 회원 탈퇴(Delete Account) 기능이 설정 페이지에 포함되었는가?
-- [ ] 사용자 경험(UX) 측면에서 `vibe_check`를 완료했는가? (브라우저 없이 코드로 직접 확인)
-- [ ] **[Efficiency]** 모든 로직 검증을 브라우저 실행 없이 터미널(`shell`, `check`)에서 완료했는가?
-- [ ] **[Infra]** 새로운 모델 추가 시 `makemigrations`를 수행했는가?
-- [ ] **[Richness]** `ProductFeature`가 최소 3개 이상 등록되어 모달이 풍성해 보이는가?
-- [ ] **[Manual]** `ServiceManual`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (빈 껍데기만 있으면 안 됨)
-- [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
-- [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
-- [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
-- [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 **4곳 모두** 등록했는가? (`INSTALLED_APPS`, `Procfile`, `nixpacks.toml`, `run_startup_tasks()`) — 하나라도 누락 시 502 에러 또는 대시보드 미노출
-- [ ] **[Infra]** `nixpacks.toml`의 `[phases.start]` 명령이 `Procfile`과 동기화되어 있는가? (불일치 시 배포 환경에 따라 다른 명령이 실행됨)
+## 8. ?ㅻ쪟 諛⑹? 泥댄겕由ъ뒪??(Bug-Free Checklist)
+- [ ] `{% csrf_token %}`??紐⑤뱺 POST ?쇱뿉 ?ы븿?섏뿀?붽??
+- [ ] HTMX ?ъ슜 ??`HX-Request` ?ㅻ뜑瑜?泥댄겕?섏뿬 Partial Template??諛섑솚?섎뒗媛?
+- [ ] ?뺤쟻 ?뚯씪(JS/CSS) ?ъ슜 ??`{% static %}` ?쒓렇瑜??ъ슜?덈뒗媛?
+- [ ] ?ъ슜???꾨줈??`UserProfile`)???녿뒗 寃쎌슦瑜??鍮꾪빐 `hasattr` 泥댄겕瑜??섎뒗媛?
+- [ ] 紐⑤컮??酉곗뿉??`clay-card`???⑤뵫???덈Т ?볦? ?딆?媛? (md:p-14, p-6 遺꾨━)
+- [ ] **[以묒슂]** ?대떦 ?쒕퉬?ㅺ? ?낆옄?곸씤 Django App?쇰줈 遺꾨━?섏뼱 ?덉쑝硫? ?꾩슜 `models.py`瑜??듯빐 ?곗씠???곸냽?깆씠 援ы쁽?섏뿀?붽??
+- [ ] AI 濡쒓퉭???ы븿?섏뼱 ?덉뼱 異뷀썑 ?먯씠?꾪듃媛 ?먭? ?섎났(Self-healing)?섍린 ?⑹씠?쒓??
+- [ ] **[Design]** `Dongle` ?고듃媛 ?ъ슜?섏? ?딆븯?쇰ŉ, ?섎닎?ㅽ섏뼱?쇱슫??Inter瑜??ъ슜?섎뒗媛?
+- [ ] **[Design]** "留덉????⑸룄" ??遺덊븘?뷀븳 媛쒖씤?뺣낫 ?섏쭛 臾멸뎄媛 ??젣?섏뿀?붽??
+- [ ] **[UI]** ?뚯썝 ?덊눜(Delete Account) 湲곕뒫???ㅼ젙 ?섏씠吏???ы븿?섏뿀?붽??
+- [ ] ?ъ슜??寃쏀뿕(UX) 痢〓㈃?먯꽌 `vibe_check`瑜??꾨즺?덈뒗媛? (釉뚮씪?곗? ?놁씠 肄붾뱶濡?吏곸젒 ?뺤씤)
+- [ ] **[Efficiency]** 紐⑤뱺 濡쒖쭅 寃利앹쓣 釉뚮씪?곗? ?ㅽ뻾 ?놁씠 ?곕???`shell`, `check`)?먯꽌 ?꾨즺?덈뒗媛?
+- [ ] **[Infra]** ?덈줈??紐⑤뜽 異붽? ??`makemigrations`瑜??섑뻾?덈뒗媛?
+- [ ] **[Richness]** `ProductFeature`媛 理쒖냼 3媛??댁긽 ?깅줉?섏뼱 紐⑤떖???띿꽦??蹂댁씠?붽??
+- [ ] **[Manual]** `ServiceManual`怨?理쒖냼 3媛??댁긽??`ManualSection`??`ensure_` 而ㅻ㎤?쒕? ?듯빐 ?먮룞 ?앹꽦?섎뒗媛? (鍮?猿띾뜲湲곕쭔 ?덉쑝硫?????
+- [ ] **[Terminology]** ?숈깮????곸쑝濡?????MBTI/寃????吏猷⑦븳 ?⑹뼱媛 ?쒗솕(罹먮┃??李얘린 ???섏뿀?붽??
+- [ ] **[Auth]** ?숈깮 李몄뿬 ??鍮꾨줈洹몄씤(Guest) ?뚮줈?곌? ?먰솢?쒓??
+- [ ] **[Infra]** ?덈줈???쇱씠釉뚮윭由щ? ?ъ슜?덈떎硫?`requirements.txt`??踰꾩쟾怨??④퍡 紐낆떆?덈뒗媛?
+- [ ] **[Infra]** `ensure_<app_name>` management command瑜??앹꽦?섍퀬 **4怨?紐⑤몢** ?깅줉?덈뒗媛? (`INSTALLED_APPS`, `Procfile`, `nixpacks.toml`, `run_startup_tasks()`) ???섎굹?쇰룄 ?꾨씫 ??502 ?먮윭 ?먮뒗 ??쒕낫??誘몃끂異?- [ ] **[Infra]** `nixpacks.toml`??`[phases.start]` 紐낅졊??`Procfile`怨??숆린?붾릺???덈뒗媛? (遺덉씪移???諛고룷 ?섍꼍???곕씪 ?ㅻⅨ 紐낅졊???ㅽ뻾??
 
 ---
-**이 가이드는 `eduitit`의 바이브를 유지하며 가장 빠르게 서비스를 출시하기 위한 약속입니다.**
+**??媛?대뱶??`eduitit`??諛붿씠釉뚮? ?좎??섎ŉ 媛??鍮좊Ⅴ寃??쒕퉬?ㅻ? 異쒖떆?섍린 ?꾪븳 ?쎌냽?낅땲??**
 
 ## Addendum: Enterprise Implementation Learnings (2026-02-15)
 
@@ -322,6 +367,38 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - Circuit breaker must protect high-traffic AI paths.
 - For generator/stream responses, success/failure must be recorded at the response-consumer boundary.
 
+---
+
+## Canonical Maintenance Rules (2026-02-17)
+If any older section conflicts with this block, this block takes precedence.
+
+### 1) UI Change Scope First
+- Declare scope before editing UI: `global`, `app`, or `page`.
+- If scope is not `global`, do not modify shared base styles/components.
+
+### 2) Existing UI Protection
+- Do not force one visual style across all services.
+- Keep each stable service's existing design language unless explicit redesign is requested.
+
+### 3) Behavior Parity Before Visual Polish
+- After UI edits, first verify:
+  - route/navigation behavior
+  - modal close behavior (backdrop click + ESC)
+  - keyboard focus and accessibility flow
+- Only then proceed to visual refinements.
+
+### 4) Korean Text Integrity
+- Treat Korean UI files as UTF-8.
+- Prefer narrow, targeted edits over broad regex rewrites.
+- If mojibake is detected: recover text first, then re-apply functional changes.
+
+### 5) Documentation Discipline
+- Keep standards actionable and testable.
+- When adding a new rule, include:
+  - trigger condition
+  - required action
+  - quick validation command/check
+
 ### 4) Error and Security Contract (MUST)
 - User-facing responses must never include raw internal exception text.
 - Health checks return stable status only (`ok`/`error`) without internals.
@@ -341,3 +418,34 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
   - p95 latency
   - AI upstream error ratio
   - rate-limit rejection ratio
+
+---
+
+## UI Change Control Addendum (2026-02-17)
+蹂???ぉ? 湲곗〈 UI瑜?蹂댄샇?섎㈃???꾩슂??媛쒖꽑留?諛섏쁺?섍린 ?꾪븳 蹂댁셿 洹쒖튃?낅땲??
+
+### 1) 蹂寃?踰붿쐞 癒쇱? ?좎뼵
+- UI 蹂寃쎌? 諛섎뱶??踰붿쐞瑜?癒쇱? ?뺥빀?덈떎: `?꾩뿭(base)`, `???⑥쐞`, `媛쒕퀎 ?섏씠吏`.
+- 踰붿쐞 諛뽰쓽 ?ㅽ???而댄룷?뚰듃???섏젙?섏? ?딆뒿?덈떎.
+
+### 2) 湲곗〈 ?쒕퉬??UI ?몄뼱 議댁쨷
+- 湲곗〈 ?쒕퉬?ㅺ? ?대? ?덉젙?곸쑝濡??댁쁺 以묒씤 ?붿옄???몄뼱瑜?媛뽮퀬 ?덉쑝硫?媛뺤젣濡??듭씪?섏? ?딆뒿?덈떎.
+- Claymorphism? 湲곕낯 ?좏깮吏??肉? 紐⑤뱺 ?쒕퉬?ㅼ뿉 媛뺤젣 ?곸슜?섏? ?딆뒿?덈떎.
+
+### 3) ?숈옉 蹂댁〈 ?곗꽑
+- ?쒓컖 蹂寃쎈낫??湲곕뒫 ?숈옉 蹂댁〈???곗꽑?⑸땲??
+- ?뱁엳 ?ㅼ쓬 ??ぉ? UI 蹂寃???諛섎뱶???좎??섏뼱???⑸땲??
+  - ?쇱슦??吏꾩엯 踰꾪듉 ?숈옉
+  - 紐⑤떖 ?リ린(諛곌꼍 ?대┃, ESC)
+  - ?ㅻ낫???묎렐???ъ빱???먮쫫
+
+### 4) 蹂寃?湲곕줉 ?꾩닔
+- UI 蹂寃????꾨옒瑜??④퍡 湲곕줉?⑸땲??
+  - 蹂寃????踰붿쐞
+  - ?섎룄???쒓컖??蹂??  - ?곹뼢 ?녿뒗 ?섏씠吏/?쒕퉬??寃利?寃곌낵
+
+### 5) ?몄퐫???ш퀬 ????곗꽑?쒖쐞
+- ?쒓뎅??源⑥쭚 諛쒓껄 ??湲곕뒫 媛쒕컻蹂대떎 ?몄퐫??蹂듦뎄瑜??곗꽑?⑸땲??
+- 蹂듦뎄 ?쒖꽌: `?몄퐫???뺤긽?? -> `臾멸뎄 蹂듦뎄` -> `湲곕뒫/?ㅽ????ъ쟻??.
+
+

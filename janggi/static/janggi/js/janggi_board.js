@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     var ROWS = 10;
     var COLS = 9;
 
@@ -21,9 +21,34 @@
     var aiRequestPending = false;
     var aiWaitAttempts = 0;
     var gameEnded = false;
+    var PIECE_LABELS = {
+        red: {
+            rook: "\u8eca",
+            horse: "\u99ac",
+            elephant: "\u8c61",
+            guard: "\u58eb",
+            king: "\u695a",
+            cannon: "\u7832",
+            pawn: "\u5175"
+        },
+        blue: {
+            rook: "\u8eca",
+            horse: "\u99ac",
+            elephant: "\u8c61",
+            guard: "\u58eb",
+            king: "\u6f22",
+            cannon: "\u7832",
+            pawn: "\u5352"
+        }
+    };
 
     function piece(type, side, label) {
         return { type: type, side: side, label: label };
+    }
+
+    function pieceLabel(type, side) {
+        if (PIECE_LABELS[side] && PIECE_LABELS[side][type]) return PIECE_LABELS[side][type];
+        return "?";
     }
 
     function clonePiece(p) {
@@ -69,13 +94,13 @@
         resultTitleEl.className = "result-title";
         if (winnerSide === "red") {
             resultTitleEl.classList.add("win-red");
-            resultTitleEl.textContent = "RED 승리";
+            resultTitleEl.textContent = "\ucd08 \uc2b9\ub9ac";
         } else if (winnerSide === "blue") {
             resultTitleEl.classList.add("win-blue");
-            resultTitleEl.textContent = "BLUE 승리";
+            resultTitleEl.textContent = "\ud55c \uc2b9\ub9ac";
         } else {
             resultTitleEl.classList.add("draw");
-            resultTitleEl.textContent = "무승부";
+            resultTitleEl.textContent = "\ubb34\uc2b9\ubd80";
         }
         resultDescEl.textContent = title + " - " + desc;
         resultOverlayEl.classList.add("show");
@@ -88,42 +113,41 @@
             for (var c = 0; c < COLS; c++) row.push(null);
             board.push(row);
         }
+        // Blue (top)
+        board[0][0] = piece("rook", "blue", pieceLabel("rook", "blue"));
+        board[0][1] = piece("horse", "blue", pieceLabel("horse", "blue"));
+        board[0][2] = piece("elephant", "blue", pieceLabel("elephant", "blue"));
+        board[0][3] = piece("guard", "blue", pieceLabel("guard", "blue"));
+        board[0][4] = piece("king", "blue", pieceLabel("king", "blue"));
+        board[0][5] = piece("guard", "blue", pieceLabel("guard", "blue"));
+        board[0][6] = piece("elephant", "blue", pieceLabel("elephant", "blue"));
+        board[0][7] = piece("horse", "blue", pieceLabel("horse", "blue"));
+        board[0][8] = piece("rook", "blue", pieceLabel("rook", "blue"));
+        board[2][1] = piece("cannon", "blue", pieceLabel("cannon", "blue"));
+        board[2][7] = piece("cannon", "blue", pieceLabel("cannon", "blue"));
+        board[3][0] = piece("pawn", "blue", pieceLabel("pawn", "blue"));
+        board[3][2] = piece("pawn", "blue", pieceLabel("pawn", "blue"));
+        board[3][4] = piece("pawn", "blue", pieceLabel("pawn", "blue"));
+        board[3][6] = piece("pawn", "blue", pieceLabel("pawn", "blue"));
+        board[3][8] = piece("pawn", "blue", pieceLabel("pawn", "blue"));
 
-        // Blue (상단)
-        board[0][0] = piece("rook", "blue", "車");
-        board[0][1] = piece("horse", "blue", "馬");
-        board[0][2] = piece("elephant", "blue", "象");
-        board[0][3] = piece("guard", "blue", "士");
-        board[0][4] = piece("king", "blue", "將");
-        board[0][5] = piece("guard", "blue", "士");
-        board[0][6] = piece("elephant", "blue", "象");
-        board[0][7] = piece("horse", "blue", "馬");
-        board[0][8] = piece("rook", "blue", "車");
-        board[2][1] = piece("cannon", "blue", "砲");
-        board[2][7] = piece("cannon", "blue", "砲");
-        board[3][0] = piece("pawn", "blue", "卒");
-        board[3][2] = piece("pawn", "blue", "卒");
-        board[3][4] = piece("pawn", "blue", "卒");
-        board[3][6] = piece("pawn", "blue", "卒");
-        board[3][8] = piece("pawn", "blue", "卒");
-
-        // Red (하단)
-        board[9][0] = piece("rook", "red", "車");
-        board[9][1] = piece("horse", "red", "馬");
-        board[9][2] = piece("elephant", "red", "相");
-        board[9][3] = piece("guard", "red", "士");
-        board[9][4] = piece("king", "red", "帥");
-        board[9][5] = piece("guard", "red", "士");
-        board[9][6] = piece("elephant", "red", "相");
-        board[9][7] = piece("horse", "red", "馬");
-        board[9][8] = piece("rook", "red", "車");
-        board[7][1] = piece("cannon", "red", "包");
-        board[7][7] = piece("cannon", "red", "包");
-        board[6][0] = piece("pawn", "red", "兵");
-        board[6][2] = piece("pawn", "red", "兵");
-        board[6][4] = piece("pawn", "red", "兵");
-        board[6][6] = piece("pawn", "red", "兵");
-        board[6][8] = piece("pawn", "red", "兵");
+        // Red (bottom)
+        board[9][0] = piece("rook", "red", pieceLabel("rook", "red"));
+        board[9][1] = piece("horse", "red", pieceLabel("horse", "red"));
+        board[9][2] = piece("elephant", "red", pieceLabel("elephant", "red"));
+        board[9][3] = piece("guard", "red", pieceLabel("guard", "red"));
+        board[9][4] = piece("king", "red", pieceLabel("king", "red"));
+        board[9][5] = piece("guard", "red", pieceLabel("guard", "red"));
+        board[9][6] = piece("elephant", "red", pieceLabel("elephant", "red"));
+        board[9][7] = piece("horse", "red", pieceLabel("horse", "red"));
+        board[9][8] = piece("rook", "red", pieceLabel("rook", "red"));
+        board[7][1] = piece("cannon", "red", pieceLabel("cannon", "red"));
+        board[7][7] = piece("cannon", "red", pieceLabel("cannon", "red"));
+        board[6][0] = piece("pawn", "red", pieceLabel("pawn", "red"));
+        board[6][2] = piece("pawn", "red", pieceLabel("pawn", "red"));
+        board[6][4] = piece("pawn", "red", pieceLabel("pawn", "red"));
+        board[6][6] = piece("pawn", "red", pieceLabel("pawn", "red"));
+        board[6][8] = piece("pawn", "red", pieceLabel("pawn", "red"));
     }
 
     function inRange(r, c) {
@@ -254,7 +278,7 @@
                 if (between !== 1) return false;
                 var screenPiece = getSingleScreenPieceStraight(from, to);
                 if (!screenPiece) return false;
-                // 포는 포를 받침으로 사용할 수 없다.
+                // Cannon cannot use cannon as the screen piece.
                 if (screenPiece.type === "cannon") return false;
                 if (target && target.type === "cannon") return false;
                 return true;
@@ -284,13 +308,14 @@
 
         if (pieceObj.type === "elephant") {
             if (!(adr === 3 && adc === 2 || adr === 2 && adc === 3)) return false;
-            var stepR = dr === 0 ? 0 : dr / Math.abs(dr);
-            var stepC = dc === 0 ? 0 : dc / Math.abs(dc);
-            var b1r = from.r + stepR;
-            var b1c = from.c + stepC;
-            var b2r = from.r + stepR * 2;
-            var b2c = from.c + stepC * 2;
-            return !getPiece(b1r, b1c) && !getPiece(b2r, b2c);
+            var signR = dr === 0 ? 0 : dr / Math.abs(dr);
+            var signC = dc === 0 ? 0 : dc / Math.abs(dc);
+            if (adr === 3 && adc === 2) {
+                return !getPiece(from.r + signR, from.c)
+                    && !getPiece(from.r + signR * 2, from.c + signC);
+            }
+            return !getPiece(from.r, from.c + signC)
+                && !getPiece(from.r + signR, from.c + signC * 2);
         }
 
         if (pieceObj.type === "guard" || pieceObj.type === "king") {
@@ -303,10 +328,7 @@
         if (pieceObj.type === "pawn") {
             var forward = pieceObj.side === "red" ? -1 : 1;
             if (dr === forward && dc === 0) return true;
-
-            var crossed = pieceObj.side === "red" ? from.r <= 4 : from.r >= 5;
-            if (crossed && dr === 0 && adc === 1) return true;
-
+            if (dr === 0 && adc === 1) return true;
             var enemyPalace = pieceObj.side === "red" ? "blue" : "red";
             if (inPalace(enemyPalace, from.r, from.c) && dr === forward && adc === 1) {
                 return canPalaceDiagonalOneStep(from, to, enemyPalace);
@@ -370,7 +392,6 @@
     function isLegalMove(from, to, p) {
         if (!canMove(from, to, p)) return false;
         return withTempMove(from, to, function () {
-            if (kingsFacing()) return false;
             return !isInCheck(p.side);
         });
     }
@@ -457,13 +478,13 @@
     }
 
     function pieceKoreanName(type) {
-        if (type === "rook") return "차";
-        if (type === "horse") return "마";
-        if (type === "elephant") return "상";
-        if (type === "guard") return "사";
-        if (type === "king") return "궁";
-        if (type === "cannon") return "포";
-        return "졸";
+        if (type === "rook") return "\ucc28";
+        if (type === "horse") return "\ub9c8";
+        if (type === "elephant") return "\uc0c1";
+        if (type === "guard") return "\uc0ac";
+        if (type === "king") return "\uad81";
+        if (type === "cannon") return "\ud3ec";
+        return "\uc878";
     }
 
     function recordMove(from, to, p, captured) {
@@ -476,24 +497,24 @@
 
     function toggleTurn() {
         currentTurn = currentTurn === "red" ? "blue" : "red";
-        if (turnEl) turnEl.textContent = "차례: " + currentTurn.toUpperCase();
+        if (turnEl) turnEl.textContent = "\ucc28\ub840: " + (currentTurn === "red" ? "\ucd08" : "\ud55c");
     }
 
     function evaluateAfterMove(movedSide) {
         var enemy = movedSide === "red" ? "blue" : "red";
 
         if (!hasKing(enemy)) {
-            endGame(movedSide, "궁 포획", "상대 궁을 잡아 즉시 승리했습니다.");
+            endGame(movedSide, "\uad81 \ud3ec\ud68d", "\uc0c1\ub300 \uad81\uc744 \uc7a1\uc544 \uc989\uc2dc \uc2b9\ub9ac\ud588\uc2b5\ub2c8\ub2e4.");
             return;
         }
         if (isInCheck(enemy)) {
-            showToast("장군!", "상대 궁이 공격받는 상태입니다.");
+            showToast("\uc7a5\uad70", "\uc0c1\ub300 \uad81\uc774 \uacf5\uaca9\ubc1b\ub294 \uc0c1\ud0dc\uc785\ub2c8\ub2e4.");
         }
         if (!hasAnyLegalMove(enemy)) {
             if (isInCheck(enemy)) {
-                endGame(movedSide, "외통 승리", "상대가 장군을 피할 수 없어 대국이 종료되었습니다.");
+                endGame(movedSide, "\uc678\ud1b5 \uc2b9\ub9ac", "\uc0c1\ub300\uac00 \uc7a5\uad70\uc744 \ud53c\ud560 \uc218 \uc5c6\uc5b4 \ub300\uad6d\uc774 \uc885\ub8cc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.");
             } else {
-                endGame("draw", "무승부", "합법적인 수가 없어 대국이 종료되었습니다.");
+                endGame("draw", "\ubb34\uc2b9\ubd80", "\ud569\ubc95\uc801\uc778 \uc218\uac00 \uc5c6\uc5b4 \ub300\uad6d\uc774 \uc885\ub8cc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.");
             }
         }
     }
@@ -558,6 +579,7 @@
                 var cell = document.createElement("button");
                 cell.type = "button";
                 cell.className = "janggi-cell";
+                if (inPalace("blue", r, c) || inPalace("red", r, c)) cell.classList.add("palace-zone");
                 if (selected && selected.r === r && selected.c === c) cell.classList.add("selected");
                 if (validTargets.some(function (v) { return v.r === r && v.c === c; })) cell.classList.add("hint");
                 if (lastMove && ((lastMove.from.r === r && lastMove.from.c === c) || (lastMove.to.r === r && lastMove.to.c === c))) {
@@ -595,10 +617,22 @@
         return { from: from, to: to };
     }
 
+    function applyLocalAiFallback(reason) {
+        var local = findLocalAiMove("blue");
+        if (!local) {
+            showToast("AI 수 없음", "합법 수를 찾지 못했습니다.");
+            return;
+        }
+        if (reason) showToast("로컬 AI 폴백", reason);
+        movePiece(local.from, local.to, false);
+        aiRequestPending = false;
+        aiWaitAttempts = 0;
+    }
+
     function requestAiMove() {
         if (aiRequestPending || gameEnded || currentTurn !== "blue") return;
         if (!window.JanggiAI || typeof window.JanggiAI.requestMove !== "function") {
-            showToast("엔진 오류", "AI 엔진 연결에 실패했습니다. 새로고침 후 다시 시도하세요.");
+            showToast("\uc5d4\uc9c4 \uc624\ub958", "AI \uc5d4\uc9c4 \uc5f0\uacb0\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.");
             return;
         }
 
@@ -606,14 +640,14 @@
             if (typeof window.JanggiAI.init === "function") window.JanggiAI.init();
             aiWaitAttempts += 1;
             if (aiWaitAttempts === 1) {
-                showToast("엔진 준비 중", "엔진 준비가 끝나면 AI가 자동으로 수를 둡니다.");
+                showToast("\uc5d4\uc9c4 \uc900\ube44 \uc911", "\uc900\ube44\uac00 \uc644\ub8cc\ub418\uba74 AI\uac00 \uc790\ub3d9\uc73c\ub85c \ub454\ub2e4.");
             }
             if (aiWaitAttempts <= 30) {
                 setTimeout(function () {
                     requestAiMove();
                 }, 400);
             } else {
-                showToast("엔진 준비 실패", "엔진이 준비되지 않았습니다. 다시 시작을 눌러 주세요.");
+                applyLocalAiFallback("엔진 준비 지연으로 로컬 AI를 사용합니다.");
             }
             return;
         }
@@ -627,17 +661,13 @@
                 aiWaitAttempts = 0;
                 return;
             }
-            aiRequestPending = false;
-            showToast("엔진 응답 오류", "AI 수를 해석하지 못했습니다. 다시 요청합니다.");
-            setTimeout(function () {
-                requestAiMove();
-            }, 300);
+            applyLocalAiFallback("엔진 응답을 해석하지 못해 로컬 AI로 진행합니다.");
         });
     }
 
     function undoMove() {
         if (!undoStack.length) {
-            showToast("알림", "되돌릴 수가 없습니다.");
+            showToast("\uc54c\ub9bc", "\ub418\ub3cc\ub9b4 \uc218\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.");
             return;
         }
         var prev = undoStack.pop();
@@ -655,7 +685,7 @@
         aiRequestPending = false;
         aiWaitAttempts = 0;
         if (historyEl) historyEl.textContent = moveHistory.length ? moveHistory.join("\n") : "-";
-        if (turnEl) turnEl.textContent = "차례: " + currentTurn.toUpperCase();
+        if (turnEl) turnEl.textContent = "\ucc28\ub840: " + (currentTurn === "red" ? "\ucd08" : "\ud55c");
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         renderBoard();
     }
@@ -672,7 +702,7 @@
         aiWaitAttempts = 0;
         gameEnded = false;
         if (historyEl) historyEl.textContent = "-";
-        if (turnEl) turnEl.textContent = "차례: RED";
+        if (turnEl) turnEl.textContent = "\ucc28\ub840: \ucd08";
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         initBoardState();
         renderBoard();
@@ -709,3 +739,4 @@
         }
     });
 })();
+

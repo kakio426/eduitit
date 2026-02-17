@@ -75,7 +75,8 @@
             if (variantSupportsJanggi) {
                 setStatus("엔진 준비 완료");
             } else {
-                setStatus("엔진 준비 완료 (장기 미지원)");
+                // Some builds do not print variant option lines; keep running if engine itself is ready.
+                setStatus("엔진 준비 완료 (variant 옵션 미확인)");
             }
             return;
         }
@@ -121,7 +122,7 @@
         initByFactory()
             .catch(function (err) {
                 log("[Janggi] Factory init failed: " + err.message);
-                setStatus("Engine initialization failed");
+                setStatus("엔진 초기화 실패");
             })
             .finally(function () {
                 engineBooting = false;
@@ -131,7 +132,8 @@
     function requestMove(moves, callback) {
         if (typeof callback !== "function") return;
 
-        if (!engine || !engineReady || !variantSupportsJanggi) {
+        // Do not hard-block by variantSupportsJanggi: option echo may be missing by build.
+        if (!engine || !engineReady) {
             callback(null);
             return;
         }
@@ -169,7 +171,7 @@
         if (!JANGGI_IS_AI_MODE) {
             setStatus("로컬 모드");
         } else {
-            setStatus("내장 AI 준비 완료");
+            setStatus("장기 AI 준비 중");
             // Start booting engine in background; local AI keeps game responsive.
             init();
         }
@@ -179,12 +181,11 @@
         init: init,
         requestMove: requestMove,
         canUseEngine: function () {
-            return !!(engine && engineReady && variantSupportsJanggi);
+            return !!(engine && engineReady);
         },
         getState: function () {
-            if (engine && engineReady && variantSupportsJanggi) return "ready";
+            if (engine && engineReady) return "ready";
             if (engineBooting) return "booting";
-            if (engine && engineReady && !variantSupportsJanggi) return "unsupported";
             if (engine && !engineReady) return "loading";
             return "idle";
         }
