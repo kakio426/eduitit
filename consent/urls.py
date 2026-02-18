@@ -12,6 +12,7 @@ urlpatterns = [
     path("<uuid:request_id>/recipients/", views.consent_recipients, name="recipients"),
     path("<uuid:request_id>/", views.consent_detail, name="detail"),
     path("<uuid:request_id>/preview/", views.consent_preview_positions, name="preview_positions"),
+    path("<uuid:request_id>/document/source/", views.consent_document_source, name="document_source"),
     path("<uuid:request_id>/send/", views.consent_send, name="send"),
     path("<uuid:request_id>/download/merged/", views.consent_download_merged, name="download_merged"),
     path("recipient/<int:recipient_id>/download/", views.consent_download_recipient_pdf, name="download_recipient_pdf"),

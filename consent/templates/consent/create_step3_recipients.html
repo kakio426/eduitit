@@ -17,6 +17,8 @@
         <form method="post" class="space-y-3">
           {% csrf_token %}
           {{ form.recipients_text }}
+          {{ form.recipients_text.errors }}
+          {{ form.non_field_errors }}
           <div>
             <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">등록</button>
             <a href="{% url 'consent:detail' request_id=consent_request.request_id %}" class="ml-2 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">상세로 이동</a>

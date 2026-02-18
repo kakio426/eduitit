@@ -16,12 +16,6 @@ def _split_data_url(data_url: str):
     return base64.b64decode(payload)
 
 
-def _load_pdf_reader(path: str):
-    from pypdf import PdfReader
-
-    return PdfReader(path)
-
-
 def _image_to_pdf_bytes(path: str):
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas
@@ -51,7 +45,13 @@ def get_document_reader(document: SignatureDocument):
     return PdfReader(io.BytesIO(get_document_pdf_bytes(document)))
 
 
-def create_signature_overlay(position: SignaturePosition, page_width: float, page_height: float, signature_data: str, footer_text: str):
+def create_signature_overlay(
+    position: SignaturePosition,
+    page_width: float,
+    page_height: float,
+    signature_data: str,
+    footer_text: str,
+):
     from pypdf import PdfReader
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas
@@ -90,7 +90,7 @@ def create_declined_watermark(page_width: float, page_height: float):
     c.translate(page_width / 2, page_height / 2)
     c.rotate(30)
     c.setFont("Helvetica-Bold", 56)
-    c.drawCentredString(0, 0, "비동의")
+    c.drawCentredString(0, 0, "DECLINED")
     c.restoreState()
     c.save()
     packet.seek(0)
@@ -108,7 +108,7 @@ def create_position_preview_overlay(position: SignaturePosition, page_width: flo
     c.setLineWidth(1.2)
     c.rect(x, y, width, height)
     c.setFont("Helvetica", 9)
-    c.drawString(x + 4, y + height - 12, "서명 위치 미리보기")
+    c.drawString(x + 4, y + height - 12, "Signature box preview")
     c.save()
     packet.seek(0)
     return PdfReader(packet).pages[0]
@@ -177,7 +177,10 @@ def generate_merged_pdf(request: SignatureRequest, include_decline_summary: bool
     from pypdf import PdfReader, PdfWriter
 
     writer = PdfWriter()
-    recipients = request.recipients.filter(status=SignatureRecipient.STATUS_SIGNED, signed_pdf__isnull=False).order_by("student_name", "id")
+    recipients = request.recipients.filter(
+        status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED],
+        signed_pdf__isnull=False,
+    ).order_by("student_name", "id")
     for recipient in recipients:
         with recipient.signed_pdf.open("rb") as f:
             reader = PdfReader(f)
@@ -243,7 +246,7 @@ def create_decline_summary_page(request: SignatureRequest):
     width, height = A4
     y = height - 40
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(32, y, "비동의 사유 요약")
+    c.drawString(32, y, "Decline Summary")
     y -= 24
     c.setFont("Helvetica", 9)
     c.drawString(32, y, f"Request ID: {request.request_id}")
@@ -254,10 +257,13 @@ def create_decline_summary_page(request: SignatureRequest):
             c.showPage()
             y = height - 40
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(32, y, "비동의 사유 요약 (계속)")
+            c.drawString(32, y, "Decline Summary (cont.)")
             y -= 24
             c.setFont("Helvetica", 9)
-        line = f"{idx}. {recipient.student_name} / {recipient.parent_name} - {recipient.decline_reason or '(사유 미입력)'}"
+        line = (
+            f"{idx}. {recipient.student_name} / {recipient.parent_name}"
+            f" - {recipient.decline_reason or '(reason not provided)'}"
+        )
         c.drawString(32, y, line[:150])
         y -= 16
 

@@ -13,6 +13,7 @@ class Command(BaseCommand):
 
         steps = [
             ("migrate", lambda: call_command("migrate", "--noinput")),
+            ("check_consent_schema", lambda: call_command("check_consent_schema")),
             ("createcachetable_if_needed", self._create_cache_table_if_needed),
             ("ensure_ssambti", lambda: call_command("ensure_ssambti")),
             ("ensure_studentmbti", lambda: call_command("ensure_studentmbti")),

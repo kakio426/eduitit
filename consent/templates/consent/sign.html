@@ -4,7 +4,12 @@
 
 {% block extra_css %}
 <style>
-  #signaturePad { width: 100%; height: 180px; background: #fff; border-radius: 16px; }
+  #signaturePad {
+    width: 100%;
+    height: 180px;
+    background: #fff;
+    border-radius: 16px;
+  }
 </style>
 {% endblock %}
 
@@ -34,7 +39,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-semibold mb-1">자필 서명</label>
+        <label class="block text-sm font-semibold mb-1">손가락 서명</label>
         <canvas id="signaturePad" class="shadow-clay-inner"></canvas>
         <div class="flex gap-2 mt-2">
           <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>
@@ -93,7 +98,9 @@
     e.preventDefault();
   }
 
-  function end() { drawing = false; }
+  function end() {
+    drawing = false;
+  }
 
   clearBtn.addEventListener("click", () => {
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);

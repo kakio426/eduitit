@@ -1,10 +1,13 @@
 import json
+import mimetypes
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import (
@@ -16,6 +19,7 @@ from .forms import (
     VerifyIdentityForm,
 )
 from .models import ConsentAuditLog, SignaturePosition, SignatureRecipient, SignatureRequest
+from .schema import get_consent_schema_status
 from .services import (
     generate_merged_pdf,
     generate_position_preview_pdf,
@@ -27,8 +31,13 @@ from .services import (
 DEFAULT_LEGAL_NOTICE = (
     "본 동의서는 학교 교육활동 운영을 위한 목적 범위 내에서만 사용됩니다.\n"
     "수집 정보(학생명, 보호자명, 연락처, 서명 이미지, 접속기록)는 관련 법령 및 학교 내부 규정에 따라 "
-    "보관 및 폐기됩니다.\n"
+    "보관 및 파기됩니다.\n"
     "서명 시각, 접속 IP, 기기 정보(User-Agent)가 증빙 목적으로 기록될 수 있습니다."
+)
+
+SCHEMA_UNAVAILABLE_MESSAGE = (
+    "동의서 서비스 데이터베이스가 아직 준비되지 않았습니다. "
+    "관리자에게 `python manage.py migrate signatures` 실행을 요청해 주세요."
 )
 
 
@@ -62,20 +71,51 @@ def _parse_recipients(text):
     return recipients
 
 
+def _schema_guard_response(request, *, force_refresh=False, detail_override=""):
+    is_ready, missing_tables, detail = get_consent_schema_status(force_refresh=force_refresh)
+    if is_ready:
+        return None
+
+    if request.user.is_authenticated:
+        messages.error(request, SCHEMA_UNAVAILABLE_MESSAGE)
+
+    return render(
+        request,
+        "consent/system_unavailable.html",
+        {
+            "message": SCHEMA_UNAVAILABLE_MESSAGE,
+            "missing_tables": missing_tables,
+            "detail": detail_override or detail,
+        },
+        status=503,
+    )
+
+
 @login_required
 def consent_dashboard(request):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     requests = SignatureRequest.objects.filter(created_by=request.user).select_related("document")
     return render(request, "consent/dashboard.html", {"requests": requests})
 
 
 @login_required
 def consent_create(request):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
     return redirect("consent:create_step1")
 
 
 @login_required
 @transaction.atomic
 def consent_create_step1(request):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     if request.method == "POST":
         document_form = ConsentDocumentForm(request.POST, request.FILES)
         request_form = ConsentRequestForm(request.POST)
@@ -83,16 +123,18 @@ def consent_create_step1(request):
             document = document_form.save(commit=False)
             document.created_by = request.user
             document.file_type = guess_file_type(document.original_file.name)
-            document.save()
-
             consent_request = request_form.save(commit=False)
             consent_request.created_by = request.user
-            consent_request.document = document
             consent_request.status = SignatureRequest.STATUS_DRAFT
             consent_request.consent_text_version = "v1"
             if not (consent_request.legal_notice or "").strip():
                 consent_request.legal_notice = DEFAULT_LEGAL_NOTICE
-            consent_request.save()
+            try:
+                document.save()
+                consent_request.document = document
+                consent_request.save()
+            except (OperationalError, ProgrammingError) as exc:
+                return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
             return redirect("consent:setup_positions", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm()
@@ -112,6 +154,10 @@ def consent_create_step1(request):
 @login_required
 @transaction.atomic
 def consent_setup_positions(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(
         SignatureRequest.objects.select_related("document"),
         request_id=request_id,
@@ -167,7 +213,7 @@ def consent_setup_positions(request, request_id):
             "consent_request": consent_request,
             "form": form,
             "initial_positions_json": json.dumps(initial_positions, ensure_ascii=False),
-            "document_url": consent_request.document.original_file.url,
+            "document_url": reverse("consent:document_source", kwargs={"request_id": consent_request.request_id}),
             "document_file_type": consent_request.document.file_type,
             "document_file_name": consent_request.document.original_file.name,
         },
@@ -177,6 +223,10 @@ def consent_setup_positions(request, request_id):
 @login_required
 @transaction.atomic
 def consent_recipients(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     form = RecipientBulkForm(request.POST or None)
 
@@ -199,6 +249,10 @@ def consent_recipients(request, request_id):
 
 @login_required
 def consent_detail(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(
         SignatureRequest.objects.select_related("document"),
         request_id=request_id,
@@ -218,6 +272,10 @@ def consent_detail(request, request_id):
 
 @login_required
 def consent_preview_positions(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     if not consent_request.positions.exists():
         messages.error(request, "서명 위치를 먼저 설정해 주세요.")
@@ -231,6 +289,10 @@ def consent_preview_positions(request, request_id):
 
 @login_required
 def consent_send(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     if not consent_request.preview_checked_at:
         messages.error(request, "발송 전에 위치 미리보기를 먼저 확인해 주세요.")
@@ -247,12 +309,16 @@ def consent_send(request, request_id):
         event_type=ConsentAuditLog.EVENT_REQUEST_SENT,
         event_meta={"recipient_count": consent_request.recipients.count()},
     )
-    messages.success(request, "발송 링크 생성을 완료했습니다. 링크를 복사해 전달해 주세요.")
+    messages.success(request, "발송 링크 생성이 완료되었습니다. 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 
 @login_required
 def consent_download_merged(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     include_decline_summary = request.GET.get("include_decline_summary") == "1"
     merged_file = generate_merged_pdf(consent_request, include_decline_summary=include_decline_summary)
@@ -266,13 +332,40 @@ def consent_download_merged(request, request_id):
 
 @login_required
 def consent_download_recipient_pdf(request, recipient_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     recipient = get_object_or_404(SignatureRecipient, id=recipient_id, request__created_by=request.user)
     if not recipient.signed_pdf:
         raise Http404("아직 서명 PDF가 없습니다.")
     return FileResponse(recipient.signed_pdf.open("rb"), as_attachment=True, filename=recipient.signed_pdf.name.split("/")[-1])
 
 
+@login_required
+def consent_document_source(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    consent_request = get_object_or_404(
+        SignatureRequest.objects.select_related("document"),
+        request_id=request_id,
+        created_by=request.user,
+    )
+    file_field = consent_request.document.original_file
+    guessed_content_type = mimetypes.guess_type(file_field.name)[0]
+    content_type = guessed_content_type or "application/octet-stream"
+    response = FileResponse(file_field.open("rb"), content_type=content_type)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 def consent_verify(request, token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request"), access_token=token)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
@@ -303,7 +396,7 @@ def consent_verify(request, token):
                 ip_address=_client_ip(request),
                 user_agent=_user_agent(request),
             )
-            form.add_error(None, "정보가 일치하지 않습니다.")
+            form.add_error(None, "입력한 정보가 일치하지 않습니다.")
     else:
         form = VerifyIdentityForm()
 
@@ -311,6 +404,10 @@ def consent_verify(request, token):
 
 
 def consent_sign(request, token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
@@ -369,5 +466,9 @@ def consent_sign(request, token):
 
 
 def consent_complete(request, token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request"), access_token=token)
     return render(request, "consent/complete.html", {"recipient": recipient})

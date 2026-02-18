@@ -3,7 +3,10 @@ from django import forms
 from .models import SignatureDocument, SignatureRequest
 
 
-CLAY_INPUT = "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300"
+CLAY_INPUT = (
+    "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft "
+    "focus:outline-none focus:ring-2 focus:ring-purple-300"
+)
 
 
 class ConsentDocumentForm(forms.ModelForm):
@@ -14,7 +17,7 @@ class ConsentDocumentForm(forms.ModelForm):
             "title": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
-                    "placeholder": "동의서 제목",
+                    "placeholder": "동의서 문서 제목",
                 }
             ),
             "original_file": forms.FileInput(
@@ -56,7 +59,7 @@ class ConsentRequestForm(forms.ModelForm):
                 attrs={
                     "class": f"{CLAY_INPUT} resize-none",
                     "rows": 5,
-                    "placeholder": "선택 입력 (비워두면 기본 법적 고지가 자동 적용됩니다.)",
+                    "placeholder": "선택 입력 (비워두면 기본 고지문이 자동 적용됩니다)",
                 }
             ),
         }
@@ -72,7 +75,7 @@ class RecipientBulkForm(forms.Form):
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
-                "placeholder": "학생명,학부모명,전화번호\n홍길동,홍길순,010-1234-5678",
+                "placeholder": "학생명,학부모명,전화번호\n홍길동,홍길동 보호자,010-1234-5678",
             }
         )
     )
@@ -121,5 +124,5 @@ class ConsentSignForm(forms.Form):
     def clean_signature_data(self):
         value = (self.cleaned_data.get("signature_data") or "").strip()
         if not value.startswith("data:image"):
-            raise forms.ValidationError("자필 서명을 입력해 주세요.")
+            raise forms.ValidationError("손서명을 입력해 주세요.")
         return value

@@ -13,21 +13,31 @@
     border: 1px solid #d1d5db;
     background: #fff;
   }
+
   #pdf-canvas,
-  #image-canvas { display: block; }
+  #image-canvas {
+    display: block;
+  }
+
   #image-canvas {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
+    display: none;
   }
+
   .sign-box {
     position: absolute;
     border: 2px dashed #7c3aed;
     background: rgba(124, 58, 237, 0.12);
     cursor: move;
   }
-  .sign-box.active { border-style: solid; }
+
+  .sign-box.active {
+    border-style: solid;
+  }
+
   .sign-box .label {
     position: absolute;
     top: -20px;
@@ -38,6 +48,7 @@
     border-radius: 999px;
     padding: 1px 6px;
   }
+
   .sign-box .handle {
     position: absolute;
     right: -7px;
@@ -57,8 +68,14 @@
     <div class="mb-6">
       <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">2단계. 서명 위치 설정</h1>
-      <p class="text-sm text-gray-500 mt-1">박스를 끌어서 배치하고 저장하세요.</p>
+      <p class="text-sm text-gray-500 mt-1">박스를 드래그해 위치/크기를 조정한 뒤 저장하세요.</p>
     </div>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
 
     <div class="clay-card p-4 md:p-5">
       <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -70,7 +87,7 @@
         <span id="stateMsg" class="text-sm text-gray-500 ml-auto">박스를 최소 1개 배치해 주세요.</span>
       </div>
 
-      <div class="overflow-auto">
+      <div id="stageWrap" class="overflow-auto">
         <div id="stage">
           <canvas id="pdf-canvas"></canvas>
           <img id="image-canvas" alt="preview">
@@ -143,7 +160,6 @@
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const pageBoxes = () => boxes.filter((b) => b.page === currentPage);
-  const selectedBox = () => boxes.find((b) => b.id === selectedId) || null;
 
   function serialize() {
     hidden.value = JSON.stringify(
@@ -236,7 +252,10 @@
 
   async function renderPdfPage(pageNo) {
     const page = await pdfDoc.getPage(pageNo);
-    const viewport = page.getViewport({ scale: 1.35 });
+    const maxWidth = Math.min(window.innerWidth - 120, 960);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.max(0.7, maxWidth / base.width);
+    const viewport = page.getViewport({ scale });
     pageWidth = viewport.width;
     pageHeight = viewport.height;
     pdfCanvas.width = pageWidth;
@@ -350,7 +369,7 @@
 
   if (!rendered) {
     console.error("preview-render-failed");
-    setMessage("미리보기를 불러오지 못했습니다. 파일 형식 또는 URL을 확인해 주세요.");
+    setMessage("미리보기를 불러오지 못했습니다. 파일 형식이나 접근 권한을 확인해 주세요.");
     pageBtn.disabled = true;
     pageInput.disabled = true;
     saveBtn.disabled = true;
@@ -365,6 +384,6 @@
   }
 
   if (!boxes.length) addBox();
-  setMessage("박스를 드래그해서 위치를 맞춘 뒤 저장하세요.");
+  setMessage("박스를 드래그해 위치를 맞춘 뒤 저장하세요.");
 </script>
 {% endblock %}

@@ -12,6 +12,12 @@ from signatures.consent_models import SignatureDocument, SignaturePosition, Sign
 class ConsentFlowTests(TestCase):
     def setUp(self):
         self.teacher = User.objects.create_user(username="teacher", password="pw123456")
+        self.teacher.email = "teacher@example.com"
+        self.teacher.save(update_fields=["email"])
+        self.teacher.userprofile.nickname = "교사"
+        self.teacher.userprofile.role = "school"
+        self.teacher.userprofile.save(update_fields=["nickname", "role"])
+
         file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
         self.document = SignatureDocument.objects.create(
             created_by=self.teacher,
@@ -29,7 +35,7 @@ class ConsentFlowTests(TestCase):
         self.recipient = SignatureRecipient.objects.create(
             request=self.request_obj,
             student_name="가나다",
-            parent_name="홍길순",
+            parent_name="홍길동",
             phone_number="010-1234-5678",
         )
 
@@ -39,7 +45,7 @@ class ConsentFlowTests(TestCase):
 
     def test_verify_identity_success_and_redirect(self):
         url = reverse("consent:verify", kwargs={"token": self.recipient.access_token})
-        response = self.client.post(url, {"parent_name": "홍길순", "phone_last4": "5678"})
+        response = self.client.post(url, {"parent_name": "홍길동", "phone_last4": "5678"})
         self.assertRedirects(response, reverse("consent:sign", kwargs={"token": self.recipient.access_token}))
         self.recipient.refresh_from_db()
         self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_VERIFIED)
@@ -57,7 +63,7 @@ class ConsentFlowTests(TestCase):
         mocked_generate.return_value = ContentFile(b"%PDF-1.4\n%%EOF", name="signed.pdf")
 
         verify_url = reverse("consent:verify", kwargs={"token": self.recipient.access_token})
-        self.client.post(verify_url, {"parent_name": "홍길순", "phone_last4": "5678"})
+        self.client.post(verify_url, {"parent_name": "홍길동", "phone_last4": "5678"})
 
         sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.post(
@@ -74,3 +80,18 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_SIGNED)
         self.assertEqual(self.recipient.decision, SignatureRecipient.DECISION_AGREE)
         self.assertTrue(bool(self.recipient.signed_pdf))
+
+    def test_document_source_returns_file(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store")
+
+    @patch("consent.views.get_consent_schema_status", return_value=(False, ["signatures_signaturedocument"], "missing"))
+    def test_schema_guard_returns_503(self, mocked_schema):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:create_step1")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, "동의서 서비스 점검 안내", status_code=503)

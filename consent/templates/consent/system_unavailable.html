@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}동의서 서비스 점검{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+  <div class="max-w-2xl mx-auto">
+    <div class="clay-card p-6">
+      <h1 class="text-2xl font-bold text-gray-800 mb-3">동의서 서비스 점검 안내</h1>
+      <p class="text-gray-700">{{ message }}</p>
+
+      {% if missing_tables %}
+      <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p class="text-sm font-semibold text-amber-800 mb-2">누락된 테이블</p>
+        <ul class="text-xs text-amber-900 space-y-1">
+          {% for table_name in missing_tables %}
+          <li><code>{{ table_name }}</code></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if detail %}
+      <details class="mt-4 text-xs text-gray-600">
+        <summary class="cursor-pointer">상세 오류</summary>
+        <pre class="mt-2 whitespace-pre-wrap">{{ detail }}</pre>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}
