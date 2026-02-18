@@ -24,6 +24,11 @@ def get_raw_storage():
     return default_storage
 
 
+def get_document_storage():
+    """안내문 원본은 기본 스토리지로 저장해 브라우저 미리보기 호환성을 높인다."""
+    return default_storage
+
+
 class SignatureDocument(models.Model):
     FILE_TYPE_PDF = "pdf"
     FILE_TYPE_IMAGE = "image"
@@ -40,7 +45,7 @@ class SignatureDocument(models.Model):
     title = models.CharField(max_length=200)
     original_file = models.FileField(
         upload_to="signatures/consent/originals/%Y/%m/%d",
-        storage=get_raw_storage,
+        storage=get_document_storage,
     )
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -4,14 +4,17 @@ import logging
 import mimetypes
 import secrets
 import os
+import re
 import qrcode
 import base64
+import requests
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -158,17 +161,15 @@ def _build_file_response(file_field, *, inline=True):
         except Exception:
             file_url = ""
 
-        signed_url = _build_cloudinary_signed_url(file_field, fallback_url=file_url)
-        if signed_url:
-            response = redirect(signed_url)
-            response["Cache-Control"] = "no-store"
-            return response
-
-        # Fallback only: direct URL redirect can fail with 401 on private resources.
-        if isinstance(file_url, str) and file_url.startswith("http"):
-            response = redirect(file_url)
-            response["Cache-Control"] = "no-store"
-            return response
+        for remote_url in _iter_remote_file_urls(file_field, fallback_url=file_url):
+            response = _build_remote_proxy_response(
+                remote_url,
+                filename=filename,
+                content_type=content_type,
+                inline=inline,
+            )
+            if response is not None:
+                return response
         raise
 
     response = FileResponse(
@@ -177,6 +178,71 @@ def _build_file_response(file_field, *, inline=True):
         as_attachment=not inline,
         filename=filename,
     )
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+def _strip_cloudinary_signature(url: str) -> str:
+    """Cloudinary signed path(/s--...--/)를 제거한 URL을 생성한다."""
+    if not url or "res.cloudinary.com" not in url:
+        return ""
+    return re.sub(r"/s--[^/]+--/", "/", url, count=1)
+
+
+def _iter_remote_file_urls(file_field, *, fallback_url=""):
+    urls = []
+    seen = set()
+
+    def push(url):
+        if not url or not isinstance(url, str):
+            return
+        if not url.startswith("http"):
+            return
+        if url in seen:
+            return
+        seen.add(url)
+        urls.append(url)
+
+    push(fallback_url)
+    push(_strip_cloudinary_signature(fallback_url))
+
+    signed_url = _build_cloudinary_signed_url(file_field, fallback_url=fallback_url)
+    push(signed_url)
+    push(_strip_cloudinary_signature(signed_url))
+
+    return urls
+
+
+def _build_remote_proxy_response(url: str, *, filename: str, content_type: str, inline: bool):
+    if not url or not url.startswith("http"):
+        return None
+
+    try:
+        remote = requests.get(url, stream=True, timeout=(5, 30))
+    except Exception:
+        return None
+
+    if remote.status_code >= 400:
+        remote.close()
+        return None
+
+    def iterator():
+        try:
+            for chunk in remote.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+        finally:
+            remote.close()
+
+    response = StreamingHttpResponse(
+        iterator(),
+        content_type=remote.headers.get("Content-Type") or content_type,
+    )
+    disposition = "inline" if inline else "attachment"
+    response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(filename)}"
+    content_length = remote.headers.get("Content-Length")
+    if content_length:
+        response["Content-Length"] = content_length
     response["Cache-Control"] = "no-store"
     return response
 
@@ -205,6 +271,8 @@ def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
     if not file_name.startswith("media/"):
         candidates.append(f"media/{file_name}")
 
+    url_candidates = []
+
     for public_id in candidates:
         for delivery_type in ("upload", "authenticated", "private"):
             try:
@@ -216,10 +284,57 @@ def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
                     sign_url=True,
                 )
             except Exception:
-                continue
+                signed = ""
             if signed:
-                return signed
+                url_candidates.append(signed)
+
+            try:
+                from cloudinary.utils import private_download_url
+            except Exception:
+                continue
+
+            # private_download_url expects public_id + format
+            fmt = ""
+            pid = public_id
+            if "." in public_id.rsplit("/", 1)[-1]:
+                pid, fmt = public_id.rsplit(".", 1)
+            if fmt:
+                try:
+                    purl = private_download_url(
+                        pid,
+                        fmt,
+                        resource_type="raw",
+                        type=delivery_type,
+                    )
+                except Exception:
+                    purl = ""
+                if purl:
+                    url_candidates.append(purl)
+
+    for candidate in url_candidates:
+        if _remote_url_accessible(candidate):
+            return candidate
     return ""
+
+
+def _remote_url_accessible(url: str) -> bool:
+    if not url:
+        return False
+    try:
+        res = requests.head(url, allow_redirects=True, timeout=(3, 5))
+        if res.status_code < 400:
+            return True
+        if res.status_code in (401, 403, 404):
+            return False
+    except Exception:
+        pass
+
+    # Some origins block HEAD; retry with GET stream.
+    try:
+        with requests.get(url, stream=True, timeout=(3, 5)) as res:
+            return res.status_code < 400
+    except Exception:
+        return False
 
 
 def _is_file_accessible(file_field) -> bool:
@@ -238,9 +353,12 @@ def _is_file_accessible(file_field) -> bool:
             file_url = file_field.url
         except Exception:
             file_url = ""
-        # Cloud storage may not support exists() reliably for delivered resources.
         if isinstance(file_url, str) and file_url.startswith("http"):
-            return True
+            if _remote_url_accessible(file_url):
+                return True
+            signed_url = _build_cloudinary_signed_url(file_field, fallback_url=file_url)
+            if signed_url and _remote_url_accessible(signed_url):
+                return True
         return False
 
     try:
@@ -696,7 +814,8 @@ def consent_public_document(request, token):
 
     file_field = recipient.request.document.original_file
     try:
-        return _build_file_response(file_field, inline=True)
+        # 학부모 화면은 인라인 뷰어 대신 다운로드를 기본값으로 제공한다.
+        return _build_file_response(file_field, inline=False)
     except Exception:
         logger.exception("[consent] public document open failed token=%s", token)
         return render(

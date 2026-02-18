@@ -119,6 +119,7 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertIn("attachment;", response.get("Content-Disposition", ""))
 
     def test_public_document_korean_filename_returns_file(self):
         file_obj = SimpleUploadedFile("안내문.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
@@ -146,6 +147,7 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertIn("attachment;", response.get("Content-Disposition", ""))
 
     def test_document_source_returns_file(self):
         self.client.login(username="teacher", password="pw123456")
