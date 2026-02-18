@@ -6,7 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from signatures.consent_models import SignatureDocument, SignaturePosition, SignatureRecipient, SignatureRequest
+from consent.models import SignatureDocument, SignaturePosition, SignatureRecipient, SignatureRequest
 
 
 class ConsentFlowTests(TestCase):
