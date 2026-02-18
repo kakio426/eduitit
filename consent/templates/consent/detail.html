@@ -26,6 +26,12 @@
       현재 발송 링크가 만료되었습니다. 필요한 수신자 링크를 재발급해 주세요.
     </div>
     {% endif %}
+    {% if not source_file_available %}
+    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      첨부 안내문 파일에 접근할 수 없습니다. 현재 상태로는 학부모가 안내문을 열 때 오류가 발생합니다.
+      문서를 다시 업로드한 뒤 발송 링크를 생성해 주세요.
+    </div>
+    {% endif %}
 
     <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
       <p class="font-semibold mb-1">학부모 안내 기본 문구 복사 지원</p>

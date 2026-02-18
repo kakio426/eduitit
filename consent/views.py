@@ -142,9 +142,23 @@ def _compose_parent_message(consent_request: SignatureRequest, recipient: Signat
 
 
 def _build_file_response(file_field, *, inline=True):
+    if not file_field or not file_field.name:
+        raise Http404("문서 파일을 찾을 수 없습니다.")
+
     filename = (file_field.name or "").split("/")[-1] or "document.pdf"
     guessed_content_type = mimetypes.guess_type(file_field.name)[0]
     content_type = guessed_content_type or "application/octet-stream"
+
+    try:
+        file_url = file_field.url
+    except Exception:
+        file_url = ""
+
+    # Remote storages (e.g. Cloudinary raw) are served more reliably via direct URL.
+    if isinstance(file_url, str) and file_url.startswith("http"):
+        response = redirect(file_url)
+        response["Cache-Control"] = "no-store"
+        return response
 
     file_obj = file_field.open("rb")
     response = FileResponse(
@@ -155,6 +169,26 @@ def _build_file_response(file_field, *, inline=True):
     )
     response["Cache-Control"] = "no-store"
     return response
+
+
+def _is_file_accessible(file_field) -> bool:
+    if not file_field or not file_field.name:
+        return False
+
+    try:
+        exists = file_field.storage.exists(file_field.name)
+    except Exception:
+        exists = None
+
+    if exists is True:
+        return True
+    if exists is False:
+        return False
+
+    try:
+        return bool(file_field.url)
+    except Exception:
+        return False
 
 
 def _schema_guard_response(request, *, force_refresh=False, detail_override=""):
@@ -380,6 +414,7 @@ def consent_detail(request, request_id):
         created_by=request.user,
     )
     recipients = consent_request.recipients.all().order_by("student_name")
+    source_file_available = _is_file_accessible(consent_request.document.original_file)
     recipient_rows = []
     for recipient in recipients:
         sign_url = request.build_absolute_uri(reverse("consent:sign", kwargs={"token": recipient.access_token}))
@@ -399,6 +434,7 @@ def consent_detail(request, request_id):
             "recipient_rows": recipient_rows,
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
+            "source_file_available": source_file_available,
         },
     )
 
@@ -424,6 +460,9 @@ def consent_send(request, request_id):
     if not consent_request.recipients.exists():
         messages.error(request, "수신자를 먼저 등록해 주세요.")
         return redirect("consent:recipients", request_id=consent_request.request_id)
+    if not _is_file_accessible(consent_request.document.original_file):
+        messages.error(request, "안내문 파일을 찾을 수 없어 발송 링크를 생성할 수 없습니다. 문서를 다시 업로드해 주세요.")
+        return redirect("consent:detail", request_id=consent_request.request_id)
 
     consent_request.status = SignatureRequest.STATUS_SENT
     consent_request.sent_at = timezone.now()

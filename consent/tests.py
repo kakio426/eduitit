@@ -55,6 +55,18 @@ class ConsentFlowTests(TestCase):
         self.request_obj.refresh_from_db()
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_SENT)
 
+    def test_send_blocks_when_source_document_missing(self):
+        self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"
+        self.document.save(update_fields=["original_file"])
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "안내문 파일을 찾을 수 없어 발송 링크를 생성할 수 없습니다.")
+        self.request_obj.refresh_from_db()
+        self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_DRAFT)
+
     def test_sign_submission_updates_status(self):
         sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.post(

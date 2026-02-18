@@ -253,6 +253,12 @@ cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
 api_key = os.environ.get('CLOUDINARY_API_KEY', '')
 api_secret = os.environ.get('CLOUDINARY_API_SECRET', '')
 
+print("[CLOUDINARY] Production environment check")
+print(f"CLOUDINARY_URL: {'SET' if cloudinary_url else '[X] NOT SET'}")
+print(f"CLOUDINARY_CLOUD_NAME: {cloud_name if cloud_name else '[X] NOT SET'}")
+print(f"CLOUDINARY_API_KEY: {api_key[:4] + '...' if api_key else '[X] NOT SET'}")
+print(f"CLOUDINARY_API_SECRET: {'SET' if api_secret else '[X] NOT SET'}")
+
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': cloud_name,
     'API_KEY': api_key,
@@ -288,6 +294,8 @@ if CLOUDINARY_STORAGE.get('CLOUD_NAME') and CLOUDINARY_STORAGE.get('API_KEY'):
 else:
     USE_CLOUDINARY = False
     # Local storage is already set in the global block above.
+
+print(f"[CLOUDINARY] USE_CLOUDINARY = {USE_CLOUDINARY}")
 
 # =============================================================================
 # AUTHENTICATION

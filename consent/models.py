@@ -4,11 +4,24 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
+from django.core.files.storage import default_storage
 from django.utils import timezone
 
 
 def _generate_access_token():
     return secrets.token_urlsafe(24)
+
+
+def get_raw_storage():
+    """Cloudinary 사용 시 raw 스토리지를, 아니면 기본 스토리지를 사용한다."""
+    if getattr(settings, "USE_CLOUDINARY", False):
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+
+            return RawMediaCloudinaryStorage()
+        except (ImportError, Exception):
+            return default_storage
+    return default_storage
 
 
 class SignatureDocument(models.Model):
@@ -25,7 +38,10 @@ class SignatureDocument(models.Model):
         related_name="consent_documents",
     )
     title = models.CharField(max_length=200)
-    original_file = models.FileField(upload_to="signatures/consent/originals/%Y/%m/%d")
+    original_file = models.FileField(
+        upload_to="signatures/consent/originals/%Y/%m/%d",
+        storage=get_raw_storage,
+    )
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -74,6 +90,7 @@ class SignatureRequest(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     merged_pdf = models.FileField(
         upload_to="signatures/consent/merged/%Y/%m/%d",
+        storage=get_raw_storage,
         blank=True,
         null=True,
     )
@@ -157,6 +174,7 @@ class SignatureRecipient(models.Model):
     signature_data = models.TextField(blank=True)
     signed_pdf = models.FileField(
         upload_to="signatures/consent/signed/%Y/%m/%d",
+        storage=get_raw_storage,
         blank=True,
         null=True,
     )
