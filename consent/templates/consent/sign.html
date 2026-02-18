@@ -1,6 +1,6 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
-{% block title %}?숈쓽 諛??쒕챸{% endblock %}
+{% block title %}동의 및 서명{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -12,34 +12,34 @@
 <main class="pt-24 pb-16 px-4 min-h-screen">
   <div class="max-w-xl mx-auto">
     <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">2?④퀎. ?숈쓽 諛??먯꽌紐?/h1>
-      <p class="text-sm text-gray-500">{{ recipient.student_name }} ?숈깮 / {{ recipient.parent_name }} ?숇?紐?/p>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">2단계. 동의 및 자필서명</h1>
+      <p class="text-sm text-gray-500">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
     </div>
 
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">
-      <p>媛쒖씤?뺣낫???숈쓽???섑빀 紐⑹쟻???쒗빐 ?ъ슜?섎ŉ, 蹂댁쑀湲곌컙 醫낅즺 ???뚭린?⑸땲??</p>
-      <p>?숈쓽 ?쒓컖, ?묒냽?뺣낫(IP/湲곌린?뺣낫), ?숈쓽 臾멸뎄 踰꾩쟾??湲곕줉?⑸땲??</p>
+      <p>개인정보는 동의서 수합 목적에만 사용되며, 보유기간 종료 시 파기됩니다.</p>
+      <p>동의 시각, 접속 정보(IP/기기정보), 동의 문구 버전이 기록됩니다.</p>
       <details class="mt-2">
-        <summary class="cursor-pointer font-semibold">怨좎? ?꾨Ц 蹂닿린</summary>
-        <pre class="whitespace-pre-wrap mt-2 text-xs">{{ consent_request.legal_notice|default:"蹂꾨룄 怨좎? ?꾨Ц???깅줉?섏? ?딆븯?듬땲??" }}</pre>
+        <summary class="cursor-pointer font-semibold">고지 전문 보기</summary>
+        <pre class="whitespace-pre-wrap mt-2 text-xs">{{ consent_request.legal_notice|default:"별도 고지 전문이 등록되지 않았습니다." }}</pre>
       </details>
     </div>
 
     <form method="post" id="signForm" class="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
       {% csrf_token %}
       <div>
-        <label class="block text-sm font-semibold mb-2">?섏궗 ?쒖떆</label>
+        <label class="block text-sm font-semibold mb-2">의사 표시</label>
         {{ form.decision }}
       </div>
       <div id="declineReasonWrap" class="hidden">
-        <label class="block text-sm font-semibold mb-1">鍮꾨룞???ъ쑀 (?좏깮)</label>
+        <label class="block text-sm font-semibold mb-1">비동의 사유 (선택)</label>
         {{ form.decline_reason }}
       </div>
 
       <div>
         <div class="flex items-center justify-between mb-1">
-          <label class="block text-sm font-semibold">?먯꽌紐?(?꾩닔)</label>
-          <button type="button" onclick="pad.clear()" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">吏?곌린</button>
+          <label class="block text-sm font-semibold">자필서명(필수)</label>
+          <button type="button" onclick="pad.clear()" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">지우기</button>
         </div>
         <canvas id="signaturePad" class="signature-pad"></canvas>
         {{ form.signature_data }}
@@ -49,7 +49,7 @@
       {% if form.non_field_errors %}
       <div class="text-sm text-red-600">{{ form.non_field_errors }}</div>
       {% endif %}
-      <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">?쒖텧?섍린</button>
+      <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출하기</button>
     </form>
   </div>
 </main>
@@ -82,7 +82,7 @@
   document.getElementById("signForm").addEventListener("submit", function (e) {
     if (pad.isEmpty()) {
       e.preventDefault();
-      alert("?먯꽌紐낆쓣 ?낅젰??二쇱꽭??");
+      alert("자필서명을 입력해 주세요.");
       return;
     }
     document.getElementById("id_signature_data").value = pad.toDataURL("image/png");

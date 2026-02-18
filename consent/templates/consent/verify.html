@@ -1,30 +1,30 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
-{% block title %}蹂몄씤 ?뺤씤{% endblock %}
+{% block title %}본인 확인{% endblock %}
 
 {% block content %}
 <main class="pt-24 pb-16 px-4 min-h-screen">
   <div class="max-w-md mx-auto">
     <div class="bg-white border border-gray-200 rounded-2xl p-5">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">1?④퀎. 蹂몄씤 ?뺤씤</h1>
-      <p class="text-sm text-gray-500 mb-4">{{ recipient.student_name }} ?숈깮 ?숈쓽??/p>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">1단계. 본인 확인</h1>
+      <p class="text-sm text-gray-500 mb-4">{{ recipient.student_name }} 학생 동의서</p>
 
       <form method="post" class="space-y-4">
         {% csrf_token %}
         <div>
-          <label class="block text-sm font-semibold mb-1">?대쫫</label>
+          <label class="block text-sm font-semibold mb-1">이름</label>
           {{ form.parent_name }}
           {{ form.parent_name.errors }}
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">?대????룹옄由?4?먮━</label>
+          <label class="block text-sm font-semibold mb-1">휴대폰 뒷자리 4자리</label>
           {{ form.phone_last4 }}
           {{ form.phone_last4.errors }}
         </div>
         {% if form.non_field_errors %}
         <div class="text-sm text-red-600">{{ form.non_field_errors }}</div>
         {% endif %}
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">?뺤씤 ???ㅼ쓬</button>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">확인 후 다음</button>
       </form>
     </div>
   </div>

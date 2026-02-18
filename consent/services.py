@@ -59,7 +59,6 @@ def create_signature_overlay(position: SignaturePosition, page_width: float, pag
     packet = io.BytesIO()
     c = canvas.Canvas(packet, pagesize=(page_width, page_height))
 
-    # Draw signature image inside configured rectangle.
     image = ImageReader(io.BytesIO(_split_data_url(signature_data)))
     c.drawImage(
         image,

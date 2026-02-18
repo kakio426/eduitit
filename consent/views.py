@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 
 from .forms import (
@@ -209,7 +208,7 @@ def consent_preview_positions(request, request_id):
 def consent_send(request, request_id):
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     if not consent_request.preview_checked_at:
-        messages.error(request, "발송 전 위치 미리보기를 먼저 확인해 주세요.")
+        messages.error(request, "발송 전에 위치 미리보기를 먼저 확인해 주세요.")
         return redirect("consent:detail", request_id=consent_request.request_id)
     if not consent_request.recipients.exists():
         messages.error(request, "수신자를 먼저 등록해 주세요.")
@@ -223,7 +222,7 @@ def consent_send(request, request_id):
         event_type=ConsentAuditLog.EVENT_REQUEST_SENT,
         event_meta={"recipient_count": consent_request.recipients.count()},
     )
-    messages.success(request, "발송 시뮬레이션 처리되었습니다. 링크를 복사해 전달하세요.")
+    messages.success(request, "발송 링크 생성을 완료했습니다. 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 

@@ -119,5 +119,5 @@ class ConsentSignForm(forms.Form):
     def clean_signature_data(self):
         value = (self.cleaned_data.get("signature_data") or "").strip()
         if not value.startswith("data:image"):
-            raise forms.ValidationError("손서명을 입력해 주세요.")
+            raise forms.ValidationError("자필 서명을 입력해 주세요.")
         return value

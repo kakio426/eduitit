@@ -428,9 +428,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 {% if mode == 'ai' %}
 <!-- Stockfish는 Worker로만 로드됨 (chess_logic.js에서 처리) -->
 {% endif %}
@@ -440,6 +437,61 @@
     var STOCKFISH_PATH = "{% static 'chess/js/stockfish.js' %}";
     var IS_AI_MODE = '{{ mode }}' === 'ai';
     var AI_DIFFICULTY = '{{ difficulty }}';
+
+    (function () {
+        function loadScript(urls) {
+            return new Promise(function (resolve, reject) {
+                var index = 0;
+                function tryNext() {
+                    if (index >= urls.length) {
+                        reject(new Error('script load failed'));
+                        return;
+                    }
+                    var s = document.createElement('script');
+                    s.src = urls[index++];
+                    s.onload = resolve;
+                    s.onerror = tryNext;
+                    document.body.appendChild(s);
+                }
+                tryNext();
+            });
+        }
+
+        function showLoadError() {
+            var board = document.getElementById('myBoard');
+            var status = document.getElementById('status');
+            if (board) {
+                board.innerHTML = '<div style="padding:16px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:12px;font-weight:600;">체스 보드 라이브러리를 불러오지 못했습니다. 네트워크 환경을 확인하고 새로고침해 주세요.</div>';
+            }
+            if (status) {
+                status.textContent = '라이브러리 로딩 실패';
+                status.className = 'status-badge status-check';
+            }
+        }
+
+        Promise.resolve()
+            .then(function () {
+                return loadScript([
+                    'https://code.jquery.com/jquery-3.6.0.min.js',
+                    'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js'
+                ]);
+            })
+            .then(function () {
+                return loadScript([
+                    'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
+                    'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js'
+                ]);
+            })
+            .then(function () {
+                return loadScript([
+                    'https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js',
+                    'https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js'
+                ]);
+            })
+            .then(function () {
+                return loadScript(["{% static 'chess/js/chess_logic.js' %}"]);
+            })
+            .catch(showLoadError);
+    })();
 </script>
-<script src="{% static 'chess/js/chess_logic.js' %}"></script>
 {% endblock %}

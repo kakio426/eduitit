@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ consent_request.title }}{% endblock %}
 
@@ -6,37 +6,39 @@
 <main class="pt-32 pb-16 px-4 min-h-screen">
   <div class="max-w-6xl mx-auto">
     <div class="mb-4">
-      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">紐⑸줉?쇰줈</a>
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-2">{{ consent_request.title }}</h1>
       <p class="text-sm text-gray-500 mt-1">Request ID: {{ consent_request.request_id }}</p>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4">
-      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" aria-label="諛쒖넚 ?쒕??덉씠??>
-        諛쒖넚 ?쒕??덉씠??      </a>
-      <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300" aria-label="?꾩튂 誘몃━蹂닿린 ?뺤씤">
-        ?꾩튂 誘몃━蹂닿린 ?뺤씤
+      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" aria-label="발송 링크 생성">
+        발송 링크 생성
       </a>
-      <a href="{% url 'consent:setup_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="?쒕챸 ?꾩튂 ?ъ꽕??>
-        ?꾩튂 ?ъ꽕??      </a>
-      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="?섏떊???몄쭛">
-        ?섏떊???몄쭛
+      <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300" aria-label="위치 미리보기 확인">
+        위치 미리보기 확인
       </a>
-      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label="?듯빀 PDF ?ㅼ슫濡쒕뱶">
-        ?듯빀 PDF ?ㅼ슫濡쒕뱶
+      <a href="{% url 'consent:setup_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="서명 위치 설정">
+        위치 설정
       </a>
-      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}?include_decline_summary=1" class="min-h-11 px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="?듯빀 PDF 鍮꾨룞???ъ쑀 ?ы븿 ?ㅼ슫濡쒕뱶">
-        ?듯빀 PDF(+鍮꾨룞???ъ쑀)
+      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="수신자 편집">
+        수신자 편집
+      </a>
+      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label="통합 PDF 다운로드">
+        통합 PDF 다운로드
+      </a>
+      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}?include_decline_summary=1" class="min-h-11 px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="비동의 사유 포함 다운로드">
+        통합 PDF(+비동의 사유)
       </a>
     </div>
 
     {% if consent_request.preview_checked_at %}
     <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-      ?꾩튂 誘몃━蹂닿린 ?뺤씤 ?꾨즺: {{ consent_request.preview_checked_at|date:"Y-m-d H:i:s" }}
+      위치 미리보기 확인 완료: {{ consent_request.preview_checked_at|date:"Y-m-d H:i:s" }}
     </div>
     {% else %}
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      ?꾩튂 誘몃━蹂닿린瑜?癒쇱? ?뺤씤?댁빞 諛쒖넚?????덉뒿?덈떎.
+      위치 미리보기를 먼저 확인해야 발송할 수 있습니다.
     </div>
     {% endif %}
 
@@ -45,12 +47,12 @@
         <table class="w-full text-sm min-w-[860px]">
           <thead class="bg-gray-50 text-gray-600">
             <tr>
-              <th class="text-left px-4 py-3">?숈깮</th>
-              <th class="text-left px-4 py-3">?숇?紐?/th>
-              <th class="text-left px-4 py-3">?곕씫泥?/th>
-              <th class="text-left px-4 py-3">?곹깭</th>
-              <th class="text-left px-4 py-3">留곹겕</th>
-              <th class="text-right px-4 py-3">寃곌낵</th>
+              <th class="text-left px-4 py-3">학생</th>
+              <th class="text-left px-4 py-3">학부모</th>
+              <th class="text-left px-4 py-3">연락처</th>
+              <th class="text-left px-4 py-3">상태</th>
+              <th class="text-left px-4 py-3">링크</th>
+              <th class="text-right px-4 py-3">결과</th>
             </tr>
           </thead>
           <tbody>
@@ -63,7 +65,7 @@
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <input id="url-{{ r.id }}" readonly class="w-64 text-xs border rounded px-2 py-1" value="{{ host_base }}{% url 'consent:verify' token=r.access_token %}">
-                  <button type="button" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" onclick="copyUrl('url-{{ r.id }}')" aria-label="留곹겕 蹂듭궗">蹂듭궗</button>
+                  <button type="button" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" onclick="copyUrl('url-{{ r.id }}')" aria-label="링크 복사">복사</button>
                 </div>
               </td>
               <td class="px-4 py-3 text-right">
@@ -95,10 +97,10 @@
         input.select();
         document.execCommand("copy");
       }
-      alert("留곹겕瑜?蹂듭궗?덉뒿?덈떎.");
+      alert("링크를 복사했습니다.");
     } catch (e) {
       input.select();
-      alert("蹂듭궗???ㅽ뙣?덉뒿?덈떎. 湲멸쾶 ?뚮윭 吏곸젒 蹂듭궗??二쇱꽭??");
+      alert("복사에 실패했습니다. 길게 눌러 직접 복사해 주세요.");
     }
   }
 </script>

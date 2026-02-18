@@ -1,6 +1,6 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
-{% block title %}?숈쓽???앹꽦 2?④퀎{% endblock %}
+{% block title %}동의서 생성 2단계{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -70,46 +70,46 @@
 <main class="pt-32 pb-16 px-4 min-h-screen">
   <div class="max-w-6xl mx-auto">
     <div class="mb-6">
-      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">紐⑸줉?쇰줈</a>
-      <h1 class="text-3xl font-bold text-gray-800 mt-2">2?④퀎. ?쒕챸 ?꾩튂 ?ㅼ젙</h1>
-      <p class="text-sm text-gray-500 mt-1">諛뺤뒪瑜?諛곗튂?섍퀬 ??ν븯硫?臾몄꽌 ?ш린媛 ?щ씪??媛숈? 鍮꾩쑉濡??곸슜?⑸땲??</p>
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
+      <h1 class="text-3xl font-bold text-gray-800 mt-2">2단계. 서명 위치 설정</h1>
+      <p class="text-sm text-gray-500 mt-1">박스를 배치하고 저장하면 문서 크기가 달라도 같은 비율로 적용됩니다.</p>
     </div>
 
     <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-      <p class="font-semibold mb-1">?ъ슜 諛⑸쾿</p>
-      <p>1) 諛뺤뒪 異붽? 2) ?쒕옒洹??대룞 3) 紐⑥꽌由??먯쑝濡??ш린 議곗젅 4) ??????ㅼ쓬 ?④퀎濡??대룞</p>
+      <p class="font-semibold mb-1">사용 방법</p>
+      <p>1) 박스 추가 2) 드래그 이동 3) 모서리로 크기 조절 4) 저장 후 다음 단계로 이동</p>
     </div>
 
     <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-5">
       <div class="sticky top-24 z-10 bg-white/95 backdrop-blur-sm border border-gray-100 rounded-xl p-3 mb-3">
         <div class="grid md:grid-cols-2 gap-2 mb-2">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">?꾩옱 ?섏씠吏 <strong id="pageBadge">1</strong></span>
-            <label for="pageInput" class="text-sm text-gray-700">?섏씠吏</label>
+            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">현재 페이지 <strong id="pageBadge">1</strong></span>
+            <label for="pageInput" class="text-sm text-gray-700">페이지</label>
             <input id="pageInput" type="number" min="1" value="1" class="w-20 rounded border border-gray-300 px-2 py-1 text-sm">
-            <button id="loadPageBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">?섏씠吏 ?대룞</button>
+            <button id="loadPageBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">페이지 이동</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <label for="presetSelect" class="text-sm text-gray-700">?꾨━??/label>
+            <label for="presetSelect" class="text-sm text-gray-700">프리셋</label>
             <select id="presetSelect" class="rounded border border-gray-300 px-2 py-1 text-sm">
-          <option value="one_bottom_right">湲곕낯 1媛?(?고븯??</option>
-          <option value="one_center">湲곕낯 1媛?(以묒븰 ?섎떒)</option>
-          <option value="two_bottom">2媛?(?섎떒 醫???</option>
+              <option value="one_bottom_right">기본 1개(우하단)</option>
+              <option value="one_center">기본 1개(중앙 하단)</option>
+              <option value="two_bottom">2개(하단 좌우)</option>
             </select>
-            <button id="applyPresetBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">?꾨━???곸슜</button>
-            <button id="addBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-purple-600 text-white text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">?쒕챸 諛뺤뒪 異붽?</button>
-            <button id="deleteBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-300" disabled>?좏깮 諛뺤뒪 ??젣</button>
+            <button id="applyPresetBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">프리셋 적용</button>
+            <button id="addBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-purple-600 text-white text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">서명 박스 추가</button>
+            <button id="deleteBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-300" disabled>선택 박스 삭제</button>
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-        <span class="text-sm text-gray-700">誘몄꽭 ?대룞</span>
-        <button type="button" id="nudgeLeft" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
-        <button type="button" id="nudgeRight" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
-        <button type="button" id="nudgeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
-        <button type="button" id="nudgeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
-        <button type="button" id="sizeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>?ш린 -</button>
-        <button type="button" id="sizeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>?ш린 +</button>
-      </div>
+          <span class="text-sm text-gray-700">미세 이동</span>
+          <button type="button" id="nudgeLeft" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>좌</button>
+          <button type="button" id="nudgeRight" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>우</button>
+          <button type="button" id="nudgeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>상</button>
+          <button type="button" id="nudgeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>하</button>
+          <button type="button" id="sizeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>크기 -</button>
+          <button type="button" id="sizeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>크기 +</button>
+        </div>
       </div>
 
       <div id="statusMessage" class="mb-3 text-sm text-gray-600"></div>
@@ -123,8 +123,8 @@
 
       <div class="mt-4">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold">?꾩옱 ?섏씠吏 諛뺤뒪</h2>
-          <span id="boxCount" class="text-xs text-gray-500">0媛?/span>
+          <h2 class="text-sm font-semibold">현재 페이지 박스</h2>
+          <span id="boxCount" class="text-xs text-gray-500">0개</span>
         </div>
         <div id="boxList" class="flex flex-wrap gap-2"></div>
       </div>
@@ -135,10 +135,10 @@
       {{ form.positions_json }}
       <div class="flex flex-wrap gap-2">
         <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
-          ?꾩튂 誘몃━蹂닿린
+          위치 미리보기
         </a>
         <button type="submit" id="saveBtn" class="min-h-11 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">
-          ?ㅼ쓬: ?섏떊???깅줉
+          다음: 수신자 등록
         </button>
       </div>
     </form>
@@ -308,9 +308,9 @@
 
   function renderBoxList() {
     const items = pageBoxes();
-    boxCount.textContent = `${items.length}媛?;
+    boxCount.textContent = `${items.length}개`;
     if (!items.length) {
-      boxList.innerHTML = "<p class='text-sm text-gray-400'>?꾩옱 ?섏씠吏??諛뺤뒪媛 ?놁뒿?덈떎.</p>";
+      boxList.innerHTML = "<p class='text-sm text-gray-400'>현재 페이지에 박스가 없습니다.</p>";
       return;
     }
 
@@ -347,7 +347,7 @@
 
   function addBoxAtCurrentPage(config = null) {
     if (pageBoxes().length >= MAX_BOXES_PER_PAGE) {
-      showStatus(`?섏씠吏??理쒕? ${MAX_BOXES_PER_PAGE}媛쒓퉴吏 諛곗튂?????덉뒿?덈떎.`, "warn");
+      showStatus(`페이지당 최대 ${MAX_BOXES_PER_PAGE}개까지 배치할 수 있습니다.`, "warn");
       return;
     }
     const b = {
@@ -360,7 +360,7 @@
     };
     boxes.push(b);
     selectedId = b.id;
-    showStatus("?쒕챸 諛뺤뒪瑜?異붽??덉뒿?덈떎.", "ok");
+    showStatus("서명 박스를 추가했습니다.", "ok");
     rerenderBoxes();
   }
 
@@ -380,7 +380,7 @@
     } else {
       addBoxAtCurrentPage({ x_ratio: 0.62, y_ratio: 0.08, w_ratio: 0.3, h_ratio: 0.12 });
     }
-    showStatus("?꾨━?뗭쓣 ?곸슜?덉뒿?덈떎. ?꾩슂?섎㈃ ?꾩튂瑜?誘몄꽭 議곗젙?섏꽭??", "ok");
+    showStatus("프리셋을 적용했습니다. 필요하면 위치를 미세 조정하세요.", "ok");
   }
 
   function nudgeSelected(dx, dy) {
@@ -458,7 +458,7 @@
     if (idx >= 0) {
       boxes.splice(idx, 1);
       selectedId = null;
-      showStatus("?좏깮??諛뺤뒪瑜???젣?덉뒿?덈떎.", "ok");
+      showStatus("선택한 박스를 삭제했습니다.", "ok");
       rerenderBoxes();
     }
   });
@@ -473,7 +473,7 @@
   saveBtn.addEventListener("click", (e) => {
     if (!boxes.length) {
       e.preventDefault();
-      alert("?쒕챸 諛뺤뒪瑜?理쒖냼 1媛??댁긽 諛곗튂??二쇱꽭??");
+      alert("서명 박스를 최소 1개 이상 배치해 주세요.");
       return;
     }
     serializePositions();
@@ -499,7 +499,7 @@
     }
   }
 
-  showStatus("?먰븯???꾩튂???쒕챸 諛뺤뒪瑜?諛곗튂??二쇱꽭??");
+  showStatus("원하는 위치에 서명 박스를 배치해 주세요.");
   updateToolbarState();
 </script>
 {% endblock %}
