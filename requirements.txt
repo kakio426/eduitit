@@ -27,6 +27,8 @@ fpdf2==2.7.9
 
 # PDF & HWP Processing (for school_violence RAG)
 PyPDF2>=3.0.0
+pypdf>=4.2.0
+reportlab>=4.2.2
 olefile>=0.46
 openpyxl>=3.1.0
 

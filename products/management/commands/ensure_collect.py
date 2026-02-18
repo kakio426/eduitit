@@ -41,6 +41,9 @@ class Command(BaseCommand):
                 display_order=20,
                 service_type='work',
                 external_url='',
+                solve_text='문서와 의견 수합, 번거로운 일은 이제 저에게 맡겨주세요!',
+                result_text='정리된 제출 목록',
+                time_text='3분',
             )
             self.stdout.write(f'[OK] Created Collect product (ID: {product.id})')
 

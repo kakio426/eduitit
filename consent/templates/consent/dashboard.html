@@ -1,0 +1,56 @@
+﻿{% extends "base.html" %}
+
+{% block title %}?숈쓽?쒕뒗 ?섏뿉寃?留↔꺼{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">?숈쓽?쒕뒗 ?섏뿉寃?留↔꺼</h1>
+        <p class="text-gray-500 mt-1">?숆탳???숈쓽???섑빀 (諛쒖넚 ?쒕??덉씠??</p>
+      </div>
+      <a href="{% url 'consent:create' %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label="???숈쓽??留뚮뱾湲?>
+        ???숈쓽??留뚮뱾湲?      </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[760px]">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="text-left px-4 py-3">?쒕ぉ</th>
+              <th class="text-left px-4 py-3">?곹깭</th>
+              <th class="text-left px-4 py-3">?섏떊??/th>
+              <th class="text-left px-4 py-3">?앹꽦??/th>
+              <th class="text-right px-4 py-3">愿由?/th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in requests %}
+            <tr class="border-t border-gray-100">
+              <td class="px-4 py-3">
+                <div class="font-semibold text-gray-800">{{ item.title }}</div>
+                <div class="text-xs text-gray-500">{{ item.document.title }}</div>
+              </td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">{{ item.get_status_display }}</span>
+              </td>
+              <td class="px-4 py-3">{{ item.recipients.count }}紐?/td>
+              <td class="px-4 py-3">{{ item.created_at|date:"Y-m-d H:i" }}</td>
+              <td class="px-4 py-3 text-right">
+                <a href="{% url 'consent:detail' request_id=item.request_id %}" class="text-purple-600 font-semibold hover:underline focus:outline-none focus:ring-2 focus:ring-purple-300 rounded">?곸꽭</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-500">?앹꽦???숈쓽???붿껌???놁뒿?덈떎.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

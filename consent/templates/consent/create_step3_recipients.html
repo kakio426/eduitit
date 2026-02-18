@@ -1,0 +1,54 @@
+﻿{% extends "base.html" %}
+
+{% block title %}?숈쓽???앹꽦 3?④퀎{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+      <a href="{% url 'consent:setup_positions' request_id=consent_request.request_id %}" class="text-sm text-gray-500 hover:text-purple-600">?댁쟾 ?④퀎濡?/a>
+      <h1 class="text-3xl font-bold text-gray-800 mt-2">3?④퀎. ?섏떊???깅줉</h1>
+      <p class="text-sm text-gray-500 mt-1">?깅줉 ???곸꽭 ?붾㈃?먯꽌 誘몃━蹂닿린 ?뺤씤 諛?諛쒖넚?섏꽭??</p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+        <h2 class="text-lg font-bold mb-3">?섏떊???쇨큵 ?깅줉</h2>
+        <form method="post" class="space-y-3">
+          {% csrf_token %}
+          <p class="text-sm text-gray-500">?뺤떇: ?숈깮紐??숇?紐⑤챸,?꾪솕踰덊샇</p>
+          {{ form.recipients_text }}
+          <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">?깅줉</button>
+          <a href="{% url 'consent:detail' request_id=consent_request.request_id %}" class="ml-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">?곸꽭濡??대룞</a>
+        </form>
+      </section>
+
+      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+        <h2 class="text-lg font-bold mb-3">?꾩옱 ?깅줉 紐⑸줉</h2>
+        <div class="max-h-80 overflow-auto border rounded-xl">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-left">?숈깮</th>
+                <th class="px-3 py-2 text-left">?숇?紐?/th>
+                <th class="px-3 py-2 text-left">?꾪솕踰덊샇</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in recipients %}
+              <tr class="border-t">
+                <td class="px-3 py-2">{{ r.student_name }}</td>
+                <td class="px-3 py-2">{{ r.parent_name }}</td>
+                <td class="px-3 py-2">{{ r.phone_number }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="px-3 py-8 text-center text-gray-400">?꾩쭅 ?섏떊?먭? ?놁뒿?덈떎.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

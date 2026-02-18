@@ -45,7 +45,7 @@ class Product(models.Model):
     external_url = models.URLField(blank=True, help_text="External URL for services hosted elsewhere")
 
     # V2 홈 목적별 섹션용 필드
-    solve_text = models.CharField(max_length=100, blank=True, help_text="무엇을 해결? (예: '학생 파일을 한곳에 모아요')")
+    solve_text = models.CharField(max_length=100, blank=True, help_text="무엇을 해결? (예: '문서와 의견 수합, 번거로운 일은 이제 저에게 맡겨주세요!')")
     result_text = models.CharField(max_length=100, blank=True, help_text="결과물 (예: '엑셀 정리표')")
     time_text = models.CharField(max_length=50, blank=True, help_text="소요시간 (예: '3분')")
 

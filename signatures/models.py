@@ -155,3 +155,4 @@ class ExpectedParticipant(models.Model):
     def has_signed(self):
         """서명 완료 여부"""
         return self.matched_signature is not None
+

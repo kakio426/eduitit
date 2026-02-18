@@ -1,0 +1,505 @@
+﻿{% extends "base.html" %}
+
+{% block title %}?숈쓽???앹꽦 2?④퀎{% endblock %}
+
+{% block extra_css %}
+<style>
+  #stage {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  #pdf-canvas,
+  #image-canvas {
+    display: block;
+    max-width: 100%;
+  }
+  #image-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .sign-box {
+    position: absolute;
+    border: 2px dashed #7c3aed;
+    background: rgba(124, 58, 237, 0.12);
+    cursor: move;
+  }
+  .sign-box.active {
+    border-style: solid;
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22);
+  }
+  .sign-box .label {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    font-size: 11px;
+    background: #7c3aed;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .sign-box .handle {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #7c3aed;
+    cursor: nwse-resize;
+  }
+  .box-chip.active {
+    border-color: #7c3aed;
+    color: #6d28d9;
+    font-weight: 700;
+    background: #f5f3ff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">紐⑸줉?쇰줈</a>
+      <h1 class="text-3xl font-bold text-gray-800 mt-2">2?④퀎. ?쒕챸 ?꾩튂 ?ㅼ젙</h1>
+      <p class="text-sm text-gray-500 mt-1">諛뺤뒪瑜?諛곗튂?섍퀬 ??ν븯硫?臾몄꽌 ?ш린媛 ?щ씪??媛숈? 鍮꾩쑉濡??곸슜?⑸땲??</p>
+    </div>
+
+    <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+      <p class="font-semibold mb-1">?ъ슜 諛⑸쾿</p>
+      <p>1) 諛뺤뒪 異붽? 2) ?쒕옒洹??대룞 3) 紐⑥꽌由??먯쑝濡??ш린 議곗젅 4) ??????ㅼ쓬 ?④퀎濡??대룞</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-5">
+      <div class="sticky top-24 z-10 bg-white/95 backdrop-blur-sm border border-gray-100 rounded-xl p-3 mb-3">
+        <div class="grid md:grid-cols-2 gap-2 mb-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">?꾩옱 ?섏씠吏 <strong id="pageBadge">1</strong></span>
+            <label for="pageInput" class="text-sm text-gray-700">?섏씠吏</label>
+            <input id="pageInput" type="number" min="1" value="1" class="w-20 rounded border border-gray-300 px-2 py-1 text-sm">
+            <button id="loadPageBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">?섏씠吏 ?대룞</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="presetSelect" class="text-sm text-gray-700">?꾨━??/label>
+            <select id="presetSelect" class="rounded border border-gray-300 px-2 py-1 text-sm">
+          <option value="one_bottom_right">湲곕낯 1媛?(?고븯??</option>
+          <option value="one_center">湲곕낯 1媛?(以묒븰 ?섎떒)</option>
+          <option value="two_bottom">2媛?(?섎떒 醫???</option>
+            </select>
+            <button id="applyPresetBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">?꾨━???곸슜</button>
+            <button id="addBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-purple-600 text-white text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">?쒕챸 諛뺤뒪 異붽?</button>
+            <button id="deleteBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-300" disabled>?좏깮 諛뺤뒪 ??젣</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm text-gray-700">誘몄꽭 ?대룞</span>
+        <button type="button" id="nudgeLeft" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
+        <button type="button" id="nudgeRight" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
+        <button type="button" id="nudgeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
+        <button type="button" id="nudgeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>??/button>
+        <button type="button" id="sizeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>?ш린 -</button>
+        <button type="button" id="sizeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>?ш린 +</button>
+      </div>
+      </div>
+
+      <div id="statusMessage" class="mb-3 text-sm text-gray-600"></div>
+
+      <div class="overflow-auto">
+        <div id="stage">
+          <canvas id="pdf-canvas"></canvas>
+          <img id="image-canvas" alt="preview">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold">?꾩옱 ?섏씠吏 諛뺤뒪</h2>
+          <span id="boxCount" class="text-xs text-gray-500">0媛?/span>
+        </div>
+        <div id="boxList" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      {{ form.positions_json }}
+      <div class="flex flex-wrap gap-2">
+        <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
+          ?꾩튂 誘몃━蹂닿린
+        </a>
+        <button type="submit" id="saveBtn" class="min-h-11 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">
+          ?ㅼ쓬: ?섏떊???깅줉
+        </button>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  const isPdf = "{{ document_file_type }}" === "pdf";
+  const initial = {{ initial_positions_json|safe }};
+  const documentUrl = "{{ document_url|escapejs }}";
+  const MAX_BOXES_PER_PAGE = 5;
+  const NUDGE_STEP = 0.005;
+  const SIZE_STEP = 0.01;
+
+  const stage = document.getElementById("stage");
+  const pdfCanvas = document.getElementById("pdf-canvas");
+  const imageCanvas = document.getElementById("image-canvas");
+  const pdfCtx = pdfCanvas.getContext("2d");
+  const hidden = document.getElementById("id_positions_json");
+  const pageInput = document.getElementById("pageInput");
+  const pageBadge = document.getElementById("pageBadge");
+  const boxList = document.getElementById("boxList");
+  const boxCount = document.getElementById("boxCount");
+  const loadPageBtn = document.getElementById("loadPageBtn");
+  const addBoxBtn = document.getElementById("addBoxBtn");
+  const deleteBoxBtn = document.getElementById("deleteBoxBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const statusMessage = document.getElementById("statusMessage");
+  const presetSelect = document.getElementById("presetSelect");
+  const applyPresetBtn = document.getElementById("applyPresetBtn");
+  const nudgeLeft = document.getElementById("nudgeLeft");
+  const nudgeRight = document.getElementById("nudgeRight");
+  const nudgeUp = document.getElementById("nudgeUp");
+  const nudgeDown = document.getElementById("nudgeDown");
+  const sizeDown = document.getElementById("sizeDown");
+  const sizeUp = document.getElementById("sizeUp");
+
+  let currentPage = 1;
+  let pageWidth = 1;
+  let pageHeight = 1;
+  let pdfDoc = null;
+  let selectedId = null;
+  let dragState = null;
+  let boxCounter = 1;
+  const boxes = [];
+
+  for (const item of initial) {
+    boxes.push({
+      id: boxCounter++,
+      page: parseInt(item.page || 1, 10),
+      x_ratio: Number(item.x_ratio ?? 0.45),
+      y_ratio: Number(item.y_ratio ?? 0.1),
+      w_ratio: Number(item.w_ratio ?? 0.3),
+      h_ratio: Number(item.h_ratio ?? 0.12),
+    });
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function showStatus(message, tone = "default") {
+    statusMessage.className = "mb-3 text-sm";
+    if (tone === "warn") {
+      statusMessage.classList.add("text-amber-700");
+    } else if (tone === "ok") {
+      statusMessage.classList.add("text-emerald-700");
+    } else {
+      statusMessage.classList.add("text-gray-600");
+    }
+    statusMessage.textContent = message;
+  }
+
+  function pageBoxes() {
+    return boxes.filter((b) => b.page === currentPage);
+  }
+
+  function getSelectedBox() {
+    return boxes.find((b) => b.id === selectedId) || null;
+  }
+
+  function updateToolbarState() {
+    pageBadge.textContent = String(currentPage);
+    const hasSelected = selectedId !== null;
+    deleteBoxBtn.disabled = !hasSelected;
+    nudgeLeft.disabled = !hasSelected;
+    nudgeRight.disabled = !hasSelected;
+    nudgeUp.disabled = !hasSelected;
+    nudgeDown.disabled = !hasSelected;
+    sizeDown.disabled = !hasSelected;
+    sizeUp.disabled = !hasSelected;
+  }
+
+  function rerenderBoxes() {
+    for (const el of Array.from(stage.querySelectorAll(".sign-box"))) el.remove();
+
+    for (const box of pageBoxes()) {
+      const el = document.createElement("div");
+      el.className = "sign-box" + (box.id === selectedId ? " active" : "");
+      el.style.left = `${box.x_ratio * pageWidth}px`;
+      el.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
+      el.style.width = `${box.w_ratio * pageWidth}px`;
+      el.style.height = `${box.h_ratio * pageHeight}px`;
+      el.innerHTML = `<span class="label">P${box.page} #${box.id}</span><span class="handle"></span>`;
+      stage.appendChild(el);
+
+      el.addEventListener("pointerdown", (e) => {
+        selectedId = box.id;
+        const handle = e.target.classList.contains("handle");
+        dragState = {
+          mode: handle ? "resize" : "move",
+          startX: e.clientX,
+          startY: e.clientY,
+          left: parseFloat(el.style.left),
+          top: parseFloat(el.style.top),
+          width: parseFloat(el.style.width),
+          height: parseFloat(el.style.height),
+        };
+        el.setPointerCapture(e.pointerId);
+        renderBoxList();
+        updateToolbarState();
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!dragState || selectedId !== box.id) return;
+        const dx = e.clientX - dragState.startX;
+        const dy = e.clientY - dragState.startY;
+        let left = dragState.left;
+        let top = dragState.top;
+        let width = dragState.width;
+        let height = dragState.height;
+
+        if (dragState.mode === "resize") {
+          width = clamp(dragState.width + dx, 50, pageWidth);
+          height = clamp(dragState.height + dy, 35, pageHeight);
+        } else {
+          left = clamp(dragState.left + dx, 0, pageWidth - width);
+          top = clamp(dragState.top + dy, 0, pageHeight - height);
+        }
+        el.style.left = `${left}px`;
+        el.style.top = `${top}px`;
+        el.style.width = `${width}px`;
+        el.style.height = `${height}px`;
+      });
+
+      el.addEventListener("pointerup", () => {
+        if (!dragState || selectedId !== box.id) return;
+        const left = parseFloat(el.style.left);
+        const top = parseFloat(el.style.top);
+        const width = parseFloat(el.style.width);
+        const height = parseFloat(el.style.height);
+
+        box.x_ratio = clamp(left / pageWidth, 0, 1);
+        box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
+        box.w_ratio = clamp(width / pageWidth, 0.02, 1);
+        box.h_ratio = clamp(height / pageHeight, 0.02, 1);
+        dragState = null;
+        renderBoxList();
+      });
+    }
+
+    renderBoxList();
+    updateToolbarState();
+  }
+
+  function renderBoxList() {
+    const items = pageBoxes();
+    boxCount.textContent = `${items.length}媛?;
+    if (!items.length) {
+      boxList.innerHTML = "<p class='text-sm text-gray-400'>?꾩옱 ?섏씠吏??諛뺤뒪媛 ?놁뒿?덈떎.</p>";
+      return;
+    }
+
+    boxList.innerHTML = items
+      .map((b) => {
+        const selected = b.id === selectedId ? "active" : "";
+        return `<button type="button" class="box-chip ${selected} px-3 py-1.5 rounded-lg border border-gray-300 text-sm" data-pick="${b.id}">#${b.id} (${(b.w_ratio*100).toFixed(0)}% x ${(b.h_ratio*100).toFixed(0)}%)</button>`;
+      })
+      .join("");
+
+    for (const btn of boxList.querySelectorAll("[data-pick]")) {
+      btn.addEventListener("click", () => {
+        selectedId = parseInt(btn.dataset.pick, 10);
+        rerenderBoxes();
+      });
+    }
+  }
+
+  function serializePositions() {
+    hidden.value = JSON.stringify(
+      boxes.map((b) => ({
+        page: b.page,
+        x_ratio: b.x_ratio,
+        y_ratio: b.y_ratio,
+        w_ratio: b.w_ratio,
+        h_ratio: b.h_ratio,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      }))
+    );
+  }
+
+  function addBoxAtCurrentPage(config = null) {
+    if (pageBoxes().length >= MAX_BOXES_PER_PAGE) {
+      showStatus(`?섏씠吏??理쒕? ${MAX_BOXES_PER_PAGE}媛쒓퉴吏 諛곗튂?????덉뒿?덈떎.`, "warn");
+      return;
+    }
+    const b = {
+      id: boxCounter++,
+      page: currentPage,
+      x_ratio: config?.x_ratio ?? 0.45,
+      y_ratio: config?.y_ratio ?? 0.1,
+      w_ratio: config?.w_ratio ?? 0.3,
+      h_ratio: config?.h_ratio ?? 0.12,
+    };
+    boxes.push(b);
+    selectedId = b.id;
+    showStatus("?쒕챸 諛뺤뒪瑜?異붽??덉뒿?덈떎.", "ok");
+    rerenderBoxes();
+  }
+
+  function applyPreset() {
+    boxes.splice(
+      0,
+      boxes.length,
+      ...boxes.filter((b) => b.page !== currentPage)
+    );
+    selectedId = null;
+    const preset = presetSelect.value;
+    if (preset === "one_center") {
+      addBoxAtCurrentPage({ x_ratio: 0.35, y_ratio: 0.12, w_ratio: 0.3, h_ratio: 0.12 });
+    } else if (preset === "two_bottom") {
+      addBoxAtCurrentPage({ x_ratio: 0.12, y_ratio: 0.1, w_ratio: 0.3, h_ratio: 0.12 });
+      addBoxAtCurrentPage({ x_ratio: 0.58, y_ratio: 0.1, w_ratio: 0.3, h_ratio: 0.12 });
+    } else {
+      addBoxAtCurrentPage({ x_ratio: 0.62, y_ratio: 0.08, w_ratio: 0.3, h_ratio: 0.12 });
+    }
+    showStatus("?꾨━?뗭쓣 ?곸슜?덉뒿?덈떎. ?꾩슂?섎㈃ ?꾩튂瑜?誘몄꽭 議곗젙?섏꽭??", "ok");
+  }
+
+  function nudgeSelected(dx, dy) {
+    const b = getSelectedBox();
+    if (!b) return;
+    b.x_ratio = clamp(b.x_ratio + dx, 0, 1 - b.w_ratio);
+    b.y_ratio = clamp(b.y_ratio + dy, 0, 1 - b.h_ratio);
+    rerenderBoxes();
+  }
+
+  function resizeSelected(delta) {
+    const b = getSelectedBox();
+    if (!b) return;
+    b.w_ratio = clamp(b.w_ratio + delta, 0.08, 0.95);
+    b.h_ratio = clamp(b.h_ratio + delta, 0.05, 0.6);
+    b.x_ratio = clamp(b.x_ratio, 0, 1 - b.w_ratio);
+    b.y_ratio = clamp(b.y_ratio, 0, 1 - b.h_ratio);
+    rerenderBoxes();
+  }
+
+  async function renderPdfPage(pageNo) {
+    const page = await pdfDoc.getPage(pageNo);
+    const viewport = page.getViewport({ scale: 1.35 });
+    pageWidth = viewport.width;
+    pageHeight = viewport.height;
+    pdfCanvas.width = pageWidth;
+    pdfCanvas.height = pageHeight;
+    imageCanvas.style.display = "none";
+    pdfCanvas.style.display = "block";
+    await page.render({ canvasContext: pdfCtx, viewport }).promise;
+    rerenderBoxes();
+  }
+
+  async function renderImagePage() {
+    imageCanvas.src = documentUrl;
+    await new Promise((resolve) => (imageCanvas.onload = resolve));
+    pageWidth = imageCanvas.naturalWidth;
+    pageHeight = imageCanvas.naturalHeight;
+    pdfCanvas.width = pageWidth;
+    pdfCanvas.height = pageHeight;
+    pdfCtx.clearRect(0, 0, pageWidth, pageHeight);
+    imageCanvas.style.width = `${pageWidth}px`;
+    imageCanvas.style.height = `${pageHeight}px`;
+    imageCanvas.style.display = "block";
+    pdfCanvas.style.display = "block";
+    rerenderBoxes();
+  }
+
+  async function renderCurrentPage() {
+    if (isPdf) {
+      await renderPdfPage(currentPage);
+    } else {
+      currentPage = 1;
+      pageInput.value = "1";
+      await renderImagePage();
+    }
+  }
+
+  loadPageBtn.addEventListener("click", async () => {
+    if (isPdf) {
+      const maxPage = pdfDoc.numPages;
+      currentPage = clamp(parseInt(pageInput.value || "1", 10), 1, maxPage);
+      pageInput.value = String(currentPage);
+      selectedId = null;
+    }
+    await renderCurrentPage();
+  });
+
+  addBoxBtn.addEventListener("click", () => addBoxAtCurrentPage());
+  applyPresetBtn.addEventListener("click", applyPreset);
+
+  deleteBoxBtn.addEventListener("click", () => {
+    if (!selectedId) return;
+    const idx = boxes.findIndex((b) => b.id === selectedId);
+    if (idx >= 0) {
+      boxes.splice(idx, 1);
+      selectedId = null;
+      showStatus("?좏깮??諛뺤뒪瑜???젣?덉뒿?덈떎.", "ok");
+      rerenderBoxes();
+    }
+  });
+
+  nudgeLeft.addEventListener("click", () => nudgeSelected(-NUDGE_STEP, 0));
+  nudgeRight.addEventListener("click", () => nudgeSelected(NUDGE_STEP, 0));
+  nudgeUp.addEventListener("click", () => nudgeSelected(0, NUDGE_STEP));
+  nudgeDown.addEventListener("click", () => nudgeSelected(0, -NUDGE_STEP));
+  sizeDown.addEventListener("click", () => resizeSelected(-SIZE_STEP));
+  sizeUp.addEventListener("click", () => resizeSelected(SIZE_STEP));
+
+  saveBtn.addEventListener("click", (e) => {
+    if (!boxes.length) {
+      e.preventDefault();
+      alert("?쒕챸 諛뺤뒪瑜?理쒖냼 1媛??댁긽 諛곗튂??二쇱꽭??");
+      return;
+    }
+    serializePositions();
+  });
+
+  if (isPdf) {
+    const mod = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs");
+    mod.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
+    pdfDoc = await mod.getDocument(documentUrl).promise;
+    pageInput.max = String(pdfDoc.numPages);
+    await renderCurrentPage();
+    if (!boxes.length) {
+      presetSelect.value = "one_bottom_right";
+      applyPreset();
+    }
+  } else {
+    loadPageBtn.disabled = true;
+    pageInput.disabled = true;
+    await renderCurrentPage();
+    if (!boxes.length) {
+      presetSelect.value = "one_center";
+      applyPreset();
+    }
+  }
+
+  showStatus("?먰븯???꾩튂???쒕챸 諛뺤뒪瑜?諛곗튂??二쇱꽭??");
+  updateToolbarState();
+</script>
+{% endblock %}

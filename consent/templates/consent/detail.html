@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ consent_request.title }}{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-4">
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">紐⑸줉?쇰줈</a>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-2">{{ consent_request.title }}</h1>
+      <p class="text-sm text-gray-500 mt-1">Request ID: {{ consent_request.request_id }}</p>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" aria-label="諛쒖넚 ?쒕??덉씠??>
+        諛쒖넚 ?쒕??덉씠??      </a>
+      <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300" aria-label="?꾩튂 誘몃━蹂닿린 ?뺤씤">
+        ?꾩튂 誘몃━蹂닿린 ?뺤씤
+      </a>
+      <a href="{% url 'consent:setup_positions' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="?쒕챸 ?꾩튂 ?ъ꽕??>
+        ?꾩튂 ?ъ꽕??      </a>
+      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" aria-label="?섏떊???몄쭛">
+        ?섏떊???몄쭛
+      </a>
+      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label="?듯빀 PDF ?ㅼ슫濡쒕뱶">
+        ?듯빀 PDF ?ㅼ슫濡쒕뱶
+      </a>
+      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}?include_decline_summary=1" class="min-h-11 px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="?듯빀 PDF 鍮꾨룞???ъ쑀 ?ы븿 ?ㅼ슫濡쒕뱶">
+        ?듯빀 PDF(+鍮꾨룞???ъ쑀)
+      </a>
+    </div>
+
+    {% if consent_request.preview_checked_at %}
+    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+      ?꾩튂 誘몃━蹂닿린 ?뺤씤 ?꾨즺: {{ consent_request.preview_checked_at|date:"Y-m-d H:i:s" }}
+    </div>
+    {% else %}
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      ?꾩튂 誘몃━蹂닿린瑜?癒쇱? ?뺤씤?댁빞 諛쒖넚?????덉뒿?덈떎.
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[860px]">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="text-left px-4 py-3">?숈깮</th>
+              <th class="text-left px-4 py-3">?숇?紐?/th>
+              <th class="text-left px-4 py-3">?곕씫泥?/th>
+              <th class="text-left px-4 py-3">?곹깭</th>
+              <th class="text-left px-4 py-3">留곹겕</th>
+              <th class="text-right px-4 py-3">寃곌낵</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recipients %}
+            <tr class="border-t border-gray-100">
+              <td class="px-4 py-3 font-semibold">{{ r.student_name }}</td>
+              <td class="px-4 py-3">{{ r.parent_name }}</td>
+              <td class="px-4 py-3">{{ r.phone_number }}</td>
+              <td class="px-4 py-3">{{ r.get_status_display }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <input id="url-{{ r.id }}" readonly class="w-64 text-xs border rounded px-2 py-1" value="{{ host_base }}{% url 'consent:verify' token=r.access_token %}">
+                  <button type="button" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" onclick="copyUrl('url-{{ r.id }}')" aria-label="留곹겕 蹂듭궗">蹂듭궗</button>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right">
+                {% if r.signed_pdf %}
+                <a href="{% url 'consent:download_recipient_pdf' recipient_id=r.id %}" class="text-purple-600 font-semibold hover:underline">PDF</a>
+                {% else %}
+                <span class="text-gray-400">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function copyUrl(inputId) {
+    const input = document.getElementById(inputId);
+    const text = input.value;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        input.select();
+        document.execCommand("copy");
+      }
+      alert("留곹겕瑜?蹂듭궗?덉뒿?덈떎.");
+    } catch (e) {
+      input.select();
+      alert("蹂듭궗???ㅽ뙣?덉뒿?덈떎. 湲멸쾶 ?뚮윭 吏곸젒 蹂듭궗??二쇱꽭??");
+    }
+  }
+</script>
+{% endblock %}

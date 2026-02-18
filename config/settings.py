@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'fortune.apps.FortuneConfig',
     'ssambti.apps.SsambtiConfig',
     'signatures.apps.SignaturesConfig',
+    'consent.apps.ConsentConfig',
     'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
     'padlet_bot.apps.PadletBotConfig',

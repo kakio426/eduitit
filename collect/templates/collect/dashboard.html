@@ -2,145 +2,109 @@
 {% load static %}
 
 {% block extra_head %}
-<meta property="og:title" content="간편 수합 - 대시보드" />
-<meta property="og:description" content="파일·링크·텍스트 수합 관리" />
+<meta property="og:title" content="가뿐 수합 - 대시보드" />
+<meta property="og:description" content="파일, 링크, 텍스트 수합 요청을 생성하고 관리하세요." />
 {% endblock %}
 
 {% block extra_css %}
 <style>
-    .request-card {
-        background: linear-gradient(135deg, #E0E5EC 0%, #F5F7FA 100%);
-        border-radius: 20px;
-        box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
-        transition: all 0.3s ease;
-    }
-
-    .request-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 12px 12px 24px #b8bec5, -12px -12px 24px #ffffff;
-    }
-
-    .status-active {
-        background: #DCFCE7;
-        color: #15803D;
-    }
-
-    .status-closed {
-        background: #FEE2E2;
-        color: #DC2626;
-    }
-
-    .status-archived {
-        background: #F3F4F6;
-        color: #6B7280;
-    }
+    .status-active { background: #DCFCE7; color: #15803D; }
+    .status-closed { background: #FEE2E2; color: #DC2626; }
+    .status-archived { background: #F3F4F6; color: #6B7280; }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-4xl mx-auto">
-        <!-- 뒤로가기 (메인으로) -->
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]" x-data="collectWizard()">
+    <div class="max-w-5xl mx-auto">
         <div class="mb-6">
             <a href="/" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <i class="fa-solid fa-house"></i>
-                <span class="font-medium">첫 화면으로가기</span>
+                <span class="font-medium">메인으로 가기</span>
             </a>
         </div>
 
-        <!-- 헤더 -->
-        <div class="text-center mb-12" data-aos="fade-up">
-            <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📋" }}</div>
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-4">
-                {{ service.title|default:"간편 수합" }}
-            </h1>
-            <p class="text-xl text-gray-500">파일·링크·텍스트 수합 요청을 관리하세요</p>
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📥" }}</div>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">{{ service.title|default:"가뿐 수합" }}</h1>
+            <p class="text-lg md:text-xl text-gray-500">수합 요청을 만들고 제출 현황을 한눈에 관리하세요.</p>
         </div>
 
-        <!-- 새 수합 요청 생성 -->
-        <div class="clay-card p-6 mb-8" data-aos="fade-up"
-            x-data="{ open: {% if form.errors %}true{% else %}false{% endif %} }">
+        <div class="clay-card p-6 md:p-8 mb-8" data-aos="fade-up" x-init="if ({{ form.errors|yesno:'true,false' }} || {{ requests_list|length }} === 0) open = true">
             <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
-                <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2">
+                <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
                     <i class="fa-solid fa-plus-circle text-emerald-500"></i>
                     새 수합 요청 만들기
                 </h2>
-                <i class="fa-solid fa-chevron-down text-gray-400 transition-transform"
-                    :class="open && 'rotate-180'"></i>
+                <i class="fa-solid fa-chevron-down text-gray-400 transition-transform" :class="open && 'rotate-180'"></i>
             </div>
 
             <div x-show="open" x-transition class="mt-6">
-                <form action="{% url 'collect:request_create' %}" method="post" enctype="multipart/form-data"
-                    class="space-y-4">
+                <div class="mb-6 grid grid-cols-3 gap-2 text-xs md:text-sm">
+                    <button type="button" @click="step=1" :class="step===1 ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'" class="py-2 rounded-lg font-bold transition">1. 기본정보</button>
+                    <button type="button" @click="step=2" :class="step===2 ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'" class="py-2 rounded-lg font-bold transition">2. 대상자</button>
+                    <button type="button" @click="step=3" :class="step===3 ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'" class="py-2 rounded-lg font-bold transition">3. 제출형식</button>
+                </div>
+
+                <form action="{% url 'collect:request_create' %}" method="post" enctype="multipart/form-data" class="space-y-5">
                     {% csrf_token %}
 
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.title.label }}</label>
-                        {{ form.title }}
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.description.label }}</label>
-                        {{ form.description }}
-                    </div>
-
-                    <!-- 제출 대상자 목록 -->
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">
-                            <i class="fa-solid fa-users text-emerald-500 mr-1"></i>
-                            {{ form.expected_submitters.label }}
-                            <span class="text-xs text-gray-400 font-normal ml-1">(선택사항: 미제출자 확인용)</span>
-                        </label>
-                        {{ form.expected_submitters }}
-                        <p class="text-xs text-gray-400 mt-1">한 줄에 한 명씩 입력하면 제출 현황에서 누가 아직 제출하지 않았는지 확인할 수 있습니다. 비워두면 자유
-                            제출입니다.</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
+                    <div x-show="step===1" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.deadline.label }}</label>
-                            {{ form.deadline }}
+                            <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.title.label }}</label>
+                            {{ form.title }}
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.max_submissions.label }}</label>
-                            {{ form.max_submissions }}
+                            <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.description.label }}</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.deadline.label }}</label>
+                                {{ form.deadline }}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.max_submissions.label }}</label>
+                                {{ form.max_submissions }}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 양식 파일 업로드 -->
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">
-                            <i class="fa-solid fa-file-lines text-emerald-500 mr-1"></i>
-                            {{ form.template_file.label }}
-                            <span class="text-xs text-gray-400 font-normal ml-1">(선택사항: 제출자에게 제공할 양식)</span>
-                        </label>
-                        {{ form.template_file }}
-                        <p class="text-xs text-gray-400 mt-1">hwp, xlsx, docx, pdf 등 양식 파일을 업로드하면 제출자가 다운로드 후 작성하여 제출할 수
-                            있습니다.</p>
+                    <div x-show="step===2" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">
+                                <i class="fa-solid fa-users text-emerald-500 mr-1"></i>{{ form.expected_submitters.label }}
+                            </label>
+                            {{ form.expected_submitters }}
+                            <p class="text-xs text-gray-500 mt-1">한 줄에 한 명씩 입력하면 미제출자를 자동으로 확인할 수 있습니다. 비우면 자유 제출입니다.</p>
+                        </div>
                     </div>
 
-                    <!-- 허용 유형 -->
-                    <div class="flex flex-wrap gap-6">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            {{ form.allow_file }}
-                            <span class="text-sm font-medium text-gray-600">파일 업로드</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            {{ form.allow_link }}
-                            <span class="text-sm font-medium text-gray-600">링크 제출</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            {{ form.allow_text }}
-                            <span class="text-sm font-medium text-gray-600">텍스트 제출</span>
-                        </label>
-                    </div>
+                    <div x-show="step===3" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">제출 허용 방식</label>
+                            <div class="flex flex-wrap gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">{{ form.allow_file }} <span class="text-sm font-medium text-gray-600">파일 업로드</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer">{{ form.allow_link }} <span class="text-sm font-medium text-gray-600">링크 제출</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer">{{ form.allow_text }} <span class="text-sm font-medium text-gray-600">텍스트 제출</span></label>
+                            </div>
+                        </div>
 
-                    <!-- 안내사항 -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700 space-y-1">
-                        <p><i class="fa-solid fa-info-circle mr-1"></i><strong>안내사항</strong></p>
-                        <p>- 파일은 30MB 이하만 업로드 가능합니다. 초과 시 구글드라이브 링크로 제출을 안내합니다.</p>
-                        <p>- 수합 완료(마감) 후 <strong>7일</strong>이 지나면 제출 파일이 자동 삭제됩니다.</p>
-                        <p>- 수합 요청은 첫 제출 후 <strong>30일</strong>이 지나면 자동으로 삭제됩니다. (제출 없으면 60일)</p>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">
+                                <i class="fa-solid fa-file-lines text-emerald-500 mr-1"></i>{{ form.template_file.label }}
+                                <span class="text-xs text-gray-400 font-normal ml-1">(선택)</span>
+                            </label>
+                            {{ form.template_file }}
+                            <p class="text-xs text-gray-500 mt-1">hwp, xlsx, docx, pdf, zip 업로드 가능</p>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700 space-y-1">
+                            <p><i class="fa-solid fa-info-circle mr-1"></i><strong>안내</strong></p>
+                            <p>- 파일은 30MB까지 업로드 가능하며, 초과 파일은 링크 제출을 권장합니다.</p>
+                            <p>- 마감 후 7일이 지나면 제출 파일이 자동 삭제됩니다.</p>
+                            <p>- 요청은 최근 제출일 기준 30일 후 자동 정리됩니다(미제출 시 60일).</p>
+                        </div>
                     </div>
 
                     {% if form.errors %}
@@ -153,80 +117,110 @@
                     </div>
                     {% endif %}
 
-                    <button type="submit"
-                        class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]">
-                        <i class="fa-solid fa-plus mr-2"></i>
-                        수합 요청 생성
-                    </button>
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button" @click="step = Math.max(1, step-1)" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">이전</button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" x-show="step<3" @click="step = Math.min(3, step+1)" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition">다음</button>
+                            <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                                <i class="fa-solid fa-plus mr-1"></i>요청 생성
+                            </button>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
 
-        <!-- 수합 목록 -->
-        <div class="space-y-4">
-            <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
-                <i class="fa-solid fa-list text-emerald-500"></i>
-                내 수합 요청 목록
-            </h2>
+        <div class="clay-card p-4 md:p-6" data-aos="fade-up">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-list text-emerald-500"></i>내 수합 요청 목록
+                </h2>
+                <span class="text-sm text-gray-500">총 {{ requests_list|length }}건</span>
+            </div>
 
             {% if requests_list %}
-            {% for req in requests_list %}
-            <div class="request-card p-6" data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 mb-2 flex-wrap">
-                            <h3 class="text-xl font-bold text-gray-700 truncate">{{ req.title }}</h3>
-                            {% if req.status == 'active' %}
-                            <span class="status-active px-3 py-1 rounded-full text-xs font-bold">
-                                <i class="fa-solid fa-circle-check mr-1"></i>진행중
-                            </span>
-                            {% elif req.status == 'closed' %}
-                            <span class="status-closed px-3 py-1 rounded-full text-xs font-bold">
-                                <i class="fa-solid fa-circle-xmark mr-1"></i>마감
-                            </span>
-                            {% else %}
-                            <span class="status-archived px-3 py-1 rounded-full text-xs font-bold">
-                                <i class="fa-solid fa-box-archive mr-1"></i>보관
-                            </span>
-                            {% endif %}
-                        </div>
-                        <div class="text-gray-500 text-sm flex items-center gap-4 flex-wrap">
-                            <span><i class="fa-solid fa-paper-plane mr-1"></i>{{ req.num_submissions }}건 제출</span>
-                            <span><i class="fa-solid fa-calendar mr-1"></i>{{ req.created_at|date:"Y-m-d H:i" }}</span>
-                            {% if req.access_code %}
-                            <span class="font-bold text-emerald-600"><i class="fa-solid fa-key mr-1"></i>코드: {{ req.access_code }}</span>
-                            {% endif %}
-                            {% if req.deadline %}
-                            <span><i class="fa-solid fa-clock mr-1"></i>마감: {{ req.deadline|date:"m/d H:i" }}</span>
-                            {% endif %}
-                        </div>
+            <div class="md:hidden space-y-3">
+                {% for req in requests_list %}
+                <div class="bg-white/70 rounded-xl p-4 border border-gray-200">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <p class="font-bold text-gray-700 truncate">{{ req.title }}</p>
+                        {% if req.status == 'active' %}
+                        <span class="status-active px-2 py-1 rounded-full text-xs font-bold">진행중</span>
+                        {% elif req.status == 'closed' %}
+                        <span class="status-closed px-2 py-1 rounded-full text-xs font-bold">마감</span>
+                        {% else %}
+                        <span class="status-archived px-2 py-1 rounded-full text-xs font-bold">보관</span>
+                        {% endif %}
                     </div>
-                    <div class="flex gap-2">
-                        <a href="{% url 'collect:request_detail' req.id %}"
-                            class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
-                            <i class="fa-solid fa-eye"></i>
-                            상세보기
-                        </a>
-                        <form action="{% url 'collect:request_delete' req.id %}" method="post"
-                            onsubmit="return confirm('정말로 이 수합 요청을 삭제하시겠습니까? 모든 제출물이 함께 삭제됩니다.');">
-                            {% csrf_token %}
-                            <button type="submit"
-                                class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
+                    <div class="text-xs text-gray-500 space-y-1 mb-3">
+                        <p>제출: {{ req.num_submissions }}건</p>
+                        <p>코드: <span class="font-mono font-bold text-emerald-600">{{ req.access_code|default:'-' }}</span></p>
+                        <p>마감: {% if req.deadline %}{{ req.deadline|date:"Y-m-d H:i" }}{% else %}-{% endif %}</p>
                     </div>
+                    <a href="{% url 'collect:request_detail' req.id %}" class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-white rounded-lg font-bold text-gray-700 shadow-sm">
+                        <i class="fa-solid fa-eye"></i>상세
+                    </a>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full min-w-[760px] text-sm">
+                    <thead>
+                        <tr class="text-left text-gray-500 border-b border-gray-200">
+                            <th class="py-3 pr-3">제목</th>
+                            <th class="py-3 pr-3">상태</th>
+                            <th class="py-3 pr-3">제출</th>
+                            <th class="py-3 pr-3">코드</th>
+                            <th class="py-3 pr-3">생성일</th>
+                            <th class="py-3 pr-3">마감일</th>
+                            <th class="py-3 text-right">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests_list %}
+                        <tr class="border-b border-gray-100 hover:bg-white/50 transition">
+                            <td class="py-3 pr-3 font-bold text-gray-700 max-w-[240px] truncate">{{ req.title }}</td>
+                            <td class="py-3 pr-3">
+                                {% if req.status == 'active' %}
+                                <span class="status-active px-2.5 py-1 rounded-full text-xs font-bold">진행중</span>
+                                {% elif req.status == 'closed' %}
+                                <span class="status-closed px-2.5 py-1 rounded-full text-xs font-bold">마감</span>
+                                {% else %}
+                                <span class="status-archived px-2.5 py-1 rounded-full text-xs font-bold">보관</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 pr-3 text-gray-600">{{ req.num_submissions }}건</td>
+                            <td class="py-3 pr-3 font-mono font-bold text-emerald-600">{{ req.access_code|default:'-' }}</td>
+                            <td class="py-3 pr-3 text-gray-500">{{ req.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="py-3 pr-3 text-gray-500">{% if req.deadline %}{{ req.deadline|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                            <td class="py-3 text-right">
+                                <a href="{% url 'collect:request_detail' req.id %}" class="px-3 py-1.5 bg-white rounded-lg font-bold text-gray-700 shadow-sm hover:shadow-md transition inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-eye"></i>상세
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
             <div class="text-center py-12 text-gray-400">
                 <i class="fa-solid fa-folder-open text-5xl mb-4"></i>
                 <p class="text-lg">아직 생성된 수합 요청이 없습니다.</p>
-                <p>위에서 새 수합 요청을 만들어보세요!</p>
+                <p>상단에서 새 요청을 만들어 시작하세요.</p>
             </div>
             {% endif %}
         </div>
     </div>
 </section>
+
+<script>
+    function collectWizard() {
+        return {
+            open: false,
+            step: 1,
+        };
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,91 @@
+﻿{% extends "base.html" %}
+
+{% block title %}?숈쓽 諛??쒕챸{% endblock %}
+
+{% block extra_css %}
+<style>
+  .signature-pad { width: 100%; height: 220px; border-radius: 12px; background: #f9fafb; border: 1px solid #e5e7eb; touch-action: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pt-24 pb-16 px-4 min-h-screen">
+  <div class="max-w-xl mx-auto">
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">2?④퀎. ?숈쓽 諛??먯꽌紐?/h1>
+      <p class="text-sm text-gray-500">{{ recipient.student_name }} ?숈깮 / {{ recipient.parent_name }} ?숇?紐?/p>
+    </div>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">
+      <p>媛쒖씤?뺣낫???숈쓽???섑빀 紐⑹쟻???쒗빐 ?ъ슜?섎ŉ, 蹂댁쑀湲곌컙 醫낅즺 ???뚭린?⑸땲??</p>
+      <p>?숈쓽 ?쒓컖, ?묒냽?뺣낫(IP/湲곌린?뺣낫), ?숈쓽 臾멸뎄 踰꾩쟾??湲곕줉?⑸땲??</p>
+      <details class="mt-2">
+        <summary class="cursor-pointer font-semibold">怨좎? ?꾨Ц 蹂닿린</summary>
+        <pre class="whitespace-pre-wrap mt-2 text-xs">{{ consent_request.legal_notice|default:"蹂꾨룄 怨좎? ?꾨Ц???깅줉?섏? ?딆븯?듬땲??" }}</pre>
+      </details>
+    </div>
+
+    <form method="post" id="signForm" class="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-semibold mb-2">?섏궗 ?쒖떆</label>
+        {{ form.decision }}
+      </div>
+      <div id="declineReasonWrap" class="hidden">
+        <label class="block text-sm font-semibold mb-1">鍮꾨룞???ъ쑀 (?좏깮)</label>
+        {{ form.decline_reason }}
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-semibold">?먯꽌紐?(?꾩닔)</label>
+          <button type="button" onclick="pad.clear()" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">吏?곌린</button>
+        </div>
+        <canvas id="signaturePad" class="signature-pad"></canvas>
+        {{ form.signature_data }}
+        {{ form.signature_data.errors }}
+      </div>
+
+      {% if form.non_field_errors %}
+      <div class="text-sm text-red-600">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">?쒖텧?섍린</button>
+    </form>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+  const canvas = document.getElementById("signaturePad");
+  const pad = new SignaturePad(canvas, { backgroundColor: "rgb(249,250,251)", penColor: "rgb(17,24,39)" });
+  function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+    pad.clear();
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  const radios = document.querySelectorAll("input[name='decision']");
+  const wrap = document.getElementById("declineReasonWrap");
+  function refreshDecisionUI() {
+    const checked = document.querySelector("input[name='decision']:checked");
+    wrap.classList.toggle("hidden", !(checked && checked.value === "disagree"));
+  }
+  radios.forEach(r => r.addEventListener("change", refreshDecisionUI));
+  refreshDecisionUI();
+
+  document.getElementById("signForm").addEventListener("submit", function (e) {
+    if (pad.isEmpty()) {
+      e.preventDefault();
+      alert("?먯꽌紐낆쓣 ?낅젰??二쇱꽭??");
+      return;
+    }
+    document.getElementById("id_signature_data").value = pad.toDataURL("image/png");
+  });
+</script>
+{% endblock %}

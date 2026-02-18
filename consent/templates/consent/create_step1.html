@@ -1,0 +1,60 @@
+﻿{% extends "base.html" %}
+
+{% block title %}?숈쓽???앹꽦 1?④퀎{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen">
+  <div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">紐⑸줉?쇰줈</a>
+      <h1 class="text-3xl font-bold text-gray-800 mt-2">1?④퀎. 臾몄꽌 ?낅줈??/h1>
+      <p class="text-sm text-gray-500 mt-1">?낅줈??-> ?꾩튂 ?ㅼ젙 -> ?섏떊???깅줉 ?쒖꽌濡?吏꾪뻾?⑸땲??</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+      {% csrf_token %}
+      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+        <h2 class="text-lg font-bold mb-3">臾몄꽌</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">臾몄꽌 ?쒕ぉ</label>
+            {{ document_form.title }}
+            {{ document_form.title.errors }}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">?뚯씪(PDF/?대?吏)</label>
+            {{ document_form.original_file }}
+            {{ document_form.original_file.errors }}
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+        <h2 class="text-lg font-bold mb-3">?붿껌 ?뺣낫</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-semibold mb-1">?붿껌 ?쒕ぉ</label>
+            {{ request_form.title }}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">諛쒖넚 硫붿떆吏</label>
+            {{ request_form.message }}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">踰뺤쟻/媛쒖씤?뺣낫 怨좎? ?꾨Ц</label>
+            {{ request_form.legal_notice }}
+          </div>
+          <div class="max-w-xs">
+            <label class="block text-sm font-semibold mb-1">臾멸뎄 踰꾩쟾</label>
+            {{ request_form.consent_text_version }}
+          </div>
+        </div>
+      </section>
+
+      <button type="submit" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
+        ?ㅼ쓬: ?꾩튂 ?ㅼ젙
+      </button>
+    </form>
+  </div>
+</main>
+{% endblock %}
