@@ -7,11 +7,15 @@ class TrainingSessionForm(forms.ModelForm):
 
     class Meta:
         model = TrainingSession
-        fields = ['title', 'instructor', 'datetime', 'location', 'description', 'expected_count', 'is_active']
+        fields = ['title', 'print_title', 'instructor', 'datetime', 'location', 'description', 'expected_count', 'is_active']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
                 'placeholder': '예: 2024학년도 1학기 학교폭력예방교육',
+            }),
+            'print_title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
+                'placeholder': '예: 2026 연수등록부 (비우면 자동 생성)',
             }),
             'instructor': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',

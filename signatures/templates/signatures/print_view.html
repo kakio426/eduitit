@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>연수등록부 - {{ session.title }}</title>
+    <title>{% if session.print_title %}{{ session.print_title }}{% else %}{% now "Y" %} 연수등록부{% endif %} - {{ session.title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css');
@@ -123,7 +123,7 @@
     <div class="print-container max-w-[210mm] mx-auto bg-white {% if not forloop.first %}page-break-before{% endif %}">
         <!-- Title -->
         <h1 class="official-title">
-            {% now "Y" %} 연수등록부{% if total_pages > 1 %} ({{ page.page_number }}/{{ total_pages }}){% endif %}
+            {% if session.print_title %}{{ session.print_title }}{% else %}{% now "Y" %} 연수등록부{% endif %}{% if total_pages > 1 %} ({{ page.page_number }}/{{ total_pages }}){% endif %}
         </h1>
 
         <!-- Header Info Table Style -->

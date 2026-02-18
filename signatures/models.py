@@ -6,6 +6,12 @@ from django.contrib.auth.models import User
 class TrainingSession(models.Model):
     """연수 정보 모델"""
     title = models.CharField('연수 제목', max_length=200)
+    print_title = models.CharField(
+        '인쇄 제목',
+        max_length=200,
+        blank=True,
+        help_text='인쇄 상단 제목(미입력 시 자동 제목 사용)',
+    )
     instructor = models.CharField('강사명', max_length=100)
     datetime = models.DateTimeField('연수 일시')
     location = models.CharField('장소', max_length=200)
