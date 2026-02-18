@@ -12,6 +12,8 @@
   const stageEl = document.getElementById('fg-stage');
   const missionEl = document.getElementById('fg-mission');
   const tipEl = document.getElementById('fg-tip');
+  const turnTopEl = document.getElementById('fg-turn-top');
+  const turnBottomEl = document.getElementById('fg-turn-bottom');
   const resultModalEl = document.getElementById('fg-result-modal');
   const resultTitleEl = document.getElementById('fg-result-title');
   const resultDescEl = document.getElementById('fg-result-desc');
@@ -71,6 +73,38 @@
     if (resultTitleEl) resultTitleEl.textContent = state.winner ? `${sideName(state.winner)} 승리` : '무승부';
     if (resultDescEl) resultDescEl.textContent = state.winner ? '축하합니다! 다시 도전해 보세요.' : '승부가 나지 않았어요. 다시 해볼까요?';
     setResultModal(true);
+  }
+
+  function pieceHtml(side, glyph, rotateOpponent = false) {
+    if (!glyph) return '';
+    const cls = rotateOpponent && side === 2 ? 'fg-piece opponent' : 'fg-piece';
+    return `<span class="${cls}">${glyph}</span>`;
+  }
+
+  function setTurnIndicator(s) {
+    if (!turnTopEl || !turnBottomEl || !s) return;
+    const topActive = !s.gameOver && s.turn === 2;
+    const bottomActive = !s.gameOver && s.turn === 1;
+    turnTopEl.classList.toggle('active', topActive);
+    turnBottomEl.classList.toggle('active', bottomActive);
+
+    const topLabel = turnTopEl.querySelector('small');
+    const bottomLabel = turnBottomEl.querySelector('small');
+    if (s.gameOver) {
+      if (s.winner === 1) {
+        if (bottomLabel) bottomLabel.textContent = '승리';
+        if (topLabel) topLabel.textContent = '패배';
+      } else if (s.winner === 2) {
+        if (bottomLabel) bottomLabel.textContent = '패배';
+        if (topLabel) topLabel.textContent = '승리';
+      } else {
+        if (bottomLabel) bottomLabel.textContent = '무승부';
+        if (topLabel) topLabel.textContent = '무승부';
+      }
+      return;
+    }
+    if (topLabel) topLabel.textContent = topActive ? '내 차례' : '대기';
+    if (bottomLabel) bottomLabel.textContent = bottomActive ? '내 차례' : '대기';
   }
 
   function posToken(r, c) { return String.fromCharCode(97 + c) + String(r); }
@@ -499,7 +533,8 @@
         const arr = s.hands[side];
         if (!arr.length) wrap.innerHTML = "<span class='text-sm text-gray-500'>손패 없음</span>";
         arr.forEach((it, idx) => {
-          const b = document.createElement('button'); b.type = 'button'; b.textContent = this.icon({ t: it });
+          const b = document.createElement('button'); b.type = 'button';
+          b.innerHTML = pieceHtml(side, this.icon({ t: it }), true);
           if (handPick && handPick.side === side && handPick.idx === idx) b.classList.add('sel');
           b.addEventListener('click', () => { if (aiActive() || s.turn !== side) return; handPick = { side, idx, t: it }; s.sel = null; render(); });
           wrap.appendChild(b);
@@ -516,7 +551,7 @@
         let cls = (r + c) % 2 ? 'dark' : '';
         if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
         if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
-        return cell(cls, p ? this.icon(p) : '', () => {
+        return cell(cls, p ? pieceHtml(p.s, this.icon(p), true) : '', () => {
           if (aiActive() || s.gameOver) return;
           if (handPick && handPick.side === s.turn && !p) { pushUndo(); this.apply(s, { k: 'd', i: handPick.idx, t: handPick.t, tr: r, tc: c }); handPick = null; render(); aiTurn(); return; }
           if (!s.sel) { if (p && p.s === s.turn) s.sel = [r, c]; render(); return; }
@@ -535,6 +570,7 @@
 
   function render() {
     game.render(state);
+    setTurnIndicator(state);
     maybeShowResult();
   }
 

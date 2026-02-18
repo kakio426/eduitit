@@ -24,6 +24,55 @@
         overflow-x: hidden;
         border: 1px solid rgba(148, 163, 184, 0.25);
     }
+    .fg-turn-rail {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .fg-turn-seat {
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: #f8fafc;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .fg-turn-seat small {
+        font-size: 0.72rem;
+        color: #64748b;
+        font-weight: 700;
+    }
+    .fg-turn-seat.active {
+        color: #111827;
+        background: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        border-color: rgba(59, 130, 246, 0.45);
+    }
+    .fg-turn-seat.active .fg-turn-dot {
+        box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.18);
+    }
+    .fg-turn-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #94a3b8;
+        transition: box-shadow 0.15s ease, background 0.15s ease;
+        margin-right: 8px;
+    }
+    .fg-turn-dot.red { background: #ef4444; }
+    .fg-turn-dot.blue { background: #3b82f6; }
+    .fg-piece {
+        display: inline-block;
+        line-height: 1;
+        transform-origin: center center;
+    }
     .fg-board-grid {
         --fg-cols: 7;
         --fg-gap: 2px;
@@ -120,6 +169,7 @@
     .fg-stage.fg-variant-dobutsu .fg-cell { font-size: clamp(1.8rem, calc(var(--fg-cell-size) * 0.5), 3.5rem); }
     .fg-stage.fg-variant-dobutsu .fg-hand button { font-size: 2.5rem; padding: 4px 10px; min-width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
     .fg-stage.fg-variant-dobutsu .fg-hand button.sel { background: #7c3aed; }
+    .fg-stage.fg-variant-dobutsu .fg-piece.opponent { transform: rotate(180deg); }
     .fg-stage.fg-variant-cfour .fg-board-grid { background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%); }
     .fg-stage.fg-variant-isolation .fg-board-grid { background: linear-gradient(180deg, #334155 0%, #1f2937 100%); }
     .fg-stage.fg-variant-ataxx .fg-board-grid { background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%); }
@@ -140,6 +190,16 @@
 
         <div class="fg-layout">
             <div class="fg-board-wrap">
+                <div class="fg-turn-rail">
+                    <div id="fg-turn-top" class="fg-turn-seat">
+                        <span class="flex items-center"><span class="fg-turn-dot blue"></span>위쪽 플레이어 (한/파랑)</span>
+                        <small>대기</small>
+                    </div>
+                    <div id="fg-turn-bottom" class="fg-turn-seat">
+                        <span class="flex items-center"><span class="fg-turn-dot red"></span>아래쪽 플레이어 (초/빨강)</span>
+                        <small>대기</small>
+                    </div>
+                </div>
                 <div id="fg-extra-top" class="mb-3"></div>
                 <div id="fg-board" class="fg-board-grid" aria-label="게임 보드"></div>
                 <div id="fg-extra-bottom" class="mt-3"></div>
