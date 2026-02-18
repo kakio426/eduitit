@@ -24,6 +24,14 @@ from .services import (
 )
 
 
+DEFAULT_LEGAL_NOTICE = (
+    "본 동의서는 학교 교육활동 운영을 위한 목적 범위 내에서만 사용됩니다.\n"
+    "수집 정보(학생명, 보호자명, 연락처, 서명 이미지, 접속기록)는 관련 법령 및 학교 내부 규정에 따라 "
+    "보관 및 폐기됩니다.\n"
+    "서명 시각, 접속 IP, 기기 정보(User-Agent)가 증빙 목적으로 기록될 수 있습니다."
+)
+
+
 def _client_ip(request):
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
@@ -81,11 +89,18 @@ def consent_create_step1(request):
             consent_request.created_by = request.user
             consent_request.document = document
             consent_request.status = SignatureRequest.STATUS_DRAFT
+            if not (consent_request.legal_notice or "").strip():
+                consent_request.legal_notice = DEFAULT_LEGAL_NOTICE
             consent_request.save()
             return redirect("consent:setup_positions", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm()
-        request_form = ConsentRequestForm(initial={"consent_text_version": "v1"})
+        request_form = ConsentRequestForm(
+            initial={
+                "consent_text_version": "v1",
+                "legal_notice": DEFAULT_LEGAL_NOTICE,
+            }
+        )
 
     return render(
         request,
@@ -97,7 +112,11 @@ def consent_create_step1(request):
 @login_required
 @transaction.atomic
 def consent_setup_positions(request, request_id):
-    consent_request = get_object_or_404(SignatureRequest.objects.select_related("document"), request_id=request_id, created_by=request.user)
+    consent_request = get_object_or_404(
+        SignatureRequest.objects.select_related("document"),
+        request_id=request_id,
+        created_by=request.user,
+    )
     form = PositionPayloadForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -232,7 +251,11 @@ def consent_download_merged(request, request_id):
     include_decline_summary = request.GET.get("include_decline_summary") == "1"
     merged_file = generate_merged_pdf(consent_request, include_decline_summary=include_decline_summary)
     consent_request.merged_pdf.save(merged_file.name, merged_file, save=True)
-    return FileResponse(consent_request.merged_pdf.open("rb"), as_attachment=True, filename=consent_request.merged_pdf.name.split("/")[-1])
+    return FileResponse(
+        consent_request.merged_pdf.open("rb"),
+        as_attachment=True,
+        filename=consent_request.merged_pdf.name.split("/")[-1],
+    )
 
 
 @login_required
@@ -299,7 +322,11 @@ def consent_sign(request, token):
             recipient.ip_address = _client_ip(request)
             recipient.user_agent = _user_agent(request)
             recipient.signed_at = timezone.now()
-            recipient.status = SignatureRecipient.STATUS_SIGNED if decision == SignatureRecipient.DECISION_AGREE else SignatureRecipient.STATUS_DECLINED
+            recipient.status = (
+                SignatureRecipient.STATUS_SIGNED
+                if decision == SignatureRecipient.DECISION_AGREE
+                else SignatureRecipient.STATUS_DECLINED
+            )
 
             signed_file = generate_signed_pdf(recipient)
             recipient.signed_pdf.save(signed_file.name, signed_file, save=False)
@@ -314,7 +341,9 @@ def consent_sign(request, token):
                 event_meta={"decision": recipient.decision},
             )
 
-            if not recipient.request.recipients.exclude(status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]).exists():
+            if not recipient.request.recipients.exclude(
+                status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
+            ).exists():
                 recipient.request.status = SignatureRequest.STATUS_COMPLETED
                 recipient.request.save(update_fields=["status"])
 

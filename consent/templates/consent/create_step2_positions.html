@@ -7,23 +7,17 @@
   #stage {
     position: relative;
     display: inline-block;
-    max-width: 100%;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
+    border: 1px solid #d1d5db;
     background: #fff;
   }
   #pdf-canvas,
-  #image-canvas {
-    display: block;
-    max-width: 100%;
-  }
+  #image-canvas { display: block; }
   #image-canvas {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
     pointer-events: none;
   }
   .sign-box {
@@ -32,20 +26,16 @@
     background: rgba(124, 58, 237, 0.12);
     cursor: move;
   }
-  .sign-box.active {
-    border-style: solid;
-    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22);
-  }
+  .sign-box.active { border-style: solid; }
   .sign-box .label {
     position: absolute;
     top: -20px;
     left: 0;
-    font-size: 11px;
     background: #7c3aed;
     color: #fff;
-    padding: 1px 6px;
+    font-size: 11px;
     border-radius: 999px;
-    white-space: nowrap;
+    padding: 1px 6px;
   }
   .sign-box .handle {
     position: absolute;
@@ -53,66 +43,31 @@
     bottom: -7px;
     width: 14px;
     height: 14px;
-    border-radius: 999px;
+    border-radius: 50%;
     background: #7c3aed;
     cursor: nwse-resize;
-  }
-  .box-chip.active {
-    border-color: #7c3aed;
-    color: #6d28d9;
-    font-weight: 700;
-    background: #f5f3ff;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-16 px-4 min-h-screen">
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-6xl mx-auto">
     <div class="mb-6">
       <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">2단계. 서명 위치 설정</h1>
-      <p class="text-sm text-gray-500 mt-1">박스를 배치하고 저장하면 문서 크기가 달라도 같은 비율로 적용됩니다.</p>
+      <p class="text-sm text-gray-500 mt-1">박스를 끌어서 배치하고 저장하세요.</p>
     </div>
 
-    <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-      <p class="font-semibold mb-1">사용 방법</p>
-      <p>1) 박스 추가 2) 드래그 이동 3) 모서리로 크기 조절 4) 저장 후 다음 단계로 이동</p>
-    </div>
-
-    <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-5">
-      <div class="sticky top-24 z-10 bg-white/95 backdrop-blur-sm border border-gray-100 rounded-xl p-3 mb-3">
-        <div class="grid md:grid-cols-2 gap-2 mb-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">현재 페이지 <strong id="pageBadge">1</strong></span>
-            <label for="pageInput" class="text-sm text-gray-700">페이지</label>
-            <input id="pageInput" type="number" min="1" value="1" class="w-20 rounded border border-gray-300 px-2 py-1 text-sm">
-            <button id="loadPageBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">페이지 이동</button>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <label for="presetSelect" class="text-sm text-gray-700">프리셋</label>
-            <select id="presetSelect" class="rounded border border-gray-300 px-2 py-1 text-sm">
-              <option value="one_bottom_right">기본 1개(우하단)</option>
-              <option value="one_center">기본 1개(중앙 하단)</option>
-              <option value="two_bottom">2개(하단 좌우)</option>
-            </select>
-            <button id="applyPresetBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">프리셋 적용</button>
-            <button id="addBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-purple-600 text-white text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">서명 박스 추가</button>
-            <button id="deleteBoxBtn" type="button" class="min-h-11 px-3 py-1.5 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-300" disabled>선택 박스 삭제</button>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm text-gray-700">미세 이동</span>
-          <button type="button" id="nudgeLeft" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>좌</button>
-          <button type="button" id="nudgeRight" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>우</button>
-          <button type="button" id="nudgeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>상</button>
-          <button type="button" id="nudgeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>하</button>
-          <button type="button" id="sizeDown" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>크기 -</button>
-          <button type="button" id="sizeUp" class="min-h-11 px-3 py-1.5 rounded bg-gray-100 text-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300" disabled>크기 +</button>
-        </div>
+    <div class="clay-card p-4 md:p-5">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <span class="text-sm text-gray-600">페이지</span>
+        <input id="pageInput" type="number" value="1" min="1" class="w-20 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft">
+        <button id="pageBtn" type="button" class="px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft">이동</button>
+        <button id="addBtn" type="button" class="px-3 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700">서명 박스 추가</button>
+        <button id="delBtn" type="button" class="px-3 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200" disabled>선택 박스 삭제</button>
+        <span id="stateMsg" class="text-sm text-gray-500 ml-auto">박스를 최소 1개 배치해 주세요.</span>
       </div>
-
-      <div id="statusMessage" class="mb-3 text-sm text-gray-600"></div>
 
       <div class="overflow-auto">
         <div id="stage">
@@ -120,24 +75,16 @@
           <img id="image-canvas" alt="preview">
         </div>
       </div>
-
-      <div class="mt-4">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold">현재 페이지 박스</h2>
-          <span id="boxCount" class="text-xs text-gray-500">0개</span>
-        </div>
-        <div id="boxList" class="flex flex-wrap gap-2"></div>
-      </div>
     </div>
 
     <form method="post" class="mt-4">
       {% csrf_token %}
       {{ form.positions_json }}
       <div class="flex flex-wrap gap-2">
-        <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
+        <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700">
           위치 미리보기
         </a>
-        <button type="submit" id="saveBtn" class="min-h-11 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">
+        <button type="submit" id="saveBtn" class="min-h-11 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
           다음: 수신자 등록
         </button>
       </div>
@@ -149,187 +96,46 @@
 {% block extra_js %}
 <script type="module">
   const isPdf = "{{ document_file_type }}" === "pdf";
-  const initial = {{ initial_positions_json|safe }};
   const documentUrl = "{{ document_url|escapejs }}";
-  const MAX_BOXES_PER_PAGE = 5;
-  const NUDGE_STEP = 0.005;
-  const SIZE_STEP = 0.01;
+  const initial = {{ initial_positions_json|safe }};
 
   const stage = document.getElementById("stage");
   const pdfCanvas = document.getElementById("pdf-canvas");
   const imageCanvas = document.getElementById("image-canvas");
-  const pdfCtx = pdfCanvas.getContext("2d");
-  const hidden = document.getElementById("id_positions_json");
+  const ctx = pdfCanvas.getContext("2d");
   const pageInput = document.getElementById("pageInput");
-  const pageBadge = document.getElementById("pageBadge");
-  const boxList = document.getElementById("boxList");
-  const boxCount = document.getElementById("boxCount");
-  const loadPageBtn = document.getElementById("loadPageBtn");
-  const addBoxBtn = document.getElementById("addBoxBtn");
-  const deleteBoxBtn = document.getElementById("deleteBoxBtn");
+  const pageBtn = document.getElementById("pageBtn");
+  const addBtn = document.getElementById("addBtn");
+  const delBtn = document.getElementById("delBtn");
   const saveBtn = document.getElementById("saveBtn");
-  const statusMessage = document.getElementById("statusMessage");
-  const presetSelect = document.getElementById("presetSelect");
-  const applyPresetBtn = document.getElementById("applyPresetBtn");
-  const nudgeLeft = document.getElementById("nudgeLeft");
-  const nudgeRight = document.getElementById("nudgeRight");
-  const nudgeUp = document.getElementById("nudgeUp");
-  const nudgeDown = document.getElementById("nudgeDown");
-  const sizeDown = document.getElementById("sizeDown");
-  const sizeUp = document.getElementById("sizeUp");
+  const stateMsg = document.getElementById("stateMsg");
+  const hidden = document.getElementById("id_positions_json");
 
+  const boxes = [];
+  let nextId = 1;
+  let selectedId = null;
   let currentPage = 1;
   let pageWidth = 1;
   let pageHeight = 1;
   let pdfDoc = null;
-  let selectedId = null;
-  let dragState = null;
-  let boxCounter = 1;
-  const boxes = [];
+  let drag = null;
 
-  for (const item of initial) {
+  for (const p of initial) {
     boxes.push({
-      id: boxCounter++,
-      page: parseInt(item.page || 1, 10),
-      x_ratio: Number(item.x_ratio ?? 0.45),
-      y_ratio: Number(item.y_ratio ?? 0.1),
-      w_ratio: Number(item.w_ratio ?? 0.3),
-      h_ratio: Number(item.h_ratio ?? 0.12),
+      id: nextId++,
+      page: Number(p.page || 1),
+      x_ratio: Number(p.x_ratio ?? 0.6),
+      y_ratio: Number(p.y_ratio ?? 0.08),
+      w_ratio: Number(p.w_ratio ?? 0.3),
+      h_ratio: Number(p.h_ratio ?? 0.12),
     });
   }
 
-  function clamp(v, min, max) {
-    return Math.max(min, Math.min(max, v));
-  }
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const pageBoxes = () => boxes.filter((b) => b.page === currentPage);
+  const selectedBox = () => boxes.find((b) => b.id === selectedId) || null;
 
-  function showStatus(message, tone = "default") {
-    statusMessage.className = "mb-3 text-sm";
-    if (tone === "warn") {
-      statusMessage.classList.add("text-amber-700");
-    } else if (tone === "ok") {
-      statusMessage.classList.add("text-emerald-700");
-    } else {
-      statusMessage.classList.add("text-gray-600");
-    }
-    statusMessage.textContent = message;
-  }
-
-  function pageBoxes() {
-    return boxes.filter((b) => b.page === currentPage);
-  }
-
-  function getSelectedBox() {
-    return boxes.find((b) => b.id === selectedId) || null;
-  }
-
-  function updateToolbarState() {
-    pageBadge.textContent = String(currentPage);
-    const hasSelected = selectedId !== null;
-    deleteBoxBtn.disabled = !hasSelected;
-    nudgeLeft.disabled = !hasSelected;
-    nudgeRight.disabled = !hasSelected;
-    nudgeUp.disabled = !hasSelected;
-    nudgeDown.disabled = !hasSelected;
-    sizeDown.disabled = !hasSelected;
-    sizeUp.disabled = !hasSelected;
-  }
-
-  function rerenderBoxes() {
-    for (const el of Array.from(stage.querySelectorAll(".sign-box"))) el.remove();
-
-    for (const box of pageBoxes()) {
-      const el = document.createElement("div");
-      el.className = "sign-box" + (box.id === selectedId ? " active" : "");
-      el.style.left = `${box.x_ratio * pageWidth}px`;
-      el.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
-      el.style.width = `${box.w_ratio * pageWidth}px`;
-      el.style.height = `${box.h_ratio * pageHeight}px`;
-      el.innerHTML = `<span class="label">P${box.page} #${box.id}</span><span class="handle"></span>`;
-      stage.appendChild(el);
-
-      el.addEventListener("pointerdown", (e) => {
-        selectedId = box.id;
-        const handle = e.target.classList.contains("handle");
-        dragState = {
-          mode: handle ? "resize" : "move",
-          startX: e.clientX,
-          startY: e.clientY,
-          left: parseFloat(el.style.left),
-          top: parseFloat(el.style.top),
-          width: parseFloat(el.style.width),
-          height: parseFloat(el.style.height),
-        };
-        el.setPointerCapture(e.pointerId);
-        renderBoxList();
-        updateToolbarState();
-      });
-
-      el.addEventListener("pointermove", (e) => {
-        if (!dragState || selectedId !== box.id) return;
-        const dx = e.clientX - dragState.startX;
-        const dy = e.clientY - dragState.startY;
-        let left = dragState.left;
-        let top = dragState.top;
-        let width = dragState.width;
-        let height = dragState.height;
-
-        if (dragState.mode === "resize") {
-          width = clamp(dragState.width + dx, 50, pageWidth);
-          height = clamp(dragState.height + dy, 35, pageHeight);
-        } else {
-          left = clamp(dragState.left + dx, 0, pageWidth - width);
-          top = clamp(dragState.top + dy, 0, pageHeight - height);
-        }
-        el.style.left = `${left}px`;
-        el.style.top = `${top}px`;
-        el.style.width = `${width}px`;
-        el.style.height = `${height}px`;
-      });
-
-      el.addEventListener("pointerup", () => {
-        if (!dragState || selectedId !== box.id) return;
-        const left = parseFloat(el.style.left);
-        const top = parseFloat(el.style.top);
-        const width = parseFloat(el.style.width);
-        const height = parseFloat(el.style.height);
-
-        box.x_ratio = clamp(left / pageWidth, 0, 1);
-        box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
-        box.w_ratio = clamp(width / pageWidth, 0.02, 1);
-        box.h_ratio = clamp(height / pageHeight, 0.02, 1);
-        dragState = null;
-        renderBoxList();
-      });
-    }
-
-    renderBoxList();
-    updateToolbarState();
-  }
-
-  function renderBoxList() {
-    const items = pageBoxes();
-    boxCount.textContent = `${items.length}개`;
-    if (!items.length) {
-      boxList.innerHTML = "<p class='text-sm text-gray-400'>현재 페이지에 박스가 없습니다.</p>";
-      return;
-    }
-
-    boxList.innerHTML = items
-      .map((b) => {
-        const selected = b.id === selectedId ? "active" : "";
-        return `<button type="button" class="box-chip ${selected} px-3 py-1.5 rounded-lg border border-gray-300 text-sm" data-pick="${b.id}">#${b.id} (${(b.w_ratio*100).toFixed(0)}% x ${(b.h_ratio*100).toFixed(0)}%)</button>`;
-      })
-      .join("");
-
-    for (const btn of boxList.querySelectorAll("[data-pick]")) {
-      btn.addEventListener("click", () => {
-        selectedId = parseInt(btn.dataset.pick, 10);
-        rerenderBoxes();
-      });
-    }
-  }
-
-  function serializePositions() {
+  function serialize() {
     hidden.value = JSON.stringify(
       boxes.map((b) => ({
         page: b.page,
@@ -345,60 +151,77 @@
     );
   }
 
-  function addBoxAtCurrentPage(config = null) {
-    if (pageBoxes().length >= MAX_BOXES_PER_PAGE) {
-      showStatus(`페이지당 최대 ${MAX_BOXES_PER_PAGE}개까지 배치할 수 있습니다.`, "warn");
-      return;
+  function setMessage(text) {
+    stateMsg.textContent = text;
+  }
+
+  function repaintBoxes() {
+    for (const el of stage.querySelectorAll(".sign-box")) el.remove();
+    delBtn.disabled = selectedId === null;
+
+    for (const box of pageBoxes()) {
+      const el = document.createElement("div");
+      el.className = "sign-box" + (box.id === selectedId ? " active" : "");
+      el.style.left = `${box.x_ratio * pageWidth}px`;
+      el.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
+      el.style.width = `${box.w_ratio * pageWidth}px`;
+      el.style.height = `${box.h_ratio * pageHeight}px`;
+      el.innerHTML = `<span class="label">#${box.id}</span><span class="handle"></span>`;
+      stage.appendChild(el);
+
+      el.addEventListener("pointerdown", (e) => {
+        selectedId = box.id;
+        drag = {
+          mode: e.target.classList.contains("handle") ? "resize" : "move",
+          startX: e.clientX,
+          startY: e.clientY,
+          left: parseFloat(el.style.left),
+          top: parseFloat(el.style.top),
+          width: parseFloat(el.style.width),
+          height: parseFloat(el.style.height),
+        };
+        el.setPointerCapture(e.pointerId);
+        repaintBoxes();
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!drag || selectedId !== box.id) return;
+        const dx = e.clientX - drag.startX;
+        const dy = e.clientY - drag.startY;
+        if (drag.mode === "move") {
+          const left = clamp(drag.left + dx, 0, pageWidth - drag.width);
+          const top = clamp(drag.top + dy, 0, pageHeight - drag.height);
+          el.style.left = `${left}px`;
+          el.style.top = `${top}px`;
+        } else {
+          const width = clamp(drag.width + dx, 60, pageWidth - drag.left);
+          const height = clamp(drag.height + dy, 28, pageHeight - drag.top);
+          el.style.width = `${width}px`;
+          el.style.height = `${height}px`;
+        }
+      });
+
+      el.addEventListener("pointerup", () => {
+        if (!drag || selectedId !== box.id) return;
+        const left = parseFloat(el.style.left);
+        const top = parseFloat(el.style.top);
+        const width = parseFloat(el.style.width);
+        const height = parseFloat(el.style.height);
+        box.x_ratio = clamp(left / pageWidth, 0, 1);
+        box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
+        box.w_ratio = clamp(width / pageWidth, 0.05, 1);
+        box.h_ratio = clamp(height / pageHeight, 0.03, 1);
+        drag = null;
+      });
     }
-    const b = {
-      id: boxCounter++,
-      page: currentPage,
-      x_ratio: config?.x_ratio ?? 0.45,
-      y_ratio: config?.y_ratio ?? 0.1,
-      w_ratio: config?.w_ratio ?? 0.3,
-      h_ratio: config?.h_ratio ?? 0.12,
-    };
+  }
+
+  function addBox() {
+    const b = { id: nextId++, page: currentPage, x_ratio: 0.6, y_ratio: 0.08, w_ratio: 0.3, h_ratio: 0.12 };
     boxes.push(b);
     selectedId = b.id;
-    showStatus("서명 박스를 추가했습니다.", "ok");
-    rerenderBoxes();
-  }
-
-  function applyPreset() {
-    boxes.splice(
-      0,
-      boxes.length,
-      ...boxes.filter((b) => b.page !== currentPage)
-    );
-    selectedId = null;
-    const preset = presetSelect.value;
-    if (preset === "one_center") {
-      addBoxAtCurrentPage({ x_ratio: 0.35, y_ratio: 0.12, w_ratio: 0.3, h_ratio: 0.12 });
-    } else if (preset === "two_bottom") {
-      addBoxAtCurrentPage({ x_ratio: 0.12, y_ratio: 0.1, w_ratio: 0.3, h_ratio: 0.12 });
-      addBoxAtCurrentPage({ x_ratio: 0.58, y_ratio: 0.1, w_ratio: 0.3, h_ratio: 0.12 });
-    } else {
-      addBoxAtCurrentPage({ x_ratio: 0.62, y_ratio: 0.08, w_ratio: 0.3, h_ratio: 0.12 });
-    }
-    showStatus("프리셋을 적용했습니다. 필요하면 위치를 미세 조정하세요.", "ok");
-  }
-
-  function nudgeSelected(dx, dy) {
-    const b = getSelectedBox();
-    if (!b) return;
-    b.x_ratio = clamp(b.x_ratio + dx, 0, 1 - b.w_ratio);
-    b.y_ratio = clamp(b.y_ratio + dy, 0, 1 - b.h_ratio);
-    rerenderBoxes();
-  }
-
-  function resizeSelected(delta) {
-    const b = getSelectedBox();
-    if (!b) return;
-    b.w_ratio = clamp(b.w_ratio + delta, 0.08, 0.95);
-    b.h_ratio = clamp(b.h_ratio + delta, 0.05, 0.6);
-    b.x_ratio = clamp(b.x_ratio, 0, 1 - b.w_ratio);
-    b.y_ratio = clamp(b.y_ratio, 0, 1 - b.h_ratio);
-    rerenderBoxes();
+    repaintBoxes();
+    setMessage("서명 박스를 추가했습니다.");
   }
 
   async function renderPdfPage(pageNo) {
@@ -409,9 +232,8 @@
     pdfCanvas.width = pageWidth;
     pdfCanvas.height = pageHeight;
     imageCanvas.style.display = "none";
-    pdfCanvas.style.display = "block";
-    await page.render({ canvasContext: pdfCtx, viewport }).promise;
-    rerenderBoxes();
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    repaintBoxes();
   }
 
   async function renderImagePage() {
@@ -421,54 +243,29 @@
     pageHeight = imageCanvas.naturalHeight;
     pdfCanvas.width = pageWidth;
     pdfCanvas.height = pageHeight;
-    pdfCtx.clearRect(0, 0, pageWidth, pageHeight);
+    ctx.clearRect(0, 0, pageWidth, pageHeight);
     imageCanvas.style.width = `${pageWidth}px`;
     imageCanvas.style.height = `${pageHeight}px`;
     imageCanvas.style.display = "block";
-    pdfCanvas.style.display = "block";
-    rerenderBoxes();
+    repaintBoxes();
   }
 
-  async function renderCurrentPage() {
-    if (isPdf) {
-      await renderPdfPage(currentPage);
-    } else {
-      currentPage = 1;
-      pageInput.value = "1";
-      await renderImagePage();
-    }
-  }
-
-  loadPageBtn.addEventListener("click", async () => {
-    if (isPdf) {
-      const maxPage = pdfDoc.numPages;
-      currentPage = clamp(parseInt(pageInput.value || "1", 10), 1, maxPage);
-      pageInput.value = String(currentPage);
-      selectedId = null;
-    }
-    await renderCurrentPage();
+  pageBtn.addEventListener("click", async () => {
+    if (!isPdf) return;
+    currentPage = clamp(parseInt(pageInput.value || "1", 10), 1, pdfDoc.numPages);
+    pageInput.value = String(currentPage);
+    selectedId = null;
+    await renderPdfPage(currentPage);
   });
 
-  addBoxBtn.addEventListener("click", () => addBoxAtCurrentPage());
-  applyPresetBtn.addEventListener("click", applyPreset);
-
-  deleteBoxBtn.addEventListener("click", () => {
+  addBtn.addEventListener("click", addBox);
+  delBtn.addEventListener("click", () => {
     if (!selectedId) return;
     const idx = boxes.findIndex((b) => b.id === selectedId);
-    if (idx >= 0) {
-      boxes.splice(idx, 1);
-      selectedId = null;
-      showStatus("선택한 박스를 삭제했습니다.", "ok");
-      rerenderBoxes();
-    }
+    if (idx >= 0) boxes.splice(idx, 1);
+    selectedId = null;
+    repaintBoxes();
   });
-
-  nudgeLeft.addEventListener("click", () => nudgeSelected(-NUDGE_STEP, 0));
-  nudgeRight.addEventListener("click", () => nudgeSelected(NUDGE_STEP, 0));
-  nudgeUp.addEventListener("click", () => nudgeSelected(0, NUDGE_STEP));
-  nudgeDown.addEventListener("click", () => nudgeSelected(0, -NUDGE_STEP));
-  sizeDown.addEventListener("click", () => resizeSelected(-SIZE_STEP));
-  sizeUp.addEventListener("click", () => resizeSelected(SIZE_STEP));
 
   saveBtn.addEventListener("click", (e) => {
     if (!boxes.length) {
@@ -476,7 +273,7 @@
       alert("서명 박스를 최소 1개 이상 배치해 주세요.");
       return;
     }
-    serializePositions();
+    serialize();
   });
 
   if (isPdf) {
@@ -484,22 +281,14 @@
     mod.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
     pdfDoc = await mod.getDocument(documentUrl).promise;
     pageInput.max = String(pdfDoc.numPages);
-    await renderCurrentPage();
-    if (!boxes.length) {
-      presetSelect.value = "one_bottom_right";
-      applyPreset();
-    }
+    await renderPdfPage(currentPage);
   } else {
-    loadPageBtn.disabled = true;
+    pageBtn.disabled = true;
     pageInput.disabled = true;
-    await renderCurrentPage();
-    if (!boxes.length) {
-      presetSelect.value = "one_center";
-      applyPreset();
-    }
+    await renderImagePage();
   }
 
-  showStatus("원하는 위치에 서명 박스를 배치해 주세요.");
-  updateToolbarState();
+  if (!boxes.length) addBox();
+  setMessage("박스를 드래그해서 위치를 맞춘 뒤 저장하세요.");
 </script>
 {% endblock %}

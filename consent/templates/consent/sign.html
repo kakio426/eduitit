@@ -1,54 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}동의 및 서명{% endblock %}
+{% block title %}동의서 서명{% endblock %}
 
 {% block extra_css %}
 <style>
-  .signature-pad { width: 100%; height: 220px; border-radius: 12px; background: #f9fafb; border: 1px solid #e5e7eb; touch-action: none; }
+  #signaturePad { width: 100%; height: 180px; background: #fff; border-radius: 16px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="pt-24 pb-16 px-4 min-h-screen">
-  <div class="max-w-xl mx-auto">
-    <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">2단계. 동의 및 자필서명</h1>
-      <p class="text-sm text-gray-500">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+  <div class="max-w-2xl mx-auto">
+    <div class="clay-card p-5 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800">{{ consent_request.title }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
     </div>
 
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">
-      <p>개인정보는 동의서 수합 목적에만 사용되며, 보유기간 종료 시 파기됩니다.</p>
-      <p>동의 시각, 접속 정보(IP/기기정보), 동의 문구 버전이 기록됩니다.</p>
-      <details class="mt-2">
-        <summary class="cursor-pointer font-semibold">고지 전문 보기</summary>
-        <pre class="whitespace-pre-wrap mt-2 text-xs">{{ consent_request.legal_notice|default:"별도 고지 전문이 등록되지 않았습니다." }}</pre>
-      </details>
+      <p class="font-semibold mb-1">법적 고지</p>
+      <p class="whitespace-pre-line">{{ consent_request.legal_notice }}</p>
     </div>
 
-    <form method="post" id="signForm" class="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+    <form method="post" id="signForm" class="clay-card p-5 space-y-4">
       {% csrf_token %}
       <div>
-        <label class="block text-sm font-semibold mb-2">의사 표시</label>
-        {{ form.decision }}
+        <label class="block text-sm font-semibold mb-2">동의 여부</label>
+        <div class="space-y-1">{{ form.decision }}</div>
       </div>
-      <div id="declineReasonWrap" class="hidden">
-        <label class="block text-sm font-semibold mb-1">비동의 사유 (선택)</label>
+
+      <div>
+        <label class="block text-sm font-semibold mb-1">비동의 사유(선택)</label>
         {{ form.decline_reason }}
       </div>
 
       <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-sm font-semibold">자필서명(필수)</label>
-          <button type="button" onclick="pad.clear()" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">지우기</button>
+        <label class="block text-sm font-semibold mb-1">자필 서명</label>
+        <canvas id="signaturePad" class="shadow-clay-inner"></canvas>
+        <div class="flex gap-2 mt-2">
+          <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>
         </div>
-        <canvas id="signaturePad" class="signature-pad"></canvas>
         {{ form.signature_data }}
-        {{ form.signature_data.errors }}
       </div>
 
-      {% if form.non_field_errors %}
-      <div class="text-sm text-red-600">{{ form.non_field_errors }}</div>
-      {% endif %}
+      {{ form.non_field_errors }}
       <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출하기</button>
     </form>
   </div>
@@ -56,36 +50,62 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <script>
   const canvas = document.getElementById("signaturePad");
-  const pad = new SignaturePad(canvas, { backgroundColor: "rgb(249,250,251)", penColor: "rgb(17,24,39)" });
-  function resizeCanvas() {
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.width = canvas.offsetWidth * ratio;
-    canvas.height = canvas.offsetHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
-    pad.clear();
-  }
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas();
+  const clearBtn = document.getElementById("clearBtn");
+  const hidden = document.getElementById("id_signature_data");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
 
-  const radios = document.querySelectorAll("input[name='decision']");
-  const wrap = document.getElementById("declineReasonWrap");
-  function refreshDecisionUI() {
-    const checked = document.querySelector("input[name='decision']:checked");
-    wrap.classList.toggle("hidden", !(checked && checked.value === "disagree"));
+  function fitCanvas() {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#111827";
+    ctx.clearRect(0, 0, width, height);
   }
-  radios.forEach(r => r.addEventListener("change", refreshDecisionUI));
-  refreshDecisionUI();
 
-  document.getElementById("signForm").addEventListener("submit", function (e) {
-    if (pad.isEmpty()) {
-      e.preventDefault();
-      alert("자필서명을 입력해 주세요.");
-      return;
-    }
-    document.getElementById("id_signature_data").value = pad.toDataURL("image/png");
+  function point(e) {
+    const r = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  }
+
+  function start(e) {
+    drawing = true;
+    const p = point(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    e.preventDefault();
+  }
+
+  function move(e) {
+    if (!drawing) return;
+    const p = point(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    hidden.value = canvas.toDataURL("image/png");
+    e.preventDefault();
+  }
+
+  function end() { drawing = false; }
+
+  clearBtn.addEventListener("click", () => {
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    hidden.value = "";
   });
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+  canvas.addEventListener("touchstart", start, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
+  window.addEventListener("touchend", end);
+  window.addEventListener("resize", fitCanvas);
+  fitCanvas();
 </script>
 {% endblock %}

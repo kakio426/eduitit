@@ -3,17 +3,17 @@
 {% block title %}동의서 생성 1단계{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-16 px-4 min-h-screen">
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-4xl mx-auto">
     <div class="mb-6">
       <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">1단계. 문서 업로드</h1>
-      <p class="text-sm text-gray-500 mt-1">업로드 → 위치 설정 → 수신자 등록 순서로 진행됩니다.</p>
+      <p class="text-sm text-gray-500 mt-1">업로드 -> 위치 설정 -> 수신자 등록 순서로 진행됩니다.</p>
     </div>
 
     <form method="post" enctype="multipart/form-data" class="space-y-6">
       {% csrf_token %}
-      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+      <section class="clay-card p-5">
         <h2 class="text-lg font-bold mb-3">문서</h2>
         <div class="grid md:grid-cols-2 gap-4">
           <div>
@@ -29,7 +29,7 @@
         </div>
       </section>
 
-      <section class="bg-white border border-gray-200 rounded-2xl p-5">
+      <section class="clay-card p-5">
         <h2 class="text-lg font-bold mb-3">요청 정보</h2>
         <div class="space-y-3">
           <div>
@@ -41,8 +41,9 @@
             {{ request_form.message }}
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">법적/개인정보 고지 전문</label>
+            <label class="block text-sm font-semibold mb-1">법적/개인정보 고지 전문(선택)</label>
             {{ request_form.legal_notice }}
+            <p class="text-xs text-gray-500 mt-1">비워두면 권장 기본 문구가 자동 적용됩니다.</p>
           </div>
           <div class="max-w-xs">
             <label class="block text-sm font-semibold mb-1">문구 버전</label>
@@ -51,7 +52,7 @@
         </div>
       </section>
 
-      <button type="submit" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
+      <button type="submit" class="px-5 py-2.5 rounded-2xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
         다음: 위치 설정
       </button>
     </form>

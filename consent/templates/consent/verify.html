@@ -3,27 +3,25 @@
 {% block title %}본인 확인{% endblock %}
 
 {% block content %}
-<main class="pt-24 pb-16 px-4 min-h-screen">
-  <div class="max-w-md mx-auto">
-    <div class="bg-white border border-gray-200 rounded-2xl p-5">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">1단계. 본인 확인</h1>
-      <p class="text-sm text-gray-500 mb-4">{{ recipient.student_name }} 학생 동의서</p>
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+  <div class="max-w-xl mx-auto">
+    <div class="clay-card p-6">
+      <h1 class="text-2xl font-bold text-gray-800 mb-1">본인 확인</h1>
+      <p class="text-sm text-gray-500 mb-4">{{ recipient.request.title }}</p>
 
       <form method="post" class="space-y-4">
         {% csrf_token %}
         <div>
-          <label class="block text-sm font-semibold mb-1">이름</label>
+          <label class="block text-sm font-semibold mb-1">학부모 이름</label>
           {{ form.parent_name }}
           {{ form.parent_name.errors }}
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">휴대폰 뒷자리 4자리</label>
+          <label class="block text-sm font-semibold mb-1">휴대폰 뒤 4자리</label>
           {{ form.phone_last4 }}
           {{ form.phone_last4.errors }}
         </div>
-        {% if form.non_field_errors %}
-        <div class="text-sm text-red-600">{{ form.non_field_errors }}</div>
-        {% endif %}
+        {{ form.non_field_errors }}
         <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">확인 후 다음</button>
       </form>
     </div>

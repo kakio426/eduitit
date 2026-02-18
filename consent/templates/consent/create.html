@@ -1,61 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}동의서 요청 생성{% endblock %}
+{% block title %}동의서 생성{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-16 px-4 min-h-screen">
-  <div class="max-w-4xl mx-auto">
-    <div class="mb-6">
-      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
-      <h1 class="text-3xl font-bold text-gray-800 mt-2">동의서 요청 생성</h1>
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+  <div class="max-w-3xl mx-auto">
+    <div class="clay-card p-6 text-center">
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">동의서 생성</h1>
+      <p class="text-gray-600">3단계 위저드로 이동해 동의서를 생성합니다.</p>
+      <a href="{% url 'consent:create_step1' %}" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">1단계 시작</a>
     </div>
-
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
-      {% csrf_token %}
-
-      <section class="bg-white border border-gray-200 rounded-2xl p-5">
-        <h2 class="text-lg font-bold mb-3">1. 문서 업로드</h2>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-1">문서 제목</label>
-            {{ document_form.title }}
-            {{ document_form.title.errors }}
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">파일(PDF/이미지)</label>
-            {{ document_form.original_file }}
-            {{ document_form.original_file.errors }}
-          </div>
-        </div>
-      </section>
-
-      <section class="bg-white border border-gray-200 rounded-2xl p-5">
-        <h2 class="text-lg font-bold mb-3">2. 요청 정보</h2>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-semibold mb-1">요청 제목</label>
-            {{ request_form.title }}
-            {{ request_form.title.errors }}
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">발송 메시지</label>
-            {{ request_form.message }}
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">법적/개인정보 고지 전문</label>
-            {{ request_form.legal_notice }}
-          </div>
-          <div class="max-w-xs">
-            <label class="block text-sm font-semibold mb-1">문구 버전</label>
-            {{ request_form.consent_text_version }}
-          </div>
-        </div>
-      </section>
-
-      <button type="submit" class="w-full md:w-auto px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
-        생성하기
-      </button>
-    </form>
   </div>
 </main>
 {% endblock %}

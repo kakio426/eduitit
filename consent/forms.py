@@ -3,6 +3,9 @@ from django import forms
 from .models import SignatureDocument, SignatureRequest
 
 
+CLAY_INPUT = "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300"
+
+
 class ConsentDocumentForm(forms.ModelForm):
     class Meta:
         model = SignatureDocument
@@ -10,13 +13,13 @@ class ConsentDocumentForm(forms.ModelForm):
         widgets = {
             "title": forms.TextInput(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                    "class": CLAY_INPUT,
                     "placeholder": "동의서 제목",
                 }
             ),
             "original_file": forms.FileInput(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                    "class": CLAY_INPUT,
                     "accept": ".pdf,.png,.jpg,.jpeg",
                 }
             ),
@@ -38,27 +41,27 @@ class ConsentRequestForm(forms.ModelForm):
         widgets = {
             "title": forms.TextInput(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                    "class": CLAY_INPUT,
                     "placeholder": "예: 1학기 체험학습 동의서",
                 }
             ),
             "message": forms.Textarea(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                    "class": f"{CLAY_INPUT} resize-none",
                     "rows": 3,
                     "placeholder": "학부모에게 보낼 안내 메시지",
                 }
             ),
             "legal_notice": forms.Textarea(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
-                    "rows": 4,
-                    "placeholder": "법적/개인정보 고지 전문",
+                    "class": f"{CLAY_INPUT} resize-none",
+                    "rows": 5,
+                    "placeholder": "선택 입력 (비워두면 기본 법적 고지가 자동 적용됩니다.)",
                 }
             ),
             "consent_text_version": forms.TextInput(
                 attrs={
-                    "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                    "class": CLAY_INPUT,
                     "placeholder": "v1",
                 }
             ),
@@ -73,7 +76,7 @@ class RecipientBulkForm(forms.Form):
     recipients_text = forms.CharField(
         widget=forms.Textarea(
             attrs={
-                "class": "w-full rounded-xl border border-gray-300 px-3 py-2 font-mono text-sm",
+                "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
                 "placeholder": "학생명,학부모명,전화번호\n홍길동,홍길순,010-1234-5678",
             }
@@ -84,12 +87,17 @@ class RecipientBulkForm(forms.Form):
 class VerifyIdentityForm(forms.Form):
     parent_name = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(attrs={"class": "w-full rounded-xl border border-gray-300 px-3 py-2"}),
+        widget=forms.TextInput(attrs={"class": CLAY_INPUT}),
     )
     phone_last4 = forms.CharField(
         min_length=4,
         max_length=4,
-        widget=forms.TextInput(attrs={"class": "w-full rounded-xl border border-gray-300 px-3 py-2", "inputmode": "numeric"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "inputmode": "numeric",
+            }
+        ),
     )
 
     def clean_phone_last4(self):
@@ -108,7 +116,7 @@ class ConsentSignForm(forms.Form):
         required=False,
         widget=forms.Textarea(
             attrs={
-                "class": "w-full rounded-xl border border-gray-300 px-3 py-2",
+                "class": f"{CLAY_INPUT} resize-none",
                 "rows": 3,
                 "placeholder": "비동의 사유(선택)",
             }
