@@ -3,6 +3,7 @@ import io
 import logging
 import mimetypes
 import secrets
+import os
 import qrcode
 import base64
 
@@ -150,17 +151,26 @@ def _build_file_response(file_field, *, inline=True):
     content_type = guessed_content_type or "application/octet-stream"
 
     try:
-        file_url = file_field.url
+        file_obj = file_field.open("rb")
     except Exception:
-        file_url = ""
+        try:
+            file_url = file_field.url
+        except Exception:
+            file_url = ""
 
-    # Remote storages (e.g. Cloudinary raw) are served more reliably via direct URL.
-    if isinstance(file_url, str) and file_url.startswith("http"):
-        response = redirect(file_url)
-        response["Cache-Control"] = "no-store"
-        return response
+        signed_url = _build_cloudinary_signed_url(file_field, fallback_url=file_url)
+        if signed_url:
+            response = redirect(signed_url)
+            response["Cache-Control"] = "no-store"
+            return response
 
-    file_obj = file_field.open("rb")
+        # Fallback only: direct URL redirect can fail with 401 on private resources.
+        if isinstance(file_url, str) and file_url.startswith("http"):
+            response = redirect(file_url)
+            response["Cache-Control"] = "no-store"
+            return response
+        raise
+
     response = FileResponse(
         file_obj,
         content_type=content_type,
@@ -169,6 +179,47 @@ def _build_file_response(file_field, *, inline=True):
     )
     response["Cache-Control"] = "no-store"
     return response
+
+
+def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
+    file_name = (getattr(file_field, "name", "") or "").lstrip("/")
+    if not file_name:
+        return ""
+
+    try:
+        from cloudinary.utils import cloudinary_url
+    except Exception:
+        return ""
+
+    storage_module = getattr(getattr(file_field, "storage", None), "__class__", type("X", (), {})).__module__
+    is_cloudinary_storage = "cloudinary" in (storage_module or "")
+    is_cloudinary_url = "res.cloudinary.com" in (fallback_url or "")
+    if not (is_cloudinary_storage or is_cloudinary_url):
+        return ""
+
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    if not cloud_name and not is_cloudinary_url:
+        return ""
+
+    candidates = [file_name]
+    if not file_name.startswith("media/"):
+        candidates.append(f"media/{file_name}")
+
+    for public_id in candidates:
+        for delivery_type in ("upload", "authenticated", "private"):
+            try:
+                signed, _ = cloudinary_url(
+                    public_id,
+                    resource_type="raw",
+                    type=delivery_type,
+                    secure=True,
+                    sign_url=True,
+                )
+            except Exception:
+                continue
+            if signed:
+                return signed
+    return ""
 
 
 def _is_file_accessible(file_field) -> bool:
@@ -183,6 +234,13 @@ def _is_file_accessible(file_field) -> bool:
     if exists is True:
         return True
     if exists is False:
+        try:
+            file_url = file_field.url
+        except Exception:
+            file_url = ""
+        # Cloud storage may not support exists() reliably for delivered resources.
+        if isinstance(file_url, str) and file_url.startswith("http"):
+            return True
         return False
 
     try:
