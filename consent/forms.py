@@ -37,7 +37,7 @@ class ConsentDocumentForm(forms.ModelForm):
 class ConsentRequestForm(forms.ModelForm):
     class Meta:
         model = SignatureRequest
-        fields = ["title", "message", "legal_notice", "consent_text_version"]
+        fields = ["title", "message", "legal_notice"]
         widgets = {
             "title": forms.TextInput(
                 attrs={
@@ -57,12 +57,6 @@ class ConsentRequestForm(forms.ModelForm):
                     "class": f"{CLAY_INPUT} resize-none",
                     "rows": 5,
                     "placeholder": "선택 입력 (비워두면 기본 법적 고지가 자동 적용됩니다.)",
-                }
-            ),
-            "consent_text_version": forms.TextInput(
-                attrs={
-                    "class": CLAY_INPUT,
-                    "placeholder": "v1",
                 }
             ),
         }

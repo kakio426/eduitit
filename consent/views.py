@@ -89,6 +89,7 @@ def consent_create_step1(request):
             consent_request.created_by = request.user
             consent_request.document = document
             consent_request.status = SignatureRequest.STATUS_DRAFT
+            consent_request.consent_text_version = "v1"
             if not (consent_request.legal_notice or "").strip():
                 consent_request.legal_notice = DEFAULT_LEGAL_NOTICE
             consent_request.save()
@@ -97,7 +98,6 @@ def consent_create_step1(request):
         document_form = ConsentDocumentForm()
         request_form = ConsentRequestForm(
             initial={
-                "consent_text_version": "v1",
                 "legal_notice": DEFAULT_LEGAL_NOTICE,
             }
         )
