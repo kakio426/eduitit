@@ -118,6 +118,11 @@ def consent_setup_positions(request, request_id):
         created_by=request.user,
     )
     form = PositionPayloadForm(request.POST or None)
+    document = consent_request.document
+    detected_file_type = guess_file_type(document.original_file.name)
+    if document.file_type != detected_file_type:
+        document.file_type = detected_file_type
+        document.save(update_fields=["file_type"])
 
     if request.method == "POST" and form.is_valid():
         raw = form.cleaned_data["positions_json"]
@@ -164,6 +169,7 @@ def consent_setup_positions(request, request_id):
             "initial_positions_json": json.dumps(initial_positions, ensure_ascii=False),
             "document_url": consent_request.document.original_file.url,
             "document_file_type": consent_request.document.file_type,
+            "document_file_name": consent_request.document.original_file.name,
         },
     )
 

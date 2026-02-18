@@ -1,141 +1,68 @@
-# Handoff: signatures 학교용 동의서 플로우 구축
+# Handoff: consent 분리 및 안정화 (2026-02-18)
 
-**날짜**: 2026-02-18  
-**상태**: MVP + 확장(위치설정 고도화) 완료  
-**범위**: `signatures` 앱 내 독립 트랙(`/signatures/consent/`)
+## 1. 요약
+- `consent`는 별도 서비스로 분리 운영 중이며, 대시보드 진입/라우팅/제품 연결이 독립 경로로 동작함.
+- `consent` UI는 `collect/signatures`와 동일 계열(클레이모피즘 톤)로 정렬함.
+- `consent` 한글 깨짐 이슈를 템플릿/폼/뷰 중심으로 복구함.
+- 테스트 기준으로 `consent`, `collect`, `signatures` 회귀 이상 없음.
 
----
+## 2. 이번 턴 실제 반영 내용
+- 한글 복구 및 UI 정리
+  - `consent/forms.py`
+  - `consent/views.py`
+  - `consent/templates/consent/create.html`
+  - `consent/templates/consent/create_step1.html`
+  - `consent/templates/consent/create_step2_positions.html`
+  - `consent/templates/consent/create_step3_recipients.html`
+  - `consent/templates/consent/dashboard.html`
+  - `consent/templates/consent/detail.html`
+  - `consent/templates/consent/verify.html`
+  - `consent/templates/consent/sign.html`
+  - `consent/templates/consent/complete.html`
+- 기본 법적 고지 UX
+  - 법적 고지 입력은 선택으로 안내
+  - 비워두면 서버 기본 문구 자동 적용
 
-## 1) 배경/의사결정
+## 3. 분리 상태 점검 결과
+- 독립 라우팅
+  - `config/urls.py`에 `path('consent/', include('consent.urls', namespace='consent'))` 존재
+- 대시보드 런치 분기
+  - `products/templates/products/partials/preview_modal.html`에서
+  - `"동의서는 나에게 맡겨" -> consent:dashboard` 연결 확인
+- 런타임 부트스트랩
+  - `core/management/commands/bootstrap_runtime.py`에 `ensure_consent` 등록 확인
+- 제품 보장 커맨드
+  - `products/management/commands/ensure_consent.py` 존재
 
-- 기존 `signatures` 연수서명 기능은 유지.
-- 학교용 학부모 동의서는 별도 메뉴/플로우로 분리.
-- OTP는 제외, 대신 본인확인(이름 + 휴대폰 뒷4자리) + 감사로그 + PDF 증빙 강화.
-- 교사용은 테이블 중심, 학부모는 3단계 위저드(본인확인 -> 동의/서명 -> 완료).
+## 4. 검증 결과
+- 정적 점검
+  - `python manage.py check` 통과
+- 테스트
+  - `python manage.py test consent -v 2` 통과 (4 tests)
+  - `python manage.py test collect.tests.test_collect_flow -v 2` 통과 (2 tests)
+  - `python manage.py test signatures -v 2` 통과 (1 test)
+- 좌표 정확성
+  - 위치설정 JS 비율 저장식과 PDF 합성식(`resolve_position`)의 좌표 변환 일치 확인
+  - 비율 round-trip 스크립트 검증 `True`
 
----
+## 5. 확인된 잔여 이슈 (중요)
+- `consent/services.py` 내부에 깨진 한글 문자열이 남아 있을 가능성 있음
+  - 대상: 워터마크/미리보기 라벨/비동의 사유 요약 텍스트
+  - 기능은 동작하지만 출력 문구 품질 이슈 가능
+- 완전 분리 관점에서 모델 결합이 남아 있음
+  - `consent/models.py`가 `signatures.consent_models`를 re-export 중
+  - 즉, UI/라우팅/제품은 분리됐지만 모델 소스는 아직 `signatures`에 의존
 
-## 2) 구현 완료 내용
+## 6. 다음 작업 권장 순서
+1. `consent/services.py` 한글 문자열 정리(UTF-8 고정)
+2. `consent` 모델 완전 이관
+   - `signatures.consent_models` 의존 제거
+   - 마이그레이션 충돌 없이 테이블 유지 전략 적용
+3. 재검증
+   - `python manage.py check`
+   - `python manage.py test consent collect.tests.test_collect_flow signatures -v 2`
 
-### A. 데이터 모델/마이그레이션
-
-- 신규 모델 추가
-  - `SignatureDocument`
-  - `SignatureRequest`
-  - `SignaturePosition`
-  - `SignatureRecipient`
-  - `ConsentAuditLog`
-- 확장 필드
-  - `SignatureRequest.preview_checked_at`
-  - `SignaturePosition` 비율 좌표 필드
-    - `x_ratio`, `y_ratio`, `w_ratio`, `h_ratio`
-- 마이그레이션
-  - `signatures/migrations/0007_signaturedocument_signaturerequest_and_more.py`
-  - `signatures/migrations/0008_signatureposition_h_ratio_signatureposition_w_ratio_and_more.py`
-
-### B. 백엔드 로직
-
-- 파일: `signatures/consent_services.py`
-- 구현:
-  - PDF/이미지 문서 처리
-  - 서명 레이어 합성
-  - 감사 footer 삽입
-  - 비동의 워터마크 삽입(`비동의`)
-  - 통합 PDF 생성(학생명 가나다순)
-  - 통합 PDF 옵션: `include_decline_summary=1` 시 비동의 사유 요약 페이지 추가
-  - 위치 미리보기 PDF 생성
-
-### C. 교사용 단계형 생성 플로우
-
-- 파일: `signatures/consent_views.py`, `signatures/urls.py`
-- 단계:
-  1. 업로드/요청 기본정보
-  2. 위치설정(pdf.js)
-  3. 수신자 등록
-- 발송 가드:
-  - 위치 미리보기 확인(`preview_checked_at`) 전 발송 차단
-  - 수신자 미등록 시 발송 차단
-
-### D. 위치설정 UI
-
-- 파일: `signatures/templates/signatures/consent/create_step2_positions.html`
-- 기능:
-  - pdf.js 기반 드래그 앤 드롭
-  - 이미지 문서도 같은 화면에서 위치설정 가능
-  - 페이지별 다중 서명 박스(추가/선택/삭제/리사이즈)
-  - 서버 저장은 비율 좌표
-
-### E. 화면/템플릿
-
-- 신규 템플릿:
-  - `signatures/templates/signatures/consent/dashboard.html`
-  - `signatures/templates/signatures/consent/create_step1.html`
-  - `signatures/templates/signatures/consent/create_step2_positions.html`
-  - `signatures/templates/signatures/consent/create_step3_recipients.html`
-  - `signatures/templates/signatures/consent/detail.html`
-  - `signatures/templates/signatures/consent/verify.html`
-  - `signatures/templates/signatures/consent/sign.html`
-  - `signatures/templates/signatures/consent/complete.html`
-
-### F. 기타
-
-- 의존성 추가: `requirements.txt`
-  - `pypdf`
-  - `reportlab`
-- 관리 편의용 admin 등록:
-  - `SignatureRequestAdmin`, `SignatureRecipientAdmin`, `SignatureDocumentAdmin`
-- 신규 메뉴용 데이터 마이그레이션:
-  - `products/migrations/0034_add_parent_consent_product.py`
-
----
-
-## 3) 테스트/검증
-
-- 실행 완료:
-  - `python manage.py check`
-  - `python manage.py test signatures.tests_consent`
-- 결과:
-  - 모두 통과
-
----
-
-## 4) 현재 동작 경로
-
-- 교사용 대시보드: `/signatures/consent/`
-- 생성 1단계: `/signatures/consent/create/step1/`
-- 생성 2단계: `/signatures/consent/<request_id>/setup/`
-- 생성 3단계: `/signatures/consent/<request_id>/recipients/`
-- 상세/발송/다운로드:
-  - `/signatures/consent/<request_id>/`
-  - `/signatures/consent/<request_id>/preview/`
-  - `/signatures/consent/<request_id>/send/`
-  - `/signatures/consent/<request_id>/download/merged/`
-
----
-
-## 5) 다음 작업 권장
-
-1. Step2 실제 브라우저 QA
-- PDF A4/Letter/다페이지 문서
-- 이미지(PNG/JPG) 문서
-- 모바일 터치 드래그/리사이즈
-
-2. 좌표 정밀도 보강
-- 최소/최대 박스 크기 정책
-- 화면 배율 변경 시 박스 렌더 검증
-
-3. 성능/안정성
-- 대량 수신자, 대용량 PDF에서 통합 생성 시간 측정
-- 타임아웃/예외 처리 가드 보완
-
-4. 정책 문구/운영 문서
-- 법적고지 텍스트 확정본 반영
-- 보유기간/파기 정책 문구 확정
-
----
-
-## 6) 참고 (작업 트리 상태)
-
-- 이번 작업 중 `products/*` 일부 파일은 기존 병행 변경이 함께 보였고, 임의 수정/되돌림 없이 보존함.
-- `.pytest_cache` 접근 경고는 sandbox 권한 이슈로 기능 영향 없음.
-
+## 7. Git 기록
+- 반영 커밋: `770e891`
+- 메시지: `fix(consent): restore korean text and align clay UI`
+- 원격 반영: `main` push 완료

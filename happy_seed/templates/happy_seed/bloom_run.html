@@ -108,6 +108,8 @@
                     {% csrf_token %}
                     <button id="BTN_EXECUTE_DRAW_NEXT__{{ student.id }}" type="button"
                             data-draw-open="{{ student.id }}"
+                            data-student-name="{{ student.name }}"
+                            data-draw-action="{% url 'happy_seed:bloom_draw' student_id=student.id %}"
                             {% if not has_rewards or student.consent.status != 'approved' %}disabled{% endif %}
                             class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         추첨하기
@@ -127,28 +129,6 @@
                     {% endif %}
                 </form>
 
-                <div id="DRAW_MODAL_{{ student.id }}"
-                     class="hidden fixed inset-0 z-[120] bg-black/40 px-4"
-                     data-draw-modal="{{ student.id }}">
-                    <div class="min-h-screen flex items-center justify-center">
-                        <div class="w-full max-w-sm clay-card p-5 rounded-2xl text-left">
-                            <p class="text-base font-bold text-gray-800">{{ student.name }} 학생 추첨을 실행할까요?</p>
-                            <p class="text-xs text-gray-500 mt-2">실행하면 티켓 1장이 사용됩니다.</p>
-                            <form id="DRAW_FORM__{{ student.id }}" method="post" action="{% url 'happy_seed:bloom_draw' student_id=student.id %}" class="mt-4 flex gap-2">
-                                {% csrf_token %}
-                                <button type="button"
-                                        data-draw-cancel="{{ student.id }}"
-                                        class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold">
-                                    취소
-                                </button>
-                                <button type="submit"
-                                        class="flex-1 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">
-                                    실행
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
             </div>
             {% endfor %}
         </div>
@@ -160,52 +140,80 @@
         </div>
         {% endif %}
 
+        <div id="DRAW_MODAL_GLOBAL" class="hidden fixed inset-0 z-[120] bg-black/40 px-4">
+            <div class="min-h-screen flex items-center justify-center">
+                <div id="DRAW_MODAL_PANEL" class="w-full max-w-sm clay-card p-5 rounded-2xl text-left">
+                    <p id="DRAW_MODAL_TITLE" class="text-base font-bold text-gray-800">추첨을 실행할까요?</p>
+                    <p class="text-xs text-gray-500 mt-2">실행하면 티켓 1장이 사용됩니다.</p>
+                    <form id="DRAW_MODAL_FORM" method="post" action="" class="mt-4 flex gap-2">
+                        {% csrf_token %}
+                        <button type="button" id="DRAW_MODAL_CANCEL" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold">
+                            취소
+                        </button>
+                        <button type="submit" class="flex-1 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">
+                            실행
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
 <script>
     (function () {
-        function closeModal(studentId) {
-            var modal = document.getElementById('DRAW_MODAL_' + studentId);
-            if (!modal) return;
+        var modal = document.getElementById('DRAW_MODAL_GLOBAL');
+        var panel = document.getElementById('DRAW_MODAL_PANEL');
+        var title = document.getElementById('DRAW_MODAL_TITLE');
+        var form = document.getElementById('DRAW_MODAL_FORM');
+        var cancelButton = document.getElementById('DRAW_MODAL_CANCEL');
+        var activeStudentId = null;
+
+        if (!modal || !panel || !title || !form || !cancelButton) return;
+
+        function closeModal() {
+            activeStudentId = null;
             modal.classList.add('hidden');
             document.body.classList.remove('overflow-hidden');
         }
 
-        function openModal(studentId) {
-            var modal = document.getElementById('DRAW_MODAL_' + studentId);
-            if (!modal) return;
+        function openModal(studentId, studentName, action) {
+            activeStudentId = studentId;
+            title.textContent = studentName + ' 학생 추첨을 실행할까요?';
+            form.setAttribute('action', action || '');
             modal.classList.remove('hidden');
             document.body.classList.add('overflow-hidden');
         }
 
         document.querySelectorAll('[data-draw-open]').forEach(function (button) {
             button.addEventListener('click', function () {
-                openModal(button.getAttribute('data-draw-open'));
+                openModal(
+                    button.getAttribute('data-draw-open'),
+                    button.getAttribute('data-student-name') || '',
+                    button.getAttribute('data-draw-action') || ''
+                );
             });
         });
 
-        document.querySelectorAll('[data-draw-cancel]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                closeModal(button.getAttribute('data-draw-cancel'));
-            });
+        cancelButton.addEventListener('click', function () {
+            closeModal();
         });
 
-        document.querySelectorAll('[data-draw-modal]').forEach(function (modal) {
-            modal.addEventListener('click', function (event) {
-                if (event.target === modal) {
-                    closeModal(modal.getAttribute('data-draw-modal'));
-                }
-            });
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) closeModal();
+        });
+
+        panel.addEventListener('click', function (event) {
+            event.stopPropagation();
         });
 
         document.addEventListener('keydown', function (event) {
             if (event.key !== 'Escape') return;
-            document.querySelectorAll('[data-draw-modal]').forEach(function (modal) {
-                if (!modal.classList.contains('hidden')) {
-                    closeModal(modal.getAttribute('data-draw-modal'));
-                }
-            });
+            if (!modal.classList.contains('hidden')) closeModal();
+        });
+
+        form.addEventListener('submit', function () {
+            closeModal();
         });
     })();
 </script>
