@@ -75,3 +75,17 @@
   - `is_published=True` + `product.is_active=True`
 - 매뉴얼 없는 활성 서비스는 준비중으로 명확히 분리.
 
+
+## 9) Mobile Board Fit Rule (Game Services)
+- Scope: all grid-board games (isolation, breakthrough, chess-like variants).
+- Never ship hardcoded JS grid width like `repeat(cols, 52px)` for mobile gameplay.
+- Use viewport-aware CSS clamp for cell size and set only metadata from JS (`--cols`, `--cell-max`).
+- Container safety defaults:
+  - `overflow-x: hidden|clip`
+  - `overscroll-behavior-x: none`
+  - `touch-action: pan-y`
+- QA required before merge:
+  - 320/360/390 width checks
+  - no horizontal page slide during play
+  - no clipped side columns
+  - verify at least isolation + breakthrough (+ new variant)

@@ -144,6 +144,16 @@ class HSPrizeForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 화면에서 순서를 별도로 받지 않아도 저장 가능하도록 기본값(0) 사용
+        self.fields["display_order"].required = False
+        self.fields["display_order"].initial = 0
+
+    def clean_display_order(self):
+        value = self.cleaned_data.get("display_order")
+        return 0 if value in (None, "") else value
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         if instance.total_quantity is not None and instance.remaining_quantity is None:

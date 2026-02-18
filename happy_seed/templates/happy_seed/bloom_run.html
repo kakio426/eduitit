@@ -95,7 +95,7 @@
         {% if students %}
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {% for student in students %}
-            <div class="clay-card p-5 rounded-2xl text-center" x-data="{ confirming: false }">
+            <div class="clay-card p-5 rounded-2xl text-center">
                 <div class="text-3xl mb-2">🌸</div>
                 <div class="font-bold text-gray-800 text-lg">{{ student.name }}</div>
                 <div class="text-sm text-gray-500 mt-1">{{ student.number }}번</div>
@@ -104,33 +104,51 @@
                     <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">씨앗 {{ student.seed_count }}개</span>
                 </div>
 
-                <div x-show="!confirming" class="mt-4">
-                    <button id="BTN_EXECUTE_DRAW_NEXT__{{ student.id }}" @click="confirming = true"
+                <form method="post" action="{% url 'happy_seed:bloom_draw' student_id=student.id %}" class="mt-4">
+                    {% csrf_token %}
+                    <button id="BTN_EXECUTE_DRAW_NEXT__{{ student.id }}" type="button"
+                            data-draw-open="{{ student.id }}"
                             {% if not has_rewards or student.consent.status != 'approved' %}disabled{% endif %}
-                            class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all">
+                            class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         추첨하기
                     </button>
+                    <noscript>
+                        <button type="submit"
+                                {% if not has_rewards or student.consent.status != 'approved' %}disabled{% endif %}
+                                class="w-full mt-2 py-2.5 bg-pink-500 text-white rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                            추첨하기 (바로 실행)
+                        </button>
+                    </noscript>
                     {% if student.consent.status != 'approved' %}
                     <p class="text-[11px] text-gray-400 mt-2">동의 완료 후 사용 가능</p>
                     {% endif %}
-                </div>
-                <div x-show="confirming" x-transition class="mt-4 space-y-2">
-                    <p class="text-xs text-gray-500">정말 추첨할까요?</p>
-                    <form method="post" action="{% url 'happy_seed:bloom_draw' student_id=student.id %}" class="flex gap-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="request_id" value="{{ student.id }}-{{ student.ticket_count }}">
-                        <button type="button" @click="confirming = false" class="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold">취소</button>
-                        <button type="submit" class="flex-1 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">확인</button>
-                    </form>
-                </div>
-
-                <form method="post" action="{% url 'happy_seed:set_teacher_override' student_id=student.id %}" class="mt-2">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button type="submit" class="w-full py-2 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200">
-                        교육적 개입: 다음 회 강제 당첨 예약
-                    </button>
+                    {% if not has_rewards %}
+                    <p class="text-[11px] text-amber-600 mt-2">보상 재고를 먼저 준비해주세요.</p>
+                    {% endif %}
                 </form>
+
+                <div id="DRAW_MODAL_{{ student.id }}"
+                     class="hidden fixed inset-0 z-[120] bg-black/40 px-4"
+                     data-draw-modal="{{ student.id }}">
+                    <div class="min-h-screen flex items-center justify-center">
+                        <div class="w-full max-w-sm clay-card p-5 rounded-2xl text-left">
+                            <p class="text-base font-bold text-gray-800">{{ student.name }} 학생 추첨을 실행할까요?</p>
+                            <p class="text-xs text-gray-500 mt-2">실행하면 티켓 1장이 사용됩니다.</p>
+                            <form id="DRAW_FORM__{{ student.id }}" method="post" action="{% url 'happy_seed:bloom_draw' student_id=student.id %}" class="mt-4 flex gap-2">
+                                {% csrf_token %}
+                                <button type="button"
+                                        data-draw-cancel="{{ student.id }}"
+                                        class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold">
+                                    취소
+                                </button>
+                                <button type="submit"
+                                        class="flex-1 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">
+                                    실행
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -144,4 +162,51 @@
 
     </div>
 </section>
+
+<script>
+    (function () {
+        function closeModal(studentId) {
+            var modal = document.getElementById('DRAW_MODAL_' + studentId);
+            if (!modal) return;
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        function openModal(studentId) {
+            var modal = document.getElementById('DRAW_MODAL_' + studentId);
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        document.querySelectorAll('[data-draw-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openModal(button.getAttribute('data-draw-open'));
+            });
+        });
+
+        document.querySelectorAll('[data-draw-cancel]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                closeModal(button.getAttribute('data-draw-cancel'));
+            });
+        });
+
+        document.querySelectorAll('[data-draw-modal]').forEach(function (modal) {
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    closeModal(modal.getAttribute('data-draw-modal'));
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            document.querySelectorAll('[data-draw-modal]').forEach(function (modal) {
+                if (!modal.classList.contains('hidden')) {
+                    closeModal(modal.getAttribute('data-draw-modal'));
+                }
+            });
+        });
+    })();
+</script>
 {% endblock %}

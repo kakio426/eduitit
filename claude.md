@@ -4,6 +4,8 @@
 - Validate behavior parity first (routing, modal close, ESC, focus)
 - If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
 - Run python manage.py check (and node --check for changed JS)
+- For form pages: never hide required model fields without making them optional/defaulted, and always render form errors
+- For JS confirmation UX (modal/step): keep a non-JS submit fallback so critical actions never become "no response"
 
 ---
 
@@ -34,6 +36,17 @@
   - 서비스 라우팅
 - 신규 기능은 "기능 정확성 -> 사용성 -> 시각 개선" 순서로 적용한다.
 - 삭제가 필요한 변경은 사용자 승인 후에만 수행한다.
+
+### 4) 폼/모달 안정성 가드레일 (2026-02-18)
+- ModelForm에 포함된 필드를 템플릿에서 숨길 경우:
+  - 필드를 `required=False`로 두고 서버 기본값/`clean_*` 정규화를 함께 둔다.
+  - 또는 템플릿에 해당 입력 필드를 명시적으로 노출한다.
+- POST 폼은 유효성 실패 시 사용자에게 오류를 반드시 노출한다 (`form.errors`, `non_field_errors`).
+- 확인 모달/2단계 UX를 쓰더라도 최종 실행은 서버 제출 기반으로 유지한다.
+- JS 확인 UX에는 `noscript` 또는 직접 제출 폴백을 반드시 제공한다.
+- 모바일 실기기 최소 QA:
+  - 제출 버튼 탭 후 실제 데이터 생성/수정 반영 확인
+  - 유효성 실패 시 오류 메시지 노출 확인
 
 ---
 ## [Legacy Reference Notice]
@@ -1549,3 +1562,23 @@ image_url = "https://res.cloudinary.com/.../upload/f_auto,q_auto/v123/image.jpg"
 - ?쒓? 源⑥쭚 諛쒓껄 ??湲곕뒫 蹂寃쎈낫???띿뒪??蹂듦뎄瑜??곗꽑?쒕떎.
 - 蹂듦뎄 ??湲곕뒫/?붿옄??蹂寃쎌쓣 ?ъ쟻?⑺븳??
 
+
+## 70. Mobile Board Fit Rule (Game Services)
+
+When implementing or modifying grid-based games (e.g., isolation, breakthrough, chess-like boards), mobile horizontal drag/overflow must be prevented by default.
+
+### Required implementation
+- Do not hardcode board cell width in JS (`repeat(cols, 52px)` is forbidden for production UI).
+- Use CSS variable based sizing with viewport-aware clamp:
+  - `--cell-size: clamp(min, calc((available-width - gaps - paddings)/cols), max)`
+- JS renderer must set only board metadata (e.g., `--cols`, `--cell-max`) and use `gridTemplateColumns: repeat(cols, minmax(0, var(--cell-size)))`.
+- Board/stage containers must block unintended horizontal page movement on mobile:
+  - `overflow-x: clip|hidden`
+  - `overscroll-behavior-x: none`
+  - `touch-action: pan-y`
+
+### Mobile QA gate (must pass before merge)
+- Verify on 320px, 360px, 390px widths (or real devices with similar widths).
+- During gameplay, left-right swipe must NOT move the page.
+- Board must be fully visible without clipped side columns.
+- Check at least: `isolation`, `breakthrough` (and any new board game variant).

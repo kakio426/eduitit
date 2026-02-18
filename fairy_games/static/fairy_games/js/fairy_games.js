@@ -85,9 +85,11 @@
     return btn;
   }
 
-  function drawGrid(rows, cols, make) {
+  function drawGrid(rows, cols, make, cellWidth = 52) {
     boardEl.innerHTML = '';
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 52px)`;
+    boardEl.style.setProperty('--fg-cols', String(cols));
+    boardEl.style.setProperty('--fg-cell-max', `${cellWidth}px`);
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, var(--fg-cell-size)))`;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) boardEl.appendChild(make(r, c));
   }
 
@@ -346,13 +348,13 @@
         if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
         if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
         return cell(cls, s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
-        if (aiActive() || s.gameOver) return;
-        if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
-        if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
-        const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
-        if (!m) return;
-        pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
-      });
+          if (aiActive() || s.gameOver) return;
+          if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
+          if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
+          const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
+          if (!m) return;
+          pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
+        });
       });
       const [a, b] = this.count(s);
       setStatus(s.gameOver ? (s.winner ? `${sideName(s.winner)} 승리` : '무승부') : `차례: ${sideName(s.turn)} / 점수 ${a}:${b}`);
@@ -410,13 +412,13 @@
         if (s.sel && s.sel[0] === r && s.sel[1] === c) cls += ' sel';
         if (moveHints.some(v => v.tr === r && v.tc === c)) cls += ' hint';
         return cell(cls, s.b[r][c] === 1 ? '🔴' : (s.b[r][c] === 2 ? '🔵' : ''), () => {
-        if (aiActive() || s.gameOver) return;
-        if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
-        if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
-        const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
-        if (!m) return;
-        pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
-      });
+          if (aiActive() || s.gameOver) return;
+          if (!s.sel) { if (s.b[r][c] === s.turn) s.sel = [r, c]; render(); return; }
+          if (s.b[r][c] === s.turn) { s.sel = [r, c]; render(); return; }
+          const m = this.moves(s, s.turn).find(v => v.fr === s.sel[0] && v.fc === s.sel[1] && v.tr === r && v.tc === c);
+          if (!m) return;
+          pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
+        });
       });
       setStatus(s.gameOver ? `${sideName(s.winner)} 승리` : `차례: ${sideName(s.turn)}`);
       setHistory(s.h);
@@ -497,7 +499,7 @@
         const arr = s.hands[side];
         if (!arr.length) wrap.innerHTML = "<span class='text-sm text-gray-500'>손패 없음</span>";
         arr.forEach((it, idx) => {
-          const b = document.createElement('button'); b.type = 'button'; b.textContent = it;
+          const b = document.createElement('button'); b.type = 'button'; b.textContent = this.icon({ t: it });
           if (handPick && handPick.side === side && handPick.idx === idx) b.classList.add('sel');
           b.addEventListener('click', () => { if (aiActive() || s.turn !== side) return; handPick = { side, idx, t: it }; s.sel = null; render(); });
           wrap.appendChild(b);
@@ -523,7 +525,7 @@
           if (!m) return;
           pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
         });
-      });
+      }, 90);
       setStatus(s.gameOver ? `${sideName(s.winner)} 승리` : `차례: ${sideName(s.turn)}`);
       setHistory(s.h);
     }

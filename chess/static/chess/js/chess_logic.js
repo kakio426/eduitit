@@ -11,7 +11,6 @@ var pendingCommands = [];
 var lastMove = null; // Track last move for highlighting
 var pendingPromotion = null; // Track pending promotion move
 var showLastMoveHighlight = true; // Toggle for last move highlight
-var boardOrientation = 'white';
 
 // [CONFIGURATION]
 // These variables must be defined in the HTML before loading this script:
@@ -229,7 +228,6 @@ function initBoard() {
     var config = {
         draggable: false, // STRICTLY Click-to-Move
         position: 'start',
-        orientation: boardOrientation,
         pieceTheme: function (piece) {
             return pieceCDNs[currentCDNIndex] + piece + '.png';
         },
@@ -687,8 +685,6 @@ function updateMoveHistory() {
 window.resetGame = function () {
     initGame();
     board.start();
-    boardOrientation = 'white';
-    board.orientation(boardOrientation);
     removeHighlights();
     renderCapturedPieces();
     updateMoveHistory();
@@ -738,22 +734,6 @@ window.undoMove = function () {
 
 window.closeGameOverModal = function () {
     document.getElementById('gameOverModal').classList.add('hidden');
-};
-
-window.toggleBoardOrientation = function () {
-    if (!board) return;
-    boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
-    board.orientation(boardOrientation);
-};
-
-window.openRulesModal = function () {
-    var modal = document.getElementById('rulesModal');
-    if (modal) modal.classList.remove('hidden');
-};
-
-window.closeRulesModal = function () {
-    var modal = document.getElementById('rulesModal');
-    if (modal) modal.classList.add('hidden');
 };
 
 // ---------------------------------------------------------

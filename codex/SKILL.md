@@ -51,6 +51,8 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - Avoid HTMX polling inside `<template x-if>`.
 - Guard JSON parsing from HTML error payloads.
 - Enforce CSRF for HTMX POST (global + critical-action double check via `hx-vals`).
+- On ModelForm pages, do not omit required fields from templates unless they are explicitly optional/defaulted server-side.
+- Always render validation errors on failed POST (`form.errors`, `non_field_errors`) so silent failures are impossible.
 
 ## UI Baseline
 - Keep base layout section:
@@ -60,6 +62,22 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - For game/interactive services, prioritize readability, tap-target size, and state clarity over decorative consistency.
 - Do not load HTMX/Alpine redundantly in child templates.
 
+## Mobile Board Fit Rule (Game Services)
+- Scope: all grid-board games (for example `isolation`, `breakthrough`, chess-like variants).
+- Do not ship hardcoded JS grid width like `repeat(cols, 52px)` for gameplay UIs.
+- Use viewport-aware CSS clamp sizing for board cells and set only metadata from JS (`--cols`, `--cell-max`).
+- JS grid template pattern:
+  - `gridTemplateColumns: repeat(cols, minmax(0, var(--cell-size)))`
+- Prevent unintended horizontal page movement on mobile:
+  - `overflow-x: hidden|clip`
+  - `overscroll-behavior-x: none`
+  - `touch-action: pan-y`
+- Required QA gate before merge:
+  - validate widths `320`, `360`, `390`
+  - no horizontal page slide during play
+  - no clipped side columns
+  - verify at least `isolation` and `breakthrough` (plus new variant if added)
+
 ## UI Change Control
 - For broad UI changes, define scope first: `global`, `app-level`, or `single-page`.
 - If scope is not global, do not modify shared base styles/components beyond the target scope.
@@ -68,6 +86,14 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - changed surface area
   - intentional visual differences
   - unaffected services/pages verified
+
+## Action Confirmation Reliability
+- Confirmation modal/step UX is allowed, but critical actions must still resolve to a normal server submit.
+- Provide non-JS fallback for critical submits (`noscript` button or direct submit path).
+- Required QA for critical buttons on mobile:
+  - tap leads to visible state change (modal or submit)
+  - confirm actually persists data
+  - invalid input shows user-facing errors
 
 ## Canonical Priority
 - If older guidance conflicts, follow these first:
