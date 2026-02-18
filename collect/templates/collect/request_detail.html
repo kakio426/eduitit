@@ -76,8 +76,8 @@
                 <i class="fa-solid" :class="showRetention ? 'fa-chevron-down' : 'fa-chevron-right'"></i> 자동 삭제 안내 보기
             </button>
             <div x-show="showRetention" x-transition class="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-                <p>수합 마감 후 7일 뒤 제출 파일이 자동 삭제됩니다.</p>
-                <p>수합 요청은 최근 제출일 기준 30일 뒤 자동 정리됩니다(미제출 시 60일).</p>
+                <p>수합 마감 후 <strong>27일</strong> 뒤 제출 파일이 자동 삭제됩니다.</p>
+                <p>수합 요청은 최근 제출일 기준 <strong>50일</strong> 뒤 자동 정리됩니다(미제출 시 <strong>80일</strong>).</p>
             </div>
         </div>
 
@@ -163,7 +163,7 @@
     function requestDetailPage() {
         return {
             copied: false,
-            showRetention: false,
+            showRetention: true,
             copyInvite() {
                 const title = '{{ req.title|escapejs }}';
                 const code = '{{ req.access_code }}';

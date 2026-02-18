@@ -32,3 +32,20 @@ class ProductPreviewTest(TestCase):
         self.assertContains(response, "Test Product")
         self.assertContains(response, "Test Feature")
         self.assertContains(response, "Feature Description")
+
+    def test_preview_uses_launch_route_name_when_provided(self):
+        self.product.launch_route_name = "collect:landing"
+        self.product.save(update_fields=["launch_route_name"])
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.context["launch_href"], reverse("collect:landing"))
+        self.assertFalse(response.context["launch_is_external"])
+
+    def test_preview_external_url_takes_priority_over_launch_route_name(self):
+        self.product.external_url = "https://example.com/direct"
+        self.product.launch_route_name = "collect:landing"
+        self.product.save(update_fields=["external_url", "launch_route_name"])
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.context["launch_href"], "https://example.com/direct")
+        self.assertTrue(response.context["launch_is_external"])

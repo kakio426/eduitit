@@ -1,12 +1,17 @@
 import csv
+import io
+import logging
 import mimetypes
 import secrets
+import qrcode
+import base64
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import FileResponse, Http404, HttpResponse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -27,6 +32,8 @@ from .services import (
     generate_summary_pdf,
     guess_file_type,
 )
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_LEGAL_NOTICE = (
@@ -58,6 +65,96 @@ def _parse_recipients(text):
             }
         )
     return recipients
+
+
+def _parse_recipients_csv(file_obj):
+    if not file_obj:
+        return [], []
+
+    raw = file_obj.read()
+    try:
+        file_obj.seek(0)
+    except Exception:
+        pass
+
+    decoded = None
+    for encoding in ("utf-8-sig", "cp949", "euc-kr"):
+        try:
+            decoded = raw.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+
+    if decoded is None:
+        return [], [0]
+
+    recipients = []
+    invalid_rows = []
+    reader = csv.reader(io.StringIO(decoded))
+    for idx, row in enumerate(reader, start=1):
+        cols = [(cell or "").strip() for cell in row]
+        if not any(cols):
+            continue
+
+        first = cols[0].lower() if cols else ""
+        second = cols[1].lower() if len(cols) > 1 else ""
+        if idx == 1 and (
+            "학생" in first
+            or "student" in first
+            or "학부모" in second
+            or "parent" in second
+        ):
+            continue
+
+        if len(cols) < 2 or not cols[0] or not cols[1]:
+            invalid_rows.append(idx)
+            continue
+
+        recipients.append(
+            {
+                "student_name": cols[0],
+                "parent_name": cols[1],
+                "phone_number": cols[2] if len(cols) >= 3 else "",
+            }
+        )
+
+    return recipients, invalid_rows
+
+
+def _generate_qr_base64(url: str) -> str:
+    qr = qrcode.QRCode(version=1, box_size=4, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+
+def _compose_parent_message(consent_request: SignatureRequest, recipient: SignatureRecipient, sign_url: str) -> str:
+    custom = (consent_request.message or "").strip()
+    body = custom or f"{consent_request.title} 동의서 확인 부탁드립니다."
+    return (
+        f"안녕하세요. {recipient.student_name} 학생 보호자님.\n"
+        f"{body}\n"
+        f"동의서 링크: {sign_url}"
+    )
+
+
+def _build_file_response(file_field, *, inline=True):
+    filename = (file_field.name or "").split("/")[-1] or "document.pdf"
+    guessed_content_type = mimetypes.guess_type(file_field.name)[0]
+    content_type = guessed_content_type or "application/octet-stream"
+
+    file_obj = file_field.open("rb")
+    response = FileResponse(
+        file_obj,
+        content_type=content_type,
+        as_attachment=not inline,
+        filename=filename,
+    )
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def _schema_guard_response(request, *, force_refresh=False, detail_override=""):
@@ -202,16 +299,33 @@ def consent_recipients(request, request_id):
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    form = RecipientBulkForm(request.POST or None)
+    form = RecipientBulkForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
-        created = 0
-        for rec in _parse_recipients(form.cleaned_data["recipients_text"]):
-            _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
-            if was_created:
-                created += 1
-        messages.success(request, f"{created}명의 수신자를 등록했습니다.")
-        return redirect("consent:detail", request_id=consent_request.request_id)
+        text_recipients = _parse_recipients(form.cleaned_data.get("recipients_text", ""))
+        csv_recipients, invalid_rows = _parse_recipients_csv(form.cleaned_data.get("recipients_csv"))
+        all_recipients = text_recipients + csv_recipients
+
+        if not all_recipients:
+            form.add_error(None, "등록 가능한 수신자가 없습니다. 입력값 또는 CSV 파일을 확인해 주세요.")
+        else:
+            created = 0
+            for rec in all_recipients:
+                _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
+                if was_created:
+                    created += 1
+
+            if invalid_rows and invalid_rows != [0]:
+                messages.warning(
+                    request,
+                    f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
+                )
+            elif invalid_rows == [0]:
+                messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+
+            skipped = max(len(all_recipients) - created, 0)
+            messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
+            return redirect("consent:detail", request_id=consent_request.request_id)
 
     recipients = consent_request.recipients.all().order_by("student_name")
     return render(
@@ -219,6 +333,22 @@ def consent_recipients(request, request_id):
         "consent/create_step3_recipients.html",
         {"consent_request": consent_request, "form": form, "recipients": recipients},
     )
+
+
+@login_required
+def consent_recipients_csv_template(request):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="consent_recipients_template.csv"'
+    response.write("\ufeff")
+    writer = csv.writer(response)
+    writer.writerow(["학생명", "학부모명"])
+    writer.writerow(["김하늘", "김하늘 보호자"])
+    writer.writerow(["박나래", "박나래 보호자"])
+    return response
 
 
 @login_required
@@ -233,12 +363,23 @@ def consent_detail(request, request_id):
         created_by=request.user,
     )
     recipients = consent_request.recipients.all().order_by("student_name")
+    recipient_rows = []
+    for recipient in recipients:
+        sign_url = request.build_absolute_uri(reverse("consent:sign", kwargs={"token": recipient.access_token}))
+        recipient_rows.append(
+            {
+                "recipient": recipient,
+                "sign_url": sign_url,
+                "qr_code_base64": _generate_qr_base64(sign_url),
+                "copy_message": _compose_parent_message(consent_request, recipient, sign_url),
+            }
+        )
     return render(
         request,
         "consent/detail.html",
         {
             "consent_request": consent_request,
-            "recipients": recipients,
+            "recipient_rows": recipient_rows,
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
         },
@@ -360,11 +501,11 @@ def consent_document_source(request, request_id):
         created_by=request.user,
     )
     file_field = consent_request.document.original_file
-    guessed_content_type = mimetypes.guess_type(file_field.name)[0]
-    content_type = guessed_content_type or "application/octet-stream"
-    response = FileResponse(file_field.open("rb"), content_type=content_type)
-    response["Cache-Control"] = "no-store"
-    return response
+    try:
+        return _build_file_response(file_field, inline=True)
+    except Exception:
+        logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
+        raise Http404("문서 파일을 찾을 수 없습니다.")
 
 
 def consent_verify(request, token):
@@ -440,12 +581,19 @@ def consent_public_document(request, token):
         return _expired_link_response(request, recipient)
 
     file_field = recipient.request.document.original_file
-    guessed_content_type = mimetypes.guess_type(file_field.name)[0]
-    content_type = guessed_content_type or "application/octet-stream"
-    response = FileResponse(file_field.open("rb"), content_type=content_type)
-    response["Cache-Control"] = "no-store"
-    response["Content-Disposition"] = f'inline; filename="{file_field.name.split("/")[-1]}"'
-    return response
+    try:
+        return _build_file_response(file_field, inline=True)
+    except Exception:
+        logger.exception("[consent] public document open failed token=%s", token)
+        return render(
+            request,
+            "consent/document_unavailable.html",
+            {
+                "recipient": recipient,
+                "consent_request": recipient.request,
+            },
+            status=404,
+        )
 
 
 @login_required

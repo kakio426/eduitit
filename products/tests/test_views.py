@@ -1,8 +1,9 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from products.models import Product
 
 
+@override_settings(HOME_V2_ENABLED=False)
 class ProductViewTests(TestCase):
     """Test suite for product views following TDD approach"""
     
@@ -95,3 +96,78 @@ class ProductViewTests(TestCase):
         
         # Check title appears in rendered HTML
         self.assertContains(response, "Active Tool 1")
+
+
+class ProductDevicePolicyTests(TestCase):
+    """Device policy tests for large-screen-only product pages."""
+
+    def setUp(self):
+        self.client = Client()
+        self.iphone_ua = (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+            "Mobile/15E148 Safari/604.1"
+        )
+        self.ipad_ua = (
+            "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+            "Mobile/15E148 Safari/604.1"
+        )
+
+    def test_yut_blocks_iphone_user_agent(self):
+        response = self.client.get(
+            reverse('yut_game'),
+            HTTP_USER_AGENT=self.iphone_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/mobile_not_supported.html')
+        self.assertContains(response, "force_desktop=1")
+
+    def test_yut_allows_ipad_user_agent(self):
+        response = self.client.get(
+            reverse('yut_game'),
+            HTTP_USER_AGENT=self.ipad_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/yut_game.html')
+
+    def test_dutyticker_allows_ipad_user_agent(self):
+        response = self.client.get(
+            reverse('dutyticker'),
+            HTTP_USER_AGENT=self.ipad_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/dutyticker/main.html')
+
+    def test_dutyticker_blocks_iphone_user_agent(self):
+        response = self.client.get(
+            reverse('dutyticker'),
+            HTTP_USER_AGENT=self.iphone_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/mobile_not_supported.html')
+
+    def test_yut_force_desktop_bypasses_phone_block(self):
+        response = self.client.get(
+            f"{reverse('yut_game')}?force_desktop=1",
+            HTTP_USER_AGENT=self.iphone_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/yut_game.html')
+
+    def test_dutyticker_force_desktop_bypasses_phone_block(self):
+        response = self.client.get(
+            f"{reverse('dutyticker')}?force_desktop=1",
+            HTTP_USER_AGENT=self.iphone_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/dutyticker/main.html')
+
+    @override_settings(ALLOW_TABLET_ACCESS=False)
+    def test_yut_blocks_ipad_when_tablet_access_disabled(self):
+        response = self.client.get(
+            reverse('yut_game'),
+            HTTP_USER_AGENT=self.ipad_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'products/mobile_not_supported.html')

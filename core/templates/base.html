@@ -6,16 +6,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
-    <meta name="description" content="{{ og_description|default:default_og_description }}">
-    <meta property="og:title" content="{{ og_title|default:default_og_title }}">
-    <meta property="og:description" content="{{ og_description|default:default_og_description }}">
+    <meta name="description" content="{{ og_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
+    <meta property="og:title" content="{{ og_title|default:default_og_title|default:'Eduitit - 선생님의 스마트한 하루' }}">
+    <meta property="og:description" content="{{ og_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ og_url }}">
-    <meta property="og:image" content="{{ og_image|default:default_og_image }}">
+    <meta property="og:url" content="{{ og_url|default:'https://eduitit.site/' }}">
+    <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ og_title|default:default_og_title }}">
-    <meta name="twitter:description" content="{{ og_description|default:default_og_description }}">
-    <meta name="twitter:image" content="{{ og_image|default:default_og_image }}">
+    <meta name="twitter:title" content="{{ og_title|default:default_og_title|default:'Eduitit - 선생님의 스마트한 하루' }}">
+    <meta name="twitter:description" content="{{ og_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
+    <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%236366F1'/%3E%3Cstop offset='100%25' stop-color='%232DD4BF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23grad)'/%3E%3Cpath d='M50 20 C50 20 60 40 80 50 C60 60 50 80 50 80 C50 80 40 60 20 50 C40 40 50 20 50 20 Z' fill='white'/%3E%3C/svg%3E">
     <title>{% block title %}Eduitit - 선생님의 스마트한 하루{% endblock %}</title>
     <!-- Tailwind CSS -->
@@ -326,7 +326,8 @@
                     <a href="{% url 'service_guide_list' %}" class="hover:text-purple-600 transition">이용방법</a>
                     <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
 
-                    <!-- Visitor Count (Desktop) -->
+                    {% if show_visitor_counts %}
+                    <!-- Visitor Count (Desktop / Superuser only) -->
                     <div class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-full bg-white/60 shadow-clay-inner text-sm transition hover:scale-105 cursor-help select-none"
                         title="오늘 방문자 / 전체 방문자">
                         <span class="text-orange-500 font-extrabold flex items-center gap-1.5"><i
@@ -335,6 +336,7 @@
                         <span class="text-purple-600 font-extrabold flex items-center gap-1.5"><i
                                 class="fa-solid fa-users-line"></i> {{ total_visitor_count|default:"0" }}</span>
                     </div>
+                    {% endif %}
                     {% if user.is_authenticated %}
 
 
@@ -422,7 +424,8 @@
                         <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
                     </a>
 
-                    <!-- Visitor Count (Mobile) -->
+                    {% if show_visitor_counts %}
+                    <!-- Visitor Count (Mobile / Superuser only) -->
                     <div
                         class="flex md:hidden items-center gap-4 px-4 py-3 rounded-2xl bg-white/60 shadow-inner text-gray-500 font-bold text-sm justify-center mb-2">
                         <span class="text-orange-500 flex items-center gap-2"><i class="fa-solid fa-user-clock"></i>
@@ -433,6 +436,7 @@
                             Total:
                             {{ total_visitor_count|default:"0" }}</span>
                     </div>
+                    {% endif %}
 
                     {% if user.is_authenticated %}
                     <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
@@ -543,7 +547,7 @@
         </footer>
 
         <!-- Auto Logout Warning Modal -->
-        <div id="autoLogoutModal" class="fixed inset-0 z-[110] hidden" aria-labelledby="modal-title" role="dialog"
+        <div id="autoLogoutModal" class="fixed inset-0 z-[110] hidden" aria-labelledby="autoLogoutModalTitle" role="dialog"
             aria-modal="true">
             <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300"></div>
             <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
@@ -556,7 +560,7 @@
                                 <i class="fa-solid fa-clock-rotate-left float-icon"></i>
                             </div>
                             <div>
-                                <h3 class="text-2xl font-bold text-gray-800 mb-2">자동 로그아웃 안내</h3>
+                                <h3 id="autoLogoutModalTitle" class="text-2xl font-bold text-gray-800 mb-2">자동 로그아웃 안내</h3>
                                 <p class="text-gray-500 font-medium">보안을 위해 장기간 활동이 없어<br><span id="logoutTimer"
                                         class="text-purple-600 font-bold">60</span>초 후 자동으로 로그아웃됩니다.</p>
                             </div>
@@ -580,7 +584,7 @@
         </div>
 
         <!-- Unified Modal for All Product Previews -->
-        <div id="unifiedModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog"
+        <div id="unifiedModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="unifiedModalTitle" role="dialog"
             aria-modal="true">
             <!-- Backdrop -->
             <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300 opacity-0"
@@ -589,6 +593,7 @@
             <div class="fixed inset-0 z-10 flex items-center justify-center p-4 md:p-6">
                 <div class="relative w-full max-w-2xl max-h-[90vh] md:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl md:rounded-3xl bg-white shadow-2xl transform transition-all duration-300 scale-95 opacity-0"
                     id="modalPanel">
+                    <h2 id="unifiedModalTitle" class="sr-only">서비스 미리보기</h2>
 
                     <!-- Loading Spinner Overlay -->
                     <div id="modalLoading"
@@ -848,8 +853,8 @@
         <script>
             // Auto Logout Logic
             (function () {
-                let timeoutMinutes = 60; // SESSION_COOKIE_AGE와 동일하게 설정 (1시간)
-                let warningMinutes = 59; // 59분에 경고 표시
+                let timeoutMinutes = 360; // 내부 세션 정책값과 동기화
+                let warningMinutes = 359; // 로그아웃 1분 전 경고 표시
                 let logoutTimer;
                 let warningTimer;
                 let countdownInterval;

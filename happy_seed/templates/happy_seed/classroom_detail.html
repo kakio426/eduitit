@@ -33,7 +33,7 @@
                 <div class="text-2xl mb-1">👥</div>
                 <div class="text-sm font-bold text-gray-700">학생 일괄 추가</div>
             </a>
-            <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
+            <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" rel="noopener noreferrer" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
                 <div class="text-2xl mb-1">🏡</div>
                 <div class="text-sm font-bold text-gray-700">공개 꽃밭</div>
             </a>
@@ -75,3 +75,4 @@
     </div>
 </section>
 {% endblock %}
+

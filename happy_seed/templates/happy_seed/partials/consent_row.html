@@ -23,7 +23,7 @@
     </td>
     <td class="px-4 py-3 text-sm">
         {% if student.consent.external_url %}
-        <a href="{{ student.consent.external_url }}" target="_blank" class="text-green-700 hover:underline">열기</a>
+        <a href="{{ student.consent.external_url }}" target="_blank" rel="noopener noreferrer" class="text-green-700 hover:underline">열기</a>
         {% else %}
         <span class="text-gray-400">-</span>
         {% endif %}
@@ -52,3 +52,4 @@
         </div>
     </td>
 </tr>
+

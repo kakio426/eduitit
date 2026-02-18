@@ -1,10 +1,19 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
+from core.models import UserProfile
 
 class UIAuthTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='ui_user', password='password123')
+        self.user = User.objects.create_user(
+            username='ui_user',
+            password='password123',
+            email='ui_user@example.com',
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.nickname = '테스트교사'
+        profile.role = ''
+        profile.save()
         self.client.login(username='ui_user', password='password123')
 
     def test_role_selection_page_content(self):
@@ -17,7 +26,8 @@ class UIAuthTestCase(TestCase):
 
     def test_login_page_social_buttons_placeholder(self):
         """로그인 페이지에 소셜 로그인 버튼이 있는지 확인"""
+        self.client.logout()
         response = self.client.get('/accounts/login/')
-        # allauth가 설정되었으므로 socialaccount 관련 링크가 있어야 함
-        self.assertContains(response, 'kakao')
-        self.assertContains(response, 'naver')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '카카오톡으로 시작하기')
+        self.assertContains(response, '네이버로 시작하기')

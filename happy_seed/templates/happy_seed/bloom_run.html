@@ -12,7 +12,7 @@
         <p class="text-sm text-gray-500 mb-6 break-keep">교사용 라이브 패널입니다. 디스플레이 화면은 별도 창으로 여세요.</p>
 
         <div class="flex gap-2 mb-6">
-            <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+            <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
                 꽃밭 화면 열기(디스플레이)
             </a>
             <a href="{% url 'happy_seed:analysis_dashboard' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
@@ -79,7 +79,7 @@
                 {% endif %}
             </div>
             <div class="flex flex-wrap gap-2 mt-4">
-                <a href="{% url 'happy_seed:celebration' draw_id=last_draw.id %}?token={{ last_draw_token }}" target="_blank" class="px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">
+                <a href="{% url 'happy_seed:celebration' draw_id=last_draw.id %}?token={{ last_draw_token }}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold hover:bg-pink-600">
                     디스플레이 축하 열기
                 </a>
                 <form method="post" action="{% url 'happy_seed:close_celebration' draw_id=last_draw.id %}">
@@ -218,3 +218,4 @@
     })();
 </script>
 {% endblock %}
+

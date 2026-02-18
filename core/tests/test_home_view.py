@@ -17,6 +17,7 @@ def _create_onboarded_user(username, email=None, nickname=None):
     return user
 
 
+@override_settings(HOME_V2_ENABLED=False)
 class HomeViewTest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -43,6 +44,17 @@ class HomeViewTest(TestCase):
         self.client.login(username='testuser', password='pass1234')
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
+
+    def test_v1_search_products_json_in_context(self):
+        """V1 홈에서도 글로벌 검색 컨텍스트를 제공"""
+        response = self.client.get(reverse('home'))
+        self.assertIn('search_products_json', response.context)
+
+    @override_settings(GLOBAL_SEARCH_ENABLED=False)
+    def test_search_products_json_absent_when_global_search_disabled(self):
+        """글로벌 검색 비활성화 시 컨텍스트에서 검색 데이터 제외"""
+        response = self.client.get(reverse('home'))
+        self.assertNotIn('search_products_json', response.context)
 
 
 @override_settings(HOME_V2_ENABLED=True)
@@ -177,6 +189,58 @@ class HomeV2ViewTest(TestCase):
         quick_actions = response.context.get('quick_actions', [])
         # 가장 많이 사용한 p2가 첫 번째
         self.assertEqual(quick_actions[0]['product'].id, self.p2.id)
+
+
+    def test_v2_quick_action_prefers_launch_route_name(self):
+        self.p2.launch_route_name = 'collect:landing'
+        self.p2.save(update_fields=['launch_route_name'])
+
+        self._login('routeuser')
+        response = self.client.get(reverse('home'))
+        quick_actions = response.context.get('quick_actions', [])
+        p2_action = next((item for item in quick_actions if item['product'].id == self.p2.id), None)
+
+        self.assertIsNotNone(p2_action)
+        self.assertEqual(p2_action['href'], reverse('collect:landing'))
+        self.assertFalse(p2_action['is_external'])
+
+    def test_v2_sections_are_preview_capped(self):
+        Product.objects.create(
+            title="Classroom Extra 1",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        Product.objects.create(
+            title="Classroom Extra 2",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+
+        response = self.client.get(reverse('home'))
+        sections = response.context.get('sections', [])
+        lesson = next((section for section in sections if section.get('key') == 'lesson'), None)
+
+        self.assertIsNotNone(lesson)
+        self.assertLessEqual(len(lesson['products']), 2)
+        self.assertTrue(lesson['has_more'])
+        self.assertGreaterEqual(lesson['remaining_count'], 1)
+
+    def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('hidden xl:block', content)
+        self.assertIn('block xl:hidden', content)
+
+    def test_v2_authenticated_uses_xl_breakpoint_for_sns_sidebar(self):
+        self._login('breakpointuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('hidden xl:block', content)
+        self.assertIn('block xl:hidden', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)

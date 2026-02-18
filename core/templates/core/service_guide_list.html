@@ -140,7 +140,7 @@
                             준비 중
                         </span>
                         {% if product.external_url %}
-                        <a href="{{ product.external_url }}" target="_blank" class="text-sm font-bold text-{{ product.color_theme }}-600 hover:underline">
+                        <a href="{{ product.external_url }}" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-{{ product.color_theme }}-600 hover:underline">
                             서비스 열기 <i class="fa-solid fa-arrow-right"></i>
                         </a>
                         {% endif %}
@@ -152,3 +152,4 @@
     </div>
 </section>
 {% endblock %}
+

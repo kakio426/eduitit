@@ -10,6 +10,7 @@ urlpatterns = [
     path("create/step1/", views.consent_create_step1, name="create_step1"),
     path("<uuid:request_id>/setup/", views.consent_setup_positions, name="setup_positions"),
     path("<uuid:request_id>/recipients/", views.consent_recipients, name="recipients"),
+    path("recipients/template.csv", views.consent_recipients_csv_template, name="recipients_csv_template"),
     path("<uuid:request_id>/", views.consent_detail, name="detail"),
     path("<uuid:request_id>/preview/", views.consent_preview_positions, name="preview_positions"),
     path("<uuid:request_id>/document/source/", views.consent_document_source, name="document_source"),

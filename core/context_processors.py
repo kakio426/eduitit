@@ -10,6 +10,19 @@ def visitor_counts(request):
     Returns visitor count context variables.
     Cached for performance could be added here later if needed.
     """
+    is_superuser = bool(
+        getattr(request, 'user', None)
+        and request.user.is_authenticated
+        and request.user.is_superuser
+    )
+
+    if not is_superuser:
+        return {
+            'show_visitor_counts': False,
+            'today_visitor_count': 0,
+            'total_visitor_count': 0,
+        }
+
     try:
         today = timezone.localdate()
         today_count = VisitorLog.objects.filter(visit_date=today).count()
@@ -18,12 +31,14 @@ def visitor_counts(request):
         logger.debug(f"Visitor counts - Today: {today_count}, Total: {total_count}")
 
         return {
+            'show_visitor_counts': True,
             'today_visitor_count': today_count,
             'total_visitor_count': total_count
         }
     except Exception as e:
         logger.error(f"Error fetching visitor counts: {e}", exc_info=True)
         return {
+            'show_visitor_counts': False,
             'today_visitor_count': 0,
             'total_visitor_count': 0
         }
@@ -72,7 +87,7 @@ def site_config(request):
 def search_products(request):
     """Ctrl+K 검색 모달용 서비스 목록 JSON 제공."""
     from django.conf import settings as django_settings
-    if not getattr(django_settings, 'HOME_V2_ENABLED', False):
+    if not getattr(django_settings, 'GLOBAL_SEARCH_ENABLED', True):
         return {}
 
     from products.models import Product

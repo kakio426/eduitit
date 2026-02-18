@@ -27,21 +27,27 @@
     </div>
     {% endif %}
 
+    <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+      <p class="font-semibold mb-1">학부모 안내 기본 문구 복사 지원</p>
+      <p>각 수신자 행의 `문구+링크 복사` 버튼을 누르면 동의 요청 멘트와 접속 링크가 함께 복사됩니다.</p>
+    </div>
+
     <div class="clay-card p-0 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[980px]">
+        <table class="w-full text-sm min-w-[1280px]">
           <thead class="bg-gray-50 text-gray-600">
             <tr>
               <th class="text-left px-4 py-3">학생명</th>
               <th class="text-left px-4 py-3">학부모명</th>
               <th class="text-left px-4 py-3">상태</th>
               <th class="text-left px-4 py-3">처리시각</th>
-              <th class="text-left px-4 py-3">접속 링크</th>
+              <th class="text-left px-4 py-3">접속 링크 / QR</th>
               <th class="text-left px-4 py-3">관리</th>
             </tr>
           </thead>
           <tbody>
-            {% for r in recipients %}
+            {% for row in recipient_rows %}
+            {% with r=row.recipient %}
             <tr class="border-t border-gray-100">
               <td class="px-4 py-3">{{ r.student_name }}</td>
               <td class="px-4 py-3">{{ r.parent_name }}</td>
@@ -59,8 +65,16 @@
                 {% endif %}
               </td>
               <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <input type="text" readonly value="{{ host_base }}{% url 'consent:sign' token=r.access_token %}" class="w-[420px] px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
+                <div class="flex items-start gap-3">
+                  <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="접속 링크 QR 코드" class="w-20 h-20 rounded border border-gray-200 bg-white p-1">
+                  <div class="space-y-2">
+                    <input id="sign-link-{{ r.id }}" type="text" readonly value="{{ row.sign_url }}" class="w-[420px] px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
+                    <textarea id="sign-message-{{ r.id }}" class="hidden">{{ row.copy_message }}</textarea>
+                    <div class="flex flex-wrap gap-2">
+                      <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="sign-link-{{ r.id }}">링크 복사</button>
+                      <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">문구+링크 복사</button>
+                    </div>
+                  </div>
                 </div>
               </td>
               <td class="px-4 py-3">
@@ -71,6 +85,7 @@
                 {% endif %}
               </td>
             </tr>
+            {% endwith %}
             {% empty %}
             <tr>
               <td colspan="6" class="px-4 py-8 text-center text-gray-500">수신자가 없습니다.</td>
@@ -82,4 +97,40 @@
     </div>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function copyFromElement(sourceId, buttonEl) {
+    const source = document.getElementById(sourceId);
+    if (!source) return;
+    const text = source.value !== undefined ? source.value : source.textContent;
+    const original = buttonEl.textContent;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        source.classList.remove("hidden");
+        source.select && source.select();
+        document.execCommand("copy");
+        source.classList.add("hidden");
+      }
+      buttonEl.textContent = "복사됨";
+      setTimeout(() => {
+        buttonEl.textContent = original;
+      }, 1300);
+    } catch (err) {
+      buttonEl.textContent = "복사 실패";
+      setTimeout(() => {
+        buttonEl.textContent = original;
+      }, 1300);
+    }
+  }
+
+  document.querySelectorAll(".js-copy").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      copyFromElement(btn.dataset.copySource, btn);
+    });
+  });
+</script>
 {% endblock %}

@@ -1,35 +1,38 @@
 from django.test import TestCase
-from django.template.loader import get_template
+from django.urls import reverse
 
 
 class ModalConsistencyTest(TestCase):
     """Test that base.html contains the unified modal structure"""
     
     def test_base_template_has_unified_modal(self):
-        """Verify base.html contains #unifiedModal div"""
-        template = get_template('base.html')
-        rendered = template.render({})
+        """Verify rendered page contains #unifiedModal"""
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        rendered = response.content.decode('utf-8')
         
         # Check for modal container
         self.assertIn('id="unifiedModal"', rendered, 
                      "base.html should contain unified modal with id='unifiedModal'")
         
         # Check for close button
-        self.assertIn('닫기', rendered,
-                     "Modal should have a close button with '닫기' text")
+        self.assertIn('aria-label="Close modal"', rendered,
+                     "Modal should have an accessible close label")
         
     def test_modal_has_backdrop(self):
         """Verify modal has backdrop element"""
-        template = get_template('base.html')
-        rendered = template.render({})
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        rendered = response.content.decode('utf-8')
         
         self.assertIn('modalBackdrop', rendered,
                      "Modal should have backdrop element")
         
     def test_modal_has_content_container(self):
         """Verify modal has content injection point"""
-        template = get_template('base.html')
-        rendered = template.render({})
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        rendered = response.content.decode('utf-8')
         
         self.assertIn('modalContent', rendered,
                      "Modal should have content container")

@@ -20,7 +20,7 @@
             {% if sub.submission_type == 'file' %}
             {{ sub.original_filename|truncatechars:50 }} <span class="text-xs text-gray-400">({{ sub.file_size|filesizeformat }})</span>
             {% elif sub.submission_type == 'link' %}
-            <a href="{{ sub.link_url }}" target="_blank" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:60 }}</a>
+            <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:60 }}</a>
             {% if sub.link_description %}<p class="text-xs text-gray-400 mt-1">{{ sub.link_description }}</p>{% endif %}
             {% else %}
             {{ sub.text_content|truncatechars:90 }}
@@ -28,7 +28,7 @@
         </div>
         {% if sub.submission_type == 'file' and sub.file %}
         <div class="mt-2">
-            <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">
+            <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">
                 <i class="fa-solid fa-download"></i>다운로드
             </a>
         </div>
@@ -64,7 +64,7 @@
                     {% if sub.submission_type == 'file' %}
                     {{ sub.original_filename|truncatechars:50 }} <span class="text-xs text-gray-400">({{ sub.file_size|filesizeformat }})</span>
                     {% elif sub.submission_type == 'link' %}
-                    <a href="{{ sub.link_url }}" target="_blank" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:50 }}</a>
+                    <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:50 }}</a>
                     {% if sub.link_description %}<div class="text-xs text-gray-400 mt-1">{{ sub.link_description }}</div>{% endif %}
                     {% else %}
                     {{ sub.text_content|truncatechars:80 }}
@@ -73,7 +73,7 @@
                 <td class="py-3 pr-3 text-gray-500">{{ sub.submitted_at|date:"Y-m-d H:i" }}</td>
                 <td class="py-3 text-right">
                     {% if sub.submission_type == 'file' and sub.file %}
-                    <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" class="px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-200 transition">
+                    <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-200 transition">
                         <i class="fa-solid fa-download"></i>
                     </a>
                     {% else %}
@@ -94,3 +94,4 @@
 {% endif %}
 
 <span id="total-count" hx-swap-oob="innerHTML">{{ total_count }}건</span>
+

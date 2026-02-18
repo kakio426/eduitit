@@ -1,7 +1,7 @@
 <!-- Headless UI Pattern: shrink-0 Header / flex-1 min-h-0 Scroll / shrink-0 Footer -->
 <div class="flex flex-col h-full">
 
-    <!-- Header (shrink-0: 고정, 스크롤 안 됨) -->
+    <!-- Header (shrink-0: fixed) -->
     <div class="shrink-0 px-5 pt-5 pb-4 md:px-8 md:pt-6 md:pb-4 border-b border-gray-100">
         <div class="flex items-center gap-4 pr-10">
             <div class="w-12 h-12 rounded-xl shadow-sm flex items-center justify-center text-2xl shrink-0
@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <!-- Scrollable Content (flex-1 + min-h-0: 남은 공간 차지, 넘치면 스크롤) -->
+    <!-- Scrollable Content -->
     <div class="flex-1 min-h-0 overflow-y-auto p-5 md:p-8 space-y-5">
 
         {% if product.lead_text %}
@@ -80,15 +80,13 @@
         {% endif %}
     </div>
 
-    <!-- Footer (shrink-0: 고정, 항상 보임) -->
+    <!-- Footer -->
     <div class="shrink-0 px-5 py-4 md:px-8 md:py-5 border-t border-gray-100">
-        {% comment %}Build target URL based on product{% endcomment %}
-        <a href="{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '두뇌 풀가동! 교실 체스' %}{% url 'chess:index' %}{% elif product.title == '두뇌 풀가동! 교실 장기' %}{% url 'janggi:index' %}{% elif product.title == '우리반 캐릭터 친구 찾기' %}{% url 'studentmbti:landing' %}{% elif product.title == 'AI 도구 가이드' %}{% url 'tool_guide' %}{% elif product.title == 'AI 프롬프트 레시피' %}{% url 'prompt_lab' %}{% elif product.title == '간편 수합' %}{% url 'collect:landing' %}{% elif product.title == '동의서는 나에게 맡겨' %}{% url 'consent:dashboard' %}{% elif product.title == '교사 백과사전' %}{% url 'encyclopedia:landing' %}{% elif product.title == '학교 예약 시스템' %}{% url 'reservations:dashboard_landing' %}{% elif product.title == '행복의 씨앗' %}{% url 'happy_seed:landing' %}{% elif product.title == '최신본 센터' or product.title == '최종최최종은 이제그만' %}{% url 'version_manager:document_list' %}{% else %}{% url 'home' %}{% endif %}"
-            {% if product.external_url %}target="_blank" rel="noopener noreferrer" {% endif %}
+        <a href="{{ launch_href }}"
+            {% if launch_is_external %}target="_blank" rel="noopener noreferrer" {% endif %}
             class="block w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            시작하기
-            <i
-                class="fa-solid fa-{% if product.external_url %}arrow-up-right-from-square{% else %}circle-play{% endif %} ml-1.5"></i>
+            ?쒖옉?섍린
+            <i class="fa-solid fa-{% if launch_is_external %}arrow-up-right-from-square{% else %}circle-play{% endif %} ml-1.5"></i>
         </a>
     </div>
 </div>

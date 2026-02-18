@@ -62,7 +62,7 @@ class ProductAdmin(admin.ModelAdmin):
             'description': 'icon: 이모지(🎲) 또는 FontAwesome 클래스(fa-solid fa-dice)'
         }),
         ('서비스 분류', {
-            'fields': ('service_type', 'external_url'),
+            'fields': ('service_type', 'external_url', 'launch_route_name'),
             'description': '카테고리를 선택하면 홈 화면 탭 필터에 반영됩니다.'
         }),
         ('V2 홈 목적별 섹션', {

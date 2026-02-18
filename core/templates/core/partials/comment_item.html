@@ -19,17 +19,17 @@
             </span>
 
             <!-- Actions (Edit/Delete) -->
-            <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            <div class="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1">
                 {% if user == comment.author %}
                 <button hx-get="{% url 'comment_edit' comment.id %}" hx-target="#comment-{{ comment.id }}"
-                    hx-swap="outerHTML" class="text-slate-400 hover:text-indigo-500 p-0.5">
+                    hx-swap="outerHTML" class="text-slate-400 hover:text-indigo-500 p-1 md:p-0.5">
                     <i class="ph ph-pencil-simple"></i>
                 </button>
                 {% endif %}
 
                 {% if user == comment.author or user.is_staff %}
                 <button hx-delete="{% url 'comment_delete' comment.id %}" hx-target="#comment-{{ comment.id }}"
-                    hx-swap="outerHTML" hx-confirm="댓글을 삭제하시겠습니까?" class="text-slate-400 hover:text-red-500 p-0.5">
+                    hx-swap="outerHTML" hx-confirm="댓글을 삭제하시겠습니까?" class="text-slate-400 hover:text-red-500 p-1 md:p-0.5">
                     <i class="ph ph-trash"></i>
                 </button>
                 {% endif %}

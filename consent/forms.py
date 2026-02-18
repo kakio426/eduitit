@@ -76,6 +76,7 @@ class PositionPayloadForm(forms.Form):
 
 class RecipientBulkForm(forms.Form):
     recipients_text = forms.CharField(
+        required=False,
         widget=forms.Textarea(
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
@@ -84,6 +85,28 @@ class RecipientBulkForm(forms.Form):
             }
         )
     )
+    recipients_csv = forms.FileField(
+        required=False,
+        widget=forms.FileInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "accept": ".csv,text/csv",
+            }
+        ),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        text = (cleaned_data.get("recipients_text") or "").strip()
+        csv_file = cleaned_data.get("recipients_csv")
+
+        if not text and not csv_file:
+            raise forms.ValidationError("직접 입력 또는 CSV 업로드 중 하나를 선택해 주세요.")
+
+        if csv_file and not (csv_file.name or "").lower().endswith(".csv"):
+            raise forms.ValidationError("CSV 파일(.csv)만 업로드할 수 있습니다.")
+
+        return cleaned_data
 
 
 class VerifyIdentityForm(forms.Form):

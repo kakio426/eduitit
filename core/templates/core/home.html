@@ -362,20 +362,4 @@
     </div>
 </div>
 
-<script>
-    // Product Cards Logic
-    document.querySelectorAll('.product-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const id = card.getAttribute('data-product-id');
-            if (window.openModal) window.openModal(id);
-        });
-
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                card.click();
-            }
-        });
-    });
-</script>
 {% endblock %}

@@ -13,6 +13,7 @@ from .utils import get_max_booking_date
 import logging
 
 logger = logging.getLogger(__name__)
+OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
 
 @login_required
 def dashboard_landing(request):
@@ -400,6 +401,13 @@ def create_reservation(request, school_slug):
             name=name,
             memo=memo
         )
+
+        # 익명 사용자도 "내가 만든 예약"만 취소할 수 있도록 세션에 소유권 기록
+        owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
+        if reservation.id not in owned_ids:
+            owned_ids.append(reservation.id)
+            request.session[OWNED_RESERVATIONS_SESSION_KEY] = owned_ids
+            request.session.modified = True
         
         messages.success(request, f"{period}교시 예약이 완료되었습니다.")
         
@@ -415,17 +423,32 @@ def create_reservation(request, school_slug):
 @require_POST
 def delete_reservation(request, school_slug, reservation_id):
     """
-    일반 사용자용 예약 취소 (LocalStorage ID 매칭 전제, 보안 수준 낮음)
+    일반 사용자용 예약 취소
+    - 생성 시 세션에 기록된 예약만 삭제 허용
+    - URL 유추로 타인 예약 삭제하는 시도를 차단
     """
     school = get_object_or_404(School, slug=school_slug)
     reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
-    
-    # 추가 검증 로직이 없으므로, URL을 아는 누구나 삭제 가능할 수 있음.
-    # 실서비스에서는 세션/쿠키 기반 소유권 검증이 필요하나, 현재 요구사항(로그인 없는 예약)상 유지.
-    
+
+    owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
+    if reservation.id not in owned_ids:
+        logger.warning(
+            "[Reservation] Unauthorized delete attempt blocked | reservation_id=%s | school=%s",
+            reservation_id,
+            school.slug,
+        )
+        return HttpResponseForbidden("삭제 권한이 없습니다.")
+
     reservation.delete()
+    request.session[OWNED_RESERVATIONS_SESSION_KEY] = [rid for rid in owned_ids if rid != reservation.id]
+    request.session.modified = True
     messages.success(request, "예약이 취소되었습니다.")
-    
+
+    if request.htmx:
+        response = HttpResponse(status=200)
+        response['HX-Refresh'] = "true"
+        return response
+
     return redirect('reservations:reservation_index', school_slug=school.slug)
 
 @login_required

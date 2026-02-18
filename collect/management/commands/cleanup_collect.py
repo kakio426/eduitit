@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '수합 자동 정리: 마감 후 7일 경과 파일 삭제 + 첫 제출 후 30일(제출 없으면 생성 후 60일) 요청 자동 삭제'
+    help = '수합 자동 정리: 마감 후 27일 경과 파일 삭제 + 첫 제출 후 50일(제출 없으면 생성 후 80일) 요청 자동 삭제'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -27,8 +27,8 @@ class Command(BaseCommand):
             self.stdout.write('[DRY RUN] 실제 삭제 없이 대상만 표시합니다.')
         self.stdout.write('=' * 70)
 
-        # 1단계: 마감(closed) 후 7일 경과 → Cloudinary 파일 삭제 + archived 전환
-        seven_days_ago = now - timedelta(days=7)
+        # 1단계: 마감(closed) 후 27일 경과 → Cloudinary 파일 삭제 + archived 전환
+        seven_days_ago = now - timedelta(days=27)
         closed_requests = CollectionRequest.objects.filter(
             status='closed',
             updated_at__lte=seven_days_ago,
@@ -71,11 +71,11 @@ class Command(BaseCommand):
             archived_count += 1
             self.stdout.write(f'  [보관 전환] {req.title}')
 
-        self.stdout.write(f'\n[1단계] 마감 후 7일 경과: {archived_count}개 보관 전환, {files_deleted}개 파일 삭제')
+        self.stdout.write(f'\n[1단계] 마감 후 27일 경과: {archived_count}개 보관 전환, {files_deleted}개 파일 삭제')
 
-        # 2단계: 첫 제출 후 30일 경과 또는 제출 없이 생성 후 60일 경과 → 요청 자체 삭제
-        thirty_days_ago = now - timedelta(days=30)
-        sixty_days_ago = now - timedelta(days=60)
+        # 2단계: 첫 제출 후 50일 경과 또는 제출 없이 생성 후 80일 경과 → 요청 자체 삭제
+        thirty_days_ago = now - timedelta(days=50)
+        sixty_days_ago = now - timedelta(days=80)
 
         all_requests = CollectionRequest.objects.all()
         delete_targets = []
@@ -83,11 +83,11 @@ class Command(BaseCommand):
         for req in all_requests:
             first_submission = req.submissions.order_by('submitted_at').first()
             if first_submission:
-                # 첫 제출 후 30일 경과
+                # 첫 제출 후 50일 경과
                 if first_submission.submitted_at <= thirty_days_ago:
                     delete_targets.append(req)
             else:
-                # 제출 없이 생성 후 60일 경과
+                # 제출 없이 생성 후 80일 경과
                 if req.created_at <= sixty_days_ago:
                     delete_targets.append(req)
 
@@ -121,6 +121,6 @@ class Command(BaseCommand):
                         logger.error(f'요청 삭제 실패 (id={req.id}, title={req.title}): {e}')
                         continue
 
-        self.stdout.write(f'[2단계] 만료 요청: {old_count}개 삭제 (첫 제출+30일 / 미제출+60일)')
+        self.stdout.write(f'[2단계] 만료 요청: {old_count}개 삭제 (첫 제출+50일 / 미제출+80일)')
         self.stdout.write('=' * 70)
         self.stdout.write('[OK] Done!')

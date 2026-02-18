@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}문서 열기 오류{% endblock %}
+
+{% block content %}
+<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+  <div class="max-w-xl mx-auto">
+    <div class="clay-card p-6">
+      <h1 class="text-2xl font-bold text-gray-800">첨부 문서를 불러오지 못했습니다.</h1>
+      <p class="text-sm text-gray-600 mt-2">
+        파일 경로 또는 저장소 상태를 확인해 주세요. 문제가 계속되면 교사에게 재발송을 요청해 주세요.
+      </p>
+      {% if consent_request %}
+      <p class="text-sm text-gray-500 mt-3">{{ consent_request.title }}</p>
+      {% endif %}
+      {% if recipient %}
+      <a href="{% url 'consent:sign' token=recipient.access_token %}" class="inline-block mt-5 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
+        서명 화면으로 돌아가기
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

@@ -60,15 +60,15 @@ document.addEventListener('DOMContentLoaded', () => {
 {% url 'account_login' as login_url %}
 
 <div x-data="{ showAll: false, activeCategory: 'all' }" class="min-h-screen bg-[#E0E5EC]">
-    <div class="flex flex-col md:flex-row pt-40 md:pt-48 max-w-[1920px] mx-auto">
+    <div class="flex flex-col xl:flex-row pt-40 md:pt-48 max-w-[1920px] mx-auto">
 
         <!-- PC 전용 SNS 사이드바 -->
-        <div class="hidden md:block flex-shrink-0">
+        <div class="hidden xl:block flex-shrink-0">
             {% include 'core/partials/sns_widget.html' %}
         </div>
 
         <!-- 메인 콘텐츠 -->
-        <main class="flex-1 pb-8 md:pb-12 px-3 md:px-8 pt-0">
+        <main class="flex-1 pb-8 md:pb-12 px-3 md:px-5 lg:px-7 xl:px-8 pt-0">
 
             <!-- Hero 섹션 -->
             <div class="flex flex-col justify-center text-center mb-5 md:mb-12" data-aos="fade-up">
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- 모바일 전용 SNS 미리보기 -->
-            <div class="block md:hidden mt-8 px-1" data-aos="fade-up">
+            <div class="block xl:hidden mt-8 px-1" data-aos="fade-up">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
                         <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>

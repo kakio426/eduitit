@@ -36,7 +36,7 @@
             {% if sign_talk_url %}
             <div class="mt-4 p-3 bg-gray-50 rounded-xl">
                 <div class="text-xs text-gray-500 mb-1">현재 공유 링크</div>
-                <a href="{{ sign_talk_url }}" target="_blank" class="text-sm text-green-700 break-all hover:underline">{{ sign_talk_url }}</a>
+                <a href="{{ sign_talk_url }}" target="_blank" rel="noopener noreferrer" class="text-sm text-green-700 break-all hover:underline">{{ sign_talk_url }}</a>
             </div>
             {% endif %}
         </div>
@@ -87,3 +87,4 @@
     </div>
 </section>
 {% endblock %}
+

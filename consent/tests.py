@@ -108,12 +108,89 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
 
+    def test_public_document_korean_filename_returns_file(self):
+        file_obj = SimpleUploadedFile("안내문.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="korean-file",
+            original_file=file_obj,
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        req = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="korean-filename-request",
+            consent_text_version="v1",
+            status=SignatureRequest.STATUS_SENT,
+            sent_at=timezone.now(),
+        )
+        rec = SignatureRecipient.objects.create(
+            request=req,
+            student_name="학생A",
+            parent_name="학부모A",
+            phone_number="",
+        )
+        url = reverse("consent:public_document", kwargs={"token": rec.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store")
+
     def test_document_source_returns_file(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_recipients_csv_template_download(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:recipients_csv_template")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertIn("학생명", response.content.decode("utf-8-sig"))
+
+    def test_recipients_csv_upload(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
+        csv_content = "학생명,학부모명\n김하늘,김하늘 보호자\n박나래,박나래 보호자\n"
+        csv_file = SimpleUploadedFile(
+            "recipients.csv",
+            csv_content.encode("utf-8-sig"),
+            content_type="text/csv",
+        )
+        response = self.client.post(
+            url,
+            {
+                "recipients_text": "",
+                "recipients_csv": csv_file,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            SignatureRecipient.objects.filter(
+                request=self.request_obj,
+                student_name="김하늘",
+                parent_name="김하늘 보호자",
+            ).exists()
+        )
+
+    def test_detail_includes_copy_buttons_and_qr(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "문구+링크 복사")
+        self.assertContains(response, "data:image/png;base64,")
+
+    def test_public_document_missing_file_returns_404_page(self):
+        self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"
+        self.document.save(update_fields=["original_file"])
+        url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "첨부 문서를 불러오지 못했습니다.", status_code=404)
 
     @patch("consent.views.get_consent_schema_status", return_value=(False, ["signatures_signaturedocument"], "missing"))
     def test_schema_guard_returns_503(self, mocked_schema):

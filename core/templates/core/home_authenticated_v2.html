@@ -80,15 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {% block content %}
 <div x-data="{ showAll: false, activeCategory: 'all' }" class="min-h-screen bg-[#E0E5EC] font-[Pretendard]">
-    <div class="flex flex-col md:flex-row pt-44 md:pt-40 max-w-[1920px] mx-auto">
+    <div class="flex flex-col xl:flex-row pt-44 md:pt-40 max-w-[1920px] mx-auto">
 
         <!-- PC 전용 SNS 사이드바 -->
-        <div class="hidden md:block flex-shrink-0">
+        <div class="hidden xl:block flex-shrink-0">
             {% include 'core/partials/sns_widget.html' %}
         </div>
 
         <!-- 메인 콘텐츠 -->
-        <main class="flex-1 p-4 md:px-10 lg:px-12 pt-0 md:pt-0">
+        <main class="flex-1 p-4 md:px-6 lg:px-8 xl:px-12 pt-0 md:pt-0">
 
             <!-- 인사말 + 검색 -->
             <div class="mb-6 flex items-start justify-between gap-4">
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- 모바일 전용 SNS 미리보기 -->
-            <div class="block md:hidden mt-4 px-1">
+            <div class="block xl:hidden mt-4 px-1">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
                         <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>

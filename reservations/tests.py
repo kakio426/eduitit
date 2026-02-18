@@ -53,7 +53,11 @@ class ReservationsViewTest(TestCase):
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(Reservation.objects.filter(room=self.room, date=self.target_date, period=1).exists())
+        created = Reservation.objects.filter(room=self.room, date=self.target_date, period=1).first()
+        self.assertIsNotNone(created)
+
+        session = self.client.session
+        self.assertIn(created.id, session.get('owned_reservation_ids', []))
         
         # Duplicate check
         response = self.client.post(url, data)
@@ -68,8 +72,49 @@ class ReservationsViewTest(TestCase):
             class_no=2,
             name='To Delete'
         )
+
+        session = self.client.session
+        session['owned_reservation_ids'] = [reservation.id]
+        session.save()
+
         url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
         response = self.client.post(url)
+        self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_delete_reservation_forbidden_without_ownership(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=4,
+            grade=4,
+            class_no=1,
+            name='Protected'
+        )
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_anonymous_can_delete_only_own_session_reservation(self):
+        self.client.logout()
+        create_url = reverse('reservations:create_reservation', args=[self.school.slug])
+        data = {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 5,
+            'grade': 6,
+            'class_no': 3,
+            'name': 'Anon Tester'
+        }
+        response = self.client.post(create_url, data)
+        self.assertEqual(response.status_code, 200)
+
+        reservation = Reservation.objects.get(room=self.room, date=self.target_date, period=5)
+        delete_url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(delete_url)
+
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 

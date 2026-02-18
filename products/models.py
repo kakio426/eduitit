@@ -43,6 +43,11 @@ class Product(models.Model):
     display_order = models.IntegerField(default=0, help_text="Order in which to display (lower numbers first)")
     service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='etc', help_text="서비스 카테고리")
     external_url = models.URLField(blank=True, help_text="External URL for services hosted elsewhere")
+    launch_route_name = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Internal Django URL name for direct launch (e.g. collect:landing).",
+    )
 
     # V2 홈 목적별 섹션용 필드
     solve_text = models.CharField(max_length=100, blank=True, help_text="무엇을 해결? (예: '문서와 의견 수합, 번거로운 일은 이제 저에게 맡겨주세요!')")

@@ -180,7 +180,7 @@
         <div class="action-buttons">
             {% if is_owned or product.price == 0 %}
             {% if product.external_url %}
-            <a href="{{ product.external_url }}" target="_blank" class="btn-launch">
+            <a href="{{ product.external_url }}" target="_blank" rel="noopener noreferrer" class="btn-launch">
                 <i class="fa-solid fa-rocket"></i> 서비스 시작하기
             </a>
             {% elif product.service_type == "game" %}

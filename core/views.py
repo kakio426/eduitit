@@ -53,13 +53,23 @@ PURPOSE_SECTIONS = [
 ]
 
 
-def get_purpose_sections(products_qs):
+def get_purpose_sections(products_qs, preview_limit=2):
     """Product queryset → 목적별 섹션 + 게임 분리."""
     sections = []
     for sec in PURPOSE_SECTIONS:
         items = [p for p in products_qs if p.service_type in sec['types']]
         if items:
-            sections.append({**sec, 'products': items})
+            if preview_limit and preview_limit > 0:
+                preview_items = items[:preview_limit]
+            else:
+                preview_items = items
+            sections.append({
+                **sec,
+                'products': preview_items,
+                'total_products': len(items),
+                'remaining_count': max(len(items) - len(preview_items), 0),
+                'has_more': len(items) > len(preview_items),
+            })
     games = [p for p in products_qs if p.service_type == 'game']
     return sections, games
 
@@ -69,25 +79,12 @@ def _resolve_product_launch_url(product):
     if product.external_url:
         return product.external_url, True
 
-    title_route_map = {
-        '쌤BTI': 'ssambti:main',
-        '두뇌 풀가동! 교실 체스': 'chess:index',
-        '두뇌 풀가동! 교실 장기': 'janggi:index',
-        '우리반 캐릭터 친구 찾기': 'studentmbti:landing',
-        'AI 도구 가이드': 'tool_guide',
-        'AI 프롬프트 레시피': 'prompt_lab',
-        '간편 수합': 'collect:landing',
-        '교사 백과사전': 'encyclopedia:landing',
-        '학교 예약 시스템': 'reservations:dashboard_landing',
-        '최신본 센터': 'version_manager:document_list',
-        '최종최최종은 이제그만': 'version_manager:document_list',
-    }
-    route_name = title_route_map.get(product.title)
+    route_name = (product.launch_route_name or '').strip()
     if route_name:
         try:
             return reverse(route_name), False
         except NoReverseMatch:
-            logger.warning("Quick action route missing for product '%s' (%s).", product.title, route_name)
+            logger.warning("Launch route missing for product '%s' (%s).", product.title, route_name)
 
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 

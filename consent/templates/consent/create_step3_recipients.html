@@ -8,16 +8,31 @@
     <div class="mb-6">
       <a href="{% url 'consent:create_step1' %}" class="text-sm text-gray-500 hover:text-purple-600">이전 단계로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">2단계. 수신자 등록</h1>
-      <p class="text-sm text-gray-500 mt-1">형식: 학생명,학부모명 (전화번호 입력 없음)</p>
+      <p class="text-sm text-gray-500 mt-1">직접 입력 또는 CSV 업로드로 학생/학부모를 등록하세요.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-4">
       <section class="clay-card p-5">
         <h2 class="text-lg font-bold mb-3">수신자 일괄 등록</h2>
-        <form method="post" class="space-y-3">
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
           {% csrf_token %}
-          {{ form.recipients_text }}
-          {{ form.recipients_text.errors }}
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-semibold text-gray-700">CSV 업로드</label>
+              <a href="{% url 'consent:recipients_csv_template' %}" class="text-xs font-semibold text-indigo-600 hover:underline">예시 CSV 다운로드</a>
+            </div>
+            {{ form.recipients_csv }}
+            <p class="text-xs text-gray-500 mt-1">헤더 포함 가능: 학생명,학부모명</p>
+            {{ form.recipients_csv.errors }}
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-gray-700">직접 입력</label>
+            <p class="text-xs text-gray-500 mt-1 mb-2">한 줄에 1명씩 `학생명,학부모명` 형식으로 입력</p>
+            {{ form.recipients_text }}
+            {{ form.recipients_text.errors }}
+          </div>
+
           {{ form.non_field_errors }}
           <div>
             <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">등록</button>

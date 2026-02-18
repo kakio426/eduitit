@@ -1,11 +1,14 @@
 ﻿## [Canonical Top Summary] 2026-02-17
 - Declare UI scope before edits: global/app/page
+- Declare `target_app` and `do_not_touch_apps` before edits
 - Preserve stable service UI language by default
 - Validate behavior parity first (routing, modal close, ESC, focus)
 - If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
 - Run python manage.py check (and node --check for changed JS)
 - For form pages: never hide required model fields without making them optional/defaulted, and always render form errors
 - For JS confirmation UX (modal/step): keep a non-JS submit fallback so critical actions never become "no response"
+- In dirty workspace, commit only request-scoped files after `git diff --cached` review
+- Do not change global settings/flags unless explicitly requested
 
 ---
 
@@ -47,6 +50,59 @@
 - 모바일 실기기 최소 QA:
   - 제출 버튼 탭 후 실제 데이터 생성/수정 반영 확인
   - 유효성 실패 시 오류 메시지 노출 확인
+
+### 5) 신규 서비스 추가 가드레일 (2026-02-18)
+- 라우팅 SSOT를 먼저 정한다. 가능하면 `title` 문자열 분기 대신 명시적 route 필드를 사용한다.
+- 당장 `title` 분기를 유지해야 한다면, 최소 2곳을 동시 반영한다:
+  - `core/views.py` (`_resolve_product_launch_url`)
+  - `products/templates/products/partials/preview_modal.html` 시작하기 링크 분기
+- 대화면 전용 서비스는 phone 차단 정책을 사용하되, 다음 2가지를 반드시 제공한다:
+  - 롤백 플래그 (`ALLOW_TABLET_ACCESS`)
+  - 사용자 우회 경로 (`force_desktop=1`, 안내문 포함)
+- 기능 플래그는 목적별로 분리한다. 검색/IA 같은 공통 기능을 `HOME_V2_ENABLED` 같은 화면 플래그에 묶지 않는다.
+- 모바일/태블릿에서 핵심 액션은 hover 의존 금지. 터치 상태에서 항상 보이거나 명시적 더보기 메뉴를 둔다.
+- 신규 서비스는 등록과 동시에 검색/탐색에 노출 가능해야 한다 (`search_products_json`, 카테고리/설명 필드 확인).
+- 테스트 게이트를 통과해야 머지한다:
+  - 서비스 진입 라우팅
+  - 모달 열기/닫기
+  - phone/iPad/desktop 정책
+  - 플래그 ON/OFF 시 기대 동작
+- 문서 동기화는 같은 커밋에서 처리한다:
+  - `CLAUDE.md`
+  - `codex/SKILL.md`
+  - 필요 시 `docs/plans/PLAN_must_fix_only.md`
+
+### 6) Target Service Lock (2026-02-18)
+- 작업 시작 전에 아래를 먼저 선언한다:
+  - `target_app`: 이번 작업 대상 앱
+  - `do_not_touch_apps`: 이번 작업에서 건드리면 안 되는 앱 목록
+- 선언 범위 밖 파일 수정이 감지되면 즉시 중단하고 범위 재확인 후 진행한다.
+- 공용 파일(`settings`, `base`, 공통 템플릿) 수정은 "요청 명시"가 있는 경우에만 허용한다.
+
+### 7) 서비스 제거 표준 절차 (2026-02-18)
+- 서비스 제거는 아래 순서를 강제한다:
+  1. 라우팅 제거 (`urls`)
+  2. 앱 등록 제거 (`INSTALLED_APPS`)
+  3. 제품/매뉴얼 데이터 제거 (마이그레이션 `RunPython`)
+  4. 설정/가이드/설명 흔적 제거
+  5. 상태 검증 (`/service-path -> 404`, 관련 헬스체크 통과)
+- 데이터 제거는 셸 수작업 대신 마이그레이션으로 남긴다.
+
+### 8) AI Provider Switch Protocol (2026-02-18)
+- Gemini/DeepSeek 전환 시 동시 점검 대상:
+  - 서버 키 소스(`MASTER_*`, fallback 포함)
+  - 사용자 메시지(한도/설정 안내 문구)
+  - 설정 화면의 키 입력/가이드 문구
+  - 관련 테스트(기본 진입/오류 코드/미설정 처리)
+- 제공자 전환 중에는 요청되지 않은 다른 서비스의 AI 경로를 변경하지 않는다.
+
+### 9) Dirty Workspace Commit Guard (2026-02-18)
+- 작업트리가 더러우면 선택 커밋만 허용한다:
+  - `git add <요청 범위 파일들>`
+  - `git diff --cached --name-only`
+  - `git diff --cached`
+- 위 검토 없이 전체 커밋/푸시 금지.
+- 커밋 보고 시 포함/제외 파일을 명시한다.
 
 ---
 ## [Legacy Reference Notice]

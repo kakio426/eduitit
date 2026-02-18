@@ -13,6 +13,61 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - Always provide `ServiceManual` for new services with at least 3 `ManualSection` records.
 - Do not overwrite admin-managed fields in `ensure_*` commands (`service_type`, `display_order`, `color_theme`).
 
+## Target Service Lock
+- Before editing, declare:
+  - `target_app`: app to change
+  - `do_not_touch_apps`: explicit no-touch app list
+- If out-of-scope files appear during edits, stop and re-confirm scope first.
+- Treat shared files (`settings`, `base`, shared templates/scripts) as protected unless explicitly requested.
+
+## Preflight 6-Step (Required)
+1. Scan impact with `rg` for routes/templates/views/commands related to request.
+2. Record `target_app` and `do_not_touch_apps`.
+3. Check dirty workspace (`git status --short`) and avoid unrelated file edits.
+4. Decide minimal test set before code change.
+5. Decide whether data migration (`RunPython`) is required.
+6. Define commit scope before staging.
+
+## Service Decommission Playbook
+- For removing a service, execute in order:
+  1. remove URL routes
+  2. remove from `INSTALLED_APPS`
+  3. remove product/manual records via migration
+  4. remove UI/help/settings traces
+  5. verify removed paths return `404`
+- Never rely only on shell/manual DB edits for service removal.
+
+## AI Provider Switch Protocol
+- For Gemini/DeepSeek switches, verify together:
+  - key source and fallback path
+  - user-facing rate-limit/config messages
+  - settings/help text consistency
+  - minimal runtime tests for success/failure/no-key
+- Do not switch provider logic in non-target services.
+
+## Dirty Workspace Commit Guard
+- In dirty workspace, use scoped commits only:
+  - `git add <scoped files>`
+  - `git diff --cached --name-only`
+  - `git diff --cached`
+- No bulk add/commit without staged diff review.
+
+## Settings Freeze Rule
+- Do not change global settings/flags (`SESSION_COOKIE_AGE`, feature flags, auth/session defaults) unless explicitly requested.
+- If a settings change is required, include same-intent parity in both:
+  - `config/settings.py`
+  - `config/settings_production.py`
+
+## Push Gate + Report
+- Before push, require:
+  - `python manage.py check`
+  - target test suite (or health checks) pass
+  - critical URL smoke check for changed service(s)
+- Final report must include:
+  - included files
+  - explicitly excluded files
+  - verification commands and results
+
 ## New Service SSOT
 - Create a separate Django app for major new services.
 - Register URL namespace explicitly.
@@ -25,6 +80,28 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - `lead_text`
   - detailed `description`
   - at least 3 `ProductFeature` items.
+
+## Service Expansion Checklist (2026-02-18)
+- Prefer explicit launch route mapping over `product.title` branching.
+- If title branching is still used, update both:
+  - `core/views.py` (`_resolve_product_launch_url`)
+  - `products/templates/products/partials/preview_modal.html`
+- For large-screen services, implement safe device policy:
+  - phone block logic
+  - `ALLOW_TABLET_ACCESS` rollback flag
+  - `force_desktop=1` user bypass path with warning text
+- Keep cross-cutting features decoupled from UI-version flags:
+  - use dedicated flags (example: `GLOBAL_SEARCH_ENABLED`)
+  - mirror flags in `settings.py` and `settings_production.py`
+- Do not ship hover-only critical actions; ensure touch-accessible controls.
+- New service must be discoverable on day one:
+  - search payload exposure (`search_products_json`)
+  - category/service_type metadata verified
+- Required tests before merge:
+  - launch routing success
+  - modal open/close flow
+  - phone/iPad/desktop behavior
+  - rollback flag ON/OFF behavior
 
 ## Launch Routing Guardrail
 - For internal services, set `external_url=''` and map the launch URL explicitly to Django route.

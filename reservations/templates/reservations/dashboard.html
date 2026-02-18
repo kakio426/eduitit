@@ -15,7 +15,7 @@
             </div>
 
             <div class="flex flex-wrap justify-center md:justify-end gap-3">
-                <a href="{% url 'reservations:reservation_index' school.slug %}" target="_blank"
+                <a href="{% url 'reservations:reservation_index' school.slug %}" target="_blank" rel="noopener noreferrer"
                     class="clay-btn-primary px-6 py-3 font-bold flex items-center gap-2">
                     <i class="fas fa-external-link-alt"></i> 예약 현황판
                 </a>
@@ -338,3 +338,4 @@
     </div>
 </section>
 {% endblock %}
+
