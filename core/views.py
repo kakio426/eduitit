@@ -53,7 +53,7 @@ PURPOSE_SECTIONS = [
 ]
 
 
-def get_purpose_sections(products_qs, preview_limit=2):
+def get_purpose_sections(products_qs, preview_limit=None):
     """Product queryset → 목적별 섹션 + 게임 분리."""
     sections = []
     for sec in PURPOSE_SECTIONS:
@@ -66,9 +66,6 @@ def get_purpose_sections(products_qs, preview_limit=2):
             sections.append({
                 **sec,
                 'products': preview_items,
-                'total_products': len(items),
-                'remaining_count': max(len(items) - len(preview_items), 0),
-                'has_more': len(items) > len(preview_items),
             })
     games = [p for p in products_qs if p.service_type == 'game']
     return sections, games
