@@ -16,7 +16,6 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from core.views import health_check
@@ -35,9 +34,6 @@ urlpatterns = [
     path('artclass/', include('artclass.urls', namespace='artclass')),
     path('signatures/', include('signatures.urls', namespace='signatures')),
     path('consent/', include('consent.urls', namespace='consent')),
-    path('school-violence/', include('school_violence.urls', namespace='school_violence')),
-    path('school_violence/', RedirectView.as_view(url='/school-violence/', permanent=True)),
-    path('padlet/', include('padlet_bot.urls', namespace='padlet_bot')),
     path('chess/', include('chess.urls', namespace='chess')),
     path('janggi/', include('janggi.urls', namespace='janggi')),
     path('fairy-games/', include('fairy_games.urls', namespace='fairy_games')),

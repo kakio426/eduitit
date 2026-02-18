@@ -116,15 +116,6 @@ class PortfolioServicesTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class SchoolViolenceServicesTest(TestCase):
-    def setUp(self):
-        self.client = Client()
-
-    def test_school_violence_chat_loads(self):
-        response = self.client.get('/school-violence/')
-        self.assertEqual(response.status_code, 200)
-
-
 class AllServicesHealthCheckTest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -145,7 +136,6 @@ class AllServicesHealthCheckTest(TestCase):
             (f'/artclass/classroom/{self.art_class.pk}/', 'ArtClass Room'),
             ('/portfolio/', 'Portfolio'),
             ('/portfolio/inquiry/', 'Portfolio Inquiry'),
-            ('/school-violence/', 'School Violence Chat'),
         ]
 
     def test_all_public_endpoints_accessible(self):

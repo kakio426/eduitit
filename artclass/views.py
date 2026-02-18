@@ -3,11 +3,10 @@ import json
 import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
-from google import genai
+from openai import OpenAI
 from django.db.models import Count
 from .models import ArtClass, ArtStep
 
@@ -17,14 +16,16 @@ except ImportError:
     YouTubeTranscriptApi = None
 
 
-def get_gemini_client():
-    """Gemini Client (Server Credentials Priority)"""
-    api_key = getattr(settings, 'GEMINI_API_KEY', None)
-    if not api_key:
-        api_key = os.environ.get('GEMINI_API_KEY')
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_MODEL_NAME = "deepseek-chat"
+
+
+def get_deepseek_client():
+    """DeepSeek client using server master key."""
+    api_key = os.environ.get('MASTER_DEEPSEEK_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
     if not api_key:
         return None
-    return genai.Client(api_key=api_key)
+    return OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=60.0)
 
 
 def setup_view(request, pk=None):
@@ -163,7 +164,7 @@ def generate_steps_api(request):
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 본 서비스는 개인 개발자의 사비로 운영되어 공용 AI 한도가 넉넉지 않습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속 이용하실 수 있습니다! 😊'
+            'message': '요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.'
         }, status=429)
 
     if request.method != 'POST':
@@ -183,7 +184,7 @@ def generate_steps_api(request):
         if len(effective_transcript.strip()) < 20 and not title:
              return JsonResponse({'error': 'LOW_INFO'}, status=400)
 
-        client = get_gemini_client()
+        client = get_deepseek_client()
         if not client:
              return JsonResponse({'error': 'API_NOT_CONFIGURED'}, status=503)
 
@@ -203,13 +204,16 @@ def generate_steps_api(request):
             6. 서론이나 맺음말 없이 본론만 출력하세요.
         """
 
-        # 유튜브 자막 요약 → 저렴한 Lite 모델
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt
+        response = client.chat.completions.create(
+            model=DEEPSEEK_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are a helpful art class teacher."},
+                {"role": "user", "content": prompt},
+            ],
+            stream=False,
         )
 
-        text = response.text
+        text = (response.choices[0].message.content or "").strip()
         if "요약할 수 있는" in text or len(text.strip()) < 5:
              return JsonResponse({'error': 'LOW_INFO'}, status=400)
 

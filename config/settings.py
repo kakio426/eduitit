@@ -69,9 +69,7 @@ INSTALLED_APPS = [
     'ssambti.apps.SsambtiConfig',
     'signatures.apps.SignaturesConfig',
     'consent.apps.ConsentConfig',
-    'school_violence.apps.SchoolViolenceConfig',
     'artclass.apps.ArtclassConfig',
-    'padlet_bot.apps.PadletBotConfig',
     'chess.apps.ChessConfig',
     'janggi.apps.JanggiConfig',
     'fairy_games.apps.FairyGamesConfig',
@@ -209,7 +207,7 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
-SESSION_COOKIE_AGE = 86400  # 24시간 (OAuth 콜백 등 긴 플로우에서도 세션 유지)
+SESSION_COOKIE_AGE = 21600  # 내부 세션 정책값
 SESSION_SAVE_EVERY_REQUEST = False  # 매 요청마다 DB write 방지 (성능 개선)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 브라우저 닫으면 로그아웃
 SOCIALACCOUNT_AUTO_SIGNUP = False  # ✅ 소셜 로그인 후 추가 정보(별명) 입력 화면 표시
@@ -431,6 +429,8 @@ LOGGING = {
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'False').lower() == 'true'
+ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
+GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
 ONBOARDING_EXEMPT_PATH_PREFIXES = ['/autoarticle/'] if TESTING else []
 
 # =============================================================================
