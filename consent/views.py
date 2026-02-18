@@ -259,7 +259,11 @@ def consent_create_step1(request):
                 consent_request.save()
             except (OperationalError, ProgrammingError) as exc:
                 return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
-            return redirect("consent:recipients", request_id=consent_request.request_id)
+            except Exception:
+                logger.exception("[consent] step1 create failed user_id=%s", request.user.id)
+                document_form.add_error("original_file", "문서 업로드 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            else:
+                return redirect("consent:recipients", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm()
         request_form = ConsentRequestForm(
@@ -298,7 +302,10 @@ def consent_recipients(request, request_id):
     if schema_block:
         return schema_block
 
-    consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
+    try:
+        consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
+    except (OperationalError, ProgrammingError) as exc:
+        return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
     form = RecipientBulkForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
@@ -310,22 +317,32 @@ def consent_recipients(request, request_id):
             form.add_error(None, "등록 가능한 수신자가 없습니다. 입력값 또는 CSV 파일을 확인해 주세요.")
         else:
             created = 0
-            for rec in all_recipients:
-                _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
-                if was_created:
-                    created += 1
-
-            if invalid_rows and invalid_rows != [0]:
-                messages.warning(
-                    request,
-                    f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
+            try:
+                for rec in all_recipients:
+                    _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
+                    if was_created:
+                        created += 1
+            except (OperationalError, ProgrammingError) as exc:
+                return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
+            except Exception:
+                logger.exception(
+                    "[consent] recipient bulk create failed request_id=%s user_id=%s",
+                    consent_request.request_id,
+                    request.user.id,
                 )
-            elif invalid_rows == [0]:
-                messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+                form.add_error(None, "수신자 저장 중 오류가 발생했습니다. 입력값을 확인한 뒤 다시 시도해 주세요.")
+            else:
+                if invalid_rows and invalid_rows != [0]:
+                    messages.warning(
+                        request,
+                        f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
+                    )
+                elif invalid_rows == [0]:
+                    messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
 
-            skipped = max(len(all_recipients) - created, 0)
-            messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
-            return redirect("consent:detail", request_id=consent_request.request_id)
+                skipped = max(len(all_recipients) - created, 0)
+                messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
+                return redirect("consent:detail", request_id=consent_request.request_id)
 
     recipients = consent_request.recipients.all().order_by("student_name")
     return render(

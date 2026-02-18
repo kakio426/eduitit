@@ -184,6 +184,38 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "문구+링크 복사")
         self.assertContains(response, "data:image/png;base64,")
 
+    @patch("consent.models.SignatureDocument.save", side_effect=RuntimeError("storage failure"))
+    def test_create_step1_handles_upload_exception_without_500(self, mocked_save):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:create_step1")
+        file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        response = self.client.post(
+            url,
+            {
+                "title": "테스트 동의서",
+                "message": "안내",
+                "legal_notice": "",
+                "link_expire_days": 14,
+                "original_file": file_obj,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "문서 업로드 처리 중 오류가 발생했습니다.")
+
+    @patch("consent.views.SignatureRecipient.objects.get_or_create", side_effect=RuntimeError("db failure"))
+    def test_recipients_handles_save_exception_without_500(self, mocked_get_or_create):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.post(
+            url,
+            {
+                "recipients_text": "김하늘,김하늘 보호자",
+                "recipients_csv": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "수신자 저장 중 오류가 발생했습니다.")
+
     def test_public_document_missing_file_returns_404_page(self):
         self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"
         self.document.save(update_fields=["original_file"])
