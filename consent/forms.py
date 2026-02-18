@@ -40,7 +40,7 @@ class ConsentDocumentForm(forms.ModelForm):
 class ConsentRequestForm(forms.ModelForm):
     class Meta:
         model = SignatureRequest
-        fields = ["title", "message", "legal_notice"]
+        fields = ["title", "message", "link_expire_days", "legal_notice"]
         widgets = {
             "title": forms.TextInput(
                 attrs={
@@ -53,6 +53,11 @@ class ConsentRequestForm(forms.ModelForm):
                     "class": f"{CLAY_INPUT} resize-none",
                     "rows": 3,
                     "placeholder": "학부모에게 보낼 안내 메시지",
+                }
+            ),
+            "link_expire_days": forms.Select(
+                attrs={
+                    "class": CLAY_INPUT,
                 }
             ),
             "legal_notice": forms.Textarea(
@@ -75,7 +80,7 @@ class RecipientBulkForm(forms.Form):
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
-                "placeholder": "학생명,학부모명,전화번호\n홍길동,홍길동 보호자,010-1234-5678",
+                "placeholder": "학생명,학부모명\n홍길동,홍길동 보호자",
             }
         )
     )

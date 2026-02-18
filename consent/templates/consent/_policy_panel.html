@@ -1,0 +1,50 @@
+<section class="clay-card p-5 mb-6">
+  <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+    <div>
+      <h2 class="text-lg font-bold text-gray-800">업무 담당자 안내</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        동의서 업무 처리 기준과 참고 법령을 확인하세요.
+      </p>
+    </div>
+    <p class="text-xs text-gray-500">기준일 {{ consent_policy_updated_at }}</p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-3 mt-4">
+    <details class="rounded-2xl border border-gray-200 bg-white/70 p-4">
+      <summary class="cursor-pointer list-none flex items-center justify-between">
+        <span class="font-semibold text-gray-800">이용 약관</span>
+        <span class="text-xs text-gray-500">펼쳐서 확인</span>
+      </summary>
+      <div class="space-y-3 mt-3 text-sm text-gray-700">
+        {% for term in consent_policy_terms %}
+        <div class="rounded-xl bg-white px-3 py-2 border border-gray-100">
+          <p class="font-semibold text-gray-800">{{ term.title }}</p>
+          <p class="text-gray-600 mt-1 leading-relaxed">{{ term.content }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+
+    <details class="rounded-2xl border border-gray-200 bg-white/70 p-4">
+      <summary class="cursor-pointer list-none flex items-center justify-between">
+        <span class="font-semibold text-gray-800">참고 법령</span>
+        <span class="text-xs text-gray-500">펼쳐서 확인</span>
+      </summary>
+      <div class="space-y-3 mt-3 text-sm">
+        {% for ref in consent_policy_references %}
+        <div class="rounded-xl bg-white px-3 py-2 border border-gray-100">
+          <a
+            href="{{ ref.url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-semibold text-purple-700 hover:underline"
+          >
+            {{ ref.title }}
+          </a>
+          <p class="text-gray-600 mt-1">{{ ref.summary }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+</section>

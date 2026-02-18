@@ -1,8 +1,10 @@
 import secrets
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 def _generate_access_token():
@@ -44,6 +46,14 @@ class SignatureRequest(models.Model):
         (STATUS_SENT, "Sent"),
         (STATUS_COMPLETED, "Completed"),
     ]
+    LINK_EXPIRE_7 = 7
+    LINK_EXPIRE_14 = 14
+    LINK_EXPIRE_30 = 30
+    LINK_EXPIRE_CHOICES = [
+        (LINK_EXPIRE_7, "7일"),
+        (LINK_EXPIRE_14, "14일"),
+        (LINK_EXPIRE_30, "30일"),
+    ]
 
     request_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_by = models.ForeignKey(
@@ -60,6 +70,7 @@ class SignatureRequest(models.Model):
     message = models.TextField(blank=True)
     legal_notice = models.TextField(blank=True)
     consent_text_version = models.CharField(max_length=32, default="v1")
+    link_expire_days = models.PositiveSmallIntegerField(choices=LINK_EXPIRE_CHOICES, default=LINK_EXPIRE_14)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     merged_pdf = models.FileField(
         upload_to="signatures/consent/merged/%Y/%m/%d",
@@ -76,6 +87,19 @@ class SignatureRequest(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.request_id})"
+
+    @property
+    def link_expires_at(self):
+        if not self.sent_at:
+            return None
+        return self.sent_at + timedelta(days=self.link_expire_days)
+
+    @property
+    def is_link_expired(self):
+        expires_at = self.link_expires_at
+        if not expires_at:
+            return False
+        return timezone.now() > expires_at
 
 
 class SignaturePosition(models.Model):

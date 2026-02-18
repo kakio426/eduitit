@@ -19,6 +19,12 @@
     <div class="clay-card p-5 mb-4">
       <h1 class="text-2xl font-bold text-gray-800">{{ consent_request.title }}</h1>
       <p class="text-sm text-gray-500 mt-1">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
+      {% if expires_at %}
+      <p class="text-xs text-gray-500 mt-1">링크 만료: {{ expires_at|date:"Y-m-d H:i" }}</p>
+      {% endif %}
+      <a href="{% url 'consent:public_document' token=recipient.access_token %}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm text-gray-700 font-semibold">
+        첨부 문서 보기
+      </a>
     </div>
 
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">

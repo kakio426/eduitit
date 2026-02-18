@@ -76,6 +76,10 @@ class VisitorTrackingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Consent public signer flow: do not store IP/User-Agent in visitor logs.
+        if request.path.startswith('/consent/public/'):
+            return self.get_response(request)
+
         # Exclude static, media, and admin paths to reduce DB load
         if not any(request.path.startswith(p) for p in ['/static/', '/media/', '/admin/', '/favicon.ico']):
             ip = get_client_ip(request)

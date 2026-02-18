@@ -1,55 +1,44 @@
-import json
+import csv
 import mimetypes
+import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 
 from .forms import (
     ConsentDocumentForm,
     ConsentRequestForm,
     ConsentSignForm,
-    PositionPayloadForm,
     RecipientBulkForm,
-    VerifyIdentityForm,
 )
-from .models import ConsentAuditLog, SignaturePosition, SignatureRecipient, SignatureRequest
+from .models import ConsentAuditLog, SignatureRecipient, SignatureRequest
+from .policy_content import (
+    CONSENT_POLICY_REFERENCES,
+    CONSENT_POLICY_TERMS,
+    CONSENT_POLICY_UPDATED_AT,
+)
 from .schema import get_consent_schema_status
 from .services import (
-    generate_merged_pdf,
-    generate_position_preview_pdf,
-    generate_signed_pdf,
+    generate_summary_pdf,
     guess_file_type,
 )
 
 
 DEFAULT_LEGAL_NOTICE = (
     "본 동의서는 학교 교육활동 운영을 위한 목적 범위 내에서만 사용됩니다.\n"
-    "수집 정보(학생명, 보호자명, 연락처, 서명 이미지, 접속기록)는 관련 법령 및 학교 내부 규정에 따라 "
-    "보관 및 파기됩니다.\n"
-    "서명 시각, 접속 IP, 기기 정보(User-Agent)가 증빙 목적으로 기록될 수 있습니다."
+    "수집 정보(학생명, 보호자명, 동의 결과, 서명 이미지, 처리 시각)는 관련 법령 및 학교 내부 규정에 따라 "
+    "보관 및 파기됩니다."
 )
 
 SCHEMA_UNAVAILABLE_MESSAGE = (
     "동의서 서비스 데이터베이스가 아직 준비되지 않았습니다. "
-    "관리자에게 `python manage.py migrate signatures` 실행을 요청해 주세요."
+    "관리자에게 `python manage.py migrate` 실행을 요청해 주세요."
 )
-
-
-def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR")
-
-
-def _user_agent(request):
-    return request.META.get("HTTP_USER_AGENT", "")[:500]
 
 
 def _parse_recipients(text):
@@ -59,13 +48,13 @@ def _parse_recipients(text):
         if not line:
             continue
         parts = [p.strip() for p in line.split(",")]
-        if len(parts) < 3:
+        if len(parts) < 2:
             continue
         recipients.append(
             {
                 "student_name": parts[0],
                 "parent_name": parts[1],
-                "phone_number": parts[2],
+                "phone_number": parts[2] if len(parts) >= 3 else "",
             }
         )
     return recipients
@@ -91,6 +80,40 @@ def _schema_guard_response(request, *, force_refresh=False, detail_override=""):
     )
 
 
+def _policy_panel_context():
+    return {
+        "consent_policy_terms": CONSENT_POLICY_TERMS,
+        "consent_policy_references": CONSENT_POLICY_REFERENCES,
+        "consent_policy_updated_at": CONSENT_POLICY_UPDATED_AT,
+    }
+
+
+def _issue_access_token():
+    while True:
+        token = secrets.token_urlsafe(24)
+        if not SignatureRecipient.objects.filter(access_token=token).exists():
+            return token
+
+
+def _is_active_link_expired(recipient: SignatureRecipient) -> bool:
+    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        return False
+    return recipient.request.is_link_expired
+
+
+def _expired_link_response(request, recipient: SignatureRecipient):
+    return render(
+        request,
+        "consent/link_expired.html",
+        {
+            "recipient": recipient,
+            "consent_request": recipient.request,
+            "expires_at": recipient.request.link_expires_at,
+        },
+        status=410,
+    )
+
+
 @login_required
 def consent_dashboard(request):
     schema_block = _schema_guard_response(request)
@@ -98,7 +121,11 @@ def consent_dashboard(request):
         return schema_block
 
     requests = SignatureRequest.objects.filter(created_by=request.user).select_related("document")
-    return render(request, "consent/dashboard.html", {"requests": requests})
+    context = {
+        "requests": requests,
+        **_policy_panel_context(),
+    }
+    return render(request, "consent/dashboard.html", context)
 
 
 @login_required
@@ -135,7 +162,7 @@ def consent_create_step1(request):
                 consent_request.save()
             except (OperationalError, ProgrammingError) as exc:
                 return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
-            return redirect("consent:setup_positions", request_id=consent_request.request_id)
+            return redirect("consent:recipients", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm()
         request_form = ConsentRequestForm(
@@ -147,7 +174,11 @@ def consent_create_step1(request):
     return render(
         request,
         "consent/create_step1.html",
-        {"document_form": document_form, "request_form": request_form},
+        {
+            "document_form": document_form,
+            "request_form": request_form,
+            **_policy_panel_context(),
+        },
     )
 
 
@@ -158,66 +189,9 @@ def consent_setup_positions(request, request_id):
     if schema_block:
         return schema_block
 
-    consent_request = get_object_or_404(
-        SignatureRequest.objects.select_related("document"),
-        request_id=request_id,
-        created_by=request.user,
-    )
-    form = PositionPayloadForm(request.POST or None)
-    document = consent_request.document
-    detected_file_type = guess_file_type(document.original_file.name)
-    if document.file_type != detected_file_type:
-        document.file_type = detected_file_type
-        document.save(update_fields=["file_type"])
-
-    if request.method == "POST" and form.is_valid():
-        raw = form.cleaned_data["positions_json"]
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            form.add_error(None, "좌표 데이터가 올바르지 않습니다.")
-            payload = []
-
-        if payload:
-            consent_request.positions.all().delete()
-            for item in payload:
-                SignaturePosition.objects.create(
-                    request=consent_request,
-                    page=max(1, int(item.get("page", 1))),
-                    x=float(item.get("x", 0.0)),
-                    y=float(item.get("y", 0.0)),
-                    width=float(item.get("width", 0.0)),
-                    height=float(item.get("height", 0.0)),
-                    x_ratio=float(item.get("x_ratio", 0.0)),
-                    y_ratio=float(item.get("y_ratio", 0.0)),
-                    w_ratio=float(item.get("w_ratio", 0.0)),
-                    h_ratio=float(item.get("h_ratio", 0.0)),
-                )
-            messages.success(request, "서명 위치를 저장했습니다.")
-            return redirect("consent:recipients", request_id=consent_request.request_id)
-
-    initial_positions = [
-        {
-            "page": p.page,
-            "x_ratio": p.x_ratio,
-            "y_ratio": p.y_ratio,
-            "w_ratio": p.w_ratio,
-            "h_ratio": p.h_ratio,
-        }
-        for p in consent_request.positions.all()
-    ]
-    return render(
-        request,
-        "consent/create_step2_positions.html",
-        {
-            "consent_request": consent_request,
-            "form": form,
-            "initial_positions_json": json.dumps(initial_positions, ensure_ascii=False),
-            "document_url": reverse("consent:document_source", kwargs={"request_id": consent_request.request_id}),
-            "document_file_type": consent_request.document.file_type,
-            "document_file_name": consent_request.document.original_file.name,
-        },
-    )
+    consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
+    messages.info(request, "위치 설정 단계는 현재 사용하지 않습니다. 수신자 등록 단계로 이동합니다.")
+    return redirect("consent:recipients", request_id=consent_request.request_id)
 
 
 @login_required
@@ -266,6 +240,7 @@ def consent_detail(request, request_id):
             "consent_request": consent_request,
             "recipients": recipients,
             "host_base": request.build_absolute_uri("/")[:-1],
+            "link_expires_at": consent_request.link_expires_at,
         },
     )
 
@@ -277,14 +252,8 @@ def consent_preview_positions(request, request_id):
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    if not consent_request.positions.exists():
-        messages.error(request, "서명 위치를 먼저 설정해 주세요.")
-        return redirect("consent:setup_positions", request_id=request_id)
-
-    preview = generate_position_preview_pdf(consent_request)
-    consent_request.preview_checked_at = timezone.now()
-    consent_request.save(update_fields=["preview_checked_at"])
-    return FileResponse(preview, as_attachment=True, filename=preview.name)
+    messages.info(request, "위치 미리보기 기능은 사용하지 않습니다.")
+    return redirect("consent:detail", request_id=consent_request.request_id)
 
 
 @login_required
@@ -294,9 +263,6 @@ def consent_send(request, request_id):
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    if not consent_request.preview_checked_at:
-        messages.error(request, "발송 전에 위치 미리보기를 먼저 확인해 주세요.")
-        return redirect("consent:detail", request_id=consent_request.request_id)
     if not consent_request.recipients.exists():
         messages.error(request, "수신자를 먼저 등록해 주세요.")
         return redirect("consent:recipients", request_id=consent_request.request_id)
@@ -307,22 +273,59 @@ def consent_send(request, request_id):
     ConsentAuditLog.objects.create(
         request=consent_request,
         event_type=ConsentAuditLog.EVENT_REQUEST_SENT,
-        event_meta={"recipient_count": consent_request.recipients.count()},
+        event_meta={
+            "recipient_count": consent_request.recipients.count(),
+            "link_expire_days": consent_request.link_expire_days,
+            "expires_at": (
+                timezone.localtime(consent_request.link_expires_at).isoformat()
+                if consent_request.link_expires_at
+                else None
+            ),
+        },
     )
-    messages.success(request, "발송 링크 생성이 완료되었습니다. 링크를 복사해 전달해 주세요.")
+    messages.success(request, "발송 링크 생성이 완료되었습니다. 수신자별 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 
 @login_required
-def consent_download_merged(request, request_id):
+def consent_download_csv(request, request_id):
     schema_block = _schema_guard_response(request)
     if schema_block:
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    include_decline_summary = request.GET.get("include_decline_summary") == "1"
-    merged_file = generate_merged_pdf(consent_request, include_decline_summary=include_decline_summary)
-    consent_request.merged_pdf.save(merged_file.name, merged_file, save=True)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="consent_result_{consent_request.request_id}.csv"'
+    )
+    response.write("\ufeff")
+    writer = csv.writer(response)
+    writer.writerow(["학생명", "학부모명", "상태", "동의결과", "처리시각", "비동의사유"])
+    for recipient in consent_request.recipients.order_by("student_name", "id"):
+        writer.writerow(
+            [
+                recipient.student_name,
+                recipient.parent_name,
+                recipient.get_status_display(),
+                recipient.get_decision_display() if recipient.decision else "",
+                timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
+                if recipient.signed_at
+                else "",
+                recipient.decline_reason or "",
+            ]
+        )
+    return response
+
+
+@login_required
+def consent_download_summary_pdf(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
+    summary_file = generate_summary_pdf(consent_request)
+    consent_request.merged_pdf.save(summary_file.name, summary_file, save=True)
     return FileResponse(
         consent_request.merged_pdf.open("rb"),
         as_attachment=True,
@@ -331,15 +334,18 @@ def consent_download_merged(request, request_id):
 
 
 @login_required
+def consent_download_merged(request, request_id):
+    return consent_download_summary_pdf(request, request_id)
+
+
+@login_required
 def consent_download_recipient_pdf(request, recipient_id):
     schema_block = _schema_guard_response(request)
     if schema_block:
         return schema_block
 
-    recipient = get_object_or_404(SignatureRecipient, id=recipient_id, request__created_by=request.user)
-    if not recipient.signed_pdf:
-        raise Http404("아직 서명 PDF가 없습니다.")
-    return FileResponse(recipient.signed_pdf.open("rb"), as_attachment=True, filename=recipient.signed_pdf.name.split("/")[-1])
+    get_object_or_404(SignatureRecipient, id=recipient_id, request__created_by=request.user)
+    raise Http404("개별 PDF 다운로드는 지원하지 않습니다. 요약 PDF를 사용해 주세요.")
 
 
 @login_required
@@ -365,42 +371,7 @@ def consent_verify(request, token):
     schema_block = _schema_guard_response(request)
     if schema_block:
         return schema_block
-
-    recipient = get_object_or_404(SignatureRecipient.objects.select_related("request"), access_token=token)
-    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
-        return redirect("consent:complete", token=token)
-
-    if request.method == "POST":
-        form = VerifyIdentityForm(request.POST)
-        if form.is_valid():
-            parent_name = form.cleaned_data["parent_name"].strip()
-            phone_last4 = form.cleaned_data["phone_last4"]
-            if parent_name == recipient.parent_name and phone_last4 == recipient.phone_last4:
-                request.session[f"consent_verified_{recipient.id}"] = True
-                if recipient.status == SignatureRecipient.STATUS_PENDING:
-                    recipient.status = SignatureRecipient.STATUS_VERIFIED
-                    recipient.save(update_fields=["status"])
-                ConsentAuditLog.objects.create(
-                    request=recipient.request,
-                    recipient=recipient,
-                    event_type=ConsentAuditLog.EVENT_VERIFY_SUCCESS,
-                    ip_address=_client_ip(request),
-                    user_agent=_user_agent(request),
-                )
-                return redirect("consent:sign", token=token)
-
-            ConsentAuditLog.objects.create(
-                request=recipient.request,
-                recipient=recipient,
-                event_type=ConsentAuditLog.EVENT_VERIFY_FAIL,
-                ip_address=_client_ip(request),
-                user_agent=_user_agent(request),
-            )
-            form.add_error(None, "입력한 정보가 일치하지 않습니다.")
-    else:
-        form = VerifyIdentityForm()
-
-    return render(request, "consent/verify.html", {"recipient": recipient, "form": form})
+    return redirect("consent:sign", token=token)
 
 
 def consent_sign(request, token):
@@ -411,9 +382,8 @@ def consent_sign(request, token):
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
-
-    if not request.session.get(f"consent_verified_{recipient.id}", False):
-        return redirect("consent:verify", token=token)
+    if _is_active_link_expired(recipient):
+        return _expired_link_response(request, recipient)
 
     if request.method == "POST":
         form = ConsentSignForm(request.POST)
@@ -422,25 +392,18 @@ def consent_sign(request, token):
             recipient.decision = decision
             recipient.decline_reason = form.cleaned_data.get("decline_reason", "").strip()
             recipient.signature_data = form.cleaned_data["signature_data"]
-            recipient.ip_address = _client_ip(request)
-            recipient.user_agent = _user_agent(request)
             recipient.signed_at = timezone.now()
             recipient.status = (
                 SignatureRecipient.STATUS_SIGNED
                 if decision == SignatureRecipient.DECISION_AGREE
                 else SignatureRecipient.STATUS_DECLINED
             )
-
-            signed_file = generate_signed_pdf(recipient)
-            recipient.signed_pdf.save(signed_file.name, signed_file, save=False)
-            recipient.save()
+            recipient.save(update_fields=["decision", "decline_reason", "signature_data", "signed_at", "status"])
 
             ConsentAuditLog.objects.create(
                 request=recipient.request,
                 recipient=recipient,
                 event_type=ConsentAuditLog.EVENT_SIGN_SUBMITTED,
-                ip_address=recipient.ip_address,
-                user_agent=recipient.user_agent,
                 event_meta={"decision": recipient.decision},
             )
 
@@ -461,8 +424,56 @@ def consent_sign(request, token):
             "recipient": recipient,
             "consent_request": recipient.request,
             "form": form,
+            "expires_at": recipient.request.link_expires_at,
+            "is_expired": _is_active_link_expired(recipient),
         },
     )
+
+
+def consent_public_document(request, token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
+    if _is_active_link_expired(recipient):
+        return _expired_link_response(request, recipient)
+
+    file_field = recipient.request.document.original_file
+    guessed_content_type = mimetypes.guess_type(file_field.name)[0]
+    content_type = guessed_content_type or "application/octet-stream"
+    response = FileResponse(file_field.open("rb"), content_type=content_type)
+    response["Cache-Control"] = "no-store"
+    response["Content-Disposition"] = f'inline; filename="{file_field.name.split("/")[-1]}"'
+    return response
+
+
+@login_required
+@transaction.atomic
+def consent_regenerate_link(request, recipient_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request"),
+        id=recipient_id,
+        request__created_by=request.user,
+    )
+    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        messages.error(request, "이미 응답 완료된 수신자는 재발급할 수 없습니다.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    recipient.access_token = _issue_access_token()
+    recipient.status = SignatureRecipient.STATUS_PENDING
+    recipient.save(update_fields=["access_token", "status"])
+    ConsentAuditLog.objects.create(
+        request=recipient.request,
+        recipient=recipient,
+        event_type=ConsentAuditLog.EVENT_LINK_CREATED,
+    )
+    messages.success(request, f"{recipient.student_name} 수신자 링크를 재발급했습니다.")
+    return redirect("consent:detail", request_id=recipient.request.request_id)
 
 
 def consent_complete(request, token):

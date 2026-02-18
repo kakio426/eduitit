@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from consent.models import SignatureDocument, SignaturePosition, SignatureRecipient, SignatureRequest
+from consent.models import SignatureDocument, SignatureRecipient, SignatureRequest
 
 
 class ConsentFlowTests(TestCase):
@@ -31,40 +31,31 @@ class ConsentFlowTests(TestCase):
             title="req",
             consent_text_version="v1",
         )
-        SignaturePosition.objects.create(request=self.request_obj, page=1, x=100, y=100, width=120, height=50)
         self.recipient = SignatureRecipient.objects.create(
             request=self.request_obj,
             student_name="가나다",
             parent_name="홍길동",
-            phone_number="010-1234-5678",
+            phone_number="",
         )
 
     def test_access_token_generated(self):
         self.assertTrue(self.recipient.access_token)
         self.assertGreaterEqual(len(self.recipient.access_token), 20)
 
-    def test_verify_identity_success_and_redirect(self):
+    def test_verify_redirects_to_sign(self):
         url = reverse("consent:verify", kwargs={"token": self.recipient.access_token})
-        response = self.client.post(url, {"parent_name": "홍길동", "phone_last4": "5678"})
+        response = self.client.get(url)
         self.assertRedirects(response, reverse("consent:sign", kwargs={"token": self.recipient.access_token}))
-        self.recipient.refresh_from_db()
-        self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_VERIFIED)
 
-    def test_send_requires_preview_check(self):
+    def test_send_marks_request_as_sent(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.request_obj.refresh_from_db()
-        self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_DRAFT)
+        self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_SENT)
 
-    @patch("consent.views.generate_signed_pdf")
-    def test_sign_submission_updates_status(self, mocked_generate):
-        mocked_generate.return_value = ContentFile(b"%PDF-1.4\n%%EOF", name="signed.pdf")
-
-        verify_url = reverse("consent:verify", kwargs={"token": self.recipient.access_token})
-        self.client.post(verify_url, {"parent_name": "홍길동", "phone_last4": "5678"})
-
+    def test_sign_submission_updates_status(self):
         sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.post(
             sign_url,
@@ -79,7 +70,43 @@ class ConsentFlowTests(TestCase):
         self.recipient.refresh_from_db()
         self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_SIGNED)
         self.assertEqual(self.recipient.decision, SignatureRecipient.DECISION_AGREE)
-        self.assertTrue(bool(self.recipient.signed_pdf))
+        self.assertTrue(bool(self.recipient.signature_data))
+
+    def test_csv_download(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_csv", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertIn("학생명", response.content.decode("utf-8-sig"))
+
+    def test_summary_pdf_download(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/pdf", response["Content-Type"])
+
+    def test_sign_link_expired(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now() - timezone.timedelta(days=20)
+        self.request_obj.link_expire_days = 7
+        self.request_obj.save(update_fields=["status", "sent_at", "link_expire_days"])
+
+        url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "응답 링크가 만료되었습니다.", status_code=410)
+
+    def test_public_document_returns_file(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store")
 
     def test_document_source_returns_file(self):
         self.client.login(username="teacher", password="pw123456")
