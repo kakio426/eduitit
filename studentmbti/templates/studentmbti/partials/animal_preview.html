@@ -1,0 +1,97 @@
+﻿{% load static %}
+<div class="flex flex-col h-full relative w-full max-w-2xl mx-auto bg-[#E0E5EC] rounded-[2.5rem] shadow-clay overflow-hidden animate-fade-in-up dyn-style-root">
+    <div class="p-8 md:p-10 text-center relative flex-shrink-0">
+        <div class="absolute top-0 left-0 w-full h-2 dyn-style-banner" data-from="{{ theme.bg }}" data-to="{{ theme.primary }}"></div>
+
+        <div class="inline-block p-4 rounded-full bg-white shadow-clay-inner mb-6 relative z-10 mt-4">
+            <img src="{% static 'studentmbti/images/' %}{{ animal_image }}" alt="{{ animal_name }}"
+                class="w-40 h-40 md:w-56 md:h-56 object-contain">
+        </div>
+
+        <div class="space-y-2">
+            <span class="inline-block px-4 py-1 rounded-full text-white font-bold text-sm md:text-base shadow-sm dyn-style-badge"
+                data-bg="{{ theme.primary }}">
+                {{ animal_name }}
+            </span>
+            <h2 class="text-2xl md:text-4xl font-bold text-gray-800 font-title break-keep">
+                {{ result_data.one_line }}
+            </h2>
+            <p class="text-sm md:text-base text-gray-500 font-semibold">{{ mbti_type }}</p>
+        </div>
+    </div>
+
+    <div class="flex-1 min-h-0 p-8 md:p-10 bg-white/40 backdrop-blur-sm space-y-6 overflow-y-auto custom-scrollbar">
+        <div class="clay-card p-6 bg-white/80 border-l-8 dyn-style-border" data-color="{{ theme.primary }}">
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 font-title flex items-center gap-2">
+                <span class="text-2xl">{{ theme.emoji }}</span> 학교생활 특징
+            </h3>
+            <p class="text-gray-700 text-sm md:text-base leading-relaxed break-keep">
+                {{ result_data.school_life_traits }}
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="clay-card p-5 bg-green-50/60">
+                <h4 class="font-bold text-green-800 mb-2">강점</h4>
+                <p class="text-gray-700 text-sm leading-relaxed break-keep">{{ result_data.strengths }}</p>
+            </div>
+            <div class="clay-card p-5 bg-purple-50/60">
+                <h4 class="font-bold text-purple-800 mb-2">성장 포인트</h4>
+                <p class="text-gray-700 text-sm leading-relaxed break-keep">{{ result_data.growth_points }}</p>
+            </div>
+        </div>
+
+        <div class="clay-card p-5 text-center dyn-style-presc" data-bg="{{ theme.bg }}">
+            <h4 class="font-bold mb-2 dyn-style-text" data-color="{{ theme.accent }}">오늘의 한마디</h4>
+            <p class="text-gray-700 text-sm md:text-base leading-relaxed">{{ result_data.motto }}</p>
+        </div>
+    </div>
+
+    <div class="p-6 bg-[#E0E5EC] text-center">
+        <a href="{% url 'studentmbti:landing' %}"
+            class="inline-flex items-center gap-2 text-gray-500 hover:text-purple-600 font-bold transition">
+            우리반BTI 바로 시작하기 <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const root = document.querySelector('.dyn-style-root');
+        if (!root) return;
+
+        const banner = root.querySelector('.dyn-style-banner');
+        if (banner) banner.style.backgroundImage = `linear-gradient(to right, ${banner.dataset.from}, ${banner.dataset.to})`;
+
+        const badge = root.querySelector('.dyn-style-badge');
+        if (badge) badge.style.backgroundColor = badge.dataset.bg;
+
+        const border = root.querySelector('.dyn-style-border');
+        if (border) border.style.borderColor = border.dataset.color;
+
+        const presc = root.querySelector('.dyn-style-presc');
+        if (presc) presc.style.background = presc.dataset.bg;
+
+        const text = root.querySelector('.dyn-style-text');
+        if (text) text.style.color = text.dataset.color;
+    })();
+</script>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>

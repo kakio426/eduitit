@@ -4,6 +4,8 @@ from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Count
 from django.utils import timezone
+from collections import Counter
+import hashlib
 import json
 import qrcode
 from io import BytesIO
@@ -16,9 +18,68 @@ from products.models import Product
 
 logger = logging.getLogger(__name__)
 
+def _normalize_mac_hash(raw_value):
+    raw = (raw_value or '').strip().lower()
+    if not raw:
+        return ''
+    if len(raw) == 64 and all(ch in '0123456789abcdef' for ch in raw):
+        return raw
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+
+def _build_national_stats_by_mac():
+    completed_qs = StudentMBTIResult.objects.filter(
+        mbti_type__isnull=False,
+        animal_name__isnull=False,
+    ).exclude(
+        mbti_type='',
+    ).exclude(
+        animal_name='',
+    ).exclude(
+        mac_hash__isnull=True,
+    ).exclude(
+        mac_hash='',
+    ).order_by('mac_hash', 'created_at', 'id')
+
+    first_by_mac = {}
+    for row in completed_qs.values('mac_hash', 'mbti_type', 'animal_name'):
+        if row['mac_hash'] not in first_by_mac:
+            first_by_mac[row['mac_hash']] = row
+
+    counter = Counter((item['mbti_type'], item['animal_name']) for item in first_by_mac.values())
+    total = len(first_by_mac)
+    stats = []
+    for idx, ((mbti_type, animal_name), count) in enumerate(counter.most_common(), start=1):
+        theme = STUDENT_MBTI_THEMES.get(mbti_type, {})
+        percentage = int((count / total) * 100) if total else 0
+        stats.append({
+            'rank': idx,
+            'mbti_type': mbti_type,
+            'animal_name': animal_name,
+            'count': count,
+            'percentage': percentage,
+            'theme': theme,
+        })
+
+    latest_result_at = completed_qs.values_list('created_at', flat=True).order_by('-created_at').first()
+    return {
+        'total_participants': total,
+        'stats': stats,
+        'latest_result_at': latest_result_at,
+    }
+
+
 def get_student_service():
-    """SIS 규격에 따라 서비스 정보 로드"""
-    return Product.objects.filter(title__icontains="우리반 캐릭터").first()
+    """Load product metadata for StudentMBTI service."""
+    service = Product.objects.filter(title='\uc6b0\ub9ac\ubc18BTI').first()
+    if service:
+        return service
+
+    service = Product.objects.filter(title__icontains='\uc6b0\ub9ac\ubc18 \uce90\ub9ad\ud130').first()
+    if service:
+        return service
+
+    return Product.objects.filter(launch_route_name='studentmbti:landing', is_active=True).first()
 
 def generate_session_qr(session_id, request):
     """세션 QR 코드 생성 (Base64 반환)"""
@@ -42,11 +103,15 @@ def generate_session_qr(session_id, request):
 # ================================
 
 def landing_page(request):
-    """공개 랜딩 페이지 - 로그인 불필요"""
+    """Public landing page."""
     try:
         service = get_student_service()
+        national_stats = _build_national_stats_by_mac()
         return render(request, 'studentmbti/landing.html', {
             'service': service,
+            'stats': national_stats['stats'],
+            'total_participants': national_stats['total_participants'],
+            'latest_result_at': national_stats['latest_result_at'],
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Landing Page Error: {str(e)}")
@@ -269,6 +334,8 @@ def start_test(request, session_id):
         if not student_name:
             return JsonResponse({'error': '이름을 입력해주세요.'}, status=400)
         
+        mac_hash = _normalize_mac_hash(request.POST.get('mac_hash'))
+
         # 세션에 저장된 result_id로 기존 레코드 찾아서 이름 업데이트
         result_id = request.session.get('student_result_id') or request.POST.get('result_id')
         
@@ -276,6 +343,8 @@ def start_test(request, session_id):
             try:
                 result = StudentMBTIResult.objects.get(id=result_id, session=session)
                 result.student_name = student_name
+                if mac_hash:
+                    result.mac_hash = mac_hash
                 result.save()
                 logger.info(f"[StudentMBTI] Student Named: {student_name} for Result {result.id}")
                 return JsonResponse({'success': True, 'result_id': str(result.id)})
@@ -286,6 +355,7 @@ def start_test(request, session_id):
         result = StudentMBTIResult.objects.create(
             session=session,
             student_name=student_name,
+            mac_hash=mac_hash or None,
             mbti_type=None,
             animal_name=None,
             answers_json=None
@@ -313,6 +383,8 @@ def analyze(request, session_id):
         if not student_name:
             return JsonResponse({'error': '이름을 입력해주세요.'}, status=400)
         
+        mac_hash = _normalize_mac_hash(request.POST.get('mac_hash'))
+
         # 테스트 타입에 따른 설정
         is_high = session.test_type == 'high'
         total_q = 28 if is_high else 12
@@ -370,6 +442,8 @@ def analyze(request, session_id):
                 result.mbti_type = mbti_type
                 result.animal_name = animal_name
                 result.answers_json = answers
+                if mac_hash:
+                    result.mac_hash = mac_hash
                 result.save()
                 logger.info(f"[StudentMBTI] Analyze Success (Updated): Result {result.id}, MBTI {mbti_type}")
             except StudentMBTIResult.DoesNotExist:
@@ -377,6 +451,7 @@ def analyze(request, session_id):
                 result = StudentMBTIResult.objects.create(
                     session=session,
                     student_name=student_name,
+                    mac_hash=mac_hash or None,
                     mbti_type=mbti_type,
                     animal_name=animal_name,
                     answers_json=answers
@@ -387,6 +462,7 @@ def analyze(request, session_id):
             result = StudentMBTIResult.objects.create(
                 session=session,
                 student_name=student_name,
+                mac_hash=mac_hash or None,
                 mbti_type=mbti_type,
                 animal_name=animal_name,
                 answers_json=answers
@@ -420,6 +496,22 @@ def result(request, result_id):
 # ================================
 # 엑셀 다운로드
 # ================================
+
+@require_GET
+def animal_preview(request, mbti_type):
+    result_data = STUDENT_MBTI_RESULTS.get(mbti_type)
+    if not result_data:
+        return HttpResponse("Invalid MBTI", status=404)
+
+    theme = STUDENT_MBTI_THEMES.get(mbti_type, STUDENT_MBTI_THEMES.get('ENFP', {}))
+    return render(request, 'studentmbti/partials/animal_preview.html', {
+        'mbti_type': mbti_type,
+        'animal_name': result_data.get('animal_name', ''),
+        'animal_image': result_data.get('animal_image', ''),
+        'result_data': result_data,
+        'theme': theme,
+    })
+
 
 @login_required
 def export_excel(request, session_id):

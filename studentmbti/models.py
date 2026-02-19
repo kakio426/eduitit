@@ -52,6 +52,7 @@ class StudentMBTIResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(TestSession, on_delete=models.CASCADE, related_name='results')
     student_name = models.CharField(max_length=50, help_text="학생 이름")
+    mac_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True, help_text="기기 식별 해시")
     mbti_type = models.CharField(max_length=4, help_text="예: ENFP", null=True, blank=True)
     animal_name = models.CharField(max_length=50, help_text="예: 여우", null=True, blank=True)
     answers_json = models.JSONField(help_text="학생이 선택한 답변들", null=True, blank=True)

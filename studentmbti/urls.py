@@ -17,6 +17,7 @@ urlpatterns = [
     path('session/<uuid:session_id>/export/', views.export_excel, name='export_excel'),
     path('result/<uuid:result_id>/teacher/', views.result_detail_teacher, name='result_detail_teacher'),
     path('join/', views.join_session, name='join_session'),
+    path('preview/<str:mbti_type>/', views.animal_preview, name='preview'),
     
     # 학생용 (비회원)
     path('session/<uuid:session_id>/', views.session_test, name='session_test'),

@@ -131,6 +131,7 @@
         <div class="clay-card p-6 md:p-14" data-aos="zoom-in">
             <form id="quiz-form" action="{% url 'studentmbti:analyze' session.id %}" method="post">
                 {% csrf_token %}
+                <input type="hidden" name="mac_hash" id="mac-hash" value="">
 
                 <!-- Step 0: 이름 입력 -->
                 <div class="quiz-step active" id="step-0">
@@ -254,7 +255,8 @@
                 },
                 body: new URLSearchParams({
                     'student_name': name,
-                    'result_id': '{{ result_id }}'
+                    'result_id': '{{ result_id }}',
+                    'mac_hash': document.getElementById('mac-hash').value
                 })
             }).then(response => response.json())
                 .then(data => {
@@ -300,6 +302,50 @@
         }, 300);
     }
 
-    document.addEventListener('DOMContentLoaded', updateUI);
+    async function generateMacHash() {
+        const payload = [
+            navigator.userAgent || '',
+            navigator.platform || '',
+            navigator.language || '',
+            Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+            String(screen.width || ''),
+            String(screen.height || ''),
+            String(screen.colorDepth || ''),
+        ].join('|');
+
+        if (window.crypto && window.crypto.subtle) {
+            const data = new TextEncoder().encode(payload);
+            const digest = await window.crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(digest))
+                .map((b) => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        // Fallback hash when SubtleCrypto is unavailable
+        let hash = 0;
+        for (let i = 0; i < payload.length; i++) {
+            hash = ((hash << 5) - hash + payload.charCodeAt(i)) | 0;
+        }
+        return Math.abs(hash).toString(16).padStart(64, '0').slice(0, 64);
+    }
+
+    async function ensureMacHash() {
+        const input = document.getElementById('mac-hash');
+        if (!input || input.value) return;
+        input.value = await generateMacHash();
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await ensureMacHash();
+        updateUI();
+    });
+
+    document.getElementById('quiz-form').addEventListener('submit', async (e) => {
+        if (!document.getElementById('mac-hash').value) {
+            e.preventDefault();
+            await ensureMacHash();
+            e.currentTarget.submit();
+        }
+    });
 </script>
 {% endblock %}

@@ -96,6 +96,50 @@
             </div>
         </div>
 
+        {% if total_participants > 0 %}
+        <div class="clay-card p-6 md:p-8 bg-white/60 text-left mb-8" data-aos="fade-up">
+            <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 font-title flex items-center gap-2">
+                <span class="text-2xl md:text-3xl">📊</span> 전국 우리반BTI 통계
+                <span class="text-sm font-normal text-gray-500 ml-2">(총 {{ total_participants }}명 집계)</span>
+            </h3>
+
+            <div class="space-y-4">
+                {% for item in stats %}
+                <div class="group cursor-pointer hover:scale-[1.01] transition-transform"
+                    hx-get="{% url 'studentmbti:preview' item.mbti_type %}"
+                    hx-target="#modalContent"
+                    onclick="openUnifiedModal()">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                            <span class="text-xl inline-block w-8 text-center">{{ item.rank }}</span>
+                            <span class="text-2xl">{{ item.theme.emoji }}</span>
+                            {{ item.animal_name }}
+                        </span>
+                        <span class="text-sm font-bold text-gray-500">
+                            {{ item.count }}명
+                            <span class="text-purple-600 ml-1">({{ item.percentage }}%)</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden shadow-inner">
+                        <div class="h-3 md:h-4 rounded-full transition-all duration-1000 ease-out stats-bar-fill"
+                            data-w="{{ item.percentage }}%"
+                            data-bg="{{ item.theme.primary }}"
+                            data-delay="{{ forloop.counter }}00ms">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-6 text-right text-xs text-gray-400">
+                * 같은 기기(mac_hash)에서 여러 번 진행된 검사는 가장 먼저 완료된 결과만 반영됩니다.
+                {% if latest_result_at %}
+                <span class="ml-2">기준: {{ latest_result_at|date:"Y-m-d H:i" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- 주요 기능 -->
         {% if service.features.all %}
         <div class="clay-card p-5 md:p-10" data-aos="fade-up">
@@ -141,5 +185,22 @@
         once: true,
         offset: 100
     });
+
+    document.querySelectorAll('.stats-bar-fill').forEach(el => {
+        if (el.dataset.w) el.style.width = el.dataset.w;
+        if (el.dataset.bg) el.style.backgroundColor = el.dataset.bg;
+        if (el.dataset.delay) el.style.animationDelay = el.dataset.delay;
+        el.style.animation = 'slideRight 1s ease-out forwards';
+    });
 </script>
+<style>
+    @keyframes slideRight {
+        from {
+            transform: translateX(-100%);
+        }
+        to {
+            transform: translateX(0);
+        }
+    }
+</style>
 {% endblock %}
