@@ -122,10 +122,10 @@ async def send_chat_message(request):
     # Manual ratelimit check
     ratelimited = await sync_to_async(is_ratelimited)(
         request, group='fortune_chat', key=ratelimit_key_for_master_only,
-        rate='15/h', method='POST', increment=True
+        rate='20/d', method='POST', increment=True
     )
     if ratelimited:
-        return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
+        return JsonResponse({'error': 'DAILY_LIMIT_EXCEEDED', 'message': '오늘 채팅 한도를 모두 사용했습니다.'}, status=429)
 
     session_id = request.POST.get('session_id')
     content = request.POST.get('message', '').strip()
@@ -151,7 +151,7 @@ async def send_chat_message(request):
         })
 
     if session.current_turns >= session.max_turns:
-        limit_msg = SimpleNamespace(role='assistant', content='상담 횟수(10회)가 모두 소진되었습니다. 새로운 세션을 시작해주세요!', created_at=timezone.now())
+        limit_msg = SimpleNamespace(role='assistant', content='오늘 상담 한도를 모두 사용했습니다. 새로운 세션을 시작해주세요!', created_at=timezone.now())
         return await sync_to_async(render)(request, 'fortune/partials/chat_message.html', {
             'message': limit_msg
         })

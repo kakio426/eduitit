@@ -297,9 +297,9 @@ class ArticleCreateView(View):
             user=request.user,
             created_at__date=today,
         ).count()
-        return count >= 5
+        return count >= 10
 
-    @method_decorator(ratelimit(key=ratelimit_key_for_master_only, rate='10/h', method='POST', block=True))
+    @method_decorator(ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=True))
     def post(self, request):
         if getattr(request, 'limited', False):
              messages.error(request, "무료 사용 한도에 도달했습니다. 가입하시면 더 많은 기사를 생성하고 파일로 다운로드할 수 있습니다! 😊")
@@ -378,7 +378,7 @@ class ArticleCreateView(View):
                 messages.error(request, "AI API 키가 설정되지 않았습니다. 관리자에게 문의해주세요.")
                 return redirect('autoarticle:create')
             if is_master_key and self._is_master_deepseek_daily_limit_exceeded(request):
-                messages.error(request, "오늘은 기사 생성 가능 횟수를 모두 사용했습니다.")
+                messages.error(request, "오늘은 기사 생성 한도를 모두 사용했습니다.")
                 return redirect('autoarticle:create')
             rag = self.get_style_rag()
 
@@ -417,7 +417,7 @@ class ArticleCreateView(View):
                     return redirect('autoarticle:create')
                 _, is_master_key = self.get_api_key(request)
                 if is_master_key and self._is_master_deepseek_daily_limit_exceeded(request):
-                    messages.error(request, "오늘은 기사 생성 가능 횟수를 모두 사용했습니다.")
+                    messages.error(request, "오늘은 기사 생성 한도를 모두 사용했습니다.")
                     return redirect('autoarticle:create')
 
                 
