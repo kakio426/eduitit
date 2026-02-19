@@ -1,4 +1,4 @@
-<form id="post-{{ post.id }}" hx-post="{% url 'post_edit' post.id %}" hx-target="#post-{{ post.id }}"
+<form data-post-root hx-post="{% url 'post_edit' post.id %}" hx-target="closest [data-post-root]"
     hx-encoding="multipart/form-data" hx-swap="outerHTML"
     class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
 

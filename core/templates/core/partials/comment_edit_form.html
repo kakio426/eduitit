@@ -1,4 +1,4 @@
-<form hx-post="{% url 'comment_edit' comment.id %}" hx-target="#comment-{{ comment.id }}" hx-swap="outerHTML"
+<form hx-post="{% url 'comment_edit' comment.id %}" hx-target="closest [data-comment-root]" hx-swap="outerHTML"
     class="flex gap-2 text-sm w-full">
     <div
         class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">

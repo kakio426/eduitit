@@ -340,7 +340,7 @@
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-4" class="mt-4">
-                        {% include 'core/partials/sns_widget_mobile.html' %}
+                        {% include 'core/partials/sns_widget_mobile.html' with posts=posts|slice:"2:" empty_title="이전 대화가 아직 없습니다." empty_subtitle="최신 글 2개를 제외하면 더 볼 대화가 없습니다." %}
                     </div>
                 </div>
             </div>
