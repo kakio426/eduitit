@@ -411,7 +411,8 @@
 
         <!-- Mobile Menu Panel -->
         <div id="mobileMenu"
-            class="fixed inset-x-0 top-[88px] z-40 md:hidden transform -translate-y-full opacity-0 transition-all duration-300 ease-in-out pointer-events-none"
+            class="fixed inset-x-0 z-40 md:hidden transform -translate-y-full opacity-0 transition-all duration-300 ease-in-out pointer-events-none"
+            style="top: var(--mobile-menu-top, 88px); max-height: calc(100vh - var(--mobile-menu-top, 88px)); overflow-y: auto;"
             aria-hidden="true">
             <div class="mx-4 clay-card p-6 bg-[#E0E5EC]/95 backdrop-blur-sm">
                 <div class="flex flex-col gap-4 text-2xl font-bold text-gray-600">
@@ -822,10 +823,23 @@
                     height = Math.ceil(banner.getBoundingClientRect().height);
                 }
                 document.documentElement.style.setProperty('--global-banner-height', `${height}px`);
+                if (window.syncMobileMenuOffset) {
+                    window.syncMobileMenuOffset();
+                }
+            };
+
+            window.syncMobileMenuOffset = function () {
+                const nav = document.getElementById('mainNav');
+                let top = 88;
+                if (nav) {
+                    top = Math.max(0, Math.ceil(nav.getBoundingClientRect().bottom));
+                }
+                document.documentElement.style.setProperty('--mobile-menu-top', `${top}px`);
             };
 
             document.addEventListener('DOMContentLoaded', function () {
                 window.syncGlobalBannerOffset();
+                window.syncMobileMenuOffset();
                 const banner = document.getElementById('globalBanner');
                 if (banner) {
                     const resizeObserver = new ResizeObserver(() => window.syncGlobalBannerOffset());
@@ -836,6 +850,8 @@
             });
 
             window.addEventListener('resize', () => window.syncGlobalBannerOffset());
+            window.addEventListener('resize', () => window.syncMobileMenuOffset());
+            window.addEventListener('load', () => window.syncMobileMenuOffset());
 
             // Initialize Animate On Scroll
             document.addEventListener('DOMContentLoaded', function () {
