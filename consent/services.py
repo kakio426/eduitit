@@ -1,12 +1,15 @@
-import base64
+﻿import base64
 import hashlib
 import io
+import logging
 from datetime import datetime
 
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from .models import SignatureDocument, SignatureRecipient, SignatureRequest
+
+logger = logging.getLogger(__name__)
 
 
 def _split_data_url(data_url: str):
@@ -144,77 +147,81 @@ def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
     except ModuleNotFoundError:
         return _generate_minimal_summary_pdf(request)
 
-    packet = io.BytesIO()
-    c = canvas.Canvas(packet, pagesize=A4)
-    width, height = A4
-    font_name = _resolve_font_name()
-    title = request.title or "동의서 수합 결과"
+    try:
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet, pagesize=A4)
+        width, height = A4
+        font_name = _resolve_font_name()
+        title = request.title or "동의서 수합 결과"
 
-    def draw_header():
-        y = height - 40
-        c.setFont(font_name, 16)
-        c.drawString(32, y, "동의서 수합 요약")
-        y -= 20
-        c.setFont(font_name, 10)
-        c.drawString(32, y, f"제목: {title}")
-        y -= 14
-        c.drawString(32, y, f"요청 ID: {request.request_id}")
-        y -= 14
-        c.drawString(32, y, f"생성 시각: {timezone.localtime(request.created_at).strftime('%Y-%m-%d %H:%M:%S')}")
-        return y - 20
+        def draw_header():
+            y = height - 40
+            c.setFont(font_name, 16)
+            c.drawString(32, y, "동의서 수합 요약")
+            y -= 20
+            c.setFont(font_name, 10)
+            c.drawString(32, y, f"제목: {title}")
+            y -= 14
+            c.drawString(32, y, f"요청 ID: {request.request_id}")
+            y -= 14
+            c.drawString(32, y, f"생성 시각: {timezone.localtime(request.created_at).strftime('%Y-%m-%d %H:%M:%S')}")
+            return y - 20
 
-    y = draw_header()
-    recipients = request.recipients.order_by("student_name", "id")
+        y = draw_header()
+        recipients = request.recipients.order_by("student_name", "id")
 
-    for idx, recipient in enumerate(recipients, start=1):
-        block_height = 124
-        if y < block_height:
-            c.showPage()
-            y = draw_header()
+        for idx, recipient in enumerate(recipients, start=1):
+            block_height = 124
+            if y < block_height:
+                c.showPage()
+                y = draw_header()
 
-        c.roundRect(28, y - block_height + 8, width - 56, block_height - 12, 8, stroke=1, fill=0)
-        c.setFont(font_name, 10)
-        c.drawString(40, y - 12, f"{idx}. 학생: {recipient.student_name} / 보호자: {recipient.parent_name}")
-        c.drawString(40, y - 28, f"상태: {_status_label(recipient)}")
-        c.drawString(200, y - 28, f"결과: {_decision_label(recipient)}")
-        signed_at_text = (
-            timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
-            if recipient.signed_at
-            else "-"
-        )
-        c.drawString(40, y - 44, f"처리시각: {signed_at_text}")
+            c.roundRect(28, y - block_height + 8, width - 56, block_height - 12, 8, stroke=1, fill=0)
+            c.setFont(font_name, 10)
+            c.drawString(40, y - 12, f"{idx}. 학생: {recipient.student_name} / 보호자: {recipient.parent_name}")
+            c.drawString(40, y - 28, f"상태: {_status_label(recipient)}")
+            c.drawString(200, y - 28, f"결과: {_decision_label(recipient)}")
+            signed_at_text = (
+                timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
+                if recipient.signed_at
+                else "-"
+            )
+            c.drawString(40, y - 44, f"처리시각: {signed_at_text}")
 
-        reason = recipient.decline_reason.strip() if recipient.decline_reason else ""
-        if reason:
-            c.drawString(40, y - 60, f"비동의 사유: {reason[:80]}")
+            reason = recipient.decline_reason.strip() if recipient.decline_reason else ""
+            if reason:
+                c.drawString(40, y - 60, f"비동의 사유: {reason[:80]}")
 
-        c.drawString(40, y - 76, "서명")
-        c.rect(75, y - 95, 170, 34, stroke=1, fill=0)
-        if (recipient.signature_data or "").startswith("data:image"):
-            try:
-                image = ImageReader(io.BytesIO(_split_data_url(recipient.signature_data)))
-                c.drawImage(
-                    image,
-                    78,
-                    y - 92,
-                    width=164,
-                    height=28,
-                    preserveAspectRatio=True,
-                    mask="auto",
-                )
-            except Exception:
+            c.drawString(40, y - 76, "서명")
+            c.rect(75, y - 95, 170, 34, stroke=1, fill=0)
+            if (recipient.signature_data or "").startswith("data:image"):
+                try:
+                    image = ImageReader(io.BytesIO(_split_data_url(recipient.signature_data)))
+                    c.drawImage(
+                        image,
+                        78,
+                        y - 92,
+                        width=164,
+                        height=28,
+                        preserveAspectRatio=True,
+                        mask="auto",
+                    )
+                except Exception:
+                    c.setFont(font_name, 9)
+                    c.drawString(82, y - 82, "서명 이미지 로드 실패")
+            else:
                 c.setFont(font_name, 9)
-                c.drawString(82, y - 82, "서명 이미지를 불러오지 못했습니다.")
-        else:
-            c.setFont(font_name, 9)
-            c.drawString(82, y - 82, "서명 없음")
+                c.drawString(82, y - 82, "서명 없음")
 
-        y -= block_height
+            y -= block_height
 
-    c.save()
-    packet.seek(0)
-    filename = f"summary_{request.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    return ContentFile(packet.read(), name=filename)
+        c.save()
+        packet.seek(0)
+        filename = f"summary_{request.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        return ContentFile(packet.read(), name=filename)
+    except Exception:
+        logger.exception("[consent] reportlab summary generation failed request_id=%s", request.request_id)
+        return _generate_minimal_summary_pdf(request)
 
 
 def generate_merged_pdf(request: SignatureRequest, include_decline_summary: bool = False) -> ContentFile:

@@ -807,13 +807,18 @@ def consent_download_summary_pdf(request, request_id):
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    summary_file = generate_summary_pdf(consent_request)
-    consent_request.merged_pdf.save(summary_file.name, summary_file, save=True)
-    return FileResponse(
-        consent_request.merged_pdf.open("rb"),
-        as_attachment=True,
-        filename=consent_request.merged_pdf.name.split("/")[-1],
-    )
+    try:
+        summary_file = generate_summary_pdf(consent_request)
+        consent_request.merged_pdf.save(summary_file.name, summary_file, save=True)
+        return FileResponse(
+            consent_request.merged_pdf.open("rb"),
+            as_attachment=True,
+            filename=consent_request.merged_pdf.name.split("/")[-1],
+        )
+    except Exception:
+        logger.exception("[consent] summary download failed request_id=%s", consent_request.request_id)
+        messages.error(request, "요약 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect("consent:detail", request_id=consent_request.request_id)
 
 
 @login_required
