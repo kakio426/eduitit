@@ -14,6 +14,7 @@ from urllib.parse import quote
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Count
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.urls import reverse
@@ -500,12 +501,44 @@ def consent_dashboard(request):
     if schema_block:
         return schema_block
 
-    requests = SignatureRequest.objects.filter(created_by=request.user).select_related("document")
+    requests = (
+        SignatureRequest.objects.filter(created_by=request.user)
+        .select_related("document")
+        .annotate(recipient_count=Count("recipients"))
+    )
     context = {
         "requests": requests,
         **_policy_panel_context(),
     }
     return render(request, "consent/dashboard.html", context)
+
+
+@login_required
+@transaction.atomic
+def consent_delete_request(request, request_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    consent_request = get_object_or_404(
+        SignatureRequest,
+        request_id=request_id,
+        created_by=request.user,
+    )
+    if request.method != "POST":
+        return redirect("consent:dashboard")
+
+    has_submitted = consent_request.recipients.filter(
+        status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
+    ).exists()
+    if has_submitted:
+        messages.error(request, "이미 응답이 제출된 동의서는 삭제할 수 없습니다.")
+        return redirect("consent:dashboard")
+
+    title = consent_request.title
+    consent_request.delete()
+    messages.success(request, f"'{title}' 동의서를 삭제했습니다.")
+    return redirect("consent:dashboard")
 
 
 @login_required
