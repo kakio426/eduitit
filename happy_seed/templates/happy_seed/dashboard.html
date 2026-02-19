@@ -7,7 +7,7 @@
         <div class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800">🌱 행복의 씨앗</h1>
-                <p class="text-gray-500 mt-1">내 교실 목록</p>
+                <p class="text-gray-500 mt-1">긍정 행동 기록과 꽃피움 운영을 위한 내 교실 목록</p>
             </div>
             <div class="flex gap-2">
                 <a href="{% url 'happy_seed:teacher_manual' %}"
@@ -23,7 +23,7 @@
 
         <div class="clay-card p-4 rounded-2xl mb-6">
             <div class="text-sm text-gray-600">
-                빠른 이동:
+                빠른 시작:
                 <a href="{% url 'happy_seed:teacher_manual' %}" class="text-green-700 font-bold hover:underline ml-1">교사용 설명서</a>
             </div>
         </div>
@@ -38,7 +38,7 @@
                     {% if classroom.school_name %}
                     <div class="text-sm text-gray-400 mt-0.5">{{ classroom.school_name }}</div>
                     {% endif %}
-                    <div class="text-xs text-gray-400 mt-1">공개 정원: /happy-seed/garden/{{ classroom.slug }}/</div>
+                    <div class="text-xs text-gray-400 mt-1">꽃밭 대시보드: /happy-seed/garden/{{ classroom.slug }}/</div>
                 </div>
                 <i class="fas fa-chevron-right text-gray-300 group-hover:text-green-400"></i>
             </a>

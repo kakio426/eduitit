@@ -16,7 +16,7 @@
                 꽃밭 화면 열기(디스플레이)
             </a>
             <a href="{% url 'happy_seed:analysis_dashboard' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
-                분석 보기
+                교사 분석 보기
             </a>
         </div>
 
@@ -34,7 +34,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500 mb-1 block">랜덤 지급 인원</label>
+                    <label class="text-xs text-gray-500 mb-1 block">추첨 지급 인원</label>
                     <select name="draw_count" class="w-full px-3 py-2 rounded-xl border border-gray-200">
                         <option value="1" {% if default_group_draw_count == 1 %}selected{% endif %}>1명</option>
                         <option value="2" {% if default_group_draw_count == 2 %}selected{% endif %}>2명</option>
@@ -46,7 +46,7 @@
                     </button>
                 </div>
             </form>
-            <p class="text-xs text-gray-500 mt-2">동의 완료 + 활성 학생 기준으로 모둠 내 랜덤 1~2명에게 티켓 +1 지급합니다.</p>
+            <p class="text-xs text-gray-500 mt-2">동의 완료 + 활성 학생 기준으로 모둠 내 추첨 1~2명에게 티켓 +1 지급합니다.</p>
             {% else %}
             <p class="text-sm text-gray-500">등록된 모둠이 없습니다. (모둠은 관리자 또는 추후 모둠 관리 화면에서 구성)</p>
             {% endif %}
@@ -135,7 +135,7 @@
         {% else %}
         <div class="clay-card p-12 rounded-2xl text-center">
             <div class="text-5xl mb-4">🌰</div>
-            <p class="text-gray-500 break-keep">블룸 티켓을 보유한 학생이 없습니다.<br>먼저 학생에게 티켓을 부여해주세요.</p>
+            <p class="text-gray-500 break-keep">꽃피움 티켓을 보유한 학생이 없습니다.<br>먼저 학생에게 티켓을 부여해주세요.</p>
             <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="inline-block mt-4 px-6 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600">교실로 돌아가기</a>
         </div>
         {% endif %}
