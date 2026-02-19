@@ -9,10 +9,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         title = "행복의 씨앗"
         defaults = {
-            "lead_text": "작은 행동이 모이면, 행복이 자랍니다.",
+            "lead_text": "작은 실천을 씨앗으로, 교실의 성장을 꽃으로 연결하세요.",
             "description": (
-                "행복의 씨앗은 초등 교실에서 긍정 행동을 씨앗과 꽃피움으로 연결해 "
-                "참여 의지와 습관 형성을 돕는 운영 플랫폼입니다."
+                "행복의 씨앗은 초등 교실의 긍정 행동을 기록하고, "
+                "씨앗-꽃피움 흐름으로 동기를 설계하는 학급 운영 서비스입니다. "
+                "보호자 동의, 보상 확률 설정, 공개 꽃밭까지 한 번에 관리할 수 있습니다."
             ),
             "price": 0.00,
             "is_active": True,
@@ -24,6 +25,7 @@ class Command(BaseCommand):
             "display_order": 27,
             "service_type": "classroom",
             "external_url": "",
+            "launch_route_name": "happy_seed:landing",
         }
         mutable_fields = [
             "lead_text",
@@ -33,6 +35,7 @@ class Command(BaseCommand):
             "is_guest_allowed",
             "icon",
             "external_url",
+            "launch_route_name",
         ]
 
         product, created = Product.objects.get_or_create(
@@ -54,37 +57,59 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.SUCCESS(f"Product already exists: {product.title}"))
 
-        features = [
+        feature_specs = [
             {
                 "icon": "🌸",
-                "title": "꽃피움 랜덤 보상",
-                "description": "긍정 행동을 기반으로 꽃피움 기회를 제공하는 랜덤 보상 시스템입니다.",
+                "title": "꽃피움 추첨 보상",
+                "legacy_titles": ["꽃피움 랜덤 보상"],
+                "description": "성실 참여와 우수 성취를 바탕으로 공평한 추첨 보상을 운영합니다.",
             },
             {
                 "icon": "🏡",
-                "title": "학급 꽃밭",
-                "description": "빈 정원에서 시작해 1년 동안 함께 자라는 공개 꽃밭 대시보드를 제공합니다.",
+                "title": "학급 꽃밭 대시보드",
+                "legacy_titles": ["학급 꽃밭"],
+                "description": "교실 화면에서 아이들과 함께 성장 흐름을 시각적으로 확인할 수 있습니다.",
             },
             {
-                "icon": "📊",
-                "title": "교사 분석",
-                "description": "학생별 참여, 당첨, 씨앗 누적 흐름을 확인하는 교사용 분석 보드를 지원합니다.",
+                "icon": "🌱",
+                "title": "긍정 행동 기록",
+                "legacy_titles": ["교사 분석"],
+                "description": "학생의 작은 실천을 씨앗으로 쌓아, 참여 습관 형성을 돕습니다.",
             },
         ]
-        for item in features:
-            _, feature_created = ProductFeature.objects.get_or_create(
-                product=product,
-                title=item["title"],
-                defaults={"icon": item["icon"], "description": item["description"]},
-            )
-            if feature_created:
+
+        for item in feature_specs:
+            titles = [item["title"], *item.get("legacy_titles", [])]
+            feature = ProductFeature.objects.filter(product=product, title__in=titles).order_by("id").first()
+            if feature is None:
+                ProductFeature.objects.create(
+                    product=product,
+                    title=item["title"],
+                    icon=item["icon"],
+                    description=item["description"],
+                )
                 self.stdout.write(self.style.SUCCESS(f"  Added feature: {item['title']}"))
+                continue
+
+            changed = []
+            if feature.title != item["title"]:
+                feature.title = item["title"]
+                changed.append("title")
+            if feature.icon != item["icon"]:
+                feature.icon = item["icon"]
+                changed.append("icon")
+            if feature.description != item["description"]:
+                feature.description = item["description"]
+                changed.append("description")
+            if changed:
+                feature.save(update_fields=changed)
+                self.stdout.write(self.style.SUCCESS(f"  Updated feature: {item['title']} ({', '.join(changed)})"))
 
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
                 "title": "행복의 씨앗 시작 가이드",
-                "description": "교실 생성부터 씨앗/꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다.",
+                "description": "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다.",
                 "is_published": True,
             },
         )
@@ -93,8 +118,9 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        if not manual.description:
-            manual.description = "교실 생성부터 씨앗/꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다."
+        target_manual_description = "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다."
+        if manual.description != target_manual_description:
+            manual.description = target_manual_description
             manual_changed.append("description")
         if manual_changed:
             manual.save(update_fields=manual_changed)
@@ -112,7 +138,7 @@ class Command(BaseCommand):
                 "주요 기능",
                 (
                     "성실 참여/우수 성취 티켓 부여, 미당첨 씨앗 +1, 씨앗 N개 자동 티켓 전환, "
-                    "꽃피움 추첨(교사 수동 종료 축하 화면)을 운영합니다."
+                    "꽃피움 추첨과 축하 화면 운영 흐름을 제공합니다."
                 ),
                 2,
             ),
@@ -149,7 +175,7 @@ class Command(BaseCommand):
                 if section.display_order != order:
                     section.display_order = order
                     changed.append("display_order")
-                if not section.content:
+                if section.content != content:
                     section.content = content
                     changed.append("content")
                 if changed:

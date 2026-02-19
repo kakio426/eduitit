@@ -22,3 +22,16 @@ Thumbs.db
 # Tool specific
 .claude/
 mcp_config.json
+
+# Test/Dev artifacts
+test_media/
+temp_setup.html
+recovered_setup.html
+reflog.txt
+reflog_all.txt
+full_reflog.txt
+git_history_check.txt
+git_log_all.txt
+product_urls.txt
+scripts/check_output.txt
+scripts/staged_files.txt

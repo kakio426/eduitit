@@ -66,7 +66,16 @@ def product_detail(request, pk):
     is_owned = False
     if request.user.is_authenticated:
         is_owned = request.user.owned_products.filter(product=product).exists() or product.price == 0
-    return render(request, 'products/detail.html', {'product': product, 'is_owned': is_owned})
+    from core.views import _resolve_product_launch_url
+    launch_href, launch_is_external = _resolve_product_launch_url(product)
+    can_launch = bool(launch_href) and launch_href != request.path
+    return render(request, 'products/detail.html', {
+        'product': product,
+        'is_owned': is_owned,
+        'launch_href': launch_href,
+        'launch_is_external': launch_is_external,
+        'can_launch': can_launch,
+    })
 
 def product_preview(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)

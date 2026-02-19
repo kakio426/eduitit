@@ -179,13 +179,9 @@
         <!-- Action Buttons -->
         <div class="action-buttons">
             {% if is_owned or product.price == 0 %}
-            {% if product.external_url %}
-            <a href="{{ product.external_url }}" target="_blank" rel="noopener noreferrer" class="btn-launch">
+            {% if can_launch %}
+            <a href="{{ launch_href }}" {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="btn-launch">
                 <i class="fa-solid fa-rocket"></i> 서비스 시작하기
-            </a>
-            {% elif product.service_type == "game" %}
-            <a href="{% url 'yut_game' %}" class="btn-launch">
-                <i class="fa-solid fa-gamepad"></i> 게임 시작하기
             </a>
             {% else %}
             <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
@@ -221,6 +217,22 @@
             <div class="feature-icon">🏆</div>
             <div class="feature-title">학급 대항전</div>
             <div class="feature-description">교육 현장에 최적화된 게임</div>
+        </div>
+        {% elif product.service_type == "classroom" %}
+        <div class="feature-card">
+            <div class="feature-icon">🌱</div>
+            <div class="feature-title">긍정 행동 기록</div>
+            <div class="feature-description">학생의 작은 실천을 씨앗으로 쌓아, 참여 습관 형성을 돕습니다.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌸</div>
+            <div class="feature-title">꽃피움 추첨 보상</div>
+            <div class="feature-description">성실 참여와 우수 성취를 바탕으로 공평한 추첨 보상을 운영합니다.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🏡</div>
+            <div class="feature-title">학급 꽃밭 대시보드</div>
+            <div class="feature-description">교실 화면에서 아이들과 함께 성장 흐름을 시각적으로 확인할 수 있습니다.</div>
         </div>
         {% elif product.service_type == "tool" %}
         <div class="feature-card">
