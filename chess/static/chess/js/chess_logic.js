@@ -17,7 +17,7 @@ var pendingCommands = [];
 // ---------------------------------------------------------
 // 1. Initialization
 // ---------------------------------------------------------
-document.addEventListener('DOMContentLoaded', function () {
+function initHelper() {
     initGame();
     initBoard();
     updateStatus();
@@ -39,7 +39,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof IS_AI_MODE !== 'undefined' && IS_AI_MODE) {
         initStockfish();
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHelper);
+} else {
+    initHelper();
+}
 
 function initGame() {
     game.reset();

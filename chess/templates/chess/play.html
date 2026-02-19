@@ -159,6 +159,18 @@
     .highlight-attack {
         box-shadow: inset 0 0 3px 3px rgba(255, 0, 0, 0.3);
     }
+    
+    /* FIX: Override base.html's overflow:hidden which might clip the board */
+    .clay-card {
+        overflow: visible !important;
+    }
+    
+    .board-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        aspect-ratio: 1 / 1; /* Reserve space before JS loads */
+    }
 </style>
 {% endblock %}
 
@@ -272,9 +284,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
 {% if mode == 'ai' %}
 <!-- Stockfish는 Worker로만 로드됨 (chess_logic.js에서 처리) -->
 {% endif %}
@@ -285,5 +295,40 @@
     var IS_AI_MODE = '{{ mode }}' === 'ai';
     var AI_DIFFICULTY = '{{ difficulty }}';
 </script>
-<script src="{% static 'chess/js/chess_logic.js' %}"></script>
+<script>
+    // Robust Loader
+    (function() {
+        function loadScript(src) {
+            return new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        // 1. jQuery
+        loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
+            .catch(function() { return loadScript('https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js'); })
+            .then(function() {
+                // 2. Chessboard.js
+                return loadScript('https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js');
+            })
+            .catch(function() { return loadScript('https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js'); })
+            .then(function() {
+                // 3. Chess.js
+                return loadScript('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js');
+            })
+            .then(function() {
+                // 4. Game Logic
+                return loadScript("{% static 'chess/js/chess_logic.js' %}");
+            })
+            .catch(function(err) {
+                console.error("Failed to load chess dependencies:", err);
+                var board = document.getElementById('myBoard');
+                if (board) board.innerHTML = '<div class="p-4 text-red-500 font-bold">게임 리소스를 불러오는데 실패했습니다. 새로고침 해주세요.</div>';
+            });
+    })();
+</script>
 {% endblock %}
