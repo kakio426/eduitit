@@ -1,16 +1,12 @@
-// Chess AI Logic - Last Updated: 2026-02-09 (Experience Upgrade)
+// Chess AI Logic - Last Updated: 2026-02-04 (Railway Sync Trigger)
 var board = null;
 var game = new Chess();
 var moveHistory = [];
-var capturedPieces = { white: [], black: [] }; // Track captured pieces
 var stockfish = null;
 var isAIThinking = false;
 var selectedSquare = null;
 var isEngineReady = false;
 var pendingCommands = [];
-var lastMove = null; // Track last move for highlighting
-var pendingPromotion = null; // Track pending promotion move
-var showLastMoveHighlight = true; // Toggle for last move highlight
 
 // [CONFIGURATION]
 // These variables must be defined in the HTML before loading this script:
@@ -48,162 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
 function initGame() {
     game.reset();
     moveHistory = [];
-    capturedPieces = { white: [], black: [] };
-    lastMove = null;
     selectedSquare = null;
     isAIThinking = false;
-}
-
-// ---------------------------------------------------------
-// Sound & Notification System
-// ---------------------------------------------------------
-var sharedAudioContext = null;
-
-function getAudioContext() {
-    if (!sharedAudioContext) {
-        sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    // 브라우저 정책으로 suspended 상태일 수 있음
-    if (sharedAudioContext.state === 'suspended') {
-        sharedAudioContext.resume();
-    }
-    return sharedAudioContext;
-}
-
-function playSound(type) {
-    try {
-        var ctx = getAudioContext();
-        var oscillator = ctx.createOscillator();
-        var gainNode = ctx.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        if (type === 'move') {
-            oscillator.frequency.value = 440;
-            gainNode.gain.value = 0.1;
-        } else if (type === 'capture') {
-            oscillator.frequency.value = 550;
-            gainNode.gain.value = 0.15;
-        } else if (type === 'check') {
-            oscillator.frequency.value = 880;
-            gainNode.gain.value = 0.2;
-        } else if (type === 'gameOver') {
-            // 게임 종료: 낮은 음으로 두 번 울림
-            oscillator.frequency.value = 330;
-            gainNode.gain.value = 0.25;
-            oscillator.start();
-            oscillator.stop(ctx.currentTime + 0.2);
-            // 두 번째 비프
-            var osc2 = ctx.createOscillator();
-            var gain2 = ctx.createGain();
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc2.frequency.value = 220;
-            gain2.gain.value = 0.25;
-            osc2.start(ctx.currentTime + 0.3);
-            osc2.stop(ctx.currentTime + 0.6);
-            return;
-        }
-
-        oscillator.start();
-        oscillator.stop(ctx.currentTime + 0.1);
-    } catch (e) {
-        console.log('Audio not supported:', e);
-    }
-}
-
-function showToast(message) {
-    var toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.add('show');
-
-    setTimeout(function () {
-        toast.classList.remove('show');
-    }, 2000);
-}
-
-// ---------------------------------------------------------
-// Material Advantage Calculation
-// ---------------------------------------------------------
-function getMaterialAdvantage() {
-    var pieceValues = {
-        'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0
-    };
-
-    var whiteMaterial = 0;
-    var blackMaterial = 0;
-
-    // Count all pieces on the board
-    var board = game.board();
-    for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-            var piece = board[i][j];
-            if (piece) {
-                var value = pieceValues[piece.type];
-                if (piece.color === 'w') {
-                    whiteMaterial += value;
-                } else {
-                    blackMaterial += value;
-                }
-            }
-        }
-    }
-
-    return {
-        white: whiteMaterial,
-        black: blackMaterial,
-        advantage: whiteMaterial - blackMaterial
-    };
-}
-
-function updateCapturedPieces(move) {
-    if (move.captured) {
-        var capturedPiece = move.captured;
-        var capturer = move.color; // 'w' or 'b'
-
-        if (capturer === 'w') {
-            capturedPieces.white.push(capturedPiece);
-        } else {
-            capturedPieces.black.push(capturedPiece);
-        }
-
-        renderCapturedPieces();
-    }
-}
-
-function renderCapturedPieces() {
-    var pieceSymbols = {
-        'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
-    };
-
-    // Render White's captured pieces (black pieces)
-    var whiteEl = document.getElementById('whiteCaptured');
-    if (capturedPieces.white.length === 0) {
-        whiteEl.innerHTML = '<span class="text-gray-400 text-sm italic">없음</span>';
-    } else {
-        whiteEl.innerHTML = '';
-        capturedPieces.white.forEach(function (piece) {
-            var span = document.createElement('span');
-            span.className = 'captured-piece';
-            span.textContent = pieceSymbols[piece];
-            whiteEl.appendChild(span);
-        });
-    }
-
-    // Render Black's captured pieces (white pieces)
-    var blackEl = document.getElementById('blackCaptured');
-    if (capturedPieces.black.length === 0) {
-        blackEl.innerHTML = '<span class="text-gray-400 text-sm italic">없음</span>';
-    } else {
-        blackEl.innerHTML = '';
-        capturedPieces.black.forEach(function (piece) {
-            var span = document.createElement('span');
-            span.className = 'captured-piece';
-            span.textContent = pieceSymbols[piece];
-            blackEl.appendChild(span);
-        });
-    }
 }
 
 var pieceCDNs = [
@@ -340,24 +182,10 @@ function onSquareClick(square) {
 
     // Case 1: Move Logic (If a square was already selected)
     if (selectedSquare) {
-        var selectedPiece = game.get(selectedSquare);
-
-        // Check if this is a pawn promotion move
-        var isPromotion = selectedPiece && selectedPiece.type === 'p' &&
-            ((selectedPiece.color === 'w' && square[1] === '8') ||
-                (selectedPiece.color === 'b' && square[1] === '1'));
-
-        if (isPromotion) {
-            // Store the move and show promotion modal
-            pendingPromotion = { from: selectedSquare, to: square };
-            showPromotionModal();
-            return;
-        }
-
-        // Regular move (no promotion)
         var move = game.move({
             from: selectedSquare,
-            to: square
+            to: square,
+            promotion: 'q' // Force Queen promotion for simplicity
         });
 
         if (move) {
@@ -392,27 +220,11 @@ function onSquareClick(square) {
 function handleMoveSuccess(move) {
     board.position(game.fen());
     moveHistory.push(move);
-    lastMove = { from: move.from, to: move.to }; // Store for highlighting
-    updateCapturedPieces(move); // Track captured pieces
     updateMoveHistory();
     updateStatus();
 
     selectedSquare = null;
     removeHighlights();
-    highlightLastMove(); // Highlight the last move
-
-    // Play sound based on move type
-    if (move.captured) {
-        playSound('capture');
-    } else {
-        playSound('move');
-    }
-
-    // Show toast for check
-    if (game.in_check() && !game.game_over()) {
-        playSound('check');
-        showToast('⚠️ 체크!');
-    }
 
     // Trigger AI
     if (IS_AI_MODE && !game.game_over()) {
@@ -500,12 +312,8 @@ function onBestMove(line) {
         if (move) {
             board.position(game.fen());
             moveHistory.push(move);
-            lastMove = { from: from, to: to }; // Store AI's last move
-            updateCapturedPieces(move); // Track captured pieces
             updateMoveHistory();
             updateStatus();
-            removeHighlights();
-            highlightLastMove(); // Highlight AI's move
         } else {
             console.warn("AI attempted invalid move:", moveStr);
             // 잘못된 수일 경우 AI를 다시 시도하도록 허용
@@ -536,69 +344,25 @@ function highlightSquare(square, type) {
     if (type === 'selected') $square.addClass('highlight-selected');
     else if (type === 'hint') $square.addClass('highlight-hint');
     else if (type === 'attack') $square.addClass('highlight-attack');
-    else if (type === 'last-move') $square.addClass('highlight-last-move');
-    else if (type === 'check-king') $square.addClass('highlight-check-king');
 }
 
 function removeHighlights() {
-    $('#myBoard .square-55d63').removeClass('highlight-selected highlight-hint highlight-attack highlight-last-move highlight-check-king');
+    $('#myBoard .square-55d63').removeClass('highlight-selected highlight-hint highlight-attack');
 }
-
-function highlightLastMove() {
-    if (lastMove && showLastMoveHighlight) {
-        highlightSquare(lastMove.from, 'last-move');
-        highlightSquare(lastMove.to, 'last-move');
-    }
-}
-
-window.toggleLastMoveHighlight = function () {
-    showLastMoveHighlight = !showLastMoveHighlight;
-    var btn = document.getElementById('highlightToggleBtn');
-    if (btn) {
-        btn.textContent = showLastMoveHighlight ? '이전 수 표시: ON' : '이전 수 표시: OFF';
-        btn.className = showLastMoveHighlight
-            ? 'btn-game text-sm py-2 px-4 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-xl'
-            : 'btn-game text-sm py-2 px-4 bg-gray-100 text-gray-500 border border-gray-300 rounded-xl';
-    }
-    removeHighlights();
-    if (showLastMoveHighlight) highlightLastMove();
-    // 체크 하이라이트 복원
-    if (game.in_check() && !game.game_over()) highlightKingInCheck();
-};
 
 function updateStatus() {
     var status = '';
     var statusEl = document.getElementById('status');
     var moveColor = game.turn() === 'w' ? '백' : '흑';
-    var winner = game.turn() === 'w' ? '흑' : '백';
 
     if (game.in_checkmate()) {
-        status = '체크메이트! ' + winner + ' 승리!';
+        status = '게임 종료 - ' + (game.turn() === 'w' ? '흑' : '백') + ' 승리!';
         statusEl.className = 'status-badge status-check';
-        playSound('gameOver');
-        showToast('♚ 체크메이트! ' + winner + '이 승리했습니다!');
-        showGameOver('체크메이트!', winner + ' 승리! 킹이 잡혔습니다.');
-    } else if (game.in_stalemate()) {
-        status = '스테일메이트 - 무승부';
+        showGameOver(game.turn() === 'w' ? '흑 승리!' : '백 승리!', '체크메이트!');
+    } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
+        status = '게임 종료 - 무승부';
         statusEl.className = 'status-badge status-white';
-        playSound('gameOver');
-        showToast('🤝 스테일메이트! 둘 수 있는 수가 없습니다.');
-        showGameOver('스테일메이트!', moveColor + '이 둘 수 있는 합법적인 수가 없어 무승부입니다.');
-    } else if (game.in_threefold_repetition()) {
-        status = '3회 반복 - 무승부';
-        statusEl.className = 'status-badge status-white';
-        playSound('gameOver');
-        showToast('🔄 같은 상황이 3번 반복되어 무승부!');
-        showGameOver('3회 반복 무승부!', '같은 보드 상태가 3번 반복되어 무승부입니다.');
-    } else if (game.in_draw()) {
-        status = '무승부';
-        statusEl.className = 'status-badge status-white';
-        playSound('gameOver');
-
-        // 기물 부족 vs 50수 규칙 구분
-        var drawReason = getDrawReason();
-        showToast('🤝 ' + drawReason);
-        showGameOver('무승부!', drawReason);
+        showGameOver('무승부', '무승부 상황입니다.');
     } else {
         if (isAIThinking) {
             status = 'AI가 생각 중...';
@@ -608,50 +372,10 @@ function updateStatus() {
             statusEl.className = game.turn() === 'w' ? 'status-badge status-white' : 'status-badge status-black';
         }
 
-        if (game.in_check()) {
-            statusEl.className += ' status-check';
-            highlightKingInCheck();
-        }
+        if (game.in_check()) statusEl.className += ' status-check';
     }
 
     statusEl.textContent = status;
-}
-
-function getDrawReason() {
-    // 기물 부족 체크: 킹만 남거나 킹+비숍/나이트만 남은 경우
-    var dominated = game.board();
-    var pieceCount = 0;
-    var hasMinorOnly = true;
-    for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-            var p = dominated[i][j];
-            if (p && p.type !== 'k') {
-                pieceCount++;
-                if (p.type !== 'b' && p.type !== 'n') hasMinorOnly = false;
-            }
-        }
-    }
-    if (pieceCount === 0) return '양쪽 모두 킹만 남아 체크메이트가 불가능합니다.';
-    if (pieceCount <= 1 && hasMinorOnly) return '남은 기물이 부족하여 체크메이트가 불가능합니다.';
-    return '50수 동안 폰 이동이나 기물 잡기가 없어 무승부입니다.';
-}
-
-function highlightKingInCheck() {
-    // Find the king's position for the current player
-    var kingColor = game.turn();
-    var board = game.board();
-
-    for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-            var piece = board[i][j];
-            if (piece && piece.type === 'k' && piece.color === kingColor) {
-                var files = 'abcdefgh';
-                var square = files[j] + (8 - i);
-                highlightSquare(square, 'check-king');
-                return;
-            }
-        }
-    }
 }
 
 function updateMoveHistory() {
@@ -686,7 +410,6 @@ window.resetGame = function () {
     initGame();
     board.start();
     removeHighlights();
-    renderCapturedPieces();
     updateMoveHistory();
     updateStatus();
     closeGameOverModal();
@@ -698,36 +421,16 @@ window.undoMove = function () {
     // If AI is thinking, ignore undo to prevent state corruption
     if (isAIThinking) return;
 
-    var undoCount = (IS_AI_MODE && moveHistory.length >= 2) ? 2 : (!IS_AI_MODE ? 1 : 0);
-    if (undoCount === 0) return;
-
-    for (var i = 0; i < undoCount; i++) {
-        var undoneMove = moveHistory.pop();
-        game.undo();
-
-        // 잡은 기물 동기화: 되돌린 수에 잡힌 기물이 있었으면 제거
-        if (undoneMove && undoneMove.captured) {
-            var capturer = undoneMove.color === 'w' ? 'white' : 'black';
-            var idx = capturedPieces[capturer].lastIndexOf(undoneMove.captured);
-            if (idx !== -1) {
-                capturedPieces[capturer].splice(idx, 1);
-            }
-        }
-    }
-
-    // lastMove 갱신: 남은 기록의 마지막 수로 설정
-    if (moveHistory.length > 0) {
-        var last = moveHistory[moveHistory.length - 1];
-        lastMove = { from: last.from, to: last.to };
-    } else {
-        lastMove = null;
+    if (IS_AI_MODE && moveHistory.length >= 2) {
+        game.undo(); game.undo();
+        moveHistory.pop(); moveHistory.pop();
+    } else if (!IS_AI_MODE) {
+        game.undo(); moveHistory.pop();
     }
 
     board.position(game.fen());
     selectedSquare = null;
     removeHighlights();
-    highlightLastMove();
-    renderCapturedPieces();
     updateMoveHistory();
     updateStatus();
 };
@@ -736,47 +439,13 @@ window.closeGameOverModal = function () {
     document.getElementById('gameOverModal').classList.add('hidden');
 };
 
-// ---------------------------------------------------------
-// Promotion Modal Functions
-// ---------------------------------------------------------
-function showPromotionModal() {
-    document.getElementById('promotionModal').classList.remove('hidden');
-}
-
-function closePromotionModal() {
-    document.getElementById('promotionModal').classList.add('hidden');
-}
-
-window.selectPromotion = function (pieceType) {
-    if (!pendingPromotion) return;
-
-    // Execute the promotion move
-    var move = game.move({
-        from: pendingPromotion.from,
-        to: pendingPromotion.to,
-        promotion: pieceType
-    });
-
-    if (move) {
-        handleMoveSuccess(move);
-    }
-
-    // Clear pending promotion and close modal
-    pendingPromotion = null;
-    closePromotionModal();
-};
-
 function showGameOver(title, message) {
     document.getElementById('gameOverTitle').textContent = title;
     document.getElementById('gameOverMessage').textContent = message;
-
     var icon = '🏆';
-    if (title.includes('무승부') || title.includes('스테일메이트') || title.includes('반복')) {
-        icon = '🤝';
-    } else if (title.includes('체크메이트')) {
-        // 진 쪽(현재 턴)이 백이면 흑 승리
-        icon = game.turn() === 'w' ? '♚' : '♔';
-    }
+    if (message.includes('무승부')) icon = '🤝';
+    else if (title.includes('흑')) icon = '♚';
+    else icon = '♔';
     document.getElementById('gameOverIcon').textContent = icon;
 
     setTimeout(function () {
