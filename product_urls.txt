@@ -1,22 +1,21 @@
-﻿Title: 諛섏쭩諛섏쭩 ?곕━諛??뚮┝?? URL: /products/dutyticker/
-Title: ?곸옄吏猿?援먯떎 ?룸??? URL: /products/yut/
-Title: ?좊떏?좊떏 ?좎깮???댁꽭, URL: /fortune/
-Title: 媛肉먰븯寃??쒕챸 ?? URL: /signatures/
-Title: 沅곴툑?? ?⑤뱾由?遊? URL: /padlet/
-Title: 紐쎄?紐쎄? 誘몄닠 ?섏뾽, URL: /artclass/
-Title: 湲?쒖뵪 ?앸뵳! ?뚯떇吏, URL: /autoarticle/
-Title: ?좏뒠釉??덉븣怨좊━利? URL: https://motube-woad.vercel.app/
-Title: ?숆탳 ?듯빀 吏???ㅼ엥?? URL: https://schoolit.shop/
-Title: ?몄궗?댄듃, URL: /insights/
-Title: AI ?꾧뎄 媛?대뱶, URL: /tools/
-Title: AI ?꾨＼?꾪듃 ?덉떆?? URL: /prompts/
-Title: ?숆탳??젰 ?ъ븞 泥섎━ 鍮꾩꽌, URL: /school_violence/
-Title: ?짟TI, URL: 
-Title: ?먮뇤 ?媛?? 援먯떎 泥댁뒪, URL: 
-Title: HWP to PDF 蹂?섍린, URL: https://drive.google.com/file/d/11FIEgxWXV2q8fWNPc5CaAXwEQPCNr4VI/view?usp=sharing
-Title: ?곕━諛?罹먮┃??移쒓뎄 李얘린, URL: 
-Title: 援먯궗 諛깃낵?ъ쟾, URL: 
-Title: 媛꾪렪 ?섑빀, URL: 
-Title: ?숆탳 ?덉빟 ?쒖뒪?? URL: 
-Title: ?좎깮???ъ＜, URL: 
-
+Title: 반짝반짝 우리반 알림판, URL: /products/dutyticker/
+Title: 왁자지껄 교실 윷놀이, URL: /products/yut/
+Title: 토닥토닥 선생님 운세, URL: /fortune/
+Title: 가뿐하게 서명 톡, URL: /signatures/
+Title: 궁금해? 패들릿 봇, URL: /padlet/
+Title: 몽글몽글 미술 수업, URL: /artclass/
+Title: 글솜씨 뚝딱! 소식지, URL: /autoarticle/
+Title: 유튜브 탈알고리즘, URL: https://motube-woad.vercel.app/
+Title: 학교 통합 지원 스쿨잇, URL: https://schoolit.shop/
+Title: 인사이트, URL: /insights/
+Title: AI 도구 가이드, URL: /tools/
+Title: AI 프롬프트 레시피, URL: /prompts/
+Title: 학교폭력 사안 처리 비서, URL: /school_violence/
+Title: 쌤BTI, URL: 
+Title: 두뇌 풀가동! 교실 체스, URL: 
+Title: HWP to PDF 변환기, URL: https://drive.google.com/file/d/1JfFn1WtkJyMBQ0OUleXPQPTf2t9ecgyq/view?usp=sharing
+Title: 우리반 캐릭터 친구 찾기, URL: 
+Title: 교사 백과사전, URL: 
+Title: 간편 수합, URL: 
+Title: 학교 예약 시스템, URL: 
+Title: 선생님 사주, URL: 

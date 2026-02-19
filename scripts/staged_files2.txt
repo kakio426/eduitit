@@ -1,0 +1,11 @@
+﻿SERVICE_INTEGRATION_STANDARD.md
+claude.md
+docs/plans/PLAN_ux_rollout_continuation_2026-02-18.md
+happy_seed/templates/happy_seed/landing.html
+happy_seed/templates/happy_seed/teacher_manual.html
+products/management/commands/ensure_happy_seed.py
+products/migrations/0039_backfill_happy_seed_launch_route.py
+products/templates/products/detail.html
+products/views.py
+scripts/check_korean_mojibake.py
+scripts/check_signature_manual.py

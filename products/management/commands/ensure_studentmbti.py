@@ -17,15 +17,23 @@ class Command(BaseCommand):
         if product:
             self.stdout.write(f'[!] Found existing StudentMBTI product (ID: {product.id})')
             needs_update = False
+            default_lead_text = '우리 반 친구들은 어떤 동물 캐릭터일까? QR 코드 하나로 시작하는 재미있는 성격 탐험! 🐾'
+            default_description = '선생님이 세션을 만들고 QR코드를 공유하면, 학생들은 회원가입 없이 바로 참여할 수 있어요. 재미있는 질문에 답하면 나와 닮은 동물 캐릭터를 알려줍니다. 16가지 동물 캐릭터로 학생들의 성격 특성을 파악하고, 학급 운영에 활용해보세요!'
             if product.title != '우리반BTI':
                 product.title = '우리반BTI'
                 needs_update = True
             if not product.is_active:
                 product.is_active = True
                 needs_update = True
-                if needs_update:
-                    product.save()
-                    self.stdout.write('[OK] Updated existing product settings')
+            if not (product.lead_text or '').strip():
+                product.lead_text = default_lead_text
+                needs_update = True
+            if not (product.description or '').strip():
+                product.description = default_description
+                needs_update = True
+            if needs_update:
+                product.save()
+                self.stdout.write('[OK] Updated existing product settings')
             else:
                 self.stdout.write('[OK] Product already has correct settings')
         else:
