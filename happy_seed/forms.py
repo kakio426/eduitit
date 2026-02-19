@@ -182,7 +182,11 @@ class StudentBulkAddForm(forms.Form):
             }
         ),
         label="학생 명단",
-        help_text="각 줄에서 번호와 이름을 공백으로 구분하거나, 이름만 입력해도 됩니다.",
+        help_text=(
+            "학교 심의 없이 운영하려면 학생 이름 대신 익명 번호를 권장합니다. "
+            "(예: 1번, 2번, 3번) "
+            "이름·학번·연락처 등 개인을 식별할 수 있는 정보는 입력하지 마세요."
+        ),
     )
 
     def parse_students(self):

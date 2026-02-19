@@ -10,6 +10,12 @@
 
         <h1 class="text-2xl font-bold text-gray-800 mb-6">👥 학생 일괄 추가</h1>
 
+        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 break-keep">
+            <strong>개인정보 안내</strong><br>
+            학교 심의 없이 운영하려면 학생 이름 대신 익명 번호(예: 1번, 2번, 3번)를 사용하세요.
+            이름·학번·연락처 등 개인을 식별할 수 있는 정보는 입력하지 마세요.
+        </div>
+
         <form method="post" class="clay-card p-6 md:p-8 rounded-2xl space-y-5">
             {% csrf_token %}
 
