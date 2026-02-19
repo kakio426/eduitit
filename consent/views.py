@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import io
 import logging
 import mimetypes
@@ -50,6 +51,78 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
     "동의서 서비스 데이터베이스가 아직 준비되지 않았습니다. "
     "관리자에게 `python manage.py migrate` 실행을 요청해 주세요."
 )
+
+
+def _snapshot_file_metadata(file_obj):
+    """Return immutable evidence info for a file-like object."""
+    if not file_obj:
+        return "", None, ""
+    name = (getattr(file_obj, "name", "") or "").split("/")[-1]
+    size = getattr(file_obj, "size", None)
+    digest = hashlib.sha256()
+    try:
+        file_obj.seek(0)
+    except Exception:
+        pass
+    for chunk in file_obj.chunks() if hasattr(file_obj, "chunks") else [file_obj.read()]:
+        if chunk:
+            digest.update(chunk)
+    try:
+        file_obj.seek(0)
+    except Exception:
+        pass
+    return name, size, digest.hexdigest()
+
+
+def _request_document_evidence(consent_request: SignatureRequest):
+    name = (consent_request.document_name_snapshot or "").strip()
+    sha256 = (consent_request.document_sha256_snapshot or "").strip()
+    size = consent_request.document_size_snapshot
+    if name and sha256:
+        return {
+            "document_name": name,
+            "document_size": size,
+            "document_sha256": sha256,
+        }
+
+    file_field = consent_request.document.original_file
+    if not file_field or not file_field.name:
+        return {
+            "document_name": name,
+            "document_size": size,
+            "document_sha256": sha256,
+        }
+
+    try:
+        with file_field.open("rb") as f:
+            digest = hashlib.sha256()
+            total = 0
+            for chunk in iter(lambda: f.read(8192), b""):
+                digest.update(chunk)
+                total += len(chunk)
+        file_name = file_field.name.split("/")[-1]
+        hash_value = digest.hexdigest()
+        consent_request.document_name_snapshot = file_name
+        consent_request.document_size_snapshot = total
+        consent_request.document_sha256_snapshot = hash_value
+        consent_request.save(
+            update_fields=[
+                "document_name_snapshot",
+                "document_size_snapshot",
+                "document_sha256_snapshot",
+            ]
+        )
+        return {
+            "document_name": file_name,
+            "document_size": total,
+            "document_sha256": hash_value,
+        }
+    except Exception:
+        return {
+            "document_name": name,
+            "document_size": size,
+            "document_sha256": sha256,
+        }
 
 
 def _parse_recipients(text):
@@ -457,10 +530,14 @@ def consent_create_step1(request):
             document = document_form.save(commit=False)
             document.created_by = request.user
             document.file_type = guess_file_type(document.original_file.name)
+            doc_name, doc_size, doc_sha256 = _snapshot_file_metadata(document.original_file)
             consent_request = request_form.save(commit=False)
             consent_request.created_by = request.user
             consent_request.status = SignatureRequest.STATUS_DRAFT
             consent_request.consent_text_version = "v1"
+            consent_request.document_name_snapshot = doc_name
+            consent_request.document_size_snapshot = doc_size
+            consent_request.document_sha256_snapshot = doc_sha256
             if not (consent_request.legal_notice or "").strip():
                 consent_request.legal_notice = DEFAULT_LEGAL_NOTICE
             try:
@@ -753,6 +830,7 @@ def consent_sign(request, token):
         return schema_block
 
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
+    evidence = _request_document_evidence(recipient.request)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
     if _is_active_link_expired(recipient):
@@ -777,7 +855,10 @@ def consent_sign(request, token):
                 request=recipient.request,
                 recipient=recipient,
                 event_type=ConsentAuditLog.EVENT_SIGN_SUBMITTED,
-                event_meta={"decision": recipient.decision},
+                event_meta={
+                    "decision": recipient.decision,
+                    **evidence,
+                },
             )
 
             if not recipient.request.recipients.exclude(
@@ -799,6 +880,7 @@ def consent_sign(request, token):
             "form": form,
             "expires_at": recipient.request.link_expires_at,
             "is_expired": _is_active_link_expired(recipient),
+            "document_evidence": evidence,
         },
     )
 

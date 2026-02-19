@@ -88,6 +88,9 @@ class SignatureRequest(models.Model):
         related_name="requests",
     )
     title = models.CharField(max_length=200)
+    document_name_snapshot = models.CharField(max_length=255, blank=True, default="")
+    document_size_snapshot = models.PositiveBigIntegerField(blank=True, null=True)
+    document_sha256_snapshot = models.CharField(max_length=64, blank=True, default="")
     message = models.TextField(blank=True)
     legal_notice = models.TextField(blank=True)
     consent_text_version = models.CharField(max_length=32, default="v1")

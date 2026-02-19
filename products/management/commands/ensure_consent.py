@@ -42,7 +42,7 @@ class Command(BaseCommand):
             product.save()
 
         features = [
-            ("fa-solid fa-mobile-screen-button", "학부모 3단계 위저드", "본인확인 → 동의/비동의 + 손서명 → 완료"),
+            ("fa-solid fa-mobile-screen-button", "학부모 동의 링크(확인→서명→완료)", "본인확인 → 동의/비동의 + 손서명 → 완료"),
             ("fa-solid fa-table-list", "교사용 테이블 대시보드", "수신자 상태와 링크, 다운로드를 한 화면에서 관리"),
             ("fa-solid fa-file-pdf", "통합 PDF 생성", "학생명 가나다순으로 통합본을 다운로드"),
         ]
@@ -52,6 +52,15 @@ class Command(BaseCommand):
                 title=title,
                 defaults={"icon": icon, "description": desc},
             )
+
+        # Normalize legacy wording to a more explicit label.
+        ProductFeature.objects.filter(
+            product=product,
+            title="학부모 3단계 위저드",
+        ).update(
+            title="학부모 동의 링크(확인→서명→완료)",
+            description="본인확인 → 동의/비동의 + 손서명 → 완료",
+        )
 
         if created:
             self.stdout.write(self.style.SUCCESS(f"[OK] Created Consent product (ID: {product.id})"))

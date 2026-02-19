@@ -318,3 +318,58 @@ class ConsentRecipientManageTests(TestCase):
         response = self.client.post(url, {}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(SignatureRecipient.objects.filter(id=self.recipient.id).exists())
+
+class ConsentEvidenceTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user(username="evidence_teacher", password="pw123456")
+        self.teacher.email = "evidence_teacher@example.com"
+        self.teacher.save(update_fields=["email"])
+        self.teacher.userprofile.nickname = "교사"
+        self.teacher.userprofile.role = "school"
+        self.teacher.userprofile.save(update_fields=["nickname", "role"])
+
+        file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\nproof\n%%EOF", content_type="application/pdf")
+        self.document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="sample",
+            original_file=file_obj,
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        self.request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=self.document,
+            title="req",
+            consent_text_version="v1",
+            document_name_snapshot="sample.pdf",
+            document_size_snapshot=17,
+            document_sha256_snapshot="abc123",
+        )
+        self.recipient = SignatureRecipient.objects.create(
+            request=self.request_obj,
+            student_name="학생A",
+            parent_name="학부모A",
+            phone_number="",
+        )
+
+    def test_sign_page_shows_document_evidence_block(self):
+        url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SHA-256")
+        self.assertContains(response, "abc123")
+
+    def test_sign_audit_log_contains_document_evidence(self):
+        url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.post(
+            url,
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signature_data": "data:image/png;base64,AAA",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        log = self.request_obj.audit_logs.filter(event_type="sign_submitted").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.event_meta.get("document_sha256"), "abc123")
