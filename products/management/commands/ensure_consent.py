@@ -10,8 +10,8 @@ class Command(BaseCommand):
         product, created = Product.objects.get_or_create(
             title="동의서는 나에게 맡겨",
             defaults={
-                "lead_text": "학부모 동의서 수합을 모바일 3단계로 간단하게 처리합니다.",
-                "description": "업로드부터 위치 설정, 수신자 발송, 통합 PDF 다운로드까지 한 번에 처리합니다.",
+                "lead_text": "문서 올리고, 수신자 등록하고, 링크 보내면 동의서 수합이 완료됩니다.",
+                "description": "안내문 업로드, 수신자 등록, 링크 발송, 제출 결과 다운로드를 한 번에 처리합니다.",
                 "price": 0.00,
                 "is_active": True,
                 "is_featured": False,
@@ -23,7 +23,7 @@ class Command(BaseCommand):
                 "service_type": "classroom",
                 "external_url": "",
                 "solve_text": "학부모 동의서 회수/보관의 번거로움",
-                "result_text": "서명 완료 PDF + 통합본",
+                "result_text": "학부모 제출 링크 + 결과 CSV/PDF",
                 "time_text": "3분",
             },
         )
@@ -43,8 +43,8 @@ class Command(BaseCommand):
 
         features = [
             ("fa-solid fa-mobile-screen-button", "학부모 동의 링크(확인→서명→완료)", "본인확인 → 동의/비동의 + 손서명 → 완료"),
-            ("fa-solid fa-table-list", "교사용 테이블 대시보드", "수신자 상태와 링크, 다운로드를 한 화면에서 관리"),
-            ("fa-solid fa-file-pdf", "통합 PDF 생성", "학생명 가나다순으로 통합본을 다운로드"),
+            ("fa-solid fa-table-list", "교사용 진행상태 대시보드", "수신자 상태와 링크, 다운로드를 한 화면에서 관리"),
+            ("fa-solid fa-file-pdf", "제출 결과 PDF 생성", "학생별 제출 결과를 묶어 PDF로 다운로드"),
         ]
         for icon, title, desc in features:
             ProductFeature.objects.get_or_create(
@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 defaults={"icon": icon, "description": desc},
             )
 
-        # Normalize legacy wording to a more explicit label.
+        # Legacy wording normalize
         ProductFeature.objects.filter(
             product=product,
             title="학부모 3단계 위저드",

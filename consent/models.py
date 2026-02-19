@@ -3,8 +3,8 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import models
 from django.core.files.storage import default_storage
+from django.db import models
 from django.utils import timezone
 
 
@@ -13,7 +13,7 @@ def _generate_access_token():
 
 
 def get_raw_storage():
-    """Cloudinary 사용 시 raw 스토리지를, 아니면 기본 스토리지를 사용한다."""
+    """Raw 파일은 Cloudinary 사용 시 Raw 스토리지를, 아니면 기본 스토리지를 사용."""
     if getattr(settings, "USE_CLOUDINARY", False):
         try:
             from cloudinary_storage.storage import RawMediaCloudinaryStorage
@@ -25,7 +25,7 @@ def get_raw_storage():
 
 
 def get_document_storage():
-    """안내문 원본은 기본 스토리지로 저장해 브라우저 미리보기 호환성을 높인다."""
+    """안내문 원본은 기본 스토리지를 사용."""
     return default_storage
 
 
@@ -63,9 +63,9 @@ class SignatureRequest(models.Model):
     STATUS_SENT = "sent"
     STATUS_COMPLETED = "completed"
     STATUS_CHOICES = [
-        (STATUS_DRAFT, "Draft"),
-        (STATUS_SENT, "Sent"),
-        (STATUS_COMPLETED, "Completed"),
+        (STATUS_DRAFT, "작성중"),
+        (STATUS_SENT, "발송됨"),
+        (STATUS_COMPLETED, "완료"),
     ]
     LINK_EXPIRE_7 = 7
     LINK_EXPIRE_14 = 14
@@ -154,17 +154,17 @@ class SignatureRecipient(models.Model):
     STATUS_SIGNED = "signed"
     STATUS_DECLINED = "declined"
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
-        (STATUS_VERIFIED, "Verified"),
-        (STATUS_SIGNED, "Signed"),
-        (STATUS_DECLINED, "Declined"),
+        (STATUS_PENDING, "대기"),
+        (STATUS_VERIFIED, "본인확인 완료"),
+        (STATUS_SIGNED, "동의 제출"),
+        (STATUS_DECLINED, "비동의 제출"),
     ]
 
     DECISION_AGREE = "agree"
     DECISION_DISAGREE = "disagree"
     DECISION_CHOICES = [
-        (DECISION_AGREE, "Agree"),
-        (DECISION_DISAGREE, "Disagree"),
+        (DECISION_AGREE, "동의"),
+        (DECISION_DISAGREE, "비동의"),
     ]
 
     request = models.ForeignKey(

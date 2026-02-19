@@ -26,7 +26,7 @@
         첨부 문서 다운로드
       </a>
       <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
-        <p class="font-semibold mb-1">동의 대상 문서 증거값</p>
+        <p class="font-semibold mb-1">동의 대상 문서 확인값</p>
         <p>파일명: {{ document_evidence.document_name|default:"(미기록)" }}</p>
         <p>SHA-256: <span class="break-all">{{ document_evidence.document_sha256|default:"(미기록)" }}</span></p>
       </div>
@@ -50,7 +50,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-semibold mb-1">손가락 서명</label>
+        <label class="block text-sm font-semibold mb-1">학부모 서명</label>
         <canvas id="signaturePad" class="shadow-clay-inner"></canvas>
         <div class="flex gap-2 mt-2">
           <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>

@@ -17,7 +17,7 @@ class ConsentDocumentForm(forms.ModelForm):
             "title": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
-                    "placeholder": "동의서 문서 제목",
+                    "placeholder": "예: 1학기 체험학습 가정통신문",
                 }
             ),
             "original_file": forms.FileInput(
@@ -45,14 +45,14 @@ class ConsentRequestForm(forms.ModelForm):
             "title": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
-                    "placeholder": "예: 1학기 체험학습 동의서",
+                    "placeholder": "예: 1학기 현장체험학습 동의서",
                 }
             ),
             "message": forms.Textarea(
                 attrs={
                     "class": f"{CLAY_INPUT} resize-none",
                     "rows": 3,
-                    "placeholder": "학부모에게 보낼 안내 메시지",
+                    "placeholder": "학부모에게 전달할 안내 메시지를 입력하세요.",
                 }
             ),
             "link_expire_days": forms.Select(
@@ -64,7 +64,7 @@ class ConsentRequestForm(forms.ModelForm):
                 attrs={
                     "class": f"{CLAY_INPUT} resize-none",
                     "rows": 5,
-                    "placeholder": "선택 입력 (비워두면 기본 고지문이 자동 적용됩니다)",
+                    "placeholder": "선택 입력 (비워두면 기본 고지문이 자동 적용됩니다.)",
                 }
             ),
         }
@@ -81,7 +81,7 @@ class RecipientBulkForm(forms.Form):
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
-                "placeholder": "학생명,학부모명\n홍길동,홍길동 보호자",
+                "placeholder": "학생명,학부모명,연락처\n김하늘,김하늘 보호자,01012345678",
             }
         )
     )
@@ -152,5 +152,5 @@ class ConsentSignForm(forms.Form):
     def clean_signature_data(self):
         value = (self.cleaned_data.get("signature_data") or "").strip()
         if not value.startswith("data:image"):
-            raise forms.ValidationError("손서명을 입력해 주세요.")
+            raise forms.ValidationError("서명을 입력해 주세요.")
         return value

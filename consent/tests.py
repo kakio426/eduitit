@@ -108,7 +108,7 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 410)
-        self.assertContains(response, "응답 링크가 만료되었습니다.", status_code=410)
+        self.assertContains(response, "이 제출 링크는 만료되었습니다.", status_code=410)
 
     def test_public_document_returns_file(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -195,7 +195,7 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "문구+링크 복사")
+        self.assertContains(response, "안내문+링크 복사")
         self.assertContains(response, "data:image/png;base64,")
 
     @patch("consent.models.SignatureDocument.save", side_effect=RuntimeError("storage failure"))
