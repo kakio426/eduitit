@@ -245,3 +245,76 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 503)
         self.assertContains(response, "동의서 서비스 점검 안내", status_code=503)
+
+class ConsentRecipientManageTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user(username="manage_teacher", password="pw123456")
+        self.teacher.email = "manage_teacher@example.com"
+        self.teacher.save(update_fields=["email"])
+        self.teacher.userprofile.nickname = "교사"
+        self.teacher.userprofile.role = "school"
+        self.teacher.userprofile.save(update_fields=["nickname", "role"])
+
+        file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        self.document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="sample",
+            original_file=file_obj,
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        self.request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=self.document,
+            title="req",
+            consent_text_version="v1",
+        )
+        self.recipient = SignatureRecipient.objects.create(
+            request=self.request_obj,
+            student_name="학생A",
+            parent_name="학부모A",
+            phone_number="",
+        )
+
+    def test_update_recipient_changes_fields(self):
+        self.client.login(username="manage_teacher", password="pw123456")
+        url = reverse("consent:update_recipient", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.post(
+            url,
+            {
+                "student_name": "수정학생",
+                "parent_name": "수정학부모",
+                "phone_number": "010-1234-5678",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.student_name, "수정학생")
+        self.assertEqual(self.recipient.parent_name, "수정학부모")
+        self.assertEqual(self.recipient.phone_number, "010-1234-5678")
+
+    def test_update_recipient_blocks_when_signed(self):
+        self.recipient.status = SignatureRecipient.STATUS_SIGNED
+        self.recipient.save(update_fields=["status"])
+
+        self.client.login(username="manage_teacher", password="pw123456")
+        url = reverse("consent:update_recipient", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.post(
+            url,
+            {
+                "student_name": "변경시도",
+                "parent_name": "변경시도",
+                "phone_number": "",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertNotEqual(self.recipient.student_name, "변경시도")
+
+    def test_delete_recipient_removes_pending_recipient(self):
+        self.client.login(username="manage_teacher", password="pw123456")
+        url = reverse("consent:delete_recipient", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.post(url, {}, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SignatureRecipient.objects.filter(id=self.recipient.id).exists())

@@ -857,6 +857,80 @@ def consent_regenerate_link(request, recipient_id):
     return redirect("consent:detail", request_id=recipient.request.request_id)
 
 
+@login_required
+@transaction.atomic
+def consent_update_recipient(request, recipient_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request"),
+        id=recipient_id,
+        request__created_by=request.user,
+    )
+    if request.method != "POST":
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        messages.error(request, "이미 응답이 완료된 수신자는 수정할 수 없습니다.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    student_name = (request.POST.get("student_name") or "").strip()
+    parent_name = (request.POST.get("parent_name") or "").strip()
+    phone_number = (request.POST.get("phone_number") or "").strip()
+
+    if not student_name or not parent_name:
+        messages.error(request, "학생명과 학부모명은 필수입니다.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+    if len(phone_number) > 20:
+        messages.error(request, "전화번호는 20자 이내로 입력해 주세요.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    duplicate_exists = SignatureRecipient.objects.filter(
+        request=recipient.request,
+        student_name=student_name,
+        parent_name=parent_name,
+        phone_number=phone_number,
+    ).exclude(id=recipient.id).exists()
+    if duplicate_exists:
+        messages.error(request, "동일한 수신자 정보가 이미 등록되어 있습니다.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    recipient.student_name = student_name
+    recipient.parent_name = parent_name
+    recipient.phone_number = phone_number
+    recipient.save(update_fields=["student_name", "parent_name", "phone_number"])
+    messages.success(request, f"{recipient.student_name} 수신자 정보를 수정했습니다.")
+    return redirect("consent:detail", request_id=recipient.request.request_id)
+
+
+@login_required
+@transaction.atomic
+def consent_delete_recipient(request, recipient_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request"),
+        id=recipient_id,
+        request__created_by=request.user,
+    )
+    if request.method != "POST":
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        messages.error(request, "이미 응답이 완료된 수신자는 삭제할 수 없습니다.")
+        return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    request_id = recipient.request.request_id
+    student_name = recipient.student_name
+    recipient.delete()
+    messages.success(request, f"{student_name} 수신자를 삭제했습니다.")
+    return redirect("consent:detail", request_id=request_id)
+
+
 def consent_complete(request, token):
     schema_block = _schema_guard_response(request)
     if schema_block:

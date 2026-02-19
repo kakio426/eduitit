@@ -23,84 +23,98 @@
 
     {% if consent_request.is_link_expired %}
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      현재 발송 링크가 만료되었습니다. 필요한 수신자 링크를 재발급해 주세요.
+      현재 발송 링크가 만료되었습니다. 필요하면 수신자별 링크를 재발급해 주세요.
     </div>
     {% endif %}
+
     {% if not source_file_available %}
     <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-      첨부 안내문 파일에 접근할 수 없습니다. 현재 상태로는 학부모가 안내문을 열 때 오류가 발생합니다.
-      문서를 다시 업로드한 뒤 발송 링크를 생성해 주세요.
+      첨부 안내문 파일을 찾을 수 없습니다. 문서를 다시 업로드한 뒤 발송 링크를 생성해 주세요.
     </div>
     {% endif %}
 
     <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
       <p class="font-semibold mb-1">학부모 안내 기본 문구 복사 지원</p>
-      <p>각 수신자 행의 `문구+링크 복사` 버튼을 누르면 동의 요청 멘트와 접속 링크가 함께 복사됩니다.</p>
+      <p>각 수신자 카드의 <code>문구+링크 복사</code> 버튼으로 안내문과 접속 링크를 함께 복사할 수 있습니다.</p>
     </div>
 
-    <div class="clay-card p-0 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[1280px]">
-          <thead class="bg-gray-50 text-gray-600">
-            <tr>
-              <th class="text-left px-4 py-3">학생명</th>
-              <th class="text-left px-4 py-3">학부모명</th>
-              <th class="text-left px-4 py-3">상태</th>
-              <th class="text-left px-4 py-3">처리시각</th>
-              <th class="text-left px-4 py-3">접속 링크 / QR</th>
-              <th class="text-left px-4 py-3">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in recipient_rows %}
-            {% with r=row.recipient %}
-            <tr class="border-t border-gray-100">
-              <td class="px-4 py-3">{{ r.student_name }}</td>
-              <td class="px-4 py-3">{{ r.parent_name }}</td>
-              <td class="px-4 py-3">
-                {{ r.get_status_display }}
-                {% if consent_request.is_link_expired and r.status == "pending" %}
-                <span class="ml-1 text-xs text-amber-700">(만료)</span>
-                {% endif %}
-              </td>
-              <td class="px-4 py-3">
-                {% if r.signed_at %}
-                {{ r.signed_at|date:"Y-m-d H:i" }}
-                {% else %}
-                <span class="text-gray-400">-</span>
-                {% endif %}
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-start gap-3">
-                  <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="접속 링크 QR 코드" class="w-20 h-20 rounded border border-gray-200 bg-white p-1">
-                  <div class="space-y-2">
-                    <input id="sign-link-{{ r.id }}" type="text" readonly value="{{ row.sign_url }}" class="w-[420px] px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
-                    <textarea id="sign-message-{{ r.id }}" class="hidden">{{ row.copy_message }}</textarea>
-                    <div class="flex flex-wrap gap-2">
-                      <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="sign-link-{{ r.id }}">링크 복사</button>
-                      <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">문구+링크 복사</button>
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-4 py-3">
+    <section class="clay-card p-4 sm:p-5 space-y-4">
+      <h2 class="text-lg font-bold text-gray-700">관리</h2>
+
+      {% for row in recipient_rows %}
+      {% with r=row.recipient %}
+      <article class="rounded-2xl border border-gray-200 bg-white/90 p-4 shadow-sm space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-base font-bold text-gray-800">{{ r.student_name }}</p>
+            <p class="text-sm text-gray-600">{{ r.parent_name }}</p>
+            {% if r.phone_number %}
+            <p class="text-xs text-gray-500 mt-1">연락처: {{ r.phone_number }}</p>
+            {% endif %}
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-semibold text-gray-700">{{ r.get_status_display }}</p>
+            {% if r.signed_at %}
+            <p class="text-xs text-gray-500">{{ r.signed_at|date:"Y-m-d H:i" }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-gray-50 border border-gray-200 p-3 space-y-3">
+          <div class="flex items-start gap-3">
+            <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="접속 링크 QR 코드" class="w-16 h-16 rounded border border-gray-200 bg-white p-1 shrink-0">
+            <div class="min-w-0 w-full space-y-2">
+              <input id="sign-link-{{ r.id }}" type="text" readonly value="{{ row.sign_url }}" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
+              <textarea id="sign-message-{{ r.id }}" class="hidden">{{ row.copy_message }}</textarea>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="sign-link-{{ r.id }}">링크 복사</button>
+                <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">문구+링크 복사</button>
                 {% if r.status == "pending" or r.status == "verified" %}
-                <a href="{% url 'consent:regenerate_link' recipient_id=r.id %}" class="text-indigo-600 font-semibold hover:underline">링크 재발급</a>
-                {% else %}
-                <span class="text-gray-400">-</span>
+                <a href="{% url 'consent:regenerate_link' recipient_id=r.id %}" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-semibold hover:bg-slate-800">링크 재발급</a>
                 {% endif %}
-              </td>
-            </tr>
-            {% endwith %}
-            {% empty %}
-            <tr>
-              <td colspan="6" class="px-4 py-8 text-center text-gray-500">수신자가 없습니다.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if r.status == "pending" or r.status == "verified" %}
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="js-toggle-edit px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
+            data-target-id="edit-form-{{ r.id }}"
+            data-open-label="수정 열기"
+            data-close-label="수정 닫기"
+            aria-expanded="false"
+          >
+            수정 열기
+          </button>
+          <form method="post" action="{% url 'consent:delete_recipient' recipient_id=r.id %}" onsubmit="return confirm('이 수신자를 삭제할까요?');">
+            {% csrf_token %}
+            <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">삭제</button>
+          </form>
+        </div>
+
+        <form id="edit-form-{{ r.id }}" method="post" action="{% url 'consent:update_recipient' recipient_id=r.id %}" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {% csrf_token %}
+          <input type="text" name="student_name" value="{{ r.student_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학생명">
+          <input type="text" name="parent_name" value="{{ r.parent_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학부모명">
+          <input type="text" name="phone_number" value="{{ r.phone_number }}" maxlength="20" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="전화번호(선택)">
+          <div class="sm:col-span-3 flex flex-wrap gap-2 pt-1">
+            <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">수정 저장</button>
+          </div>
+        </form>
+        {% else %}
+        <p class="text-xs text-gray-500">응답 완료된 수신자는 수정/삭제가 잠금됩니다.</p>
+        {% endif %}
+      </article>
+      {% endwith %}
+      {% empty %}
+      <div class="rounded-xl border border-dashed border-gray-300 bg-white/60 px-4 py-8 text-center text-gray-500">
+        수신자가 없습니다.
       </div>
-    </div>
+      {% endfor %}
+    </section>
   </div>
 </main>
 {% endblock %}
@@ -136,6 +150,17 @@
   document.querySelectorAll(".js-copy").forEach((btn) => {
     btn.addEventListener("click", () => {
       copyFromElement(btn.dataset.copySource, btn);
+    });
+  });
+
+  document.querySelectorAll(".js-toggle-edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = document.getElementById(btn.dataset.targetId);
+      if (!target) return;
+      const isHidden = target.classList.contains("hidden");
+      target.classList.toggle("hidden");
+      btn.textContent = isHidden ? btn.dataset.closeLabel : btn.dataset.openLabel;
+      btn.setAttribute("aria-expanded", isHidden ? "true" : "false");
     });
   });
 </script>
