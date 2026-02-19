@@ -1,0 +1,2 @@
+{% load i18n %}
+{% blocktrans %}로그인되었습니다.{% endblocktrans %}

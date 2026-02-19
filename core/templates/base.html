@@ -265,7 +265,7 @@
         tagColor(tag) {
             return { success: 'text-green-500', error: 'text-red-500', warning: 'text-orange-500', info: 'text-blue-500' }[tag] || 'text-blue-500';
         }
-    }" class="fixed top-24 right-6 z-[200] flex flex-col gap-3 pointer-events-none" style="max-width: 380px;">
+    }" class="fixed top-28 md:top-24 right-4 md:right-6 z-[200] flex flex-col gap-3 pointer-events-none" style="max-width: 380px;">
             <template x-for="toast in toasts" :key="toast.id">
                 <div x-show="true" x-transition:enter="transition ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-x-8"
