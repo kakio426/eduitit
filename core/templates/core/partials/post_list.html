@@ -1,7 +1,7 @@
 {% for post in posts %}
 {% if forloop.first %}
 {% include 'core/partials/post_item.html' with is_first=True %}
-{% if posts.count > 1 %}
+{% if posts.count > 1 and not expand_all_mobile %}
 <div class="md:hidden text-center my-3 relative group" data-older-posts-group>
     <div class="absolute inset-0 flex items-center" aria-hidden="true">
         <div class="w-full border-t border-indigo-100"></div>
@@ -20,7 +20,7 @@
     {% else %}
     {% include 'core/partials/post_item.html' with is_first=False %}
     {% endif %}
-    {% if forloop.last and posts.count > 1 %}
+    {% if forloop.last and posts.count > 1 and not expand_all_mobile %}
 </div>
 {% endif %}
 {% empty %}

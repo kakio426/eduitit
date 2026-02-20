@@ -56,6 +56,22 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertNotIn('search_products_json', response.context)
 
+    def test_v1_mobile_sns_more_uses_toggle_not_anchor(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('@click="snsOpen = true"', content)
+        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
+        self.assertNotIn('href="#sns-full-section"', content)
+
+    def test_v1_authenticated_mobile_sns_more_uses_toggle_not_anchor(self):
+        _create_onboarded_user('v1authuser')
+        self.client.login(username='v1authuser', password='pass1234')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('@click="snsOpen = true"', content)
+        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
+        self.assertNotIn('href="#sns-full-section-auth"', content)
+
 
 @override_settings(HOME_V2_ENABLED=True)
 class HomeV2ViewTest(TestCase):
@@ -241,6 +257,21 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('hidden xl:block', content)
         self.assertIn('block xl:hidden', content)
+
+    def test_v2_mobile_sns_more_uses_toggle_not_anchor(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('@click="snsOpen = true"', content)
+        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
+        self.assertNotIn('href="#sns-full-section-v2"', content)
+
+    def test_v2_authenticated_mobile_sns_more_uses_toggle_not_anchor(self):
+        self._login('v2authsns')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('@click="snsOpen = true"', content)
+        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
+        self.assertNotIn('href="#sns-full-section-auth-v2"', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)
