@@ -17,14 +17,17 @@ class DutyTickerManager {
         this.timerMaxSeconds = 300;
         this.isTimerRunning = false;
         this.timerInterval = null;
+        this.timerEndAt = null;
+        this.timerStorageKey = 'dt-focus-timer-state-v1';
         this.audioCtx = null;
     }
 
     init() {
         console.log("DutyTicker: Initializing...");
         this.loadData();
-        this.updateTimerDisplay();
         this.setupEventListeners();
+        this.restoreTimerState();
+        this.updateTimerDisplay();
         this.updateSoundUI();
 
         // Anti-cache check
@@ -37,6 +40,17 @@ class DutyTickerManager {
 
         const broadcastCancel = document.getElementById('broadcastCancelBtn');
         if (broadcastCancel) broadcastCancel.onclick = () => this.closeBroadcastModal();
+
+        const customTimerInput = document.getElementById('customTimerMinutesInput');
+        if (customTimerInput) {
+            customTimerInput.value = String(Math.max(1, Math.round(this.timerMaxSeconds / 60)));
+            customTimerInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.applyCustomTimerMinutes();
+                }
+            });
+        }
 
         // Ensure timer display is correct on start
         this.updateTimerDisplay();
@@ -63,6 +77,88 @@ class DutyTickerManager {
         if (!options.headers) options.headers = {};
         if (csrftoken) options.headers['X-CSRFToken'] = csrftoken;
         return fetch(url, options);
+    }
+
+    // --- Safety / State Helpers ---
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => {
+            switch (char) {
+                case '&': return '&amp;';
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '"': return '&quot;';
+                case "'": return '&#39;';
+                default: return char;
+            }
+        });
+    }
+
+    normalizeTimerSeconds(value, fallback = 300) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return fallback;
+        const floored = Math.floor(numeric);
+        if (floored < 1) return fallback;
+        return Math.min(floored, 59940);
+    }
+
+    saveTimerState() {
+        try {
+            const safeMax = this.normalizeTimerSeconds(this.timerMaxSeconds, 300);
+            const safeSeconds = Math.min(this.normalizeTimerSeconds(this.timerSeconds, safeMax), safeMax);
+            const timerEndAt = this.isTimerRunning
+                ? (Number.isFinite(this.timerEndAt) ? this.timerEndAt : Date.now() + (safeSeconds * 1000))
+                : null;
+
+            localStorage.setItem(this.timerStorageKey, JSON.stringify({
+                timerSeconds: safeSeconds,
+                timerMaxSeconds: safeMax,
+                isTimerRunning: this.isTimerRunning,
+                timerEndAt,
+            }));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save timer state', error);
+        }
+    }
+
+    restoreTimerState() {
+        try {
+            const raw = localStorage.getItem(this.timerStorageKey);
+            if (!raw) return;
+
+            const parsed = JSON.parse(raw);
+            const restoredMax = this.normalizeTimerSeconds(parsed.timerMaxSeconds, 300);
+            const restoredSeconds = Math.min(this.normalizeTimerSeconds(parsed.timerSeconds, restoredMax), restoredMax);
+            const now = Date.now();
+            const restoredEndAt = Number(parsed.timerEndAt);
+            const shouldResume = parsed.isTimerRunning === true && Number.isFinite(restoredEndAt) && restoredEndAt > now;
+
+            this.timerMaxSeconds = restoredMax;
+
+            if (shouldResume) {
+                this.timerEndAt = restoredEndAt;
+                this.timerSeconds = Math.max(1, Math.ceil((restoredEndAt - now) / 1000));
+                this.isTimerRunning = true;
+                this.startTimerTicker();
+            } else {
+                this.timerSeconds = restoredSeconds;
+                this.timerEndAt = null;
+                this.isTimerRunning = false;
+            }
+
+            this.syncCustomTimerInput();
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore timer state', error);
+        }
+    }
+
+    startTimerTicker() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => this.handleTimerTick(), 250);
+    }
+
+    stopTimerTicker() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = null;
     }
 
     // --- Data ---
@@ -122,7 +218,7 @@ class DutyTickerManager {
         }
         container.innerHTML = this.todaySchedule.map(s => `
             <div class="px-3 py-1 bg-white/5 rounded-xl border border-white/5 whitespace-nowrap text-xs font-bold text-slate-200">
-                <span class="text-indigo-400 mr-1">${s.period}</span> ${s.name}
+                <span class="text-indigo-400 mr-1">${this.escapeHtml(s.period)}</span> ${this.escapeHtml(s.name)}
             </div>
         `).join('');
     }
@@ -149,20 +245,24 @@ class DutyTickerManager {
         container.innerHTML = this.roles.map(role => {
             const iconClass = roleIcons[role.name] || 'fa-solid fa-circle-user';
             const isCompleted = role.status === 'completed';
+            const roleId = Number.isFinite(Number(role.id)) ? Number(role.id) : 0;
+            const safeTimeSlot = this.escapeHtml(role.timeSlot || 'TASK');
+            const safeRoleName = this.escapeHtml(role.name);
+            const safeAssignee = this.escapeHtml(role.assignee || '미배정');
             return `
                 <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg"
-                    onclick="window.dtApp.openStudentModal(${role.id})">
+                    onclick="window.dtApp.openStudentModal(${roleId})">
                     <div class="w-14 h-14 bg-slate-900/60 rounded-2xl flex items-center justify-center border border-white/5 group-hover:border-indigo-500/50 transition-all">
                         <i class="${iconClass} text-2xl ${isCompleted ? 'text-emerald-400' : 'text-slate-400 group-hover:text-indigo-400'}"></i>
                     </div>
                     <div class="flex-1 ml-5">
                         <div class="flex justify-between items-center mb-1">
-                            <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${role.timeSlot || 'TASK'}</p>
+                            <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${safeTimeSlot}</p>
                             ${isCompleted ? '<span class="text-emerald-400 text-[10px] font-black uppercase"><i class="fa-solid fa-check-circle"></i> DONE</span>' : ''}
                         </div>
                         <div class="flex justify-between items-center text-xl font-black text-slate-100">
-                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${role.name}</p>
-                             <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${role.assignee}</div>
+                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}</p>
+                             <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -176,13 +276,16 @@ class DutyTickerManager {
 
         container.innerHTML = this.students.map(student => {
             const isDone = student.status === 'done';
+            const studentId = Number.isFinite(Number(student.id)) ? Number(student.id) : 0;
+            const safeStudentNumber = this.escapeHtml(student.number);
+            const safeStudentName = this.escapeHtml(student.name);
             return `
                 <div class="relative p-2 rounded-2xl border border-slate-700 bg-slate-800/50 flex flex-col items-center gap-1 cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''}"
-                    onclick="window.dtApp.handleStudentStatusToggle(${student.id})">
+                    onclick="window.dtApp.handleStudentStatusToggle(${studentId})">
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
-                        ${student.number}
+                        ${safeStudentNumber}
                     </div>
-                    <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'}">${student.name}</span>
+                    <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
@@ -242,41 +345,108 @@ class DutyTickerManager {
         else this.startTimer();
     }
 
+    handleTimerTick() {
+        if (!this.isTimerRunning || !this.timerEndAt) return;
+        const remaining = Math.max(0, Math.ceil((this.timerEndAt - Date.now()) / 1000));
+
+        if (remaining !== this.timerSeconds) {
+            this.timerSeconds = remaining;
+            this.updateTimerDisplay();
+            this.saveTimerState();
+        }
+
+        if (remaining === 0) {
+            this.pauseTimer();
+            this.playAlert();
+        }
+    }
+
     startTimer() {
         if (this.isTimerRunning) return;
-        this.isTimerRunning = true;
-        this.getAudioCtx().resume();
-        this.updateTimerDisplay();
 
-        this.timerInterval = setInterval(() => {
-            if (this.timerSeconds > 0) {
-                this.timerSeconds--;
-                this.updateTimerDisplay();
-            } else {
-                this.pauseTimer();
-                this.playAlert();
-            }
-        }, 1000);
+        if (this.timerSeconds <= 0) {
+            this.timerSeconds = this.timerMaxSeconds > 0 ? this.timerMaxSeconds : 60;
+        }
+
+        this.isTimerRunning = true;
+        this.timerEndAt = Date.now() + (this.timerSeconds * 1000);
+        this.resumeAudioContext();
+        this.updateTimerDisplay();
+        this.saveTimerState();
+
+        this.startTimerTicker();
     }
 
     pauseTimer() {
+        if (this.isTimerRunning && this.timerEndAt) {
+            this.timerSeconds = Math.max(0, Math.ceil((this.timerEndAt - Date.now()) / 1000));
+        }
+
         this.isTimerRunning = false;
-        if (this.timerInterval) clearInterval(this.timerInterval);
-        this.timerInterval = null;
+        this.stopTimerTicker();
+        this.timerEndAt = null;
         this.updateTimerDisplay();
+        this.saveTimerState();
     }
 
     resetTimer() {
         this.pauseTimer();
         this.timerSeconds = this.timerMaxSeconds;
+        this.syncCustomTimerInput();
         this.updateTimerDisplay();
+        this.saveTimerState();
     }
 
-    setTimerMode(sec) {
-        this.pauseTimer();
-        this.timerMaxSeconds = sec;
-        this.timerSeconds = sec;
+    addTimerMinutes(minutes = 1) {
+        const minuteValue = Number(minutes);
+        if (!Number.isFinite(minuteValue) || minuteValue <= 0) return;
+
+        const nextSeconds = this.timerSeconds + (Math.floor(minuteValue) * 60);
+        const clampedSeconds = Math.min(nextSeconds, 59940);
+
+        this.timerSeconds = clampedSeconds;
+        this.timerMaxSeconds = clampedSeconds;
+
+        if (this.isTimerRunning) {
+            this.timerEndAt = Date.now() + (this.timerSeconds * 1000);
+        }
+
+        this.syncCustomTimerInput();
         this.updateTimerDisplay();
+        this.saveTimerState();
+    }
+
+    applyCustomTimerMinutes() {
+        const input = document.getElementById('customTimerMinutesInput');
+        if (!input) return;
+
+        const rawValue = Number(input.value);
+        if (!Number.isFinite(rawValue)) return;
+
+        const minutes = Math.max(1, Math.floor(rawValue));
+        input.value = String(minutes);
+        this.setTimerMode(minutes * 60, true);
+    }
+
+    setTimerMode(sec, autoStart = false) {
+        const normalizedSec = Number(sec);
+        if (!Number.isFinite(normalizedSec) || normalizedSec <= 0) return;
+
+        this.pauseTimer();
+        this.timerMaxSeconds = Math.floor(normalizedSec);
+        this.timerSeconds = this.timerMaxSeconds;
+        this.syncCustomTimerInput();
+        this.updateTimerDisplay();
+        this.saveTimerState();
+
+        if (autoStart) this.startTimer();
+    }
+
+    syncCustomTimerInput() {
+        const input = document.getElementById('customTimerMinutesInput');
+        if (!input) return;
+        const mins = Math.max(1, Math.round(this.timerMaxSeconds / 60));
+        input.value = String(mins);
     }
 
     updateTimerDisplay() {
@@ -320,14 +490,28 @@ class DutyTickerManager {
         const role = this.roles.find(r => r.id === roleId);
         if (!role) return;
 
-        document.getElementById('studentModalTitle').textContent = `'${role.name}' 담당자`;
-        document.getElementById('studentListGrid').innerHTML = this.students.map(s => `
-            <button onclick="window.dtApp.assignStudent(${s.id})" 
-                class="p-4 bg-slate-700/50 border border-slate-600 rounded-xl font-bold ${role.assigneeId === s.id ? 'ring-2 ring-indigo-500 bg-indigo-900/50' : ''}">
-                <span class="text-xs opacity-50">${s.number}번</span><br>${s.name}
+        const titleEl = document.getElementById('studentModalTitle');
+        const listEl = document.getElementById('studentListGrid');
+        if (titleEl) titleEl.textContent = `'${role.name}' 담당자`;
+        if (listEl) {
+            const selectedAssigneeId = Number(role.assigneeId);
+            listEl.innerHTML = this.students.map(s => `
+            <button onclick="window.dtApp.assignStudent(${Number.isFinite(Number(s.id)) ? Number(s.id) : 0})" 
+                class="p-4 bg-slate-700/50 border border-slate-600 rounded-xl font-bold ${selectedAssigneeId === Number(s.id) ? 'ring-2 ring-indigo-500 bg-indigo-900/50' : ''}">
+                <span class="text-xs opacity-50">${this.escapeHtml(s.number)}번</span><br>${this.escapeHtml(s.name)}
             </button>
         `).join('');
+        }
+
+        const roleToggleBtn = document.getElementById('toggleRoleStatusBtn');
+        if (roleToggleBtn) {
+            roleToggleBtn.onclick = () => this.toggleSelectedRoleStatus();
+        }
         this.openModal('studentModal');
+    }
+
+    closeStudentModal() {
+        this.closeModal('studentModal');
     }
 
     async assignStudent(studentId) {
@@ -340,6 +524,31 @@ class DutyTickerManager {
             this.loadData();
             this.closeModal('studentModal');
         } catch (e) { console.error(e); }
+    }
+
+    async toggleSelectedRoleStatus() {
+        if (!this.selectedRoleId) return;
+        const role = this.roles.find(r => r.id === this.selectedRoleId);
+        if (!role || !role.assignmentId) {
+            this.closeStudentModal();
+            return;
+        }
+
+        const nextStatus = role.status !== 'completed';
+        role.status = nextStatus ? 'completed' : 'pending';
+        this.renderRoleList();
+        this.closeStudentModal();
+
+        try {
+            await this.secureFetch(`/dutyticker/api/assignment/${role.assignmentId}/toggle/`, {
+                method: 'POST',
+                body: JSON.stringify({ is_completed: nextStatus })
+            });
+            this.loadData();
+        } catch (error) {
+            console.error(error);
+            this.loadData();
+        }
     }
 
     openBroadcastModal() { this.openModal('broadcastModal'); document.getElementById('broadcastInput').focus(); }
@@ -377,15 +586,56 @@ class DutyTickerManager {
         });
     }
 
+    async rotateRolesManually() {
+        try {
+            await this.secureFetch('/dutyticker/api/rotate/', { method: 'POST' });
+            this.loadData();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async resetToMockup() {
+        const shouldReset = confirm('정말로 기본 데이터로 초기화할까요? 현재 학급 상태가 초기화됩니다.');
+        if (!shouldReset) return;
+
+        try {
+            await this.secureFetch('/dutyticker/api/reset/', { method: 'POST' });
+            this.pauseTimer();
+            this.timerMaxSeconds = 300;
+            this.timerSeconds = 300;
+            this.syncCustomTimerInput();
+            this.updateTimerDisplay();
+            this.saveTimerState();
+            this.loadData();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     // --- Utils ---
     getAudioCtx() {
-        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.audioCtx) return this.audioCtx;
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+
+        this.audioCtx = new AudioContextClass();
         return this.audioCtx;
+    }
+
+    resumeAudioContext() {
+        const ctx = this.getAudioCtx();
+        if (!ctx || typeof ctx.resume !== 'function') return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => { });
+        }
     }
 
     playNote(freq, start, dur, vol = 0.2) {
         if (!this.isSoundEnabled) return;
         const ctx = this.getAudioCtx();
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -397,12 +647,16 @@ class DutyTickerManager {
     }
 
     playAlert() {
-        const now = this.getAudioCtx().currentTime;
+        const ctx = this.getAudioCtx();
+        if (!ctx) return;
+        const now = ctx.currentTime;
         this.playNote(880, now, 0.1, 0.4); this.playNote(440, now + 0.15, 0.4, 0.4);
     }
 
     playSuccessSound() {
-        const now = this.getAudioCtx().currentTime;
+        const ctx = this.getAudioCtx();
+        if (!ctx) return;
+        const now = ctx.currentTime;
         this.playNote(523.25, now, 0.05); this.playNote(659.25, now + 0.05, 0.1);
     }
 
