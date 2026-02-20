@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}동의서 서명{% endblock %}
 
@@ -126,40 +127,71 @@
 {% block extra_js %}
 <script>
 {% if file_type == "pdf" %}
-// PDF.js 동적 로드 (pdfjs-dist@3 UMD)
+// PDF.js 동적 로드 (local static 우선, 실패 시 CDN fallback)
 (function() {
-  var inlineUrl = "{% url 'consent:public_document_inline' token=recipient.access_token %}";
-  var statusEl = document.getElementById("pdfViewerStatus");
-  var pdfCanvas = document.getElementById("pdfViewerCanvas");
+  const inlineUrl = "{% url 'consent:public_document_inline' token=recipient.access_token %}";
+  const statusEl = document.getElementById("pdfViewerStatus");
+  const pdfCanvas = document.getElementById("pdfViewerCanvas");
   if (!pdfCanvas) return;
-  var script = document.createElement("script");
-  script.src = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js";
-  script.onload = function() {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js";
-    pdfjsLib.getDocument(inlineUrl).promise
-      .then(function(pdf) { return pdf.getPage(1); })
-      .then(function(page) {
-        var container = pdfCanvas.parentElement;
-        var maxWidth = Math.min(container.clientWidth || 600, 800);
-        var base = page.getViewport({ scale: 1 });
-        var scale = Math.max(0.6, maxWidth / base.width);
-        var viewport = page.getViewport({ scale: scale });
-        pdfCanvas.width = viewport.width;
-        pdfCanvas.height = viewport.height;
-        return page.render({ canvasContext: pdfCanvas.getContext("2d"), viewport: viewport }).promise;
-      })
-      .then(function() {
-        if (statusEl) statusEl.textContent = "1페이지 표시 중 (전체는 다운로드 버튼 이용)";
-      })
-      .catch(function() {
-        if (statusEl) statusEl.textContent = "미리보기를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
-      });
-  };
-  script.onerror = function() {
-    if (statusEl) statusEl.textContent = "뷰어를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
-  };
-  document.head.appendChild(script);
+
+  const providers = [
+    {
+      moduleUrl: "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}",
+      workerUrl: "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}",
+    },
+    {
+      moduleUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs",
+      workerUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
+    },
+    {
+      moduleUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs",
+      workerUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
+    },
+  ];
+
+  async function renderFirstPage(pdfjsLib) {
+    const pdf = await pdfjsLib.getDocument(inlineUrl).promise;
+    const page = await pdf.getPage(1);
+    const container = pdfCanvas.parentElement;
+    const maxWidth = Math.min(container.clientWidth || 600, 800);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.max(0.6, maxWidth / base.width);
+    const viewport = page.getViewport({ scale });
+    pdfCanvas.width = viewport.width;
+    pdfCanvas.height = viewport.height;
+    await page.render({
+      canvasContext: pdfCanvas.getContext("2d"),
+      viewport,
+    }).promise;
+    if (statusEl) statusEl.textContent = "1페이지 표시 중 (전체는 다운로드 버튼 이용)";
+  }
+
+  async function loadAndRender() {
+    for (const provider of providers) {
+      try {
+        const mod = await import(provider.moduleUrl);
+        mod.GlobalWorkerOptions.workerSrc = provider.workerUrl;
+        await renderFirstPage(mod);
+        return true;
+      } catch (error) {
+        console.warn("sign-pdf-provider-failed", provider.moduleUrl, error);
+      }
+    }
+    return false;
+  }
+
+  loadAndRender()
+    .then(function(ok) {
+      if (!ok && statusEl) {
+        statusEl.textContent = "미리보기를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
+      }
+    })
+    .catch(function(error) {
+      console.warn("sign-pdf-render-failed", error);
+      if (statusEl) {
+        statusEl.textContent = "뷰어를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
+      }
+    });
 })();
 {% endif %}
 

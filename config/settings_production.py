@@ -411,7 +411,7 @@ CSP_SCRIPT_SRC = (
     "https://html2canvas.hertzen.com",
     "blob:", # Web Worker용
 )
-CSP_WORKER_SRC = ("'self'", "blob:", "https://cdnjs.cloudflare.com", "https://unpkg.com")
+CSP_WORKER_SRC = ("'self'", "blob:", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com")
 CSP_STYLE_SRC = (
     "'self'",
     "'unsafe-inline'",
