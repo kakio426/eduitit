@@ -877,6 +877,13 @@ def consent_sign(request, token):
     if request.method == "POST":
         form = ConsentSignForm(request.POST)
         if form.is_valid():
+            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(",")[0].strip()
+            else:
+                ip_address = request.META.get("REMOTE_ADDR")
+            user_agent = request.META.get("HTTP_USER_AGENT", "")
+
             decision = form.cleaned_data["decision"]
             recipient.decision = decision
             recipient.decline_reason = form.cleaned_data.get("decline_reason", "").strip()
@@ -887,7 +894,12 @@ def consent_sign(request, token):
                 if decision == SignatureRecipient.DECISION_AGREE
                 else SignatureRecipient.STATUS_DECLINED
             )
-            recipient.save(update_fields=["decision", "decline_reason", "signature_data", "signed_at", "status"])
+            recipient.ip_address = ip_address
+            recipient.user_agent = user_agent
+            recipient.save(update_fields=[
+                "decision", "decline_reason", "signature_data",
+                "signed_at", "status", "ip_address", "user_agent",
+            ])
 
             ConsentAuditLog.objects.create(
                 request=recipient.request,
@@ -897,6 +909,8 @@ def consent_sign(request, token):
                     "decision": recipient.decision,
                     **evidence,
                 },
+                ip_address=ip_address,
+                user_agent=user_agent,
             )
 
             if not recipient.request.recipients.exclude(
@@ -917,8 +931,9 @@ def consent_sign(request, token):
             "consent_request": recipient.request,
             "form": form,
             "expires_at": recipient.request.link_expires_at,
-            "is_expired": _is_active_link_expired(recipient),
+            "is_expired": False,
             "document_evidence": evidence,
+            "file_type": recipient.request.document.file_type,
         },
     )
 
@@ -938,6 +953,34 @@ def consent_public_document(request, token):
         return _build_file_response(file_field, inline=False)
     except Exception:
         logger.exception("[consent] public document open failed token=%s", token)
+        return render(
+            request,
+            "consent/document_unavailable.html",
+            {
+                "recipient": recipient,
+                "consent_request": recipient.request,
+            },
+            status=404,
+        )
+
+
+def consent_public_document_inline(request, token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request__document"),
+        access_token=token,
+    )
+    if _is_active_link_expired(recipient):
+        return _expired_link_response(request, recipient)
+
+    file_field = recipient.request.document.original_file
+    try:
+        return _build_file_response(file_field, inline=True)
+    except Exception:
+        logger.exception("[consent] public document inline open failed token=%s", token)
         return render(
             request,
             "consent/document_unavailable.html",

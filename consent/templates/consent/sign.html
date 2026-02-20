@@ -16,15 +16,22 @@
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-2xl mx-auto">
+
+    <!-- 헤더 카드 -->
     <div class="clay-card p-5 mb-4">
-      <h1 class="text-2xl font-bold text-gray-800">{{ consent_request.title }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
-      {% if expires_at %}
-      <p class="text-xs text-gray-500 mt-1">링크 만료: {{ expires_at|date:"Y-m-d H:i" }}</p>
-      {% endif %}
-      <a href="{% url 'consent:public_document' token=recipient.access_token %}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm text-gray-700 font-semibold">
-        첨부 문서 다운로드
-      </a>
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">{{ consent_request.title }}</h1>
+          <p class="text-sm text-gray-500 mt-1">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
+          {% if expires_at %}
+          <p class="text-xs text-gray-500 mt-1">링크 만료: {{ expires_at|date:"Y-m-d H:i" }}</p>
+          {% endif %}
+        </div>
+        <a href="{% url 'consent:public_document' token=recipient.access_token %}" target="_blank" rel="noopener noreferrer"
+           class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg shadow-clay-inner bg-bg-soft text-gray-600">
+          ↓ 다운로드
+        </a>
+      </div>
       <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
         <p class="font-semibold mb-1">동의 대상 문서 확인값</p>
         <p>파일명: {{ document_evidence.document_name|default:"(미기록)" }}</p>
@@ -32,16 +39,58 @@
       </div>
     </div>
 
+    <!-- 뷰어 카드 -->
+    {% if file_type == "pdf" or file_type == "image" %}
+    <div class="clay-card p-4 mb-4" x-data="{ open: true }">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-semibold text-gray-700">첨부 문서 미리보기</span>
+        <div class="flex items-center gap-2">
+          <a href="{% url 'consent:public_document' token=recipient.access_token %}"
+             target="_blank" rel="noopener noreferrer"
+             class="text-xs px-2 py-1 rounded-lg shadow-clay-inner bg-bg-soft text-gray-600">
+            ↓ 다운로드
+          </a>
+          <button type="button" @click="open = !open"
+                  class="text-xs px-2 py-1 rounded-lg shadow-clay-inner bg-bg-soft text-gray-600">
+            <span x-text="open ? '접기' : '펼치기'"></span>
+          </button>
+        </div>
+      </div>
+      <div x-show="open" x-transition>
+        {% if file_type == "pdf" %}
+        <div id="pdfViewerContainer"
+             class="w-full overflow-auto rounded-xl bg-white border border-gray-200"
+             style="max-height: 480px;">
+          <canvas id="pdfViewerCanvas" class="block mx-auto"></canvas>
+        </div>
+        <p id="pdfViewerStatus" class="text-xs text-gray-500 mt-1 text-center"></p>
+        {% elif file_type == "image" %}
+        <div class="w-full overflow-auto rounded-xl bg-white border border-gray-200"
+             style="max-height: 480px;">
+          <img src="{% url 'consent:public_document_inline' token=recipient.access_token %}"
+               alt="{{ document_evidence.document_name|default:'첨부 문서' }}"
+               class="block mx-auto max-w-full" loading="lazy">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 법적 고지 -->
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">
       <p class="font-semibold mb-1">법적 고지</p>
       <p class="whitespace-pre-line">{{ consent_request.legal_notice }}</p>
     </div>
 
+    <!-- 서명 폼 -->
     <form method="post" id="signForm" class="clay-card p-5 space-y-4">
       {% csrf_token %}
       <div>
         <label class="block text-sm font-semibold mb-2">동의 여부</label>
         <div class="space-y-1">{{ form.decision }}</div>
+        {% if form.decision.errors %}
+        <p class="text-red-600 text-xs mt-1">{{ form.decision.errors|join:", " }}</p>
+        {% endif %}
       </div>
 
       <div>
@@ -56,9 +105,18 @@
           <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>
         </div>
         {{ form.signature_data }}
+        {% if form.signature_data.errors %}
+        <p class="text-red-600 text-xs mt-1">{{ form.signature_data.errors|join:", " }}</p>
+        {% endif %}
+        <p class="text-red-600 text-xs mt-1 hidden" id="signatureWarning">서명을 먼저 입력해 주세요.</p>
       </div>
 
-      {{ form.non_field_errors }}
+      {% if form.non_field_errors %}
+      <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
       <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출하기</button>
     </form>
   </div>
@@ -67,63 +125,113 @@
 
 {% block extra_js %}
 <script>
-  const canvas = document.getElementById("signaturePad");
-  const clearBtn = document.getElementById("clearBtn");
-  const hidden = document.getElementById("id_signature_data");
-  const ctx = canvas.getContext("2d");
-  let drawing = false;
+{% if file_type == "pdf" %}
+// PDF.js 동적 로드 (pdfjs-dist@3 UMD)
+(function() {
+  var inlineUrl = "{% url 'consent:public_document_inline' token=recipient.access_token %}";
+  var statusEl = document.getElementById("pdfViewerStatus");
+  var pdfCanvas = document.getElementById("pdfViewerCanvas");
+  if (!pdfCanvas) return;
+  var script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js";
+  script.onload = function() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js";
+    pdfjsLib.getDocument(inlineUrl).promise
+      .then(function(pdf) { return pdf.getPage(1); })
+      .then(function(page) {
+        var container = pdfCanvas.parentElement;
+        var maxWidth = Math.min(container.clientWidth || 600, 800);
+        var base = page.getViewport({ scale: 1 });
+        var scale = Math.max(0.6, maxWidth / base.width);
+        var viewport = page.getViewport({ scale: scale });
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        return page.render({ canvasContext: pdfCanvas.getContext("2d"), viewport: viewport }).promise;
+      })
+      .then(function() {
+        if (statusEl) statusEl.textContent = "1페이지 표시 중 (전체는 다운로드 버튼 이용)";
+      })
+      .catch(function() {
+        if (statusEl) statusEl.textContent = "미리보기를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
+      });
+  };
+  script.onerror = function() {
+    if (statusEl) statusEl.textContent = "뷰어를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
+  };
+  document.head.appendChild(script);
+})();
+{% endif %}
 
-  function fitCanvas() {
-    const ratio = window.devicePixelRatio || 1;
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    canvas.width = Math.floor(width * ratio);
-    canvas.height = Math.floor(height * ratio);
-    ctx.scale(ratio, ratio);
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#111827";
-    ctx.clearRect(0, 0, width, height);
-  }
+// 캔버스 서명 JS
+const canvas = document.getElementById("signaturePad");
+const clearBtn = document.getElementById("clearBtn");
+const hidden = document.getElementById("id_signature_data");
+const ctx = canvas.getContext("2d");
+let drawing = false;
 
-  function point(e) {
-    const r = canvas.getBoundingClientRect();
-    const p = e.touches ? e.touches[0] : e;
-    return { x: p.clientX - r.left, y: p.clientY - r.top };
-  }
+function fitCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#111827";
+  ctx.clearRect(0, 0, width, height);
+}
 
-  function start(e) {
-    drawing = true;
-    const p = point(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+function point(e) {
+  const r = canvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return { x: p.clientX - r.left, y: p.clientY - r.top };
+}
+
+function start(e) {
+  drawing = true;
+  const p = point(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  e.preventDefault();
+}
+
+function move(e) {
+  if (!drawing) return;
+  const p = point(e);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  hidden.value = canvas.toDataURL("image/png");
+  e.preventDefault();
+}
+
+function end() {
+  drawing = false;
+}
+
+clearBtn.addEventListener("click", () => {
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  hidden.value = "";
+});
+canvas.addEventListener("mousedown", start);
+canvas.addEventListener("mousemove", move);
+window.addEventListener("mouseup", end);
+canvas.addEventListener("touchstart", start, { passive: false });
+canvas.addEventListener("touchmove", move, { passive: false });
+window.addEventListener("touchend", end);
+window.addEventListener("resize", fitCanvas);
+fitCanvas();
+
+// 폼 제출 전 서명 체크
+document.getElementById("signForm").addEventListener("submit", function(e) {
+  const val = (hidden.value || "").trim();
+  if (!val.startsWith("data:image")) {
     e.preventDefault();
+    const warning = document.getElementById("signatureWarning");
+    if (warning) warning.classList.remove("hidden");
+    document.getElementById("signaturePad").scrollIntoView({ behavior: "smooth", block: "center" });
   }
-
-  function move(e) {
-    if (!drawing) return;
-    const p = point(e);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    hidden.value = canvas.toDataURL("image/png");
-    e.preventDefault();
-  }
-
-  function end() {
-    drawing = false;
-  }
-
-  clearBtn.addEventListener("click", () => {
-    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-    hidden.value = "";
-  });
-  canvas.addEventListener("mousedown", start);
-  canvas.addEventListener("mousemove", move);
-  window.addEventListener("mouseup", end);
-  canvas.addEventListener("touchstart", start, { passive: false });
-  canvas.addEventListener("touchmove", move, { passive: false });
-  window.addEventListener("touchend", end);
-  window.addEventListener("resize", fitCanvas);
-  fitCanvas();
+});
 </script>
 {% endblock %}

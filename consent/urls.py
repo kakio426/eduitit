@@ -25,6 +25,7 @@ urlpatterns = [
     path("recipient/<int:recipient_id>/delete/", views.consent_delete_recipient, name="delete_recipient"),
     path("public/<str:token>/verify/", views.consent_verify, name="verify"),
     path("public/<str:token>/document/", views.consent_public_document, name="public_document"),
+    path("public/<str:token>/document/inline/", views.consent_public_document_inline, name="public_document_inline"),
     path("public/<str:token>/sign/", views.consent_sign, name="sign"),
     path("public/<str:token>/complete/", views.consent_complete, name="complete"),
 ]
