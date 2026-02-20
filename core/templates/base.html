@@ -286,7 +286,37 @@
 
         <!-- Global Banner -->
         {% if banner_active and banner_text %}
-        <div x-data="{ show: true, bannerColor: '{{ banner_color|default:" #000000"|escapejs }}' }" x-show="show"
+        <div x-data="{
+            show: true,
+            bannerColor: '{{ banner_color|default:" #000000"|escapejs }}',
+            hiddenDateKey: 'eduitit_banner_hidden_date',
+            todayKey() {
+                const d = new Date();
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            },
+            initBanner() {
+                try {
+                    this.show = localStorage.getItem(this.hiddenDateKey) !== this.todayKey();
+                } catch (e) {
+                    this.show = true;
+                }
+                this.$nextTick(() => {
+                    if (window.syncGlobalBannerOffset) window.syncGlobalBannerOffset();
+                });
+            },
+            hideForToday() {
+                this.show = false;
+                try {
+                    localStorage.setItem(this.hiddenDateKey, this.todayKey());
+                } catch (e) {}
+                this.$nextTick(() => {
+                    if (window.syncGlobalBannerOffset) window.syncGlobalBannerOffset();
+                });
+            }
+        }" x-init="initBanner()" x-show="show"
             x-cloak x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="fixed w-full z-[55] top-0 left-0 text-center text-white text-sm font-bold py-2.5 px-6"
@@ -297,7 +327,7 @@
                 {% else %}
                 <span>{{ banner_text }}</span>
                 {% endif %}
-                <button @click="show = false; setTimeout(() => window.syncGlobalBannerOffset && window.syncGlobalBannerOffset(), 0)"
+                <button @click="hideForToday()"
                     class="ml-4 text-white/80 hover:text-white transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -831,9 +861,12 @@
             window.syncMobileMenuOffset = function () {
                 const nav = document.getElementById('mainNav');
                 let top = 88;
+                let navHeight = 88;
                 if (nav) {
+                    navHeight = Math.max(0, Math.ceil(nav.getBoundingClientRect().height));
                     top = Math.max(0, Math.ceil(nav.getBoundingClientRect().bottom));
                 }
+                document.documentElement.style.setProperty('--main-nav-height', `${navHeight}px`);
                 document.documentElement.style.setProperty('--mobile-menu-top', `${top}px`);
             };
 
