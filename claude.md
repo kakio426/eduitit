@@ -757,6 +757,73 @@ function getAudioContext() {
 
 > **사례 (2026-02-09)**: tools 페이지 모달이 `.clay-card:hover`의 `translateY(-4px)`에 의해 centering이 깨지면서 반짝거림 발생. `.tool-modal.clay-card:hover`로 transform 고정하여 해결.
 
+### 19. 체스판 미표시 — 비동기 스크립트 로더 절대 금지 (2026-02-21)
+
+**증상**: 체스판 영역에 얇은 가로선만 표시되고 보드/기물이 보이지 않음.
+
+**원인 분석**:
+- 얇은 가로선 = `.board-b72b1 { border: 2px solid #404040 }` 의 top border만 보이는 것
+- chessboard.js가 `$(containerEl).width()`를 읽을 때 `0`을 반환 → 8×8칸이 전부 0×0px
+- `verifyBoardRendered()`가 `.board-b72b1` div를 발견하므로 에러 메시지도 뜨지 않음 (조용한 실패)
+- 비동기 Promise 로더로 `<script>` 태그를 동적 주입하면 chessboard.js의 레이아웃 계산 타이밍이 틀어짐
+
+**잘못된 방식 (❌ 비동기 로더)**:
+```javascript
+// 절대 금지 — width 감지 타이밍 버그 발생
+loadScript('jquery.js')
+  .then(() => loadScript('chessboard.js'))
+  .then(() => loadScript('chess.js'))
+  .then(() => loadScript('chess_logic.js'))
+  .then(() => verifyBoardRendered())  // 1800ms 후 체크 → 0px 보드면 에러 안 남
+```
+
+**올바른 방식 (✅ 동기 로딩)**:
+```html
+<!-- extra_js 블록 — 순서대로 완전히 로드된 후 다음 실행 -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>var STOCKFISH_PATH = "..."; var IS_AI_MODE = ...; var AI_DIFFICULTY = ...;</script>
+<script src="{% static 'chess/js/chess_logic.js' %}"></script>
+```
+
+### 20. 체스 CDN — production CSP 허용 목록 (2026-02-21)
+
+`settings_production.py`의 `CSP_SCRIPT_SRC`에 `code.jquery.com`이 **없음**. 반드시 아래 CDN만 사용:
+
+| 라이브러리 | CSP 허용 CDN | 비고 |
+|---|---|---|
+| jQuery | `cdn.jsdelivr.net` | `code.jquery.com` 차단됨 |
+| chessboard.js | `unpkg.com` | OK |
+| chess.js | `cdnjs.cloudflare.com` | OK |
+| 체스말 이미지 | `chessboardjs.com`, `unpkg.com`, `raw.githubusercontent.com` | `CSP_IMG_SRC`에 `https:` 허용 |
+
+### 21. chess_logic.js 초기화 패턴 — 동기/비동기 모두 호환 (2026-02-21)
+
+`DOMContentLoaded` 대신 `readyState` 체크를 사용하면 동기/비동기 로딩 모두에서 작동:
+
+```javascript
+// ✅ 현재 chess_logic.js 채택 방식
+function initHelper() { initGame(); initBoard(); updateStatus(); ... }
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHelper);
+} else {
+    initHelper();  // 동기 로딩 시 readyState='interactive', 비동기 시 'complete'
+}
+```
+
+> **주의**: `document.addEventListener('DOMContentLoaded', ...)` 단독 사용은 동기 로딩에서만 정상. 비동기 주입 스크립트에서는 DOMContentLoaded가 이미 발화한 상태라 콜백이 영원히 실행되지 않음.
+
+### 22. Stockfish 경로 충돌 없음 (확인 완료 2026-02-21)
+
+체스와 장기는 **완전히 별도** static 경로를 사용하므로 collectstatic 시 덮어쓰기 없음:
+
+| 앱 | 파일 경로 | Static URL |
+|---|---|---|
+| Chess | `chess/static/chess/js/stockfish.js` (1.5MB) | `/static/chess/js/stockfish.js` |
+| 장기 | `janggi/static/janggi/js/engine/stockfish.js` (64KB) | `/static/janggi/js/engine/stockfish.js` |
+
 ---
 
 ## 소셜 로그인 / Gunicorn / allauth 이슈 (2026-02-10)
