@@ -4,6 +4,7 @@
 {% block title %}체스 플레이 - Eduitit{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'chess/css/chessboard-1.0.0.min.css' %}?v=20260220a">
 <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <style>
     .board-container {
@@ -294,6 +295,7 @@
     var STOCKFISH_PATH = "{% static 'chess/js/stockfish.js' %}";
     var IS_AI_MODE = '{{ mode }}' === 'ai';
     var AI_DIFFICULTY = '{{ difficulty }}';
+    var CHESS_ASSET_VERSION = '20260220a';
 </script>
 <script>
     // Robust Loader
@@ -308,23 +310,85 @@
             });
         }
 
+        function loadWithFallback(label, sources) {
+            var i = 0;
+            return new Promise(function(resolve, reject) {
+                function tryNext(lastError) {
+                    if (i >= sources.length) {
+                        reject(lastError || new Error(label + ' load failed'));
+                        return;
+                    }
+
+                    var src = sources[i++];
+                    loadScript(src)
+                        .then(resolve)
+                        .catch(function(err) {
+                            tryNext(err);
+                        });
+                }
+                tryNext();
+            });
+        }
+
+        function showLoadError(stage, err) {
+            console.error('Failed to load chess dependencies at stage:', stage, err);
+
+            var board = document.getElementById('myBoard');
+            var libs = [
+                'jQuery=' + (typeof window.jQuery !== 'undefined'),
+                'Chessboard=' + (typeof window.Chessboard !== 'undefined'),
+                'Chess=' + (typeof window.Chess !== 'undefined')
+            ].join(' | ');
+
+            if (board && !document.querySelector('#myBoard .board-b72b1')) {
+                board.innerHTML = '<div class="p-4 text-red-500 font-bold">Failed to load chess board resources. Please refresh.<br><span class="text-xs font-normal">' + libs + '</span></div>';
+            }
+        }
+
+        function verifyBoardRendered() {
+            return new Promise(function(resolve, reject) {
+                window.setTimeout(function() {
+                    if (document.querySelector('#myBoard .board-b72b1')) {
+                        resolve();
+                        return;
+                    }
+                    reject(new Error('board did not render after script load'));
+                }, 1800);
+            });
+        }
+
+        var logicScriptPrimary = "{% static 'chess/js/chess_logic.js' %}?v=" + encodeURIComponent(CHESS_ASSET_VERSION || '20260220a');
+        var logicScriptFallback = "{% static 'chess/js/chess_logic.js' %}";
+
         // 1. jQuery
-        loadScript('https://code.jquery.com/jquery-3.6.0.min.js')
-            .catch(function() { return loadScript('https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js'); })
+        loadWithFallback('jQuery', [
+                'https://code.jquery.com/jquery-3.6.0.min.js',
+                'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js'
+            ])
             .then(function() {
                 // 2. Chessboard.js
-                return loadScript('https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js');
+                return loadWithFallback('Chessboard.js', [
+                    'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
+                    'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js'
+                ]);
             })
-            .catch(function() { return loadScript('https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js'); })
             .then(function() {
                 // 3. Chess.js
-                return loadScript('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js');
+                return loadWithFallback('Chess.js', [
+                    'https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js',
+                    'https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js'
+                ]);
             })
             .then(function() {
                 // 4. Game Logic
-                return loadScript("{% static 'chess/js/chess_logic.js' %}");
+                return loadWithFallback('chess_logic.js', [logicScriptPrimary, logicScriptFallback]);
+            })
+            .then(function() {
+                return verifyBoardRendered();
             })
             .catch(function(err) {
+                showLoadError('dependency-load', err);
                 console.error("Failed to load chess dependencies:", err);
                 var board = document.getElementById('myBoard');
                 if (board) board.innerHTML = '<div class="p-4 text-red-500 font-bold">게임 리소스를 불러오는데 실패했습니다. 새로고침 해주세요.</div>';
