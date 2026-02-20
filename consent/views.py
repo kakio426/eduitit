@@ -235,7 +235,8 @@ def _build_file_response(file_field, *, inline=True):
         except Exception:
             file_url = ""
 
-        for remote_url in _iter_remote_file_urls(file_field, fallback_url=file_url):
+        remote_urls = _iter_remote_file_urls(file_field, fallback_url=file_url)
+        for remote_url in remote_urls:
             response = _build_remote_proxy_response(
                 remote_url,
                 filename=filename,
@@ -244,6 +245,11 @@ def _build_file_response(file_field, *, inline=True):
             )
             if response is not None:
                 return response
+        if remote_urls:
+            # Last-resort fallback: avoid hard 404 if proxy streaming from origin fails.
+            response = redirect(remote_urls[0])
+            response["Cache-Control"] = "no-store"
+            return response
         raise
 
     response = FileResponse(
