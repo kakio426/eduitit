@@ -11,11 +11,11 @@ class TrainingSessionForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
-                'placeholder': '예: 2024학년도 1학기 학교폭력예방교육',
+                'placeholder': '예: 2026 AI 수업 설계 직무연수',
             }),
             'print_title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
-                'placeholder': '예: 2026 연수등록부 (비우면 자동 생성)',
+                'placeholder': '예: 2026 상반기 교원 직무연수',
             }),
             'instructor': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
