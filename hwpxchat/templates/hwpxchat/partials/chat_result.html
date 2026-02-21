@@ -1,0 +1,44 @@
+<div class="clay-card p-5 md:p-6">
+    {% if error_message %}
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i>{{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if info_message %}
+    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm">
+        <i class="fa-solid fa-circle-info mr-1"></i>{{ info_message }}
+    </div>
+    {% endif %}
+
+    <div class="mb-4 text-sm text-gray-500 flex items-center justify-between gap-2 flex-wrap">
+        <span>
+            <i class="fa-solid fa-file-lines mr-1"></i>
+            {% if has_document_context %}문서 컨텍스트 로드됨{% else %}문서 컨텍스트 없음{% endif %}
+        </span>
+        <span>
+            <i class="fa-solid fa-robot mr-1"></i>
+            Provider: {{ selected_provider|default:"gemini"|upper }}
+        </span>
+    </div>
+
+    {% if messages %}
+    <div class="space-y-4">
+        {% for item in messages %}
+        <div class="rounded-2xl p-4 border {% if item.role == 'user' %}bg-white border-gray-200{% else %}bg-emerald-50 border-emerald-200{% endif %}">
+            <p class="text-xs font-bold mb-2 {% if item.role == 'user' %}text-gray-500{% else %}text-emerald-700{% endif %}">
+                {% if item.role == 'user' %}사용자 질문{% else %}AI 답변{% endif %}
+            </p>
+            <div class="text-sm md:text-base text-gray-700 leading-relaxed break-words">
+                {{ item.content|linebreaksbr }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">
+        HWPX 파일을 업로드하고 질문을 보내면 이 영역에 대화 결과가 표시됩니다.
+    </div>
+    {% endif %}
+</div>
+

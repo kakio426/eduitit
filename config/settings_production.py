@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'fairy_games.apps.FairyGamesConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
+    'hwpxchat.apps.HwpxchatConfig',
     'encyclopedia.apps.EncyclopediaConfig',
     'version_manager.apps.VersionManagerConfig',
     'happy_seed.apps.HappySeedConfig',
