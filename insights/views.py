@@ -81,6 +81,9 @@ def insight_create(request):
 @login_required
 def insight_update(request, pk):
     insight = get_object_or_404(Insight, pk=pk)
+    if not request.user.is_superuser:
+        messages.error(request, '수정 권한이 없습니다.')
+        return redirect('insights:detail', pk=insight.pk)
 
     if request.method == 'POST':
         form = InsightForm(request.POST, instance=insight)

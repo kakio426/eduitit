@@ -116,6 +116,16 @@
                 title="삭제">
                 <i class="fa-solid fa-trash text-sm"></i>
             </button>
+            <noscript>
+                <form method="POST" action="{% url 'insights:delete' insight.pk %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="p-2 rounded-full bg-red-500 text-white transition-colors"
+                        title="삭제">
+                        <i class="fa-solid fa-trash text-sm"></i>
+                    </button>
+                </form>
+            </noscript>
             {% endif %}
         </div>
     </div>

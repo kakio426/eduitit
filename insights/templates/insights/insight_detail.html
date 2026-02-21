@@ -28,6 +28,15 @@
                     class="flex items-center gap-2 px-5 py-2 rounded-full bg-white shadow-clay-inner text-gray-600 hover:text-red-600 font-bold transition-all">
                     <i class="fa-solid fa-trash"></i> 삭제
                 </button>
+                <noscript>
+                    <form method="POST" action="{% url 'insights:delete' insight.pk %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="flex items-center gap-2 px-5 py-2 rounded-full bg-red-500 text-white font-bold">
+                            <i class="fa-solid fa-trash"></i> 삭제
+                        </button>
+                    </form>
+                </noscript>
 
                 <!-- Delete Modal -->
                 <div x-show="showDeleteModal" x-cloak
