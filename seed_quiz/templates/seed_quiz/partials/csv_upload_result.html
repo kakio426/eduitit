@@ -1,0 +1,19 @@
+{% if errors %}
+<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+    <p class="font-bold mb-2">CSV 처리 중 문제가 있습니다.</p>
+    <ul class="list-disc pl-5 space-y-1">
+        {% for err in errors|slice:":8" %}
+        <li>{{ err }}</li>
+        {% endfor %}
+    </ul>
+    {% if errors|length > 8 %}
+    <p class="mt-2 text-xs">외 {{ errors|length|add:"-8" }}건</p>
+    {% endif %}
+</div>
+{% else %}
+<div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm"
+     hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated'));">
+    <p class="font-bold">CSV 가져오기가 완료되었습니다.</p>
+    <p class="mt-1">생성된 퀴즈 은행 세트: {{ created_count }}개</p>
+</div>
+{% endif %}

@@ -9,9 +9,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         title = "씨앗 퀴즈"
         defaults = {
-            "lead_text": "AI가 만든 3문제 퀴즈로 수업 집중도를 높이고, 만점 학생에게 씨앗을 선물하세요.",
+            "lead_text": "공식 퀴즈 은행과 CSV 업로드로 3문제 퀴즈를 빠르게 배포하고, 만점 학생에게 씨앗을 선물하세요.",
             "description": (
-                "씨앗 퀴즈는 교사가 원클릭으로 AI 퀴즈를 생성하고, "
+                "씨앗 퀴즈는 교사가 공식/공유 퀴즈 은행에서 문제를 선택해 배포하고, "
                 "학생이 태블릿으로 5분 내에 풀이하는 교실 참여형 퀴즈 서비스입니다. "
                 "만점 학생에게는 행복의 씨앗 보상이 자동으로 지급됩니다."
             ),
@@ -60,16 +60,16 @@ class Command(BaseCommand):
         # 기능 목록
         feature_specs = [
             {
-                "icon": "🤖",
-                "title": "AI 퀴즈 자동 생성",
+                "icon": "📚",
+                "title": "퀴즈 은행 원클릭 적용",
                 "legacy_titles": [],
-                "description": "과목과 학년을 선택하면 DeepSeek AI가 3문항 퀴즈를 즉시 생성합니다.",
+                "description": "학년/과목 필터로 공식 또는 공유 퀴즈를 골라 바로 우리 반에 배포할 수 있습니다.",
             },
             {
-                "icon": "📱",
-                "title": "태블릿 최적화 UI",
+                "icon": "🗂️",
+                "title": "CSV 업로드 지원",
                 "legacy_titles": [],
-                "description": "학생이 태블릿으로 손쉽게 풀 수 있는 큰 버튼과 간결한 화면으로 구성되어 있습니다.",
+                "description": "교사가 보유한 문제를 CSV로 가져와 즉시 미리보기/배포할 수 있습니다.",
             },
             {
                 "icon": "🌱",
@@ -113,7 +113,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "씨앗 퀴즈 시작 가이드",
-                "description": "퀴즈 생성부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다.",
+                "description": "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다.",
                 "is_published": True,
             },
         )
@@ -122,7 +122,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        target_desc = "퀴즈 생성부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다."
+        target_desc = "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다."
         if manual.description != target_desc:
             manual.description = target_desc
             manual_changed.append("description")
@@ -133,17 +133,16 @@ class Command(BaseCommand):
             (
                 "시작하기",
                 (
-                    "1) 교실 상세 화면에서 '씨앗 퀴즈' 버튼 클릭 → 2) 과목과 학년 선택 후 'AI 퀴즈 생성' 클릭 "
+                    "1) 교실 상세 화면에서 '씨앗 퀴즈' 버튼 클릭 → 2) 범위/과목/학년 필터로 퀴즈 은행 조회 "
                     "→ 3) 미리보기 확인 후 '배포하기' → 4) 학생에게 접속 주소 공유 순서로 진행합니다."
                 ),
                 1,
             ),
             (
-                "퀴즈 생성법",
+                "퀴즈 선택법",
                 (
-                    "과목(상식/수학/국어/과학/사회/영어)과 학년(1~6)을 선택하고 'AI 퀴즈 생성'을 누르세요. "
-                    "AI 생성에 실패할 경우 자동으로 기본 문제 은행으로 전환됩니다. "
-                    "마음에 들지 않으면 '다시 생성' 버튼으로 새 문제를 받을 수 있습니다."
+                    "과목(상식/수학/국어/과학/사회/영어)과 학년(1~6)을 선택해 공식 또는 공유 퀴즈를 조회하세요. "
+                    "원하는 세트를 선택하면 미리보기 화면으로 이동하며, 배포 전 정답/해설을 확인할 수 있습니다."
                 ),
                 2,
             ),

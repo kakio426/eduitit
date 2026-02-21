@@ -1,0 +1,59 @@
+<div class="clay-card p-6 rounded-2xl">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="font-bold text-gray-700">퀴즈 은행 목록</h2>
+            <p class="text-xs text-gray-500 mt-1">
+                {{ grade }}학년 · {{ preset_label }} ·
+                {% if scope == 'official' %}공식{% elif scope == 'public' %}공유{% else %}전체{% endif %}
+            </p>
+        </div>
+        <form hx-post="{% url 'seed_quiz:htmx_generate' classroom_id=classroom.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML"
+              hx-include="#bank-filter-form">
+            {% csrf_token %}
+            <button type="submit"
+                    class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
+                AI 즉시 생성
+            </button>
+        </form>
+    </div>
+
+    {% if banks %}
+    <div class="space-y-3">
+        {% for bank in banks %}
+        <div class="p-4 bg-white border border-gray-200 rounded-xl">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="font-bold text-gray-800">{{ bank.title }}</h3>
+                        {% if bank.is_official %}
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">공식</span>
+                        {% endif %}
+                        {% if bank.is_public %}
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">공유</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        {{ bank.grade }}학년 · {{ bank.get_preset_type_display }} · {{ bank.get_source_display }} · 사용 {{ bank.use_count }}회
+                    </p>
+                </div>
+                <form hx-post="{% url 'seed_quiz:htmx_bank_select' classroom_id=classroom.id bank_id=bank.id %}"
+                      hx-target="#preview-area"
+                      hx-swap="innerHTML">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all">
+                        이 세트 적용
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500">
+        조건에 맞는 퀴즈 세트가 없습니다. 범위를 `전체`로 바꾸거나 AI 즉시 생성을 사용해 주세요.
+    </div>
+    {% endif %}
+</div>

@@ -4,6 +4,8 @@ from seed_quiz.models import (
     SQAttempt,
     SQAttemptAnswer,
     SQGenerationLog,
+    SQQuizBank,
+    SQQuizBankItem,
     SQQuizItem,
     SQQuizSet,
 )
@@ -23,6 +25,32 @@ class SQAttemptAnswerInline(admin.TabularInline):
     can_delete = False
 
 
+class SQQuizBankItemInline(admin.TabularInline):
+    model = SQQuizBankItem
+    extra = 0
+    fields = ["order_no", "question_text", "choices", "correct_index", "difficulty"]
+
+
+@admin.register(SQQuizBank)
+class SQQuizBankAdmin(admin.ModelAdmin):
+    list_display = [
+        "title",
+        "preset_type",
+        "grade",
+        "source",
+        "is_official",
+        "is_public",
+        "is_active",
+        "use_count",
+        "created_at",
+    ]
+    list_filter = ["preset_type", "grade", "source", "is_official", "is_public", "is_active"]
+    search_fields = ["title"]
+    raw_id_fields = ["created_by"]
+    inlines = [SQQuizBankItemInline]
+    readonly_fields = ["created_at", "updated_at", "use_count"]
+
+
 @admin.register(SQQuizSet)
 class SQQuizSetAdmin(admin.ModelAdmin):
     list_display = [
@@ -38,7 +66,7 @@ class SQQuizSetAdmin(admin.ModelAdmin):
     list_filter = ["status", "source", "preset_type", "target_date"]
     search_fields = ["title", "classroom__name"]
     inlines = [SQQuizItemInline]
-    raw_id_fields = ["classroom", "created_by", "published_by"]
+    raw_id_fields = ["classroom", "created_by", "published_by", "bank_source"]
     readonly_fields = ["created_at", "updated_at", "published_at"]
 
     def get_queryset(self, request):

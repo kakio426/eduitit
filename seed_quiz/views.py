@@ -9,7 +9,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from happy_seed.models import HSClassroom, HSStudent
-from seed_quiz.models import SQAttempt, SQQuizItem, SQQuizSet
+from seed_quiz.models import SQAttempt, SQQuizBank, SQQuizItem, SQQuizSet
+from seed_quiz.services.bank import copy_bank_to_draft, import_csv_to_bank
 from seed_quiz.services.gate import (
     clear_session,
     find_or_create_attempt,
@@ -21,6 +22,17 @@ from seed_quiz.services.generation import generate_and_save_draft
 from seed_quiz.services.grading import submit_and_reward
 
 logger = logging.getLogger("seed_quiz.views")
+
+
+def _parse_bank_filters(raw_preset: str, raw_grade: str):
+    preset_type = raw_preset if raw_preset in dict(SQQuizSet.PRESET_CHOICES) else "general"
+    try:
+        grade = int(raw_grade)
+    except (TypeError, ValueError):
+        grade = 3
+    if grade not in range(1, 7):
+        grade = 3
+    return preset_type, grade
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +52,10 @@ def landing(request):
 @login_required
 def teacher_dashboard(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    initial_preset, initial_grade = _parse_bank_filters(
+        request.GET.get("preset_type", "general"),
+        request.GET.get("grade", "3"),
+    )
     today_sets = SQQuizSet.objects.filter(
         classroom=classroom,
         target_date=timezone.localdate(),
@@ -51,7 +67,104 @@ def teacher_dashboard(request, classroom_id):
             "classroom": classroom,
             "today_sets": today_sets,
             "preset_choices": SQQuizSet.PRESET_CHOICES,
+            "initial_preset": initial_preset,
+            "initial_grade": initial_grade,
+            "initial_grade_str": str(initial_grade),
         },
+    )
+
+
+@login_required
+def htmx_bank_browse(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    preset_type, grade = _parse_bank_filters(
+        request.GET.get("preset_type", "general"),
+        request.GET.get("grade", "3"),
+    )
+    scope = (request.GET.get("scope", "official") or "official").strip().lower()
+    if scope not in {"official", "public", "all"}:
+        scope = "official"
+
+    banks = SQQuizBank.objects.filter(
+        is_active=True,
+        preset_type=preset_type,
+        grade=grade,
+    )
+    if scope == "official":
+        banks = banks.filter(is_official=True)
+    elif scope == "public":
+        banks = banks.filter(is_public=True)
+
+    banks = banks.order_by("-use_count", "-created_at")[:24]
+
+    return render(
+        request,
+        "seed_quiz/partials/bank_browse.html",
+        {
+            "classroom": classroom,
+            "banks": banks,
+            "scope": scope,
+            "preset_type": preset_type,
+            "preset_label": dict(SQQuizSet.PRESET_CHOICES).get(preset_type, "상식"),
+            "grade": grade,
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_bank_select(request, classroom_id, bank_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    try:
+        quiz_set = copy_bank_to_draft(
+            bank_id=bank_id,
+            classroom=classroom,
+            teacher=request.user,
+        )
+    except SQQuizBank.DoesNotExist:
+        return HttpResponse(
+            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            "선택한 퀴즈 세트를 찾을 수 없습니다.</div>",
+            status=404,
+        )
+    except ValueError as e:
+        return HttpResponse(
+            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{e}</div>',
+            status=400,
+        )
+
+    items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": items,
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_csv_upload(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    csv_file = request.FILES.get("csv_file")
+    if not csv_file:
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {"classroom": classroom, "created_count": 0, "errors": ["CSV 파일을 선택해 주세요."]},
+            status=400,
+        )
+
+    created_count, errors = import_csv_to_bank(csv_file=csv_file, created_by=request.user)
+    status_code = 200 if not errors else 400
+    return render(
+        request,
+        "seed_quiz/partials/csv_upload_result.html",
+        {"classroom": classroom, "created_count": created_count, "errors": errors},
+        status=status_code,
     )
 
 
@@ -59,13 +172,10 @@ def teacher_dashboard(request, classroom_id):
 @require_POST
 def htmx_generate(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    preset_type = request.POST.get("preset_type", "general")
-    grade = int(request.POST.get("grade", 3))
-
-    if preset_type not in dict(SQQuizSet.PRESET_CHOICES):
-        preset_type = "general"
-    if grade not in range(1, 7):
-        grade = 3
+    preset_type, grade = _parse_bank_filters(
+        request.POST.get("preset_type", "general"),
+        request.POST.get("grade", "3"),
+    )
 
     try:
         quiz_set = generate_and_save_draft(classroom, preset_type, grade, request.user)

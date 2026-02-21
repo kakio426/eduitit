@@ -9,6 +9,99 @@ from happy_seed.models import HSClassroom, HSStudent
 User = get_user_model()
 
 
+class SQQuizBank(models.Model):
+    """관리자/공유용 퀴즈 은행 세트."""
+
+    SOURCE_CHOICES = [
+        ("ai", "AI생성"),
+        ("csv", "CSV임포트"),
+        ("manual", "직접입력"),
+    ]
+    PRESET_CHOICES = [
+        ("general", "상식"),
+        ("math", "수학"),
+        ("korean", "국어"),
+        ("science", "과학"),
+        ("social", "사회"),
+        ("english", "영어"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    preset_type = models.CharField(
+        max_length=20,
+        choices=PRESET_CHOICES,
+        default="general",
+        verbose_name="과목 프리셋",
+    )
+    grade = models.IntegerField(default=3, verbose_name="학년")
+    title = models.CharField(max_length=200, verbose_name="제목")
+    source = models.CharField(
+        max_length=10,
+        choices=SOURCE_CHOICES,
+        default="manual",
+        verbose_name="출처",
+    )
+    is_official = models.BooleanField(default=False, verbose_name="공식 세트")
+    is_public = models.BooleanField(default=False, verbose_name="공개 세트")
+    is_active = models.BooleanField(default=True, verbose_name="활성")
+    use_count = models.IntegerField(default=0, verbose_name="사용 횟수")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sq_quiz_banks_created",
+        verbose_name="생성자",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "퀴즈 은행 세트"
+        verbose_name_plural = "퀴즈 은행 세트"
+        ordering = ["preset_type", "grade", "-created_at"]
+        indexes = [
+            models.Index(fields=["preset_type", "grade", "is_active"]),
+            models.Index(fields=["is_official", "is_active"]),
+            models.Index(fields=["is_public", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_preset_type_display()}·{self.grade}학년] {self.title}"
+
+
+class SQQuizBankItem(models.Model):
+    """퀴즈 은행 세트의 개별 문항."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    bank = models.ForeignKey(
+        SQQuizBank,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="은행 세트",
+    )
+    order_no = models.IntegerField(verbose_name="순서")
+    question_text = models.TextField(verbose_name="문제")
+    choices = models.JSONField(verbose_name="선택지")
+    correct_index = models.IntegerField(verbose_name="정답 인덱스")
+    explanation = models.TextField(blank=True, verbose_name="해설")
+    difficulty = models.CharField(max_length=10, default="medium", verbose_name="난이도")
+
+    class Meta:
+        verbose_name = "은행 문항"
+        verbose_name_plural = "은행 문항"
+        unique_together = [("bank", "order_no")]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(correct_index__gte=0) & Q(correct_index__lte=3),
+                name="sq_bank_item_correct_index_range",
+            )
+        ]
+
+    def __str__(self):
+        return f"Q{self.order_no}: {self.question_text[:30]}"
+
+
 class SQQuizSet(models.Model):
     STATUS_CHOICES = [
         ("draft", "초안"),
@@ -19,6 +112,8 @@ class SQQuizSet(models.Model):
     SOURCE_CHOICES = [
         ("ai", "AI"),
         ("fallback", "기본문제"),
+        ("bank", "은행"),
+        ("csv", "CSV"),
     ]
     PRESET_CHOICES = [
         ("general", "상식"),
@@ -72,6 +167,14 @@ class SQQuizSet(models.Model):
         blank=True,
         related_name="sq_quiz_sets_published",
         verbose_name="배포자",
+    )
+    bank_source = models.ForeignKey(
+        SQQuizBank,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="derived_sets",
+        verbose_name="은행 출처",
     )
     published_at = models.DateTimeField(null=True, blank=True, verbose_name="배포 시각")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -10,6 +10,9 @@ urlpatterns = [
 
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("class/<uuid:classroom_id>/htmx/bank/", views.htmx_bank_browse, name="htmx_bank_browse"),
+    path("class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/", views.htmx_bank_select, name="htmx_bank_select"),
+    path("class/<uuid:classroom_id>/htmx/csv/upload/", views.htmx_csv_upload, name="htmx_csv_upload"),
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),
     path("class/<uuid:classroom_id>/htmx/progress/", views.htmx_progress, name="htmx_progress"),

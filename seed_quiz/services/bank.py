@@ -1,0 +1,285 @@
+"""
+관리자/교사용 퀴즈 은행 서비스.
+"""
+
+import csv
+import io
+import logging
+
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
+
+from seed_quiz.models import SQGenerationLog, SQQuizBank, SQQuizBankItem, SQQuizItem, SQQuizSet
+from seed_quiz.services.validator import normalize_and_check, validate_quiz_payload
+
+logger = logging.getLogger("seed_quiz.bank")
+
+VALID_PRESET_TYPES = {"general", "math", "korean", "science", "social", "english"}
+VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+
+def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
+    """
+    은행 세트를 교실용 draft SQQuizSet으로 복사한다.
+    같은 날짜/과목 draft가 있으면 문항을 교체해 재사용한다.
+    """
+    bank = SQQuizBank.objects.prefetch_related("items").get(id=bank_id, is_active=True)
+    bank_items = list(bank.items.order_by("order_no"))
+    if len(bank_items) != 3:
+        raise ValueError("퀴즈 은행 세트는 정확히 3문항이어야 합니다.")
+    target_date = timezone.localdate()
+
+    with transaction.atomic():
+        quiz_set, created = SQQuizSet.objects.get_or_create(
+            classroom=classroom,
+            target_date=target_date,
+            preset_type=bank.preset_type,
+            status="draft",
+            defaults={
+                "grade": bank.grade,
+                "title": bank.title,
+                "source": "bank",
+                "bank_source": bank,
+                "created_by": teacher,
+            },
+        )
+        if not created:
+            quiz_set.items.all().delete()
+            quiz_set.title = bank.title
+            quiz_set.grade = bank.grade
+            quiz_set.source = "bank"
+            quiz_set.bank_source = bank
+            quiz_set.save(update_fields=["title", "grade", "source", "bank_source"])
+
+        for bank_item in bank_items:
+            SQQuizItem.objects.create(
+                quiz_set=quiz_set,
+                order_no=bank_item.order_no,
+                question_text=bank_item.question_text,
+                choices=bank_item.choices,
+                correct_index=bank_item.correct_index,
+                explanation=bank_item.explanation,
+                difficulty=bank_item.difficulty,
+            )
+
+    SQQuizBank.objects.filter(id=bank.id).update(use_count=F("use_count") + 1)
+    logger.info(
+        "seed_quiz bank copied bank=%s quiz_set=%s classroom=%s",
+        str(bank.id),
+        str(quiz_set.id),
+        str(classroom.id),
+    )
+    return quiz_set
+
+
+def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
+    """
+    CSV를 파싱해 SQQuizBank + SQQuizBankItem을 생성한다.
+    반환: (생성된 세트 수, 에러 목록)
+    """
+    errors = []
+    created_count = 0
+
+    try:
+        raw = csv_file.read() if hasattr(csv_file, "read") else csv_file
+        if isinstance(raw, bytes):
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("cp949")
+        else:
+            text = raw
+    except Exception as e:
+        return 0, [f"파일 읽기 실패: {e}"]
+
+    reader = csv.DictReader(io.StringIO(text))
+    required_cols = {
+        "set_title", "preset_type", "grade", "question_text",
+        "choice_1", "choice_2", "choice_3", "choice_4",
+        "correct_index",
+    }
+    if not reader.fieldnames:
+        return 0, ["CSV 헤더가 없습니다."]
+
+    missing_cols = required_cols - set(reader.fieldnames)
+    if missing_cols:
+        return 0, [f"필수 컬럼 누락: {', '.join(sorted(missing_cols))}"]
+
+    grouped: dict[str, list[tuple[int, dict]]] = {}
+    for row_no, row in enumerate(reader, start=2):
+        set_title = (row.get("set_title") or "").strip()
+        if not set_title:
+            errors.append(f"행 {row_no}: set_title이 비어있습니다.")
+            continue
+        grouped.setdefault(set_title, []).append((row_no, row))
+
+    for set_title, rows in grouped.items():
+        if len(rows) != 3:
+            errors.append(f"세트 '{set_title}': 행이 {len(rows)}개입니다 (정확히 3개 필요).")
+            continue
+
+        _, first = rows[0]
+        preset_type = (first.get("preset_type") or "general").strip()
+        if preset_type not in VALID_PRESET_TYPES:
+            errors.append(f"세트 '{set_title}': 잘못된 preset_type '{preset_type}'.")
+            continue
+
+        try:
+            grade = int((first.get("grade") or "3").strip())
+        except ValueError:
+            errors.append(f"세트 '{set_title}': grade가 정수가 아닙니다.")
+            continue
+        if grade not in range(1, 7):
+            errors.append(f"세트 '{set_title}': grade는 1~6이어야 합니다.")
+            continue
+
+        items_data = []
+        row_error = False
+        for row_no, row in rows:
+            question_text = (row.get("question_text") or "").strip()
+            if not question_text:
+                errors.append(f"행 {row_no}: question_text가 비어있습니다.")
+                row_error = True
+                break
+
+            try:
+                question_text = normalize_and_check(question_text)
+                choices = [
+                    normalize_and_check((row.get("choice_1") or "").strip()),
+                    normalize_and_check((row.get("choice_2") or "").strip()),
+                    normalize_and_check((row.get("choice_3") or "").strip()),
+                    normalize_and_check((row.get("choice_4") or "").strip()),
+                ]
+            except ValueError:
+                errors.append(f"행 {row_no}: 텍스트에 허용되지 않는 문자가 포함되어 있습니다.")
+                row_error = True
+                break
+
+            if any(not c for c in choices):
+                errors.append(f"행 {row_no}: 선택지에 빈 항목이 있습니다.")
+                row_error = True
+                break
+            if len(set(choices)) != 4:
+                errors.append(f"행 {row_no}: 선택지에 중복이 있습니다.")
+                row_error = True
+                break
+
+            try:
+                correct_index = int((row.get("correct_index") or "0").strip())
+            except ValueError:
+                errors.append(f"행 {row_no}: correct_index가 정수가 아닙니다.")
+                row_error = True
+                break
+            if correct_index not in range(4):
+                errors.append(f"행 {row_no}: correct_index는 0~3이어야 합니다.")
+                row_error = True
+                break
+
+            explanation_raw = (row.get("explanation") or "").strip()
+            try:
+                explanation = normalize_and_check(explanation_raw) if explanation_raw else ""
+            except ValueError:
+                errors.append(f"행 {row_no}: 해설에 허용되지 않는 문자가 포함되어 있습니다.")
+                row_error = True
+                break
+
+            difficulty = (row.get("difficulty") or "medium").strip() or "medium"
+            if difficulty not in VALID_DIFFICULTIES:
+                difficulty = "medium"
+
+            items_data.append(
+                {
+                    "question_text": question_text,
+                    "choices": choices,
+                    "correct_index": correct_index,
+                    "explanation": explanation,
+                    "difficulty": difficulty,
+                }
+            )
+
+        if row_error:
+            continue
+
+        payload = {"items": items_data}
+        ok, validate_errors = validate_quiz_payload(payload)
+        if not ok:
+            errors.append(f"세트 '{set_title}': 규칙 검증 실패({', '.join(validate_errors)}).")
+            continue
+
+        with transaction.atomic():
+            bank, created = SQQuizBank.objects.get_or_create(
+                title=set_title,
+                preset_type=preset_type,
+                grade=grade,
+                source="csv",
+                defaults={
+                    "is_active": True,
+                    "is_public": False,
+                    "is_official": False,
+                    "created_by": created_by,
+                },
+            )
+            if not created:
+                bank.items.all().delete()
+
+            for order_no, item_data in enumerate(items_data, start=1):
+                SQQuizBankItem.objects.create(bank=bank, order_no=order_no, **item_data)
+
+        if created:
+            created_count += 1
+
+        SQGenerationLog.objects.create(
+            level="info",
+            code="BANK_CSV_IMPORTED",
+            message=f"CSV 임포트: {set_title}",
+            payload={"bank_id": str(bank.id), "created": created},
+        )
+
+    return created_count, errors
+
+
+def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBank:
+    """
+    AI 호출 -> 검증 -> SQQuizBank 저장.
+    """
+    from seed_quiz.services.generation import _call_ai, PRESET_LABELS
+
+    payload = _call_ai(grade, preset_type)
+    ok, errors = validate_quiz_payload(payload)
+    if not ok:
+        raise ValueError(f"AI 생성 검증 실패: {errors}")
+
+    title_date = timezone.localdate().isoformat()
+    label = PRESET_LABELS.get(preset_type, "상식")
+    title = f"[AI] {grade}학년 {label} {title_date}"
+
+    with transaction.atomic():
+        bank = SQQuizBank.objects.create(
+            preset_type=preset_type,
+            grade=grade,
+            title=title,
+            source="ai",
+            is_official=False,
+            is_public=False,
+            is_active=True,
+            created_by=created_by,
+        )
+        for order_no, item in enumerate(payload["items"], start=1):
+            SQQuizBankItem.objects.create(
+                bank=bank,
+                order_no=order_no,
+                question_text=item["question_text"],
+                choices=item["choices"],
+                correct_index=item["correct_index"],
+                explanation=item.get("explanation", ""),
+                difficulty=item.get("difficulty", "medium"),
+            )
+
+    SQGenerationLog.objects.create(
+        level="info",
+        code="BANK_AI_CREATED",
+        message=f"AI 은행 생성: {title}",
+        payload={"bank_id": str(bank.id), "preset_type": preset_type, "grade": grade},
+    )
+    return bank

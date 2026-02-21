@@ -28,6 +28,7 @@ class Command(BaseCommand):
             ("ensure_fairy_games", lambda: call_command("ensure_fairy_games")),
             ("ensure_happy_seed", lambda: call_command("ensure_happy_seed")),
             ("ensure_seed_quiz", lambda: call_command("ensure_seed_quiz")),
+            ("seed_quiz_bank", lambda: call_command("seed_quiz_bank")),
             ("ensure_noticegen", lambda: call_command("ensure_noticegen")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
         ]
