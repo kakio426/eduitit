@@ -24,17 +24,17 @@
                 Student Only
             </p>
             <h1 class="mt-4 text-4xl md:text-6xl font-black text-white">쉬는시간 게임방</h1>
-            <p class="mt-3 text-slate-300 text-base md:text-lg">선생님이 공유한 링크로 들어온 학생 전용 화면입니다. 원하는 게임을 선택해 바로 시작하세요.</p>
+            <p class="mt-3 text-slate-300 text-base md:text-lg">원하는 게임을 바로 선택해서 시작하세요.</p>
         </div>
 
-        <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-5">
             {% for game in games %}
             <a href="{{ game.href }}"
-               class="game-card rounded-3xl p-6 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/40">
-                <div class="text-5xl mb-4">{{ game.emoji }}</div>
-                <h2 class="text-2xl font-black text-white">{{ game.title }}</h2>
-                <p class="mt-3 text-slate-300">{{ game.description }}</p>
-                <div class="mt-5 inline-flex items-center gap-2 text-cyan-300 font-bold">
+               class="game-card rounded-3xl p-5 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/40">
+                <div class="text-4xl mb-3">{{ game.emoji }}</div>
+                <h2 class="text-xl md:text-2xl font-black text-white">{{ game.title }}</h2>
+                <p class="mt-2 text-slate-300 text-sm md:text-base leading-relaxed">{{ game.description }}</p>
+                <div class="mt-4 inline-flex items-center gap-2 text-cyan-300 font-bold text-sm md:text-base">
                     시작하기
                     <i class="fa-solid fa-arrow-right"></i>
                 </div>

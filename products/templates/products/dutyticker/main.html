@@ -613,32 +613,32 @@
     <div id="studentGamesQrModal"
         class="fixed inset-0 z-[240] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div
-            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
-            <div class="flex items-start justify-between mb-4">
+            class="bg-slate-800 p-5 md:p-6 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700 transform scale-95 transition-transform">
+            <div class="flex items-start justify-between mb-3">
                 <div>
-                    <h3 class="text-2xl font-black text-white">학생 게임 입장 QR</h3>
-                    <p class="text-sm text-slate-400 mt-1">유효시간: {{ student_games_expires_hours }}시간</p>
+                    <h3 class="text-xl md:text-2xl font-black text-white">학생 게임 입장 QR</h3>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1">유효시간: {{ student_games_expires_hours }}시간</p>
                 </div>
                 <button onclick="closeStudentGamesQrModal()" class="text-slate-400 hover:text-white transition">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
 
-            <div class="bg-white rounded-2xl p-4 flex justify-center mb-4">
-                <img src="{{ student_games_qr_data_url }}" alt="학생 게임 입장 QR 코드" class="w-64 h-64 max-w-full">
+            <div class="bg-white rounded-2xl p-3 flex justify-center mb-3">
+                <img src="{{ student_games_qr_data_url }}" alt="학생 게임 입장 QR 코드" class="w-44 h-44 md:w-48 md:h-48 max-w-full">
             </div>
 
             <label for="studentGamesLaunchUrl" class="block text-xs font-bold text-slate-400 mb-1">학생용 링크</label>
             <input id="studentGamesLaunchUrl" type="text" readonly value="{{ student_games_launch_url }}"
-                class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-slate-200 text-sm mb-4">
+                class="w-full bg-slate-900 border border-slate-600 rounded-xl p-2.5 text-slate-200 text-xs md:text-sm mb-3">
 
             <div class="flex gap-3">
                 <button onclick="copyStudentGamesLink()"
-                    class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
+                    class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
                     링크 복사
                 </button>
                 <a href="{{ student_games_launch_url }}" target="_blank" rel="noopener noreferrer"
-                    class="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold text-center transition">
+                    class="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold text-center transition">
                     새 창 미리보기
                 </a>
             </div>
