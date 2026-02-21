@@ -109,14 +109,15 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - expected: service route opens
   - failure pattern: redirects to `home` due to missing title branch.
 - First triage for "service click goes home":
-  - check `product.title` exact match (SSOT)
-  - check launch URL branch in `products/templates/products/partials/preview_modal.html`.
+  - check `launch_route_name` value (for example `noticegen:main`)
+  - check route exists in `config/urls.py` + target app `urls.py`
+  - check `_resolve_product_launch_url` in `core/views.py`.
 
-## Deployment Sync (All 4 Required)
-- Update `INSTALLED_APPS`.
-- Append `ensure_<app>` in `Procfile` after migrate.
-- Mirror same start command in `nixpacks.toml`.
-- Register `call_command('ensure_<app>')` in startup tasks.
+## Deployment Sync (Bootstrap Runtime)
+- Update `INSTALLED_APPS` in both `config/settings.py` and `config/settings_production.py`.
+- Register `ensure_<app>` in `core/management/commands/bootstrap_runtime.py`.
+- Keep startup command synchronized in `Procfile` and `nixpacks.toml` (`python3 manage.py bootstrap_runtime ...`).
+- Do not re-add `ensure_*` calls inside `run_startup_tasks()`; keep that hook lightweight.
 
 ## Data Rules
 - Use migrations (`RunPython`) for DB data changes, not only Django shell edits.

@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {% block content %}
 {% url 'account_login' as login_url %}
 
-<div x-data="{ showAll: false, activeCategory: 'all' }" class="min-h-screen bg-[#E0E5EC]">
+<div x-data="{ showAll: true, activeCategory: 'all' }" class="min-h-screen bg-[#E0E5EC]">
     <div class="flex flex-col xl:flex-row max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
 
         <!-- PC 전용 SNS 사이드바 -->
