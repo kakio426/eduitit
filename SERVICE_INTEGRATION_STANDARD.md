@@ -14,6 +14,14 @@
 - 모든 UI 변경은 작업 시작 전에 범위를 선언한다: `global`, `app-level`, `single-page`.
 - 범위가 `global`이 아니면 공통 레이아웃(`base.html`, 공용 CSS/JS)은 변경하지 않는다.
 
+### 1-1) Target App Lock (MUST)
+- 작업 시작 전에 반드시 아래 2가지를 명시한다.
+  - `target_app`: 이번 작업의 단일 대상 앱
+  - `do_not_touch_apps`: 대상 외 앱 목록(공용 파일 포함)
+- `target_app`가 명시되지 않은 상태에서는 구현을 시작하지 않는다.
+- 신규 서비스는 기본값이 "독립 앱 생성"이며, 기존 앱 내부 구현은 사용자가 명시적으로 지시한 경우에만 허용한다.
+- 작업 중 대상 외 파일 변경이 감지되면 즉시 중단하고 범위를 재확인한다.
+
 ### 2) 기존 서비스 보호
 - 이미 안정적으로 운영 중인 서비스의 UI 언어/동작은 기본적으로 유지한다.
 - 신규 서비스 추가 때문에 기존 서비스를 동일 스타일로 강제 통합하지 않는다.
@@ -143,7 +151,12 @@ def service_main_view(request):
     1. Product 모델에서 서비스 정보를 가져와 context에 포함 (아이콘/컬러 동기화)
     2. 에러 처리는 try-except로 감싸고 사용자에게 친절한 메시지 반환
     """
-    service = Product.objects.filter(title__icontains="서비스명").first()
+    SERVICE_TITLE = "서비스명"
+    SERVICE_ROUTE = "app_name:main"
+    service = (
+        Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
+        or Product.objects.filter(title=SERVICE_TITLE).first()
+    )
     
     context = {
         'service': service,
@@ -152,6 +165,8 @@ def service_main_view(request):
     }
     return render(request, 'app_name/service_template.html', context)
 ```
+
+> 주의: `title__icontains` 기반 조회는 오탐으로 다른 서비스를 잡아 종속 결합을 만들 수 있으므로 기본 패턴으로 사용하지 않는다.
 
 ### B. Template: 레이아웃 (HTML + HTMX)
 단일 페이지 경험(SPA)을 위해 **HTMX**를 적극 활용합니다.
