@@ -29,9 +29,9 @@
         {% endif %}
 
         <!-- 문항별 요약 -->
-        <div class="w-full max-w-sm space-y-3 text-left">
+        <div class="w-full max-w-md space-y-3 text-left">
             {% for row in items_with_answers %}
-            <div class="p-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+            <div class="p-5 rounded-xl bg-white border border-gray-100 shadow-sm">
                 <div class="flex items-start gap-3">
                     <span class="text-xl shrink-0 mt-0.5">
                         {% if row.answer %}{% if row.answer.is_correct %}✅{% else %}❌{% endif %}{% else %}—{% endif %}
