@@ -994,7 +994,7 @@ if self.sociallogin and self.sociallogin.user.email:
 
 ### 28. DB 데이터 변경 시 반드시 데이터 마이그레이션 작성
 
-Django shell로 로컬 DB만 수동 수정하면 **프로덕션에는 반영되지 않는다**. DB 데이터를 변경할 때는 반드시 `RunPython` 데이터 마이그레이션을 함께 작성해야 한다.
+Django shell로 로컬 DB만 수동 수정하면 **프로덕션에는 반영되지 않는다**. DB 데이터 변경은 반드시 `RunPython` 데이터 마이그레이션 또는 SSOT(단일 소스) 기반의 idempotent `management command`로 기록 가능하게 반영해야 한다.
 
 ```python
 # ❌ Django shell로만 변경 → 프로덕션 미반영
@@ -1446,7 +1446,7 @@ UI를 구현할 때는 항상 모바일 표준 너비인 360px에서 화면이 �
 
 `ensure_` 커맨드나 초기화 로직을 통해 데이터를 생성할 때, 중복 실행으로 인한 데이터 누적을 원천 봉쇄해야 한다. 또한, 뷰(View) 레벨에서도 예기치 않은 중복 데이터가 섞여 들어오지 않도록 방어 로직을 갖춘다.
 
-- **멱등성(Idempotency) 보장**: 초기 데이터 생성 스크립트(`management/commands`)는 여러 번 실행해도 결과가 동일해야 한다. `feature.objects.create(...)` 대신 반드시 `get_or_create` 또는 `update_or_create`를 사용한다. 필요하다면 기존 데이터를 `clear()` 하고 다시 생성한다.
+- **멱등성(Idempotency) 보장**: 초기 데이터 생성 스크립트(`management/commands`)는 여러 번 실행해도 결과가 동일해야 한다. `feature.objects.create(...)` 대신 반드시 `get_or_create` 또는 `update_or_create`를 사용한다. 기존 데이터를 `clear()`/`delete()`로 일괄 삭제 후 재생성하는 방식은 금지한다.
 - **뷰 레벨 방어**: DB에 이미 중복 데이터가 쌓였을 가능성을 대비하여, `landing` 페이지나 목록 조회 뷰에서는 **중복 제거(deduplication) 로직**을 통해 화면에 동일한 내용이 반복 출력되는 참사를 막는다.
 - **사례 (2026-02-12)**: `Collect` 앱 랜딩 페이지의 [주요 기능] 섹션이 이유 없이 2번씩 반복 출력되는 현상 발생. 뷰에서 `title` 기반 중복 제거 로직을 추가하여 해결함.
 
