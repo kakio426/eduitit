@@ -66,6 +66,8 @@ class Command(BaseCommand):
                             defaults={
                                 "is_official": True,
                                 "is_public": False,
+                                "share_opt_in": False,
+                                "quality_status": "approved",
                                 "is_active": True,
                             },
                         )
@@ -79,6 +81,12 @@ class Command(BaseCommand):
                             if bank.is_public:
                                 bank.is_public = False
                                 changed_fields.append("is_public")
+                            if bank.share_opt_in:
+                                bank.share_opt_in = False
+                                changed_fields.append("share_opt_in")
+                            if bank.quality_status != "approved":
+                                bank.quality_status = "approved"
+                                changed_fields.append("quality_status")
                             if not bank.is_active:
                                 bank.is_active = True
                                 changed_fields.append("is_active")

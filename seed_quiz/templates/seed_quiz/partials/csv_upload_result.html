@@ -13,7 +13,10 @@
 {% else %}
 <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm"
      hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated'));">
-    <p class="font-bold">CSV 가져오기가 완료되었습니다.</p>
-    <p class="mt-1">생성된 퀴즈 은행 세트: {{ created_count }}개</p>
+    <p class="font-bold">CSV 저장이 완료되었습니다.</p>
+    <p class="mt-1">신규 생성: {{ created_count }}개 / 기존 갱신: {{ updated_count|default:0 }}개</p>
+    {% if review_count %}
+    <p class="mt-1 text-amber-700">공유 신청 대기: {{ review_count }}개 (관리자 승인 후 공개)</p>
+    {% endif %}
 </div>
 {% endif %}

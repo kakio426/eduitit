@@ -5,6 +5,8 @@
 import csv
 import io
 import logging
+import json
+import os
 
 from django.db import transaction
 from django.db.models import F
@@ -73,38 +75,47 @@ def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
     return quiz_set
 
 
-def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
+def _decode_csv_text(csv_file_or_bytes) -> str:
+    raw = csv_file_or_bytes.read() if hasattr(csv_file_or_bytes, "read") else csv_file_or_bytes
+    if isinstance(raw, bytes):
+        try:
+            return raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return raw.decode("cp949")
+    return raw
+
+
+def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
     """
-    CSV를 파싱해 SQQuizBank + SQQuizBankItem을 생성한다.
-    반환: (생성된 세트 수, 에러 목록)
+    CSV를 파싱/검증해 미리보기 가능한 구조로 반환한다.
+    반환: (parsed_sets, errors)
     """
-    errors = []
-    created_count = 0
+    errors: list[str] = []
+    parsed_sets: list[dict] = []
 
     try:
-        raw = csv_file.read() if hasattr(csv_file, "read") else csv_file
-        if isinstance(raw, bytes):
-            try:
-                text = raw.decode("utf-8-sig")
-            except UnicodeDecodeError:
-                text = raw.decode("cp949")
-        else:
-            text = raw
+        text = _decode_csv_text(csv_file_or_bytes)
     except Exception as e:
-        return 0, [f"파일 읽기 실패: {e}"]
+        return [], [f"파일 읽기 실패: {e}"]
 
     reader = csv.DictReader(io.StringIO(text))
     required_cols = {
-        "set_title", "preset_type", "grade", "question_text",
-        "choice_1", "choice_2", "choice_3", "choice_4",
+        "set_title",
+        "preset_type",
+        "grade",
+        "question_text",
+        "choice_1",
+        "choice_2",
+        "choice_3",
+        "choice_4",
         "correct_index",
     }
     if not reader.fieldnames:
-        return 0, ["CSV 헤더가 없습니다."]
+        return [], ["CSV 헤더가 없습니다."]
 
     missing_cols = required_cols - set(reader.fieldnames)
     if missing_cols:
-        return 0, [f"필수 컬럼 누락: {', '.join(sorted(missing_cols))}"]
+        return [], [f"필수 컬럼 누락: {', '.join(sorted(missing_cols))}"]
 
     grouped: dict[str, list[tuple[int, dict]]] = {}
     for row_no, row in enumerate(reader, start=2):
@@ -207,36 +218,109 @@ def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
             errors.append(f"세트 '{set_title}': 규칙 검증 실패({', '.join(validate_errors)}).")
             continue
 
+        parsed_sets.append(
+            {
+                "set_title": set_title,
+                "preset_type": preset_type,
+                "grade": grade,
+                "items": items_data,
+            }
+        )
+
+    return parsed_sets, errors
+
+
+def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: bool = False) -> tuple[int, int, int]:
+    """
+    parse 완료 데이터를 SQQuizBank에 저장한다.
+    반환: (created_count, updated_count, review_count)
+    """
+    created_count = 0
+    updated_count = 0
+    review_count = 0
+
+    quality_status = "review" if share_opt_in else "approved"
+    is_public = False
+
+    for parsed in parsed_sets:
+        set_title = parsed["set_title"]
+        preset_type = parsed["preset_type"]
+        grade = parsed["grade"]
+        items_data = parsed["items"]
+
         with transaction.atomic():
             bank, created = SQQuizBank.objects.get_or_create(
                 title=set_title,
                 preset_type=preset_type,
                 grade=grade,
                 source="csv",
+                created_by=created_by,
                 defaults={
                     "is_active": True,
-                    "is_public": False,
+                    "is_public": is_public,
                     "is_official": False,
-                    "created_by": created_by,
+                    "share_opt_in": share_opt_in,
+                    "quality_status": quality_status,
                 },
             )
-            if not created:
+            if created:
+                created_count += 1
+            else:
                 bank.items.all().delete()
+                bank.is_active = True
+                bank.is_official = False
+                bank.is_public = is_public
+                bank.share_opt_in = share_opt_in
+                bank.quality_status = quality_status
+                bank.reviewed_by = None
+                bank.reviewed_at = None
+                bank.save(
+                    update_fields=[
+                        "is_active",
+                        "is_official",
+                        "is_public",
+                        "share_opt_in",
+                        "quality_status",
+                        "reviewed_by",
+                        "reviewed_at",
+                    ]
+                )
+                updated_count += 1
 
             for order_no, item_data in enumerate(items_data, start=1):
                 SQQuizBankItem.objects.create(bank=bank, order_no=order_no, **item_data)
 
-        if created:
-            created_count += 1
+            SQGenerationLog.objects.create(
+                level="info",
+                code="BANK_CSV_IMPORTED",
+                message=f"CSV 임포트: {set_title}",
+                payload={
+                    "bank_id": str(bank.id),
+                    "created": created,
+                    "share_opt_in": share_opt_in,
+                    "quality_status": quality_status,
+                },
+            )
 
-        SQGenerationLog.objects.create(
-            level="info",
-            code="BANK_CSV_IMPORTED",
-            message=f"CSV 임포트: {set_title}",
-            payload={"bank_id": str(bank.id), "created": created},
-        )
+            if quality_status == "review":
+                review_count += 1
 
-    return created_count, errors
+    return created_count, updated_count, review_count
+
+
+def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
+    """
+    호환용 래퍼: CSV를 즉시 저장한다(공유 신청 없음).
+    """
+    parsed_sets, errors = parse_csv_upload(csv_file)
+    if errors:
+        return 0, errors
+    created_count, _, _ = save_parsed_sets_to_bank(
+        parsed_sets=parsed_sets,
+        created_by=created_by,
+        share_opt_in=False,
+    )
+    return created_count, []
 
 
 def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBank:
@@ -262,6 +346,8 @@ def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBan
             source="ai",
             is_official=False,
             is_public=False,
+            share_opt_in=False,
+            quality_status="approved",
             is_active=True,
             created_by=created_by,
         )
@@ -280,6 +366,77 @@ def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBan
         level="info",
         code="BANK_AI_CREATED",
         message=f"AI 은행 생성: {title}",
+        payload={"bank_id": str(bank.id), "preset_type": preset_type, "grade": grade},
+    )
+    return bank
+
+
+def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str, created_by) -> SQQuizBank:
+    """
+    입력 지문(source_text)을 근거로 퀴즈 은행 세트를 생성한다.
+    """
+    from openai import OpenAI
+
+    api_key = os.environ.get("MASTER_DEEPSEEK_API_KEY")
+    if not api_key:
+        raise RuntimeError("MASTER_DEEPSEEK_API_KEY not set")
+
+    if len(source_text.strip()) < 20:
+        raise ValueError("지문이 너무 짧습니다. 20자 이상 입력해 주세요.")
+    if len(source_text) > 4000:
+        raise ValueError("지문이 너무 깁니다. 4000자 이하로 입력해 주세요.")
+
+    prompt = (
+        f"아래 지문만을 근거로 초등 {grade}학년 {preset_type} 퀴즈 3문항을 JSON으로 작성하세요.\n"
+        '형식: {"items":[{"question_text":"...","choices":["A","B","C","D"],"correct_index":0,"explanation":"...","difficulty":"medium"}]}\n'
+        "지문 외 추측 금지, 모르면 쉬운 수준으로 재구성하세요.\n\n"
+        f"[지문]\n{source_text}"
+    )
+
+    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com", timeout=8.0)
+    resp = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": "당신은 초등 수업용 퀴즈 생성기입니다. JSON만 출력하세요."},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.4,
+    )
+
+    payload = json.loads(resp.choices[0].message.content)
+    ok, errors = validate_quiz_payload(payload)
+    if not ok:
+        raise ValueError(f"RAG 생성 검증 실패: {errors}")
+
+    title = f"[RAG] {grade}학년 {preset_type} 맞춤 세트 {timezone.localdate().isoformat()}"
+    with transaction.atomic():
+        bank = SQQuizBank.objects.create(
+            preset_type=preset_type,
+            grade=grade,
+            title=title,
+            source="ai",
+            is_official=False,
+            is_public=False,
+            share_opt_in=False,
+            quality_status="approved",
+            is_active=True,
+            created_by=created_by,
+        )
+        for order_no, item in enumerate(payload["items"], start=1):
+            SQQuizBankItem.objects.create(
+                bank=bank,
+                order_no=order_no,
+                question_text=item["question_text"],
+                choices=item["choices"],
+                correct_index=item["correct_index"],
+                explanation=item.get("explanation", ""),
+                difficulty=item.get("difficulty", "medium"),
+            )
+    SQGenerationLog.objects.create(
+        level="info",
+        code="BANK_RAG_CREATED",
+        message=f"RAG 은행 생성: {title}",
         payload={"bank_id": str(bank.id), "preset_type": preset_type, "grade": grade},
     )
     return bank

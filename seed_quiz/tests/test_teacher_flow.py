@@ -1,14 +1,15 @@
 import uuid
+import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
-from seed_quiz.models import SQQuizBank, SQQuizBankItem, SQQuizSet
+from seed_quiz.models import SQRagDailyUsage, SQQuizBank, SQQuizBankItem, SQQuizSet
 
 User = get_user_model()
 
@@ -126,6 +127,44 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "공식 상식 기본 세트")
 
+    def test_bank_browse_public_hides_unapproved(self):
+        SQQuizBank.objects.create(
+            title="미승인 공개 세트",
+            preset_type="general",
+            grade=3,
+            source="csv",
+            is_public=True,
+            share_opt_in=True,
+            quality_status="review",
+            created_by=self.other_teacher,
+        )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "public"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "미승인 공개 세트")
+
+    def test_bank_browse_all_includes_my_review_set(self):
+        SQQuizBank.objects.create(
+            title="내 검토대기 세트",
+            preset_type="general",
+            grade=3,
+            source="csv",
+            is_public=False,
+            share_opt_in=True,
+            quality_status="review",
+            created_by=self.teacher,
+        )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "all"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "내 검토대기 세트")
+
     def test_bank_select_creates_draft_preview(self):
         url = reverse(
             "seed_quiz:htmx_bank_select",
@@ -175,8 +214,126 @@ class TeacherFlowTest(TestCase):
             {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "CSV 가져오기가 완료되었습니다")
+        self.assertContains(resp, "CSV 미리보기 완료")
+
+        match = re.search(r'name="preview_token" value="([^"]+)"', resp.content.decode("utf-8"))
+        self.assertIsNotNone(match)
+        token = match.group(1)
+
+        confirm_url = reverse(
+            "seed_quiz:htmx_csv_confirm",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        confirm_resp = self.client.post(confirm_url, {"preview_token": token})
+        self.assertEqual(confirm_resp.status_code, 200)
+        self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
         self.assertTrue(SQQuizBank.objects.filter(title="CSV 세트 A", source="csv").exists())
+
+    def test_csv_confirm_with_share_opt_in_sets_review_status(self):
+        csv_text = (
+            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "CSV 세트 공유,general,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
+            "CSV 세트 공유,general,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
+            "CSV 세트 공유,general,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        upload_url = reverse(
+            "seed_quiz:htmx_csv_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        upload_resp = self.client.post(
+            upload_url,
+            {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
+        )
+        self.assertEqual(upload_resp.status_code, 200)
+
+        match = re.search(r'name="preview_token" value="([^"]+)"', upload_resp.content.decode("utf-8"))
+        self.assertIsNotNone(match)
+        token = match.group(1)
+
+        confirm_url = reverse(
+            "seed_quiz:htmx_csv_confirm",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        confirm_resp = self.client.post(
+            confirm_url,
+            {"preview_token": token, "share_opt_in": "on"},
+        )
+        self.assertEqual(confirm_resp.status_code, 200)
+        bank = SQQuizBank.objects.get(title="CSV 세트 공유", source="csv", created_by=self.teacher)
+        self.assertEqual(bank.quality_status, "review")
+        self.assertFalse(bank.is_public)
+        self.assertTrue(bank.share_opt_in)
+
+    def test_csv_confirm_fails_when_preview_expired(self):
+        confirm_url = reverse(
+            "seed_quiz:htmx_csv_confirm",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(confirm_url, {"preview_token": "expired-token"})
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "세션이 만료", status_code=400)
+
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    @patch("seed_quiz.views.generate_bank_from_context_ai")
+    def test_rag_generate_returns_preview_and_consumes_quota(self, mock_generate):
+        mock_generate.return_value = self.bank
+        url = reverse(
+            "seed_quiz:htmx_rag_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "지문 기반 맞춤 생성 완료")
+        self.assertContains(resp, "대한민국 수도는?")
+        usage = SQRagDailyUsage.objects.get(
+            usage_date=timezone.localdate(),
+            classroom=self.classroom,
+            teacher=self.teacher,
+        )
+        self.assertEqual(usage.count, 1)
+
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    def test_rag_generate_blocks_when_daily_limit_exceeded(self):
+        SQRagDailyUsage.objects.create(
+            usage_date=timezone.localdate(),
+            classroom=self.classroom,
+            teacher=self.teacher,
+            count=1,
+        )
+        url = reverse(
+            "seed_quiz:htmx_rag_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+        )
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn("오늘의 맞춤 생성 횟수를 모두 사용", resp.content.decode("utf-8"))
+
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    @patch("seed_quiz.views.generate_bank_from_context_ai", side_effect=RuntimeError("생성 실패"))
+    def test_rag_generate_refunds_quota_on_generation_error(self, _mock_generate):
+        url = reverse(
+            "seed_quiz:htmx_rag_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+        )
+        self.assertEqual(resp.status_code, 400)
+        usage = SQRagDailyUsage.objects.get(
+            usage_date=timezone.localdate(),
+            classroom=self.classroom,
+            teacher=self.teacher,
+        )
+        self.assertEqual(usage.count, 0)
 
     @patch("seed_quiz.services.generation._call_ai")
     def test_generate_returns_preview(self, mock_ai):

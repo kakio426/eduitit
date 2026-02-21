@@ -1,4 +1,9 @@
 <div class="clay-card p-6 rounded-2xl">
+    {% if rag_notice %}
+    <div class="mb-4 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700 font-medium">
+        {{ rag_notice }}
+    </div>
+    {% endif %}
     <div class="flex items-start justify-between gap-3 mb-4">
         <div>
             <h2 class="font-bold text-gray-700">선택된 퀴즈 미리보기</h2>

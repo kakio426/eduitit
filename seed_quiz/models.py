@@ -17,6 +17,12 @@ class SQQuizBank(models.Model):
         ("csv", "CSV임포트"),
         ("manual", "직접입력"),
     ]
+    QUALITY_CHOICES = [
+        ("draft", "초안"),
+        ("review", "검토대기"),
+        ("approved", "승인"),
+        ("rejected", "반려"),
+    ]
     PRESET_CHOICES = [
         ("general", "상식"),
         ("math", "수학"),
@@ -43,8 +49,17 @@ class SQQuizBank(models.Model):
     )
     is_official = models.BooleanField(default=False, verbose_name="공식 세트")
     is_public = models.BooleanField(default=False, verbose_name="공개 세트")
+    share_opt_in = models.BooleanField(default=False, verbose_name="공유 신청")
+    quality_status = models.CharField(
+        max_length=10,
+        choices=QUALITY_CHOICES,
+        default="approved",
+        verbose_name="품질 상태",
+    )
     is_active = models.BooleanField(default=True, verbose_name="활성")
     use_count = models.IntegerField(default=0, verbose_name="사용 횟수")
+    available_from = models.DateField(null=True, blank=True, verbose_name="노출 시작일")
+    available_to = models.DateField(null=True, blank=True, verbose_name="노출 종료일")
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -53,6 +68,15 @@ class SQQuizBank(models.Model):
         related_name="sq_quiz_banks_created",
         verbose_name="생성자",
     )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sq_quiz_banks_reviewed",
+        verbose_name="검토자",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name="검토 시각")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -64,6 +88,7 @@ class SQQuizBank(models.Model):
             models.Index(fields=["preset_type", "grade", "is_active"]),
             models.Index(fields=["is_official", "is_active"]),
             models.Index(fields=["is_public", "is_active"]),
+            models.Index(fields=["quality_status", "is_active"]),
         ]
 
     def __str__(self):
@@ -197,6 +222,94 @@ class SQQuizSet(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
+
+
+class SQBatchJob(models.Model):
+    """월간 배치 생성 작업 추적."""
+
+    STATUS_CHOICES = [
+        ("pending", "대기"),
+        ("submitted", "제출됨"),
+        ("validating", "검증중"),
+        ("in_progress", "진행중"),
+        ("finalizing", "마무리중"),
+        ("completed", "완료"),
+        ("failed", "실패"),
+        ("cancelled", "취소"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    provider = models.CharField(max_length=30, default="openai", verbose_name="제공자")
+    target_month = models.DateField(verbose_name="대상 월(1일 기준)")
+    batch_id = models.CharField(max_length=120, blank=True, default="", verbose_name="외부 배치 ID")
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        verbose_name="상태",
+    )
+    input_file_id = models.CharField(max_length=120, blank=True, default="", verbose_name="입력 파일 ID")
+    output_file_id = models.CharField(max_length=120, blank=True, default="", verbose_name="출력 파일 ID")
+    error_file_id = models.CharField(max_length=120, blank=True, default="", verbose_name="오류 파일 ID")
+    requested_count = models.IntegerField(default=0, verbose_name="요청 수")
+    success_count = models.IntegerField(default=0, verbose_name="성공 수")
+    failed_count = models.IntegerField(default=0, verbose_name="실패 수")
+    meta_json = models.JSONField(default=dict, blank=True, verbose_name="메타 정보")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sq_batch_jobs_created",
+        verbose_name="생성자",
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "퀴즈 배치 작업"
+        verbose_name_plural = "퀴즈 배치 작업"
+        indexes = [
+            models.Index(fields=["status", "target_month"]),
+            models.Index(fields=["provider", "target_month"]),
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.target_month} ({self.status})"
+
+
+class SQRagDailyUsage(models.Model):
+    """교사/교실 단위 RAG 일일 사용량."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usage_date = models.DateField(verbose_name="사용 날짜")
+    classroom = models.ForeignKey(
+        HSClassroom,
+        on_delete=models.CASCADE,
+        related_name="sq_rag_usages",
+        verbose_name="교실",
+    )
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="sq_rag_usages",
+        verbose_name="교사",
+    )
+    count = models.IntegerField(default=0, verbose_name="사용 횟수")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "RAG 일일 사용량"
+        verbose_name_plural = "RAG 일일 사용량"
+        unique_together = [("usage_date", "classroom", "teacher")]
+        indexes = [
+            models.Index(fields=["usage_date", "teacher"]),
+            models.Index(fields=["usage_date", "classroom"]),
+        ]
+
+    def __str__(self):
+        return f"{self.usage_date} {self.classroom_id}:{self.teacher_id} ({self.count})"
 
 
 class SQQuizItem(models.Model):

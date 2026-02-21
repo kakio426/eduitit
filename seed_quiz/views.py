@@ -1,7 +1,10 @@
 import logging
+from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -10,7 +13,12 @@ from django.views.decorators.http import require_POST
 
 from happy_seed.models import HSClassroom, HSStudent
 from seed_quiz.models import SQAttempt, SQQuizBank, SQQuizItem, SQQuizSet
-from seed_quiz.services.bank import copy_bank_to_draft, import_csv_to_bank
+from seed_quiz.services.bank import (
+    copy_bank_to_draft,
+    generate_bank_from_context_ai,
+    parse_csv_upload,
+    save_parsed_sets_to_bank,
+)
 from seed_quiz.services.gate import (
     clear_session,
     find_or_create_attempt,
@@ -20,8 +28,12 @@ from seed_quiz.services.gate import (
 )
 from seed_quiz.services.generation import generate_and_save_draft
 from seed_quiz.services.grading import submit_and_reward
+from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
 
 logger = logging.getLogger("seed_quiz.views")
+
+CSV_PREVIEW_PAYLOAD_KEY = "sq_csv_preview_payload"
+CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
 
 
 def _parse_bank_filters(raw_preset: str, raw_grade: str):
@@ -70,6 +82,7 @@ def teacher_dashboard(request, classroom_id):
             "initial_preset": initial_preset,
             "initial_grade": initial_grade,
             "initial_grade_str": str(initial_grade),
+            "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
         },
     )
 
@@ -85,17 +98,24 @@ def htmx_bank_browse(request, classroom_id):
     if scope not in {"official", "public", "all"}:
         scope = "official"
 
-    banks = SQQuizBank.objects.filter(
+    banks_qs = SQQuizBank.objects.filter(
         is_active=True,
         preset_type=preset_type,
         grade=grade,
     )
+    approved_filter = Q(quality_status="approved")
     if scope == "official":
-        banks = banks.filter(is_official=True)
+        banks_qs = banks_qs.filter(is_official=True).filter(approved_filter)
     elif scope == "public":
-        banks = banks.filter(is_public=True)
+        banks_qs = banks_qs.filter(is_public=True).filter(approved_filter)
+    else:
+        banks_qs = banks_qs.filter(
+            (Q(is_official=True) & approved_filter)
+            | (Q(is_public=True) & approved_filter)
+            | Q(created_by=request.user)
+        ).distinct()
 
-    banks = banks.order_by("-use_count", "-created_at")[:24]
+    banks = banks_qs.order_by("-is_official", "-use_count", "-created_at")[:24]
 
     return render(
         request,
@@ -107,6 +127,7 @@ def htmx_bank_browse(request, classroom_id):
             "preset_type": preset_type,
             "preset_label": dict(SQQuizSet.PRESET_CHOICES).get(preset_type, "상식"),
             "grade": grade,
+            "allow_inline_ai": bool(getattr(settings, "SEED_QUIZ_ALLOW_INLINE_AI", False)),
         },
     )
 
@@ -158,13 +179,157 @@ def htmx_csv_upload(request, classroom_id):
             status=400,
         )
 
-    created_count, errors = import_csv_to_bank(csv_file=csv_file, created_by=request.user)
-    status_code = 200 if not errors else 400
+    parsed_sets, errors = parse_csv_upload(csv_file)
+    if errors:
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+            },
+            status=400,
+        )
+
+    if not parsed_sets:
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": ["저장할 수 있는 문제 세트가 없습니다."],
+            },
+            status=400,
+        )
+
+    token = uuid4().hex
+    request.session[CSV_PREVIEW_TOKEN_KEY] = token
+    request.session[CSV_PREVIEW_PAYLOAD_KEY] = parsed_sets
+    request.session.modified = True
+
+    return render(
+        request,
+        "seed_quiz/partials/csv_upload_preview.html",
+        {
+            "classroom": classroom,
+            "preview_token": token,
+            "parsed_sets": parsed_sets,
+            "set_count": len(parsed_sets),
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_csv_confirm(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    token = (request.POST.get("preview_token") or "").strip()
+    session_token = request.session.get(CSV_PREVIEW_TOKEN_KEY)
+    parsed_sets = request.session.get(CSV_PREVIEW_PAYLOAD_KEY) or []
+
+    if not token or token != session_token or not parsed_sets:
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": ["CSV 미리보기 세션이 만료되었습니다. 다시 업로드해 주세요."],
+            },
+            status=400,
+        )
+
+    share_opt_in = (request.POST.get("share_opt_in") or "").lower() in {"on", "1", "true", "yes"}
+    created_count, updated_count, review_count = save_parsed_sets_to_bank(
+        parsed_sets=parsed_sets,
+        created_by=request.user,
+        share_opt_in=share_opt_in,
+    )
+
+    request.session.pop(CSV_PREVIEW_TOKEN_KEY, None)
+    request.session.pop(CSV_PREVIEW_PAYLOAD_KEY, None)
+    request.session.modified = True
+
     return render(
         request,
         "seed_quiz/partials/csv_upload_result.html",
-        {"classroom": classroom, "created_count": created_count, "errors": errors},
-        status=status_code,
+        {
+            "classroom": classroom,
+            "created_count": created_count,
+            "updated_count": updated_count,
+            "review_count": review_count,
+            "errors": [],
+        },
+        status=200,
+    )
+
+
+@login_required
+@require_POST
+def htmx_rag_generate(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    preset_type, grade = _parse_bank_filters(
+        request.POST.get("preset_type", "general"),
+        request.POST.get("grade", "3"),
+    )
+    source_text = (request.POST.get("source_text") or "").strip()
+    if not source_text:
+        return HttpResponse(
+            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            "지문 텍스트를 입력해 주세요.</div>",
+            status=400,
+        )
+
+    daily_limit = max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1)))
+    if daily_limit == 0:
+        return HttpResponse(
+            '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+            "현재 맞춤 생성 기능이 비활성화되어 있습니다.</div>",
+            status=403,
+        )
+
+    allowed, remaining = consume_rag_quota(classroom=classroom, teacher=request.user, daily_limit=daily_limit)
+    if not allowed:
+        return HttpResponse(
+            '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+            "오늘의 맞춤 생성 횟수를 모두 사용했습니다. 내일 다시 시도해 주세요.</div>",
+            status=429,
+        )
+
+    try:
+        bank = generate_bank_from_context_ai(
+            preset_type=preset_type,
+            grade=grade,
+            source_text=source_text,
+            created_by=request.user,
+        )
+        quiz_set = copy_bank_to_draft(bank_id=bank.id, classroom=classroom, teacher=request.user)
+    except Exception as e:
+        refund_rag_quota(classroom=classroom, teacher=request.user)
+        return HttpResponse(
+            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            f"맞춤 생성 오류: {e}</div>",
+            status=400,
+        )
+
+    items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": items,
+            "rag_notice": f"지문 기반 맞춤 생성 완료 (오늘 남은 횟수: {remaining})",
+        },
     )
 
 

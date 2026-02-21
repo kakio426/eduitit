@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.utils import timezone
 
 from seed_quiz.models import (
     SQAttempt,
     SQAttemptAnswer,
+    SQBatchJob,
     SQGenerationLog,
     SQQuizBank,
     SQQuizBankItem,
@@ -38,17 +40,83 @@ class SQQuizBankAdmin(admin.ModelAdmin):
         "preset_type",
         "grade",
         "source",
+        "quality_status",
+        "share_opt_in",
         "is_official",
         "is_public",
         "is_active",
         "use_count",
         "created_at",
     ]
-    list_filter = ["preset_type", "grade", "source", "is_official", "is_public", "is_active"]
+    list_filter = [
+        "preset_type",
+        "grade",
+        "source",
+        "quality_status",
+        "share_opt_in",
+        "is_official",
+        "is_public",
+        "is_active",
+    ]
     search_fields = ["title"]
-    raw_id_fields = ["created_by"]
+    raw_id_fields = ["created_by", "reviewed_by"]
     inlines = [SQQuizBankItemInline]
-    readonly_fields = ["created_at", "updated_at", "use_count"]
+    readonly_fields = ["created_at", "updated_at", "use_count", "reviewed_at"]
+    actions = ["approve_public_share", "reject_public_share"]
+
+    @admin.action(description="공유 신청 승인 (공개 전환)")
+    def approve_public_share(self, request, queryset):
+        count = queryset.update(
+            quality_status="approved",
+            is_public=True,
+            reviewed_by_id=request.user.id,
+            reviewed_at=timezone.now(),
+        )
+        self.message_user(request, f"{count}개 세트를 승인했습니다.")
+
+    @admin.action(description="공유 신청 반려")
+    def reject_public_share(self, request, queryset):
+        count = queryset.update(
+            quality_status="rejected",
+            is_public=False,
+            reviewed_by_id=request.user.id,
+            reviewed_at=timezone.now(),
+        )
+        self.message_user(request, f"{count}개 세트를 반려했습니다.")
+
+
+@admin.register(SQBatchJob)
+class SQBatchJobAdmin(admin.ModelAdmin):
+    list_display = [
+        "provider",
+        "target_month",
+        "status",
+        "requested_count",
+        "success_count",
+        "failed_count",
+        "started_at",
+        "completed_at",
+    ]
+    list_filter = ["provider", "status", "target_month"]
+    search_fields = ["batch_id", "input_file_id", "output_file_id"]
+    raw_id_fields = ["created_by"]
+    readonly_fields = [
+        "provider",
+        "target_month",
+        "batch_id",
+        "status",
+        "input_file_id",
+        "output_file_id",
+        "error_file_id",
+        "requested_count",
+        "success_count",
+        "failed_count",
+        "meta_json",
+        "created_by",
+        "started_at",
+        "completed_at",
+        "updated_at",
+    ]
 
 
 @admin.register(SQQuizSet)
