@@ -120,6 +120,7 @@ class TeacherFlowTest(TestCase):
         body = resp.content.decode("utf-8-sig")
         self.assertIn("set_title,preset_type,grade", body)
         self.assertIn("orthography", body)
+        self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
 
     def test_topic_summary_returns_200(self):
         url = reverse(

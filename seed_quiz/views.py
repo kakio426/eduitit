@@ -147,21 +147,23 @@ def download_csv_template(request, classroom_id):
         ]
     )
     for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
-        writer.writerow(
-            [
-                f"{topic_label}_기본_01",
-                topic_key,
-                3,
-                f"{topic_label} 예시 문제를 입력하세요.",
-                "선택지1",
-                "선택지2",
-                "선택지3",
-                "선택지4",
-                0,
-                "정답 해설을 입력하세요.",
-                "easy",
-            ]
-        )
+        set_title = f"SQ-{topic_key}-basic-L1-G3-S001-V1"
+        for q_no in range(1, 4):
+            writer.writerow(
+                [
+                    set_title,
+                    topic_key,
+                    3,
+                    f"[{topic_label}] 예시 문제 {q_no}",
+                    f"{topic_label} 보기 A{q_no}",
+                    f"{topic_label} 보기 B{q_no}",
+                    f"{topic_label} 보기 C{q_no}",
+                    f"{topic_label} 보기 D{q_no}",
+                    (q_no - 1) % 4,
+                    f"{topic_label} 예시 해설 {q_no}",
+                    "easy",
+                ]
+            )
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
