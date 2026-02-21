@@ -1,0 +1,34 @@
+<div>
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="font-bold text-gray-700">주제별 운영 요약</h2>
+        <span class="text-xs text-gray-400">30초 자동 갱신</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-xs">
+            <thead>
+                <tr class="text-gray-500 border-b border-gray-200">
+                    <th class="py-2 pr-3 text-left">주제</th>
+                    <th class="py-2 pr-3 text-right">총 세트</th>
+                    <th class="py-2 pr-3 text-right">공식</th>
+                    <th class="py-2 pr-3 text-right">공유</th>
+                    <th class="py-2 pr-3 text-right">검토대기</th>
+                    <th class="py-2 text-right">최근 사용일</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in topics %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 pr-3 text-gray-700 font-medium">{{ t.label }}</td>
+                    <td class="py-2 pr-3 text-right text-gray-600">{{ t.total_count }}</td>
+                    <td class="py-2 pr-3 text-right text-indigo-600">{{ t.official_count }}</td>
+                    <td class="py-2 pr-3 text-right text-emerald-600">{{ t.public_count }}</td>
+                    <td class="py-2 pr-3 text-right text-amber-600">{{ t.review_count }}</td>
+                    <td class="py-2 text-right text-gray-500">
+                        {% if t.last_used %}{{ t.last_used }}{% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

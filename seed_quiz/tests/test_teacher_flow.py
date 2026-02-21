@@ -109,6 +109,27 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "오늘의 퀴즈 선택")
 
+    def test_download_csv_template(self):
+        url = reverse(
+            "seed_quiz:download_csv_template",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
+        body = resp.content.decode("utf-8-sig")
+        self.assertIn("set_title,preset_type,grade", body)
+        self.assertIn("orthography", body)
+
+    def test_topic_summary_returns_200(self):
+        url = reverse(
+            "seed_quiz:htmx_topic_summary",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "주제별 운영 요약")
+
     def test_other_teacher_forbidden(self):
         other_client = Client()
         other_client.force_login(self.other_teacher)

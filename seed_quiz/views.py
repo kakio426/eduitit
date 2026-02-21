@@ -1,13 +1,15 @@
 import logging
 import random
+import csv
 from datetime import timedelta
+from io import StringIO
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
-from django.http import HttpResponse
+from django.db.models import Count, Max, Q
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -119,6 +121,53 @@ def teacher_dashboard(request, classroom_id):
             "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
         },
     )
+
+
+@login_required
+def download_csv_template(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    if not classroom:
+        return HttpResponseForbidden("권한이 없습니다.")
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "set_title",
+            "preset_type",
+            "grade",
+            "question_text",
+            "choice_1",
+            "choice_2",
+            "choice_3",
+            "choice_4",
+            "correct_index",
+            "explanation",
+            "difficulty",
+        ]
+    )
+    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
+        writer.writerow(
+            [
+                f"{topic_label}_기본_01",
+                topic_key,
+                3,
+                f"{topic_label} 예시 문제를 입력하세요.",
+                "선택지1",
+                "선택지2",
+                "선택지3",
+                "선택지4",
+                0,
+                "정답 해설을 입력하세요.",
+                "easy",
+            ]
+        )
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
+    response.write("\ufeff")
+    response.write(output.getvalue())
+    return response
 
 
 @login_required
@@ -537,6 +586,53 @@ def htmx_progress(request, classroom_id):
         {
             "quiz_set": quiz_set,
             "stats": stats,
+        },
+    )
+
+
+@login_required
+def htmx_topic_summary(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    counts_by_topic = {
+        row["preset_type"]: row
+        for row in SQQuizBank.objects.filter(is_active=True)
+        .values("preset_type")
+        .annotate(
+            total_count=Count("id"),
+            official_count=Count("id", filter=Q(is_official=True)),
+            public_count=Count("id", filter=Q(is_public=True)),
+            review_count=Count("id", filter=Q(quality_status="review")),
+            last_created=Max("created_at"),
+        )
+    }
+    last_used_by_topic = {
+        row["bank_source__preset_type"]: row["last_used"]
+        for row in SQQuizSet.objects.filter(classroom=classroom, bank_source__isnull=False)
+        .values("bank_source__preset_type")
+        .annotate(last_used=Max("target_date"))
+    }
+
+    topics = []
+    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
+        row = counts_by_topic.get(topic_key, {})
+        topics.append(
+            {
+                "key": topic_key,
+                "label": topic_label,
+                "total_count": row.get("total_count", 0),
+                "official_count": row.get("official_count", 0),
+                "public_count": row.get("public_count", 0),
+                "review_count": row.get("review_count", 0),
+                "last_used": last_used_by_topic.get(topic_key),
+            }
+        )
+
+    return render(
+        request,
+        "seed_quiz/partials/topic_summary.html",
+        {
+            "classroom": classroom,
+            "topics": topics,
         },
     )
 

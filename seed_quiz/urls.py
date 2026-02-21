@@ -10,6 +10,7 @@ urlpatterns = [
 
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("class/<uuid:classroom_id>/csv-template/", views.download_csv_template, name="download_csv_template"),
     path("class/<uuid:classroom_id>/htmx/bank/", views.htmx_bank_browse, name="htmx_bank_browse"),
     path("class/<uuid:classroom_id>/htmx/bank/random-select/", views.htmx_bank_random_select, name="htmx_bank_random_select"),
     path("class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/", views.htmx_bank_select, name="htmx_bank_select"),
@@ -19,6 +20,7 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),
     path("class/<uuid:classroom_id>/htmx/progress/", views.htmx_progress, name="htmx_progress"),
+    path("class/<uuid:classroom_id>/htmx/topic-summary/", views.htmx_topic_summary, name="htmx_topic_summary"),
 
     # 학생 영역
     path("gate/<slug:class_slug>/", views.student_gate, name="student_gate"),

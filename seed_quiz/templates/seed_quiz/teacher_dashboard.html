@@ -79,7 +79,13 @@
 
     <!-- CSV 업로드 -->
     <div class="clay-card p-6 rounded-2xl mb-6">
-        <h2 class="font-bold text-gray-700 mb-4">CSV 업로드</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-gray-700">CSV 업로드</h2>
+            <a href="{% url 'seed_quiz:download_csv_template' classroom_id=classroom.id %}"
+               class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
+                템플릿 다운로드
+            </a>
+        </div>
         <form hx-post="{% url 'seed_quiz:htmx_csv_upload' classroom_id=classroom.id %}"
               hx-encoding="multipart/form-data"
               hx-target="#csv-upload-result"
@@ -160,6 +166,14 @@
 
     <!-- 미리보기 영역 -->
     <div id="preview-area" class="mb-6"></div>
+
+    <!-- 주제별 운영 요약 -->
+    <div class="clay-card p-6 rounded-2xl mb-6"
+         hx-get="{% url 'seed_quiz:htmx_topic_summary' classroom_id=classroom.id %}"
+         hx-trigger="load, every 30s"
+         hx-swap="innerHTML">
+        <p class="text-sm text-gray-400">주제별 요약 불러오는 중...</p>
+    </div>
 
     <!-- 진행 현황 -->
     <div class="clay-card p-6 rounded-2xl"
