@@ -8,6 +8,7 @@ import logging
 import json
 import os
 import hashlib
+import re
 
 from django.db import transaction
 from django.db.models import F
@@ -21,6 +22,9 @@ logger = logging.getLogger("seed_quiz.bank")
 
 VALID_PRESET_TYPES = set(TOPIC_LABELS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+SET_TITLE_RE = re.compile(
+    r"^SQ-(?P<topic>[a-z_]+)-basic-L1-G(?P<grade>[1-6])-S(?P<seq>\d{3})-V(?P<version>\d+)$"
+)
 
 
 def _normalize_source_text(source_text: str) -> str:
@@ -30,6 +34,19 @@ def _normalize_source_text(source_text: str) -> str:
 
 def _source_hash(source_text: str) -> str:
     return hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+
+
+def _parse_set_title_meta(set_title: str) -> dict | None:
+    match = SET_TITLE_RE.match(set_title or "")
+    if not match:
+        return None
+    topic = normalize_topic(match.group("topic"))
+    if not topic:
+        return None
+    return {
+        "topic": topic,
+        "grade": int(match.group("grade")),
+    }
 
 
 def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
@@ -155,6 +172,26 @@ def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
             continue
         if grade not in range(1, 7):
             errors.append(f"세트 '{set_title}': grade는 1~6이어야 합니다.")
+            continue
+
+        set_title_meta = _parse_set_title_meta(set_title)
+        if not set_title_meta:
+            errors.append(
+                f"세트 '{set_title}': set_title 형식이 올바르지 않습니다. "
+                "(예: SQ-orthography-basic-L1-G3-S001-V1)"
+            )
+            continue
+        if set_title_meta["topic"] != preset_type:
+            errors.append(
+                f"세트 '{set_title}': set_title의 topic({set_title_meta['topic']})과 "
+                f"preset_type({preset_type})이 일치하지 않습니다."
+            )
+            continue
+        if set_title_meta["grade"] != grade:
+            errors.append(
+                f"세트 '{set_title}': set_title의 grade({set_title_meta['grade']})와 "
+                f"grade 컬럼({grade})이 일치하지 않습니다."
+            )
             continue
 
         items_data = []
