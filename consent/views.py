@@ -293,12 +293,14 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
         seen.add(url)
         urls.append(url)
 
-    push(fallback_url)
-    push(_strip_cloudinary_signature(fallback_url))
-
+    # 서명 URL을 먼저 시도 (401 인증 오류 우회)
     signed_url = _build_cloudinary_signed_url(file_field, fallback_url=fallback_url)
     push(signed_url)
     push(_strip_cloudinary_signature(signed_url))
+
+    # 그다음 원본 URL
+    push(fallback_url)
+    push(_strip_cloudinary_signature(fallback_url))
 
     return urls
 
@@ -355,57 +357,44 @@ def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
     if not (is_cloudinary_storage or is_cloudinary_url):
         return ""
 
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-    if not cloud_name and not is_cloudinary_url:
-        return ""
+    # fallback_url에서 resource_type과 delivery_type 파싱
+    # URL 형식: https://res.cloudinary.com/{cloud}/{resource_type}/{delivery_type}/...
+    resource_type = "raw"
+    delivery_type = "upload"
+    if is_cloudinary_url:
+        try:
+            after_cloud = fallback_url.split("res.cloudinary.com/")[1]
+            parts = after_cloud.split("/")
+            # parts[0]=cloud_name, parts[1]=resource_type, parts[2]=delivery_type
+            if len(parts) >= 3:
+                resource_type = parts[1]   # "image", "raw", "video"
+                delivery_type = parts[2]   # "upload", "authenticated", "private"
+        except Exception:
+            pass
 
-    candidates = [file_name]
-    if not file_name.startswith("media/"):
-        candidates.append(f"media/{file_name}")
+    logger.warning("[PDF_DEBUG] signing with resource_type=%s delivery_type=%s", resource_type, delivery_type)
 
-    url_candidates = []
+    # 탐지된 resource_type 우선, 그다음 raw/image 순으로 시도
+    resource_types_to_try = [resource_type]
+    for rt in ("raw", "image"):
+        if rt not in resource_types_to_try:
+            resource_types_to_try.append(rt)
 
-    for public_id in candidates:
-        for delivery_type in ("upload", "authenticated", "private"):
-            try:
-                signed, _ = cloudinary_url(
-                    public_id,
-                    resource_type="raw",
-                    type=delivery_type,
-                    secure=True,
-                    sign_url=True,
-                )
-            except Exception:
-                signed = ""
+    for rt in resource_types_to_try:
+        try:
+            signed, _ = cloudinary_url(
+                file_name,
+                resource_type=rt,
+                type=delivery_type,
+                secure=True,
+                sign_url=True,
+            )
             if signed:
-                url_candidates.append(signed)
+                logger.warning("[PDF_DEBUG] generated signed URL (resource_type=%s): %s", rt, signed[:80])
+                return signed
+        except Exception:
+            continue
 
-            try:
-                from cloudinary.utils import private_download_url
-            except Exception:
-                continue
-
-            # private_download_url expects public_id + format
-            fmt = ""
-            pid = public_id
-            if "." in public_id.rsplit("/", 1)[-1]:
-                pid, fmt = public_id.rsplit(".", 1)
-            if fmt:
-                try:
-                    purl = private_download_url(
-                        pid,
-                        fmt,
-                        resource_type="raw",
-                        type=delivery_type,
-                    )
-                except Exception:
-                    purl = ""
-                if purl:
-                    url_candidates.append(purl)
-
-    for candidate in url_candidates:
-        if _remote_url_accessible(candidate):
-            return candidate
     return ""
 
 
