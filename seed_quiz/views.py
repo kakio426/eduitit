@@ -39,6 +39,8 @@ logger = logging.getLogger("seed_quiz.views")
 
 CSV_PREVIEW_PAYLOAD_KEY = "sq_csv_preview_payload"
 CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
+CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
+CSV_ERROR_REPORT_ROWS_KEY = "sq_csv_error_report_rows"
 
 
 def _parse_bank_filters(raw_preset: str, raw_grade: str):
@@ -80,6 +82,25 @@ def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, s
             | Q(created_by=user)
         ).distinct()
     return banks_qs
+
+
+def _clear_csv_error_report(request):
+    request.session.pop(CSV_ERROR_REPORT_TOKEN_KEY, None)
+    request.session.pop(CSV_ERROR_REPORT_ROWS_KEY, None)
+    request.session.modified = True
+
+
+def _store_csv_error_report(request, errors: list[str]) -> str:
+    token = uuid4().hex
+    sanitized = []
+    for raw in errors:
+        msg = str(raw or "").replace("\r", " ").replace("\n", " ").strip()
+        if msg:
+            sanitized.append(msg)
+    request.session[CSV_ERROR_REPORT_TOKEN_KEY] = token
+    request.session[CSV_ERROR_REPORT_ROWS_KEY] = sanitized[:500]
+    request.session.modified = True
+    return token
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +188,33 @@ def download_csv_template(request, classroom_id):
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
+    response.write("\ufeff")
+    response.write(output.getvalue())
+    return response
+
+
+@login_required
+def download_csv_error_report(request, classroom_id, token):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    if not classroom:
+        return HttpResponseForbidden("권한이 없습니다.")
+
+    session_token = request.session.get(CSV_ERROR_REPORT_TOKEN_KEY)
+    error_rows = request.session.get(CSV_ERROR_REPORT_ROWS_KEY) or []
+
+    if not token or token != session_token or not error_rows:
+        return HttpResponse("오류 리포트가 만료되었습니다. 다시 CSV를 업로드해 주세요.", status=404)
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["no", "error_message"])
+    for idx, message in enumerate(error_rows, start=1):
+        writer.writerow([idx, message])
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="seed_quiz_error_report_{timezone.localdate().isoformat()}.csv"'
+    )
     response.write("\ufeff")
     response.write(output.getvalue())
     return response
@@ -312,17 +360,28 @@ def htmx_bank_select(request, classroom_id, bank_id):
 @require_POST
 def htmx_csv_upload(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    _clear_csv_error_report(request)
     csv_file = request.FILES.get("csv_file")
     if not csv_file:
+        token = _store_csv_error_report(request, ["CSV 파일을 선택해 주세요."])
         return render(
             request,
             "seed_quiz/partials/csv_upload_result.html",
-            {"classroom": classroom, "created_count": 0, "errors": ["CSV 파일을 선택해 주세요."]},
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "errors": ["CSV 파일을 선택해 주세요."],
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
             status=400,
         )
 
     parsed_sets, errors = parse_csv_upload(csv_file)
     if errors:
+        token = _store_csv_error_report(request, errors)
         return render(
             request,
             "seed_quiz/partials/csv_upload_result.html",
@@ -332,11 +391,16 @@ def htmx_csv_upload(request, classroom_id):
                 "updated_count": 0,
                 "review_count": 0,
                 "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
             },
             status=400,
         )
 
     if not parsed_sets:
+        token = _store_csv_error_report(request, ["저장할 수 있는 문제 세트가 없습니다."])
         return render(
             request,
             "seed_quiz/partials/csv_upload_result.html",
@@ -346,6 +410,10 @@ def htmx_csv_upload(request, classroom_id):
                 "updated_count": 0,
                 "review_count": 0,
                 "errors": ["저장할 수 있는 문제 세트가 없습니다."],
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
             },
             status=400,
         )
@@ -354,6 +422,7 @@ def htmx_csv_upload(request, classroom_id):
     request.session[CSV_PREVIEW_TOKEN_KEY] = token
     request.session[CSV_PREVIEW_PAYLOAD_KEY] = parsed_sets
     request.session.modified = True
+    _clear_csv_error_report(request)
 
     return render(
         request,

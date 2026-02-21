@@ -11,6 +11,11 @@ urlpatterns = [
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
     path("class/<uuid:classroom_id>/csv-template/", views.download_csv_template, name="download_csv_template"),
+    path(
+        "class/<uuid:classroom_id>/csv-error-report/<slug:token>/",
+        views.download_csv_error_report,
+        name="download_csv_error_report",
+    ),
     path("class/<uuid:classroom_id>/htmx/bank/", views.htmx_bank_browse, name="htmx_bank_browse"),
     path("class/<uuid:classroom_id>/htmx/bank/random-select/", views.htmx_bank_random_select, name="htmx_bank_random_select"),
     path("class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/", views.htmx_bank_select, name="htmx_bank_select"),

@@ -9,6 +9,12 @@
     {% if errors|length > 8 %}
     <p class="mt-2 text-xs">외 {{ errors|length|add:"-8" }}건</p>
     {% endif %}
+    {% if error_report_url %}
+    <a href="{{ error_report_url }}"
+       class="inline-flex mt-3 px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200 transition-colors">
+        오류 CSV 다운로드
+    </a>
+    {% endif %}
 </div>
 {% else %}
 <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm"

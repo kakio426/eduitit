@@ -108,6 +108,7 @@ class TeacherFlowTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "오늘의 퀴즈 선택")
+        self.assertContains(resp, 'id="csv-client-check"')
 
     def test_download_csv_template(self):
         url = reverse(
@@ -121,6 +122,14 @@ class TeacherFlowTest(TestCase):
         self.assertIn("set_title,preset_type,grade", body)
         self.assertIn("orthography", body)
         self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
+
+    def test_download_csv_error_report_requires_valid_token(self):
+        url = reverse(
+            "seed_quiz:download_csv_error_report",
+            kwargs={"classroom_id": self.classroom.id, "token": "invalid-token"},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 404)
 
     def test_topic_summary_returns_200(self):
         url = reverse(
@@ -331,6 +340,15 @@ class TeacherFlowTest(TestCase):
         )
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "set_title 형식이 올바르지 않습니다", status_code=400)
+        body = resp.content.decode("utf-8")
+        report_match = re.search(r'href="([^"]+/csv-error-report/[^"]+/)"', body)
+        self.assertIsNotNone(report_match)
+        report_url = report_match.group(1)
+        report_resp = self.client.get(report_url)
+        self.assertEqual(report_resp.status_code, 200)
+        report_body = report_resp.content.decode("utf-8-sig")
+        self.assertIn("no,error_message", report_body)
+        self.assertIn("set_title 형식이 올바르지 않습니다", report_body)
 
     def test_csv_confirm_with_share_opt_in_sets_review_status(self):
         csv_text = (

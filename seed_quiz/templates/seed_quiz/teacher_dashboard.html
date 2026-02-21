@@ -86,7 +86,9 @@
                 템플릿 다운로드
             </a>
         </div>
-        <form hx-post="{% url 'seed_quiz:htmx_csv_upload' classroom_id=classroom.id %}"
+        <form id="csv-upload-form"
+              data-client-check-state="idle"
+              hx-post="{% url 'seed_quiz:htmx_csv_upload' classroom_id=classroom.id %}"
               hx-encoding="multipart/form-data"
               hx-target="#csv-upload-result"
               hx-swap="innerHTML"
@@ -95,6 +97,7 @@
             <div class="flex-1 min-w-[260px]">
                 <label class="block text-xs font-bold text-gray-500 mb-1">CSV 파일</label>
                 <input type="file"
+                       id="csv-file-input"
                        name="csv_file"
                        accept=".csv,text/csv"
                        required
@@ -111,6 +114,7 @@
         <p class="mt-1 text-xs text-gray-400">
             set_title 표준: <code>SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}</code> 예: <code>SQ-orthography-basic-L1-G3-S001-V1</code>
         </p>
+        <div id="csv-client-check" class="mt-2 hidden"></div>
         <div id="csv-upload-result" class="mt-3"></div>
     </div>
 
@@ -188,4 +192,209 @@
 
 </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const form = document.getElementById('csv-upload-form');
+    const input = document.getElementById('csv-file-input');
+    const panel = document.getElementById('csv-client-check');
+    if (!form || !input || !panel) {
+        return;
+    }
+
+    const requiredHeaders = [
+        'set_title', 'preset_type', 'grade', 'question_text',
+        'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
+    ];
+
+    function setState(state) {
+        form.dataset.clientCheckState = state;
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function showInfo(message) {
+        panel.className = 'mt-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs p-3';
+        panel.innerHTML = '<p class="font-bold">브라우저 1차 검사</p><p class="mt-1">' + escapeHtml(message) + '</p>';
+    }
+
+    function showErrors(errors) {
+        const visible = errors.slice(0, 6).map((e) => '<li>' + escapeHtml(e) + '</li>').join('');
+        const more = errors.length > 6 ? '<p class="mt-2 text-[11px]">외 ' + (errors.length - 6) + '건</p>' : '';
+        panel.className = 'mt-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs p-3';
+        panel.innerHTML = (
+            '<p class="font-bold">브라우저 1차 검사에서 수정 필요 항목이 있습니다.</p>' +
+            '<ul class="list-disc pl-5 mt-1 space-y-0.5">' + visible + '</ul>' +
+            more
+        );
+    }
+
+    function hidePanel() {
+        panel.className = 'mt-2 hidden';
+        panel.innerHTML = '';
+    }
+
+    function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let cell = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i += 1) {
+            const ch = text[i];
+            if (ch === '"') {
+                if (inQuotes && text[i + 1] === '"') {
+                    cell += '"';
+                    i += 1;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+                continue;
+            }
+            if (!inQuotes && ch === ',') {
+                row.push(cell);
+                cell = '';
+                continue;
+            }
+            if (!inQuotes && (ch === '\n' || ch === '\r')) {
+                if (ch === '\r' && text[i + 1] === '\n') {
+                    i += 1;
+                }
+                row.push(cell);
+                rows.push(row);
+                row = [];
+                cell = '';
+                continue;
+            }
+            cell += ch;
+        }
+        if (cell.length > 0 || row.length > 0) {
+            row.push(cell);
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    function validateRows(rows) {
+        const errors = [];
+        if (!rows.length) {
+            return ['CSV 내용이 비어 있습니다.'];
+        }
+
+        const headers = rows[0].map((h) => (h || '').trim());
+        const headerIndex = {};
+        headers.forEach((h, idx) => { headerIndex[h] = idx; });
+
+        requiredHeaders.forEach((col) => {
+            if (!(col in headerIndex)) {
+                errors.push('필수 헤더 누락: ' + col);
+            }
+        });
+        if (errors.length) {
+            return errors;
+        }
+
+        const maxRows = Math.min(rows.length, 121);
+        for (let i = 1; i < maxRows; i += 1) {
+            const raw = rows[i];
+            if (!raw || !raw.length || raw.every((v) => String(v || '').trim() === '')) {
+                continue;
+            }
+            const lineNo = i + 1;
+            const get = (key) => (raw[headerIndex[key]] || '').trim();
+
+            const rowRequired = [
+                'set_title', 'preset_type', 'grade', 'question_text',
+                'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
+            ];
+            rowRequired.forEach((col) => {
+                if (!get(col)) {
+                    errors.push(lineNo + '행: ' + col + ' 값이 비어 있습니다.');
+                }
+            });
+
+            const choices = [get('choice_1'), get('choice_2'), get('choice_3'), get('choice_4')];
+            const nonEmptyChoices = choices.filter(Boolean);
+            if (nonEmptyChoices.length === 4 && new Set(nonEmptyChoices).size !== 4) {
+                errors.push(lineNo + '행: 선택지 중복이 있습니다.');
+            }
+
+            const ci = get('correct_index');
+            if (ci && !/^[0-3]$/.test(ci)) {
+                errors.push(lineNo + '행: correct_index는 0~3이어야 합니다.');
+            }
+        }
+
+        if (rows.length > 121) {
+            errors.push('1차 검사는 처음 120행까지만 검사했습니다. 전체 검증은 서버에서 진행됩니다.');
+        }
+        return errors;
+    }
+
+    function runClientCheck(callback) {
+        const file = input.files && input.files[0];
+        if (!file) {
+            setState('invalid');
+            showErrors(['CSV 파일을 선택해 주세요.']);
+            if (callback) callback(false);
+            return;
+        }
+
+        const reader = new FileReader();
+        setState('checking');
+        showInfo('파일 구조를 확인 중입니다...');
+        reader.onload = function (event) {
+            try {
+                const text = String(event.target && event.target.result ? event.target.result : '');
+                const rows = parseCsv(text);
+                const errors = validateRows(rows);
+                if (errors.length) {
+                    setState('invalid');
+                    showErrors(errors);
+                    if (callback) callback(false);
+                    return;
+                }
+                setState('valid');
+                showInfo('1차 검사 통과. 서버 검증을 진행할 수 있습니다.');
+                if (callback) callback(true);
+            } catch (e) {
+                setState('invalid');
+                showErrors(['브라우저 검사 중 오류가 발생했습니다. 바로 업로드해 서버 검증을 실행해 주세요.']);
+                if (callback) callback(false);
+            }
+        };
+        reader.onerror = function () {
+            setState('invalid');
+            showErrors(['파일을 읽을 수 없습니다. 다시 선택해 주세요.']);
+            if (callback) callback(false);
+        };
+        reader.readAsText(file, 'utf-8');
+    }
+
+    input.addEventListener('change', function () {
+        if (!input.files || !input.files.length) {
+            setState('idle');
+            hidePanel();
+            return;
+        }
+        runClientCheck();
+    });
+
+    form.addEventListener('submit', function (event) {
+        if (form.dataset.clientCheckState === 'invalid') {
+            event.preventDefault();
+            showErrors(['1차 검사 오류를 먼저 수정한 뒤 다시 업로드해 주세요.']);
+        }
+    });
+})();
+</script>
 {% endblock %}
