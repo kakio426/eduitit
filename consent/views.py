@@ -227,23 +227,15 @@ def _build_file_response(file_field, *, inline=True):
     guessed_content_type = mimetypes.guess_type(file_field.name)[0]
     content_type = guessed_content_type or "application/octet-stream"
 
-    logger.warning("[PDF_DEBUG] _build_file_response: name=%s inline=%s", file_field.name, inline)
-
     try:
         file_obj = file_field.open("rb")
-        logger.warning("[PDF_DEBUG] local open SUCCESS")
-    except Exception as e:
-        logger.warning("[PDF_DEBUG] local open FAILED: %s", e)
+    except Exception:
         try:
             file_url = file_field.url
-        except Exception as e2:
-            logger.warning("[PDF_DEBUG] file_field.url FAILED: %s", e2)
+        except Exception:
             file_url = ""
 
-        logger.warning("[PDF_DEBUG] file_field.url = %s", file_url)
-
         remote_urls = _iter_remote_file_urls(file_field, fallback_url=file_url)
-        logger.warning("[PDF_DEBUG] remote_urls = %s", remote_urls)
         for remote_url in remote_urls:
             response = _build_remote_proxy_response(
                 remote_url,
@@ -252,11 +244,8 @@ def _build_file_response(file_field, *, inline=True):
                 inline=inline,
             )
             if response is not None:
-                logger.warning("[PDF_DEBUG] proxy SUCCESS for %s", remote_url)
                 return response
         if remote_urls:
-            logger.warning("[PDF_DEBUG] all proxies FAILED, doing redirect to %s", remote_urls[0])
-            # Last-resort fallback: avoid hard 404 if proxy streaming from origin fails.
             response = redirect(remote_urls[0])
             response["Cache-Control"] = "no-store"
             return response
@@ -293,24 +282,13 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
         seen.add(url)
         urls.append(url)
 
-    # Cloudinary 파일이면 모든 (resource_type, delivery_type) 조합의 서명 URL을 먼저 시도
     is_cloudinary_url = "res.cloudinary.com" in (fallback_url or "")
     storage_module = getattr(getattr(file_field, "storage", None), "__class__", type("X", (), {})).__module__
     is_cloudinary_storage = "cloudinary" in (storage_module or "")
 
     if is_cloudinary_url or is_cloudinary_storage:
         try:
-            import cloudinary as _cld_lib
-            _cfg = _cld_lib.config()
-            logger.warning(
-                "[PDF_DEBUG] cloudinary config at runtime: cloud=%s key=%s secret_len=%d",
-                _cfg.cloud_name, (_cfg.api_key or "")[:8], len(_cfg.api_secret or ""),
-            )
-        except Exception as _e:
-            logger.warning("[PDF_DEBUG] cloudinary config check failed: %s", _e)
-
-        try:
-            from cloudinary.utils import cloudinary_url as _cld_url, private_download_url as _pdl
+            from cloudinary.utils import private_download_url as _pdl
             file_name = (getattr(file_field, "name", "") or "").lstrip("/")
 
             # fallback_url에서 resource_type/delivery_type 파싱
@@ -325,29 +303,12 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
                 except Exception:
                     pass
 
-            # 1순위: API 인증 방식 다운로드 URL (CDN 서명 우회, api_key+api_secret 직접 인증)
-            for rt in (detected_rt, "raw", "image"):
+            # API 인증 방식 다운로드 URL (CDN 보안 설정 우회)
+            for rt in dict.fromkeys([detected_rt, "raw", "image"]):
                 try:
                     api_dl = _pdl(file_name, "", resource_type=rt, type=detected_dt)
                     if api_dl:
-                        logger.warning("[PDF_DEBUG] private_download_url (rt=%s): %s", rt, api_dl[:80])
                         push(api_dl)
-                except Exception:
-                    pass
-
-            # 2순위: CDN 서명 URL
-            combos = [(detected_rt, detected_dt)]
-            for rt in ("image", "raw"):
-                for dt in ("upload", "authenticated", "private"):
-                    if (rt, dt) not in combos:
-                        combos.append((rt, dt))
-
-            for rt, dt in combos:
-                try:
-                    signed, _ = _cld_url(
-                        file_name, resource_type=rt, type=dt, secure=True, sign_url=True
-                    )
-                    push(signed)
                 except Exception:
                     pass
         except Exception:
@@ -355,7 +316,6 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
 
     # 원본 URL을 마지막 fallback으로
     push(fallback_url)
-    push(_strip_cloudinary_signature(fallback_url))
 
     return urls
 
@@ -366,11 +326,9 @@ def _build_remote_proxy_response(url: str, *, filename: str, content_type: str, 
 
     try:
         remote = requests.get(url, stream=True, timeout=(5, 30))
-    except Exception as e:
-        logger.warning("[PDF_DEBUG] proxy requests.get EXCEPTION for %s : %s", url[:80], e)
+    except Exception:
         return None
 
-    logger.warning("[PDF_DEBUG] proxy status=%s for %s", remote.status_code, url[:80])
     if remote.status_code >= 400:
         remote.close()
         return None
@@ -396,94 +354,6 @@ def _build_remote_proxy_response(url: str, *, filename: str, content_type: str, 
     return response
 
 
-def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
-    file_name = (getattr(file_field, "name", "") or "").lstrip("/")
-    if not file_name:
-        return ""
-
-    try:
-        from cloudinary.utils import cloudinary_url
-    except Exception:
-        return ""
-
-    storage_module = getattr(getattr(file_field, "storage", None), "__class__", type("X", (), {})).__module__
-    is_cloudinary_storage = "cloudinary" in (storage_module or "")
-    is_cloudinary_url = "res.cloudinary.com" in (fallback_url or "")
-    if not (is_cloudinary_storage or is_cloudinary_url):
-        return ""
-
-    # 현재 cloudinary 설정 확인 (자격증명 유효성 로깅)
-    try:
-        import cloudinary as _cld
-        _cfg = _cld.config()
-        logger.warning(
-            "[PDF_DEBUG] cloudinary config: cloud=%s api_key=%s api_secret_len=%d",
-            _cfg.cloud_name,
-            (_cfg.api_key or "")[:6],
-            len(_cfg.api_secret or ""),
-        )
-    except Exception as _e:
-        logger.warning("[PDF_DEBUG] cloudinary config check failed: %s", _e)
-
-    # fallback_url에서 resource_type과 delivery_type 파싱
-    resource_type = "image"
-    delivery_type = "upload"
-    if is_cloudinary_url:
-        try:
-            after_cloud = fallback_url.split("res.cloudinary.com/")[1]
-            parts = after_cloud.split("/")
-            if len(parts) >= 3:
-                resource_type = parts[1]
-                delivery_type = parts[2]
-        except Exception:
-            pass
-
-    logger.warning("[PDF_DEBUG] signing with resource_type=%s delivery_type=%s", resource_type, delivery_type)
-
-    # (resource_type, delivery_type) 조합을 우선순위대로 모두 시도
-    combos = [(resource_type, delivery_type)]
-    for rt in ("image", "raw"):
-        for dt in ("upload", "authenticated", "private"):
-            if (rt, dt) not in combos:
-                combos.append((rt, dt))
-
-    urls = []
-    for rt, dt in combos:
-        try:
-            signed, _ = cloudinary_url(
-                file_name,
-                resource_type=rt,
-                type=dt,
-                secure=True,
-                sign_url=True,
-            )
-            if signed:
-                logger.warning("[PDF_DEBUG] candidate signed URL (rt=%s dt=%s): %s", rt, dt, signed[:80])
-                urls.append(signed)
-        except Exception:
-            continue
-
-    return urls[0] if urls else ""
-
-
-def _remote_url_accessible(url: str) -> bool:
-    if not url:
-        return False
-    try:
-        res = requests.head(url, allow_redirects=True, timeout=(3, 5))
-        if res.status_code < 400:
-            return True
-        if res.status_code in (401, 403, 404):
-            return False
-    except Exception:
-        pass
-
-    # Some origins block HEAD; retry with GET stream.
-    try:
-        with requests.get(url, stream=True, timeout=(3, 5)) as res:
-            return res.status_code < 400
-    except Exception:
-        return False
 
 
 def _is_file_accessible(file_field) -> bool:
