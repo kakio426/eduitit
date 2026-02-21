@@ -11,6 +11,12 @@ from .utils.llm_client import LlmClientError, generate_chat_response
 
 logger = logging.getLogger(__name__)
 
+SERVICE_TITLE = "한글문서 AI야 읽어줘"
+LEGACY_SERVICE_TITLES = (
+    "한글 문서 톡톡",
+    "HWPX 문서 AI 대화",
+)
+
 HWPX_SESSION_CONTEXT_KEY = "hwpxchat_markdown_context"
 HWPX_SESSION_MESSAGES_KEY = "hwpxchat_messages"
 HWPX_SESSION_PROVIDER_KEY = "hwpxchat_provider"
@@ -19,10 +25,16 @@ MAX_HWPX_CHAT_MESSAGES = 12
 
 
 def _get_service():
-    return (
-        Product.objects.filter(title__icontains="HWPX 문서 AI 대화").first()
-        or Product.objects.filter(title__icontains="HWPX").first()
-    )
+    product = Product.objects.filter(title=SERVICE_TITLE).first()
+    if product:
+        return product
+
+    for legacy_title in LEGACY_SERVICE_TITLES:
+        product = Product.objects.filter(title=legacy_title).first()
+        if product:
+            return product
+
+    return Product.objects.filter(launch_route_name="hwpxchat:main").first()
 
 
 @login_required
@@ -199,4 +211,3 @@ def _build_prompt(document_markdown, messages, question):
         "[새 질문]\n"
         f"{question}\n"
     )
-
