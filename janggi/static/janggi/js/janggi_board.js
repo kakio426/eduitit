@@ -20,7 +20,6 @@
     var undoStack = [];
     var lastMove = null;
     var aiRequestPending = false;
-    var aiWaitAttempts = 0;
     var gameEnded = false;
     var PIECE_LABELS = {
         red: {
@@ -604,66 +603,25 @@
         }
     }
 
-    function parseEngineMove(bestmove) {
-        if (!bestmove || bestmove.length < 4) return null;
-        var from = {
-            c: bestmove.charCodeAt(0) - "a".charCodeAt(0),
-            r: Number(bestmove.charAt(1))
-        };
-        var to = {
-            c: bestmove.charCodeAt(2) - "a".charCodeAt(0),
-            r: Number(bestmove.charAt(3))
-        };
-        if (!inRange(from.r, from.c) || !inRange(to.r, to.c)) return null;
-        return { from: from, to: to };
-    }
-
-    function applyLocalAiFallback(reason) {
+    function applyLocalAiMove(reason) {
         var local = findLocalAiMove("blue");
         if (!local) {
             showToast("AI 수 없음", "합법 수를 찾지 못했습니다.");
+            aiRequestPending = false;
             return;
         }
-        if (reason) showToast("로컬 AI 폴백", reason);
+        if (reason) showToast("로컬 AI", reason);
         movePiece(local.from, local.to, false);
         aiRequestPending = false;
-        aiWaitAttempts = 0;
     }
 
     function requestAiMove() {
         if (aiRequestPending || gameEnded || currentTurn !== "blue") return;
-        if (!window.JanggiAI || typeof window.JanggiAI.requestMove !== "function") {
-            showToast("\uc5d4\uc9c4 \uc624\ub958", "AI \uc5d4\uc9c4 \uc5f0\uacb0\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.");
-            return;
-        }
-
-        if (!window.JanggiAI.canUseEngine()) {
-            if (typeof window.JanggiAI.init === "function") window.JanggiAI.init();
-            aiWaitAttempts += 1;
-            if (aiWaitAttempts === 1) {
-                showToast("\uc5d4\uc9c4 \uc900\ube44 \uc911", "\uc900\ube44\uac00 \uc644\ub8cc\ub418\uba74 AI\uac00 \uc790\ub3d9\uc73c\ub85c \ub454\ub2e4.");
-            }
-            if (aiWaitAttempts <= 30) {
-                setTimeout(function () {
-                    requestAiMove();
-                }, 400);
-            } else {
-                applyLocalAiFallback("엔진 준비 지연으로 로컬 AI를 사용합니다.");
-            }
-            return;
-        }
-
         aiRequestPending = true;
-        window.JanggiAI.requestMove(moveTokens.slice(), function (bestmove) {
+        setTimeout(function () {
             if (!aiRequestPending || gameEnded || currentTurn !== "blue") return;
-            var parsed = parseEngineMove(bestmove);
-            if (parsed && movePiece(parsed.from, parsed.to, false)) {
-                aiRequestPending = false;
-                aiWaitAttempts = 0;
-                return;
-            }
-            applyLocalAiFallback("엔진 응답을 해석하지 못해 로컬 AI로 진행합니다.");
-        });
+            applyLocalAiMove("현재 모드는 로컬 AI로 진행됩니다.");
+        }, 320);
     }
 
     function undoMove() {
@@ -684,7 +642,6 @@
         selected = null;
         validTargets = [];
         aiRequestPending = false;
-        aiWaitAttempts = 0;
         if (historyEl) historyEl.textContent = moveHistory.length ? moveHistory.join("\n") : "-";
         if (turnEl) turnEl.textContent = "\ucc28\ub840: " + (currentTurn === "red" ? "\ucd08" : "\ud55c");
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
@@ -700,7 +657,6 @@
         selected = null;
         validTargets = [];
         aiRequestPending = false;
-        aiWaitAttempts = 0;
         gameEnded = false;
         if (historyEl) historyEl.textContent = "-";
         if (turnEl) turnEl.textContent = "\ucc28\ub840: \ucd08";
@@ -751,9 +707,6 @@
         });
 
         resetAll();
-        if (window.JanggiAI && JANGGI_MODE === "ai" && typeof window.JanggiAI.init === "function") {
-            window.JanggiAI.init();
-        }
     });
 })();
 

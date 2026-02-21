@@ -15,10 +15,10 @@ def rules(request):
 
 def play(request):
     mode = request.GET.get('mode', 'local')
-    difficulty = request.GET.get('difficulty', 'medium')
+    if mode != 'ai':
+        mode = 'local'
     context = {
         'mode': mode,
-        'difficulty': difficulty,
         'hide_navbar': _student_games_mode(request),
     }
     return render(request, 'janggi/play.html', context)

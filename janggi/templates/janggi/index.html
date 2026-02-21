@@ -9,7 +9,7 @@
         <div class="text-center mb-10 sm:mb-12">
             <div class="text-5xl sm:text-6xl mb-4">🎯</div>
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-gray-700 font-title">두뇌 대결의 교실 장기</h1>
-            <p class="text-base sm:text-lg md:text-xl text-gray-500 mt-4">로컬 대전과 AI 대전을 한 화면에서 시작합니다.</p>
+            <p class="text-base sm:text-lg md:text-xl text-gray-500 mt-4">로컬 대전과 로컬 AI 대전을 한 화면에서 시작합니다.</p>
         </div>
 
         <div class="grid md:grid-cols-2 gap-4 sm:gap-6">
@@ -20,13 +20,8 @@
             </div>
             <div class="clay-card p-5 sm:p-8">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-700 mb-3">🤖 AI 대전</h2>
-                <p class="text-gray-600 mb-6">Fairy-Stockfish 기반 UCI 엔진 연동 구조로 AI 수를 계산합니다.</p>
-                <div class="space-y-2">
-                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=easy" class="block w-full text-center py-3 bg-green-500 text-white rounded-xl font-bold">초급</a>
-                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=medium" class="block w-full text-center py-3 bg-blue-500 text-white rounded-xl font-bold">중급</a>
-                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=hard" class="block w-full text-center py-3 bg-orange-500 text-white rounded-xl font-bold">고급</a>
-                    <a href="{% url 'janggi:play' %}?mode=ai&difficulty=expert" class="block w-full text-center py-3 bg-red-500 text-white rounded-xl font-bold">최강</a>
-                </div>
+                <p class="text-gray-600 mb-6">브라우저 내장 로컬 AI가 수를 계산해 안정적으로 대전합니다.</p>
+                <a href="{% url 'janggi:play' %}?mode=ai" class="block w-full text-center py-3 sm:py-4 bg-blue-600 text-white rounded-2xl font-bold">AI 대전 시작</a>
             </div>
         </div>
 
