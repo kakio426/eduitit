@@ -300,7 +300,17 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
 
     if is_cloudinary_url or is_cloudinary_storage:
         try:
-            from cloudinary.utils import cloudinary_url as _cld_url
+            import cloudinary as _cld_lib
+            _cfg = _cld_lib.config()
+            logger.warning(
+                "[PDF_DEBUG] cloudinary config at runtime: cloud=%s key=%s secret_len=%d",
+                _cfg.cloud_name, (_cfg.api_key or "")[:8], len(_cfg.api_secret or ""),
+            )
+        except Exception as _e:
+            logger.warning("[PDF_DEBUG] cloudinary config check failed: %s", _e)
+
+        try:
+            from cloudinary.utils import cloudinary_url as _cld_url, private_download_url as _pdl
             file_name = (getattr(file_field, "name", "") or "").lstrip("/")
 
             # fallback_url에서 resource_type/delivery_type 파싱
@@ -315,7 +325,17 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
                 except Exception:
                     pass
 
-            # 탐지된 조합 우선, 그다음 나머지 조합 순으로 서명 URL 생성
+            # 1순위: API 인증 방식 다운로드 URL (CDN 서명 우회, api_key+api_secret 직접 인증)
+            for rt in (detected_rt, "raw", "image"):
+                try:
+                    api_dl = _pdl(file_name, "", resource_type=rt, type=detected_dt)
+                    if api_dl:
+                        logger.warning("[PDF_DEBUG] private_download_url (rt=%s): %s", rt, api_dl[:80])
+                        push(api_dl)
+                except Exception:
+                    pass
+
+            # 2순위: CDN 서명 URL
             combos = [(detected_rt, detected_dt)]
             for rt in ("image", "raw"):
                 for dt in ("upload", "authenticated", "private"):
