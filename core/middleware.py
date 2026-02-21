@@ -34,6 +34,39 @@ class BlockKnownProbePathsMiddleware:
         return self.get_response(request)
 
 
+class StudentGamesIsolationMiddleware:
+    """
+    If student game mode is enabled in session, allow only game-related routes.
+    This keeps students inside the game-only experience from shared links.
+    """
+
+    SESSION_KEY = "dutyticker_student_games_mode"
+    ALLOWED_PREFIXES = (
+        "/static/",
+        "/media/",
+        "/favicon.ico",
+        "/health/",
+        "/products/dutyticker/student-games/",
+        "/chess/",
+        "/janggi/",
+        "/fairy-games/",
+        "/products/yut/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not request.session.get(self.SESSION_KEY):
+            return self.get_response(request)
+
+        path = request.path
+        if any(path.startswith(prefix) for prefix in self.ALLOWED_PREFIXES):
+            return self.get_response(request)
+
+        return redirect("dt_student_games_portal")
+
+
 class RequestIDMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

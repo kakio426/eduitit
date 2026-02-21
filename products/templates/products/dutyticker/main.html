@@ -101,6 +101,13 @@
 
             <!-- Global Controls -->
             <div class="flex items-center gap-2">
+                {% if student_games_launch_url %}
+                <button onclick="openStudentGamesQrModal()"
+                    class="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center border border-indigo-400/40 transition"
+                    title="학생 게임 QR">
+                    <i class="fa-solid fa-qrcode"></i>
+                </button>
+                {% endif %}
                 <button onclick="window.dtApp.toggleFullscreen()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
                     title="전체화면">
@@ -424,6 +431,43 @@
         </div>
     </div>
 
+    {% if student_games_launch_url %}
+    <div id="studentGamesQrModal"
+        class="fixed inset-0 z-[240] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-2xl font-black text-white">학생 게임 입장 QR</h3>
+                    <p class="text-sm text-slate-400 mt-1">유효시간: {{ student_games_expires_hours }}시간</p>
+                </div>
+                <button onclick="closeStudentGamesQrModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 flex justify-center mb-4">
+                <img src="{{ student_games_qr_data_url }}" alt="학생 게임 입장 QR 코드" class="w-64 h-64 max-w-full">
+            </div>
+
+            <label for="studentGamesLaunchUrl" class="block text-xs font-bold text-slate-400 mb-1">학생용 링크</label>
+            <input id="studentGamesLaunchUrl" type="text" readonly value="{{ student_games_launch_url }}"
+                class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-slate-200 text-sm mb-4">
+
+            <div class="flex gap-3">
+                <button onclick="copyStudentGamesLink()"
+                    class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition">
+                    링크 복사
+                </button>
+                <a href="{{ student_games_launch_url }}" target="_blank" rel="noopener noreferrer"
+                    class="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold text-center transition">
+                    새 창 미리보기
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Tier Limit Modal (Friendly UX) -->
     <div id="limitModal" class="fixed inset-0 z-[300] hidden items-center justify-center bg-black/90 backdrop-blur-md">
         <div
@@ -491,6 +535,44 @@
         document.addEventListener('DOMContentLoaded', bootDutyTicker);
     } else {
         bootDutyTicker();
+    }
+
+    function openStudentGamesQrModal() {
+        const modal = document.getElementById('studentGamesQrModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            const panel = modal.firstElementChild;
+            if (panel) panel.classList.remove('scale-95');
+        });
+    }
+
+    function closeStudentGamesQrModal() {
+        const modal = document.getElementById('studentGamesQrModal');
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        const panel = modal.firstElementChild;
+        if (panel) panel.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 180);
+    }
+
+    async function copyStudentGamesLink() {
+        const input = document.getElementById('studentGamesLaunchUrl');
+        if (!input) return;
+        const text = input.value;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                input.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+            }
+            alert('학생용 링크를 복사했습니다.');
+        } catch (error) {
+            alert('링크 복사에 실패했습니다. 직접 선택해서 복사해 주세요.');
+        }
     }
 </script>
 {% endblock %}

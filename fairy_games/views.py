@@ -4,13 +4,21 @@ from django.shortcuts import render
 from .game_catalog import GAME_CATALOG
 
 
+def _student_games_mode(request):
+    return bool(request.session.get("dutyticker_student_games_mode"))
+
+
 def index(request):
     games = []
     for key, value in GAME_CATALOG.items():
         game = {"key": key}
         game.update(value)
         games.append(game)
-    return render(request, "fairy_games/index.html", {"games": games})
+    return render(
+        request,
+        "fairy_games/index.html",
+        {"games": games, "hide_navbar": _student_games_mode(request)},
+    )
 
 
 def rules(request, variant):
@@ -20,7 +28,7 @@ def rules(request, variant):
     return render(
         request,
         "fairy_games/rules.html",
-        {"variant": variant, "game": game},
+        {"variant": variant, "game": game, "hide_navbar": _student_games_mode(request)},
     )
 
 
@@ -41,5 +49,6 @@ def play(request, variant):
             "game": game,
             "mode": mode,
             "difficulty": difficulty,
+            "hide_navbar": _student_games_mode(request),
         },
     )

@@ -103,6 +103,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.StudentGamesIsolationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Allauth middleware
@@ -436,6 +437,7 @@ HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
 ONBOARDING_EXEMPT_PATH_PREFIXES = ['/autoarticle/'] if TESTING else []
+DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS = int(os.environ.get('DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS', '28800'))
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)

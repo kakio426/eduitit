@@ -5,164 +5,153 @@
 
 {% block extra_css %}
 <style>
-    .text-shadow {
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    .filter-tab {
+        transition: all 0.2s ease;
     }
-
-    /* Toast Animation */
-    #toast {
-        visibility: hidden;
-        min-width: 250px;
-        background-color: #333;
-        color: #fff;
-        text-align: center;
-        border-radius: 50px;
-        padding: 16px;
-        position: fixed;
-        z-index: 100;
-        left: 50%;
-        bottom: 30px;
-        transform: translateX(-50%);
-        font-size: 17px;
-        opacity: 0;
-        transition: opacity 0.5s, bottom 0.5s;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    .filter-tab.active {
+        transform: scale(1.05);
     }
-
-    #toast.show {
-        visibility: visible;
-        opacity: 1;
-        bottom: 50px;
+    .tag-chip {
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .tag-chip:hover {
+        transform: translateY(-1px);
+    }
+    .featured-badge {
+        background: linear-gradient(135deg, #f59e0b, #ef4444);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
+
     <!-- Header Section -->
-    <header class="text-center mb-12">
-        <span
-            class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-600 font-bold text-2xl mb-4 shadow-sm font-hand tracking-wide">
+    <header class="text-center mb-10">
+        <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-600 font-bold text-2xl mb-4 shadow-sm font-hand tracking-wide">
             ✨ Teacher's Inspiration
         </span>
-        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 font-hand text-shadow mb-2 leading-none">
+        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 font-hand mb-2 leading-none"
+            style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1)">
             Insight Library
         </h1>
         <p class="text-2xl md:text-3xl text-gray-500 font-hand max-w-2xl mx-auto leading-tight">
             AI 시대를 이끄는 선생님의 시선.<br>
             유튜브 영상과 함께 선생님만의 통찰을 기록하고 공유합니다.
         </p>
+    </header>
 
-        <!-- Sort Buttons -->
-        <div class="flex justify-center gap-3 mt-8">
-            <a href="?sort=recent"
-                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'recent' %}bg-indigo-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-indigo-100{% endif %}">
-                <i class="fa-solid fa-clock mr-2"></i>최신순
+    <!-- Filter Section -->
+    <section class="mb-8">
+        <!-- Category Tabs -->
+        <div class="flex flex-wrap justify-center gap-3 mb-4">
+            <a href="?sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if not current_category %}bg-gray-700 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-gray-100{% endif %}">
+                🌐 전체
             </a>
-            <a href="?sort=popular"
-                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'popular' %}bg-pink-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-pink-100{% endif %}">
-                <i class="fa-solid fa-fire mr-2"></i>인기순
+            <a href="?category=youtube&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'youtube' %}bg-red-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-red-50{% endif %}">
+                ▶️ YouTube
             </a>
-            <a href="?sort=oldest"
-                class="px-6 py-3 rounded-full font-bold text-lg transition-all {% if current_sort == 'oldest' %}bg-purple-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-purple-100{% endif %}">
-                <i class="fa-solid fa-history mr-2"></i>오래된순
+            <a href="?category=devlog&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'devlog' %}bg-green-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-green-50{% endif %}">
+                💻 DevLog
+            </a>
+            <a href="?category=column&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'column' %}bg-blue-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-blue-50{% endif %}">
+                📝 Column
             </a>
         </div>
-    </header>
+
+        <!-- Sort Buttons -->
+        <div class="flex justify-center gap-3">
+            <a href="?sort=recent{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'recent' %}bg-indigo-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-indigo-100{% endif %}">
+                <i class="fa-solid fa-clock mr-1"></i>최신순
+            </a>
+            <a href="?sort=popular{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'popular' %}bg-pink-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-pink-100{% endif %}">
+                <i class="fa-solid fa-fire mr-1"></i>인기순
+            </a>
+            <a href="?sort=oldest{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'oldest' %}bg-purple-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-purple-100{% endif %}">
+                <i class="fa-solid fa-history mr-1"></i>오래된순
+            </a>
+        </div>
+
+        <!-- Active Tag Filter Notice -->
+        {% if current_tag %}
+        <div class="flex justify-center mt-4">
+            <span class="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-full text-indigo-700 font-bold">
+                <i class="fa-solid fa-tag text-sm"></i>
+                #{{ current_tag }} 필터 중
+                <a href="?sort={{ current_sort }}{% if current_category %}&category={{ current_category }}{% endif %}"
+                    class="ml-1 text-indigo-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </a>
+            </span>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Featured Section (상단 고정) -->
+    {% if featured_insights and not current_tag %}
+    <section class="mb-12">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="text-3xl">⭐</span>
+            <h2 class="text-3xl font-bold featured-badge font-hand">Featured Insights</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for insight in featured_insights %}
+            <article class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-gradient-to-br from-[#E0E5EC] to-[#d4dae8] shadow-clay relative group ring-2 ring-amber-300/50"
+                x-data="{ showDeleteModal: false }">
+
+                <!-- Featured Badge -->
+                <div class="absolute -top-3 -right-3 z-10">
+                    <span class="px-3 py-1 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-sm font-bold rounded-full shadow-md">
+                        ⭐ Featured
+                    </span>
+                </div>
+
+                {% include 'insights/partials/insight_card_body.html' with insight=insight %}
+            </article>
+            {% endfor %}
+        </div>
+        <div class="mt-8 border-t-2 border-dashed border-gray-200"></div>
+    </section>
+    {% endif %}
 
     <!-- Main Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
 
         {% for insight in insights %}
         <article
-            class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-[#E0E5EC] shadow-clay relative group">
+            class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-[#E0E5EC] shadow-clay relative group"
+            x-data="{ showDeleteModal: false }">
 
-            <!-- 1. Video Thumbnail -->
-            <div class="relative w-full aspect-video rounded-2xl overflow-hidden shadow-clay-inner mb-6 cursor-pointer border-4 border-[#E0E5EC]"
-                onclick="window.open('{{ insight.video_url }}', '_blank')">
-                <img src="{{ insight.thumbnail_url|optimize }}" loading="lazy"
-                    class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                    alt="Thumbnail">
-                <!-- Play Button Overlay -->
-                <div
-                    class="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
-                    <div
-                        class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg text-red-500 text-2xl pl-1 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-play"></i>
-                    </div>
-                </div>
-                <!-- Tag -->
-                {% if insight.tags %}
-                <span
-                    class="absolute top-3 left-3 px-3 py-1 bg-indigo-500/90 text-white text-sm font-bold rounded-lg shadow-sm backdrop-blur-sm font-sans">
-                    {{ insight.tags }}
-                </span>
-                {% endif %}
-            </div>
-
-            <!-- 2. Content -->
-            <div class="flex flex-col flex-1">
-                <!-- Title -->
-                <h3 class="text-4xl font-bold text-gray-700 font-hand leading-none mb-4">
-                    {{ insight.title }}
-                </h3>
-
-                <!-- Quote Box (Pressed Effect) -->
-                <div class="bg-[#E0E5EC] rounded-2xl p-5 shadow-clay-inner mb-6 relative">
-                    <i class="fa-solid fa-quote-left text-3xl text-gray-300 absolute -top-3 -left-2"></i>
-                    <p class="text-gray-600 font-sans text-lg leading-relaxed italic relative z-10 pl-2">
-                        "{{ insight.content }}"
-                    </p>
-                </div>
-
-                <!-- Creator's Note (Pop-out Effect) -->
-                {% if insight.kakio_note %}
-                <div class="mt-auto pt-4 border-t border-gray-200/50">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div
-                            class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs shadow-sm">
-                            <i class="fa-solid fa-pen"></i>
-                        </div>
-                        <span class="text-purple-600 font-bold font-hand text-2xl pt-1">Kakio's Note</span>
-                    </div>
-                    <p class="text-gray-500 font-sans text-base leading-relaxed">
-                        {{ insight.kakio_note }}
-                    </p>
-                </div>
-                {% endif %}
-
-                <!-- Like Button -->
-                <div class="mt-4 pt-4 border-t border-gray-200/50 flex items-center justify-between">
-                    {% if user.is_authenticated %}
-                    <button onclick="toggleLike({{ insight.pk }}, this)"
-                        class="like-btn flex items-center gap-2 px-4 py-2 rounded-full transition-all {% if user in insight.likes.all %}bg-pink-500 text-white{% else %}bg-gray-200 text-gray-600 hover:bg-pink-100 hover:text-pink-600{% endif %}"
-                        data-insight-id="{{ insight.pk }}"
-                        data-liked="{% if user in insight.likes.all %}true{% else %}false{% endif %}">
-                        <i class="fa-solid fa-heart"></i>
-                        <span class="font-bold like-count-{{ insight.pk }}">{{ insight.total_likes }}</span>
-                    </button>
-                    {% else %}
-                    <a href="{% url 'account_login' %}?next={% url 'insights:list' %}"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 text-gray-600 hover:bg-pink-100 hover:text-pink-600 transition-all">
-                        <i class="fa-solid fa-heart"></i>
-                        <span class="font-bold">{{ insight.total_likes }}</span>
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'insights:detail' insight.pk %}"
-                        class="text-indigo-600 hover:text-indigo-800 font-bold text-lg">
-                        자세히 보기 <i class="fa-solid fa-arrow-right ml-1"></i>
-                    </a>
-                </div>
-            </div>
+            {% include 'insights/partials/insight_card_body.html' with insight=insight %}
         </article>
+        {% empty %}
+        <div class="col-span-3 text-center py-20 text-gray-400">
+            <i class="fa-solid fa-inbox text-6xl mb-4 block"></i>
+            <p class="text-2xl font-hand">
+                {% if current_category or current_tag %}
+                    해당 조건의 인사이트가 없습니다.
+                {% else %}
+                    아직 등록된 인사이트가 없습니다.
+                {% endif %}
+            </p>
+        </div>
         {% endfor %}
 
-        <!-- [Add Button] -->
+        <!-- Add Button -->
         {% if user.is_authenticated %}
         <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-purple-400 hover:text-purple-500 cursor-pointer transition-all min-h-[400px] bg-[#E0E5EC]/50 hover:bg-white/40 group"
             onclick="location.href='{% url 'insights:create' %}'">
-            <div
-                class="w-24 h-24 rounded-full shadow-clay flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform bg-[#E0E5EC]">
+            <div class="w-24 h-24 rounded-full shadow-clay flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform bg-[#E0E5EC]">
                 <i class="fa-solid fa-plus"></i>
             </div>
             <span class="font-hand text-4xl font-bold mb-2">기록하기</span>
@@ -171,10 +160,9 @@
             </p>
         </div>
         {% else %}
-        <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 transition-all min-h-[400px] bg-[#E0E5EC]/50"
+        <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 transition-all min-h-[400px] bg-[#E0E5EC]/50 cursor-pointer"
             onclick="location.href='{% url 'account_login' %}?next={% url 'insights:create' %}'">
-            <div
-                class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 bg-[#E0E5EC]">
+            <div class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 bg-[#E0E5EC]">
                 <i class="fa-solid fa-lock"></i>
             </div>
             <span class="font-hand text-4xl font-bold mb-2">로그인 필요</span>
@@ -187,19 +175,10 @@
     </div>
 </main>
 
-<!-- Toast Notification -->
-<div id="toast">메시지</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function showToast(message) {
-        var x = document.getElementById("toast");
-        x.textContent = message;
-        x.className = "show";
-        setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
-    }
-
     async function toggleLike(insightId, button) {
         try {
             const response = await fetch(`/insights/${insightId}/like/`, {
@@ -210,13 +189,10 @@
                 },
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to toggle like');
-            }
+            if (!response.ok) throw new Error('Failed to toggle like');
 
             const data = await response.json();
 
-            // Update button appearance
             if (data.liked) {
                 button.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
                 button.classList.add('bg-pink-500', 'text-white');
@@ -225,12 +201,10 @@
                 button.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
             }
 
-            // Update like count
             document.querySelector(`.like-count-${insightId}`).textContent = data.total_likes;
 
         } catch (error) {
             console.error('Error:', error);
-            showToast('좋아요 처리 중 오류가 발생했습니다.');
         }
     }
 </script>
