@@ -4,6 +4,18 @@
 {% block title %}한글문서 AI야 읽어줘{% endblock %}
 
 {% block content %}
+<style>
+    #hwpx-chat-loading {
+        display: none;
+        pointer-events: none;
+    }
+
+    #hwpx-chat-loading.htmx-request {
+        display: flex;
+        pointer-events: auto;
+    }
+</style>
+
 <section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]" x-data="hwpxChatPage()">
     <div class="max-w-5xl mx-auto">
         <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
