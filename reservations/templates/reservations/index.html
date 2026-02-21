@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="pt-24 pb-20 min-h-screen bg-[#E0E5EC]" 
+<div class="pb-20 min-h-screen bg-[#E0E5EC]"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 1.25rem);"
     x-data="{ 
         showModal: false,
         selectedRoom: null,
@@ -9,21 +10,52 @@
         selectedPeriod: null,
         selectedPeriodLabel: '',
         selectedDate: '{{ target_date|date:"Y-m-d" }}', 
+        rememberInfo: localStorage.getItem('remember_reservation_info') !== '0',
         grade: '', classNo: '', name: '', memo: '',
+        loadRememberedInfo() {
+            if (!this.rememberInfo) {
+                this.grade = '';
+                this.classNo = '';
+                this.name = '';
+                return;
+            }
+            const saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}');
+            this.grade = saved.grade || '';
+            this.classNo = saved.classNo || '';
+            this.name = saved.name || '';
+        },
+        toggleRememberInfo() {
+            localStorage.setItem('remember_reservation_info', this.rememberInfo ? '1' : '0');
+            if (!this.rememberInfo) {
+                localStorage.removeItem('my_reservation_info');
+            } else {
+                localStorage.setItem('my_reservation_info', JSON.stringify({
+                    grade: this.grade,
+                    classNo: this.classNo,
+                    name: this.name
+                }));
+            }
+        },
         openBooking(roomId, roomName, period, date, periodLabel) { 
             this.selectedRoomId = roomId; 
             this.selectedRoom = roomName;
             this.selectedPeriod = period; 
             this.selectedPeriodLabel = periodLabel;
-            this.selectedDate = date; 
-            const saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}'); 
-            if (saved.grade) this.grade = saved.grade; 
-            if (saved.classNo) this.classNo = saved.classNo; 
-            if (saved.name) this.name = saved.name; 
+            this.selectedDate = date;
+            this.loadRememberedInfo();
+            this.memo = '';
             this.showModal = true; 
         },
         saveAndSubmit() { 
-            localStorage.setItem('my_reservation_info', JSON.stringify({ grade: this.grade, classNo: this.classNo, name: this.name })); 
+            if (this.rememberInfo) {
+                localStorage.setItem('my_reservation_info', JSON.stringify({
+                    grade: this.grade,
+                    classNo: this.classNo,
+                    name: this.name
+                }));
+            } else {
+                localStorage.removeItem('my_reservation_info');
+            }
             this.showModal = false; 
         }, 
         myReservations: JSON.parse(localStorage.getItem('my_reservations') || '[]'), 

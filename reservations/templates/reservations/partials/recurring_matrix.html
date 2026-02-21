@@ -19,8 +19,11 @@
                 <tbody>
                     {% for row in item.rows %}
                     <tr>
-                        <td class="p-2 text-gray-500 font-bold bg-white/40 rounded-lg text-sm truncate max-w-[80px]">
-                            {{ row.period.label }}
+                        <td class="p-2 text-gray-500 bg-white/40 rounded-lg text-center">
+                            <div class="font-bold text-sm leading-tight">{{ row.period.label }}</div>
+                            {% if row.period.time %}
+                            <div class="text-[11px] text-gray-400 font-semibold mt-1 leading-tight">{{ row.period.time }}</div>
+                            {% endif %}
                         </td>
 
                         {% for schedule in row.slots %}

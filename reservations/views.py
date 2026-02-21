@@ -146,8 +146,7 @@ def recurring_settings(request, school_slug):
     # matrix[period-1][day] 형태로 접근 가능하게 (1교시가 0번 인덱스)
     
     config, _ = SchoolConfig.objects.get_or_create(school=school)
-    period_labels = config.get_period_list()
-    periods = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
+    periods = config.get_period_slots()
     days = range(5) # 0~4 (월~금)
     
     rooms_data = []
@@ -196,22 +195,34 @@ def update_config(request, school_slug):
     school.save()
 
     period_labels = request.POST.get('period_labels')
-    if period_labels:
+    if period_labels is not None:
         config.period_labels = period_labels
-        # max_periods 동기화 (기존 코드와의 호환성)
-        config.max_periods = len(config.get_period_list())
+
+    period_times = request.POST.get('period_times')
+    if period_times is not None:
+        label_count = len(config.get_period_list())
+        raw_times = [p.strip() for p in period_times.split(',')] if period_times else []
+        normalized = raw_times[:label_count]
+        if len(normalized) < label_count:
+            normalized.extend([''] * (label_count - len(normalized)))
+        while normalized and normalized[-1] == '':
+            normalized.pop()
+        config.period_times = ",".join(normalized)
+
+    # max_periods 동기화 (기존 코드와의 호환성)
+    config.max_periods = len(config.get_period_list())
     
     # 주간 예약 제한 설정 업데이트
     weekly_mode = request.POST.get('weekly_opening_mode') == 'on'
     config.weekly_opening_mode = weekly_mode
-    
+
+    # Fields are non-null. Keep sane defaults when mode is off or values are omitted.
     if weekly_mode:
-        config.weekly_opening_weekday = int(request.POST.get('weekly_opening_weekday', 4))
-        config.weekly_opening_hour = int(request.POST.get('weekly_opening_hour', 9))
+        config.weekly_opening_weekday = int(request.POST.get('weekly_opening_weekday', config.weekly_opening_weekday or 4))
+        config.weekly_opening_hour = int(request.POST.get('weekly_opening_hour', config.weekly_opening_hour or 9))
     else:
-        # weekly_opening_mode가 꺼지면 관련 설정도 초기화하거나 무시
-        config.weekly_opening_weekday = None
-        config.weekly_opening_hour = None
+        config.weekly_opening_weekday = config.weekly_opening_weekday if config.weekly_opening_weekday is not None else 4
+        config.weekly_opening_hour = config.weekly_opening_hour if config.weekly_opening_hour is not None else 9
     
     config.save()
     messages.success(request, "학교 설정이 저장되었습니다.")
@@ -292,8 +303,7 @@ def reservation_index(request, school_slug):
     
     # 데이터 조회
     rooms = school.specialroom_set.all()
-    period_labels = config.get_period_list()
-    periods_data = [{"id": i+1, "label": label} for i, label in enumerate(period_labels)]
+    periods_data = config.get_period_slots()
     
     # 예약 및 고정 수업 조회
     reservations = Reservation.objects.filter(room__school=school, date=target_date).select_related('room')
@@ -322,6 +332,8 @@ def reservation_index(request, school_slug):
             slots.append({
                 'period': p['id'],
                 'label': p['label'],
+                'time': p['time'],
+                'display_label': p['display_label'],
                 'reservation': res,
                 'recurring': rec,
                 'state': state
@@ -341,7 +353,7 @@ def reservation_index(request, school_slug):
         'rooms_data': rooms_data,
         'periods': periods_data,
         'weekday_name': ['월', '화', '수', '목', '금', '토', '일'][target_date.weekday()],
-        'period_labels': period_labels,
+        'period_labels': [p['label'] for p in periods_data],
         'max_date': max_date, # 템플릿에 전달하여 '다음' 버튼 비활성화에 사용
     }
     

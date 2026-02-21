@@ -162,3 +162,38 @@ class ReservationsViewTest(TestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Reservation.objects.filter(room=self.room, date=self.target_date).exists())
+
+    def test_period_times_are_rendered_in_grid(self):
+        self.config.period_labels = "1교시,2교시"
+        self.config.period_times = "09:00-09:40,09:50-10:30"
+        self.config.save()
+
+        url = reverse('reservations:reservation_index', args=[self.school.slug])
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "09:00-09:40")
+        self.assertContains(response, "09:50-10:30")
+
+    def test_update_config_saves_optional_period_times(self):
+        self.client.force_login(self.user)
+        url = reverse('reservations:update_config', args=[self.school.slug])
+        response = self.client.post(url, {
+            'school_name': self.school.name,
+            'period_labels': '1교시,2교시,3교시',
+            'period_times': '09:00-09:40,09:50-10:30,',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.period_labels, '1교시,2교시,3교시')
+        self.assertEqual(self.config.period_times, '09:00-09:40,09:50-10:30')
+
+    def test_booking_form_uses_examples_and_opt_in_local_storage(self):
+        url = reverse('reservations:reservation_index', args=[self.school.slug])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "예: 홍길동")
+        self.assertContains(response, "remember_reservation_info")
+        self.assertContains(response, "my_reservation_info")

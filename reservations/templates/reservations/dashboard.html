@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
+<section class="pb-20 px-6 min-h-screen bg-[#E0E5EC]"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 1.75rem);">
     <div class="max-w-7xl mx-auto">
 
         <!-- Header -->
@@ -36,7 +37,7 @@
                 copied: false,
                 shareUrl: '{{ request.scheme }}://{{ request.get_host }}{% url 'reservations:reservation_index' school.slug %}',
                 getShareMessage() {
-                    return `[{{ school.name }} 특별실 예약 안내]\n\n선생님 안녕하세요,\n특별실 예약 시스템이 오픈되었습니다. 아래 링크를 통해 원하시는 시간대에 예약을 진행해 주세요.\n\n🔗 예약 링크: ${this.shareUrl}\n\n* 예약 시 학년/반/이름을 입력하면 브라우저가 기억하여 다음 예약이 더 빨라집니다.`;
+                    return `[{{ school.name }} 특별실 예약 안내]\n\n선생님 안녕하세요,\n특별실 예약 시스템이 오픈되었습니다. 아래 링크를 통해 원하시는 시간대에 예약을 진행해 주세요.\n\n🔗 예약 링크: ${this.shareUrl}\n\n* 필요 시 '이 기기에서 정보 기억'을 켜면 다음 예약이 빨라집니다.`;
                 },
                 copyToClipboard() {
                     const text = this.getShareMessage();
@@ -196,6 +197,16 @@
                             placeholder="1교시,2교시,3교시,4교시,5교시,6교시">{{ school.config.period_labels }}</textarea>
                         <p class="text-[10px] text-gray-500 mt-2 ml-2">
                             * 교시 이름을 콤마(,)로 구분하여 입력하세요. 입력한 개수만큼 예약판의 행이 생깁니다.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 시간 (선택)</label>
+                        <textarea name="period_times" rows="2"
+                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
+                            placeholder="09:00-09:40,09:50-10:30,10:40-11:20">{{ school.config.period_times }}</textarea>
+                        <p class="text-[10px] text-gray-500 mt-2 ml-2">
+                            * 비우면 표시하지 않습니다. 교시 순서에 맞춰 콤마(,)로 입력하세요.
                         </p>
                     </div>
 

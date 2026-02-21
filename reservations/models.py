@@ -20,6 +20,7 @@ class SchoolConfig(models.Model):
     school = models.OneToOneField(School, on_delete=models.CASCADE, related_name='config')
     max_periods = models.IntegerField(default=6) # Safety/Legacy
     period_labels = models.TextField(default="1교시,2교시,3교시,4교시,5교시,6교시") # Custom labels
+    period_times = models.TextField(blank=True, default="") # Optional times matched by index
     reservation_window_days = models.IntegerField(default=14)
     # 주간 예약 오픈 제한 설정 (Weekly Opening Rule)
     weekly_opening_mode = models.BooleanField(default=False)
@@ -29,6 +30,37 @@ class SchoolConfig(models.Model):
     def get_period_list(self):
         """Returns labels as a list of strings: ['1교시', '2교시', ...]"""
         return [p.strip() for p in self.period_labels.split(',') if p.strip()]
+
+    def get_period_time_list(self, expected_count=None):
+        """
+        Returns optional time strings matched by index.
+        Example: '09:00-09:40,09:50-10:30' -> ['09:00-09:40', '09:50-10:30', ...]
+        """
+        if expected_count is None:
+            expected_count = len(self.get_period_list())
+        raw = [p.strip() for p in (self.period_times or "").split(',')]
+        if len(raw) < expected_count:
+            raw.extend([''] * (expected_count - len(raw)))
+        return raw[:expected_count]
+
+    def get_period_slots(self):
+        """
+        Returns structured period rows preserving order.
+        [{'id': 1, 'label': '1교시', 'time': '09:00-09:40', 'display_label': '1교시 (09:00-09:40)'}, ...]
+        """
+        labels = self.get_period_list()
+        times = self.get_period_time_list(len(labels))
+        slots = []
+        for idx, label in enumerate(labels):
+            time_text = times[idx]
+            display = f"{label} ({time_text})" if time_text else label
+            slots.append({
+                'id': idx + 1,
+                'label': label,
+                'time': time_text,
+                'display_label': display,
+            })
+        return slots
 
     def __str__(self):
         return f"{self.school.name} Config"

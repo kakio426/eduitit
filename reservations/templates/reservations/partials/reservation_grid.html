@@ -4,7 +4,7 @@
         <table class="w-full text-center border-separate border-spacing-2">
             <thead>
                 <tr>
-                    <th class="w-24 p-3 text-gray-400 font-bold bg-gray-50 rounded-xl">교시</th>
+                    <th class="w-28 p-3 text-gray-400 font-bold bg-gray-50 rounded-xl">교시</th>
                     {% for room_data in rooms_data %}
                     <th class="p-3 bg-purple-50 rounded-xl">
                         <div class="flex flex-col items-center">
@@ -18,7 +18,12 @@
             <tbody>
                 {% for p in periods %}
                 <tr>
-                    <td class="p-3 bg-gray-50 rounded-xl font-bold text-gray-500 text-sm truncate max-w-[100px]">{{ p.label }}</td>
+                    <td class="p-3 bg-gray-50 rounded-xl text-center">
+                        <div class="font-bold text-gray-600 text-sm leading-tight">{{ p.label }}</div>
+                        {% if p.time %}
+                        <div class="text-[11px] text-gray-400 font-semibold mt-1 leading-tight">{{ p.time }}</div>
+                        {% endif %}
+                    </td>
                     {% for room_data in rooms_data %}
                     <!-- Actually, we prepared slots as list, so let's use lookup -->
                     {% for s in room_data.slots %}
@@ -72,7 +77,7 @@
                         {% else %}
                         <!-- Available -->
                         <button
-                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.label }}')"
+                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}')"
                             class="w-full h-full bg-white rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-md flex justify-center items-center group transition-all">
                             <i
                                 class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
@@ -104,7 +109,12 @@
                 {% if s.state == 'reserved' %}
                 <div
                     class="bg-purple-50 rounded-lg p-3 border border-purple-100 h-20 flex flex-col justify-center items-center text-center relative">
-                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-gray-400 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-gray-300 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
                     <div class="text-purple-800 font-bold text-sm">{{ s.reservation.grade }}-{{ s.reservation.class_no }} {{ s.reservation.name }}</div>
 
                     <!-- My Reservation -->
@@ -133,22 +143,37 @@
                 {% elif s.state == 'recurring' %}
                 <div
                     class="bg-gray-50 rounded-lg p-3 border border-dashed border-gray-200 h-20 flex flex-col justify-center items-center text-center">
-                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-gray-400 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-gray-300 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
                     <div class="text-gray-400 text-xs font-bold flex items-center gap-1">
                         <i class="fas fa-lock text-[10px]"></i> {{ s.recurring.name }}
                     </div>
                 </div>
                 {% elif s.state == 'blackout' %}
                 <div class="bg-red-50 rounded-lg p-3 h-20 flex justify-center items-center opacity-50 relative">
-                    <div class="text-[10px] font-bold text-red-300 absolute top-1 left-2 truncate max-w-[60px]">{{ s.label }}</div>
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-red-300 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-red-200 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
                     <i class="fas fa-ban text-red-300"></i>
                 </div>
                 {% else %}
                 <!-- Available -->
                 <button
-                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.label }}')"
+                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}')"
                     class="w-full bg-white rounded-lg p-3 border border-gray-100 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-purple-300 transition-all group relative">
-                    <div class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 group-hover:text-purple-400 truncate max-w-[60px]">{{ s.label }}</div>
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-gray-400 group-hover:text-purple-400 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-gray-300 group-hover:text-purple-300 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
                     <div class="text-gray-300 font-bold text-sm group-hover:text-purple-500">예약 가능</div>
                 </button>
                 {% endif %}
