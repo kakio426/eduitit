@@ -49,35 +49,50 @@
                         <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-bold">보관</span>
                         {% endif %}
                         {% if req.deadline %}<span><i class="fa-solid fa-clock mr-1"></i>마감: {{ req.deadline|date:"Y-m-d H:i" }}</span>{% endif %}
+                        {% if req.retention_until %}<span><i class="fa-solid fa-hourglass-end mr-1"></i>보관 연장: {{ req.retention_until|date:"Y-m-d H:i" }}까지</span>{% endif %}
                         <span><i class="fa-solid fa-paper-plane mr-1"></i><span id="total-count">{{ total_count }}건</span> 제출</span>
                         {% if req.template_file %}<span class="text-emerald-600"><i class="fa-solid fa-file-lines mr-1"></i>양식 첨부</span>{% endif %}
                     </div>
                 </div>
-                <div class="flex gap-2">
-                    <form action="{% url 'collect:request_toggle' req.id %}" method="post">
-                        {% csrf_token %}
-                        {% if req.status == 'active' %}
-                        <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-stop mr-1"></i>마감하기</button>
-                        {% else %}
-                        <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-sm"><i class="fa-solid fa-play mr-1"></i>재개하기</button>
-                        {% endif %}
-                    </form>
-                    <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-sm"><i class="fa-solid fa-file-csv mr-1"></i>CSV</a>
-                    <form action="{% url 'collect:request_delete' req.id %}" method="post" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
-                        {% csrf_token %}
-                        <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
-                    </form>
+                <div class="flex flex-col items-end gap-2">
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        <form action="{% url 'collect:request_toggle' req.id %}" method="post">
+                            {% csrf_token %}
+                            {% if req.status == 'active' %}
+                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-stop mr-1"></i>마감하기</button>
+                            {% else %}
+                            <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-sm"><i class="fa-solid fa-play mr-1"></i>재개하기</button>
+                            {% endif %}
+                        </form>
+                        <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-sm"><i class="fa-solid fa-file-csv mr-1"></i>CSV</a>
+                        <form action="{% url 'collect:request_delete' req.id %}" method="post" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
+                        </form>
+                    </div>
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        <form action="{% url 'collect:request_extend_deadline' req.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="days" value="1">
+                            <button type="submit" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition text-sm"><i class="fa-solid fa-clock mr-1"></i>마감 +1일</button>
+                        </form>
+                        <form action="{% url 'collect:request_extend_retention' req.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="days" value="7">
+                            <button type="submit" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200 transition text-sm"><i class="fa-solid fa-hourglass-end mr-1"></i>보관 +7일</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="mb-5">
             <button type="button" @click="showRetention=!showRetention" class="text-sm text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1">
-                <i class="fa-solid" :class="showRetention ? 'fa-chevron-down' : 'fa-chevron-right'"></i> 자동 삭제 안내 보기
+                <i class="fa-solid" :class="showRetention ? 'fa-chevron-down' : 'fa-chevron-right'"></i> 자동 정리 안내
             </button>
             <div x-show="showRetention" x-transition class="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-                <p>수합 마감 후 <strong>27일</strong> 뒤 제출 파일이 자동 삭제됩니다.</p>
-                <p>수합 요청은 최근 제출일 기준 <strong>50일</strong> 뒤 자동 정리됩니다(미제출 시 <strong>80일</strong>).</p>
+                <p>자동 삭제/정리는 백그라운드에서 처리됩니다.</p>
+                <p>제출 기간은 <strong>마감 연장</strong>, 보관 기간은 <strong>보관 연장</strong>으로 각각 조정할 수 있습니다.</p>
             </div>
         </div>
 

@@ -14,6 +14,8 @@ urlpatterns = [
     path('<uuid:request_id>/detail/', views.request_detail, name='request_detail'),
     path('<uuid:request_id>/submissions-partial/', views.submissions_partial, name='submissions_partial'),
     path('<uuid:request_id>/toggle/', views.request_toggle, name='request_toggle'),
+    path('<uuid:request_id>/extend-deadline/', views.request_extend_deadline, name='request_extend_deadline'),
+    path('<uuid:request_id>/extend-retention/', views.request_extend_retention, name='request_extend_retention'),
     path('<uuid:request_id>/delete/', views.request_delete, name='request_delete'),
     path('<uuid:request_id>/export-csv/', views.export_csv, name='export_csv'),
 

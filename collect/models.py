@@ -1,8 +1,11 @@
-from django.db import models
-from django.contrib.auth.models import User
+from datetime import timedelta
 import uuid
+
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.files.storage import default_storage
+from django.db import models
+from django.utils import timezone
 
 
 def get_raw_storage():
@@ -35,6 +38,12 @@ class CollectionRequest(models.Model):
     allow_text = models.BooleanField(default=True, help_text="텍스트 제출 허용")
     deadline = models.DateTimeField(null=True, blank=True, help_text="마감일시")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    closed_at = models.DateTimeField(null=True, blank=True, help_text="마감 처리 시각")
+    retention_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="자동 정리 유예 시각",
+    )
     max_file_size_mb = models.IntegerField(default=30, help_text="파일당 최대 크기(MB)")
     max_submissions = models.IntegerField(default=50, help_text="최대 제출 건수")
     expected_submitters = models.TextField(blank=True, help_text="예상 제출자 목록 (줄바꿈 구분)")
@@ -89,8 +98,21 @@ class CollectionRequest(models.Model):
     def is_deadline_passed(self):
         if not self.deadline:
             return False
-        from django.utils import timezone
         return timezone.now() > self.deadline
+
+    def extend_deadline(self, days):
+        """마감 기한을 지정된 일수만큼 연장한다."""
+        now = timezone.now()
+        base = self.deadline if self.deadline and self.deadline > now else now
+        self.deadline = base + timedelta(days=days)
+        self.save(update_fields=["deadline", "updated_at"])
+
+    def extend_retention(self, days):
+        """자동 정리 유예 기한을 지정된 일수만큼 연장한다."""
+        now = timezone.now()
+        base = self.retention_until if self.retention_until and self.retention_until > now else now
+        self.retention_until = base + timedelta(days=days)
+        self.save(update_fields=["retention_until", "updated_at"])
 
 
 class Submission(models.Model):

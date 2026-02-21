@@ -7,7 +7,10 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '수합 자동 정리: 마감 후 27일 경과 파일 삭제 + 첫 제출 후 50일(제출 없으면 생성 후 80일) 요청 자동 삭제'
+    help = (
+        '수합 자동 정리: 마감 후 27일 파일 삭제/보관 전환 + '
+        '첫 제출 후 50일(미제출 시 생성 후 80일) 요청 삭제'
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -27,16 +30,20 @@ class Command(BaseCommand):
             self.stdout.write('[DRY RUN] 실제 삭제 없이 대상만 표시합니다.')
         self.stdout.write('=' * 70)
 
-        # 1단계: 마감(closed) 후 27일 경과 → Cloudinary 파일 삭제 + archived 전환
-        seven_days_ago = now - timedelta(days=27)
-        closed_requests = CollectionRequest.objects.filter(
-            status='closed',
-            updated_at__lte=seven_days_ago,
-        )
+        # 1단계: 마감(closed) 후 27일 경과 → 파일 삭제 + archived 전환
+        closed_requests = CollectionRequest.objects.filter(status='closed')
 
         archived_count = 0
         files_deleted = 0
         for req in closed_requests:
+            # closed_at이 없던 기존 데이터는 updated_at을 fallback으로 사용
+            closed_base = req.closed_at or req.updated_at
+            file_cleanup_due_at = closed_base + timedelta(days=27)
+            if req.retention_until and req.retention_until > file_cleanup_due_at:
+                file_cleanup_due_at = req.retention_until
+            if file_cleanup_due_at > now:
+                continue
+
             file_submissions = Submission.objects.filter(
                 collection_request=req,
                 submission_type='file',
@@ -67,15 +74,13 @@ class Command(BaseCommand):
 
             if not dry_run:
                 req.status = 'archived'
-                req.save()
+                req.save(update_fields=["status", "updated_at"])
             archived_count += 1
             self.stdout.write(f'  [보관 전환] {req.title}')
 
         self.stdout.write(f'\n[1단계] 마감 후 27일 경과: {archived_count}개 보관 전환, {files_deleted}개 파일 삭제')
 
         # 2단계: 첫 제출 후 50일 경과 또는 제출 없이 생성 후 80일 경과 → 요청 자체 삭제
-        thirty_days_ago = now - timedelta(days=50)
-        sixty_days_ago = now - timedelta(days=80)
 
         all_requests = CollectionRequest.objects.all()
         delete_targets = []
@@ -83,13 +88,15 @@ class Command(BaseCommand):
         for req in all_requests:
             first_submission = req.submissions.order_by('submitted_at').first()
             if first_submission:
-                # 첫 제출 후 50일 경과
-                if first_submission.submitted_at <= thirty_days_ago:
-                    delete_targets.append(req)
+                request_cleanup_due_at = first_submission.submitted_at + timedelta(days=50)
             else:
-                # 제출 없이 생성 후 80일 경과
-                if req.created_at <= sixty_days_ago:
-                    delete_targets.append(req)
+                request_cleanup_due_at = req.created_at + timedelta(days=80)
+
+            if req.retention_until and req.retention_until > request_cleanup_due_at:
+                request_cleanup_due_at = req.retention_until
+
+            if request_cleanup_due_at <= now:
+                delete_targets.append(req)
 
         old_count = len(delete_targets)
         if old_count > 0:

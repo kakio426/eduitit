@@ -23,6 +23,9 @@ from products.models import Product
 logger = logging.getLogger(__name__)
 
 MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024  # 30MB
+DEFAULT_DEADLINE_EXTENSION_DAYS = 1
+DEFAULT_RETENTION_EXTENSION_DAYS = 7
+ALLOWED_EXTENSION_DAYS = {1, 3, 7, 14, 30}
 _STREAM_END = object()
 
 
@@ -46,6 +49,16 @@ def _remote_file_chunks(file_url, chunk_size=8192):
         for chunk in resp.iter_content(chunk_size=chunk_size):
             if chunk:
                 yield chunk
+
+
+def _parse_extension_days(raw_days, fallback):
+    try:
+        days = int(raw_days)
+    except (TypeError, ValueError):
+        return fallback
+    if days not in ALLOWED_EXTENSION_DAYS:
+        return fallback
+    return days
 
 
 def get_collect_service():
@@ -206,9 +219,33 @@ def request_toggle(request, request_id):
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
     if collection_req.status == 'active':
         collection_req.status = 'closed'
+        collection_req.closed_at = timezone.now()
     else:
         collection_req.status = 'active'
-    collection_req.save()
+        collection_req.closed_at = None
+    collection_req.save(update_fields=["status", "closed_at", "updated_at"])
+    return redirect('collect:request_detail', request_id=collection_req.id)
+
+
+@login_required
+@require_POST
+def request_extend_deadline(request, request_id):
+    """마감 기한 연장"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
+    days = _parse_extension_days(request.POST.get("days"), DEFAULT_DEADLINE_EXTENSION_DAYS)
+    collection_req.extend_deadline(days)
+    messages.success(request, f"마감 기한을 {days}일 연장했습니다.")
+    return redirect('collect:request_detail', request_id=collection_req.id)
+
+
+@login_required
+@require_POST
+def request_extend_retention(request, request_id):
+    """자동 정리 유예 기한 연장"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
+    days = _parse_extension_days(request.POST.get("days"), DEFAULT_RETENTION_EXTENSION_DAYS)
+    collection_req.extend_retention(days)
+    messages.success(request, f"보관 기간을 {days}일 연장했습니다.")
     return redirect('collect:request_detail', request_id=collection_req.id)
 
 
@@ -301,7 +338,9 @@ def submit(request, request_id):
     # 마감일 초과 확인
     if collection_req.is_deadline_passed:
         collection_req.status = 'closed'
-        collection_req.save()
+        if not collection_req.closed_at:
+            collection_req.closed_at = timezone.now()
+        collection_req.save(update_fields=["status", "closed_at", "updated_at"])
         return render(request, 'collect/request_closed.html', {'req': collection_req})
 
     # 최대 제출 수 확인
