@@ -6,7 +6,7 @@ from django.core import signing
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import UserProfile
+from core.models import SiteConfig, UserProfile
 from products import views as product_views
 
 
@@ -22,6 +22,11 @@ class StudentGamesAccessTests(TestCase):
         if not profile.nickname or profile.nickname.startswith("user"):
             profile.nickname = "담임"
             profile.save(update_fields=["nickname"])
+
+        site_config = SiteConfig.load()
+        site_config.banner_active = True
+        site_config.banner_text = "테스트 배너"
+        site_config.save(update_fields=["banner_active", "banner_text"])
 
     def _issue_token(self):
         payload = {
@@ -70,3 +75,17 @@ class StudentGamesAccessTests(TestCase):
         response = self.client.get(reverse("chess:index"))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["hide_navbar"])
+
+    def test_game_page_shows_banner_when_not_in_student_mode(self):
+        response = self.client.get(reverse("chess:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="globalBanner"', html=False)
+
+    def test_student_mode_hides_global_banner_on_game_page(self):
+        session = self.client.session
+        session[product_views.STUDENT_GAMES_SESSION_KEY] = {"issuer_id": self.user.id}
+        session.save()
+
+        response = self.client.get(reverse("chess:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="globalBanner"', html=False)

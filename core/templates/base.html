@@ -285,7 +285,7 @@
         </div>
 
         <!-- Global Banner -->
-        {% if banner_active and banner_text %}
+        {% if banner_active and banner_text and not request.session.dutyticker_student_games_mode %}
         <div x-data="{
             show: true,
             bannerColor: '{{ banner_color|default:" #000000"|escapejs }}',
