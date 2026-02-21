@@ -45,6 +45,7 @@ urlpatterns = [
     path('encyclopedia/', include('encyclopedia.urls', namespace='encyclopedia')),
     path('version-manager/', include('version_manager.urls', namespace='version_manager')),
     path('happy-seed/', include('happy_seed.urls', namespace='happy_seed')),
+    path('noticegen/', include('noticegen.urls', namespace='noticegen')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 

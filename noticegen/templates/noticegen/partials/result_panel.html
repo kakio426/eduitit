@@ -1,0 +1,67 @@
+<div class="clay-card p-5 md:p-6">
+    {% if limit_message %}
+    <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ limit_message }}
+    </div>
+    {% endif %}
+
+    {% if error_message %}
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i>{{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if info_message %}
+    <div class="mb-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-4 py-3 text-sm">
+        <i class="fa-solid fa-circle-info mr-1"></i>{{ info_message }}
+    </div>
+    {% endif %}
+
+    {% if daily_limit %}
+    <div class="mb-4 text-sm text-gray-500">
+        <i class="fa-solid fa-gauge-high mr-1"></i>
+        오늘 남은 생성 횟수: <span class="font-bold text-gray-700">{{ remaining_count }}</span> / {{ daily_limit }}
+    </div>
+    {% endif %}
+
+    {% if result_text %}
+    <div class="space-y-3">
+        <div x-data="{ copied: false }" class="flex items-center justify-end">
+            <button
+                type="button"
+                @click="navigator.clipboard.writeText($refs.output.value); copied = true; setTimeout(() => copied = false, 2000)"
+                class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition"
+            >
+                <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                <span x-show="!copied">복사하기</span>
+                <span x-show="copied">복사됨!</span>
+            </button>
+            <textarea x-ref="output" class="hidden">{{ result_text }}</textarea>
+        </div>
+
+        <textarea
+            readonly
+            class="w-full h-40 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed focus:outline-none"
+        >{{ result_text }}</textarea>
+    </div>
+    {% else %}
+    <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">
+        대상, 주제, 전달 사항을 입력하면 이 영역에 멘트가 표시됩니다.
+    </div>
+    {% endif %}
+
+    {% if similar_items %}
+    <div class="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+        <p class="text-sm font-bold text-gray-700 mb-3">유사 행사 참고 멘트</p>
+        <div class="space-y-3">
+            {% for item in similar_items %}
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                <p class="text-xs text-gray-500 mb-1">유사도 {{ item.score }}%</p>
+                <p class="text-sm text-gray-700 whitespace-pre-line">{{ item.result_text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

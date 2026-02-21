@@ -27,6 +27,7 @@ class Command(BaseCommand):
             ("ensure_janggi", lambda: call_command("ensure_janggi")),
             ("ensure_fairy_games", lambda: call_command("ensure_fairy_games")),
             ("ensure_happy_seed", lambda: call_command("ensure_happy_seed")),
+            ("ensure_noticegen", lambda: call_command("ensure_noticegen")),
         ]
 
         for name, fn in steps:

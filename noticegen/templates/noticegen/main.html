@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}알림장 & 주간학습 멘트 생성기{% endblock %}
+
+{% block content %}
+<style>
+    #noticegen-loading {
+        display: none;
+        pointer-events: none;
+    }
+
+    #noticegen-loading.htmx-request {
+        display: flex;
+        pointer-events: auto;
+    }
+</style>
+
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📝" }}</div>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">알림장 & 주간학습 멘트 생성기</h1>
+            <p class="text-lg md:text-xl text-gray-500">대상과 주제를 고르면, 학교에서 바로 쓸 수 있는 짧은 멘트를 빠르게 만듭니다.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="lg:col-span-2">
+                <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                    <form
+                        method="post"
+                        action="{% url 'noticegen:generate' %}"
+                        hx-post="{% url 'noticegen:generate' %}"
+                        hx-target="#noticegen-result"
+                        hx-swap="innerHTML"
+                        hx-indicator="#noticegen-loading"
+                        class="space-y-6"
+                    >
+                        {% csrf_token %}
+
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">대상 선택</label>
+                            <div class="grid grid-cols-1 gap-2">
+                                {% for value, label in target_options %}
+                                <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:border-blue-300 transition">
+                                    <input type="radio" name="target" value="{{ value }}" {% if forloop.first %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <span class="text-sm font-semibold text-gray-700">{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">주제 선택</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                {% for value, label in topic_options %}
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
+                                    <input type="radio" name="topic" value="{{ value }}" {% if forloop.first %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <span class="font-medium text-gray-700">{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">상황 추가</label>
+                            <div class="space-y-2">
+                                {% for value, label in context_options %}
+                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                    <input type="checkbox" name="contexts" value="{{ value }}" class="rounded border-gray-300 text-blue-500 focus:ring-blue-300">
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="noticegen-keywords" class="block text-sm font-bold text-gray-600 mb-2">전달 사항</label>
+                            <textarea
+                                id="noticegen-keywords"
+                                name="keywords"
+                                rows="5"
+                                required
+                                placeholder="예: 수학 3단원 평가, 실내화 지참"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 focus:border-blue-500 focus:outline-none"
+                            ></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>멘트 생성하기
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <div id="noticegen-result">
+                    {% include "noticegen/partials/result_panel.html" %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="noticegen-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
+    <div class="clay-card px-6 py-5 flex items-center gap-3">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-500"></i>
+        <span class="text-gray-700 font-bold">멘트를 생성하고 있습니다...</span>
+    </div>
+</div>
+{% endblock %}
+
