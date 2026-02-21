@@ -1,0 +1,35 @@
+{% if quiz_set %}
+<h2 class="font-bold text-gray-700 mb-4">진행 현황 <span class="text-xs text-gray-400 font-normal">(15초마다 자동 갱신)</span></h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="text-center">
+        <div class="text-3xl font-black text-gray-800">{{ stats.total }}</div>
+        <div class="text-xs text-gray-500 mt-1">전체 학생</div>
+    </div>
+    <div class="text-center">
+        <div class="text-3xl font-black text-blue-600">{{ stats.started }}</div>
+        <div class="text-xs text-gray-500 mt-1">접속</div>
+    </div>
+    <div class="text-center">
+        <div class="text-3xl font-black text-green-600">{{ stats.submitted }}</div>
+        <div class="text-xs text-gray-500 mt-1">제출 완료</div>
+    </div>
+    <div class="text-center">
+        <div class="text-3xl font-black text-purple-600">{{ stats.perfect }}</div>
+        <div class="text-xs text-gray-500 mt-1">만점</div>
+    </div>
+</div>
+{% if stats.total > 0 %}
+<div class="mt-4">
+    <div class="flex justify-between text-xs text-gray-500 mb-1">
+        <span>제출률</span>
+        <span>{{ stats.submitted }}/{{ stats.total }}</span>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-2">
+        <div class="bg-green-500 h-2 rounded-full transition-all"
+             style="width: {% widthratio stats.submitted stats.total 100 %}%"></div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<p class="text-sm text-gray-400 text-center py-4">배포된 퀴즈가 없습니다.</p>
+{% endif %}

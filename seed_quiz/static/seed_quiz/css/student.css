@@ -1,0 +1,82 @@
+/* ===== 씨앗 퀴즈 학생 화면 CSS ===== */
+
+body {
+    font-family: 'NanumSquareRound', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+
+/* 메인 컨테이너 */
+.sq-container {
+    max-width: 768px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* 문제 텍스트 */
+.sq-question {
+    font-size: 1.25rem;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+/* 선택지 버튼 */
+.sq-choice-btn {
+    display: block;
+    width: 100%;
+    min-height: 64px;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sq-choice-btn:active {
+    transform: scale(0.97);
+}
+
+/* htmx 요청 중 버튼 비활성화 시각 피드백 */
+.sq-choice-btn[disabled],
+.sq-choice-btn.htmx-request {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 로딩 오버레이 (htmx-request 클래스가 #quiz-area에 붙을 때 표시) */
+.sq-overlay {
+    display: none;
+}
+
+#quiz-area.htmx-request .sq-overlay {
+    display: flex;
+}
+
+/* safe area 하단 여백 */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* 씨앗 보상 애니메이션 */
+@keyframes seedPop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.seed-reward-anim {
+    animation: seedPop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 640px) {
+    .sq-question {
+        font-size: 1.4rem;
+    }
+    .sq-choice-btn {
+        font-size: 1.125rem;
+    }
+}

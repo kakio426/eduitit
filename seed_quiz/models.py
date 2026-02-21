@@ -1,0 +1,258 @@
+import uuid
+
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.db.models import Q
+
+from happy_seed.models import HSClassroom, HSStudent
+
+User = get_user_model()
+
+
+class SQQuizSet(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "초안"),
+        ("published", "배포중"),
+        ("closed", "종료"),
+        ("failed", "생성실패"),
+    ]
+    SOURCE_CHOICES = [
+        ("ai", "AI"),
+        ("fallback", "기본문제"),
+    ]
+    PRESET_CHOICES = [
+        ("general", "상식"),
+        ("math", "수학"),
+        ("korean", "국어"),
+        ("science", "과학"),
+        ("social", "사회"),
+        ("english", "영어"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    classroom = models.ForeignKey(
+        HSClassroom,
+        on_delete=models.CASCADE,
+        related_name="sq_quiz_sets",
+        verbose_name="교실",
+    )
+    target_date = models.DateField(verbose_name="대상 날짜")
+    preset_type = models.CharField(
+        max_length=20,
+        choices=PRESET_CHOICES,
+        default="general",
+        verbose_name="과목 프리셋",
+    )
+    grade = models.IntegerField(default=3, verbose_name="학년")
+    title = models.CharField(max_length=100, verbose_name="제목")
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="draft",
+        verbose_name="상태",
+    )
+    source = models.CharField(
+        max_length=10,
+        choices=SOURCE_CHOICES,
+        default="ai",
+        verbose_name="출처",
+    )
+    time_limit_seconds = models.IntegerField(default=600, verbose_name="제한시간(초)")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="sq_quiz_sets_created",
+        verbose_name="생성자",
+    )
+    published_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sq_quiz_sets_published",
+        verbose_name="배포자",
+    )
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name="배포 시각")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "퀴즈 세트"
+        verbose_name_plural = "퀴즈 세트"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["classroom", "target_date", "preset_type"],
+                condition=Q(status="published"),
+                name="unique_published_quiz_per_class_date_preset",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["classroom", "target_date", "status"]),
+            models.Index(fields=["status", "published_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+
+class SQQuizItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    quiz_set = models.ForeignKey(
+        SQQuizSet,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="퀴즈 세트",
+    )
+    order_no = models.IntegerField(verbose_name="순서")
+    question_text = models.TextField(verbose_name="문제")
+    choices = models.JSONField(verbose_name="선택지")  # list[str], 길이=4
+    correct_index = models.IntegerField(verbose_name="정답 인덱스")  # 0~3
+    explanation = models.TextField(blank=True, verbose_name="해설")
+    difficulty = models.CharField(max_length=10, default="medium", verbose_name="난이도")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "퀴즈 문항"
+        verbose_name_plural = "퀴즈 문항"
+        unique_together = [("quiz_set", "order_no")]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(correct_index__gte=0) & Q(correct_index__lte=3),
+                name="sq_item_correct_index_range",
+            )
+        ]
+
+    def __str__(self):
+        return f"Q{self.order_no}: {self.question_text[:30]}"
+
+    def clean(self):
+        from seed_quiz.services.validator import normalize_and_check
+
+        if isinstance(self.choices, list):
+            choices = [normalize_and_check(c) for c in self.choices]
+            if len(choices) != 4:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("선택지는 정확히 4개여야 합니다.")
+            if len(set(choices)) != 4:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("선택지에 중복이 있습니다.")
+
+
+class SQAttempt(models.Model):
+    STATUS_CHOICES = [
+        ("in_progress", "진행중"),
+        ("submitted", "제출완료"),
+        ("rewarded", "보상완료"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    quiz_set = models.ForeignKey(
+        SQQuizSet,
+        on_delete=models.CASCADE,
+        related_name="attempts",
+        verbose_name="퀴즈 세트",
+    )
+    student = models.ForeignKey(
+        HSStudent,
+        on_delete=models.CASCADE,
+        related_name="sq_attempts",
+        verbose_name="학생",
+    )
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="in_progress",
+        verbose_name="상태",
+    )
+    request_id = models.UUIDField(unique=True, default=uuid.uuid4, verbose_name="요청 ID")
+    score = models.IntegerField(default=0, verbose_name="점수")
+    max_score = models.IntegerField(default=3, verbose_name="만점")
+    reward_seed_amount = models.IntegerField(default=0, verbose_name="보상 씨앗 수")
+    consent_snapshot = models.CharField(
+        max_length=15, blank=True, verbose_name="동의 상태 스냅샷"
+    )
+    reward_applied_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="보상 지급 시각"
+    )
+    started_at = models.DateTimeField(auto_now_add=True, verbose_name="시작 시각")
+    submitted_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="제출 시각"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "시도"
+        verbose_name_plural = "시도"
+        unique_together = [("student", "quiz_set")]
+
+    def __str__(self):
+        return f"{self.student} - {self.quiz_set} ({self.get_status_display()})"
+
+
+class SQAttemptAnswer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(
+        SQAttempt,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        verbose_name="시도",
+    )
+    item = models.ForeignKey(
+        SQQuizItem,
+        on_delete=models.CASCADE,
+        verbose_name="문항",
+    )
+    selected_index = models.IntegerField(verbose_name="선택한 답")
+    is_correct = models.BooleanField(verbose_name="정답 여부")
+    answered_at = models.DateTimeField(auto_now_add=True, verbose_name="답변 시각")
+
+    class Meta:
+        verbose_name = "답변"
+        verbose_name_plural = "답변"
+        unique_together = [("attempt", "item")]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(selected_index__gte=0) & Q(selected_index__lte=3),
+                name="sq_answer_selected_index_range",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.attempt} - {self.item} ({'O' if self.is_correct else 'X'})"
+
+
+class SQGenerationLog(models.Model):
+    LEVEL_CHOICES = [
+        ("info", "정보"),
+        ("warn", "경고"),
+        ("error", "오류"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    quiz_set = models.ForeignKey(
+        SQQuizSet,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="logs",
+        verbose_name="퀴즈 세트",
+    )
+    level = models.CharField(
+        max_length=5,
+        choices=LEVEL_CHOICES,
+        default="info",
+        verbose_name="레벨",
+    )
+    code = models.CharField(max_length=50, verbose_name="코드")
+    message = models.TextField(verbose_name="메시지")
+    payload = models.JSONField(default=dict, blank=True, verbose_name="페이로드")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "생성 로그"
+        verbose_name_plural = "생성 로그"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.level.upper()}] {self.code}: {self.message[:50]}"

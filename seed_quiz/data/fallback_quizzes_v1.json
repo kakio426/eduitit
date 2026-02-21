@@ -1,0 +1,545 @@
+{
+  "version": "v1",
+  "quizzes": {
+    "general": {
+      "3": [
+        {
+          "items": [
+            {
+              "question_text": "우리나라 국화는 무엇인가요?",
+              "choices": ["장미", "무궁화", "국화", "튤립"],
+              "correct_index": 1,
+              "explanation": "우리나라 국화는 무궁화입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "우리나라의 수도는 어디인가요?",
+              "choices": ["부산", "인천", "서울", "대구"],
+              "correct_index": 2,
+              "explanation": "우리나라의 수도는 서울입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "1년은 몇 달인가요?",
+              "choices": ["10달", "11달", "12달", "13달"],
+              "correct_index": 2,
+              "explanation": "1년은 12달입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "태양계에서 지구와 가장 가까운 별은 무엇인가요?",
+              "choices": ["화성", "금성", "목성", "태양"],
+              "correct_index": 3,
+              "explanation": "태양계에서 지구와 가장 가까운 별은 태양입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "한국의 전통 악기가 아닌 것은?",
+              "choices": ["가야금", "해금", "피아노", "장구"],
+              "correct_index": 2,
+              "explanation": "피아노는 서양 악기입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "우리나라에서 가장 긴 강은 무엇인가요?",
+              "choices": ["한강", "낙동강", "금강", "영산강"],
+              "correct_index": 1,
+              "explanation": "낙동강이 우리나라에서 가장 긴 강입니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "1주일은 며칠인가요?",
+              "choices": ["5일", "6일", "7일", "8일"],
+              "correct_index": 2,
+              "explanation": "1주일은 7일입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "빛이 가장 빠르게 이동하는 곳은 어디인가요?",
+              "choices": ["물속", "공기 중", "진공", "유리 속"],
+              "correct_index": 2,
+              "explanation": "빛은 진공에서 가장 빠르게 이동합니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "어린이날은 몇 월 며칠인가요?",
+              "choices": ["4월 5일", "5월 1일", "5월 5일", "6월 6일"],
+              "correct_index": 2,
+              "explanation": "어린이날은 5월 5일입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "세종대왕이 만든 것은 무엇인가요?",
+              "choices": ["거북선", "한글", "측우기", "앙부일구"],
+              "correct_index": 1,
+              "explanation": "세종대왕은 한글을 창제하셨습니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "물이 얼면 무엇이 되나요?",
+              "choices": ["수증기", "구름", "얼음", "이슬"],
+              "correct_index": 2,
+              "explanation": "물이 얼면 얼음이 됩니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "다음 중 포유류가 아닌 동물은?",
+              "choices": ["고래", "박쥐", "독수리", "돌고래"],
+              "correct_index": 2,
+              "explanation": "독수리는 포유류가 아닌 조류입니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "지구에서 가장 높은 산은 무엇인가요?",
+              "choices": ["백두산", "한라산", "에베레스트산", "후지산"],
+              "correct_index": 2,
+              "explanation": "지구에서 가장 높은 산은 에베레스트산입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "무지개의 색깔은 모두 몇 가지인가요?",
+              "choices": ["5가지", "6가지", "7가지", "8가지"],
+              "correct_index": 2,
+              "explanation": "무지개는 빨주노초파남보 7가지 색깔로 이루어져 있습니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "우리나라 화폐 단위는 무엇인가요?",
+              "choices": ["달러", "엔", "원", "유로"],
+              "correct_index": 2,
+              "explanation": "우리나라 화폐 단위는 원(₩)입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        }
+      ],
+      "4": [
+        {
+          "items": [
+            {
+              "question_text": "지구의 모양은 어떻게 생겼나요?",
+              "choices": ["납작한 원", "정육면체", "완전한 구", "약간 납작한 구"],
+              "correct_index": 3,
+              "explanation": "지구는 완전한 구가 아니라 남북 방향으로 약간 납작한 구 모양입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "광합성이 일어나는 식물의 기관은?",
+              "choices": ["뿌리", "줄기", "잎", "꽃"],
+              "correct_index": 2,
+              "explanation": "광합성은 주로 잎에서 일어납니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "한국의 독립 기념일은 언제인가요?",
+              "choices": ["3월 1일", "7월 4일", "8월 15일", "10월 9일"],
+              "correct_index": 2,
+              "explanation": "8월 15일은 광복절로 우리나라 독립 기념일입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "혈액을 온몸에 순환시키는 기관은?",
+              "choices": ["폐", "간", "심장", "위"],
+              "correct_index": 2,
+              "explanation": "심장이 혈액을 온몸에 순환시킵니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "지구의 공전 주기는 얼마인가요?",
+              "choices": ["24시간", "30일", "약 365일", "약 3650일"],
+              "correct_index": 2,
+              "explanation": "지구는 태양 주위를 약 365일에 한 바퀴 돕니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "다음 중 재생 가능한 에너지가 아닌 것은?",
+              "choices": ["태양에너지", "풍력에너지", "석유", "수력에너지"],
+              "correct_index": 2,
+              "explanation": "석유는 화석연료로 재생 불가능한 에너지입니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "조선을 세운 사람은 누구인가요?",
+              "choices": ["왕건", "이성계", "이순신", "장영실"],
+              "correct_index": 1,
+              "explanation": "이성계가 조선을 세웠습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "공기 중 가장 많은 기체는 무엇인가요?",
+              "choices": ["산소", "이산화탄소", "질소", "수소"],
+              "correct_index": 2,
+              "explanation": "공기 중 가장 많은 기체는 질소(약 78%)입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "우리나라에서 가장 넓은 섬은 어디인가요?",
+              "choices": ["독도", "울릉도", "거제도", "제주도"],
+              "correct_index": 3,
+              "explanation": "제주도가 우리나라에서 가장 넓은 섬입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "달이 지구를 한 바퀴 도는 데 걸리는 시간은?",
+              "choices": ["약 7일", "약 15일", "약 30일", "약 365일"],
+              "correct_index": 2,
+              "explanation": "달은 지구 주위를 약 30일(한 달)에 한 바퀴 돕니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "다음 중 초식 동물은?",
+              "choices": ["호랑이", "사자", "기린", "늑대"],
+              "correct_index": 2,
+              "explanation": "기린은 나뭇잎을 먹는 초식 동물입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "한글날은 몇 월 몇 일인가요?",
+              "choices": ["9월 9일", "10월 3일", "10월 9일", "11월 3일"],
+              "correct_index": 2,
+              "explanation": "한글날은 10월 9일입니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "뼈와 뼈를 연결하는 부분을 무엇이라고 하나요?",
+              "choices": ["근육", "인대", "관절", "힘줄"],
+              "correct_index": 2,
+              "explanation": "뼈와 뼈가 만나는 부분을 관절이라고 합니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "태양은 어느 쪽에서 뜨나요?",
+              "choices": ["서쪽", "남쪽", "동쪽", "북쪽"],
+              "correct_index": 2,
+              "explanation": "태양은 동쪽에서 뜹니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "다음 중 사막이 있는 나라는?",
+              "choices": ["캐나다", "이집트", "일본", "영국"],
+              "correct_index": 1,
+              "explanation": "이집트에는 사하라 사막이 있습니다.",
+              "difficulty": "easy"
+            }
+          ]
+        }
+      ],
+      "5": [
+        {
+          "items": [
+            {
+              "question_text": "지구 온난화의 주요 원인이 되는 기체는?",
+              "choices": ["산소", "질소", "이산화탄소", "수소"],
+              "correct_index": 2,
+              "explanation": "이산화탄소는 대표적인 온실 가스로 지구 온난화의 주요 원인입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "임진왜란이 일어난 해는 언제인가요?",
+              "choices": ["1392년", "1592년", "1876년", "1945년"],
+              "correct_index": 1,
+              "explanation": "임진왜란은 1592년에 일어났습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "혈액 속에서 산소를 운반하는 세포는?",
+              "choices": ["백혈구", "혈소판", "적혈구", "혈장"],
+              "correct_index": 2,
+              "explanation": "적혈구가 산소를 운반합니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "전기를 만들어내는 장치를 무엇이라고 하나요?",
+              "choices": ["전동기", "발전기", "변압기", "축전지"],
+              "correct_index": 1,
+              "explanation": "발전기는 운동 에너지를 전기 에너지로 바꾸는 장치입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "우리나라 삼국시대에 속하지 않는 나라는?",
+              "choices": ["고구려", "백제", "신라", "고려"],
+              "correct_index": 3,
+              "explanation": "고려는 삼국시대 이후 고려시대에 세워진 나라입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "빛이 물에서 공기 중으로 나올 때 꺾이는 현상은?",
+              "choices": ["반사", "굴절", "흡수", "산란"],
+              "correct_index": 1,
+              "explanation": "빛이 다른 매질을 통과할 때 꺾이는 현상을 굴절이라고 합니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "생물의 특성이 자손에게 전달되는 것을 무엇이라 하나요?",
+              "choices": ["진화", "유전", "변이", "적응"],
+              "correct_index": 1,
+              "explanation": "부모의 특성이 자손에게 전달되는 것을 유전이라고 합니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "다음 중 열대 기후 지역이 아닌 곳은?",
+              "choices": ["아마존", "동남아시아", "중앙아프리카", "시베리아"],
+              "correct_index": 3,
+              "explanation": "시베리아는 냉대 기후 지역입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "산업 혁명이 처음 시작된 나라는?",
+              "choices": ["프랑스", "독일", "영국", "미국"],
+              "correct_index": 2,
+              "explanation": "산업 혁명은 18세기 영국에서 시작되었습니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "소리의 속도와 빛의 속도 중 어느 것이 더 빠른가요?",
+              "choices": ["소리", "빛", "둘 다 같다", "상황에 따라 다르다"],
+              "correct_index": 1,
+              "explanation": "빛의 속도(30만 km/s)가 소리의 속도(340 m/s)보다 훨씬 빠릅니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "조선 시대 신분 제도에서 가장 낮은 계층은?",
+              "choices": ["양반", "중인", "상민", "천민"],
+              "correct_index": 3,
+              "explanation": "조선 시대 신분 제도에서 천민이 가장 낮은 계층이었습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "지진이 발생하는 주요 원인은?",
+              "choices": ["화산 폭발만", "지각판의 이동", "기상 변화", "달의 인력"],
+              "correct_index": 1,
+              "explanation": "지진은 주로 지각판이 이동하거나 충돌할 때 발생합니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "물질이 세 가지 상태 중 가장 많은 공간을 차지하는 것은?",
+              "choices": ["고체", "액체", "기체", "모두 같다"],
+              "correct_index": 2,
+              "explanation": "기체는 분자 간 거리가 가장 멀어 가장 많은 공간을 차지합니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "현재 유엔(UN) 본부가 있는 도시는?",
+              "choices": ["파리", "런던", "뉴욕", "제네바"],
+              "correct_index": 2,
+              "explanation": "유엔 본부는 미국 뉴욕에 있습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "3.1 운동이 일어난 해는?",
+              "choices": ["1910년", "1919년", "1945년", "1950년"],
+              "correct_index": 1,
+              "explanation": "3.1 운동은 1919년에 일어났습니다.",
+              "difficulty": "easy"
+            }
+          ]
+        }
+      ],
+      "6": [
+        {
+          "items": [
+            {
+              "question_text": "대한민국 헌법에서 국가 주권은 누구에게 있나요?",
+              "choices": ["대통령", "국회", "국민", "법원"],
+              "correct_index": 2,
+              "explanation": "대한민국 헌법 제1조에 따르면 대한민국의 주권은 국민에게 있습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "원자를 이루는 입자 중 (+) 전하를 띠는 것은?",
+              "choices": ["전자", "중성자", "양성자", "쿼크"],
+              "correct_index": 2,
+              "explanation": "원자핵 안의 양성자가 (+) 전하를 띱니다.",
+              "difficulty": "hard"
+            },
+            {
+              "question_text": "세계 4대 문명 발상지에 속하지 않는 것은?",
+              "choices": ["황하", "나일강", "아마존강", "메소포타미아"],
+              "correct_index": 2,
+              "explanation": "세계 4대 문명은 황하, 나일강, 메소포타미아, 인더스 문명입니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "우리나라 3권 분립에서 법을 만드는 기관은?",
+              "choices": ["행정부", "입법부", "사법부", "헌법재판소"],
+              "correct_index": 1,
+              "explanation": "법을 만드는 곳은 입법부(국회)입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "DNA를 발견한 사람들이 이용한 실험 방법은?",
+              "choices": ["현미경 관찰", "X선 회절", "화학 분석", "전자 현미경"],
+              "correct_index": 1,
+              "explanation": "왓슨과 크릭은 X선 회절 사진을 통해 DNA 이중 나선 구조를 발견했습니다.",
+              "difficulty": "hard"
+            },
+            {
+              "question_text": "제2차 세계대전이 끝난 해는?",
+              "choices": ["1940년", "1943년", "1945년", "1950년"],
+              "correct_index": 2,
+              "explanation": "제2차 세계대전은 1945년에 끝났습니다.",
+              "difficulty": "medium"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "우리나라 최고 법원은 무엇인가요?",
+              "choices": ["지방법원", "고등법원", "대법원", "헌법재판소"],
+              "correct_index": 2,
+              "explanation": "대법원이 우리나라의 최고 법원입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "에너지 보존 법칙에서 에너지는 어떻게 되나요?",
+              "choices": ["사라진다", "새로 만들어진다", "형태가 바뀔 뿐 총량은 일정", "온도에 따라 증가"],
+              "correct_index": 2,
+              "explanation": "에너지 보존 법칙에 따라 에너지의 형태는 바뀌지만 총량은 항상 일정합니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "다음 중 민주주의의 기본 원리가 아닌 것은?",
+              "choices": ["국민 주권", "기본권 보장", "독재 통치", "권력 분립"],
+              "correct_index": 2,
+              "explanation": "독재 통치는 민주주의의 기본 원리에 반합니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "광복 이후 대한민국 정부가 수립된 해는?",
+              "choices": ["1945년", "1948년", "1950년", "1953년"],
+              "correct_index": 1,
+              "explanation": "대한민국 정부는 1948년 8월 15일에 수립되었습니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "식물에서 광합성에 필요한 것이 아닌 것은?",
+              "choices": ["빛", "이산화탄소", "물", "산소"],
+              "correct_index": 3,
+              "explanation": "광합성은 빛, 이산화탄소, 물을 이용해 산소와 포도당을 만드는 과정입니다. 산소는 결과물입니다.",
+              "difficulty": "medium"
+            },
+            {
+              "question_text": "지구의 자전 주기는 얼마인가요?",
+              "choices": ["12시간", "24시간", "30일", "365일"],
+              "correct_index": 1,
+              "explanation": "지구는 약 24시간에 한 바퀴 자전합니다.",
+              "difficulty": "easy"
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "question_text": "6.25 전쟁(한국 전쟁)이 시작된 해는?",
+              "choices": ["1945년", "1948년", "1950년", "1953년"],
+              "correct_index": 2,
+              "explanation": "6.25 전쟁은 1950년 6월 25일에 시작되었습니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "다음 중 전도에 의한 열 이동이 잘 일어나는 물질은?",
+              "choices": ["나무", "플라스틱", "금속", "고무"],
+              "correct_index": 2,
+              "explanation": "금속은 전도에 의한 열 이동이 잘 일어나는 물질입니다.",
+              "difficulty": "easy"
+            },
+            {
+              "question_text": "우리나라 국회의원의 임기는 몇 년인가요?",
+              "choices": ["3년", "4년", "5년", "6년"],
+              "correct_index": 1,
+              "explanation": "국회의원의 임기는 4년입니다.",
+              "difficulty": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    "math": {
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    },
+    "korean": {
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    },
+    "science": {
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    },
+    "social": {
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    },
+    "english": {
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    }
+  }
+}

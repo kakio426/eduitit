@@ -1,0 +1,25 @@
+<div class="clay-card p-6 rounded-2xl">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="text-3xl">🚀</span>
+        <div>
+            <h2 class="font-bold text-gray-800">퀴즈가 배포되었습니다!</h2>
+            <p class="text-sm text-gray-500">학생들이 지금 바로 접속할 수 있습니다.</p>
+        </div>
+    </div>
+
+    <div class="p-4 bg-gray-50 rounded-xl mb-4">
+        <p class="text-xs font-bold text-gray-500 mb-2">학생 접속 주소</p>
+        <div class="flex items-center gap-2">
+            <code class="text-sm text-purple-700 font-mono break-all flex-1">{{ student_url }}</code>
+            <button onclick="navigator.clipboard.writeText('{{ student_url }}').then(()=>alert('복사되었습니다!'))"
+                    class="shrink-0 px-3 py-1.5 bg-purple-100 text-purple-600 rounded-lg text-xs font-bold hover:bg-purple-200 transition-colors">
+                복사
+            </button>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-2 text-sm text-green-600">
+        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        배포 중 · 자동 갱신되는 진행 현황을 아래에서 확인하세요
+    </div>
+</div>

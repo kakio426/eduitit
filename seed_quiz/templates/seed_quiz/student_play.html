@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>씨앗 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/seed_quiz/css/student.css">
+</head>
+<body class="min-h-dvh bg-gradient-to-b from-purple-50 to-indigo-50">
+
+<!-- CSRF 자동 주입 -->
+<script>
+document.addEventListener('htmx:configRequest', function(e) {
+    e.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+});
+</script>
+
+<!-- 메인 컨테이너 -->
+<div id="quiz-area" class="sq-container relative">
+
+    <!-- 로딩 오버레이 -->
+    <div class="sq-overlay fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="text-center">
+            <svg class="animate-spin h-10 w-10 text-purple-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <p class="text-sm text-gray-500 font-medium">처리 중...</p>
+        </div>
+    </div>
+
+    <!-- 퀴즈 콘텐츠 (HTMX로 채워짐) -->
+    <div hx-get="{% url 'seed_quiz:htmx_play_current' %}"
+         hx-trigger="load"
+         hx-target="#quiz-area"
+         hx-swap="innerHTML">
+        <div class="flex items-center justify-center min-h-dvh">
+            <div class="text-center">
+                <div class="text-5xl mb-4">🌱</div>
+                <p class="text-gray-500">퀴즈를 불러오는 중...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<noscript>
+    <div style="text-align:center;padding:2rem;">
+        <p>이 페이지는 JavaScript가 필요합니다.</p>
+        <a href="/" style="color:#7c3aed;">처음으로 돌아가기</a>
+    </div>
+</noscript>
+
+</body>
+</html>

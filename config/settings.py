@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'encyclopedia.apps.EncyclopediaConfig',
     'version_manager.apps.VersionManagerConfig',
     'happy_seed.apps.HappySeedConfig',
+    'seed_quiz.apps.SeedQuizConfig',
     'noticegen.apps.NoticegenConfig',
     'django_htmx',
     'django.contrib.humanize',

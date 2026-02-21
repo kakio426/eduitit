@@ -1,0 +1,53 @@
+<!-- 결과 화면 -->
+<div class="sq-container flex flex-col min-h-dvh px-4 py-8">
+
+    <div class="flex-1 flex flex-col items-center justify-center text-center">
+
+        {% if attempt.status == 'rewarded' %}
+        <div class="seed-reward-anim text-7xl mb-4">🌟</div>
+        <h2 class="text-3xl font-black text-gray-800 mb-2">완벽해요!</h2>
+        <p class="text-lg text-gray-600 mb-4">{{ attempt.score }}문제 모두 맞혔어요</p>
+        <div class="px-6 py-3 bg-gradient-to-r from-yellow-400 to-amber-400 rounded-2xl shadow-lg mb-6">
+            <p class="text-white font-black text-xl">🌱 씨앗 +{{ attempt.reward_seed_amount }}개 획득!</p>
+        </div>
+
+        {% elif attempt.score == attempt.max_score %}
+        <div class="text-7xl mb-4">🌸</div>
+        <h2 class="text-3xl font-black text-gray-800 mb-2">대단해요!</h2>
+        <p class="text-lg text-gray-600 mb-4">{{ attempt.score }}문제 모두 맞혔어요</p>
+        <div class="px-5 py-3 bg-blue-50 border border-blue-200 rounded-2xl mb-6">
+            <p class="text-blue-700 text-sm font-medium">학습 완료! 씨앗 보상은 보호자 동의 후 지급됩니다.</p>
+        </div>
+
+        {% else %}
+        <div class="text-7xl mb-4">💪</div>
+        <h2 class="text-3xl font-black text-gray-800 mb-2">수고했어요!</h2>
+        <p class="text-lg text-gray-600 mb-4">{{ attempt.score }}/{{ attempt.max_score }}문제 맞혔어요</p>
+        <div class="px-5 py-3 bg-gray-50 rounded-2xl mb-6">
+            <p class="text-gray-500 text-sm">다음엔 더 잘할 수 있어요! 💚</p>
+        </div>
+        {% endif %}
+
+        <!-- 문항별 요약 -->
+        <div class="w-full max-w-sm space-y-3 text-left">
+            {% for row in items_with_answers %}
+            <div class="p-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <span class="text-xl shrink-0 mt-0.5">
+                        {% if row.answer %}{% if row.answer.is_correct %}✅{% else %}❌{% endif %}{% else %}—{% endif %}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-700 leading-snug" style="word-break:keep-all">{{ row.item.question_text }}</p>
+                        <p class="text-xs text-green-600 mt-1 font-medium">정답: {{ row.correct_choice }}</p>
+                        {% if row.answer and not row.answer.is_correct and row.selected_choice %}
+                        <p class="text-xs text-red-500 mt-0.5">내 답: {{ row.selected_choice }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="pb-safe mt-8"></div>
+</div>

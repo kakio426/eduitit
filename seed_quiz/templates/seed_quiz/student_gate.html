@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>씨앗 퀴즈 — {{ classroom.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic', sans-serif; background: #f3f4f6; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+<div class="w-full max-w-sm mx-auto">
+
+    <!-- 상단 로고 -->
+    <div class="text-center mb-8">
+        <div class="text-5xl mb-3">🌱</div>
+        <h1 class="text-2xl font-black text-gray-800">씨앗 퀴즈</h1>
+        <p class="text-gray-500 text-sm mt-1">{{ classroom.name }}</p>
+        {% if classroom.school_name %}<p class="text-gray-400 text-xs">{{ classroom.school_name }}</p>{% endif %}
+    </div>
+
+    {% if not quiz_set %}
+    <!-- 퀴즈 미준비 -->
+    <div class="bg-white rounded-2xl shadow-sm p-8 text-center"
+         hx-get="{% url 'seed_quiz:student_gate' class_slug=classroom.slug %}"
+         hx-trigger="every 10s"
+         hx-swap="outerHTML">
+        <div class="text-4xl mb-4">⏳</div>
+        <h2 class="font-bold text-gray-700 mb-2">아직 준비중이에요</h2>
+        <p class="text-sm text-gray-500">선생님이 퀴즈를 준비하고 있어요.<br>잠시만 기다려 주세요!</p>
+        <p class="text-xs text-gray-400 mt-4">자동으로 확인됩니다...</p>
+    </div>
+    {% else %}
+    <!-- 로그인 폼 -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="font-bold text-gray-700 mb-5 text-center">내 정보를 입력해주세요</h2>
+
+        {% if error %}
+        <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'seed_quiz:student_start' class_slug=classroom.slug %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-600 mb-2">번호</label>
+                <input type="number" name="number" min="1" max="99" required
+                       class="w-full px-4 py-3 text-lg rounded-xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-center font-bold"
+                       placeholder="1">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-600 mb-2">이름</label>
+                <input type="text" name="name" required maxlength="10"
+                       class="w-full px-4 py-3 text-lg rounded-xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-center font-bold"
+                       placeholder="홍길동">
+            </div>
+            <button type="submit"
+                    class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-black text-lg hover:shadow-lg transition-all">
+                퀴즈 시작하기 →
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>
