@@ -208,6 +208,12 @@
         'set_title', 'preset_type', 'grade', 'question_text',
         'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
     ];
+    const setTitleRegex = /^SQ-([a-z_]+)-basic-L1-G([1-6])-S(\d{3})-V(\d+)$/;
+    const allowedPresetTypes = new Set(
+        Array.from(document.querySelectorAll('#bank-filter-form select[name="preset_type"] option'))
+            .map((opt) => (opt.value || '').trim())
+            .filter(Boolean)
+    );
 
     function setState(state) {
         form.dataset.clientCheckState = state;
@@ -286,6 +292,18 @@
 
     function validateRows(rows) {
         const errors = [];
+        const maxErrors = 120;
+        const groupedSetStats = {};
+        let isOverflow = false;
+
+        function addError(msg) {
+            if (errors.length < maxErrors) {
+                errors.push(msg);
+            } else {
+                isOverflow = true;
+            }
+        }
+
         if (!rows.length) {
             return ['CSV 내용이 비어 있습니다.'];
         }
@@ -296,46 +314,115 @@
 
         requiredHeaders.forEach((col) => {
             if (!(col in headerIndex)) {
-                errors.push('필수 헤더 누락: ' + col);
+                addError('필수 헤더 누락: ' + col);
             }
         });
         if (errors.length) {
             return errors;
         }
 
-        const maxRows = Math.min(rows.length, 121);
-        for (let i = 1; i < maxRows; i += 1) {
+        const rowRequired = [
+            'set_title', 'preset_type', 'grade', 'question_text',
+            'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
+        ];
+
+        for (let i = 1; i < rows.length; i += 1) {
             const raw = rows[i];
             if (!raw || !raw.length || raw.every((v) => String(v || '').trim() === '')) {
                 continue;
             }
             const lineNo = i + 1;
             const get = (key) => (raw[headerIndex[key]] || '').trim();
+            const setTitle = get('set_title');
+            const presetRaw = get('preset_type');
+            const gradeRaw = get('grade');
 
-            const rowRequired = [
-                'set_title', 'preset_type', 'grade', 'question_text',
-                'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
-            ];
+            if (!groupedSetStats[setTitle]) {
+                groupedSetStats[setTitle] = {
+                    count: 0,
+                    lines: [],
+                    presets: new Set(),
+                    grades: new Set(),
+                };
+            }
+            groupedSetStats[setTitle].count += 1;
+            groupedSetStats[setTitle].lines.push(lineNo);
+            if (presetRaw) {
+                groupedSetStats[setTitle].presets.add(presetRaw);
+            }
+            if (gradeRaw) {
+                groupedSetStats[setTitle].grades.add(gradeRaw);
+            }
+
             rowRequired.forEach((col) => {
                 if (!get(col)) {
-                    errors.push(lineNo + '행: ' + col + ' 값이 비어 있습니다.');
+                    addError(lineNo + '행: ' + col + ' 값이 비어 있습니다.');
                 }
             });
 
             const choices = [get('choice_1'), get('choice_2'), get('choice_3'), get('choice_4')];
             const nonEmptyChoices = choices.filter(Boolean);
             if (nonEmptyChoices.length === 4 && new Set(nonEmptyChoices).size !== 4) {
-                errors.push(lineNo + '행: 선택지 중복이 있습니다.');
+                addError(lineNo + '행: 선택지 중복이 있습니다.');
             }
 
             const ci = get('correct_index');
             if (ci && !/^[0-3]$/.test(ci)) {
-                errors.push(lineNo + '행: correct_index는 0~3이어야 합니다.');
+                addError(lineNo + '행: correct_index는 0~3이어야 합니다.');
+            }
+
+            let parsedTitleTopic = '';
+            let parsedTitleGrade = '';
+            const setTitleMatch = setTitle.match(setTitleRegex);
+            if (!setTitleMatch) {
+                addError(
+                    lineNo + '행: set_title 형식 오류 (예: SQ-orthography-basic-L1-G3-S001-V1)'
+                );
+            } else {
+                parsedTitleTopic = setTitleMatch[1];
+                parsedTitleGrade = setTitleMatch[2];
+            }
+
+            if (presetRaw && !allowedPresetTypes.has(presetRaw)) {
+                addError(lineNo + '행: preset_type이 허용 주제가 아닙니다 (' + presetRaw + ')');
+            }
+            if (gradeRaw && !/^[1-6]$/.test(gradeRaw)) {
+                addError(lineNo + '행: grade는 1~6이어야 합니다.');
+            }
+
+            if (setTitleMatch && presetRaw && parsedTitleTopic !== presetRaw) {
+                addError(
+                    lineNo + '행: set_title topic(' + parsedTitleTopic + ')과 preset_type(' + presetRaw + ')이 다릅니다.'
+                );
+            }
+            if (setTitleMatch && gradeRaw && parsedTitleGrade !== gradeRaw) {
+                addError(
+                    lineNo + '행: set_title grade(' + parsedTitleGrade + ')와 grade(' + gradeRaw + ')가 다릅니다.'
+                );
             }
         }
 
-        if (rows.length > 121) {
-            errors.push('1차 검사는 처음 120행까지만 검사했습니다. 전체 검증은 서버에서 진행됩니다.');
+        Object.keys(groupedSetStats).forEach((setTitle) => {
+            const stat = groupedSetStats[setTitle];
+            if (stat.count !== 3) {
+                addError(
+                    "세트 '" + setTitle + "': 문항 수 " + stat.count + "개 (정확히 3문항 필요)"
+                );
+            }
+            if (stat.presets.size > 1) {
+                addError(
+                    "세트 '" + setTitle + "': preset_type 값이 행마다 다릅니다."
+                );
+            }
+            if (stat.grades.size > 1) {
+                addError(
+                    "세트 '" + setTitle + "': grade 값이 행마다 다릅니다."
+                );
+            }
+        });
+
+        if (isOverflow) {
+            errors.push('오류가 많아 처음 120건만 표시합니다.');
         }
         return errors;
     }
@@ -390,10 +477,22 @@
     });
 
     form.addEventListener('submit', function (event) {
-        if (form.dataset.clientCheckState === 'invalid') {
-            event.preventDefault();
-            showErrors(['1차 검사 오류를 먼저 수정한 뒤 다시 업로드해 주세요.']);
+        const state = form.dataset.clientCheckState || 'idle';
+        if (state === 'valid') {
+            return;
         }
+        event.preventDefault();
+        if (state === 'checking') {
+            showInfo('검사가 진행 중입니다. 잠시만 기다려 주세요.');
+            return;
+        }
+        runClientCheck(function (ok) {
+            if (ok) {
+                form.requestSubmit();
+            } else {
+                showErrors(['1차 검사 오류를 먼저 수정한 뒤 다시 업로드해 주세요.']);
+            }
+        });
     });
 })();
 </script>

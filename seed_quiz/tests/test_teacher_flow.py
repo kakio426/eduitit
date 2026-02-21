@@ -109,6 +109,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "오늘의 퀴즈 선택")
         self.assertContains(resp, 'id="csv-client-check"')
+        self.assertContains(resp, "정확히 3문항 필요")
 
     def test_download_csv_template(self):
         url = reverse(
