@@ -293,12 +293,47 @@ def _iter_remote_file_urls(file_field, *, fallback_url=""):
         seen.add(url)
         urls.append(url)
 
-    # 서명 URL을 먼저 시도 (401 인증 오류 우회)
-    signed_url = _build_cloudinary_signed_url(file_field, fallback_url=fallback_url)
-    push(signed_url)
-    push(_strip_cloudinary_signature(signed_url))
+    # Cloudinary 파일이면 모든 (resource_type, delivery_type) 조합의 서명 URL을 먼저 시도
+    is_cloudinary_url = "res.cloudinary.com" in (fallback_url or "")
+    storage_module = getattr(getattr(file_field, "storage", None), "__class__", type("X", (), {})).__module__
+    is_cloudinary_storage = "cloudinary" in (storage_module or "")
 
-    # 그다음 원본 URL
+    if is_cloudinary_url or is_cloudinary_storage:
+        try:
+            from cloudinary.utils import cloudinary_url as _cld_url
+            file_name = (getattr(file_field, "name", "") or "").lstrip("/")
+
+            # fallback_url에서 resource_type/delivery_type 파싱
+            detected_rt = "image"
+            detected_dt = "upload"
+            if is_cloudinary_url:
+                try:
+                    parts = fallback_url.split("res.cloudinary.com/")[1].split("/")
+                    if len(parts) >= 3:
+                        detected_rt = parts[1]
+                        detected_dt = parts[2]
+                except Exception:
+                    pass
+
+            # 탐지된 조합 우선, 그다음 나머지 조합 순으로 서명 URL 생성
+            combos = [(detected_rt, detected_dt)]
+            for rt in ("image", "raw"):
+                for dt in ("upload", "authenticated", "private"):
+                    if (rt, dt) not in combos:
+                        combos.append((rt, dt))
+
+            for rt, dt in combos:
+                try:
+                    signed, _ = _cld_url(
+                        file_name, resource_type=rt, type=dt, secure=True, sign_url=True
+                    )
+                    push(signed)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # 원본 URL을 마지막 fallback으로
     push(fallback_url)
     push(_strip_cloudinary_signature(fallback_url))
 
@@ -357,45 +392,58 @@ def _build_cloudinary_signed_url(file_field, *, fallback_url="") -> str:
     if not (is_cloudinary_storage or is_cloudinary_url):
         return ""
 
+    # 현재 cloudinary 설정 확인 (자격증명 유효성 로깅)
+    try:
+        import cloudinary as _cld
+        _cfg = _cld.config()
+        logger.warning(
+            "[PDF_DEBUG] cloudinary config: cloud=%s api_key=%s api_secret_len=%d",
+            _cfg.cloud_name,
+            (_cfg.api_key or "")[:6],
+            len(_cfg.api_secret or ""),
+        )
+    except Exception as _e:
+        logger.warning("[PDF_DEBUG] cloudinary config check failed: %s", _e)
+
     # fallback_url에서 resource_type과 delivery_type 파싱
-    # URL 형식: https://res.cloudinary.com/{cloud}/{resource_type}/{delivery_type}/...
-    resource_type = "raw"
+    resource_type = "image"
     delivery_type = "upload"
     if is_cloudinary_url:
         try:
             after_cloud = fallback_url.split("res.cloudinary.com/")[1]
             parts = after_cloud.split("/")
-            # parts[0]=cloud_name, parts[1]=resource_type, parts[2]=delivery_type
             if len(parts) >= 3:
-                resource_type = parts[1]   # "image", "raw", "video"
-                delivery_type = parts[2]   # "upload", "authenticated", "private"
+                resource_type = parts[1]
+                delivery_type = parts[2]
         except Exception:
             pass
 
     logger.warning("[PDF_DEBUG] signing with resource_type=%s delivery_type=%s", resource_type, delivery_type)
 
-    # 탐지된 resource_type 우선, 그다음 raw/image 순으로 시도
-    resource_types_to_try = [resource_type]
-    for rt in ("raw", "image"):
-        if rt not in resource_types_to_try:
-            resource_types_to_try.append(rt)
+    # (resource_type, delivery_type) 조합을 우선순위대로 모두 시도
+    combos = [(resource_type, delivery_type)]
+    for rt in ("image", "raw"):
+        for dt in ("upload", "authenticated", "private"):
+            if (rt, dt) not in combos:
+                combos.append((rt, dt))
 
-    for rt in resource_types_to_try:
+    urls = []
+    for rt, dt in combos:
         try:
             signed, _ = cloudinary_url(
                 file_name,
                 resource_type=rt,
-                type=delivery_type,
+                type=dt,
                 secure=True,
                 sign_url=True,
             )
             if signed:
-                logger.warning("[PDF_DEBUG] generated signed URL (resource_type=%s): %s", rt, signed[:80])
-                return signed
+                logger.warning("[PDF_DEBUG] candidate signed URL (rt=%s dt=%s): %s", rt, dt, signed[:80])
+                urls.append(signed)
         except Exception:
             continue
 
-    return ""
+    return urls[0] if urls else ""
 
 
 def _remote_url_accessible(url: str) -> bool:
