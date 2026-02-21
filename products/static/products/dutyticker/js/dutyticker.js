@@ -423,7 +423,7 @@ class DutyTickerManager {
         const rawValue = Number(input.value);
         if (!Number.isFinite(rawValue)) return;
 
-        const minutes = Math.max(1, Math.floor(rawValue));
+        const minutes = Math.min(999, Math.max(1, Math.floor(rawValue)));
         input.value = String(minutes);
         this.setTimerMode(minutes * 60, true);
     }
@@ -431,9 +431,10 @@ class DutyTickerManager {
     setTimerMode(sec, autoStart = false) {
         const normalizedSec = Number(sec);
         if (!Number.isFinite(normalizedSec) || normalizedSec <= 0) return;
+        const safeSeconds = this.normalizeTimerSeconds(normalizedSec, this.timerMaxSeconds || 300);
 
         this.pauseTimer();
-        this.timerMaxSeconds = Math.floor(normalizedSec);
+        this.timerMaxSeconds = safeSeconds;
         this.timerSeconds = this.timerMaxSeconds;
         this.syncCustomTimerInput();
         this.updateTimerDisplay();
@@ -445,7 +446,7 @@ class DutyTickerManager {
     syncCustomTimerInput() {
         const input = document.getElementById('customTimerMinutesInput');
         if (!input) return;
-        const mins = Math.max(1, Math.round(this.timerMaxSeconds / 60));
+        const mins = Math.min(999, Math.max(1, Math.round(this.timerMaxSeconds / 60)));
         input.value = String(mins);
     }
 
@@ -456,6 +457,8 @@ class DutyTickerManager {
         const display = document.getElementById('mainTimerDisplay');
         if (display) {
             display.textContent = text;
+            display.setAttribute('aria-pressed', this.isTimerRunning ? 'true' : 'false');
+            display.setAttribute('aria-label', this.isTimerRunning ? `타이머 일시정지 (${text})` : `타이머 시작 (${text})`);
             if (this.isTimerRunning) {
                 display.classList.add('text-yellow-400', 'scale-105');
                 display.classList.remove('text-white');

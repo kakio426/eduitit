@@ -15,7 +15,9 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertTemplateUsed(response, 'products/dutyticker/main.html')
 
         self.assertContains(response, 'id="customTimerMinutesInput"')
+        self.assertContains(response, 'max="999"')
         self.assertContains(response, 'step="1"')
+        self.assertContains(response, 'id="mainTimerDisplay" type="button"')
         self.assertContains(response, 'window.dtApp.addTimerMinutes(1)')
         self.assertContains(response, 'window.dtApp.applyCustomTimerMinutes()')
         self.assertContains(response, 'window.dtApp.setTimerMode(300, true)')
@@ -29,3 +31,5 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('normalizeTimerSeconds(', script)
         self.assertIn('saveTimerState()', script)
         self.assertIn('restoreTimerState()', script)
+        self.assertIn('Math.min(999', script)
+        self.assertIn("display.setAttribute('aria-pressed'", script)
