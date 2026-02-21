@@ -17,7 +17,7 @@
 </style>
 
 <section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]" x-data="hwpxChatPage()">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
             <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <i class="fa-solid fa-arrow-left"></i>
@@ -33,7 +33,7 @@
             >
                 {% csrf_token %}
                 <button type="submit" class="px-3 py-2 bg-white text-gray-600 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                    대화 초기화
+                    변환 결과 초기화
                 </button>
             </form>
         </div>
@@ -41,70 +41,54 @@
         <div class="text-center mb-8" data-aos="fade-up">
             <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📄" }}</div>
             <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">한글문서 AI야 읽어줘</h1>
-            <p class="text-lg md:text-xl text-gray-500">한글(HWPX) 문서를 읽고 AI와 바로 대화해요.</p>
+            <p class="text-lg md:text-xl text-gray-500">HWPX를 LLM 친화 Markdown으로 변환해서, 원하는 AI 사이트에 복붙해 쓰는 도구입니다.</p>
         </div>
 
-        <div class="clay-card p-6 md:p-8 mb-6" data-aos="fade-up">
-            <p class="text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 leading-relaxed">
-                AI가 문서를 완벽하게 이해할 수 있도록, 한글 파일은 <strong>'다른 이름으로 저장 ➡️ HWPX'</strong>로 변환 후 업로드해 주세요.
-            </p>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="lg:col-span-2">
+                <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                    <p class="text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 leading-relaxed">
+                        AI가 문서를 완벽하게 이해할 수 있도록, 한글 파일은 <strong>'다른 이름으로 저장 ➡️ HWPX'</strong>로 변환 후 업로드해 주세요.
+                    </p>
 
-            <form
-                hx-post="{% url 'hwpxchat:chat_process' %}"
-                hx-target="#hwpx-chat-result"
-                hx-swap="innerHTML"
-                hx-indicator="#hwpx-chat-loading"
-                enctype="multipart/form-data"
-                class="space-y-4"
-            >
-                {% csrf_token %}
+                    <p class="text-sm md:text-base text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 leading-relaxed">
+                        이 서비스는 AI API를 호출하지 않습니다. 파일을 Markdown으로 변환만 수행하며, 변환 결과는 직접 복사해 외부 LLM에 붙여 넣어 사용합니다.
+                    </p>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-bold text-gray-600 mb-1">한글 파일(HWPX) 업로드</label>
-                        <input
-                            type="file"
-                            name="hwpx_file"
-                            accept=".hwpx,.hwp"
-                            @change="validateHwpxFile($event)"
-                            class="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none bg-white"
-                        >
-                        <p class="text-xs text-gray-500 mt-1">
-                            문서를 바꾸지 않을 때는 파일을 다시 올리지 않고 질문만 이어서 입력해도 됩니다.
-                        </p>
-                    </div>
+                    <form
+                        hx-post="{% url 'hwpxchat:chat_process' %}"
+                        hx-target="#hwpx-chat-result"
+                        hx-swap="innerHTML"
+                        hx-indicator="#hwpx-chat-loading"
+                        enctype="multipart/form-data"
+                        class="space-y-4"
+                    >
+                        {% csrf_token %}
 
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">AI Provider</label>
-                        <select
-                            name="provider"
-                            class="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none bg-white"
-                        >
-                            <option value="gemini" {% if selected_provider == 'gemini' %}selected{% endif %}>Gemini</option>
-                            <option value="claude" {% if selected_provider == 'claude' %}selected{% endif %}>Claude</option>
-                        </select>
-                    </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">한글 파일(HWPX) 업로드</label>
+                            <input
+                                type="file"
+                                name="hwpx_file"
+                                required
+                                accept=".hwpx,.hwp"
+                                @change="validateHwpxFile($event)"
+                                class="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none bg-white"
+                            >
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
+                            <i class="fa-solid fa-file-code mr-1"></i>HWPX를 Markdown으로 변환하기
+                        </button>
+                    </form>
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-bold text-gray-600 mb-1">질문</label>
-                    <textarea
-                        name="question"
-                        rows="4"
-                        required
-                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none bg-white"
-                        placeholder="문서에서 확인하고 싶은 내용을 질문해 주세요."
-                    ></textarea>
+            <div class="lg:col-span-3">
+                <div id="hwpx-chat-result">
+                    {% include 'hwpxchat/partials/chat_result.html' %}
                 </div>
-
-                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
-                    <i class="fa-solid fa-paper-plane mr-1"></i>문서 기반으로 AI에게 질문하기
-                </button>
-            </form>
-        </div>
-
-        <div id="hwpx-chat-result">
-            {% include 'hwpxchat/partials/chat_result.html' %}
+            </div>
         </div>
     </div>
 </section>
@@ -112,7 +96,7 @@
 <div id="hwpx-chat-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
     <div class="clay-card px-6 py-5 flex items-center gap-3">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
-        <span class="text-gray-700 font-bold">문서를 분석하고 있어요...</span>
+        <span class="text-gray-700 font-bold">HWPX를 분석하고 Markdown으로 변환 중...</span>
     </div>
 </div>
 
@@ -127,19 +111,55 @@
                 }
 
                 const file = input.files[0];
-                const name = (file.name || '').toLowerCase();
-                if (name.endsWith('.hwp')) {
-                    input.value = '';
+                const name = (file.name || "").toLowerCase();
+                if (name.endsWith(".hwp")) {
+                    input.value = "";
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'HWP 파일은 업로드할 수 없습니다',
+                        icon: "warning",
+                        title: "HWP 파일은 업로드할 수 없습니다",
                         html: "문서를 <b>다른 이름으로 저장 ➡️ HWPX</b>로 변환한 뒤 업로드해 주세요.",
-                        confirmButtonText: '확인',
-                        confirmButtonColor: '#10b981'
+                        confirmButtonText: "확인",
+                        confirmButtonColor: "#10b981"
                     });
                 }
             }
         };
+    }
+
+    function copyHwpxMarkdown() {
+        const textarea = document.getElementById("hwpx-markdown-output");
+        if (!textarea) {
+            return;
+        }
+
+        const text = textarea.value || "";
+        if (!text.trim()) {
+            Swal.fire({
+                icon: "warning",
+                title: "복사할 내용이 없습니다",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+            return;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({
+                icon: "success",
+                title: "Markdown을 복사했습니다",
+                text: "원하는 LLM 사이트에 붙여 넣고 질문해 보세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+        }).catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "복사에 실패했습니다",
+                text: "텍스트를 직접 선택해서 복사해 주세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+        });
     }
 </script>
 {% endblock %}

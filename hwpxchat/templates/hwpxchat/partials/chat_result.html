@@ -14,31 +14,37 @@
     <div class="mb-4 text-sm text-gray-500 flex items-center justify-between gap-2 flex-wrap">
         <span>
             <i class="fa-solid fa-file-lines mr-1"></i>
-            {% if has_document_context %}문서 컨텍스트 로드됨{% else %}문서 컨텍스트 없음{% endif %}
+            {% if has_markdown_output %}변환 결과 준비됨{% else %}변환 결과 없음{% endif %}
         </span>
-        <span>
-            <i class="fa-solid fa-robot mr-1"></i>
-            Provider: {{ selected_provider|default:"gemini"|upper }}
-        </span>
+
+        {% if has_markdown_output %}
+        <button
+            type="button"
+            onclick="copyHwpxMarkdown()"
+            class="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition"
+        >
+            <i class="fa-solid fa-copy mr-1"></i>Markdown 복사
+        </button>
+        {% endif %}
     </div>
 
-    {% if messages %}
+    {% if has_markdown_output %}
     <div class="space-y-4">
-        {% for item in messages %}
-        <div class="rounded-2xl p-4 border {% if item.role == 'user' %}bg-white border-gray-200{% else %}bg-emerald-50 border-emerald-200{% endif %}">
-            <p class="text-xs font-bold mb-2 {% if item.role == 'user' %}text-gray-500{% else %}text-emerald-700{% endif %}">
-                {% if item.role == 'user' %}사용자 질문{% else %}AI 답변{% endif %}
-            </p>
-            <div class="text-sm md:text-base text-gray-700 leading-relaxed break-words">
-                {{ item.content|linebreaksbr }}
-            </div>
+        <textarea
+            id="hwpx-markdown-output"
+            readonly
+            class="w-full h-[420px] px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed focus:outline-none"
+        >{{ markdown_output }}</textarea>
+
+        <div class="rounded-xl bg-white border border-gray-200 p-4 text-sm text-gray-600 leading-relaxed">
+            1. 위 Markdown을 복사합니다.<br>
+            2. Gemini/Claude/ChatGPT 등 원하는 LLM 사이트를 엽니다.<br>
+            3. 붙여 넣은 뒤 원하는 질문을 이어서 입력하면 됩니다.
         </div>
-        {% endfor %}
     </div>
     {% else %}
     <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">
-        HWPX 파일을 업로드하고 질문을 보내면 이 영역에 대화 결과가 표시됩니다.
+        HWPX 파일을 업로드하면 여기에 LLM이 읽기 쉬운 Markdown 변환 결과가 표시됩니다.
     </div>
     {% endif %}
 </div>
-

@@ -1,6 +1,5 @@
 import io
 import zipfile
-from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,7 +12,7 @@ from core.models import UserProfile
 def _build_sample_hwpx_file(name="sample.hwpx"):
     section_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <hp:section xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">
-  <hp:p><hp:run><hp:t>테스트 문서</hp:t></hp:run></hp:p>
+  <hp:p><hp:run><hp:t>Sample document</hp:t></hp:run></hp:p>
 </hp:section>
 """
     buffer = io.BytesIO()
@@ -38,32 +37,34 @@ class HwpxChatViewTests(TestCase):
     def test_hwp_upload_is_blocked_server_side(self):
         response = self.client.post(
             reverse("hwpxchat:chat_process"),
-            data={
-                "question": "요약해줘",
-                "provider": "gemini",
-                "hwpx_file": _build_sample_hwpx_file(name="sample.hwp"),
-            },
+            data={"hwpx_file": _build_sample_hwpx_file(name="sample.hwp")},
             HTTP_HX_REQUEST="true",
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "HWP 파일은 지원하지 않습니다")
+        self.assertContains(response, "HWP 파일은 지원하지 않습니다.")
 
-    @patch("hwpxchat.views.generate_chat_response", return_value="AI 응답 테스트")
-    def test_hwpx_chat_success(self, _mock_ai):
+    def test_missing_file_returns_error(self):
         response = self.client.post(
             reverse("hwpxchat:chat_process"),
-            data={
-                "question": "문서 핵심 알려줘",
-                "provider": "gemini",
-                "hwpx_file": _build_sample_hwpx_file(),
-            },
+            data={},
             HTTP_HX_REQUEST="true",
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "AI 응답 테스트")
-        self.assertContains(response, "문서 컨텍스트 로드됨")
+        self.assertContains(response, "HWPX 파일을 업로드해 주세요.")
 
+    def test_hwpx_convert_success(self):
+        response = self.client.post(
+            reverse("hwpxchat:chat_process"),
+            data={"hwpx_file": _build_sample_hwpx_file()},
+            HTTP_HX_REQUEST="true",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "변환 완료.")
+        self.assertContains(response, "id=\"hwpx-markdown-output\"")
+        self.assertContains(response, "Sample document")
