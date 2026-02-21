@@ -64,7 +64,7 @@ class TeacherFlowTest(TestCase):
         self.client.force_login(self.teacher)
         self.bank = SQQuizBank.objects.create(
             title="공식 상식 기본 세트",
-            preset_type="general",
+            preset_type="orthography",
             grade=3,
             source="manual",
             is_official=True,
@@ -124,14 +124,53 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_bank_browse",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "official"})
+        resp = self.client.get(url, {"preset_type": "orthography", "grade": "3", "scope": "official"})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "공식 상식 기본 세트")
+
+    def test_bank_browse_with_all_grade_includes_other_grades(self):
+        bank2 = SQQuizBank.objects.create(
+            title="공식 맞춤법 심화 세트",
+            preset_type="orthography",
+            grade=4,
+            source="manual",
+            is_official=True,
+            is_public=False,
+            is_active=True,
+            created_by=self.teacher,
+        )
+        for idx in range(1, 4):
+            SQQuizBankItem.objects.create(
+                bank=bank2,
+                order_no=idx,
+                question_text=f"문제 {idx}",
+                choices=["A", "B", "C", "D"],
+                correct_index=0,
+                explanation="",
+                difficulty="easy",
+            )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "orthography", "grade": "all", "scope": "official"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "공식 상식 기본 세트")
+        self.assertContains(resp, "공식 맞춤법 심화 세트")
+
+    def test_bank_random_select_returns_preview(self):
+        url = reverse(
+            "seed_quiz:htmx_bank_random_select",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(url, {"preset_type": "orthography", "grade": "all", "scope": "official"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "선택된 퀴즈 미리보기")
 
     def test_bank_browse_hides_future_official_set(self):
         SQQuizBank.objects.create(
             title="내일 공개 공식 세트",
-            preset_type="general",
+            preset_type="orthography",
             grade=3,
             source="ai",
             is_official=True,
@@ -143,14 +182,14 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_bank_browse",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "official"})
+        resp = self.client.get(url, {"preset_type": "orthography", "grade": "3", "scope": "official"})
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, "내일 공개 공식 세트")
 
     def test_bank_browse_public_hides_unapproved(self):
         SQQuizBank.objects.create(
             title="미승인 공개 세트",
-            preset_type="general",
+            preset_type="orthography",
             grade=3,
             source="csv",
             is_public=True,
@@ -162,14 +201,14 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_bank_browse",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "public"})
+        resp = self.client.get(url, {"preset_type": "orthography", "grade": "3", "scope": "public"})
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, "미승인 공개 세트")
 
     def test_bank_browse_all_includes_my_review_set(self):
         SQQuizBank.objects.create(
             title="내 검토대기 세트",
-            preset_type="general",
+            preset_type="orthography",
             grade=3,
             source="csv",
             is_public=False,
@@ -181,7 +220,7 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_bank_browse",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "all"})
+        resp = self.client.get(url, {"preset_type": "orthography", "grade": "3", "scope": "all"})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "내 검토대기 세트")
 
@@ -219,9 +258,9 @@ class TeacherFlowTest(TestCase):
     def test_csv_upload_creates_bank(self):
         csv_text = (
             "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "CSV 세트 A,general,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "CSV 세트 A,general,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "CSV 세트 A,general,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "CSV 세트 A,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
+            "CSV 세트 A,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
+            "CSV 세트 A,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -252,9 +291,9 @@ class TeacherFlowTest(TestCase):
     def test_csv_confirm_with_share_opt_in_sets_review_status(self):
         csv_text = (
             "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "CSV 세트 공유,general,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "CSV 세트 공유,general,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "CSV 세트 공유,general,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "CSV 세트 공유,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
+            "CSV 세트 공유,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
+            "CSV 세트 공유,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -295,7 +334,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "세션이 만료", status_code=400)
 
-    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1, SEED_QUIZ_ALLOW_RAG=True)
     @patch("seed_quiz.views.generate_bank_from_context_ai")
     def test_rag_generate_returns_preview_and_consumes_quota(self, mock_generate):
         mock_generate.return_value = self.bank
@@ -305,7 +344,7 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(
             url,
-            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+            {"preset_type": "orthography", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "지문 기반 맞춤 생성 완료")
@@ -317,7 +356,7 @@ class TeacherFlowTest(TestCase):
         )
         self.assertEqual(usage.count, 1)
 
-    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1, SEED_QUIZ_ALLOW_RAG=True)
     def test_rag_generate_blocks_when_daily_limit_exceeded(self):
         SQRagDailyUsage.objects.create(
             usage_date=timezone.localdate(),
@@ -331,12 +370,12 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(
             url,
-            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+            {"preset_type": "orthography", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
         )
         self.assertEqual(resp.status_code, 429)
         self.assertIn("오늘의 맞춤 생성 횟수를 모두 사용", resp.content.decode("utf-8"))
 
-    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1)
+    @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1, SEED_QUIZ_ALLOW_RAG=True)
     @patch("seed_quiz.views.generate_bank_from_context_ai", side_effect=RuntimeError("생성 실패"))
     def test_rag_generate_refunds_quota_on_generation_error(self, _mock_generate):
         url = reverse(
@@ -345,7 +384,7 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(
             url,
-            {"preset_type": "general", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
+            {"preset_type": "orthography", "grade": "3", "source_text": "오늘 읽은 글 지문입니다."},
         )
         self.assertEqual(resp.status_code, 400)
         usage = SQRagDailyUsage.objects.get(
@@ -362,7 +401,7 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_generate",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.post(url, {"preset_type": "general", "grade": "3"})
+        resp = self.client.post(url, {"preset_type": "orthography", "grade": "3"})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "우리나라 수도는?")
 
@@ -374,7 +413,7 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_generate",
             kwargs={"classroom_id": self.classroom.id},
         )
-        self.client.post(gen_url, {"preset_type": "general", "grade": "3"})
+        self.client.post(gen_url, {"preset_type": "orthography", "grade": "3"})
         quiz_set = SQQuizSet.objects.filter(classroom=self.classroom).first()
         self.assertIsNotNone(quiz_set)
 
@@ -400,7 +439,7 @@ class TeacherFlowTest(TestCase):
         )
 
         # 첫 번째 생성
-        self.client.post(gen_url, {"preset_type": "general", "grade": "3"})
+        self.client.post(gen_url, {"preset_type": "orthography", "grade": "3"})
         qs1 = SQQuizSet.objects.filter(classroom=self.classroom).order_by("created_at").first()
         self.assertIsNotNone(qs1)
         pub_url = reverse(
@@ -412,7 +451,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(qs1.status, "published")
 
         # 두 번째 생성 (다시 생성하면 같은 draft 세트 재사용)
-        self.client.post(gen_url, {"preset_type": "general", "grade": "3"})
+        self.client.post(gen_url, {"preset_type": "orthography", "grade": "3"})
         # draft가 다시 생겼는지 확인 (qs1이 published → 새 draft)
         qs2 = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
         self.assertIsNotNone(qs2)

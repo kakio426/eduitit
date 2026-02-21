@@ -29,7 +29,7 @@ def _setup_data():
     quiz_set = SQQuizSet.objects.create(
         classroom=classroom,
         target_date=timezone.localdate(),
-        preset_type="general",
+        preset_type="orthography",
         grade=3,
         title="채점 테스트",
         status="published",

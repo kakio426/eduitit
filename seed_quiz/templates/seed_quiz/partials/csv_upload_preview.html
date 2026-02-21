@@ -7,7 +7,7 @@
         <div class="px-3 py-2 bg-white border border-indigo-100 rounded-lg">
             <div class="font-bold text-slate-800">{{ s.set_title }}</div>
             <div class="text-xs text-slate-500 mt-1">
-                {{ s.grade }}학년 · {{ s.preset_type }} · {{ s.items|length }}문항
+                {{ s.grade }}학년 · {{ s.preset_label|default:s.preset_type }} ({{ s.preset_type }}) · {{ s.items|length }}문항
             </div>
         </div>
         {% endfor %}

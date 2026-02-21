@@ -34,7 +34,7 @@ def make_quiz_set(classroom, teacher, status="draft"):
     return SQQuizSet.objects.create(
         classroom=classroom,
         target_date=timezone.localdate(),
-        preset_type="general",
+        preset_type="orthography",
         grade=3,
         title="테스트 퀴즈",
         status=status,
@@ -73,7 +73,7 @@ class SQQuizSetModelTest(TestCase):
             SQQuizSet.objects.create(
                 classroom=self.classroom,
                 target_date=timezone.localdate(),
-                preset_type="general",
+                preset_type="orthography",
                 grade=3,
                 title="두 번째 퀴즈",
                 status="published",

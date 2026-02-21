@@ -3,11 +3,12 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from seed_quiz.models import SQBatchJob
 
 
+@override_settings(SEED_QUIZ_BATCH_ENABLED=True)
 class BatchCommandTest(TestCase):
     def test_batch_tick_submits_dry_run_when_missing(self):
         out = StringIO()

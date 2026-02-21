@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from seed_quiz.data.fallback_loader import load_fallback_bank
 from seed_quiz.models import SQGenerationLog, SQQuizItem, SQQuizSet
+from seed_quiz.topics import TOPIC_LABELS
 from seed_quiz.services.validator import normalize_and_check, validate_quiz_payload
 
 logger = logging.getLogger("seed_quiz.generation")
@@ -15,14 +16,7 @@ logger = logging.getLogger("seed_quiz.generation")
 AI_TIMEOUT = 5.0
 AI_RETRIES = 1
 
-PRESET_LABELS = {
-    "general": "상식",
-    "math": "수학",
-    "korean": "국어",
-    "science": "과학",
-    "social": "사회",
-    "english": "영어",
-}
+PRESET_LABELS = TOPIC_LABELS
 
 SYSTEM_PROMPT = """\
 당신은 대한민국 초등학교 교육 전문가입니다. 교사가 요청하는 학년과 과목에 맞는 퀴즈를 만들어 주세요.
@@ -30,7 +24,7 @@ SYSTEM_PROMPT = """\
 
 
 def _make_user_prompt(grade: int, preset_type: str) -> str:
-    label = PRESET_LABELS.get(preset_type, "상식")
+    label = PRESET_LABELS.get(preset_type, "주제")
     return (
         f"초등학교 {grade}학년 학생을 위한 {label} 퀴즈 3문제를 JSON으로 출력하세요.\n"
         '출력 형식:\n{"items":[{"question_text":"문제","choices":["A","B","C","D"],'
@@ -102,7 +96,7 @@ def generate_and_save_draft(classroom, preset_type: str, grade: int, created_by)
             status="draft",
             defaults={
                 "grade": grade,
-                "title": f"{target_date} {PRESET_LABELS.get(preset_type, '상식')} 퀴즈",
+                "title": f"{target_date} {PRESET_LABELS.get(preset_type, '주제')} 퀴즈",
                 "source": "ai",
                 "created_by": created_by,
             },

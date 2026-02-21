@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q
 
 from happy_seed.models import HSClassroom, HSStudent
+from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_CHOICES
 
 User = get_user_model()
 
@@ -23,21 +24,14 @@ class SQQuizBank(models.Model):
         ("approved", "승인"),
         ("rejected", "반려"),
     ]
-    PRESET_CHOICES = [
-        ("general", "상식"),
-        ("math", "수학"),
-        ("korean", "국어"),
-        ("science", "과학"),
-        ("social", "사회"),
-        ("english", "영어"),
-    ]
+    PRESET_CHOICES = TOPIC_CHOICES
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     preset_type = models.CharField(
         max_length=20,
         choices=PRESET_CHOICES,
-        default="general",
-        verbose_name="과목 프리셋",
+        default=DEFAULT_TOPIC,
+        verbose_name="주제",
     )
     grade = models.IntegerField(default=3, verbose_name="학년")
     title = models.CharField(max_length=200, verbose_name="제목")
@@ -142,14 +136,7 @@ class SQQuizSet(models.Model):
         ("bank", "은행"),
         ("csv", "CSV"),
     ]
-    PRESET_CHOICES = [
-        ("general", "상식"),
-        ("math", "수학"),
-        ("korean", "국어"),
-        ("science", "과학"),
-        ("social", "사회"),
-        ("english", "영어"),
-    ]
+    PRESET_CHOICES = TOPIC_CHOICES
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     classroom = models.ForeignKey(
@@ -162,8 +149,8 @@ class SQQuizSet(models.Model):
     preset_type = models.CharField(
         max_length=20,
         choices=PRESET_CHOICES,
-        default="general",
-        verbose_name="과목 프리셋",
+        default=DEFAULT_TOPIC,
+        verbose_name="주제",
     )
     grade = models.IntegerField(default=3, verbose_name="학년")
     title = models.CharField(max_length=100, verbose_name="제목")

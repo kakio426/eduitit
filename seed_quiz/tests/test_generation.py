@@ -66,7 +66,7 @@ class GenerationTest(TestCase):
     @patch("seed_quiz.services.generation._call_ai")
     def test_ai_success_creates_draft(self, mock_call_ai):
         mock_call_ai.return_value = VALID_AI_RESPONSE
-        quiz_set = generate_and_save_draft(self.classroom, "general", 3, self.teacher)
+        quiz_set = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
 
         self.assertEqual(quiz_set.status, "draft")
         self.assertEqual(quiz_set.source, "ai")
@@ -75,7 +75,7 @@ class GenerationTest(TestCase):
     @patch("seed_quiz.services.generation._call_ai")
     def test_ai_timeout_falls_back_to_fallback(self, mock_call_ai):
         mock_call_ai.side_effect = Exception("timeout")
-        quiz_set = generate_and_save_draft(self.classroom, "general", 3, self.teacher)
+        quiz_set = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
 
         self.assertEqual(quiz_set.status, "draft")
         self.assertEqual(quiz_set.source, "fallback")
@@ -92,7 +92,7 @@ class GenerationTest(TestCase):
         mock_fallback.side_effect = FileNotFoundError("no fallback")
 
         with self.assertRaises(RuntimeError):
-            generate_and_save_draft(self.classroom, "general", 3, self.teacher)
+            generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
 
         # atomic 밖에서 status=failed 저장되므로 DB에 반영됨
         quiz_set = SQQuizSet.objects.filter(classroom=self.classroom).first()
@@ -107,10 +107,10 @@ class GenerationTest(TestCase):
     def test_regeneration_replaces_items(self, mock_call_ai):
         mock_call_ai.return_value = VALID_AI_RESPONSE
         # 첫 번째 생성
-        qs1 = generate_and_save_draft(self.classroom, "general", 3, self.teacher)
+        qs1 = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
         self.assertEqual(qs1.items.count(), 3)
 
         # 두 번째 생성 (재생성)
-        qs2 = generate_and_save_draft(self.classroom, "general", 3, self.teacher)
+        qs2 = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
         self.assertEqual(qs1.id, qs2.id)  # 같은 draft 세트
         self.assertEqual(qs2.items.count(), 3)  # 여전히 3개 (재생성)

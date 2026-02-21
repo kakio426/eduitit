@@ -1,136 +1,78 @@
-# Seed Quiz 최종 통합 계획안
+# Seed Quiz 통합 계획안 (CSV 전용 운영)
 
 기준일: 2026-02-21  
-목표: 교사 업무 제로화, API 비용 최소화, 태블릿 학생 UX 안정화
+운영 원칙: `자동 배치 비활성` + `교사/운영자 검수 후 CSV 업로드`
 
-## 1. 최종 전략 요약
+## 1. 변경 결정 (확정)
 
-운영 기본은 `공식 문제은행 + CSV`로 고정하고, `RAG`는 제한형 보완 기능으로 운영한다.
+1. OpenAI Batch 자동화 파이프라인은 운영에서 사용하지 않는다.
+2. 문제 공급은 `CSV 업로드`를 기본으로 한다.
+3. 교사 화면은 `주제 중심`으로 운영한다(학년은 선택 보조값).
+4. AI 경로는 기본 비활성 상태로 둔다.
 
-- 기본 운영 비율: `90% 비API(공식/CSV)` + `10% 제한형 RAG`
-- 교사는 API 키를 다루지 않는다. 모든 외부 API는 서버에서만 호출한다.
-- 교사 기본 동선은 `선택 -> 미리보기 -> 배포` 3단계로 고정한다.
+## 2. 현재 반영 상태
 
-## 2. 교사 입장에서 API 사용 지점
+1. `SEED_QUIZ_BATCH_ENABLED=False` 기본값 반영 완료.
+2. 배치 명령(`seed_quiz_batch_submit`, `seed_quiz_batch_collect`, `seed_quiz_batch_tick`)은 위 플래그가 꺼져 있으면 실행 차단.
+3. 교사 대시보드에서 RAG 카드는 `SEED_QUIZ_ALLOW_RAG=True`일 때만 노출.
+4. 주제(`preset_type`)는 20개로 확장 완료.
+5. CSV 파서가 새 주제 키를 검증하도록 반영 완료.
+6. 문제은행 조회에서 `전체 학년` 필터 지원 완료.
+7. 주제별 랜덤 1세트 선택 기능 반영 완료(최근 사용 세트 우선 제외).
 
-교사에게 노출되는 기능별 외부 AI API 호출 여부:
+## 3. 주제 체계 (20개)
 
-1. `오늘의 공식 퀴즈 적용`: 호출 없음
-2. `CSV 업로드`: 호출 없음
-3. `맞춤 생성(RAG, 제한형)`: 서버에서만 호출 있음
-4. `월간 배치 공장`: 관리자/스케줄러만 호출
+1. `orthography` 맞춤법
+2. `spacing` 띄어쓰기
+3. `vocabulary` 어휘 뜻
+4. `proverb` 속담
+5. `idiom` 관용어
+6. `sino_idiom` 사자성어
+7. `hanja_word` 한자어 뜻
+8. `main_sentence` 중심문장 찾기
+9. `sentence_order` 문장 순서 배열
+10. `topic_title` 주제/제목 고르기
+11. `fact_opinion` 사실/의견 구분
+12. `eng_vocab` 영어 단어 뜻
+13. `eng_sentence` 영어 문장 의미
+14. `eng_cloze` 영어 빈칸 채우기
+15. `arithmetic` 수학 연산
+16. `pattern` 규칙 찾기
+17. `fraction_decimal` 분수/소수 비교
+18. `time_calendar` 시간/달력 계산
+19. `unit_conversion` 단위 변환
+20. `safety_common` 생활 안전 상식
 
-결론: 교사 일상 사용은 대부분 API 호출 없이 동작한다.
+## 4. CSV 운영 표준
 
-## 3. 아키텍처 역할 분리
+헤더:
+`set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty`
 
-1. `SQQuizBank`: 공유 가능한 원본 콘텐츠 저장소
-2. `SQQuizSet`: 교실/날짜 배포본(런타임 객체)
-3. `SQAttempt`: 학생 풀이/채점/보상 기록
-4. `SQBatchJob`: 월간 배치 작업 추적
+규칙:
+1. 한 세트는 정확히 3문항.
+2. `preset_type`은 위 20개 키만 허용.
+3. `correct_index`는 0~3.
+4. 선택지 중복/빈값 금지.
+5. 업로드 후 반드시 미리보기에서 검수 후 확정.
 
-핵심 원칙:
+## 5. 배포 운영 흐름
 
-- 교사는 은행 콘텐츠를 선택해서 배포본(`SQQuizSet`)으로 복사해 사용
-- 학생 플로우(게이트/풀이/보상)는 기존 안정 로직 유지
+1. 운영자/교사가 외부 LLM으로 CSV 초안 생성
+2. 사람이 검수/수정
+3. `CSV 업로드 -> 미리보기 -> 확정 저장`
+4. 교사가 주제별/학년별(또는 전체학년)로 은행 조회
+5. 선택 후 배포
 
-## 4. 파이프라인 설계
+## 6. 남은 작업 (미완료)
 
-### A. 중앙 공식 배달 (권장 기본)
+1. 운영 보고 화면 간소화
+내용: 주제별 보유 세트 수, 최근 사용일, 품질 상태를 한 화면에서 확인.
 
-- 관리자 검수 완료 콘텐츠를 `official`로 게시
-- 교사 대시보드에 `오늘의 공식 퀴즈 적용` 목록 제공
-- 적용 시 `copy_bank_to_draft()` 후 즉시 미리보기/배포
+2. CSV 템플릿 자동 다운로드 버튼
+내용: 20개 주제 키/설명 포함 템플릿 파일 제공.
 
-### B. 월간 Batch 공장
+## 7. 운영 플래그 기본값
 
-- 매월 25일 다음 달 세트 대량 생성 요청
-- 결과 수집 후 공통 validator 검증
-- 승인 전 `review`, 승인 후 `official`로 전환
-
-### C. 교사 CSV 업로드
-
-- 템플릿 기반 업로드 -> 행 번호 단위 검증 오류 반환
-- 흐름: `parse -> preview -> confirm`
-- 공개 체크 시 즉시 공개하지 않고 `review` 대기 후 승인 공개
-
-### D. 제한형 RAG 맞춤 생성
-
-- 교사 입력 텍스트 기반 문제 생성
-- 기본 제한: 교실당 하루 1회
-- 비용 안전장치: `top_k 3~5`, 출력 토큰 상한, 캐시 적용
-
-## 5. 데이터 모델 확장 (요약)
-
-### SQQuizBank
-
-- `visibility`: official/public/private
-- `quality_status`: draft/review/approved/rejected
-- `available_from`, `available_to`
-- `share_opt_in`, `reviewed_by`, `reviewed_at`
-
-### SQBatchJob (신규)
-
-- `provider`, `batch_id`, `status`
-- `input_file_id`, `output_file_id`, `error_file_id`
-- `target_month`, `requested_count`, `success_count`, `failed_count`
-- `meta_json`, `started_at`, `completed_at`
-
-## 6. 교사 대시보드 최종 UX
-
-버튼 3개만 제공:
-
-1. `오늘의 공식 퀴즈 적용` (기본 탭)
-2. `CSV 업로드`
-3. `맞춤 생성(RAG)` (권한/횟수 제한)
-
-기존 `AI 즉시 생성` 버튼은 기본 UI에서 제거하거나 관리자 플래그로 숨긴다.
-
-## 7. RAG 비용 최소화 설계
-
-1. 문서를 규격화해서 DB 저장
-2. 업로드 시 임베딩 1회 생성 후 재사용
-3. 질의 시 관련 청크만 추출해 LLM에 전달
-4. 동일 조건 질의는 캐시 재사용
-
-주의:
-
-- 긴 원문을 매번 LLM에 통째로 보내면 비용 절감 효과가 사라진다.
-
-## 8. 안정성/품질/보안 기준
-
-1. 보상은 기존 멱등성/트랜잭션 정책 유지
-2. 교사 권한 검증(`classroom.teacher == request.user`) 강제
-3. 학생 URL 변조 방지를 위한 세션-DB 교차검증 유지
-4. 공통 validator로 정답 누락/중복 보기/깨진 문자 차단
-5. 공개 콘텐츠는 승인 전 미노출
-
-## 9. 단계별 오픈 로드맵
-
-### Phase 1 (즉시)
-
-- 은행 선택 중심 교사 UI 전환
-- 공식 콘텐츠 적용 흐름 안정화
-
-### Phase 2
-
-- CSV 업로드 + 미리보기 + 확정 배포
-- 공개 공유 승인 워크플로우 추가
-
-### Phase 3
-
-- 월간 Batch 생성/수집 파이프라인 운영화
-- 관리 대시보드에서 승인 일괄 처리
-
-### Phase 4
-
-- 제한형 RAG 파일럿 오픈
-- 사용량/비용/품질 지표 기반 점진 확대
-
-## 10. 완료 기준 (DoD)
-
-1. 교사가 30초 내 퀴즈 배포 가능
-2. 월간 공식 세트 100개 이상 안정 공급
-3. CSV 오류 메시지 행 번호 단위 제공
-4. 학생 풀이/보상 회귀 테스트 통과
-5. 운영 2주간 중복 보상/정답 누락/배포 실패 0건
+1. `SEED_QUIZ_BATCH_ENABLED=False`
+2. `SEED_QUIZ_ALLOW_RAG=False`
+3. `SEED_QUIZ_ALLOW_INLINE_AI=False`

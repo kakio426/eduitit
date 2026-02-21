@@ -14,11 +14,12 @@ from django.db.models import F
 from django.utils import timezone
 
 from seed_quiz.models import SQGenerationLog, SQQuizBank, SQQuizBankItem, SQQuizItem, SQQuizSet
+from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
 from seed_quiz.services.validator import normalize_and_check, validate_quiz_payload
 
 logger = logging.getLogger("seed_quiz.bank")
 
-VALID_PRESET_TYPES = {"general", "math", "korean", "science", "social", "english"}
+VALID_PRESET_TYPES = set(TOPIC_LABELS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 
@@ -141,9 +142,10 @@ def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
             continue
 
         _, first = rows[0]
-        preset_type = (first.get("preset_type") or "general").strip()
-        if preset_type not in VALID_PRESET_TYPES:
-            errors.append(f"세트 '{set_title}': 잘못된 preset_type '{preset_type}'.")
+        preset_raw = (first.get("preset_type") or "").strip()
+        preset_type = normalize_topic(preset_raw)
+        if not preset_type:
+            errors.append(f"세트 '{set_title}': 잘못된 preset_type '{preset_raw}'.")
             continue
 
         try:
@@ -232,6 +234,7 @@ def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
             {
                 "set_title": set_title,
                 "preset_type": preset_type,
+                "preset_label": TOPIC_LABELS.get(preset_type, preset_type),
                 "grade": grade,
                 "items": items_data,
             }
@@ -337,15 +340,16 @@ def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBan
     """
     AI 호출 -> 검증 -> SQQuizBank 저장.
     """
-    from seed_quiz.services.generation import _call_ai, PRESET_LABELS
+    from seed_quiz.services.generation import _call_ai
 
+    preset_type = normalize_topic(preset_type) or DEFAULT_TOPIC
     payload = _call_ai(grade, preset_type)
     ok, errors = validate_quiz_payload(payload)
     if not ok:
         raise ValueError(f"AI 생성 검증 실패: {errors}")
 
     title_date = timezone.localdate().isoformat()
-    label = PRESET_LABELS.get(preset_type, "상식")
+    label = TOPIC_LABELS.get(preset_type, "주제")
     title = f"[AI] {grade}학년 {label} {title_date}"
 
     with transaction.atomic():
@@ -388,6 +392,7 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
     """
     from openai import OpenAI
 
+    preset_type = normalize_topic(preset_type) or DEFAULT_TOPIC
     normalized_source_text = _normalize_source_text(source_text)
     if len(normalized_source_text) < 20:
         raise ValueError("지문이 너무 짧습니다. 20자 이상 입력해 주세요.")
@@ -439,7 +444,7 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
         raise RuntimeError("MASTER_DEEPSEEK_API_KEY not set")
 
     prompt = (
-        f"아래 지문만을 근거로 초등 {grade}학년 {preset_type} 퀴즈 3문항을 JSON으로 작성하세요.\n"
+        f"아래 지문만을 근거로 초등 {grade}학년 {TOPIC_LABELS.get(preset_type, '주제')} 퀴즈 3문항을 JSON으로 작성하세요.\n"
         '형식: {"items":[{"question_text":"...","choices":["A","B","C","D"],"correct_index":0,"explanation":"...","difficulty":"medium"}]}\n'
         "지문 외 추측 금지, 모르면 쉬운 수준으로 재구성하세요.\n\n"
         f"[지문]\n{normalized_source_text}"
@@ -461,7 +466,7 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
     if not ok:
         raise ValueError(f"RAG 생성 검증 실패: {errors}")
 
-    title = f"[RAG] {grade}학년 {preset_type} 맞춤 세트 {timezone.localdate().isoformat()}"
+    title = f"[RAG] {grade}학년 {TOPIC_LABELS.get(preset_type, '주제')} 맞춤 세트 {timezone.localdate().isoformat()}"
     with transaction.atomic():
         bank = SQQuizBank.objects.create(
             preset_type=preset_type,

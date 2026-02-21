@@ -11,6 +11,7 @@ urlpatterns = [
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
     path("class/<uuid:classroom_id>/htmx/bank/", views.htmx_bank_browse, name="htmx_bank_browse"),
+    path("class/<uuid:classroom_id>/htmx/bank/random-select/", views.htmx_bank_random_select, name="htmx_bank_random_select"),
     path("class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/", views.htmx_bank_select, name="htmx_bank_select"),
     path("class/<uuid:classroom_id>/htmx/csv/upload/", views.htmx_csv_upload, name="htmx_csv_upload"),
     path("class/<uuid:classroom_id>/htmx/csv/confirm/", views.htmx_csv_confirm, name="htmx_csv_confirm"),

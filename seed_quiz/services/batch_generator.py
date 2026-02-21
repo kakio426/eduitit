@@ -9,19 +9,13 @@ from datetime import date
 from django.utils import timezone
 
 from seed_quiz.models import SQBatchJob, SQQuizBank, SQQuizBankItem
+from seed_quiz.topics import TOPIC_LABELS
 from seed_quiz.services.validator import validate_quiz_payload
 
 logger = logging.getLogger("seed_quiz.batch")
 
 DEFAULT_MODEL = "gpt-4o-mini"
-PRESET_LABELS = {
-    "general": "상식",
-    "math": "수학",
-    "korean": "국어",
-    "science": "과학",
-    "social": "사회",
-    "english": "영어",
-}
+PRESET_LABELS = TOPIC_LABELS
 
 
 @dataclass
@@ -40,7 +34,7 @@ def _month_days(target_month: date) -> list[date]:
 
 
 def _build_prompt(grade: int, preset_type: str, target_date: date) -> str:
-    label = PRESET_LABELS.get(preset_type, "상식")
+    label = PRESET_LABELS.get(preset_type, "주제")
     return (
         f"초등학교 {grade}학년 대상 {label} 퀴즈 3문항을 만들어 주세요. 날짜 컨텍스트는 {target_date.isoformat()}입니다.\n"
         'JSON만 출력: {"items":[{"question_text":"...","choices":["A","B","C","D"],"correct_index":0,"explanation":"...","difficulty":"medium"}]}\n'

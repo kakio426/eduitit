@@ -1,10 +1,12 @@
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from seed_quiz.models import SQBatchJob
 from seed_quiz.services.batch_generator import BatchConfig, submit_batch_job
+from seed_quiz.topics import TOPIC_LABELS
 
 
 class Command(BaseCommand):
@@ -19,7 +21,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--preset-types",
             type=str,
-            default="general,korean,math,science,social,english",
+            default=",".join(TOPIC_LABELS.keys()),
             help="Comma-separated preset types.",
         )
         parser.add_argument(
@@ -58,6 +60,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if not bool(getattr(settings, "SEED_QUIZ_BATCH_ENABLED", False)):
+            self.stdout.write(
+                self.style.WARNING(
+                    "SEED_QUIZ_BATCH_ENABLED=False: 배치 자동화가 비활성화되어 있습니다 (CSV 운영 모드)."
+                )
+            )
+            return
+
         target_month_str = (options.get("target_month") or "").strip()
         if target_month_str:
             try:

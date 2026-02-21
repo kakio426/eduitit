@@ -1,4 +1,6 @@
 import logging
+import random
+from datetime import timedelta
 from uuid import uuid4
 
 from django.conf import settings
@@ -29,6 +31,7 @@ from seed_quiz.services.gate import (
 from seed_quiz.services.generation import generate_and_save_draft
 from seed_quiz.services.grading import submit_and_reward
 from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
+from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
 
 logger = logging.getLogger("seed_quiz.views")
 
@@ -37,14 +40,44 @@ CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
 
 
 def _parse_bank_filters(raw_preset: str, raw_grade: str):
-    preset_type = raw_preset if raw_preset in dict(SQQuizSet.PRESET_CHOICES) else "general"
+    preset_type = normalize_topic(raw_preset) or DEFAULT_TOPIC
+    raw_grade_value = (raw_grade or "").strip().lower()
+    if raw_grade_value in {"all", "*", ""}:
+        return preset_type, None
     try:
-        grade = int(raw_grade)
+        grade = int(raw_grade_value)
     except (TypeError, ValueError):
         grade = 3
     if grade not in range(1, 7):
         grade = 3
     return preset_type, grade
+
+
+def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, scope: str):
+    banks_qs = SQQuizBank.objects.filter(
+        is_active=True,
+        preset_type=preset_type,
+    )
+    if grade is not None:
+        banks_qs = banks_qs.filter(grade=grade)
+
+    approved_filter = Q(quality_status="approved")
+    today = timezone.localdate()
+    available_filter = (
+        (Q(available_from__isnull=True) | Q(available_from__lte=today))
+        & (Q(available_to__isnull=True) | Q(available_to__gte=today))
+    )
+    if scope == "official":
+        banks_qs = banks_qs.filter(is_official=True).filter(approved_filter).filter(available_filter)
+    elif scope == "public":
+        banks_qs = banks_qs.filter(is_public=True).filter(approved_filter).filter(available_filter)
+    else:
+        banks_qs = banks_qs.filter(
+            (Q(is_official=True) & approved_filter & available_filter)
+            | (Q(is_public=True) & approved_filter & available_filter)
+            | Q(created_by=user)
+        ).distinct()
+    return banks_qs
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +98,7 @@ def landing(request):
 def teacher_dashboard(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     initial_preset, initial_grade = _parse_bank_filters(
-        request.GET.get("preset_type", "general"),
+        request.GET.get("preset_type", DEFAULT_TOPIC),
         request.GET.get("grade", "3"),
     )
     today_sets = SQQuizSet.objects.filter(
@@ -81,8 +114,9 @@ def teacher_dashboard(request, classroom_id):
             "preset_choices": SQQuizSet.PRESET_CHOICES,
             "initial_preset": initial_preset,
             "initial_grade": initial_grade,
-            "initial_grade_str": str(initial_grade),
+            "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
             "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
+            "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
         },
     )
 
@@ -91,34 +125,20 @@ def teacher_dashboard(request, classroom_id):
 def htmx_bank_browse(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     preset_type, grade = _parse_bank_filters(
-        request.GET.get("preset_type", "general"),
+        request.GET.get("preset_type", DEFAULT_TOPIC),
         request.GET.get("grade", "3"),
     )
     scope = (request.GET.get("scope", "official") or "official").strip().lower()
     if scope not in {"official", "public", "all"}:
         scope = "official"
 
-    banks_qs = SQQuizBank.objects.filter(
-        is_active=True,
+    banks_qs = _build_bank_queryset(
+        classroom=classroom,
+        user=request.user,
         preset_type=preset_type,
         grade=grade,
+        scope=scope,
     )
-    approved_filter = Q(quality_status="approved")
-    today = timezone.localdate()
-    available_filter = (
-        (Q(available_from__isnull=True) | Q(available_from__lte=today))
-        & (Q(available_to__isnull=True) | Q(available_to__gte=today))
-    )
-    if scope == "official":
-        banks_qs = banks_qs.filter(is_official=True).filter(approved_filter).filter(available_filter)
-    elif scope == "public":
-        banks_qs = banks_qs.filter(is_public=True).filter(approved_filter).filter(available_filter)
-    else:
-        banks_qs = banks_qs.filter(
-            (Q(is_official=True) & approved_filter & available_filter)
-            | (Q(is_public=True) & approved_filter & available_filter)
-            | Q(created_by=request.user)
-        ).distinct()
 
     banks = banks_qs.order_by("-is_official", "-use_count", "-created_at")[:24]
 
@@ -130,9 +150,75 @@ def htmx_bank_browse(request, classroom_id):
             "banks": banks,
             "scope": scope,
             "preset_type": preset_type,
-            "preset_label": dict(SQQuizSet.PRESET_CHOICES).get(preset_type, "상식"),
+            "preset_label": TOPIC_LABELS.get(preset_type, "주제"),
             "grade": grade,
             "allow_inline_ai": bool(getattr(settings, "SEED_QUIZ_ALLOW_INLINE_AI", False)),
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_bank_random_select(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    preset_type, grade = _parse_bank_filters(
+        request.POST.get("preset_type", DEFAULT_TOPIC),
+        request.POST.get("grade", "all"),
+    )
+    scope = (request.POST.get("scope", "all") or "all").strip().lower()
+    if scope not in {"official", "public", "all"}:
+        scope = "all"
+
+    banks_qs = _build_bank_queryset(
+        classroom=classroom,
+        user=request.user,
+        preset_type=preset_type,
+        grade=grade,
+        scope=scope,
+    )
+
+    # 최근 7일 내 이미 사용한 은행 세트는 우선 제외
+    recent_bank_ids = list(
+        SQQuizSet.objects.filter(
+            classroom=classroom,
+            target_date__gte=timezone.localdate() - timedelta(days=7),
+            bank_source__isnull=False,
+        )
+        .values_list("bank_source_id", flat=True)
+        .distinct()
+    )
+    candidates = list(banks_qs.exclude(id__in=recent_bank_ids)[:100])
+    if not candidates:
+        candidates = list(banks_qs[:100])
+    if not candidates:
+        return HttpResponse(
+            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            "랜덤으로 선택할 퀴즈 세트가 없습니다. 먼저 CSV 문제를 업로드해 주세요.</div>",
+            status=404,
+        )
+
+    selected_bank = random.choice(candidates)
+    try:
+        quiz_set = copy_bank_to_draft(
+            bank_id=selected_bank.id,
+            classroom=classroom,
+            teacher=request.user,
+        )
+    except ValueError as e:
+        return HttpResponse(
+            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{e}</div>',
+            status=400,
+        )
+
+    items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": items,
+            "rag_notice": f"랜덤 선택 완료: {selected_bank.get_preset_type_display()}",
         },
     )
 
@@ -280,9 +366,16 @@ def htmx_csv_confirm(request, classroom_id):
 @login_required
 @require_POST
 def htmx_rag_generate(request, classroom_id):
+    if not bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)):
+        return HttpResponse(
+            '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+            "현재 맞춤 생성 기능이 비활성화되어 있습니다.</div>",
+            status=403,
+        )
+
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     preset_type, grade = _parse_bank_filters(
-        request.POST.get("preset_type", "general"),
+        request.POST.get("preset_type", DEFAULT_TOPIC),
         request.POST.get("grade", "3"),
     )
     source_text = (request.POST.get("source_text") or "").strip()
@@ -352,7 +445,7 @@ def htmx_rag_generate(request, classroom_id):
 def htmx_generate(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     preset_type, grade = _parse_bank_filters(
-        request.POST.get("preset_type", "general"),
+        request.POST.get("preset_type", DEFAULT_TOPIC),
         request.POST.get("grade", "3"),
     )
 

@@ -5,16 +5,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from seed_quiz.models import SQQuizBank, SQQuizBankItem
+from seed_quiz.topics import TOPIC_LABELS, normalize_topic
 from seed_quiz.services.validator import validate_quiz_payload
-
-PRESET_LABELS = {
-    "general": "상식",
-    "math": "수학",
-    "korean": "국어",
-    "science": "과학",
-    "social": "사회",
-    "english": "영어",
-}
 
 
 class Command(BaseCommand):
@@ -34,8 +26,9 @@ class Command(BaseCommand):
         updated_count = 0
         skipped_count = 0
 
-        for preset_type, by_grade in quizzes.items():
-            if preset_type not in PRESET_LABELS:
+        for legacy_preset_type, by_grade in quizzes.items():
+            preset_type = normalize_topic(legacy_preset_type)
+            if not preset_type:
                 continue
             for grade_str, quiz_sets in by_grade.items():
                 try:
@@ -56,7 +49,7 @@ class Command(BaseCommand):
                         )
                         continue
 
-                    title = f"[공식] {grade}학년 {PRESET_LABELS[preset_type]} #{idx}"
+                    title = f"[공식] {grade}학년 {TOPIC_LABELS.get(preset_type, '주제')} #{idx}"
                     with transaction.atomic():
                         bank, created = SQQuizBank.objects.get_or_create(
                             title=title,

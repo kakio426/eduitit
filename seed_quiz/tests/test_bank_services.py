@@ -36,8 +36,8 @@ class BankServiceTest(TestCase):
         source_hash = _source_hash(_normalize_source_text(source_text))
 
         bank = SQQuizBank.objects.create(
-            title="[RAG] 3학년 general 맞춤 세트",
-            preset_type="general",
+            title="[RAG] 3학년 orthography 맞춤 세트",
+            preset_type="orthography",
             grade=3,
             source="ai",
             source_hash=source_hash,
@@ -75,7 +75,7 @@ class BankServiceTest(TestCase):
 
         with patch.dict("os.environ", {}, clear=True):
             result_bank, cached = generate_bank_from_context_ai(
-                preset_type="general",
+                preset_type="orthography",
                 grade=3,
                 source_text=source_text,
                 created_by=self.teacher,
@@ -89,7 +89,7 @@ class BankServiceTest(TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(RuntimeError):
                 generate_bank_from_context_ai(
-                    preset_type="general",
+                    preset_type="orthography",
                     grade=3,
                     source_text=source_text,
                     created_by=self.teacher,

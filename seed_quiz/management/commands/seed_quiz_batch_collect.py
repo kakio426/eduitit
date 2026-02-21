@@ -1,6 +1,7 @@
 import uuid
 from datetime import date
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from seed_quiz.models import SQBatchJob
@@ -30,6 +31,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if not bool(getattr(settings, "SEED_QUIZ_BATCH_ENABLED", False)):
+            self.stdout.write(
+                self.style.WARNING(
+                    "SEED_QUIZ_BATCH_ENABLED=False: 배치 자동화가 비활성화되어 있습니다 (CSV 운영 모드)."
+                )
+            )
+            return
+
         job_id_raw = (options.get("job_id") or "").strip()
         no_ingest = bool(options.get("no_ingest"))
         target_month_raw = (options.get("target_month") or "").strip()
