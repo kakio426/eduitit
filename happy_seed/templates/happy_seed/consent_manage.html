@@ -13,29 +13,56 @@
         <p class="text-sm text-gray-500 mb-6 break-keep">미동의 학생은 기록 저장 및 보상 지급이 불가합니다. 동의 철회 시 해당 학생은 즉시 비활성됩니다.</p>
 
         <div class="clay-card p-5 rounded-2xl mb-6">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex flex-col gap-4">
                 <div>
-                    <h2 class="font-bold text-gray-800">서명톡 연계</h2>
-                    <p class="text-sm text-gray-500 mt-1">버튼 1회로 보호자 동의용 서명 링크를 생성해 학생 동의 항목에 연결합니다.</p>
+                    <h2 class="font-bold text-gray-800">Consent 자동 생성</h2>
+                    <p class="text-sm text-gray-500 mt-1">학부모 명단만 입력하면 안내문 PDF와 학생별 동의 링크를 자동으로 생성합니다. 교사가 PDF를 따로 업로드할 필요가 없습니다.</p>
                 </div>
-                <div class="flex gap-2">
-                    <form method="post" action="{% url 'happy_seed:consent_request_via_sign_talk' classroom_id=classroom.id %}">
-                        {% csrf_token %}
+                <form method="post" enctype="multipart/form-data" action="{% url 'happy_seed:consent_request_via_sign_talk' classroom_id=classroom.id %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">직접 입력 (학생명,학부모명,연락처)</label>
+                        {{ recipient_form.recipients_text }}
+                        {% if recipient_form.recipients_text.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ recipient_form.recipients_text.errors|striptags }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">또는 CSV 업로드</label>
+                        {{ recipient_form.recipients_csv }}
+                        {% if recipient_form.recipients_csv.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ recipient_form.recipients_csv.errors|striptags }}</p>
+                        {% endif %}
+                    </div>
+                    {% if recipient_form.non_field_errors %}
+                    <div class="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                        {{ recipient_form.non_field_errors|striptags }}
+                    </div>
+                    {% endif %}
+                    <div class="flex gap-2">
                         <button type="submit" class="px-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
-                            서명톡 링크 생성
+                            동의 링크 자동 생성
                         </button>
-                    </form>
+                    </div>
+                </form>
+                <div class="flex gap-2">
                     <form method="post" action="{% url 'happy_seed:consent_sync_from_sign_talk' classroom_id=classroom.id %}">
                         {% csrf_token %}
                         <button type="submit" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
-                            서명 결과 동기화
+                            consent 결과 동기화
                         </button>
                     </form>
                 </div>
             </div>
+            {% if consent_request_url %}
+            <div class="mt-4 p-3 bg-blue-50 rounded-xl">
+                <div class="text-xs text-gray-500 mb-1">최근 생성된 consent 요청</div>
+                <a href="{{ consent_request_url }}" class="text-sm text-blue-700 hover:underline">요청 상세 열기</a>
+            </div>
+            {% endif %}
             {% if sign_talk_url %}
             <div class="mt-4 p-3 bg-gray-50 rounded-xl">
-                <div class="text-xs text-gray-500 mb-1">현재 공유 링크</div>
+                <div class="text-xs text-gray-500 mb-1">현재 학생 링크 샘플</div>
                 <a href="{{ sign_talk_url }}" target="_blank" rel="noopener noreferrer" class="text-sm text-green-700 break-all hover:underline">{{ sign_talk_url }}</a>
             </div>
             {% endif %}
@@ -43,14 +70,14 @@
 
         {% if unmatched_signatures %}
         <div class="clay-card p-5 rounded-2xl mb-6">
-            <h2 class="font-bold text-gray-800 mb-2">수동 확인 승인(명단 미일치 서명)</h2>
-            <p class="text-xs text-gray-500 mb-3">서명 이름과 학생명이 정확히 일치하지 않을 때, 교사가 확인 후 직접 승인하세요.</p>
+            <h2 class="font-bold text-gray-800 mb-2">수동 확인 승인(명단 미일치 응답)</h2>
+            <p class="text-xs text-gray-500 mb-3">응답 학생명과 교실 학생명이 정확히 일치하지 않을 때, 교사가 확인 후 직접 승인하세요.</p>
             <div class="space-y-2">
                 {% for signer in unmatched_signatures %}
                 <form method="post" action="{% url 'happy_seed:consent_manual_approve' classroom_id=classroom.id %}" class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {% csrf_token %}
                     <input type="hidden" name="signer_name" value="{{ signer }}">
-                    <div class="px-3 py-2 bg-gray-50 rounded-xl text-sm text-gray-700">서명자: {{ signer }}</div>
+                    <div class="px-3 py-2 bg-gray-50 rounded-xl text-sm text-gray-700">응답 이름: {{ signer }}</div>
                     <select name="student_id" class="px-3 py-2 rounded-xl border border-gray-200 text-sm" required>
                         <option value="">학생 선택</option>
                         {% for s in pending_students %}
@@ -72,7 +99,7 @@
                         <th class="px-4 py-3">이름</th>
                         <th class="px-4 py-3">동의 상태</th>
                         <th class="px-4 py-3">발송일</th>
-                        <th class="px-4 py-3">서명 링크</th>
+                        <th class="px-4 py-3">동의 링크</th>
                         <th class="px-4 py-3">변경</th>
                     </tr>
                 </thead>

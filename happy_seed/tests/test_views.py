@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from consent.models import SignatureRecipient
 from core.models import UserProfile
 from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent, HSStudentGroup
 
@@ -53,11 +55,40 @@ class HappySeedViewTests(TestCase):
         self.student.consent.status = "pending"
         self.student.consent.save(update_fields=["status"])
         url = reverse("happy_seed:consent_request_via_sign_talk", kwargs={"classroom_id": self.classroom.id})
-        res = self.client.post(url)
+        res = self.client.post(
+            url,
+            {"recipients_text": f"{self.student.name},하늘 보호자,01012345678"},
+        )
         self.assertEqual(res.status_code, 302)
         consent = HSGuardianConsent.objects.get(student=self.student)
         self.assertTrue(consent.external_url)
-        self.assertIn("/signatures/sign/", consent.external_url)
+        self.assertIn("/consent/public/", consent.external_url)
+        self.assertIn("/sign/", consent.external_url)
+
+    def test_consent_sync_from_sign_talk_applies_approved_status(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.consent.status = "pending"
+        self.student.consent.save(update_fields=["status"])
+
+        create_url = reverse("happy_seed:consent_request_via_sign_talk", kwargs={"classroom_id": self.classroom.id})
+        create_res = self.client.post(
+            create_url,
+            {"recipients_text": f"{self.student.name},하늘 보호자,01012345678"},
+        )
+        self.assertEqual(create_res.status_code, 302)
+
+        recipient = SignatureRecipient.objects.filter(student_name=self.student.name).latest("id")
+        recipient.status = SignatureRecipient.STATUS_SIGNED
+        recipient.decision = SignatureRecipient.DECISION_AGREE
+        recipient.signed_at = timezone.now()
+        recipient.save(update_fields=["status", "decision", "signed_at"])
+
+        sync_url = reverse("happy_seed:consent_sync_from_sign_talk", kwargs={"classroom_id": self.classroom.id})
+        sync_res = self.client.post(sync_url)
+        self.assertEqual(sync_res.status_code, 302)
+
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.consent.status, "approved")
 
     def test_group_mission_success_grants_ticket_to_random_member(self):
         self.client.login(username="teacher2", password="pw12345")

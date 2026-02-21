@@ -1,16 +1,21 @@
 import uuid
 import random
-import re
-from uuid import UUID
+import csv
+import io
 import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+
+from consent.forms import RecipientBulkForm
+from consent.models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
 
 from .forms import (
     HSActivityForm,
@@ -74,6 +79,216 @@ def get_teacher_classroom(request, classroom_id):
         teacher=request.user,
         is_active=True,
     )
+
+
+DEFAULT_HAPPY_SEED_LEGAL_NOTICE = (
+    "본 동의서는 행복의 씨앗 학급 운영(긍정 행동 기록, 보상 운영)을 위한 목적 범위 내에서만 사용됩니다.\n"
+    "수집 정보(학생명, 보호자명, 동의 결과, 서명 이미지, 처리 시각)는 관련 법령 및 학교 내부 규정에 따라 "
+    "보관 및 파기됩니다."
+)
+
+
+def _resolve_pdf_font_name():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    except Exception:
+        return "Helvetica"
+
+    for candidate in ("HYGothic-Medium", "HYSMyeongJo-Medium"):
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont(candidate))
+            return candidate
+        except Exception:
+            continue
+    return "Helvetica"
+
+
+def _build_happy_seed_notice_pdf(classroom, recipient_rows):
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+    except Exception:
+        body = (
+            "Happy Seed Guardian Consent Notice\n"
+            f"Classroom: {classroom.name}\n"
+            f"School: {classroom.school_name or '-'}\n"
+            f"Recipients: {len(recipient_rows)}\n"
+        )
+        filename = f"happy_seed_notice_{classroom.id}.pdf"
+        return ContentFile(body.encode("utf-8"), name=filename)
+
+    font_name = _resolve_pdf_font_name()
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+    y = height - 48
+
+    c.setFont(font_name, 16)
+    c.drawString(40, y, "행복의 씨앗 보호자 동의 안내문")
+    y -= 26
+
+    c.setFont(font_name, 10)
+    c.drawString(40, y, f"학급: {classroom.name}")
+    y -= 16
+    c.drawString(40, y, f"학교: {classroom.school_name or '-'}")
+    y -= 16
+    c.drawString(40, y, f"생성일시: {timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')}")
+    y -= 24
+
+    lines = [
+        "안녕하세요. 행복의 씨앗 학급 운영을 위해 보호자 동의를 요청드립니다.",
+        "아래 링크에서 안내문을 확인하시고 동의/비동의 및 서명을 제출해 주세요.",
+        "수집 정보는 동의 관리 목적 외에는 사용하지 않습니다.",
+        "",
+        f"요청 대상 학생 수: {len(recipient_rows)}명",
+    ]
+    for line in lines:
+        c.drawString(40, y, line)
+        y -= 16
+
+    c.setFont(font_name, 9)
+    y -= 8
+    c.drawString(40, y, "[대상 학생 목록]")
+    y -= 14
+    for idx, row in enumerate(recipient_rows, start=1):
+        if y < 60:
+            c.showPage()
+            y = height - 48
+            c.setFont(font_name, 9)
+            c.drawString(40, y, "[대상 학생 목록 - 계속]")
+            y -= 14
+        c.drawString(48, y, f"{idx}. {row['student_name']} / {row['parent_name']}")
+        y -= 14
+
+    c.showPage()
+    c.save()
+    packet.seek(0)
+    filename = f"happy_seed_notice_{classroom.id}_{timezone.localtime(timezone.now()).strftime('%Y%m%d%H%M%S')}.pdf"
+    return ContentFile(packet.read(), name=filename)
+
+
+def _parse_guardian_rows_from_text(text):
+    rows = []
+    invalid_rows = []
+    for idx, raw in enumerate((text or "").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) < 2 or not parts[0] or not parts[1]:
+            invalid_rows.append(idx)
+            continue
+        rows.append(
+            {
+                "student_name": parts[0],
+                "parent_name": parts[1],
+                "phone_number": parts[2] if len(parts) >= 3 else "",
+            }
+        )
+    return rows, invalid_rows
+
+
+def _parse_guardian_rows_from_csv(file_obj):
+    if not file_obj:
+        return [], []
+
+    raw = file_obj.read()
+    try:
+        file_obj.seek(0)
+    except Exception:
+        pass
+
+    decoded = None
+    for encoding in ("utf-8-sig", "cp949", "euc-kr"):
+        try:
+            decoded = raw.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if decoded is None:
+        return [], [0]
+
+    rows = []
+    invalid_rows = []
+    reader = csv.reader(io.StringIO(decoded))
+    for idx, row in enumerate(reader, start=1):
+        cols = [(cell or "").strip() for cell in row]
+        if not any(cols):
+            continue
+
+        first = cols[0].lower() if cols else ""
+        second = cols[1].lower() if len(cols) > 1 else ""
+        if idx == 1 and ("학생" in first or "student" in first or "학부모" in second or "parent" in second):
+            continue
+
+        if len(cols) < 2 or not cols[0] or not cols[1]:
+            invalid_rows.append(idx)
+            continue
+
+        rows.append(
+            {
+                "student_name": cols[0],
+                "parent_name": cols[1],
+                "phone_number": cols[2] if len(cols) >= 3 else "",
+            }
+        )
+    return rows, invalid_rows
+
+
+def _parse_consent_note_payload(note):
+    if not note:
+        return {}
+    try:
+        payload = json.loads(note)
+    except (TypeError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _build_consent_manage_context(request, classroom, recipient_form=None):
+    students = list(
+        classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+    )
+    sign_talk_url = ""
+    linked_request_id = ""
+
+    for student in students:
+        consent = getattr(student, "consent", None)
+        if consent and consent.external_url and not sign_talk_url:
+            sign_talk_url = consent.external_url
+        payload = _parse_consent_note_payload(consent.note if consent else "")
+        if payload.get("consent_request_id") and not linked_request_id:
+            linked_request_id = payload["consent_request_id"]
+
+    consent_request = None
+    if linked_request_id:
+        consent_request = (
+            SignatureRequest.objects.filter(request_id=linked_request_id, created_by=request.user)
+            .prefetch_related("recipients")
+            .first()
+        )
+
+    unmatched_signatures = []
+    consent_request_url = ""
+    if consent_request:
+        classroom_names = {student.name for student in students}
+        recipient_names = set(consent_request.recipients.values_list("student_name", flat=True))
+        unmatched_signatures = sorted(name for name in recipient_names if name not in classroom_names)
+        consent_request_url = reverse("consent:detail", kwargs={"request_id": consent_request.request_id})
+
+    return {
+        "classroom": classroom,
+        "students": students,
+        "sign_talk_url": sign_talk_url,
+        "consent_request_url": consent_request_url,
+        "unmatched_signatures": unmatched_signatures,
+        "pending_students": [
+            student for student in students
+            if not getattr(student, "consent", None) or student.consent.status != "approved"
+        ],
+        "recipient_form": recipient_form or RecipientBulkForm(),
+    }
 
 
 def landing(request):
@@ -245,89 +460,174 @@ def student_edit(request, student_id):
 @login_required
 def consent_manage(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
-    sign_talk_url = ""
-    for student in students:
-        consent = getattr(student, "consent", None)
-        if consent and consent.external_url:
-            sign_talk_url = consent.external_url
-            break
-    unmatched_signatures = []
-    if sign_talk_url:
-        from signatures.models import Signature, TrainingSession
-
-        match = re.search(r"/sign/([0-9a-fA-F-]+)/", sign_talk_url)
-        if match:
-            session = TrainingSession.objects.filter(uuid=UUID(match.group(1))).first()
-            if session:
-                signed_names = set(
-                    Signature.objects.filter(training_session=session).values_list("participant_name", flat=True)
-                )
-                classroom_names = set(students.values_list("name", flat=True))
-                unmatched_signatures = sorted(name for name in signed_names if name not in classroom_names)
-    return render(
-        request,
-        "happy_seed/consent_manage.html",
-        {
-            "classroom": classroom,
-            "students": students,
-            "sign_talk_url": sign_talk_url,
-            "unmatched_signatures": unmatched_signatures,
-            "pending_students": [s for s in students if s.consent.status != "approved"],
-        },
-    )
+    context = _build_consent_manage_context(request, classroom)
+    return render(request, "happy_seed/consent_manage.html", context)
 
 
 @login_required
 @require_POST
+@transaction.atomic
 def consent_request_via_sign_talk(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
+    recipient_form = RecipientBulkForm(request.POST, request.FILES)
+    if not recipient_form.is_valid():
+        context = _build_consent_manage_context(request, classroom, recipient_form=recipient_form)
+        return render(request, "happy_seed/consent_manage.html", context, status=400)
 
-    from signatures.models import TrainingSession
+    text_rows, invalid_text_rows = _parse_guardian_rows_from_text(
+        recipient_form.cleaned_data.get("recipients_text", "")
+    )
+    csv_rows, invalid_csv_rows = _parse_guardian_rows_from_csv(
+        recipient_form.cleaned_data.get("recipients_csv")
+    )
+    raw_rows = text_rows + csv_rows
+    if not raw_rows:
+        recipient_form.add_error(None, "등록 가능한 명단이 없습니다. 텍스트 또는 CSV를 확인해 주세요.")
+        context = _build_consent_manage_context(request, classroom, recipient_form=recipient_form)
+        return render(request, "happy_seed/consent_manage.html", context, status=400)
 
-    now = timezone.now()
-    title = f"[행복의 씨앗] {classroom.name} 보호자 동의"
-
-    session = TrainingSession.objects.filter(
-        created_by=request.user,
-        title=title,
-        is_active=True,
-    ).order_by("-created_at").first()
-
-    if session is None:
-        session = TrainingSession.objects.create(
-            title=title,
-            instructor=request.user.get_full_name() or request.user.username,
-            datetime=now,
-            location=classroom.school_name or classroom.name,
-            description=(
-                f"{classroom.name} 보호자 동의를 위한 서명톡 페이지입니다. "
-                "보호자 성함과 서명을 제출해 주세요."
-            ),
-            created_by=request.user,
-            is_active=True,
+    seen_student_names = set()
+    duplicate_upload_names = []
+    cleaned_rows = []
+    for row in raw_rows:
+        student_name = (row.get("student_name") or "").strip()
+        parent_name = (row.get("parent_name") or "").strip()
+        phone_number = (row.get("phone_number") or "").strip()
+        if not student_name or not parent_name:
+            continue
+        if student_name in seen_student_names:
+            duplicate_upload_names.append(student_name)
+            continue
+        seen_student_names.add(student_name)
+        cleaned_rows.append(
+            {
+                "student_name": student_name,
+                "parent_name": parent_name,
+                "phone_number": phone_number,
+            }
         )
 
-    sign_url = request.build_absolute_uri(
-        reverse("signatures:sign", kwargs={"uuid": session.uuid})
+    if duplicate_upload_names:
+        recipient_form.add_error(
+            None,
+            f"업로드 명단에 동일 학생명이 중복되었습니다: {', '.join(sorted(set(duplicate_upload_names)))}",
+        )
+        context = _build_consent_manage_context(request, classroom, recipient_form=recipient_form)
+        return render(request, "happy_seed/consent_manage.html", context, status=400)
+
+    students = list(classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"))
+    student_name_map = {}
+    for student in students:
+        student_name_map.setdefault(student.name.strip(), []).append(student)
+
+    missing_students = []
+    ambiguous_students = []
+    matched_pairs = []
+    for row in cleaned_rows:
+        matches = student_name_map.get(row["student_name"], [])
+        if len(matches) == 1:
+            matched_pairs.append((matches[0], row))
+        elif len(matches) == 0:
+            missing_students.append(row["student_name"])
+        else:
+            ambiguous_students.append(row["student_name"])
+
+    if missing_students:
+        recipient_form.add_error(
+            None,
+            f"학급에 없는 학생명이 포함되어 있습니다: {', '.join(sorted(set(missing_students)))}",
+        )
+    if ambiguous_students:
+        recipient_form.add_error(
+            None,
+            f"동명이인으로 매칭할 수 없는 학생이 있습니다: {', '.join(sorted(set(ambiguous_students)))}",
+        )
+    if recipient_form.errors:
+        context = _build_consent_manage_context(request, classroom, recipient_form=recipient_form)
+        return render(request, "happy_seed/consent_manage.html", context, status=400)
+
+    now = timezone.now()
+    title = f"[행복의 씨앗] {classroom.name} 보호자 동의서"
+    document = SignatureDocument(
+        created_by=request.user,
+        title=f"{title} 안내문",
+        file_type=SignatureDocument.FILE_TYPE_PDF,
+    )
+    notice_pdf = _build_happy_seed_notice_pdf(classroom, [row for _, row in matched_pairs])
+    document.original_file.save(notice_pdf.name, notice_pdf, save=False)
+    document.save()
+
+    consent_request = SignatureRequest.objects.create(
+        created_by=request.user,
+        document=document,
+        title=title,
+        message=(
+            f"{classroom.name} 보호자 동의서입니다. 아래 링크에서 안내문 확인 후 동의 여부와 서명을 제출해 주세요."
+        ),
+        legal_notice=DEFAULT_HAPPY_SEED_LEGAL_NOTICE,
+        consent_text_version="v1",
+        status=SignatureRequest.STATUS_SENT,
+        sent_at=now,
     )
 
-    HSGuardianConsent.objects.filter(
-        student__classroom=classroom,
-        student__is_active=True,
-    ).update(
-        external_url=sign_url,
-        requested_at=now,
-    )
-    for student in classroom.students.filter(is_active=True):
+    for student, row in matched_pairs:
+        recipient = SignatureRecipient.objects.create(
+            request=consent_request,
+            student_name=row["student_name"],
+            parent_name=row["parent_name"],
+            phone_number=row["phone_number"],
+            status=SignatureRecipient.STATUS_PENDING,
+        )
+        sign_url = request.build_absolute_uri(
+            reverse("consent:sign", kwargs={"token": recipient.access_token})
+        )
+        consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
+        consent.status = "pending"
+        consent.external_url = sign_url
+        consent.requested_at = now
+        consent.completed_at = None
+        consent.note = json.dumps(
+            {
+                "consent_request_id": str(consent_request.request_id),
+                "recipient_id": recipient.id,
+                "parent_name": recipient.parent_name,
+                "phone_number": recipient.phone_number,
+            },
+            ensure_ascii=False,
+        )
+        consent.save()
+
         log_class_event(
             classroom,
             "CONSENT_REQUEST_SENT",
             student=student,
-            meta={"external_url": sign_url},
+            meta={
+                "external_url": sign_url,
+                "consent_request_id": str(consent_request.request_id),
+            },
         )
 
-    messages.success(request, "서명톡 동의 링크를 생성하고 학생 동의 항목에 연동했습니다.")
+    ConsentAuditLog.objects.create(
+        request=consent_request,
+        event_type=ConsentAuditLog.EVENT_REQUEST_SENT,
+        event_meta={
+            "source": "happy_seed",
+            "classroom_id": str(classroom.id),
+            "recipient_count": len(matched_pairs),
+        },
+    )
+
+    if invalid_csv_rows == [0]:
+        messages.warning(request, "CSV 인코딩을 읽지 못해 CSV 일부를 제외했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+    elif invalid_text_rows or invalid_csv_rows:
+        invalid_total = len(invalid_text_rows) + len(invalid_csv_rows)
+        messages.warning(request, f"형식 오류 {invalid_total}행은 제외하고 처리했습니다.")
+
+    messages.success(
+        request,
+        f"동의 링크를 {len(matched_pairs)}명에게 자동 생성했습니다. "
+        "안내문 PDF도 시스템이 자동으로 만들어 consent 요청에 연결했습니다.",
+    )
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
@@ -338,7 +638,7 @@ def consent_resend(request, student_id):
     classroom = get_teacher_classroom(request, student.classroom_id)
     consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
     if not consent.external_url:
-        messages.error(request, "먼저 서명톡 링크를 생성해 주세요.")
+        messages.error(request, "먼저 동의 링크를 생성해 주세요.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
     consent.requested_at = timezone.now()
     consent.save(update_fields=["requested_at", "updated_at"])
@@ -351,37 +651,91 @@ def consent_resend(request, student_id):
 @require_POST
 def consent_sync_from_sign_talk(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    from signatures.models import Signature, TrainingSession
+    students = list(classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"))
+    consent_request_id = ""
+    for student in students:
+        consent = getattr(student, "consent", None)
+        payload = _parse_consent_note_payload(consent.note if consent else "")
+        if payload.get("consent_request_id"):
+            consent_request_id = payload["consent_request_id"]
+            break
 
-    sample_consent = classroom.students.filter(is_active=True).select_related("consent").first()
-    if not sample_consent or not getattr(sample_consent, "consent", None) or not sample_consent.consent.external_url:
-        messages.error(request, "연동된 서명톡 링크가 없어 동기화할 수 없습니다.")
+    if not consent_request_id:
+        messages.error(request, "연동된 consent 요청이 없어 동기화할 수 없습니다.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
-    match = re.search(r"/sign/([0-9a-fA-F-]+)/", sample_consent.consent.external_url)
-    if not match:
-        messages.error(request, "서명톡 링크 형식을 확인할 수 없습니다.")
-        return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
-    session_uuid = UUID(match.group(1))
-    session = TrainingSession.objects.filter(uuid=session_uuid).first()
-    if not session:
-        messages.error(request, "서명 세션을 찾을 수 없습니다.")
+    consent_request = (
+        SignatureRequest.objects.filter(request_id=consent_request_id, created_by=request.user)
+        .prefetch_related("recipients")
+        .first()
+    )
+    if not consent_request:
+        messages.error(request, "consent 요청을 찾을 수 없습니다.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
-    signatures = Signature.objects.filter(training_session=session).values_list("participant_name", flat=True)
-    signed_names = set(signatures)
-    classroom_names = set(classroom.students.filter(is_active=True).values_list("name", flat=True))
-    unmatched_signature_count = len([name for name in signed_names if name not in classroom_names])
-    updated = 0
-    for student in classroom.students.filter(is_active=True).select_related("consent"):
-        if student.name in signed_names and student.consent.status != "approved":
-            student.consent.status = "approved"
-            student.consent.completed_at = timezone.now()
-            student.consent.save(update_fields=["status", "completed_at", "updated_at"])
-            log_class_event(classroom, "CONSENT_SIGNED", student=student)
-            updated += 1
+    recipient_map = {}
+    for recipient in consent_request.recipients.all():
+        recipient_map.setdefault(recipient.student_name, []).append(recipient)
 
-    messages.success(request, f"서명 결과를 동기화했습니다. 동의 완료 {updated}명, 명단 미일치 {unmatched_signature_count}건")
+    approved_updated = 0
+    rejected_updated = 0
+    ambiguous_student_count = 0
+    now = timezone.now()
+    for student in students:
+        consent = getattr(student, "consent", None)
+        if not consent:
+            consent = HSGuardianConsent.objects.create(student=student)
+        matches = recipient_map.get(student.name, [])
+        if len(matches) != 1:
+            if len(matches) > 1:
+                ambiguous_student_count += 1
+            continue
+
+        recipient = matches[0]
+        consent.external_url = request.build_absolute_uri(
+            reverse("consent:sign", kwargs={"token": recipient.access_token})
+        )
+        payload = _parse_consent_note_payload(consent.note)
+        payload.update(
+            {
+                "consent_request_id": str(consent_request.request_id),
+                "recipient_id": recipient.id,
+                "parent_name": recipient.parent_name,
+                "phone_number": recipient.phone_number,
+            }
+        )
+        consent.note = json.dumps(payload, ensure_ascii=False)
+        if not consent.requested_at:
+            consent.requested_at = consent_request.sent_at or now
+
+        if recipient.status == SignatureRecipient.STATUS_SIGNED and recipient.decision == SignatureRecipient.DECISION_AGREE:
+            if consent.status != "approved":
+                approved_updated += 1
+                log_class_event(classroom, "CONSENT_SIGNED", student=student, meta={"by": "consent_sync"})
+            consent.status = "approved"
+            consent.completed_at = recipient.signed_at or now
+            if not student.is_active:
+                student.is_active = True
+                student.save(update_fields=["is_active"])
+        elif recipient.status in (SignatureRecipient.STATUS_DECLINED, SignatureRecipient.STATUS_SIGNED) and (
+            recipient.decision == SignatureRecipient.DECISION_DISAGREE
+        ):
+            if consent.status != "rejected":
+                rejected_updated += 1
+            consent.status = "rejected"
+            consent.completed_at = recipient.signed_at or now
+
+        consent.save()
+
+    classroom_names = {student.name for student in students}
+    recipient_names = set(consent_request.recipients.values_list("student_name", flat=True))
+    unmatched_signature_count = len([name for name in recipient_names if name not in classroom_names])
+    messages.success(
+        request,
+        "동의 결과를 동기화했습니다. "
+        f"동의 완료 {approved_updated}명, 비동의 반영 {rejected_updated}명, "
+        f"명단 미일치 {unmatched_signature_count}건, 중복매칭 불가 {ambiguous_student_count}건",
+    )
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
