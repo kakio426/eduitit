@@ -2,10 +2,21 @@
 {# 사용: {% include 'core/includes/game_banner.html' with games=games %} #}
 {% if games %}
 <div class="bg-gradient-to-r from-rose-50 to-orange-50 rounded-3xl p-5 md:p-6 border border-rose-100">
-    <div class="flex items-center gap-2 mb-4">
-        <span class="text-2xl">🎮</span>
-        <h3 class="font-bold text-base text-slate-800">쉬는 시간</h3>
-        <span class="text-xs text-slate-400">잠깐 쉬어가요</span>
+    <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">🎮</span>
+            <h3 class="font-bold text-base text-slate-800">쉬는 시간</h3>
+            <span class="text-xs text-slate-400">잠깐 쉬어가요</span>
+        </div>
+        {% if request.user.is_authenticated and student_games_launch_url and student_games_qr_data_url %}
+        <button type="button"
+            onclick="openHomeStudentGamesQrModal()"
+            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 transition"
+            title="학생 게임 QR 열기">
+            <i class="fa-solid fa-qrcode"></i>
+            학생용 QR
+        </button>
+        {% endif %}
     </div>
     <div class="flex gap-3 overflow-x-auto pb-1" style="-ms-overflow-style:none;scrollbar-width:none;">
         {% for game in games %}
@@ -19,4 +30,79 @@
         {% endfor %}
     </div>
 </div>
+{% if request.user.is_authenticated and student_games_launch_url and student_games_qr_data_url %}
+<div id="homeStudentGamesQrModal"
+    class="fixed inset-0 z-[220] hidden items-center justify-center bg-black/75 backdrop-blur-sm transition-opacity duration-200 opacity-0">
+    <div
+        class="bg-white rounded-3xl shadow-2xl w-[min(92vw,28rem)] border border-slate-200 p-6 transform scale-95 transition-transform">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="text-xl font-black text-slate-800">학생 게임 입장 QR</h3>
+                <p class="text-xs text-slate-500 mt-1">유효시간: {{ student_games_expires_hours }}시간</p>
+            </div>
+            <button type="button" onclick="closeHomeStudentGamesQrModal()"
+                class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-3 flex justify-center mb-4">
+            <img src="{{ student_games_qr_data_url }}" alt="학생 게임 입장 QR 코드" class="w-56 h-56 max-w-full">
+        </div>
+
+        <label for="homeStudentGamesLaunchUrl" class="block text-xs font-bold text-slate-500 mb-1">학생용 링크</label>
+        <input id="homeStudentGamesLaunchUrl" type="text" readonly value="{{ student_games_launch_url }}"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 text-sm mb-4">
+
+        <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="copyHomeStudentGamesLink()"
+                class="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition">
+                링크 복사
+            </button>
+            <a href="{{ student_games_launch_url }}" target="_blank" rel="noopener noreferrer"
+                class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm text-center transition">
+                새 창 미리보기
+            </a>
+        </div>
+    </div>
+</div>
+<script>
+    function openHomeStudentGamesQrModal() {
+        const modal = document.getElementById('homeStudentGamesQrModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            const panel = modal.firstElementChild;
+            if (panel) panel.classList.remove('scale-95');
+        });
+    }
+
+    function closeHomeStudentGamesQrModal() {
+        const modal = document.getElementById('homeStudentGamesQrModal');
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        const panel = modal.firstElementChild;
+        if (panel) panel.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 180);
+    }
+
+    async function copyHomeStudentGamesLink() {
+        const input = document.getElementById('homeStudentGamesLaunchUrl');
+        if (!input) return;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(input.value);
+            } else {
+                input.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+            }
+            alert('학생용 링크를 복사했습니다.');
+        } catch (error) {
+            alert('링크 복사에 실패했습니다. 직접 선택해서 복사해 주세요.');
+        }
+    }
+</script>
+{% endif %}
 {% endif %}

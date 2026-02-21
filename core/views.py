@@ -125,6 +125,27 @@ def _get_usage_based_quick_actions(user, product_list, limit=5):
     return quick_actions
 
 
+def _build_home_student_games_qr_context(request):
+    """홈 화면에서 바로 사용할 학생 게임 QR 컨텍스트 생성."""
+    if not request.user.is_authenticated:
+        return {}
+
+    from products.views import (
+        _build_qr_data_url,
+        _build_student_games_launch_url,
+        _create_student_games_token,
+        _student_games_max_age_seconds,
+    )
+
+    token = _create_student_games_token(request)
+    launch_url = _build_student_games_launch_url(request, token)
+    return {
+        "student_games_launch_url": launch_url,
+        "student_games_qr_data_url": _build_qr_data_url(launch_url),
+        "student_games_expires_hours": max(1, _student_games_max_age_seconds() // 3600),
+    }
+
+
 def _home_v2(request, products, posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = list(products)
@@ -151,6 +172,7 @@ def _home_v2(request, products, posts):
             'games': games,
             'quick_actions': quick_action_items,
             'posts': posts,
+            **_build_home_student_games_qr_context(request),
         })
 
     featured_product = next((p for p in product_list if p.is_featured), product_list[0] if product_list else None)

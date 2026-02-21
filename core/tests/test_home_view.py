@@ -120,6 +120,15 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('쉬는 시간', content)
         self.assertIn('테스트 게임', content)
+        self.assertNotIn('학생용 QR', content)
+
+    def test_v2_authenticated_has_student_games_qr_button(self):
+        """V2 로그인 홈에 학생 게임 QR 버튼 존재"""
+        self._login('gameqruser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('학생용 QR', content)
+        self.assertIn('homeStudentGamesQrModal', content)
 
     def test_v2_anonymous_has_show_all_toggle(self):
         """V2 비로그인 홈에 전체 서비스 보기 토글 존재"""
