@@ -1,5 +1,6 @@
 {% if errors %}
-<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm"
+     hx-on::after-settle="document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold mb-2">CSV 처리 중 문제가 있습니다.</p>
     <ul class="list-disc pl-5 space-y-1">
         {% for err in errors|slice:":8" %}
@@ -18,7 +19,7 @@
 </div>
 {% else %}
 <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm"
-     hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated'));">
+     hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated')); document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold">CSV 저장이 완료되었습니다.</p>
     <p class="mt-1">신규 생성: {{ created_count }}개 / 기존 갱신: {{ updated_count|default:0 }}개</p>
     {% if review_count %}

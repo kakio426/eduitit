@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from happy_seed.models import HSClassroom, HSStudent
-from seed_quiz.models import SQAttempt, SQQuizBank, SQQuizItem, SQQuizSet
+from seed_quiz.models import SQAttempt, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
 from seed_quiz.services.bank import (
     copy_bank_to_draft,
     generate_bank_from_context_ai,
@@ -69,6 +69,37 @@ def _humanize_bytes(num: int) -> str:
     if unit_idx == 0:
         return f"{int(value)}{units[unit_idx]}"
     return f"{value:.1f}{units[unit_idx]}"
+
+
+def _trim_errors(errors: list[str], max_items: int = 5, max_len: int = 180) -> list[str]:
+    trimmed = []
+    for err in (errors or [])[:max_items]:
+        msg = str(err or "").replace("\n", " ").replace("\r", " ").strip()
+        if len(msg) > max_len:
+            msg = msg[: max_len - 1] + "..."
+        if msg:
+            trimmed.append(msg)
+    return trimmed
+
+
+def _log_csv_event(
+    *,
+    classroom,
+    teacher,
+    code: str,
+    level: str,
+    message: str,
+    payload: dict | None = None,
+):
+    data = dict(payload or {})
+    data.setdefault("classroom_id", str(classroom.id))
+    data.setdefault("teacher_id", int(getattr(teacher, "id", 0) or 0))
+    SQGenerationLog.objects.create(
+        level=level,
+        code=code,
+        message=message,
+        payload=data,
+    )
 
 
 def _parse_bank_filters(raw_preset: str, raw_grade: str):
@@ -399,6 +430,15 @@ def htmx_csv_upload(request, classroom_id):
     csv_limits = _get_csv_upload_limits()
     csv_file = request.FILES.get("csv_file")
     if not csv_file:
+        errors = ["CSV 파일을 선택해 주세요."]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="CSV_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="CSV 미리보기 실패: 파일 미선택",
+            payload={"error_count": 1, "errors": _trim_errors(errors)},
+        )
         token = _store_csv_error_report(request, ["CSV 파일을 선택해 주세요."])
         return render(
             request,
@@ -416,12 +456,26 @@ def htmx_csv_upload(request, classroom_id):
         )
 
     if int(getattr(csv_file, "size", 0) or 0) > csv_limits["max_file_bytes"]:
+        errors = [
+            "CSV 파일 용량이 제한을 초과했습니다. "
+            f"(최대 {_humanize_bytes(csv_limits['max_file_bytes'])})"
+        ]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="CSV_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="CSV 미리보기 실패: 파일 용량 초과",
+            payload={
+                "filename": getattr(csv_file, "name", ""),
+                "file_size": int(getattr(csv_file, "size", 0) or 0),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
         token = _store_csv_error_report(
             request,
-            [
-                "CSV 파일 용량이 제한을 초과했습니다. "
-                f"(최대 {_humanize_bytes(csv_limits['max_file_bytes'])})"
-            ],
+            errors,
         )
         return render(
             request,
@@ -449,6 +503,19 @@ def htmx_csv_upload(request, classroom_id):
         max_sets=csv_limits["max_sets"],
     )
     if errors:
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="CSV_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="CSV 미리보기 실패: 파싱/검증 오류",
+            payload={
+                "filename": getattr(csv_file, "name", ""),
+                "file_size": int(getattr(csv_file, "size", 0) or 0),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
         token = _store_csv_error_report(request, errors)
         return render(
             request,
@@ -468,6 +535,20 @@ def htmx_csv_upload(request, classroom_id):
         )
 
     if not parsed_sets:
+        errors = ["저장할 수 있는 문제 세트가 없습니다."]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="CSV_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="CSV 미리보기 실패: 유효 세트 없음",
+            payload={
+                "filename": getattr(csv_file, "name", ""),
+                "file_size": int(getattr(csv_file, "size", 0) or 0),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
         token = _store_csv_error_report(request, ["저장할 수 있는 문제 세트가 없습니다."])
         return render(
             request,
@@ -486,6 +567,19 @@ def htmx_csv_upload(request, classroom_id):
             status=400,
         )
 
+    _log_csv_event(
+        classroom=classroom,
+        teacher=request.user,
+        code="CSV_UPLOAD_PREVIEW_READY",
+        level="info",
+        message=f"CSV 미리보기 성공: {len(parsed_sets)}세트",
+        payload={
+            "filename": getattr(csv_file, "name", ""),
+            "file_size": int(getattr(csv_file, "size", 0) or 0),
+            "set_count": len(parsed_sets),
+            "row_count": sum(len(s.get("items", [])) for s in parsed_sets),
+        },
+    )
     token = uuid4().hex
     request.session[CSV_PREVIEW_TOKEN_KEY] = token
     request.session[CSV_PREVIEW_PAYLOAD_KEY] = parsed_sets
@@ -513,6 +607,14 @@ def htmx_csv_confirm(request, classroom_id):
     parsed_sets = request.session.get(CSV_PREVIEW_PAYLOAD_KEY) or []
 
     if not token or token != session_token or not parsed_sets:
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="CSV_UPLOAD_CONFIRM_FAILED",
+            level="warn",
+            message="CSV 저장 실패: 미리보기 세션 만료",
+            payload={"error_count": 1, "errors": ["CSV 미리보기 세션이 만료되었습니다."]},
+        )
         return render(
             request,
             "seed_quiz/partials/csv_upload_result.html",
@@ -532,6 +634,20 @@ def htmx_csv_confirm(request, classroom_id):
         created_by=request.user,
         share_opt_in=share_opt_in,
     )
+    _log_csv_event(
+        classroom=classroom,
+        teacher=request.user,
+        code="CSV_UPLOAD_CONFIRM_SUCCESS",
+        level="info",
+        message=f"CSV 저장 완료: 생성 {created_count}, 갱신 {updated_count}",
+        payload={
+            "set_count": len(parsed_sets),
+            "created_count": created_count,
+            "updated_count": updated_count,
+            "review_count": review_count,
+            "share_opt_in": bool(share_opt_in),
+        },
+    )
 
     request.session.pop(CSV_PREVIEW_TOKEN_KEY, None)
     request.session.pop(CSV_PREVIEW_PAYLOAD_KEY, None)
@@ -548,6 +664,29 @@ def htmx_csv_confirm(request, classroom_id):
             "errors": [],
         },
         status=200,
+    )
+
+
+@login_required
+def htmx_csv_history(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    logs = (
+        SQGenerationLog.objects.filter(
+            code__in=[
+                "CSV_UPLOAD_PREVIEW_READY",
+                "CSV_UPLOAD_PREVIEW_FAILED",
+                "CSV_UPLOAD_CONFIRM_SUCCESS",
+                "CSV_UPLOAD_CONFIRM_FAILED",
+            ],
+            payload__classroom_id=str(classroom.id),
+            payload__teacher_id=int(request.user.id),
+        )
+        .order_by("-created_at")[:20]
+    )
+    return render(
+        request,
+        "seed_quiz/partials/csv_upload_history.html",
+        {"classroom": classroom, "history_logs": logs},
     )
 
 

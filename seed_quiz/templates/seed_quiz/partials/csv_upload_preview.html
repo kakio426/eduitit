@@ -1,4 +1,5 @@
-<div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50 text-slate-700 text-sm">
+<div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50 text-slate-700 text-sm"
+     hx-on::after-settle="document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold text-indigo-700">CSV 미리보기 완료</p>
     <p class="mt-1">저장 예정 세트: {{ set_count }}개</p>
 

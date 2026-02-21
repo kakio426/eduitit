@@ -124,6 +124,14 @@
         <div id="csv-upload-result" class="mt-3"></div>
     </div>
 
+    <!-- CSV 업로드 이력 -->
+    <div class="clay-card p-6 rounded-2xl mb-6"
+         hx-get="{% url 'seed_quiz:htmx_csv_history' classroom_id=classroom.id %}"
+         hx-trigger="load, csvHistoryUpdated from:body, every 20s"
+         hx-swap="innerHTML">
+        <p class="text-sm text-gray-400">CSV 업로드 이력을 불러오는 중...</p>
+    </div>
+
     {% if allow_rag %}
     <!-- 제한형 RAG -->
     <div class="clay-card p-6 rounded-2xl mb-6">

@@ -21,6 +21,7 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/", views.htmx_bank_select, name="htmx_bank_select"),
     path("class/<uuid:classroom_id>/htmx/csv/upload/", views.htmx_csv_upload, name="htmx_csv_upload"),
     path("class/<uuid:classroom_id>/htmx/csv/confirm/", views.htmx_csv_confirm, name="htmx_csv_confirm"),
+    path("class/<uuid:classroom_id>/htmx/csv/history/", views.htmx_csv_history, name="htmx_csv_history"),
     path("class/<uuid:classroom_id>/htmx/rag/generate/", views.htmx_rag_generate, name="htmx_rag_generate"),
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),

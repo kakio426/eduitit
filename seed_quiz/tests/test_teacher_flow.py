@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
-from seed_quiz.models import SQRagDailyUsage, SQQuizBank, SQQuizBankItem, SQQuizSet
+from seed_quiz.models import SQGenerationLog, SQRagDailyUsage, SQQuizBank, SQQuizBankItem, SQQuizSet
 
 User = get_user_model()
 
@@ -140,6 +140,22 @@ class TeacherFlowTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "주제별 운영 요약")
+
+    def test_csv_history_returns_200(self):
+        SQGenerationLog.objects.create(
+            level="info",
+            code="CSV_UPLOAD_PREVIEW_READY",
+            message="CSV 미리보기 성공: 1세트",
+            payload={"classroom_id": str(self.classroom.id), "teacher_id": self.teacher.id, "set_count": 1},
+        )
+        url = reverse(
+            "seed_quiz:htmx_csv_history",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "CSV 업로드 이력")
+        self.assertContains(resp, "CSV_UPLOAD_PREVIEW_READY")
 
     def test_other_teacher_forbidden(self):
         other_client = Client()
@@ -350,6 +366,13 @@ class TeacherFlowTest(TestCase):
         report_body = report_resp.content.decode("utf-8-sig")
         self.assertIn("no,error_message", report_body)
         self.assertIn("set_title 형식이 올바르지 않습니다", report_body)
+        self.assertTrue(
+            SQGenerationLog.objects.filter(
+                code="CSV_UPLOAD_PREVIEW_FAILED",
+                payload__classroom_id=str(self.classroom.id),
+                payload__teacher_id=self.teacher.id,
+            ).exists()
+        )
 
     @override_settings(SEED_QUIZ_CSV_MAX_ROWS=2)
     def test_csv_upload_rejects_when_row_limit_exceeded(self):
@@ -457,6 +480,13 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(bank.quality_status, "review")
         self.assertFalse(bank.is_public)
         self.assertTrue(bank.share_opt_in)
+        self.assertTrue(
+            SQGenerationLog.objects.filter(
+                code="CSV_UPLOAD_CONFIRM_SUCCESS",
+                payload__classroom_id=str(self.classroom.id),
+                payload__teacher_id=self.teacher.id,
+            ).exists()
+        )
 
     def test_csv_confirm_fails_when_preview_expired(self):
         confirm_url = reverse(
