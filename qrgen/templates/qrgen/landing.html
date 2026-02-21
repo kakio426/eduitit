@@ -9,7 +9,7 @@
             <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
             <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'수업 QR 생성기' }}</h1>
             <p class="text-gray-500 mt-3 text-sm md:text-base">
-                모둠별 제목과 링크를 입력한 뒤, 초 단위 자동 순환으로 QR을 보여주세요.
+                기본은 링크 1개 생성입니다. 필요할 때 링크를 추가해 자동 전환으로 QR을 보여주세요.
             </p>
         </div>
 
@@ -32,7 +32,7 @@
                     @click="addItem()"
                     class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm"
                 >
-                    모둠 추가
+                    + 링크
                 </button>
 
                 <button
@@ -48,7 +48,7 @@
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="clay-card p-5 md:p-6">
-                <h2 class="text-xl font-black text-gray-800 mb-4">모둠 입력</h2>
+                <h2 class="text-xl font-black text-gray-800 mb-4">링크 입력</h2>
                 <div class="space-y-3 max-h-[560px] overflow-y-auto pr-1">
                     <template x-for="(item, idx) in items" :key="item.uid">
                         <div class="rounded-xl border border-gray-200 bg-white p-3">
@@ -69,7 +69,7 @@
                                     x-model="item.title"
                                     maxlength="80"
                                     @input.debounce.120ms="queueRender()"
-                                    placeholder="예: 1모둠"
+                                    placeholder="예: 수학 활동지"
                                     class="w-full rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 >
                                 <input
@@ -95,7 +95,7 @@
                 <div x-show="validItems().length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
                     <template x-for="item in items" :key="'preview-' + item.uid">
                         <div x-show="item.normalizedUrl" class="rounded-xl border border-gray-200 bg-white p-3 text-center">
-                            <p class="text-sm font-black text-gray-800 truncate" x-text="item.title || '모둠'"></p>
+                            <p class="text-sm font-black text-gray-800 truncate" x-text="item.title || '링크'"></p>
                             <div class="mt-2 mx-auto w-[170px] h-[170px] flex items-center justify-center" :id="'preview-qr-' + item.uid"></div>
                         </div>
                     </template>
@@ -159,9 +159,7 @@ function qrgenApp() {
         renderTimer: null,
 
         init() {
-            for (let i = 1; i <= 4; i += 1) {
-                this.addItem(`${i}모둠`, '');
-            }
+            this.addItem('링크 1', '');
             this.queueRender();
 
             document.addEventListener('fullscreenchange', () => {
@@ -179,7 +177,7 @@ function qrgenApp() {
         addItem(defaultTitle = '', defaultUrl = '') {
             const item = {
                 uid: this.nextUid++,
-                title: defaultTitle || `${this.items.length + 1}모둠`,
+                title: defaultTitle || `${this.items.length + 1}번 링크`,
                 url: defaultUrl || '',
                 normalizedUrl: '',
                 error: '',
@@ -193,7 +191,7 @@ function qrgenApp() {
         removeItem(uid) {
             this.items = this.items.filter((item) => item.uid !== uid);
             if (this.items.length === 0) {
-                this.addItem('1모둠', '');
+                this.addItem('링크 1', '');
             }
             this.queueRender();
             this.syncCycleAfterDataChange();
@@ -307,7 +305,7 @@ function qrgenApp() {
 
         activeItemTitle() {
             const item = this.activeItem();
-            return item ? (item.title || '모둠') : '표시할 QR이 없습니다';
+            return item ? (item.title || '링크') : '표시할 QR이 없습니다';
         },
 
         slideLabel() {

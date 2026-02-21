@@ -9,11 +9,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         title = "수업 QR 생성기"
         defaults = {
-            "lead_text": "모둠별 QR코드를 한 번에 만들고, 제목과 전환 간격을 정해 자동 순환으로 보여주세요.",
+            "lead_text": "기본 링크 1개를 QR로 만들고, 필요하면 여러 링크를 추가해 자동 전환으로 보여주세요.",
             "description": (
-                "수업 자료 링크를 모둠별로 입력하면 여러 QR코드를 한 화면에서 만들 수 있습니다. "
-                "자동 전환 화면에서는 교사가 설정한 초 단위로 QR이 넘어가며, 모둠 제목이 함께 표시되어 "
-                "학생들이 자신의 QR을 빠르게 인식할 수 있습니다."
+                "수업 자료 링크를 하나 또는 여러 개 입력하면 QR코드를 즉시 생성할 수 있습니다. "
+                "자동 전환 화면에서는 교사가 설정한 초 단위로 QR이 넘어가며, 각 링크 제목이 함께 표시되어 "
+                "학생들이 필요한 사이트를 빠르게 찾을 수 있습니다."
             ),
             "price": 0.00,
             "is_active": True,
@@ -26,8 +26,8 @@ class Command(BaseCommand):
             "service_type": "classroom",
             "external_url": "",
             "launch_route_name": "qrgen:landing",
-            "solve_text": "모둠마다 다른 링크를 헷갈리지 않게 배포하고 싶어요",
-            "result_text": "모둠 제목이 붙은 순환 QR 화면",
+            "solve_text": "학습 사이트 링크를 QR로 빠르게 배포하고 싶어요",
+            "result_text": "제목이 붙은 자동 전환 QR 화면",
             "time_text": "30초",
         }
         mutable_fields = [
@@ -73,18 +73,18 @@ class Command(BaseCommand):
         features = [
             {
                 "icon": "🧩",
-                "title": "모둠별 다중 QR 생성",
-                "description": "여러 모둠의 제목과 링크를 입력해 QR코드를 한 번에 생성합니다.",
+                "title": "다중 링크 QR 생성",
+                "description": "링크를 하나씩 추가해 여러 QR코드를 한 화면에서 생성합니다.",
             },
             {
                 "icon": "⏱️",
                 "title": "초 단위 자동 순환",
-                "description": "교사가 설정한 전환 간격에 맞춰 다음 모둠 QR로 자동 이동합니다.",
+                "description": "교사가 설정한 전환 간격에 맞춰 다음 링크 QR로 자동 이동합니다.",
             },
             {
                 "icon": "🖥️",
                 "title": "제목 표시 QR 화면",
-                "description": "현재 QR 상단에 모둠 제목을 크게 보여 학생들이 자신의 코드를 쉽게 찾습니다.",
+                "description": "현재 QR 상단에 링크 제목을 크게 보여 학생들이 목적 사이트를 쉽게 찾습니다.",
             },
         ]
         for item in features:
@@ -111,7 +111,7 @@ class Command(BaseCommand):
             if changed:
                 feature.save(update_fields=changed)
 
-        target_manual_description = "모둠별 QR 생성부터 자동 순환 QR 화면까지 빠르게 사용하는 방법입니다."
+        target_manual_description = "단일/다중 링크 QR 생성부터 자동 전환 QR 화면까지 빠르게 사용하는 방법입니다."
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
@@ -138,18 +138,18 @@ class Command(BaseCommand):
 
         sections = [
             (
-                "모둠 설정",
-                "모둠별 제목과 링크를 입력하면 QR코드가 즉시 생성됩니다. http/https 링크만 지원합니다.",
+                "링크 설정",
+                "링크 제목과 URL을 입력하면 QR코드가 즉시 생성됩니다. http/https 링크만 지원합니다.",
                 1,
             ),
             (
                 "자동 순환 표시",
-                "전환 간격(초)을 정한 뒤 자동 전환을 시작하면 모둠 QR이 자동으로 넘어갑니다.",
+                "전환 간격(초)을 정한 뒤 자동 전환을 시작하면 링크 QR이 자동으로 넘어갑니다.",
                 2,
             ),
             (
                 "현장 활용 팁",
-                "모둠 제목을 실제 자리 배치와 동일하게 입력하면 학생 이동 동선을 줄일 수 있습니다.",
+                "링크 제목을 교사가 안내하는 활동 순서와 같게 입력하면 학생 혼선을 줄일 수 있습니다.",
                 3,
             ),
         ]
