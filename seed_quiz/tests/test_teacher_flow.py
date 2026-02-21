@@ -113,6 +113,20 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "오늘의 퀴즈 선택")
         self.assertContains(resp, 'id="csv-client-check"')
         self.assertContains(resp, "정확히 3문항 필요")
+        self.assertContains(resp, "제작 가이드(1P)")
+
+    def test_download_csv_guide(self):
+        url = reverse(
+            "seed_quiz:download_csv_guide",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/markdown; charset=utf-8")
+        body = resp.content.decode("utf-8-sig")
+        self.assertIn("교사용 Seed Quiz CSV 제작 가이드", body)
+        self.assertIn("set_title,preset_type,grade", body)
+        self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
 
     def test_download_csv_template(self):
         url = reverse(

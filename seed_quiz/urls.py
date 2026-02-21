@@ -11,6 +11,7 @@ urlpatterns = [
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
     path("class/<uuid:classroom_id>/csv-template/", views.download_csv_template, name="download_csv_template"),
+    path("class/<uuid:classroom_id>/csv-guide/", views.download_csv_guide, name="download_csv_guide"),
     path("class/<uuid:classroom_id>/csv-sample-pack/", views.download_csv_sample_pack, name="download_csv_sample_pack"),
     path(
         "class/<uuid:classroom_id>/csv-error-report/<slug:token>/",

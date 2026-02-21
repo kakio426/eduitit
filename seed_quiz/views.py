@@ -43,6 +43,68 @@ CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
 CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
 CSV_ERROR_REPORT_ROWS_KEY = "sq_csv_error_report_rows"
 
+CSV_TEACHER_GUIDE_MD = """# 교사용 Seed Quiz CSV 제작 가이드 (1페이지)
+
+## 1) 업로드 파일 기본 형식
+
+헤더(고정):
+`set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty`
+
+- 파일 형식: `.csv`
+- 인코딩: `UTF-8` 권장 (엑셀 저장 시 CSV UTF-8 선택)
+- 한 세트 문항 수: 정확히 3문항
+
+## 2) set_title 표준 (반드시 준수)
+
+`SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}`
+
+예시:
+`SQ-orthography-basic-L1-G3-S001-V1`
+
+- `{topic}`: `preset_type`와 동일해야 함
+- `{grade}`: `grade`와 동일해야 함
+- `{seq}`: 3자리 숫자 (예: 001, 102)
+- `{ver}`: 버전 숫자 (예: 1, 2)
+
+## 3) 필수 검수 체크리스트
+
+1. `preset_type`이 허용 주제 키인지 확인
+2. `grade`가 1~6인지 확인
+3. 각 문항의 선택지 4개가 모두 채워졌는지 확인
+4. 선택지 중복이 없는지 확인
+5. `correct_index`가 0~3인지 확인
+6. 정답과 해설이 서로 일치하는지 확인
+7. 세트별 문항 수가 정확히 3개인지 확인
+
+## 4) 자주 발생하는 오류
+
+- `set_title 형식 오류`
+  - 원인: 규격이 다르거나 `S001`/`V1` 형식 누락
+- `set_title topic/grade 불일치`
+  - 원인: `preset_type`, `grade` 값과 `set_title` 내 값이 다름
+- `선택지 중복`
+  - 원인: 같은 보기 텍스트를 두 칸 이상에 입력
+- `correct_index 오류`
+  - 원인: 0~3이 아닌 값 입력
+
+## 5) 제작 권장 절차 (실수 최소화)
+
+1. 대시보드에서 템플릿 다운로드
+2. 한 세트(3문항)만 먼저 작성
+3. 업로드하여 미리보기/오류 리포트 확인
+4. 이상 없으면 동일 규칙으로 대량 작성
+5. 최종 업로드 후 미리보기 검수 후 확정
+
+## 6) 빠른 예시 (3문항 1세트)
+
+```csv
+set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty
+SQ-orthography-basic-L1-G3-S001-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울이 수도입니다,easy
+SQ-orthography-basic-L1-G3-S001-V1,orthography,3,1+1은?,1,2,3,4,1,1+1=2 입니다,easy
+SQ-orthography-basic-L1-G3-S001-V1,orthography,3,바다 색은?,파랑,빨강,노랑,검정,0,일반적으로 파랑으로 보입니다,easy
+```
+"""
+
 
 def _get_positive_int_setting(name: str, default: int) -> int:
     try:
@@ -257,6 +319,19 @@ def download_csv_template(request, classroom_id):
     response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
     response.write("\ufeff")
     response.write(output.getvalue())
+    return response
+
+
+@login_required
+def download_csv_guide(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    if not classroom:
+        return HttpResponseForbidden("권한이 없습니다.")
+
+    response = HttpResponse(content_type="text/markdown; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="seed_quiz_csv_teacher_guide.md"'
+    response.write("\ufeff")
+    response.write(CSV_TEACHER_GUIDE_MD)
     return response
 
 

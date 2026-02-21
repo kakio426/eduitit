@@ -82,6 +82,10 @@
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-gray-700">CSV 업로드</h2>
             <div class="flex items-center gap-2">
+                <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
+                   class="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors">
+                    제작 가이드(1P)
+                </a>
                 <a href="{% url 'seed_quiz:download_csv_template' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
                     템플릿 다운로드
