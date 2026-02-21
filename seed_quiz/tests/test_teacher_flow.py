@@ -351,6 +351,72 @@ class TeacherFlowTest(TestCase):
         self.assertIn("no,error_message", report_body)
         self.assertIn("set_title 형식이 올바르지 않습니다", report_body)
 
+    @override_settings(SEED_QUIZ_CSV_MAX_ROWS=2)
+    def test_csv_upload_rejects_when_row_limit_exceeded(self):
+        csv_text = (
+            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
+            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
+            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse(
+            "seed_quiz:htmx_csv_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "CSV 행 수가 제한(2행)을 초과했습니다.", status_code=400)
+
+    @override_settings(SEED_QUIZ_CSV_MAX_SETS=1)
+    def test_csv_upload_rejects_when_set_limit_exceeded(self):
+        csv_text = (
+            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제1,가,나,다,라,0,해설,easy\n"
+            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제2,가,나,다,라,1,해설,easy\n"
+            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제3,가,나,다,라,2,해설,easy\n"
+            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제4,가,나,다,라,0,해설,easy\n"
+            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제5,가,나,다,라,1,해설,easy\n"
+            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제6,가,나,다,라,2,해설,easy\n"
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse(
+            "seed_quiz:htmx_csv_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "CSV 세트 수가 제한(1세트)을 초과했습니다.", status_code=400)
+
+    @override_settings(SEED_QUIZ_CSV_MAX_FILE_BYTES=120)
+    def test_csv_upload_rejects_when_file_size_exceeded(self):
+        csv_text = (
+            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,대한민국 수도는 어디인가요?,부산,서울,대구,광주,1,서울입니다,easy\n"
+            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
+            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse(
+            "seed_quiz:htmx_csv_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "CSV 파일 용량이 제한을 초과했습니다.", status_code=400)
+
     def test_csv_confirm_with_share_opt_in_sets_review_status(self):
         csv_text = (
             "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"

@@ -113,7 +113,11 @@ def _decode_csv_text(csv_file_or_bytes) -> str:
     return raw
 
 
-def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
+def parse_csv_upload(
+    csv_file_or_bytes,
+    max_rows: int | None = None,
+    max_sets: int | None = None,
+) -> tuple[list[dict], list[str]]:
     """
     CSV를 파싱/검증해 미리보기 가능한 구조로 반환한다.
     반환: (parsed_sets, errors)
@@ -146,12 +150,27 @@ def parse_csv_upload(csv_file_or_bytes) -> tuple[list[dict], list[str]]:
         return [], [f"필수 컬럼 누락: {', '.join(sorted(missing_cols))}"]
 
     grouped: dict[str, list[tuple[int, dict]]] = {}
+    data_row_count = 0
     for row_no, row in enumerate(reader, start=2):
+        if not any(str(v or "").strip() for v in row.values()):
+            continue
+        data_row_count += 1
+        if max_rows and data_row_count > max_rows:
+            return [], [
+                f"CSV 행 수가 제한({max_rows}행)을 초과했습니다. "
+                "파일을 분할해 다시 업로드해 주세요."
+            ]
         set_title = (row.get("set_title") or "").strip()
         if not set_title:
             errors.append(f"행 {row_no}: set_title이 비어있습니다.")
             continue
         grouped.setdefault(set_title, []).append((row_no, row))
+
+    if max_sets and len(grouped) > max_sets:
+        return [], [
+            f"CSV 세트 수가 제한({max_sets}세트)을 초과했습니다. "
+            "파일을 분할해 다시 업로드해 주세요."
+        ]
 
     for set_title, rows in grouped.items():
         if len(rows) != 3:

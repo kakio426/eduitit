@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'chess.apps.ChessConfig',
     'janggi.apps.JanggiConfig',
     'fairy_games.apps.FairyGamesConfig',
+    'ppobgi.apps.PpobgiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
     'qrgen.apps.QrgenConfig',
@@ -441,6 +442,9 @@ ONBOARDING_EXEMPT_PATH_PREFIXES = ['/autoarticle/'] if TESTING else []
 DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS = int(os.environ.get('DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS', '28800'))
 SEED_QUIZ_BATCH_ENABLED = os.environ.get('SEED_QUIZ_BATCH_ENABLED', 'False').lower() in ('true', '1', 'yes')
 SEED_QUIZ_ALLOW_RAG = os.environ.get('SEED_QUIZ_ALLOW_RAG', 'False').lower() in ('true', '1', 'yes')
+SEED_QUIZ_CSV_MAX_FILE_BYTES = int(os.environ.get('SEED_QUIZ_CSV_MAX_FILE_BYTES', str(2 * 1024 * 1024)))
+SEED_QUIZ_CSV_MAX_ROWS = int(os.environ.get('SEED_QUIZ_CSV_MAX_ROWS', '1200'))
+SEED_QUIZ_CSV_MAX_SETS = int(os.environ.get('SEED_QUIZ_CSV_MAX_SETS', '400'))
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)

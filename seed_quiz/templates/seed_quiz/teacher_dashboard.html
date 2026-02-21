@@ -88,6 +88,9 @@
         </div>
         <form id="csv-upload-form"
               data-client-check-state="idle"
+              data-max-file-bytes="{{ csv_limits.max_file_bytes }}"
+              data-max-rows="{{ csv_limits.max_rows }}"
+              data-max-sets="{{ csv_limits.max_sets }}"
               hx-post="{% url 'seed_quiz:htmx_csv_upload' classroom_id=classroom.id %}"
               hx-encoding="multipart/form-data"
               hx-target="#csv-upload-result"
@@ -113,6 +116,9 @@
         </p>
         <p class="mt-1 text-xs text-gray-400">
             set_title 표준: <code>SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}</code> 예: <code>SQ-orthography-basic-L1-G3-S001-V1</code>
+        </p>
+        <p class="mt-1 text-xs text-gray-400">
+            업로드 제한: 파일 {{ csv_limits_human.max_file }} 이하 / 데이터 {{ csv_limits_human.max_rows }}행 이하 / {{ csv_limits_human.max_sets }}세트 이하
         </p>
         <div id="csv-client-check" class="mt-2 hidden"></div>
         <div id="csv-upload-result" class="mt-3"></div>
@@ -208,12 +214,29 @@
         'set_title', 'preset_type', 'grade', 'question_text',
         'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
     ];
+    const maxFileBytes = parseInt(form.dataset.maxFileBytes || '0', 10) || 0;
+    const maxRows = parseInt(form.dataset.maxRows || '0', 10) || 0;
+    const maxSets = parseInt(form.dataset.maxSets || '0', 10) || 0;
     const setTitleRegex = /^SQ-([a-z_]+)-basic-L1-G([1-6])-S(\d{3})-V(\d+)$/;
     const allowedPresetTypes = new Set(
         Array.from(document.querySelectorAll('#bank-filter-form select[name="preset_type"] option'))
             .map((opt) => (opt.value || '').trim())
             .filter(Boolean)
     );
+
+    function humanizeBytes(num) {
+        let value = Number(num) || 0;
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let unitIdx = 0;
+        while (value >= 1024 && unitIdx < units.length - 1) {
+            value /= 1024;
+            unitIdx += 1;
+        }
+        if (unitIdx === 0) {
+            return String(Math.floor(value)) + units[unitIdx];
+        }
+        return value.toFixed(1) + units[unitIdx];
+    }
 
     function setState(state) {
         form.dataset.clientCheckState = state;
@@ -295,6 +318,7 @@
         const maxErrors = 120;
         const groupedSetStats = {};
         let isOverflow = false;
+        let dataRowsCount = 0;
 
         function addError(msg) {
             if (errors.length < maxErrors) {
@@ -330,6 +354,11 @@
             const raw = rows[i];
             if (!raw || !raw.length || raw.every((v) => String(v || '').trim() === '')) {
                 continue;
+            }
+            dataRowsCount += 1;
+            if (maxRows && dataRowsCount > maxRows) {
+                addError('CSV 행 수가 제한(' + maxRows + '행)을 초과했습니다.');
+                break;
             }
             const lineNo = i + 1;
             const get = (key) => (raw[headerIndex[key]] || '').trim();
@@ -420,6 +449,9 @@
                 );
             }
         });
+        if (maxSets && Object.keys(groupedSetStats).length > maxSets) {
+            addError('CSV 세트 수가 제한(' + maxSets + '세트)을 초과했습니다.');
+        }
 
         if (isOverflow) {
             errors.push('오류가 많아 처음 120건만 표시합니다.');
@@ -432,6 +464,14 @@
         if (!file) {
             setState('invalid');
             showErrors(['CSV 파일을 선택해 주세요.']);
+            if (callback) callback(false);
+            return;
+        }
+        if (maxFileBytes && file.size > maxFileBytes) {
+            setState('invalid');
+            showErrors([
+                'CSV 파일 용량이 제한을 초과했습니다. (최대 ' + humanizeBytes(maxFileBytes) + ')'
+            ]);
             if (callback) callback(false);
             return;
         }

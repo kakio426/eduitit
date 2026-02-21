@@ -43,6 +43,34 @@ CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
 CSV_ERROR_REPORT_ROWS_KEY = "sq_csv_error_report_rows"
 
 
+def _get_positive_int_setting(name: str, default: int) -> int:
+    try:
+        value = int(getattr(settings, name, default))
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def _get_csv_upload_limits() -> dict:
+    return {
+        "max_file_bytes": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_FILE_BYTES", 2 * 1024 * 1024),
+        "max_rows": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_ROWS", 1200),
+        "max_sets": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_SETS", 400),
+    }
+
+
+def _humanize_bytes(num: int) -> str:
+    value = float(max(0, int(num)))
+    units = ["B", "KB", "MB", "GB"]
+    unit_idx = 0
+    while value >= 1024 and unit_idx < len(units) - 1:
+        value /= 1024
+        unit_idx += 1
+    if unit_idx == 0:
+        return f"{int(value)}{units[unit_idx]}"
+    return f"{value:.1f}{units[unit_idx]}"
+
+
 def _parse_bank_filters(raw_preset: str, raw_grade: str):
     preset_type = normalize_topic(raw_preset) or DEFAULT_TOPIC
     raw_grade_value = (raw_grade or "").strip().lower()
@@ -120,6 +148,7 @@ def landing(request):
 @login_required
 def teacher_dashboard(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    csv_limits = _get_csv_upload_limits()
     initial_preset, initial_grade = _parse_bank_filters(
         request.GET.get("preset_type", DEFAULT_TOPIC),
         request.GET.get("grade", "3"),
@@ -140,6 +169,12 @@ def teacher_dashboard(request, classroom_id):
             "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
             "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
             "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
+            "csv_limits": csv_limits,
+            "csv_limits_human": {
+                "max_file": _humanize_bytes(csv_limits["max_file_bytes"]),
+                "max_rows": csv_limits["max_rows"],
+                "max_sets": csv_limits["max_sets"],
+            },
         },
     )
 
@@ -361,6 +396,7 @@ def htmx_bank_select(request, classroom_id, bank_id):
 def htmx_csv_upload(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     _clear_csv_error_report(request)
+    csv_limits = _get_csv_upload_limits()
     csv_file = request.FILES.get("csv_file")
     if not csv_file:
         token = _store_csv_error_report(request, ["CSV 파일을 선택해 주세요."])
@@ -379,7 +415,39 @@ def htmx_csv_upload(request, classroom_id):
             status=400,
         )
 
-    parsed_sets, errors = parse_csv_upload(csv_file)
+    if int(getattr(csv_file, "size", 0) or 0) > csv_limits["max_file_bytes"]:
+        token = _store_csv_error_report(
+            request,
+            [
+                "CSV 파일 용량이 제한을 초과했습니다. "
+                f"(최대 {_humanize_bytes(csv_limits['max_file_bytes'])})"
+            ],
+        )
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": [
+                    "CSV 파일 용량이 제한을 초과했습니다. "
+                    f"(최대 {_humanize_bytes(csv_limits['max_file_bytes'])})"
+                ],
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    parsed_sets, errors = parse_csv_upload(
+        csv_file,
+        max_rows=csv_limits["max_rows"],
+        max_sets=csv_limits["max_sets"],
+    )
     if errors:
         token = _store_csv_error_report(request, errors)
         return render(
