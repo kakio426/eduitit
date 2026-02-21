@@ -37,6 +37,7 @@ urlpatterns = [
     path('chess/', include('chess.urls', namespace='chess')),
     path('janggi/', include('janggi.urls', namespace='janggi')),
     path('fairy-games/', include('fairy_games.urls', namespace='fairy_games')),
+    path('ppobgi/', include('ppobgi.urls', namespace='ppobgi')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
     path('collect/', include('collect.urls', namespace='collect')),
     path('qrgen/', include('qrgen.urls', namespace='qrgen')),

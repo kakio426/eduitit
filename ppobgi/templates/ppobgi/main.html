@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}별빛 추첨기 | EDUITIT{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'ppobgi/css/ppobgi.css' %}">
+{% endblock %}
+
+{% block content %}
+<main
+    id="ppobgi-app"
+    class="ppb-root"
+    data-default-names="{{ default_names|escapejs }}"
+    data-roster-url="{% url 'ppobgi:roster_names' %}"
+>
+    <div class="ppb-bg-gradient" aria-hidden="true"></div>
+    <div id="ppb-stars" class="ppb-stars" aria-hidden="true"></div>
+    <div id="ppb-flash" class="ppb-flash" aria-hidden="true"></div>
+
+    <header class="ppb-topbar">
+        <div class="ppb-brand">
+            <span class="ppb-brand-icon">✨</span>
+            <div>
+                <h1>별빛 추첨기</h1>
+                <p>교사용 TV 전용 추첨 모드</p>
+            </div>
+        </div>
+        <div class="ppb-top-controls">
+            <label class="ppb-toggle">
+                <input id="ppb-reduce-motion" type="checkbox">
+                <span>애니메이션 줄이기</span>
+            </label>
+            <button id="ppb-fullscreen-btn" type="button" class="ppb-ghost-btn">전체화면</button>
+        </div>
+    </header>
+
+    <section id="ppb-setup" class="ppb-screen">
+        <div class="ppb-setup-shell">
+            <article class="ppb-panel ppb-panel-info">
+                <h2>추첨 준비</h2>
+                <p class="ppb-muted">
+                    줄바꿈으로 이름을 넣고 추첨을 시작하세요.
+                    기본은 비복원 추첨이라 한 번 뽑힌 학생은 자동 제외됩니다.
+                </p>
+
+                <div class="ppb-btn-row">
+                    <button id="ppb-load-sample-btn" type="button" class="ppb-soft-btn">예시 명단 불러오기</button>
+                    <button id="ppb-load-roster-btn" type="button" class="ppb-soft-btn">당번 명단 불러오기</button>
+                    <button id="ppb-clear-input-btn" type="button" class="ppb-soft-btn">입력 비우기</button>
+                </div>
+
+                <div class="ppb-stats-grid">
+                    <div class="ppb-stat-card">
+                        <span class="ppb-stat-label">유효 인원</span>
+                        <strong id="ppb-stat-valid">0</strong>
+                    </div>
+                    <div class="ppb-stat-card">
+                        <span class="ppb-stat-label">중복 제외</span>
+                        <strong id="ppb-stat-dup">0</strong>
+                    </div>
+                    <div class="ppb-stat-card">
+                        <span class="ppb-stat-label">최대 40명 초과</span>
+                        <strong id="ppb-stat-cut">0</strong>
+                    </div>
+                </div>
+
+                <div id="ppb-setup-message" class="ppb-message" aria-live="polite"></div>
+
+                <button id="ppb-start-btn" type="button" class="ppb-primary-btn">
+                    추첨 우주 시작
+                </button>
+            </article>
+
+            <article class="ppb-panel ppb-panel-input">
+                <label for="ppb-name-input">학생 이름 명단</label>
+                <textarea
+                    id="ppb-name-input"
+                    class="ppb-textarea"
+                    placeholder="예)&#10;김별빛&#10;이은하&#10;박우주"
+                ></textarea>
+                <p class="ppb-input-hint">한 줄에 한 명, 최대 40명까지 진행됩니다.</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="ppb-universe" class="ppb-screen is-hidden">
+        <div class="ppb-universe-shell">
+            <div class="ppb-universe-main">
+                <div class="ppb-chip-row">
+                    <span class="ppb-chip">총 <strong id="ppb-chip-total">0</strong>명</span>
+                    <span class="ppb-chip">남은 <strong id="ppb-chip-left">0</strong>명</span>
+                    <span class="ppb-chip">추첨 <strong id="ppb-chip-round">0</strong>회</span>
+                </div>
+                <h2 class="ppb-universe-title">빛나는 별 하나를 선택하세요</h2>
+                <div id="ppb-orb-grid" class="ppb-orb-grid"></div>
+                <div class="ppb-bottom-actions">
+                    <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">처음으로 돌아가기</button>
+                </div>
+            </div>
+            <aside class="ppb-history-panel">
+                <h3>추첨 기록</h3>
+                <ol id="ppb-history-list-universe" class="ppb-history-list"></ol>
+            </aside>
+        </div>
+    </section>
+
+    <section id="ppb-reveal" class="ppb-screen is-hidden">
+        <div class="ppb-reveal-bg" aria-hidden="true"></div>
+        <div id="ppb-particles" class="ppb-particles" aria-hidden="true"></div>
+
+        <div class="ppb-reveal-shell">
+            <p class="ppb-reveal-label">이번에 선택된 학생</p>
+            <div class="ppb-selected-wrap">
+                <div class="ppb-selected-glow" aria-hidden="true"></div>
+                <h2 id="ppb-selected-name" class="ppb-selected-name"></h2>
+            </div>
+            <p class="ppb-reveal-meta">
+                남은 인원 <strong id="ppb-reveal-left">0</strong>명 /
+                누적 추첨 <strong id="ppb-reveal-round">0</strong>회
+            </p>
+
+            <div class="ppb-reveal-actions">
+                <button id="ppb-next-draw-btn" type="button" class="ppb-primary-btn">다음 추첨</button>
+                <button id="ppb-reset-btn" type="button" class="ppb-ghost-btn">새 명단으로 다시 시작</button>
+            </div>
+
+            <div class="ppb-history-inline">
+                <h3>최근 추첨 기록</h3>
+                <ol id="ppb-history-list-reveal" class="ppb-history-list"></ol>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'ppobgi/js/ppobgi.js' %}"></script>
+{% endblock %}
+
