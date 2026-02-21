@@ -1,5 +1,7 @@
 import uuid
 import re
+import io
+import zipfile
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -11,6 +13,7 @@ from django.utils import timezone
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
 from seed_quiz.models import SQGenerationLog, SQRagDailyUsage, SQQuizBank, SQQuizBankItem, SQQuizSet
+from seed_quiz.services.bank import parse_csv_upload
 
 User = get_user_model()
 
@@ -123,6 +126,27 @@ class TeacherFlowTest(TestCase):
         self.assertIn("set_title,preset_type,grade", body)
         self.assertIn("orthography", body)
         self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
+
+    def test_download_csv_sample_pack(self):
+        url = reverse(
+            "seed_quiz:download_csv_sample_pack",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/zip")
+
+        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        names = zf.namelist()
+        self.assertIn("README.txt", names)
+        csv_names = [n for n in names if n.startswith("samples/") and n.endswith(".csv")]
+        self.assertEqual(len(csv_names), len(SQQuizSet.PRESET_CHOICES))
+
+        first_csv = zf.read(csv_names[0])
+        parsed_sets, errors = parse_csv_upload(first_csv)
+        self.assertFalse(errors)
+        self.assertEqual(len(parsed_sets), 1)
+        self.assertEqual(len(parsed_sets[0]["items"]), 3)
 
     def test_download_csv_error_report_requires_valid_token(self):
         url = reverse(

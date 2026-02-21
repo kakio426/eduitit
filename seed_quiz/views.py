@@ -2,7 +2,8 @@ import logging
 import random
 import csv
 from datetime import timedelta
-from io import StringIO
+from io import BytesIO, StringIO
+from zipfile import ZIP_DEFLATED, ZipFile
 from uuid import uuid4
 
 from django.conf import settings
@@ -256,6 +257,104 @@ def download_csv_template(request, classroom_id):
     response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
     response.write("\ufeff")
     response.write(output.getvalue())
+    return response
+
+
+@login_required
+def download_csv_sample_pack(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    if not classroom:
+        return HttpResponseForbidden("권한이 없습니다.")
+
+    headers = [
+        "set_title",
+        "preset_type",
+        "grade",
+        "question_text",
+        "choice_1",
+        "choice_2",
+        "choice_3",
+        "choice_4",
+        "correct_index",
+        "explanation",
+        "difficulty",
+    ]
+
+    buffer = BytesIO()
+    with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zf:
+        readme_lines = [
+            "Seed Quiz CSV Sample Pack",
+            "",
+            "- 모든 파일은 현재 업로드 검증 규칙을 통과하도록 구성되어 있습니다.",
+            "- 각 CSV는 1세트(3문항)이며, set_title 규칙을 따릅니다.",
+            "- 필요 시 문항/보기/해설을 수정해 업로드하세요.",
+        ]
+        zf.writestr("README.txt", "\n".join(readme_lines))
+
+        for idx, (topic_key, topic_label) in enumerate(SQQuizSet.PRESET_CHOICES, start=1):
+            seq_no = 900 + idx
+            set_title = f"SQ-{topic_key}-basic-L1-G3-S{seq_no:03d}-V1"
+            output = StringIO()
+            writer = csv.writer(output)
+            writer.writerow(headers)
+            writer.writerow(
+                [
+                    set_title,
+                    topic_key,
+                    3,
+                    f"[{topic_label}] 예시 문제 1",
+                    f"{topic_label} 정답 1",
+                    f"{topic_label} 오답 1-1",
+                    f"{topic_label} 오답 1-2",
+                    f"{topic_label} 오답 1-3",
+                    0,
+                    f"{topic_label} 예시 해설 1",
+                    "easy",
+                ]
+            )
+            writer.writerow(
+                [
+                    set_title,
+                    topic_key,
+                    3,
+                    f"[{topic_label}] 예시 문제 2",
+                    f"{topic_label} 오답 2-1",
+                    f"{topic_label} 정답 2",
+                    f"{topic_label} 오답 2-2",
+                    f"{topic_label} 오답 2-3",
+                    1,
+                    f"{topic_label} 예시 해설 2",
+                    "easy",
+                ]
+            )
+            writer.writerow(
+                [
+                    set_title,
+                    topic_key,
+                    3,
+                    f"[{topic_label}] 예시 문제 3",
+                    f"{topic_label} 오답 3-1",
+                    f"{topic_label} 오답 3-2",
+                    f"{topic_label} 정답 3",
+                    f"{topic_label} 오답 3-3",
+                    2,
+                    f"{topic_label} 예시 해설 3",
+                    "easy",
+                ]
+            )
+
+            csv_text = output.getvalue()
+            parsed_sets, errors = parse_csv_upload(csv_text.encode("utf-8"))
+            if errors or not parsed_sets:
+                return HttpResponse(
+                    "샘플 CSV 팩 생성 중 검증 오류가 발생했습니다. 관리자에게 문의해 주세요.",
+                    status=500,
+                )
+            zf.writestr(f"samples/{idx:02d}_{topic_key}.csv", "\ufeff" + csv_text)
+
+    response = HttpResponse(content_type="application/zip")
+    response["Content-Disposition"] = 'attachment; filename="seed_quiz_sample_pack.zip"'
+    response.write(buffer.getvalue())
     return response
 
 
