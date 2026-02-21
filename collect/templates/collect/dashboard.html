@@ -30,6 +30,18 @@
             <p class="text-lg md:text-xl text-gray-500">수합 요청을 만들고 제출 현황을 한눈에 관리하세요.</p>
         </div>
 
+        <div class="clay-card p-4 md:p-5 mb-8" data-aos="fade-up">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">HWPX 문서 기반 AI</p>
+                    <p class="text-base md:text-lg font-bold text-gray-700">압축 내부 XML을 직접 파싱해 문서와 대화</p>
+                </div>
+                <a href="{% url 'collect:hwpx_chat' %}" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                    HWPX AI 대화 열기
+                </a>
+            </div>
+        </div>
+
         <div class="clay-card p-6 md:p-8 mb-8" data-aos="fade-up" x-init="if ({{ form.errors|yesno:'true,false' }} || {{ requests_list|length }} === 0) open = true">
             <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
                 <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
