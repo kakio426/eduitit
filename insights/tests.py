@@ -24,3 +24,8 @@ class InsightModelTest(TestCase):
         response = self.client.get(reverse('insights:detail', args=[insight.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'insights/insight_detail.html')
+
+    def test_legacy_singular_path_redirects_to_list(self):
+        response = self.client.get('/insight/', follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'insights/insight_list.html')
