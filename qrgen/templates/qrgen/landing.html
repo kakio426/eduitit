@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}수업 QR 생성기 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto" x-data="qrgenApp()" x-init="init()" @keydown.window.escape="closeCycleMode()">
+        <div class="text-center mb-8">
+            <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
+            <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'수업 QR 생성기' }}</h1>
+            <p class="text-gray-500 mt-3 text-sm md:text-base">
+                모둠별 제목과 링크를 입력한 뒤, 초 단위 자동 순환으로 QR을 보여주세요.
+            </p>
+        </div>
+
+        <div class="clay-card p-5 md:p-6 mb-5">
+            <div class="flex flex-wrap items-center gap-2 md:gap-3">
+                <label for="intervalSec" class="text-sm font-bold text-gray-700">전환 간격</label>
+                <input
+                    id="intervalSec"
+                    type="number"
+                    min="2"
+                    max="120"
+                    x-model.number="intervalSec"
+                    @input="onIntervalChange()"
+                    class="w-20 rounded-lg px-2 py-1 text-center border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                <span class="text-sm text-gray-500 mr-2">초</span>
+
+                <button
+                    type="button"
+                    @click="addItem()"
+                    class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm"
+                >
+                    모둠 추가
+                </button>
+
+                <button
+                    type="button"
+                    @click="startCycleMode()"
+                    :disabled="validItems().length === 0"
+                    class="px-3 py-2 rounded-lg bg-indigo-600 text-white font-bold text-sm disabled:opacity-50"
+                >
+                    자동 전환 시작
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="clay-card p-5 md:p-6">
+                <h2 class="text-xl font-black text-gray-800 mb-4">모둠 입력</h2>
+                <div class="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                    <template x-for="(item, idx) in items" :key="item.uid">
+                        <div class="rounded-xl border border-gray-200 bg-white p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-black px-2 py-1 rounded-full bg-gray-100 text-gray-700" x-text="`${idx + 1}번`"></span>
+                                <button
+                                    type="button"
+                                    @click="removeItem(item.uid)"
+                                    class="px-2 py-1 rounded-md bg-red-100 text-red-700 text-xs font-bold"
+                                >
+                                    삭제
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-2">
+                                <input
+                                    type="text"
+                                    x-model="item.title"
+                                    maxlength="80"
+                                    @input.debounce.120ms="queueRender()"
+                                    placeholder="예: 1모둠"
+                                    class="w-full rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                >
+                                <input
+                                    type="text"
+                                    x-model="item.url"
+                                    @input.debounce.250ms="updateItem(item)"
+                                    placeholder="예: forms.gle/abcd1234"
+                                    class="w-full rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                >
+                            </div>
+
+                            <p class="mt-2 text-xs text-red-600" x-show="item.error" x-text="item.error"></p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="clay-card p-5 md:p-6">
+                <h2 class="text-xl font-black text-gray-800 mb-4">QR 미리보기</h2>
+                <div x-show="validItems().length === 0" class="text-sm text-gray-400 text-center py-20">
+                    유효한 링크를 입력하면 QR이 표시됩니다.
+                </div>
+                <div x-show="validItems().length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
+                    <template x-for="item in items" :key="'preview-' + item.uid">
+                        <div x-show="item.normalizedUrl" class="rounded-xl border border-gray-200 bg-white p-3 text-center">
+                            <p class="text-sm font-black text-gray-800 truncate" x-text="item.title || '모둠'"></p>
+                            <div class="mt-2 mx-auto w-[170px] h-[170px] flex items-center justify-center" :id="'preview-qr-' + item.uid"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="cycleStage"
+            x-show="cycleMode"
+            x-cloak
+            class="fixed inset-0 z-[140] bg-white flex flex-col"
+            @click.self="closeCycleMode()"
+        >
+            <div class="px-4 md:px-8 py-4 border-b border-gray-100">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase">자동 순환 QR 표시</p>
+                        <p class="text-2xl md:text-4xl font-black text-gray-900" x-text="activeItemTitle()"></p>
+                        <p class="text-sm text-gray-500 mt-1">다음 전환까지 <span class="font-black text-indigo-600" x-text="remainingSec"></span>초</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" @click="prevSlide()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">이전</button>
+                        <button
+                            type="button"
+                            @click="togglePlay()"
+                            class="px-3 py-2 rounded-lg bg-indigo-600 text-white font-bold text-sm"
+                            x-text="isPlaying ? '일시정지' : '재생'"
+                        ></button>
+                        <button type="button" @click="nextSlide()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">다음</button>
+                        <button type="button" @click="closeCycleMode()" class="px-3 py-2 rounded-lg bg-gray-900 text-white font-bold text-sm">종료</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col items-center justify-center px-4 py-6 text-center">
+                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                    <div id="cycleQrCanvas" class="mx-auto w-[min(76vw,780px)] aspect-square flex items-center justify-center"></div>
+                </div>
+                <p class="mt-3 text-sm font-bold text-gray-700" x-text="slideLabel()"></p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+function qrgenApp() {
+    return {
+        items: [],
+        nextUid: 1,
+        intervalSec: 8,
+        cycleMode: false,
+        isPlaying: false,
+        currentSlide: 0,
+        remainingSec: 8,
+        autoTimer: null,
+        countdownTimer: null,
+        renderTimer: null,
+
+        init() {
+            for (let i = 1; i <= 4; i += 1) {
+                this.addItem(`${i}모둠`, '');
+            }
+            this.queueRender();
+
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && this.cycleMode) {
+                    this.closeCycleMode(true);
+                }
+            });
+            window.addEventListener('resize', () => {
+                if (this.cycleMode) {
+                    this.$nextTick(() => this.renderCycleQr());
+                }
+            });
+        },
+
+        addItem(defaultTitle = '', defaultUrl = '') {
+            const item = {
+                uid: this.nextUid++,
+                title: defaultTitle || `${this.items.length + 1}모둠`,
+                url: defaultUrl || '',
+                normalizedUrl: '',
+                error: '',
+            };
+            this.items.push(item);
+            if (item.url) {
+                this.updateItem(item);
+            }
+        },
+
+        removeItem(uid) {
+            this.items = this.items.filter((item) => item.uid !== uid);
+            if (this.items.length === 0) {
+                this.addItem('1모둠', '');
+            }
+            this.queueRender();
+            this.syncCycleAfterDataChange();
+        },
+
+        parseUrl(raw) {
+            const text = (raw || '').trim();
+            if (!text) {
+                return { url: '', error: '' };
+            }
+
+            const withScheme = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+            let parsed;
+            try {
+                parsed = new URL(withScheme);
+            } catch (err) {
+                return { url: '', error: '유효한 링크 형식이 아니에요.' };
+            }
+
+            if (!['http:', 'https:'].includes(parsed.protocol)) {
+                return { url: '', error: 'http/https 링크만 사용할 수 있어요.' };
+            }
+
+            if (!parsed.hostname || parsed.hostname.indexOf('.') === -1) {
+                return { url: '', error: '도메인이 포함된 링크를 입력해 주세요.' };
+            }
+
+            return { url: parsed.toString(), error: '' };
+        },
+
+        updateItem(item) {
+            const parsed = this.parseUrl(item.url);
+            item.normalizedUrl = parsed.url;
+            item.error = parsed.error;
+            this.queueRender();
+            this.syncCycleAfterDataChange();
+        },
+
+        validItems() {
+            return this.items.filter((item) => !!item.normalizedUrl);
+        },
+
+        queueRender() {
+            if (this.renderTimer) {
+                clearTimeout(this.renderTimer);
+            }
+            this.renderTimer = setTimeout(() => {
+                this.$nextTick(() => {
+                    this.renderAllPreviews();
+                    if (this.cycleMode) {
+                        this.renderCycleQr();
+                    }
+                });
+            }, 40);
+        },
+
+        renderAllPreviews() {
+            this.items.forEach((item) => {
+                const container = document.getElementById(`preview-qr-${item.uid}`);
+                if (!container) {
+                    return;
+                }
+                container.innerHTML = '';
+                if (!item.normalizedUrl) {
+                    return;
+                }
+                new QRCode(container, {
+                    text: item.normalizedUrl,
+                    width: 170,
+                    height: 170,
+                    colorDark: '#111827',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+            });
+        },
+
+        sanitizedInterval() {
+            let value = parseInt(this.intervalSec, 10);
+            if (Number.isNaN(value)) {
+                value = 8;
+            }
+            if (value < 2) {
+                value = 2;
+            }
+            if (value > 120) {
+                value = 120;
+            }
+            this.intervalSec = value;
+            return value;
+        },
+
+        onIntervalChange() {
+            const interval = this.sanitizedInterval();
+            this.remainingSec = interval;
+            if (this.cycleMode && this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        activeItem() {
+            const valid = this.validItems();
+            if (!valid.length) {
+                return null;
+            }
+            if (this.currentSlide >= valid.length) {
+                this.currentSlide = 0;
+            }
+            return valid[this.currentSlide];
+        },
+
+        activeItemTitle() {
+            const item = this.activeItem();
+            return item ? (item.title || '모둠') : '표시할 QR이 없습니다';
+        },
+
+        slideLabel() {
+            const total = this.validItems().length;
+            if (!total) {
+                return '0 / 0';
+            }
+            return `${this.currentSlide + 1} / ${total}`;
+        },
+
+        startCycleMode() {
+            if (!this.validItems().length) {
+                return;
+            }
+            this.cycleMode = true;
+            this.isPlaying = true;
+            this.currentSlide = 0;
+            this.remainingSec = this.sanitizedInterval();
+
+            this.$nextTick(() => {
+                this.renderCycleQr();
+                this.startTimers();
+                const stage = document.getElementById('cycleStage');
+                if (stage && !document.fullscreenElement && stage.requestFullscreen) {
+                    stage.requestFullscreen().catch(() => {});
+                }
+            });
+        },
+
+        closeCycleMode(skipExit = false) {
+            this.cycleMode = false;
+            this.isPlaying = false;
+            this.clearTimers();
+            if (!skipExit && document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        },
+
+        syncCycleAfterDataChange() {
+            if (!this.cycleMode) {
+                return;
+            }
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            if (this.currentSlide >= valid.length) {
+                this.currentSlide = 0;
+            }
+            if (this.isPlaying) {
+                this.startTimers();
+            } else {
+                this.renderCycleQr();
+            }
+        },
+
+        clearTimers() {
+            if (this.autoTimer) {
+                clearInterval(this.autoTimer);
+                this.autoTimer = null;
+            }
+            if (this.countdownTimer) {
+                clearInterval(this.countdownTimer);
+                this.countdownTimer = null;
+            }
+        },
+
+        startTimers() {
+            this.clearTimers();
+            if (!this.cycleMode || !this.isPlaying) {
+                return;
+            }
+
+            const interval = this.sanitizedInterval();
+            this.remainingSec = interval;
+
+            this.autoTimer = setInterval(() => {
+                this.nextSlide(false);
+            }, interval * 1000);
+
+            this.countdownTimer = setInterval(() => {
+                if (!this.cycleMode || !this.isPlaying) {
+                    return;
+                }
+                this.remainingSec -= 1;
+                if (this.remainingSec <= 0) {
+                    this.remainingSec = interval;
+                }
+            }, 1000);
+        },
+
+        togglePlay() {
+            if (!this.cycleMode) {
+                return;
+            }
+            this.isPlaying = !this.isPlaying;
+            if (this.isPlaying) {
+                this.startTimers();
+            } else {
+                this.clearTimers();
+            }
+        },
+
+        nextSlide(manual = true) {
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            this.currentSlide = (this.currentSlide + 1) % valid.length;
+            this.renderCycleQr();
+            if (manual && this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        prevSlide() {
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            this.currentSlide = (this.currentSlide - 1 + valid.length) % valid.length;
+            this.renderCycleQr();
+            if (this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        renderCycleQr() {
+            const container = document.getElementById('cycleQrCanvas');
+            if (!container) {
+                return;
+            }
+            container.innerHTML = '';
+            const item = this.activeItem();
+            if (!item) {
+                return;
+            }
+            const side = Math.max(280, Math.min(780, Math.floor(window.innerWidth * 0.76)));
+            new QRCode(container, {
+                text: item.normalizedUrl,
+                width: side,
+                height: side,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+        },
+    };
+}
+</script>
+{% endblock %}

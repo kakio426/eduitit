@@ -19,6 +19,7 @@ class Command(BaseCommand):
             ("ensure_studentmbti", lambda: call_command("ensure_studentmbti")),
             ("ensure_notebooklm", lambda: call_command("ensure_notebooklm")),
             ("ensure_collect", lambda: call_command("ensure_collect")),
+            ("ensure_qrgen", lambda: call_command("ensure_qrgen")),
             ("ensure_hwpxchat", lambda: call_command("ensure_hwpxchat")),
             ("ensure_consent", lambda: call_command("ensure_consent")),
             ("ensure_reservations", lambda: call_command("ensure_reservations")),

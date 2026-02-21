@@ -39,6 +39,7 @@ urlpatterns = [
     path('fairy-games/', include('fairy_games.urls', namespace='fairy_games')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
     path('collect/', include('collect.urls', namespace='collect')),
+    path('qrgen/', include('qrgen.urls', namespace='qrgen')),
     path('hwpx-chat/', include('hwpxchat.urls', namespace='hwpxchat')),
     path('reservations/', include('reservations.urls', namespace='reservations')),
     path('encyclopedia/', include('encyclopedia.urls', namespace='encyclopedia')),
