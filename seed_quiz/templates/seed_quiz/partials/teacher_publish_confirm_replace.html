@@ -1,0 +1,40 @@
+<div class="clay-card p-6 rounded-2xl border border-amber-200 bg-amber-50">
+    <div class="flex items-start gap-3 mb-4">
+        <span class="text-2xl">⚠️</span>
+        <div>
+            <h2 class="font-bold text-amber-800">이미 배포 중인 퀴즈가 있습니다.</h2>
+            <p class="text-sm text-amber-700 mt-1">이번 배포를 진행하면 기존 배포가 종료되고 현재 미리보기 세트로 교체됩니다.</p>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-3 mb-5 text-sm">
+        <div class="p-3 rounded-xl bg-white border border-amber-200">
+            <p class="text-xs text-gray-500 mb-1">현재 배포 중</p>
+            <p class="font-bold text-gray-800">{{ existing_published.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ existing_published.target_date }} · {{ existing_published.get_preset_type_display }}</p>
+        </div>
+        <div class="p-3 rounded-xl bg-white border border-amber-200">
+            <p class="text-xs text-gray-500 mb-1">교체할 세트</p>
+            <p class="font-bold text-gray-800">{{ quiz_set.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ quiz_set.target_date }} · {{ quiz_set.get_preset_type_display }}</p>
+        </div>
+    </div>
+
+    <div class="flex gap-2">
+        <button type="button"
+                onclick="document.getElementById('preview-area').innerHTML='';"
+                class="px-4 py-2 rounded-lg bg-white text-gray-700 text-sm font-bold border border-gray-200 hover:bg-gray-50 transition-colors">
+            취소
+        </button>
+        <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=quiz_set.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="force_replace" value="1">
+            <button type="submit"
+                    class="px-5 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors">
+                확인 후 덮어쓰기 배포
+            </button>
+        </form>
+    </div>
+</div>

@@ -594,7 +594,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(quiz_set.status, "published")
 
     @patch("seed_quiz.services.generation._call_ai")
-    def test_publish_closes_existing_published(self, mock_ai):
+    def test_publish_requires_force_and_closes_existing_published(self, mock_ai):
         mock_ai.return_value = VALID_AI_RESPONSE
         gen_url = reverse(
             "seed_quiz:htmx_generate",
@@ -622,8 +622,68 @@ class TeacherFlowTest(TestCase):
             "seed_quiz:htmx_publish",
             kwargs={"classroom_id": self.classroom.id, "set_id": qs2.id},
         )
-        self.client.post(pub_url2)
+        first_resp = self.client.post(pub_url2)
+        self.assertEqual(first_resp.status_code, 200)
+        self.assertContains(first_resp, "이미 배포 중인 퀴즈가 있습니다.")
+        qs1.refresh_from_db()
+        qs2.refresh_from_db()
+        self.assertEqual(qs1.status, "published")
+        self.assertEqual(qs2.status, "draft")
+
+        # 확인 후 강제 배포
+        force_resp = self.client.post(pub_url2, {"force_replace": "1"})
+        self.assertEqual(force_resp.status_code, 200)
+        self.assertContains(force_resp, "직전 배포로 되돌리기")
         qs1.refresh_from_db()
         qs2.refresh_from_db()
         self.assertEqual(qs1.status, "closed")
         self.assertEqual(qs2.status, "published")
+
+    @patch("seed_quiz.services.generation._call_ai")
+    def test_publish_rollback_restores_previous_set(self, mock_ai):
+        mock_ai.return_value = VALID_AI_RESPONSE
+        gen_url = reverse(
+            "seed_quiz:htmx_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+
+        # 첫 배포
+        self.client.post(gen_url, {"preset_type": "orthography", "grade": "3"})
+        old_set = SQQuizSet.objects.filter(classroom=self.classroom).order_by("created_at").first()
+        self.assertIsNotNone(old_set)
+        old_publish_url = reverse(
+            "seed_quiz:htmx_publish",
+            kwargs={"classroom_id": self.classroom.id, "set_id": old_set.id},
+        )
+        self.client.post(old_publish_url)
+        old_set.refresh_from_db()
+        self.assertEqual(old_set.status, "published")
+
+        # 새 배포(강제 덮어쓰기)
+        self.client.post(gen_url, {"preset_type": "orthography", "grade": "3"})
+        new_set = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(new_set)
+        new_publish_url = reverse(
+            "seed_quiz:htmx_publish",
+            kwargs={"classroom_id": self.classroom.id, "set_id": new_set.id},
+        )
+        self.client.post(new_publish_url, {"force_replace": "1"})
+        old_set.refresh_from_db()
+        new_set.refresh_from_db()
+        self.assertEqual(old_set.status, "closed")
+        self.assertEqual(new_set.status, "published")
+
+        rollback_url = reverse(
+            "seed_quiz:htmx_publish_rollback",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        rollback_resp = self.client.post(
+            rollback_url,
+            {"restore_set_id": str(old_set.id), "current_set_id": str(new_set.id)},
+        )
+        self.assertEqual(rollback_resp.status_code, 200)
+        self.assertContains(rollback_resp, "직전 배포로 되돌렸습니다.")
+        old_set.refresh_from_db()
+        new_set.refresh_from_db()
+        self.assertEqual(old_set.status, "published")
+        self.assertEqual(new_set.status, "closed")

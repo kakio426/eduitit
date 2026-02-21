@@ -25,6 +25,7 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/rag/generate/", views.htmx_rag_generate, name="htmx_rag_generate"),
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),
+    path("class/<uuid:classroom_id>/htmx/publish/rollback/", views.htmx_publish_rollback, name="htmx_publish_rollback"),
     path("class/<uuid:classroom_id>/htmx/progress/", views.htmx_progress, name="htmx_progress"),
     path("class/<uuid:classroom_id>/htmx/topic-summary/", views.htmx_topic_summary, name="htmx_topic_summary"),
 

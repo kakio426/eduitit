@@ -803,20 +803,73 @@ def htmx_publish(request, classroom_id, set_id):
     quiz_set = get_object_or_404(
         SQQuizSet, id=set_id, classroom=classroom, status="draft"
     )
+    force_replace = (request.POST.get("force_replace") or "").lower() in {"1", "true", "yes", "on"}
+    existing_published = (
+        SQQuizSet.objects.filter(
+            classroom=classroom,
+            target_date=quiz_set.target_date,
+            preset_type=quiz_set.preset_type,
+            status="published",
+        )
+        .exclude(id=quiz_set.id)
+        .order_by("-published_at", "-updated_at")
+        .first()
+    )
+    if existing_published and not force_replace:
+        return render(
+            request,
+            "seed_quiz/partials/teacher_publish_confirm_replace.html",
+            {
+                "classroom": classroom,
+                "quiz_set": quiz_set,
+                "existing_published": existing_published,
+            },
+        )
 
     with transaction.atomic():
+        replaced_set_id = None
+        if existing_published:
+            replaced_set_id = existing_published.id
+
         # 기존 published → closed
         SQQuizSet.objects.filter(
             classroom=classroom,
             target_date=quiz_set.target_date,
             preset_type=quiz_set.preset_type,
             status="published",
-        ).update(status="closed")
+        ).exclude(id=quiz_set.id).update(status="closed")
 
         quiz_set.status = "published"
         quiz_set.published_at = timezone.now()
         quiz_set.published_by = request.user
         quiz_set.save(update_fields=["status", "published_at", "published_by"])
+        if replaced_set_id:
+            SQGenerationLog.objects.create(
+                level="info",
+                code="QUIZ_PUBLISH_REPLACED",
+                message=f"퀴즈 재배포: {quiz_set.title}",
+                payload={
+                    "classroom_id": str(classroom.id),
+                    "teacher_id": int(request.user.id),
+                    "target_date": str(quiz_set.target_date),
+                    "preset_type": quiz_set.preset_type,
+                    "new_set_id": str(quiz_set.id),
+                    "replaced_set_id": str(replaced_set_id),
+                },
+            )
+        else:
+            SQGenerationLog.objects.create(
+                level="info",
+                code="QUIZ_PUBLISH_NEW",
+                message=f"퀴즈 배포: {quiz_set.title}",
+                payload={
+                    "classroom_id": str(classroom.id),
+                    "teacher_id": int(request.user.id),
+                    "target_date": str(quiz_set.target_date),
+                    "preset_type": quiz_set.preset_type,
+                    "new_set_id": str(quiz_set.id),
+                },
+            )
 
     student_url = request.build_absolute_uri(
         reverse(
@@ -831,6 +884,91 @@ def htmx_publish(request, classroom_id, set_id):
             "classroom": classroom,
             "quiz_set": quiz_set,
             "student_url": student_url,
+            "rollback_restore_set_id": str(replaced_set_id) if replaced_set_id else "",
+            "rollback_from_set_id": str(quiz_set.id),
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_publish_rollback(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    restore_set_id = (request.POST.get("restore_set_id") or "").strip()
+    current_set_id = (request.POST.get("current_set_id") or "").strip()
+    if not restore_set_id:
+        return HttpResponse(
+            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            "되돌릴 세트 정보가 없습니다.</div>",
+            status=400,
+        )
+
+    restore_set = get_object_or_404(SQQuizSet, id=restore_set_id, classroom=classroom)
+
+    with transaction.atomic():
+        current_set = (
+            SQQuizSet.objects.select_for_update()
+            .filter(
+                classroom=classroom,
+                target_date=restore_set.target_date,
+                preset_type=restore_set.preset_type,
+                status="published",
+            )
+            .first()
+        )
+        if not current_set:
+            return HttpResponse(
+                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+                "현재 배포 중인 세트를 찾을 수 없습니다. 이미 변경되었을 수 있습니다.</div>",
+                status=409,
+            )
+        if current_set_id and str(current_set.id) != current_set_id:
+            return HttpResponse(
+                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+                "배포 상태가 변경되어 되돌리기를 중단했습니다. 화면을 새로고침해 주세요.</div>",
+                status=409,
+            )
+        if current_set.id == restore_set.id:
+            return HttpResponse(
+                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+                "이미 해당 세트가 배포 중입니다.</div>",
+                status=409,
+            )
+
+        SQQuizSet.objects.filter(id=current_set.id).update(status="closed")
+        restore_set.status = "published"
+        restore_set.published_at = timezone.now()
+        restore_set.published_by = request.user
+        restore_set.save(update_fields=["status", "published_at", "published_by"])
+
+        SQGenerationLog.objects.create(
+            level="info",
+            code="QUIZ_PUBLISH_ROLLBACK",
+            message=f"퀴즈 롤백: {restore_set.title}",
+            payload={
+                "classroom_id": str(classroom.id),
+                "teacher_id": int(request.user.id),
+                "target_date": str(restore_set.target_date),
+                "preset_type": restore_set.preset_type,
+                "restore_set_id": str(restore_set.id),
+                "from_set_id": str(current_set.id),
+            },
+        )
+
+    student_url = request.build_absolute_uri(
+        reverse(
+            "seed_quiz:student_gate",
+            kwargs={"class_slug": classroom.slug},
+        )
+    )
+    return render(
+        request,
+        "seed_quiz/partials/teacher_published.html",
+        {
+            "classroom": classroom,
+            "quiz_set": restore_set,
+            "student_url": student_url,
+            "rollback_done": True,
         },
     )
 

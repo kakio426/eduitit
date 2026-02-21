@@ -2,8 +2,13 @@
     <div class="flex items-center gap-3 mb-4">
         <span class="text-3xl">🚀</span>
         <div>
+            {% if rollback_done %}
+            <h2 class="font-bold text-gray-800">직전 배포로 되돌렸습니다.</h2>
+            <p class="text-sm text-gray-500">학생 접속 주소는 동일하며, 이전 세트가 다시 배포 중입니다.</p>
+            {% else %}
             <h2 class="font-bold text-gray-800">퀴즈가 배포되었습니다!</h2>
             <p class="text-sm text-gray-500">학생들이 지금 바로 접속할 수 있습니다.</p>
+            {% endif %}
         </div>
     </div>
 
@@ -22,4 +27,21 @@
         <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
         배포 중 · 자동 갱신되는 진행 현황을 아래에서 확인하세요
     </div>
+
+    {% if rollback_restore_set_id and not rollback_done %}
+    <div class="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+        <p class="text-xs text-amber-700 mb-2">기존 배포를 덮어썼습니다. 문제가 있으면 즉시 직전 배포로 되돌릴 수 있습니다.</p>
+        <form hx-post="{% url 'seed_quiz:htmx_publish_rollback' classroom_id=classroom.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="restore_set_id" value="{{ rollback_restore_set_id }}">
+            <input type="hidden" name="current_set_id" value="{{ rollback_from_set_id }}">
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold hover:bg-amber-200 transition-colors">
+                직전 배포로 되돌리기
+            </button>
+        </form>
+    </div>
+    {% endif %}
 </div>
