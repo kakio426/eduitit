@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
@@ -103,6 +104,21 @@ def chat_reset(request):
         request,
         info_message="변환 결과를 초기화했습니다.",
     )
+
+
+@login_required
+def download_markdown(request):
+    markdown_output = request.session.get(HWPX_SESSION_MARKDOWN_KEY, "")
+    if not markdown_output:
+        return HttpResponse(
+            "변환된 Markdown이 없습니다. HWPX 파일을 먼저 업로드해 주세요.",
+            status=400,
+            content_type="text/plain; charset=utf-8",
+        )
+
+    response = HttpResponse(markdown_output, content_type="text/markdown; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="hwpx_markdown.md"'
+    return response
 
 
 def _render_result(request, error_message="", info_message=""):

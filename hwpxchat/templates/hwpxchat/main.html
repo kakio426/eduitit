@@ -25,6 +25,8 @@
             </a>
 
             <form
+                method="post"
+                action="{% url 'hwpxchat:chat_reset' %}"
                 hx-post="{% url 'hwpxchat:chat_reset' %}"
                 hx-target="#hwpx-chat-result"
                 hx-swap="innerHTML"
@@ -56,6 +58,8 @@
                     </p>
 
                     <form
+                        method="post"
+                        action="{% url 'hwpxchat:chat_process' %}"
                         hx-post="{% url 'hwpxchat:chat_process' %}"
                         hx-target="#hwpx-chat-result"
                         hx-swap="innerHTML"

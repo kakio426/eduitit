@@ -8,5 +8,5 @@ urlpatterns = [
     path("", views.main, name="main"),
     path("process/", views.chat_process, name="chat_process"),
     path("reset/", views.chat_reset, name="chat_reset"),
+    path("download/", views.download_markdown, name="download_markdown"),
 ]
-

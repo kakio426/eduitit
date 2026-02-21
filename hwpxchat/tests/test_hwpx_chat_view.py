@@ -45,6 +45,15 @@ class HwpxChatViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "HWP 파일은 지원하지 않습니다.")
 
+    def test_main_wireframe_has_back_link_and_fallback_form_attrs(self):
+        response = self.client.get(reverse("hwpxchat:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "서비스 목록으로 돌아가기")
+        self.assertContains(response, "action=\"/hwpx-chat/process/\"")
+        self.assertContains(response, "action=\"/hwpx-chat/reset/\"")
+        self.assertContains(response, "method=\"post\"")
+
     def test_missing_file_returns_error(self):
         response = self.client.post(
             reverse("hwpxchat:chat_process"),
@@ -68,3 +77,31 @@ class HwpxChatViewTests(TestCase):
         self.assertContains(response, "변환 완료.")
         self.assertContains(response, "id=\"hwpx-markdown-output\"")
         self.assertContains(response, "Sample document")
+
+    def test_download_markdown_after_convert(self):
+        self.client.post(
+            reverse("hwpxchat:chat_process"),
+            data={"hwpx_file": _build_sample_hwpx_file()},
+            HTTP_HX_REQUEST="true",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        response = self.client.get(reverse("hwpxchat:download_markdown"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment; filename=\"hwpx_markdown.md\"", response["Content-Disposition"])
+        self.assertIn("Sample document", response.content.decode("utf-8"))
+
+    def test_download_markdown_without_output_returns_400(self):
+        response = self.client.get(reverse("hwpxchat:download_markdown"))
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_result_contains_llm_quick_links(self):
+        response = self.client.get(reverse("hwpxchat:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "https://chatgpt.com/")
+        self.assertContains(response, "https://gemini.google.com/")
+        self.assertContains(response, "https://claude.ai/")
+        self.assertContains(response, "https://www.perplexity.ai/")

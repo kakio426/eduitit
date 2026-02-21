@@ -390,3 +390,36 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
   - p95 latency
   - AI upstream error ratio
   - rate-limit rejection ratio
+
+## Addendum: Independent Service UX/Output Contract (2026-02-21)
+
+### 1) HTMX Overlay Safety (MUST)
+- `hx-indicator`로 사용하는 오버레이는 **기본 숨김**이어야 하며, `.htmx-request` 상태에서만 표시한다.
+- 오버레이는 활성 상태에서만 클릭을 막고, 평상시에는 `pointer-events: none`으로 사용자 입력을 방해하지 않는다.
+
+### 2) Non-JS Critical Fallback (MUST)
+- `hx-post`를 쓰는 핵심 폼(업로드/초기화/삭제)은 반드시 `method`와 `action`을 함께 둔다.
+- HTMX 실패/차단 환경에서도 서비스 핵심 기능이 동작해야 한다.
+
+### 3) BYO-LLM Conversion Mode (MUST, when requested)
+- 사용자가 “내 API 키를 쓰지 않겠다”고 명시한 서비스는 서버측 LLM API 호출을 금지한다.
+- 서비스 역할을 “변환기”로 명확히 고정한다: `HWPX -> LLM 친화 Markdown`.
+- UI에 “AI API 호출 없음, 변환만 수행” 안내를 명시한다.
+
+### 4) Output Delivery Contract (MUST)
+- 변환 결과는 즉시 재사용 가능하도록 세션에 저장한다.
+- 결과 액션은 **복사 + 다운로드**를 모두 제공한다.
+- 다운로드는 전용 엔드포인트로 제공하고 `Content-Disposition` 헤더를 설정한다.
+- 출력물이 없을 때 다운로드 요청은 400과 사용자 친화 메시지를 반환한다.
+
+### 5) External LLM Quick Links (SHOULD)
+- 외부 LLM 버튼은 새 탭으로 열고(`target="_blank"`), `rel="noopener noreferrer"`를 사용한다.
+- 버튼 레이아웃은 반응형 비율을 고정한다:
+  - Mobile: 1열
+  - Tablet: 2열
+  - Desktop: 4열
+
+### 6) Real User Journey QA (MUST)
+- 최소 시나리오를 수동/자동으로 확인한다:
+  - 진입(`/service`) -> 업로드(.hwp 차단/.hwpx 성공) -> 결과 복사 -> 결과 다운로드 -> 결과 초기화 -> 홈 복귀
+- 테스트에는 HTMX 헤더가 없는 요청(Non-HX 폴백)도 포함한다.
