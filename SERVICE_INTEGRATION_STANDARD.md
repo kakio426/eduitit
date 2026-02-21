@@ -4,6 +4,7 @@
 - Prioritize behavior parity over visual polish
 - Recover Korean text integrity before continuing feature work
 - Validate with python manage.py check (+ node --check when JS changes)
+- New services MUST create `ServiceManual` (+ 3+ `ManualSection`) at the same time
 
 ---
 
@@ -48,6 +49,14 @@
 - `SERVICE_INTEGRATION_STANDARD.md`
 - `codex/SKILL.md`
 - 기능/정책 변경 시 3개 문서의 충돌 여부를 함께 점검한다.
+
+### 7) 신규 서비스 이용방법 동시 생성 (MUST)
+- 신규 서비스는 `Product` 생성과 동시에 이용방법(`ServiceManual`)을 반드시 생성한다.
+- `ServiceManual`은 기본값으로 `is_published=True`를 사용한다.
+- `ManualSection`은 최소 3개(예: 시작하기/주요 기능/활용 팁)를 함께 생성한다.
+- 구현 위치는 `products/management/commands/ensure_<app_name>.py`로 통일한다.
+- 위 항목이 누락된 서비스는 "구현 완료"로 간주하지 않으며 배포/머지 대상에서 제외한다.
+- 상단바 `이용방법`(`service_guide_list`)에서 즉시 노출되는지 확인한다.
 
 ---
 ## [Legacy Reference Notice]
@@ -259,6 +268,7 @@ def process_with_ai(request):
 
 - **Rule**: 모든 신규 서비스는 반드시 `ensure_<app_name>` management command를 생성해야 합니다.
 - **위치**: `products/management/commands/ensure_<app_name>.py` (통일 위치. 앱 내부 `management/`에 두지 말 것)
+- **MUST**: 모든 신규 서비스는 `ensure_<app_name>` 안에서 `ServiceManual(is_published=True)` + `ManualSection` 3개 이상을 함께 생성해야 합니다. (누락 시 서비스 통합 불합격)
 - **현재 표준 등록 절차 (bootstrap_runtime 기준)**:
   1. `config/settings.py`, `config/settings_production.py` → `INSTALLED_APPS`에 앱 추가
   2. `config/urls.py` → URL namespace 등록
@@ -359,7 +369,7 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] **[Efficiency]** 모든 로직 검증을 브라우저 실행 없이 터미널(`shell`, `check`)에서 완료했는가?
 - [ ] **[Infra]** 새로운 모델 추가 시 `makemigrations`를 수행했는가?
 - [ ] **[Richness]** `ProductFeature`가 최소 3개 이상 등록되어 모달이 풍성해 보이는가?
-- [ ] **[Manual]** `ServiceManual`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (빈 껍데기만 있으면 안 됨)
+- [ ] **[Manual][MUST]** `ServiceManual(is_published=True)`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (누락 시 배포/머지 금지)
 - [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
 - [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
 - [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
