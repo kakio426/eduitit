@@ -227,15 +227,23 @@ def _build_file_response(file_field, *, inline=True):
     guessed_content_type = mimetypes.guess_type(file_field.name)[0]
     content_type = guessed_content_type or "application/octet-stream"
 
+    logger.warning("[PDF_DEBUG] _build_file_response: name=%s inline=%s", file_field.name, inline)
+
     try:
         file_obj = file_field.open("rb")
-    except Exception:
+        logger.warning("[PDF_DEBUG] local open SUCCESS")
+    except Exception as e:
+        logger.warning("[PDF_DEBUG] local open FAILED: %s", e)
         try:
             file_url = file_field.url
-        except Exception:
+        except Exception as e2:
+            logger.warning("[PDF_DEBUG] file_field.url FAILED: %s", e2)
             file_url = ""
 
+        logger.warning("[PDF_DEBUG] file_field.url = %s", file_url)
+
         remote_urls = _iter_remote_file_urls(file_field, fallback_url=file_url)
+        logger.warning("[PDF_DEBUG] remote_urls = %s", remote_urls)
         for remote_url in remote_urls:
             response = _build_remote_proxy_response(
                 remote_url,
@@ -244,8 +252,10 @@ def _build_file_response(file_field, *, inline=True):
                 inline=inline,
             )
             if response is not None:
+                logger.warning("[PDF_DEBUG] proxy SUCCESS for %s", remote_url)
                 return response
         if remote_urls:
+            logger.warning("[PDF_DEBUG] all proxies FAILED, doing redirect to %s", remote_urls[0])
             # Last-resort fallback: avoid hard 404 if proxy streaming from origin fails.
             response = redirect(remote_urls[0])
             response["Cache-Control"] = "no-store"
@@ -299,9 +309,11 @@ def _build_remote_proxy_response(url: str, *, filename: str, content_type: str, 
 
     try:
         remote = requests.get(url, stream=True, timeout=(5, 30))
-    except Exception:
+    except Exception as e:
+        logger.warning("[PDF_DEBUG] proxy requests.get EXCEPTION for %s : %s", url[:80], e)
         return None
 
+    logger.warning("[PDF_DEBUG] proxy status=%s for %s", remote.status_code, url[:80])
     if remote.status_code >= 400:
         remote.close()
         return None
