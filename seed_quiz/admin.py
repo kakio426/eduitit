@@ -40,6 +40,7 @@ class SQQuizBankAdmin(admin.ModelAdmin):
         "preset_type",
         "grade",
         "source",
+        "source_hash",
         "quality_status",
         "share_opt_in",
         "is_official",
@@ -61,7 +62,7 @@ class SQQuizBankAdmin(admin.ModelAdmin):
     search_fields = ["title"]
     raw_id_fields = ["created_by", "reviewed_by"]
     inlines = [SQQuizBankItemInline]
-    readonly_fields = ["created_at", "updated_at", "use_count", "reviewed_at"]
+    readonly_fields = ["created_at", "updated_at", "use_count", "reviewed_at", "source_hash"]
     actions = ["approve_public_share", "reject_public_share"]
 
     @admin.action(description="공유 신청 승인 (공개 전환)")

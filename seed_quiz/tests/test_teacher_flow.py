@@ -1,5 +1,6 @@
 import uuid
 import re
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -126,6 +127,25 @@ class TeacherFlowTest(TestCase):
         resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "official"})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "공식 상식 기본 세트")
+
+    def test_bank_browse_hides_future_official_set(self):
+        SQQuizBank.objects.create(
+            title="내일 공개 공식 세트",
+            preset_type="general",
+            grade=3,
+            source="ai",
+            is_official=True,
+            quality_status="approved",
+            available_from=timezone.localdate() + timedelta(days=1),
+            created_by=self.teacher,
+        )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "general", "grade": "3", "scope": "official"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "내일 공개 공식 세트")
 
     def test_bank_browse_public_hides_unapproved(self):
         SQQuizBank.objects.create(

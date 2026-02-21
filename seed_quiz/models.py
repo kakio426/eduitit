@@ -50,6 +50,7 @@ class SQQuizBank(models.Model):
     is_official = models.BooleanField(default=False, verbose_name="공식 세트")
     is_public = models.BooleanField(default=False, verbose_name="공개 세트")
     share_opt_in = models.BooleanField(default=False, verbose_name="공유 신청")
+    source_hash = models.CharField(max_length=64, blank=True, default="", verbose_name="원문 해시")
     quality_status = models.CharField(
         max_length=10,
         choices=QUALITY_CHOICES,
@@ -89,6 +90,7 @@ class SQQuizBank(models.Model):
             models.Index(fields=["is_official", "is_active"]),
             models.Index(fields=["is_public", "is_active"]),
             models.Index(fields=["quality_status", "is_active"]),
+            models.Index(fields=["source_hash", "created_at"]),
         ]
 
     def __str__(self):

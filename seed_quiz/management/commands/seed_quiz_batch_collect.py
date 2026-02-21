@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from django.core.management.base import BaseCommand
 
@@ -21,10 +22,25 @@ class Command(BaseCommand):
             action="store_true",
             help="Only sync status. Skip output ingestion.",
         )
+        parser.add_argument(
+            "--target-month",
+            type=str,
+            default="",
+            help="Optional target month (YYYY-MM) filter.",
+        )
 
     def handle(self, *args, **options):
         job_id_raw = (options.get("job_id") or "").strip()
         no_ingest = bool(options.get("no_ingest"))
+        target_month_raw = (options.get("target_month") or "").strip()
+        target_month = None
+        if target_month_raw:
+            try:
+                year, month = map(int, target_month_raw.split("-"))
+                target_month = date(year, month, 1)
+            except Exception:
+                self.stderr.write(self.style.ERROR("Invalid --target-month. Use YYYY-MM."))
+                return
 
         jobs = SQBatchJob.objects.none()
         if job_id_raw:
@@ -36,6 +52,8 @@ class Command(BaseCommand):
             jobs = SQBatchJob.objects.filter(id=job_uuid)
         else:
             jobs = SQBatchJob.objects.filter(status__in=["submitted", "validating", "in_progress", "finalizing", "completed"])
+            if target_month:
+                jobs = jobs.filter(target_month=target_month)
 
         if not jobs.exists():
             self.stdout.write("No batch jobs to collect.")

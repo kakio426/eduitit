@@ -3,6 +3,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
+from seed_quiz.models import SQBatchJob
 from seed_quiz.services.batch_generator import BatchConfig, submit_batch_job
 
 
@@ -50,6 +51,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Create job record without external API submission.",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Submit even if active/completed job already exists for target month.",
+        )
 
     def handle(self, *args, **options):
         target_month_str = (options.get("target_month") or "").strip()
@@ -91,6 +97,19 @@ class Command(BaseCommand):
             model=options["model"],
             completion_window=options["completion_window"],
         )
+        if not bool(options.get("force")):
+            existing = SQBatchJob.objects.filter(target_month=target_month).exclude(
+                status__in=["failed", "cancelled"]
+            )
+            if existing.exists():
+                first = existing.order_by("-started_at").first()
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"skip submit: existing job={first.id} status={first.status} target_month={target_month}"
+                    )
+                )
+                return
+
         job = submit_batch_job(config=config, created_by=created_by, dry_run=bool(options["dry_run"]))
         self.stdout.write(
             self.style.SUCCESS(

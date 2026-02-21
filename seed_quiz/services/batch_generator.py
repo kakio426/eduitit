@@ -248,6 +248,7 @@ def ingest_completed_batch_output(job: SQBatchJob) -> SQBatchJob:
                 "quality_status": "approved",
                 "is_active": True,
                 "available_from": target_date,
+                "available_to": target_date,
             },
         )
         bank.is_official = True
@@ -255,8 +256,8 @@ def ingest_completed_batch_output(job: SQBatchJob) -> SQBatchJob:
         bank.share_opt_in = False
         bank.quality_status = "approved"
         bank.is_active = True
-        if not bank.available_from:
-            bank.available_from = target_date
+        bank.available_from = target_date
+        bank.available_to = target_date
         bank.save(
             update_fields=[
                 "is_official",
@@ -265,6 +266,7 @@ def ingest_completed_batch_output(job: SQBatchJob) -> SQBatchJob:
                 "quality_status",
                 "is_active",
                 "available_from",
+                "available_to",
                 "updated_at",
             ]
         )

@@ -7,6 +7,7 @@ import io
 import logging
 import json
 import os
+import hashlib
 
 from django.db import transaction
 from django.db.models import F
@@ -19,6 +20,15 @@ logger = logging.getLogger("seed_quiz.bank")
 
 VALID_PRESET_TYPES = {"general", "math", "korean", "science", "social", "english"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+
+def _normalize_source_text(source_text: str) -> str:
+    # 연속 공백을 하나로 압축해 의미가 같은 입력은 같은 해시로 취급한다.
+    return " ".join((source_text or "").split())
+
+
+def _source_hash(source_text: str) -> str:
+    return hashlib.sha256(source_text.encode("utf-8")).hexdigest()
 
 
 def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
@@ -371,26 +381,68 @@ def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBan
     return bank
 
 
-def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str, created_by) -> SQQuizBank:
+def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str, created_by) -> tuple[SQQuizBank, bool]:
     """
     입력 지문(source_text)을 근거로 퀴즈 은행 세트를 생성한다.
+    반환: (bank, cached)
     """
     from openai import OpenAI
+
+    normalized_source_text = _normalize_source_text(source_text)
+    if len(normalized_source_text) < 20:
+        raise ValueError("지문이 너무 짧습니다. 20자 이상 입력해 주세요.")
+    if len(normalized_source_text) > 4000:
+        raise ValueError("지문이 너무 깁니다. 4000자 이하로 입력해 주세요.")
+
+    source_hash = _source_hash(normalized_source_text)
+    cached_bank = (
+        SQQuizBank.objects.filter(
+            source_hash=source_hash,
+            preset_type=preset_type,
+            grade=grade,
+            source="ai",
+            is_active=True,
+            created_by=created_by,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if cached_bank:
+        cached_items = list(
+            cached_bank.items.order_by("order_no").values(
+                "question_text",
+                "choices",
+                "correct_index",
+                "explanation",
+                "difficulty",
+            )
+        )
+        cached_payload = {"items": cached_items}
+        valid_cached, _ = validate_quiz_payload(cached_payload)
+    else:
+        valid_cached = False
+    if cached_bank and valid_cached:
+        SQGenerationLog.objects.create(
+            level="info",
+            code="BANK_RAG_CACHE_HIT",
+            message=f"RAG 캐시 재사용: {cached_bank.title}",
+            payload={
+                "bank_id": str(cached_bank.id),
+                "preset_type": preset_type,
+                "grade": grade,
+            },
+        )
+        return cached_bank, True
 
     api_key = os.environ.get("MASTER_DEEPSEEK_API_KEY")
     if not api_key:
         raise RuntimeError("MASTER_DEEPSEEK_API_KEY not set")
 
-    if len(source_text.strip()) < 20:
-        raise ValueError("지문이 너무 짧습니다. 20자 이상 입력해 주세요.")
-    if len(source_text) > 4000:
-        raise ValueError("지문이 너무 깁니다. 4000자 이하로 입력해 주세요.")
-
     prompt = (
         f"아래 지문만을 근거로 초등 {grade}학년 {preset_type} 퀴즈 3문항을 JSON으로 작성하세요.\n"
         '형식: {"items":[{"question_text":"...","choices":["A","B","C","D"],"correct_index":0,"explanation":"...","difficulty":"medium"}]}\n'
         "지문 외 추측 금지, 모르면 쉬운 수준으로 재구성하세요.\n\n"
-        f"[지문]\n{source_text}"
+        f"[지문]\n{normalized_source_text}"
     )
 
     client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com", timeout=8.0)
@@ -422,6 +474,7 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
             quality_status="approved",
             is_active=True,
             created_by=created_by,
+            source_hash=source_hash,
         )
         for order_no, item in enumerate(payload["items"], start=1):
             SQQuizBankItem.objects.create(
@@ -439,4 +492,4 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
         message=f"RAG 은행 생성: {title}",
         payload={"bank_id": str(bank.id), "preset_type": preset_type, "grade": grade},
     )
-    return bank
+    return bank, False

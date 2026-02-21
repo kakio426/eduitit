@@ -104,14 +104,19 @@ def htmx_bank_browse(request, classroom_id):
         grade=grade,
     )
     approved_filter = Q(quality_status="approved")
+    today = timezone.localdate()
+    available_filter = (
+        (Q(available_from__isnull=True) | Q(available_from__lte=today))
+        & (Q(available_to__isnull=True) | Q(available_to__gte=today))
+    )
     if scope == "official":
-        banks_qs = banks_qs.filter(is_official=True).filter(approved_filter)
+        banks_qs = banks_qs.filter(is_official=True).filter(approved_filter).filter(available_filter)
     elif scope == "public":
-        banks_qs = banks_qs.filter(is_public=True).filter(approved_filter)
+        banks_qs = banks_qs.filter(is_public=True).filter(approved_filter).filter(available_filter)
     else:
         banks_qs = banks_qs.filter(
-            (Q(is_official=True) & approved_filter)
-            | (Q(is_public=True) & approved_filter)
+            (Q(is_official=True) & approved_filter & available_filter)
+            | (Q(is_public=True) & approved_filter & available_filter)
             | Q(created_by=request.user)
         ).distinct()
 
@@ -305,12 +310,17 @@ def htmx_rag_generate(request, classroom_id):
         )
 
     try:
-        bank = generate_bank_from_context_ai(
+        result = generate_bank_from_context_ai(
             preset_type=preset_type,
             grade=grade,
             source_text=source_text,
             created_by=request.user,
         )
+        if isinstance(result, tuple):
+            bank, from_cache = result
+        else:
+            bank = result
+            from_cache = False
         quiz_set = copy_bank_to_draft(bank_id=bank.id, classroom=classroom, teacher=request.user)
     except Exception as e:
         refund_rag_quota(classroom=classroom, teacher=request.user)
@@ -328,7 +338,11 @@ def htmx_rag_generate(request, classroom_id):
             "classroom": classroom,
             "quiz_set": quiz_set,
             "items": items,
-            "rag_notice": f"지문 기반 맞춤 생성 완료 (오늘 남은 횟수: {remaining})",
+            "rag_notice": (
+                f"지문 기반 맞춤 생성 완료 (오늘 남은 횟수: {remaining})"
+                if not from_cache
+                else f"지문 기반 캐시 세트 재사용 (오늘 남은 횟수: {remaining})"
+            ),
         },
     )
 
