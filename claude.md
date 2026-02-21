@@ -45,6 +45,23 @@
 - 동의서(Consent) 운영 점검 명령:
   - `python manage.py check_consent_files --only-missing`
 
+### 2-2) Cloudinary 파일 프록시 규칙 (2026-02-21)
+- **CDN URL (`res.cloudinary.com`) 직접 접근은 신뢰하지 않는다.**
+  - Cloudinary 계정 보안 설정(Strict Transformations, Signed URLs 등)에 따라
+    `type=upload` 공개 파일도 서명 URL 포함 401을 반환할 수 있다.
+  - `cloudinary_url(sign_url=True)`로 생성한 CDN 서명 URL도 이 경우 무효.
+- **파일 프록시는 반드시 `private_download_url` (Admin API) 방식을 1순위로 사용한다.**
+  - `cloudinary.utils.private_download_url(public_id, "", resource_type=rt, type=dt)`
+  - 생성 URL: `https://api.cloudinary.com/v1_1/{cloud}/{rt}/download?...&api_key=...&signature=...`
+  - CDN 보안 설정과 무관하게 api_key + api_secret으로 직접 인증 → 항상 작동.
+- **resource_type은 `file_field.url`에서 파싱한다.**
+  - URL 형식: `https://res.cloudinary.com/{cloud}/{resource_type}/{delivery_type}/...`
+  - 확장자 없는 파일은 `resource_type=image`로 저장될 수 있음 (PDF도 포함).
+  - `private_download_url` 호출 시 `image`, `raw` 순으로 시도한다.
+- **브라우저 리다이렉트(302) 방식은 CORS 문제로 PDF.js에서 실패한다.**
+  - Django 서버가 파일을 가져와 `StreamingHttpResponse`로 same-origin 응답해야 한다.
+- 구현 위치: `consent/views.py` → `_iter_remote_file_urls()`
+
 ### 3) 서비스 진화 시 점검 체크리스트
 - 기존 핵심 플로우 회귀 점검:
   - 대시보드 진입
@@ -347,13 +364,22 @@ chart_data = {...} if chart_context else None
 
 > **사례 (2026-02-08)**: studentmbti 결과지에서 초등학생이 이해하기 어려운 단어 다수 발견. 12개 이상의 어휘 순화 작업 진행.
 
-## 8. SNS Sidebar 통합 패턴
+## 8. SNS Sidebar 통합 패턴 (현재 기준: V2)
 
-다른 서비스에 SNS sidebar 추가 시:
+다른 서비스에 SNS를 붙일 때는 아래 구조를 기본으로 사용한다.
 
-**템플릿**: `max-w-7xl` 외부 컨테이너 → `flex flex-col lg:flex-row gap-6 items-start` → 메인(`flex-1 lg:max-w-3xl`) + 사이드바(`hidden lg:block w-[380px] flex-shrink-0`)
+- **레이아웃 브레이크포인트**: PC `hidden xl:block`, 모바일 `block xl:hidden`
+- **메인 래퍼**: `flex flex-col xl:flex-row max-w-[1920px] mx-auto`
+- **PC 사이드바**: `core/partials/sns_widget.html` 포함 (`w-[380px]`, `sticky`, `top-32`)
+- **모바일 본문**: 상단 미리보기(최신 2개) + 버튼 토글(`@click="snsOpen = true"`) + 아코디언 내부 전체 피드
+- **모바일 전체 피드 include**: `{% include 'core/partials/sns_widget_mobile.html' with hide_header=True expand_all_mobile=True %}`
 
-**뷰**: `from core.models import Post` import → `select_related('author')` + `prefetch_related('comments__author', 'likes')` + `annotate(like_count, comment_count)` → context에 `'posts': posts` 전달
+**뷰 쿼리 규칙 (`core/views.py`)**
+- `select_related('author', 'author__userprofile')`
+- `prefetch_related('likes', 'comments', 'comments__author', 'comments__author__userprofile')`
+- `annotate(likes_count_annotated=Count('likes', distinct=True), comments_count_annotated=Count('comments', distinct=True))`
+- `order_by('-created_at')`
+- context에 반드시 `'posts': posts` 전달
 
 ---
 
@@ -536,75 +562,59 @@ like_count_display.admin_order_field = '_like_count'
 
 ---
 
-## SNS Sidebar 통합 상세 가이드 (2026-02-04)
+## SNS Sidebar 통합 상세 가이드 (2026-02-20 업데이트)
 
-### 올바른 레이아웃 구조
+### 올바른 레이아웃 구조 (V2)
 
 ```html
-{% block content %}
-<section class="pt-32 pb-20 px-6 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col lg:flex-row gap-6 items-start">
-            <!-- 메인 콘텐츠 -->
-            <div class="flex-1 w-full lg:max-w-3xl">
-                {{ 메인 콘텐츠 }}
-            </div>
-            <!-- SNS 사이드바 (데스크톱만) -->
-            <div class="hidden lg:block w-[380px] flex-shrink-0">
-                <div class="relative">
-                    {% include 'core/partials/sns_widget.html' %}
-                </div>
-            </div>
-        </div>
+<div class="flex flex-col xl:flex-row max-w-[1920px] mx-auto">
+    <!-- 데스크톱 SNS -->
+    <div class="hidden xl:block flex-shrink-0">
+        {% include 'core/partials/sns_widget.html' %}
     </div>
-</section>
-{% endblock %}
+
+    <!-- 메인 콘텐츠 -->
+    <main class="flex-1">
+        {{ 메인 콘텐츠 }}
+
+        <!-- 모바일 SNS -->
+        <div x-data="{ snsOpen: false }" class="block xl:hidden">
+            {{ 최신 2개 미리보기 }}
+            {% include 'core/partials/sns_widget_mobile.html' with hide_header=True expand_all_mobile=True %}
+        </div>
+    </main>
+</div>
 ```
 
-### 올바른 뷰 쿼리
+### 모바일 피드 표시 규칙
 
-```python
-from core.models import Post
-from django.db.models import Count
+- `core/partials/post_list.html`은 첫 글만 보여주고 "이전 소식 보기"를 접는 로직이 기본이다.
+- 단, `expand_all_mobile=True`를 주면 접기 로직이 비활성화되어 전체 피드를 즉시 렌더링한다.
+- 홈 모바일 아코디언 내부에서는 반드시 `expand_all_mobile=True`를 사용한다.
 
-# 선택적 관계(UserProfile)는 select_related 제외
-try:
-    posts = Post.objects.select_related(
-        'author'
-    ).prefetch_related(
-        'comments__author',
-        'likes'
-    ).annotate(
-        like_count=Count('likes', distinct=True),
-        comment_count=Count('comments', distinct=True)
-    ).order_by('-created_at')[:20]
-except Exception as e:
-    posts = []
+### 흔한 실수 6가지 (현재 기준)
 
-context['posts'] = posts
-```
+1. **구식 브레이크포인트 사용**: `lg` 기준으로 분기 → 현재 기준 `xl` 분기(`hidden xl:block` / `block xl:hidden`) 사용.
+2. **모바일 더보기 구현을 앵커/HTMX로 처리**: `href="#..."` 또는 `hx-get` 기반 점프/중복 렌더링 유발 → `@click="snsOpen = true"` 토글 사용.
+3. **모바일 위젯 헤더 중복**: 아코디언 바깥 제목 + 위젯 내부 제목 중복 → `hide_header=True` 전달.
+4. **모바일 전체 피드가 1개만 보임**: `expand_all_mobile` 누락 → include 시 `expand_all_mobile=True` 전달.
+5. **구식 annotate 필드명 사용**: `like_count`, `comment_count` 참조 → 현재는 `likes_count_annotated`, `comments_count_annotated`.
+6. **회귀 테스트 누락**: 반응형/토글 규칙이 재깨짐 → `core/tests/test_home_view.py` SNS 테스트 유지.
 
-### 흔한 실수 5가지
+### 회귀 테스트 포인트
 
-1. **Flex 구조 없이 위젯만 추가** → 레이아웃 깨짐 → Flex 컨테이너로 감싸기
-2. **context에 `posts` 누락** → 위젯 빈 화면 → `'posts': posts` 추가
-3. **N+1 쿼리** → `Post.objects.all()[:20]` → select_related/prefetch_related 사용
-4. **`items-start` 누락** → 사이드바 stretch → 추가
-5. **모바일 반응형 미처리** → `hidden lg:block` 추가
+- `test_v2_uses_xl_breakpoint_for_sns_sidebar`
+- `test_v2_authenticated_uses_xl_breakpoint_for_sns_sidebar`
+- `test_v2_mobile_sns_more_uses_toggle_not_anchor`
+- `test_v2_authenticated_mobile_sns_more_uses_toggle_not_anchor`
 
-### 관련 파일
-- SNS 위젯: `core/templates/core/partials/sns_widget.html`
-- 게시글: `core/templates/core/partials/post_list.html`, `post_item.html`
-- 모델/뷰: `core/models.py` (Post, Comment), `core/views.py`
-- HTMX: 작성(`hx-post="/post/create/"`), 좋아요(`hx-post="/post/<id>/like/"`), 댓글(`hx-post="/post/<id>/comment/"`)
+### 관련 파일 (현재)
 
-### 적용 현황
-- 쌤BTI: 완료 (커밋 3223af2, 92e5f44, hotfix 6b90179)
-- Fortune: 미적용
-
-### 향후 개선
-- Post 모델에 `service` 필드 추가 → 서비스별 게시글 필터링
-- HTMX 무한 스크롤 페이지네이션
+- 홈: `core/templates/core/home_v2.html`, `core/templates/core/home_authenticated_v2.html`
+- SNS 위젯: `core/templates/core/partials/sns_widget.html`, `core/templates/core/partials/sns_widget_mobile.html`
+- 목록/아이템: `core/templates/core/partials/post_list.html`, `core/templates/core/partials/post_item.html`
+- 뷰/쿼리: `core/views.py` (`home`, `_home_v2`)
+- 테스트: `core/tests/test_home_view.py`
 
 ---
 
@@ -938,21 +948,23 @@ if self.sociallogin and self.sociallogin.user.email:
 
 ### 26. 홈 화면 레이아웃 구조 (모바일/PC 분리)
 
-**모바일**: 서비스 카드 above the fold → SNS 미리보기(최신 2개) → "소통창 열기" 아코디언
-**PC**: SNS 사이드바(왼쪽, sticky) + 메인 콘텐츠(오른쪽)
+**모바일(V2)**: 서비스/배너 섹션 → SNS 미리보기(최신 2개) → "소통창 열기" 아코디언(전체 피드)
+**PC(V2)**: SNS 사이드바(왼쪽, sticky) + 메인 콘텐츠(오른쪽), 분기 기준은 `xl`
 
 ```
 모바일 스크롤 간섭 해결 핵심:
 - SNS를 별도 스크롤 컨테이너(overflow-auto)에 넣지 않기
 - 페이지 본문 흐름에 통합 (overflow-visible)
 - 아코디언으로 펼치기/접기 → x-show + x-transition 사용
+- 모바일 더보기는 앵커 점프 대신 @click 상태 토글 사용
 ```
 
 **관련 파일:**
-- `core/templates/core/home.html` — 비로그인 홈
-- `core/templates/core/home_authenticated.html` — 로그인 홈
+- `core/templates/core/home_v2.html` — 비로그인 홈 (기본)
+- `core/templates/core/home_authenticated_v2.html` — 로그인 홈 (기본)
 - `core/templates/core/partials/sns_widget.html` — PC 전용 사이드바
-- `core/templates/core/partials/sns_widget_mobile.html` — 모바일 전용 (아코디언 내부)
+- `core/templates/core/partials/sns_widget_mobile.html` — 모바일 전용 (아코디언 내부, `hide_header=True`, `expand_all_mobile=True`)
+- `core/templates/core/partials/post_list.html` — `expand_all_mobile`로 모바일 접기/전체 노출 제어
 
 ### 27. 서비스 카테고리 시스템
 
@@ -967,11 +979,13 @@ if self.sociallogin and self.sociallogin.user.email:
 | `edutech` | 에듀테크 | 시안색 | `text-cyan-500` |
 | `etc` | 기타 | 회색 | `text-slate-500` |
 
-**카테고리 추가/변경 시 수정 필요한 파일 (4곳):**
+**카테고리 추가/변경 시 수정 필요한 파일 (현재 6곳, V2 우선):**
 1. `products/models.py` — `SERVICE_CHOICES` + 마이그레이션
-2. `core/templates/core/home.html` — CSS `.cat-{code}` + 탭 버튼
-3. `core/templates/core/home_authenticated.html` — 위와 동일
-4. `core/templates/core/includes/card_product.html` — 아이콘/라벨 색상 분기
+2. `core/templates/core/home_v2.html` — CSS `.cat-{code}` + 탭 버튼
+3. `core/templates/core/home_authenticated_v2.html` — 위와 동일
+4. `core/templates/core/home.html` — V1 fallback 유지 시 동기화
+5. `core/templates/core/home_authenticated.html` — V1 fallback 유지 시 동기화
+6. `core/templates/core/includes/card_product.html` — 아이콘/라벨 색상 분기
 
 **카드 컴포넌트 `card_product.html`:**
 - `is_filtered=True` 전달 시: 외부 `x-show` 래퍼와 함께 사용 (Alpine.js 필터링 모드)
@@ -1385,7 +1399,7 @@ JavaScript 또는 Alpine.js 속성(예: `@click`, `:class`) 내부에 Django 템
 @click="openBooking(..., '{{ target_date|date:"Y-m-d" }}', ...)"
 ```
 
-**증상**: 브라우저 콘솔에는 `SyntaxError: Unexpected token`이 나타나며, 서버 로그에는 `TemplateSyntaxError`가 찍힐 수 있다. 특히 PC에서는 잘 되고 모바일 전용 블록(`lg:hidden`) 내부에서만 이 실수가 있을 경우 원인을 찾기 매우 어렵다.
+**증상**: 브라우저 콘솔에는 `SyntaxError: Unexpected token`이 나타나며, 서버 로그에는 `TemplateSyntaxError`가 찍힐 수 있다. 특히 PC에서는 잘 되고 모바일 전용 블록(`xl:hidden` 또는 `lg:hidden`) 내부에서만 이 실수가 있을 경우 원인을 찾기 매우 어렵다.
 
 **사례 (2026-02-12)**: 예약 시스템 모바일 레이아웃 작업 중 `@click` 핸들러 내 `date:'Y-m-d'`의 작은따옴표 중복 사용으로 인해 모바일에서만 500 에러 발생.
 
