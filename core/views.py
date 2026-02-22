@@ -64,10 +64,12 @@ def get_purpose_sections(products_qs, preview_limit=None):
                 preview_items = items[:preview_limit]
             else:
                 preview_items = items
+            overflow_items = items[len(preview_items):]
             remaining_count = max(0, len(items) - len(preview_items))
             sections.append({
                 **sec,
                 'products': preview_items,
+                'overflow_products': overflow_items,
                 'total_count': len(items),
                 'remaining_count': remaining_count,
                 'has_more': remaining_count > 0,

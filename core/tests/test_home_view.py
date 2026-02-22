@@ -130,11 +130,12 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('학생용 QR', content)
         self.assertIn('homeStudentGamesQrModal', content)
 
-    def test_v2_anonymous_has_show_all_toggle(self):
-        """V2 비로그인 홈에 전체 서비스 보기 토글 존재"""
+    def test_v2_anonymous_does_not_render_show_all_toggle(self):
+        """V2 비로그인 홈에 전체 서비스 보기 토글이 노출되지 않음"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-track="show_all_toggle"', content)
+        self.assertNotIn('data-track="show_all_toggle"', content)
+        self.assertNotIn('전체 서비스 보기', content)
 
     def test_v2_authenticated_200(self):
         """V2 로그인 홈 200 응답"""
@@ -165,6 +166,14 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('수업 준비', content)
         self.assertIn('문서·행정', content)
+
+    def test_v2_authenticated_does_not_render_show_all_toggle(self):
+        """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
+        self._login('authnotoggle')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertNotIn('data-track="show_all_toggle"', content)
+        self.assertNotIn('전체 서비스 보기', content)
 
     def test_v2_mini_card_has_data_product_id(self):
         """V2 미니 카드에 data-product-id 속성 존재"""
@@ -253,6 +262,48 @@ class HomeV2ViewTest(TestCase):
         self.assertLessEqual(len(lesson['products']), 2)
         self.assertTrue(lesson['has_more'])
         self.assertGreaterEqual(lesson['remaining_count'], 1)
+
+    def test_v2_section_more_toggle_renders_when_overflow_exists(self):
+        Product.objects.create(
+            title="Classroom Extra 1",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        Product.objects.create(
+            title="Classroom Extra 2",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-track="section_more_toggle"', content)
+        self.assertIn('더보기', content)
+
+    def test_v2_section_overflow_items_are_rendered_in_markup(self):
+        Product.objects.create(
+            title="Classroom Overflow A",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        Product.objects.create(
+            title="Classroom Overflow B",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('Classroom Overflow A', content)
+        self.assertIn('Classroom Overflow B', content)
 
     def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
         response = self.client.get(reverse('home'))
