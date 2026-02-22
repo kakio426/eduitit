@@ -36,3 +36,13 @@ class ModalConsistencyTest(TestCase):
         
         self.assertIn('modalContent', rendered,
                      "Modal should have content container")
+
+    def test_modal_has_mobile_scroll_safe_layout(self):
+        """Verify modal panel/layout supports mobile internal scrolling."""
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        rendered = response.content.decode('utf-8')
+
+        self.assertIn('items-end md:items-center', rendered)
+        self.assertIn('overflow-y-auto overscroll-y-contain', rendered)
+        self.assertIn('h-[calc(100dvh-1rem)]', rendered)

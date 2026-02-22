@@ -621,8 +621,8 @@
             <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity duration-300 opacity-0"
                 id="modalBackdrop" aria-hidden="true" onclick="closeModal()"></div>
 
-            <div class="fixed inset-0 z-10 flex items-center justify-center p-4 md:p-6">
-                <div class="relative w-full max-w-2xl max-h-[90vh] md:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl md:rounded-3xl bg-white shadow-2xl transform transition-all duration-300 scale-95 opacity-0"
+            <div class="fixed inset-0 z-10 flex items-end md:items-center justify-center p-2 pt-6 md:p-6 overflow-y-auto overscroll-y-contain">
+                <div class="relative w-full max-w-2xl h-[calc(100dvh-1rem)] md:h-auto max-h-[calc(100dvh-1rem)] md:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl md:rounded-3xl bg-white shadow-2xl transform transition-all duration-300 scale-95 opacity-0"
                     id="modalPanel">
                     <h2 id="unifiedModalTitle" class="sr-only">서비스 미리보기</h2>
 
@@ -643,7 +643,7 @@
                     </button>
 
                     <!-- Content Container: flex-1 + min-h-0 ensures flex overflow works -->
-                    <div id="modalContent" class="flex-1 min-h-0 flex flex-col">
+                    <div id="modalContent" class="flex-1 min-h-0 flex flex-col overflow-hidden">
                         <!-- Content will be loaded here -->
                     </div>
                 </div>
@@ -719,14 +719,21 @@
                 }
             });
 
+            let unifiedModalPrevBodyOverflow = '';
+
             function openUnifiedModal() {
                 const modal = document.getElementById('unifiedModal');
                 const backdrop = document.getElementById('modalBackdrop');
                 const panel = document.getElementById('modalPanel');
                 const body = document.body;
+                if (!modal || !backdrop || !panel || !body) return;
+
+                // Already open.
+                if (!modal.classList.contains('hidden')) return;
 
                 // Show modal and prevent scroll
                 modal.classList.remove('hidden');
+                unifiedModalPrevBodyOverflow = body.style.overflow || '';
                 body.style.overflow = 'hidden';
 
                 // Reset scale for animation
@@ -779,6 +786,10 @@
                 const backdrop = document.getElementById('modalBackdrop');
                 const panel = document.getElementById('modalPanel');
                 const body = document.body;
+                if (!modal || !backdrop || !panel || !body) return;
+
+                // Already closed.
+                if (modal.classList.contains('hidden')) return;
 
                 // Animate out
                 backdrop.classList.add('opacity-0');
@@ -787,7 +798,8 @@
 
                 setTimeout(() => {
                     modal.classList.add('hidden');
-                    body.style.overflow = 'auto';
+                    body.style.overflow = unifiedModalPrevBodyOverflow;
+                    unifiedModalPrevBodyOverflow = '';
                 }, 300);
             }
 
@@ -804,7 +816,8 @@
                 backdrop.classList.add('opacity-0');
                 panel.classList.remove('scale-100', 'opacity-100');
                 panel.classList.add('scale-95', 'opacity-0');
-                document.body.style.overflow = 'auto';
+                document.body.style.overflow = unifiedModalPrevBodyOverflow;
+                unifiedModalPrevBodyOverflow = '';
 
                 if (loading) loading.classList.add('hidden');
                 if (content) content.innerHTML = '';
