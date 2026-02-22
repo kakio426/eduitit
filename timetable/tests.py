@@ -50,7 +50,7 @@ class TimetablePhaseOneTest(TestCase):
 
     def test_upload_missing_sheet_fails_check(self):
         wb = openpyxl.load_workbook(BytesIO(build_template_workbook()))
-        del wb["배치조건"]
+        del wb["전담배정표"]
         output = BytesIO()
         wb.save(output)
         output.seek(0)
@@ -63,8 +63,25 @@ class TimetablePhaseOneTest(TestCase):
         response = self.client.post("/timetable/", {"excel_file": upload})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["check_result"]["is_valid"])
-        self.assertIn("배치조건", " ".join(response.context["check_result"]["errors"]))
+        self.assertIn("전담배정표", " ".join(response.context["check_result"]["errors"]))
         self.assertIsNone(response.context["generated_result"])
+
+    def test_upload_without_optional_sheet_still_passes_check(self):
+        wb = openpyxl.load_workbook(BytesIO(build_template_workbook()))
+        del wb["배치조건"]
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        upload = SimpleUploadedFile(
+            "without_optional_sheet.xlsx",
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response = self.client.post("/timetable/", {"excel_file": upload})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["check_result"]["is_valid"])
+        self.assertIsNotNone(response.context["generated_result"])
 
     def test_apply_to_reservation_when_school_selected(self):
         user = User.objects.create_user(

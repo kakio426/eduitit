@@ -15,6 +15,7 @@ from products.models import Product
 from .forms import TimetableUploadForm
 from .models import TimetableSyncLog
 from .services import (
+    OPTIONAL_SHEETS,
     REQUIRED_SHEETS,
     apply_schedule_to_reservations,
     build_template_workbook,
@@ -118,6 +119,7 @@ def main(request):
         "preview_apply_info": preview_apply_info,
         "can_use_overwrite_option": request.user.is_authenticated and bool(school_choices),
         "required_sheet_names": list(REQUIRED_SHEETS.keys()),
+        "optional_sheet_names": list(OPTIONAL_SHEETS.keys()),
         "recent_sync_logs": _get_recent_sync_logs(request, log_filters=log_filters),
         "log_filters": log_filters,
         "log_school_options": _get_sync_log_school_options(request, log_filters=log_filters),

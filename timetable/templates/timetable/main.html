@@ -47,6 +47,15 @@
                         <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">{{ sheet_name }}</span>
                         {% endfor %}
                     </div>
+                    {% if optional_sheet_names %}
+                    <h3 class="text-sm font-bold text-slate-700 mt-4 mb-2">선택 시트 (고급)</h3>
+                    <p class="text-xs text-slate-500 mb-2">없어도 자동 배치는 가능합니다. 세밀 조정이 필요할 때만 작성하세요.</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for sheet_name in optional_sheet_names %}
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{{ sheet_name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

@@ -10,13 +10,48 @@ REQUIRED_SHEETS = {
     "학급목록": ["학년", "반", "사용여부"],
     "전담선생님목록": ["선생님코드", "이름", "담당교과", "하루최대수업칸"],
     "전담배정표": ["배정번호", "선생님코드", "교과", "학년", "반", "주당시수", "특별실처리", "특별실명"],
+}
+
+OPTIONAL_SHEETS = {
     "배치불가시간": ["선생님코드", "요일", "시간칸", "사유"],
     "배치조건": ["조건이름", "적용대상", "대상값", "배치방법", "세부값", "중요도"],
     "수동고정": ["배정번호", "요일", "시간칸", "처리", "메모"],
     "특별실설정": ["특별실명", "대상교과", "운영방식", "연동선택"],
 }
 
+ALL_TEMPLATE_SHEETS = {**REQUIRED_SHEETS, **OPTIONAL_SHEETS}
+
 REQUIRED_SETTING_KEYS = {"운영요일", "기본교시수", "시간칸형식"}
+
+TEMPLATE_GUIDE_ROWS = {
+    "기본설정": [
+        ["※작성안내", "운영요일(예: 월,화,수,목,금) / 기본교시수(예: 6) / 시간칸목록(예: 1,2,3,4,5,6)"],
+        ["※학년별사용시간칸", "선택 입력: 1=1,2,3,4;2=1,2,3,4,5 형태(세미콜론으로 학년 구분)"],
+    ],
+    "학급목록": [
+        ["※작성안내: 학년 숫자(예: 3)", "반 숫자(예: 1)", "사용여부 Y/N (N이면 배치 제외)"],
+    ],
+    "전담선생님목록": [
+        ["※작성안내: 선생님코드는 고유값(예: T001)", "이름", "담당교과는 참고용(복수 가능: 영어,체육)", "하루최대수업칸 숫자"],
+        ["※운영팁: 같은 선생님코드로 전담배정표 여러 행 배정 가능", "", "", ""],
+    ],
+    "전담배정표": [
+        ["※작성안내: 배정번호는 고유값(예: A001)", "선생님코드(T001)", "교과명", "학년 숫자", "반 숫자", "주당시수", "자동배치/예약연동/해당없음", "해당없음이면 빈칸, 아니면 특별실명 입력"],
+        ["※예시: 전담 1명이 3학년/5학년 동시 담당이면 행을 2개로 작성", "같은 선생님코드 반복 입력", "", "", "", "", "", ""],
+    ],
+    "배치불가시간": [
+        ["※작성안내: 선생님코드(T001)", "요일(월~금)", "시간칸(기본설정의 시간칸과 동일)", "사유 메모(선택)"],
+    ],
+    "배치조건": [
+        ["※작성안내", "적용대상: 교과/선생님/학년", "대상값 예: 영어, T001, 3학년", "배치방법: 피하기/나눠배치", "피하기: 월,수 / 나눠배치: 2+1", "중요도: 반드시/권장"],
+    ],
+    "수동고정": [
+        ["※작성안내: 배정번호(A001)", "요일(월~금)", "시간칸(예: 2)", "처리: 고정/배치금지", "메모(선택)"],
+    ],
+    "특별실설정": [
+        ["※작성안내: 특별실명(예: 과학실)", "대상교과(예: 과학)", "운영방식: 자동배치/예약연동", "연동선택: 연동안함/미리보기/바로반영"],
+    ],
+}
 
 ALLOWED_CHOICES = {
     ("전담배정표", "특별실처리"): {"자동배치", "예약연동", "해당없음"},
@@ -31,40 +66,40 @@ def build_template_workbook():
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    _add_sheet(wb, "기본설정", REQUIRED_SHEETS["기본설정"], [
+    _add_sheet(wb, "기본설정", ALL_TEMPLATE_SHEETS["기본설정"], [
         ["운영요일", "월,화,수,목,금"],
         ["기본교시수", "6"],
         ["시간칸형식", "기본"],
         ["시간칸목록", "1,2,3,4,5,6"],
-    ])
-    _add_sheet(wb, "학급목록", REQUIRED_SHEETS["학급목록"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("기본설정"))
+    _add_sheet(wb, "학급목록", ALL_TEMPLATE_SHEETS["학급목록"], [
         [3, 1, "Y"],
         [3, 2, "Y"],
         [4, 1, "Y"],
-    ])
-    _add_sheet(wb, "전담선생님목록", REQUIRED_SHEETS["전담선생님목록"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("학급목록"))
+    _add_sheet(wb, "전담선생님목록", ALL_TEMPLATE_SHEETS["전담선생님목록"], [
         ["T001", "김과학", "과학", 5],
         ["T002", "이영어", "영어", 6],
-    ])
-    _add_sheet(wb, "전담배정표", REQUIRED_SHEETS["전담배정표"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("전담선생님목록"))
+    _add_sheet(wb, "전담배정표", ALL_TEMPLATE_SHEETS["전담배정표"], [
         ["A001", "T001", "과학", 3, 1, 3, "자동배치", "과학실"],
         ["A002", "T002", "영어", 3, 1, 2, "해당없음", ""],
-    ])
-    _add_sheet(wb, "배치불가시간", REQUIRED_SHEETS["배치불가시간"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("전담배정표"))
+    _add_sheet(wb, "배치불가시간", ALL_TEMPLATE_SHEETS["배치불가시간"], [
         ["T001", "월", "1", "회의"],
         ["T002", "수", "5", "학년협의"],
-    ])
-    _add_sheet(wb, "배치조건", REQUIRED_SHEETS["배치조건"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("배치불가시간"))
+    _add_sheet(wb, "배치조건", ALL_TEMPLATE_SHEETS["배치조건"], [
         ["과학 3시간 분리", "교과", "과학", "나눠배치", "2+1", "반드시"],
         ["영어 월요일 피하기", "교과", "영어", "피하기", "월", "권장"],
-    ])
-    _add_sheet(wb, "수동고정", REQUIRED_SHEETS["수동고정"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("배치조건"))
+    _add_sheet(wb, "수동고정", ALL_TEMPLATE_SHEETS["수동고정"], [
         ["A001", "화", "2", "고정", "교내 행사 연계"],
-    ])
-    _add_sheet(wb, "특별실설정", REQUIRED_SHEETS["특별실설정"], [
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("수동고정"))
+    _add_sheet(wb, "특별실설정", ALL_TEMPLATE_SHEETS["특별실설정"], [
         ["과학실", "과학", "자동배치", "미리보기"],
         ["음악실", "음악", "예약연동", "미리보기"],
-    ])
+    ], guide_rows=TEMPLATE_GUIDE_ROWS.get("특별실설정"))
 
     output = BytesIO()
     wb.save(output)
@@ -95,7 +130,7 @@ def validate_timetable_workbook(file_obj):
 
     existing_sheets = wb.sheetnames
     missing_sheets = [name for name in REQUIRED_SHEETS if name not in existing_sheets]
-    extra_sheets = [name for name in existing_sheets if name not in REQUIRED_SHEETS]
+    extra_sheets = [name for name in existing_sheets if name not in ALL_TEMPLATE_SHEETS]
 
     if missing_sheets:
         result["is_valid"] = False
@@ -103,7 +138,7 @@ def validate_timetable_workbook(file_obj):
     if extra_sheets:
         result["warnings"].append(f"사용하지 않는 시트가 포함되어 있습니다: {', '.join(extra_sheets)}")
 
-    for sheet_name, required_headers in REQUIRED_SHEETS.items():
+    for sheet_name, required_headers in ALL_TEMPLATE_SHEETS.items():
         if sheet_name not in existing_sheets:
             continue
 
@@ -119,10 +154,11 @@ def validate_timetable_workbook(file_obj):
 
         data_rows = _count_data_rows(ws)
         result["sheet_stats"].append({"sheet_name": sheet_name, "data_rows": data_rows})
-        result["summary"]["확인된시트수"] += 1
+        if sheet_name in REQUIRED_SHEETS:
+            result["summary"]["확인된시트수"] += 1
         result["summary"]["총입력행수"] += data_rows
 
-        if sheet_name != "기본설정" and data_rows == 0:
+        if sheet_name in REQUIRED_SHEETS and sheet_name != "기본설정" and data_rows == 0:
             result["warnings"].append(f"[{sheet_name}] 입력된 데이터가 없습니다.")
 
         _validate_sheet_choices(ws, sheet_name, headers, result)
@@ -133,12 +169,19 @@ def validate_timetable_workbook(file_obj):
     return result
 
 
-def _add_sheet(wb, title, headers, rows):
+def _add_sheet(wb, title, headers, rows, guide_rows=None):
     ws = wb.create_sheet(title)
     ws.append(headers)
     _style_header_row(ws, len(headers))
     for row in rows:
         ws.append(row)
+    if guide_rows:
+        for guide_row in guide_rows:
+            padded = list(guide_row)[: len(headers)]
+            if len(padded) < len(headers):
+                padded.extend([""] * (len(headers) - len(padded)))
+            ws.append(padded)
+            _style_guide_row(ws, ws.max_row, len(headers))
     _set_column_widths(ws, headers)
 
 
@@ -149,6 +192,18 @@ def _style_header_row(ws, header_count):
 
     for col_idx in range(1, header_count + 1):
         cell = ws.cell(row=1, column=col_idx)
+        cell.fill = fill
+        cell.font = font
+        cell.alignment = align
+
+
+def _style_guide_row(ws, row_idx, col_count):
+    fill = PatternFill(start_color="EEF2FF", end_color="EEF2FF", fill_type="solid")
+    font = Font(color="334155", bold=False)
+    align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    for col_idx in range(1, col_count + 1):
+        cell = ws.cell(row=row_idx, column=col_idx)
         cell.fill = fill
         cell.font = font
         cell.alignment = align
@@ -171,6 +226,8 @@ def _read_headers(ws):
 def _count_data_rows(ws):
     count = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if _is_instruction_row(row):
+            continue
         if any(value not in (None, "") for value in row):
             count += 1
     return count
@@ -188,6 +245,8 @@ def _validate_settings_key_rows(ws, headers, result):
 
     existing_keys = set()
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if _is_instruction_row(row):
+            continue
         key_value = row[key_idx]
         if key_value in (None, ""):
             continue
@@ -211,6 +270,8 @@ def _validate_sheet_choices(ws, sheet_name, headers, result):
 
         column_idx = idx_map[column_name]
         for row_no, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if _is_instruction_row(row):
+                continue
             value = row[column_idx]
             if value in (None, ""):
                 continue
@@ -343,7 +404,11 @@ def _load_schedule_input(wb, result):
         result["errors"].append("전담선생님목록에 입력된 선생님이 없어 자동 배치를 진행할 수 없습니다.")
         return None
 
-    special_room_rows = _read_sheet_rows(wb["특별실설정"], REQUIRED_SHEETS["특별실설정"])
+    special_room_rows = _read_optional_sheet_rows(
+        wb,
+        "특별실설정",
+        OPTIONAL_SHEETS["특별실설정"],
+    )
     special_room_settings = {}
     for row in special_room_rows:
         room_name = row.get("특별실명", "")
@@ -355,8 +420,16 @@ def _load_schedule_input(wb, result):
             "subject": row.get("대상교과", ""),
         }
 
-    condition_rows = _read_sheet_rows(wb["배치조건"], REQUIRED_SHEETS["배치조건"])
-    manual_rows = _read_sheet_rows(wb["수동고정"], REQUIRED_SHEETS["수동고정"])
+    condition_rows = _read_optional_sheet_rows(
+        wb,
+        "배치조건",
+        OPTIONAL_SHEETS["배치조건"],
+    )
+    manual_rows = _read_optional_sheet_rows(
+        wb,
+        "수동고정",
+        OPTIONAL_SHEETS["수동고정"],
+    )
 
     manual_fixed = defaultdict(list)
     manual_blocked = defaultdict(set)
@@ -377,7 +450,11 @@ def _load_schedule_input(wb, result):
         elif mode == "배치금지":
             manual_blocked[assignment_id].add((day, slot))
 
-    unavailable_rows = _read_sheet_rows(wb["배치불가시간"], REQUIRED_SHEETS["배치불가시간"])
+    unavailable_rows = _read_optional_sheet_rows(
+        wb,
+        "배치불가시간",
+        OPTIONAL_SHEETS["배치불가시간"],
+    )
     teacher_unavailable = set()
     for row in unavailable_rows:
         teacher_id = row.get("선생님코드", "")
@@ -939,6 +1016,8 @@ def _read_sheet_rows(ws, headers):
     rows = []
     idx_map = _header_index_map(_read_headers(ws))
     for excel_row in ws.iter_rows(min_row=2, values_only=True):
+        if _is_instruction_row(excel_row):
+            continue
         if not any(value not in (None, "") for value in excel_row):
             continue
         row_dict = {}
@@ -948,6 +1027,12 @@ def _read_sheet_rows(ws, headers):
             row_dict[header] = _normalize_cell(cell_value)
         rows.append(row_dict)
     return rows
+
+
+def _read_optional_sheet_rows(wb, sheet_name, headers):
+    if sheet_name not in wb.sheetnames:
+        return []
+    return _read_sheet_rows(wb[sheet_name], headers)
 
 
 def _normalize_cell(value):
@@ -962,6 +1047,14 @@ def _normalize_cell(value):
             return str(int(value))
         return str(value).strip()
     return str(value).strip()
+
+
+def _is_instruction_row(values):
+    if not values:
+        return False
+    first = values[0]
+    first_text = str(first).strip() if first is not None else ""
+    return first_text.startswith("※")
 
 
 def _parse_int(value, default=0):
