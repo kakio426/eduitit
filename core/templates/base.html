@@ -374,13 +374,13 @@
                     <div class="relative" x-data="classroomPicker()" @click.away="open = false" x-init="init()">
                         <button @click="open = !open"
                             class="flex items-center gap-2 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700 text-xl"
-                            :title="current ? '현재 학급: ' + current : '학급 단축키 선택'">
+                            :title="current ? '현재 학급: ' + current + ' (별빛 추첨기/우리반BTI 명단 자동 적용)' : '기본 학급을 선택하면 별빛 추첨기/우리반BTI 명단에 자동 적용됩니다.'">
                             <i class="fa-solid fa-chalkboard-user text-purple-400"></i>
                             <span x-text="current || '학급 선택'" class="max-w-[120px] truncate"></span>
                             <i class="fa-solid fa-chevron-down text-sm transition-transform" :class="open ? 'rotate-180' : ''"></i>
                         </button>
                         <div x-show="open" x-cloak
-                            class="absolute right-0 top-full mt-3 w-56 z-[60]"
+                            class="absolute right-0 top-full mt-3 w-72 z-[60]"
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 translate-y-2 scale-95"
                             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
@@ -388,7 +388,10 @@
                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                             x-transition:leave-end="opacity-0 translate-y-2 scale-95">
                             <div class="clay-card p-2 bg-white/90 backdrop-blur-xl border border-white/50">
-                                <p class="text-xs text-gray-400 font-normal px-3 py-1">학급 단축키</p>
+                                <p class="text-xs text-gray-400 font-normal px-3 pt-1">기본 학급 선택</p>
+                                <p class="text-[11px] text-slate-500 px-3 pb-2 leading-4">
+                                    선택한 학급은 별빛 추첨기/우리반BTI 명단에 자동 적용됩니다.
+                                </p>
                                 <template x-for="cls in classrooms" :key="cls.id">
                                     <button @click="select(cls)"
                                         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all text-left"
@@ -403,6 +406,11 @@
                                     <i class="fa-solid fa-xmark text-sm"></i>
                                     <span>선택 해제</span>
                                 </button>
+                                <a href="{% url 'happy_seed:dashboard' %}"
+                                    class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-sm">
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                                    <span>학생 명단 관리</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -512,7 +520,7 @@
                     <div x-data="classroomPicker()" x-init="init()" class="py-2 border-b border-gray-200/50">
                         <div class="px-3 mb-2">
                             <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
-                            <p class="text-xs text-slate-500 font-medium mt-0.5">별빛 추첨기·우리반BTI에서 기본 학급으로 사용됩니다.</p>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">선택한 학급은 별빛 추첨기·우리반BTI 명단에 자동 적용됩니다.</p>
                         </div>
                         <div class="flex flex-col gap-1">
                             <template x-for="cls in classrooms" :key="cls.id">
@@ -529,7 +537,7 @@
                             </button>
                             <a href="{% url 'happy_seed:dashboard' %}"
                                 class="mt-1 flex items-center gap-2 px-3 py-1.5 text-indigo-500 hover:text-indigo-600 text-sm transition-all">
-                                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> 학급 관리
+                                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> 학생 명단 관리
                             </a>
                         </div>
                     </div>
