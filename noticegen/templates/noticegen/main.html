@@ -63,18 +63,6 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">상황 추가</label>
-                            <div class="space-y-2">
-                                {% for value, label in context_options %}
-                                <label class="flex items-center gap-2 text-sm text-gray-700">
-                                    <input type="checkbox" name="contexts" value="{{ value }}" class="rounded border-gray-300 text-blue-500 focus:ring-blue-300">
-                                    <span>{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div>
                             <label for="noticegen-keywords" class="block text-sm font-bold text-gray-600 mb-2">전달 사항</label>
                             <textarea
                                 id="noticegen-keywords"
@@ -109,4 +97,3 @@
     </div>
 </div>
 {% endblock %}
-

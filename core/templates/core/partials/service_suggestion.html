@@ -14,7 +14,13 @@
             {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
             class="group rounded-xl border border-indigo-200 bg-white px-3 py-3 hover:border-indigo-300 hover:shadow-sm transition-all">
             <div class="flex items-start gap-3">
-                <span class="text-2xl leading-none">{{ item.icon }}</span>
+                <span class="text-2xl leading-none">
+                    {% if "fa-" in item.icon %}
+                    <i class="{{ item.icon }}"></i>
+                    {% else %}
+                    {{ item.icon }}
+                    {% endif %}
+                </span>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-black text-slate-800 group-hover:text-indigo-700 truncate">{{ item.title }}</p>
                     <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.summary }}</p>
