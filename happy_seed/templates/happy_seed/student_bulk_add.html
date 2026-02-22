@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen">
-    <div class="max-w-lg mx-auto">
+    <div class="max-w-2xl mx-auto">
 
         <div class="mb-8">
             <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
@@ -17,14 +17,34 @@
             학운위 심의 및 내부 절차 적용 여부는 학교 정책에 따라 확인해 주세요.
         </div>
 
-        <form method="post" class="clay-card p-6 md:p-8 rounded-2xl space-y-5">
+        <form method="post" enctype="multipart/form-data" class="clay-card p-6 md:p-8 rounded-2xl space-y-6">
             {% csrf_token %}
 
             <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">{{ form.students_text.label }}</label>
-                {{ form.students_text }}
-                <p class="text-xs text-gray-400 mt-2 break-keep">{{ form.students_text.help_text }}</p>
+                <label class="block text-sm font-bold text-gray-700 mb-2">{{ form.students_paste.label }}</label>
+                {{ form.students_paste }}
+                <p class="text-xs text-gray-400 mt-2 break-keep">{{ form.students_paste.help_text }}</p>
+                {% for error in form.students_paste.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+                {% endfor %}
             </div>
+
+            <div class="border-t border-gray-100 pt-5">
+                <label class="block text-sm font-bold text-gray-700 mb-2">{{ form.students_csv.label }}</label>
+                {{ form.students_csv }}
+                <p class="text-xs text-gray-400 mt-2 break-keep">{{ form.students_csv.help_text }}</p>
+                {% for error in form.students_csv.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <button type="submit"
                     class="w-full py-3 bg-green-500 text-white rounded-xl font-bold text-base hover:bg-green-600 transition-colors">

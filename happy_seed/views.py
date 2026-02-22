@@ -411,20 +411,43 @@ def student_add(request, classroom_id):
 def student_bulk_add(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
     if request.method == "POST":
-        form = StudentBulkAddForm(request.POST)
+        form = StudentBulkAddForm(request.POST, request.FILES)
         if form.is_valid():
             parsed = form.parse_students()
+            used_numbers = set(classroom.students.values_list("number", flat=True))
+            auto_number = 1
             created_count = 0
+            skipped_count = 0
             for item in parsed:
+                requested_number = item.get("number")
+                if requested_number is None:
+                    while auto_number in used_numbers:
+                        auto_number += 1
+                    assigned_number = auto_number
+                elif requested_number in used_numbers:
+                    skipped_count += 1
+                    continue
+                else:
+                    assigned_number = requested_number
+
                 student, created = HSStudent.objects.get_or_create(
                     classroom=classroom,
-                    number=item["number"],
+                    number=assigned_number,
                     defaults={"name": item["name"]},
                 )
                 if created:
                     HSGuardianConsent.objects.create(student=student)
+                    used_numbers.add(student.number)
                     created_count += 1
-            messages.success(request, f"{created_count}명의 학생을 추가했습니다.")
+                else:
+                    skipped_count += 1
+
+            if created_count:
+                messages.success(request, f"{created_count}명의 학생을 추가했습니다.")
+            else:
+                messages.warning(request, "추가된 학생이 없습니다.")
+            if skipped_count:
+                messages.warning(request, f"{skipped_count}건은 번호 중복으로 건너뛰었습니다.")
             return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
     else:
         form = StudentBulkAddForm()

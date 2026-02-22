@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -108,6 +109,38 @@ class HappySeedViewTests(TestCase):
         url = reverse("happy_seed:group_manage", kwargs={"classroom_id": self.classroom.id})
         res = self.client.get(url)
         self.assertEqual(res.status_code, 200)
+
+    def test_student_bulk_add_with_excel_paste(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:student_bulk_add", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            {
+                "students_paste": "번호\t이름\n2\t민수\n3\t지수",
+            },
+        )
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=2, name="민수").exists())
+        self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=3, name="지수").exists())
+
+    def test_student_bulk_add_with_csv_file(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:student_bulk_add", kwargs={"classroom_id": self.classroom.id})
+        csv_file = SimpleUploadedFile(
+            "students.csv",
+            "번호,이름\n4,다온\n5,서준\n".encode("utf-8"),
+            content_type="text/csv",
+        )
+        res = self.client.post(
+            url,
+            {
+                "students_paste": "",
+                "students_csv": csv_file,
+            },
+        )
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=4, name="다온").exists())
+        self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=5, name="서준").exists())
 
     def test_consent_manual_approve(self):
         self.client.login(username="teacher2", password="pw12345")
