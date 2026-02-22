@@ -180,7 +180,10 @@ def _build_today_context(request):
                 }
             )
     except Exception:
-        pass
+        logger.exception(
+            "[TodayContext] reservations 집계 실패 user_id=%s",
+            getattr(request.user, "id", None),
+        )
 
     try:
         from collect.models import CollectionRequest
@@ -203,7 +206,10 @@ def _build_today_context(request):
                 }
             )
     except Exception:
-        pass
+        logger.exception(
+            "[TodayContext] collect 집계 실패 user_id=%s",
+            getattr(request.user, "id", None),
+        )
 
     try:
         from consent.models import SignatureRecipient, SignatureRequest
@@ -228,7 +234,10 @@ def _build_today_context(request):
                 }
             )
     except Exception:
-        pass
+        logger.exception(
+            "[TodayContext] consent 집계 실패 user_id=%s",
+            getattr(request.user, "id", None),
+        )
 
     return {
         "today_items": today_items,

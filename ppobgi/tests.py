@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 from core.models import UserProfile
+from happy_seed.models import HSClassroom, HSStudent
 from products.models import DTStudent
 
 
@@ -45,3 +46,37 @@ class PpobgiViewTest(TestCase):
     def test_roster_names_requires_login(self):
         response = self.client.get(reverse("ppobgi:roster_names"))
         self.assertEqual(response.status_code, 302)
+
+    def test_classroom_students_returns_active_students_for_owner(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
+        HSStudent.objects.create(classroom=classroom, name="3번 학생", number=3, is_active=True)
+        HSStudent.objects.create(classroom=classroom, name="1번 학생", number=1, is_active=True)
+        HSStudent.objects.create(classroom=classroom, name="비활성 학생", number=2, is_active=False)
+
+        response = self.client.get(reverse("ppobgi:classroom_students", args=[classroom.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["classroom_name"], "3학년 4반")
+        self.assertEqual(response.json()["names"], ["1번 학생", "3번 학생"])
+
+    def test_classroom_students_requires_login(self):
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
+
+        response = self.client.get(reverse("ppobgi:classroom_students", args=[classroom.pk]))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_classroom_students_returns_404_for_non_owner(self):
+        other_user = User.objects.create_user(
+            username="other_teacher",
+            password="password123",
+            email="other@example.com",
+        )
+        classroom = HSClassroom.objects.create(teacher=other_user, name="다른 반")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("ppobgi:classroom_students", args=[classroom.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"], "classroom not found")

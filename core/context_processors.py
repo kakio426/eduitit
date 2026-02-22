@@ -140,16 +140,16 @@ def active_classroom(request):
         qs = HSClassroom.objects.filter(teacher=request.user, is_active=True).order_by('-created_at')
         classrooms_data = [{'id': str(c.pk), 'name': c.name} for c in qs]
         if source == 'hs' and cid:
-            try:
-                classroom = next((c for c in qs if str(c.pk) == cid), None)
-                if classroom is None:
-                    # 학급이 삭제됐거나 비활성화된 경우 세션 초기화
-                    request.session.pop('active_classroom_source', None)
-                    request.session.pop('active_classroom_id', None)
-            except Exception:
-                pass
+            classroom = next((c for c in qs if str(c.pk) == cid), None)
+            if classroom is None:
+                # 학급이 삭제됐거나 비활성화된 경우 세션 초기화
+                request.session.pop('active_classroom_source', None)
+                request.session.pop('active_classroom_id', None)
     except Exception:
-        pass
+        logger.exception(
+            "[ActiveClassroom] 학급 컨텍스트 구성 실패 user_id=%s",
+            getattr(request.user, 'id', None),
+        )
     return {
         'active_classroom': classroom,
         'has_hs_classrooms': bool(classrooms_data),

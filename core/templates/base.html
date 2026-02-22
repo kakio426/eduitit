@@ -1297,6 +1297,18 @@
                 open: false,
                 classrooms: [],
                 current: null,
+                getCsrfToken: function() {
+                    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+                    if (el && el.value) {
+                        return el.value;
+                    }
+                    var templateToken = '{{ csrf_token }}';
+                    if (templateToken && templateToken !== 'NOTPROVIDED') {
+                        return templateToken;
+                    }
+                    var match = document.cookie.match(/csrftoken=([^;]+)/);
+                    return match ? match[1] : '';
+                },
                 init: function() {
                     var raw = document.getElementById('hs-classrooms-data');
                     var parsedClassrooms = [];
@@ -1324,32 +1336,44 @@
                 },
                 select: function(cls) {
                     var self = this;
+                    var token = this.getCsrfToken();
                     fetch('/api/set-classroom/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || ''
+                            'X-CSRFToken': token
                         },
                         body: JSON.stringify({source: 'hs', classroom_id: cls.id})
-                    }).then(function(r) { return r.json(); }).then(function(d) {
+                    }).then(function(r) {
+                        if (!r.ok) throw new Error('set classroom failed');
+                        return r.json();
+                    }).then(function(d) {
                         if (d.status === 'ok') {
                             self.current = d.name || cls.name;
                             self.open = false;
                         }
-                    }).catch(function() {});
+                    }).catch(function() {
+                        alert('학급 선택 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                    });
                 },
                 clear: function() {
                     var self = this;
+                    var token = this.getCsrfToken();
                     fetch('/api/set-classroom/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || ''
+                            'X-CSRFToken': token
                         },
                         body: JSON.stringify({classroom_id: ''})
-                    }).then(function(r) { return r.json(); }).then(function(d) {
+                    }).then(function(r) {
+                        if (!r.ok) throw new Error('clear classroom failed');
+                        return r.json();
+                    }).then(function(d) {
                         if (d.status === 'cleared') { self.current = null; self.open = false; }
-                    }).catch(function() {});
+                    }).catch(function() {
+                        alert('학급 선택 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                    });
                 }
             };
         }

@@ -292,24 +292,32 @@
     if (!classroomUrl) return;
     // 세션 학급이 설정된 경우 자동으로 학생 명단 로드
     var textarea = document.getElementById('ppb-name-input');
-    var laderTextarea = document.getElementById('pbl-name-input');
+    var ladderTextarea = document.getElementById('pbl-name-input');
     var msgEl = document.getElementById('ppb-setup-message');
     if (!textarea) return;
     fetch(classroomUrl, {credentials: 'same-origin'})
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (!r.ok) throw new Error('classroom fetch failed');
+            return r.json();
+        })
         .then(function(d) {
             var names = Array.isArray(d.names) ? d.names : [];
             if (!names.length) return;
             textarea.value = names.join('\n');
-            if (laderTextarea) laderTextarea.value = names.join('\n');
+            if (ladderTextarea) ladderTextarea.value = names.join('\n');
             textarea.dispatchEvent(new Event('input'));
-            if (laderTextarea) laderTextarea.dispatchEvent(new Event('input'));
+            if (ladderTextarea) ladderTextarea.dispatchEvent(new Event('input'));
             if (msgEl) {
                 msgEl.textContent = '현재 학급 [' + classroomName + '] 명단 ' + names.length + '명이 자동으로 불러와졌습니다.';
-                msgEl.className = 'ppb-message ppb-message--info';
+                msgEl.className = 'ppb-message info';
             }
         })
-        .catch(function() {});
+        .catch(function() {
+            if (msgEl) {
+                msgEl.textContent = '현재 학급 명단 자동 불러오기에 실패했습니다. 다시 시도해 주세요.';
+                msgEl.className = 'ppb-message warn';
+            }
+        });
 })();
 </script>
 {% endif %}
