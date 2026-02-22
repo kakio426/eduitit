@@ -1,0 +1,617 @@
+{% extends 'base.html' %}
+
+{% block title %}전담 시간표·특별실 배치 도우미{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-slate-50">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-xl bg-indigo-100 text-indigo-600 text-2xl flex items-center justify-center shrink-0">
+                    📘
+                </div>
+                <div class="space-y-2">
+                    <h1 class="text-2xl md:text-3xl font-black text-slate-800">전담 시간표·특별실 배치 도우미</h1>
+                    <p class="text-slate-600 leading-relaxed">
+                        전담 선생님 시간표를 먼저 만들고, 겹침 여부를 점검한 뒤 특별실 운영 방식까지 연결합니다.
+                        먼저 입력 양식을 내려받아 작성한 후 업로드 점검을 진행해 주세요.
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        {% if service %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                            {{ service.get_service_type_display }}
+                        </span>
+                        {% endif %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                            교사용 쉬운 용어 적용
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-lg font-black text-slate-800 mb-4">1단계: 입력 양식 내려받기</h2>
+                <p class="text-sm text-slate-600 mb-4">아래 버튼으로 표준 양식을 받아 그대로 작성해 주세요.</p>
+                <a href="{% url 'timetable:download_template' %}"
+                    class="inline-flex items-center justify-center w-full md:w-auto px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors">
+                    <i class="fa-solid fa-download mr-2"></i>
+                    엑셀 양식 다운로드
+                </a>
+
+                <div class="mt-5">
+                    <h3 class="text-sm font-bold text-slate-700 mb-2">필수 시트</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for sheet_name in required_sheet_names %}
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">{{ sheet_name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-lg font-black text-slate-800 mb-4">2단계: 작성 파일 점검하기</h2>
+                <form method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="generate">
+                    <div>
+                        <label for="{{ form.reservation_school_slug.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">예약 반영 학교 (선택)</label>
+                        {{ form.reservation_school_slug }}
+                        {% if form.reservation_school_slug.help_text %}
+                        <p class="text-xs text-slate-500 mt-2">{{ form.reservation_school_slug.help_text }}</p>
+                        {% endif %}
+                        {% if form.reservation_school_slug.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {% for error in form.reservation_school_slug.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if can_use_overwrite_option %}
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <label class="inline-flex items-start gap-2 text-sm text-slate-700">
+                            {{ form.overwrite_existing }}
+                            <span>
+                                <span class="font-bold text-slate-800">{{ form.overwrite_existing.label }}</span>
+                                {% if form.overwrite_existing.help_text %}
+                                <span class="block text-xs text-slate-500 mt-1">{{ form.overwrite_existing.help_text }}</span>
+                                {% endif %}
+                            </span>
+                        </label>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label for="{{ form.excel_file.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">시간표 엑셀 파일</label>
+                        {{ form.excel_file }}
+                        {% if form.excel_file.help_text %}
+                        <p class="text-xs text-slate-500 mt-2">{{ form.excel_file.help_text }}</p>
+                        {% endif %}
+                        {% if form.excel_file.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {% for error in form.excel_file.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit"
+                        class="inline-flex items-center justify-center w-full md:w-auto px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors">
+                        <i class="fa-solid fa-check mr-2"></i>
+                        업로드하고 점검하기
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if check_result %}
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-5">
+            <div class="flex items-center gap-3">
+                {% if check_result.is_valid %}
+                <span class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </span>
+                <div>
+                    <h2 class="text-lg font-black text-emerald-700">점검 완료: 입력 형식이 올바릅니다.</h2>
+                    <p class="text-sm text-slate-600">다음 단계에서 자동 배치 기능을 적용할 수 있습니다.</p>
+                </div>
+                {% else %}
+                <span class="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+                <div>
+                    <h2 class="text-lg font-black text-red-700">점검 결과: 수정이 필요한 항목이 있습니다.</h2>
+                    <p class="text-sm text-slate-600">아래 오류를 먼저 해결한 뒤 다시 업로드해 주세요.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">필수 시트 수</p>
+                    <p class="text-xl font-black text-slate-800">{{ check_result.summary.필수시트수 }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">확인된 시트 수</p>
+                    <p class="text-xl font-black text-slate-800">{{ check_result.summary.확인된시트수 }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">총 입력 행 수</p>
+                    <p class="text-xl font-black text-slate-800">{{ check_result.summary.총입력행수 }}</p>
+                </div>
+            </div>
+
+            {% if check_result.errors %}
+            <div>
+                <h3 class="text-sm font-black text-red-700 mb-2">오류</h3>
+                <ul class="space-y-2">
+                    {% for item in check_result.errors %}
+                    <li class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if check_result.warnings %}
+            <div>
+                <h3 class="text-sm font-black text-amber-700 mb-2">안내</h3>
+                <ul class="space-y-2">
+                    {% for item in check_result.warnings %}
+                    <li class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if check_result.sheet_stats %}
+            <div>
+                <h3 class="text-sm font-black text-slate-700 mb-2">시트별 입력 현황</h3>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full min-w-[420px] text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="text-left px-4 py-2 font-bold">시트 이름</th>
+                                <th class="text-right px-4 py-2 font-bold">입력된 행 수</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in check_result.sheet_stats %}
+                            <tr class="border-t border-slate-200">
+                                <td class="px-4 py-2 text-slate-700">{{ row.sheet_name }}</td>
+                                <td class="px-4 py-2 text-right text-slate-700">{{ row.data_rows }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if generated_result %}
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3">
+                {% if generated_result.is_success %}
+                <span class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </span>
+                <div>
+                    <h2 class="text-lg font-black text-emerald-700">자동 배치 완료</h2>
+                    <p class="text-sm text-slate-600">전담 시간표와 특별실 결과를 확인해 주세요.</p>
+                </div>
+                {% else %}
+                <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+                <div>
+                    <h2 class="text-lg font-black text-amber-700">부분 완료</h2>
+                    <p class="text-sm text-slate-600">배치 결과와 오류 안내를 함께 확인해 주세요.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">필요 수업칸</p>
+                    <p class="text-xl font-black text-slate-800">{{ generated_result.summary.total_needed }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">배치된 수업칸</p>
+                    <p class="text-xl font-black text-slate-800">{{ generated_result.summary.placed_count }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">남은 수업칸</p>
+                    <p class="text-xl font-black {% if generated_result.summary.unplaced_count > 0 %}text-red-700{% else %}text-emerald-700{% endif %}">
+                        {{ generated_result.summary.unplaced_count }}
+                    </p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                    <p class="text-xs text-slate-500">겹침 수</p>
+                    <p class="text-xl font-black text-slate-800">{{ generated_result.summary.overlap_count }}</p>
+                </div>
+            </div>
+
+            {% if integration_result %}
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <h3 class="text-sm font-black text-slate-800">예약 시스템 반영 결과 ({{ integration_result.school_name }})</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                        <p class="text-xs text-slate-500">새로 반영</p>
+                        <p class="text-lg font-black text-slate-800">{{ integration_result.applied_count }}</p>
+                    </div>
+                    <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                        <p class="text-xs text-slate-500">이름 갱신</p>
+                        <p class="text-lg font-black text-slate-800">{{ integration_result.updated_count }}</p>
+                    </div>
+                    <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                        <p class="text-xs text-slate-500">건너뜀</p>
+                        <p class="text-lg font-black text-slate-800">{{ integration_result.skipped_count }}</p>
+                    </div>
+                    <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                        <p class="text-xs text-slate-500">기존값 충돌</p>
+                        <p class="text-lg font-black text-slate-800">{{ integration_result.conflict_count }}</p>
+                    </div>
+                    <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                        <p class="text-xs text-slate-500">신규 특별실</p>
+                        <p class="text-lg font-black text-slate-800">{{ integration_result.room_created_count }}</p>
+                    </div>
+                </div>
+                {% if integration_result.messages %}
+                <ul class="space-y-2">
+                    {% for message in integration_result.messages %}
+                    <li class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if integration_result.reservation_url %}
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <a href="{{ integration_result.reservation_url }}" class="inline-flex items-center px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                        예약 화면 보기
+                    </a>
+                    <a href="{{ integration_result.reservation_admin_url }}" class="inline-flex items-center px-3 py-2 rounded-lg bg-slate-700 text-white text-sm font-bold hover:bg-slate-800">
+                        예약 관리자 화면 보기
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if preview_apply_info and preview_apply_info.preview_count > 0 %}
+            <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 space-y-3">
+                <h3 class="text-sm font-black text-indigo-800">미리보기 항목 수동 반영</h3>
+                <p class="text-sm text-indigo-800">
+                    현재 <span class="font-black">{{ preview_apply_info.preview_count }}</span>개 항목이 `미리보기`로 설정되어 있습니다.
+                    아래 버튼을 누르면 예약 시스템에 반영됩니다.
+                </p>
+                <form method="post" class="space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="apply_preview">
+                    <input type="hidden" name="sync_token" value="{{ preview_apply_info.token }}">
+                    <input type="hidden" name="school_slug" value="{{ preview_apply_info.school_slug }}">
+                    {% if can_use_overwrite_option %}
+                    <label class="inline-flex items-start gap-2 text-sm text-indigo-900">
+                        <input type="checkbox" name="overwrite_existing" class="h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                        <span>기존 고정시간표 덮어쓰기 (관리자 전용)</span>
+                    </label>
+                    {% endif %}
+                    <div>
+                        <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                            미리보기 항목 예약 반영하기
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if generated_result.errors %}
+            <div>
+                <h3 class="text-sm font-black text-red-700 mb-2">오류 안내</h3>
+                <ul class="space-y-2">
+                    {% for item in generated_result.errors %}
+                    <li class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if generated_result.warnings %}
+            <div>
+                <h3 class="text-sm font-black text-amber-700 mb-2">추가 안내</h3>
+                <ul class="space-y-2">
+                    {% for item in generated_result.warnings %}
+                    <li class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="space-y-4">
+                <h3 class="text-base font-black text-slate-800">전담 선생님 시간표</h3>
+                {% for table in generated_result.teacher_tables %}
+                <div class="border border-slate-200 rounded-xl overflow-x-auto">
+                    <div class="px-4 py-3 bg-slate-100 border-b border-slate-200">
+                        <p class="text-sm font-black text-slate-800">{{ table.teacher_name }} <span class="text-slate-500 font-semibold">({{ table.teacher_id }})</span></p>
+                    </div>
+                    <table class="w-full min-w-[680px] text-sm">
+                        <thead class="bg-white text-slate-700">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-bold border-b border-slate-200">시간칸</th>
+                                {% for day in generated_result.days %}
+                                <th class="text-left px-3 py-2 font-bold border-b border-slate-200">{{ day }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table.rows %}
+                            <tr class="border-b border-slate-100">
+                                <td class="px-3 py-2 font-bold text-slate-700 bg-slate-50">{{ row.slot_label }}</td>
+                                {% for cell in row.cells %}
+                                <td class="px-3 py-2 text-slate-700">
+                                    {% if cell %}
+                                    <span class="inline-flex px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 font-semibold">{{ cell }}</span>
+                                    {% else %}
+                                    <span class="text-slate-300">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if generated_result.class_tables %}
+            <details class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <summary class="cursor-pointer text-sm font-black text-slate-800">담임 참고용: 학급별 전담 점유표 보기</summary>
+                <div class="mt-4 space-y-4">
+                    {% for table in generated_result.class_tables %}
+                    <div class="border border-slate-200 rounded-xl overflow-x-auto bg-white">
+                        <div class="px-4 py-3 bg-slate-100 border-b border-slate-200">
+                            <p class="text-sm font-black text-slate-800">{{ table.class_id }}</p>
+                        </div>
+                        <table class="w-full min-w-[680px] text-sm">
+                            <thead class="bg-white text-slate-700">
+                                <tr>
+                                    <th class="text-left px-3 py-2 font-bold border-b border-slate-200">시간칸</th>
+                                    {% for day in generated_result.days %}
+                                    <th class="text-left px-3 py-2 font-bold border-b border-slate-200">{{ day }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in table.rows %}
+                                <tr class="border-b border-slate-100">
+                                    <td class="px-3 py-2 font-bold text-slate-700 bg-slate-50">{{ row.slot_label }}</td>
+                                    {% for cell in row.cells %}
+                                    <td class="px-3 py-2 text-slate-700">
+                                        {% if cell %}
+                                        <span class="inline-flex px-2 py-1 rounded-md bg-purple-50 text-purple-700 font-semibold">{{ cell }}</span>
+                                        {% else %}
+                                        <span class="text-slate-300">-</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            {% if generated_result.room_tables %}
+            <div class="space-y-4">
+                <h3 class="text-base font-black text-slate-800">특별실 자동배치 시간표</h3>
+                {% for table in generated_result.room_tables %}
+                <div class="border border-slate-200 rounded-xl overflow-x-auto">
+                    <div class="px-4 py-3 bg-slate-100 border-b border-slate-200">
+                        <p class="text-sm font-black text-slate-800">{{ table.room_name }}</p>
+                    </div>
+                    <table class="w-full min-w-[680px] text-sm">
+                        <thead class="bg-white text-slate-700">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-bold border-b border-slate-200">시간칸</th>
+                                {% for day in generated_result.days %}
+                                <th class="text-left px-3 py-2 font-bold border-b border-slate-200">{{ day }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table.rows %}
+                            <tr class="border-b border-slate-100">
+                                <td class="px-3 py-2 font-bold text-slate-700 bg-slate-50">{{ row.slot_label }}</td>
+                                {% for cell in row.cells %}
+                                <td class="px-3 py-2 text-slate-700">
+                                    {% if cell %}
+                                    <span class="inline-flex px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 font-semibold">{{ cell }}</span>
+                                    {% else %}
+                                    <span class="text-slate-300">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if generated_result.reservation_rows %}
+            <div class="space-y-3">
+                <h3 class="text-base font-black text-slate-800">예약 연동 대상 목록</h3>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full min-w-[760px] text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-bold">특별실</th>
+                                <th class="text-left px-3 py-2 font-bold">요일</th>
+                                <th class="text-left px-3 py-2 font-bold">시간칸</th>
+                                <th class="text-left px-3 py-2 font-bold">학급</th>
+                                <th class="text-left px-3 py-2 font-bold">교과</th>
+                                <th class="text-left px-3 py-2 font-bold">전담 선생님</th>
+                                <th class="text-left px-3 py-2 font-bold">연동 선택</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in generated_result.reservation_rows %}
+                            <tr class="border-t border-slate-200">
+                                <td class="px-3 py-2">{{ item.room_name }}</td>
+                                <td class="px-3 py-2">{{ item.day }}</td>
+                                <td class="px-3 py-2">{{ item.slot_label }}</td>
+                                <td class="px-3 py-2">{{ item.class_id }}</td>
+                                <td class="px-3 py-2">{{ item.subject }}</td>
+                                <td class="px-3 py-2">{{ item.teacher_name }}</td>
+                                <td class="px-3 py-2">{{ item.sync_option }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="space-y-3">
+                <h3 class="text-base font-black text-slate-800">배정별 진행 현황</h3>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full min-w-[760px] text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-bold">배정번호</th>
+                                <th class="text-left px-3 py-2 font-bold">전담 선생님</th>
+                                <th class="text-left px-3 py-2 font-bold">교과</th>
+                                <th class="text-left px-3 py-2 font-bold">학급</th>
+                                <th class="text-right px-3 py-2 font-bold">필요</th>
+                                <th class="text-right px-3 py-2 font-bold">배치됨</th>
+                                <th class="text-right px-3 py-2 font-bold">남음</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in generated_result.assignment_status_rows %}
+                            <tr class="border-t border-slate-200">
+                                <td class="px-3 py-2">{{ row.assignment_id }}</td>
+                                <td class="px-3 py-2">{{ row.teacher_name }}</td>
+                                <td class="px-3 py-2">{{ row.subject }}</td>
+                                <td class="px-3 py-2">{{ row.class_id }}</td>
+                                <td class="px-3 py-2 text-right">{{ row.needed_hours }}</td>
+                                <td class="px-3 py-2 text-right">{{ row.placed_hours }}</td>
+                                <td class="px-3 py-2 text-right {% if row.remaining_hours > 0 %}text-red-700 font-bold{% else %}text-emerald-700 font-bold{% endif %}">
+                                    {{ row.remaining_hours }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if request.user.is_authenticated %}
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-lg font-black text-slate-800">최근 예약 반영 내역</h2>
+                <a href="{% url 'timetable:download_sync_logs_csv' %}{% if csv_download_query %}?{{ csv_download_query }}{% endif %}"
+                    class="inline-flex items-center px-3 py-2 rounded-lg bg-slate-800 text-white text-sm font-bold hover:bg-slate-900">
+                    <i class="fa-solid fa-file-csv mr-2"></i>
+                    CSV 다운로드
+                </a>
+            </div>
+            <div class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 space-y-2">
+                <h3 class="text-sm font-black text-indigo-900">사용 방법 (처음 쓰는 선생님용)</h3>
+                <p class="text-sm text-indigo-900">아래 순서대로 하면 원하는 반영 내역만 빠르게 찾고, 같은 조건으로 CSV를 내려받을 수 있습니다.</p>
+                <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900">
+                    <li><span class="font-bold">학교 선택</span>: 한 학교만 보고 싶으면 학교를 고르고, 전체를 보고 싶으면 그대로 둡니다.</li>
+                    <li><span class="font-bold">날짜 입력</span>: 시작 날짜와 끝 날짜를 넣고 <span class="font-bold">조회하기</span>를 누릅니다.</li>
+                    <li><span class="font-bold">CSV 다운로드</span>: 지금 보이는 조건 그대로 내려받습니다.</li>
+                </ol>
+                <p class="text-xs text-indigo-800">
+                    예시: 2026-03-01부터 2026-03-31까지 한 학교만 확인하고 싶다면, 학교를 고른 뒤 시작 날짜/끝 날짜를 입력하고 조회하면 됩니다.
+                </p>
+                <p class="text-xs text-indigo-800">
+                    조건을 다시 처음으로 돌리고 싶으면 <span class="font-bold">조건 초기화</span>를 누르세요.
+                </p>
+            </div>
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">학교 선택</label>
+                    <select name="log_school_slug" class="w-full rounded-lg border-slate-300 text-sm">
+                        <option value="">전체 학교</option>
+                        {% for slug, name in log_school_options %}
+                        <option value="{{ slug }}" {% if log_filters.school_slug == slug %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">시작 날짜</label>
+                    <input type="date" name="log_date_from" value="{{ log_filters.date_from_text }}" class="w-full rounded-lg border-slate-300 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">끝 날짜</label>
+                    <input type="date" name="log_date_to" value="{{ log_filters.date_to_text }}" class="w-full rounded-lg border-slate-300 text-sm">
+                </div>
+                <div class="md:col-span-4 flex flex-wrap gap-2">
+                    <button type="submit" class="inline-flex items-center px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                        조회하기
+                    </button>
+                    <a href="{% url 'timetable:main' %}" class="inline-flex items-center px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200">
+                        조건 초기화
+                    </a>
+                </div>
+            </form>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full min-w-[980px] text-sm">
+                    <thead class="bg-slate-100 text-slate-700">
+                        <tr>
+                            <th class="text-left px-3 py-2 font-bold">실행 시각</th>
+                            <th class="text-left px-3 py-2 font-bold">실행자</th>
+                            <th class="text-left px-3 py-2 font-bold">학교</th>
+                            <th class="text-left px-3 py-2 font-bold">반영 방식</th>
+                            <th class="text-left px-3 py-2 font-bold">옵션</th>
+                            <th class="text-right px-3 py-2 font-bold">새로 반영</th>
+                            <th class="text-right px-3 py-2 font-bold">이름 갱신</th>
+                            <th class="text-right px-3 py-2 font-bold">충돌</th>
+                            <th class="text-left px-3 py-2 font-bold">요약</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_sync_logs %}
+                        {% for row in recent_sync_logs %}
+                        <tr class="border-t border-slate-200">
+                            <td class="px-3 py-2">{{ row.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-3 py-2">{{ row.user.username|default:"(시스템)" }}</td>
+                            <td class="px-3 py-2">{{ row.school_name|default:row.school_slug }}</td>
+                            <td class="px-3 py-2">{{ row.get_sync_mode_display }}</td>
+                            <td class="px-3 py-2">
+                                {{ row.sync_options_text }}
+                                {% if row.overwrite_existing %}
+                                <span class="ml-1 inline-flex px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold">덮어쓰기</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-3 py-2 text-right">{{ row.applied_count }}</td>
+                            <td class="px-3 py-2 text-right">{{ row.updated_count }}</td>
+                            <td class="px-3 py-2 text-right">{{ row.conflict_count }}</td>
+                            <td class="px-3 py-2">{{ row.summary_text }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr class="border-t border-slate-200">
+                            <td colspan="9" class="px-3 py-6 text-center text-slate-500">조건에 맞는 반영 내역이 없습니다.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     'happy_seed.apps.HappySeedConfig',
     'seed_quiz.apps.SeedQuizConfig',
     'noticegen.apps.NoticegenConfig',
+    'timetable.apps.TimetableConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
