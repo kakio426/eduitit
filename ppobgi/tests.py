@@ -29,6 +29,8 @@ class PpobgiViewTest(TestCase):
         self.assertContains(response, "추첨 준비")
         self.assertContains(response, "추첨 우주 시작")
         self.assertContains(response, "사다리 뽑기")
+        self.assertContains(response, reverse("dutyticker"))
+        self.assertContains(response, "title=\"반짝반짝 우리반 알림판\"")
 
     def test_roster_names_returns_active_students(self):
         self.client.force_login(self.user)

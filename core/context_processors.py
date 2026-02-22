@@ -129,9 +129,8 @@ def seo_meta(request):
 
 def active_classroom(request):
     """세션에서 현재 학급 정보를 모든 템플릿에 제공."""
-    import json
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
-        return {'active_classroom': None, 'has_hs_classrooms': False, 'hs_classrooms_json': '[]'}
+        return {'active_classroom': None, 'has_hs_classrooms': False, 'hs_classrooms_json': []}
     source = request.session.get('active_classroom_source')
     cid = request.session.get('active_classroom_id')
     classroom = None
@@ -154,5 +153,5 @@ def active_classroom(request):
     return {
         'active_classroom': classroom,
         'has_hs_classrooms': bool(classrooms_data),
-        'hs_classrooms_json': json.dumps(classrooms_data, ensure_ascii=False),
+        'hs_classrooms_json': classrooms_data,
     }

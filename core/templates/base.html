@@ -436,11 +436,6 @@
                                     <i class="fa-solid fa-gauge-high"></i>
                                     <span>내 홈페이지</span>
                                 </a>
-                                <a href="{% url 'fortune:history' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
-                                    <i class="fa-solid fa-box-archive"></i>
-                                    <span>사주 보관함</span>
-                                </a>
                                 <a href="{% url 'settings' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
                                     <i class="fa-solid fa-gear"></i>
@@ -515,11 +510,14 @@
                     {% if has_hs_classrooms %}
                     <!-- 모바일 학급 단축키 -->
                     <div x-data="classroomPicker()" x-init="init()" class="py-2 border-b border-gray-200/50">
-                        <p class="text-xs text-gray-400 font-normal mb-2">현재 학급</p>
+                        <div class="px-3 mb-2">
+                            <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">별빛 추첨기·우리반BTI에서 기본 학급으로 사용됩니다.</p>
+                        </div>
                         <div class="flex flex-col gap-1">
                             <template x-for="cls in classrooms" :key="cls.id">
                                 <button @click="select(cls)"
-                                    class="flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left"
+                                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
                                     :class="current === cls.name ? 'bg-purple-100 text-purple-600 font-bold' : 'text-gray-600 hover:bg-purple-50'">
                                     <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
                                     <span class="font-bold" x-text="cls.name"></span>
@@ -529,14 +527,13 @@
                             <button x-show="current" @click="clear()" class="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-500 text-sm transition-all">
                                 <i class="fa-solid fa-xmark text-xs"></i> 선택 해제
                             </button>
+                            <a href="{% url 'happy_seed:dashboard' %}"
+                                class="mt-1 flex items-center gap-2 px-3 py-1.5 text-indigo-500 hover:text-indigo-600 text-sm transition-all">
+                                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> 학급 관리
+                            </a>
                         </div>
                     </div>
                     {% endif %}
-
-                    <a href="{% url 'fortune:history' %}"
-                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                        <i class="fa-solid fa-box-archive mr-3 text-purple-400"></i> 사주 보관함
-                    </a>
 
                     <a href="{% url 'settings' %}"
                         class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
@@ -1302,9 +1299,28 @@
                 current: null,
                 init: function() {
                     var raw = document.getElementById('hs-classrooms-data');
-                    this.classrooms = raw ? JSON.parse(raw.textContent) : [];
+                    var parsedClassrooms = [];
+                    if (raw) {
+                        try {
+                            parsedClassrooms = JSON.parse(raw.textContent);
+                            if (typeof parsedClassrooms === 'string') {
+                                parsedClassrooms = JSON.parse(parsedClassrooms);
+                            }
+                        } catch (e) {
+                            parsedClassrooms = [];
+                        }
+                    }
+                    this.classrooms = Array.isArray(parsedClassrooms) ? parsedClassrooms : [];
                     var nameEl = document.getElementById('hs-active-classroom-name');
-                    this.current = nameEl ? JSON.parse(nameEl.textContent) : null;
+                    if (!nameEl) {
+                        this.current = null;
+                        return;
+                    }
+                    try {
+                        this.current = JSON.parse(nameEl.textContent);
+                    } catch (e) {
+                        this.current = null;
+                    }
                 },
                 select: function(cls) {
                     var self = this;
@@ -1316,7 +1332,10 @@
                         },
                         body: JSON.stringify({source: 'hs', classroom_id: cls.id})
                     }).then(function(r) { return r.json(); }).then(function(d) {
-                        if (d.status === 'ok') { self.current = cls.name; self.open = false; }
+                        if (d.status === 'ok') {
+                            self.current = d.name || cls.name;
+                            self.open = false;
+                        }
                     }).catch(function() {});
                 },
                 clear: function() {

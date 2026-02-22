@@ -205,6 +205,31 @@ def _build_today_context(request):
     except Exception:
         pass
 
+    try:
+        from consent.models import SignatureRecipient, SignatureRequest
+
+        unsigned_consent_count = SignatureRecipient.objects.filter(
+            request__created_by=request.user,
+            request__status=SignatureRequest.STATUS_SENT,
+            status__in=[
+                SignatureRecipient.STATUS_PENDING,
+                SignatureRecipient.STATUS_VERIFIED,
+            ],
+        ).count()
+        if unsigned_consent_count > 0:
+            today_items.append(
+                {
+                    "title": "미서명 동의서 확인",
+                    "count_text": f"{unsigned_consent_count}건",
+                    "description": "서명이 아직 완료되지 않은 동의서가 있습니다. 진행 상태를 확인해 주세요.",
+                    "emoji": "✍️",
+                    "href": reverse("consent:dashboard"),
+                    "cta_text": "동의서 대시보드 열기",
+                }
+            )
+    except Exception:
+        pass
+
     return {
         "today_items": today_items,
         "today_date_text": today.strftime("%Y-%m-%d"),

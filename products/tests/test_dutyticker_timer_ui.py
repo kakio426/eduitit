@@ -21,6 +21,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'window.dtApp.addTimerMinutes(1)')
         self.assertContains(response, 'window.dtApp.applyCustomTimerMinutes()')
         self.assertContains(response, 'window.dtApp.setTimerMode(300, true)')
+        self.assertContains(response, 'title="별빛 추첨기"')
+        self.assertContains(response, reverse('ppobgi:main'))
 
     def test_timer_script_contains_safety_and_restore_methods(self):
         script_path = Path(settings.BASE_DIR) / 'products' / 'static' / 'products' / 'dutyticker' / 'js' / 'dutyticker.js'

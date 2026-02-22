@@ -284,6 +284,11 @@
                     <i class="fa-solid fa-qrcode"></i>
                 </button>
                 {% endif %}
+                <a href="{% url 'ppobgi:main' %}"
+                    class="w-10 h-10 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 rounded-xl flex items-center justify-center border border-amber-300/30 transition"
+                    title="별빛 추첨기">
+                    <i class="fa-solid fa-shuffle"></i>
+                </a>
                 <button onclick="window.dtApp.toggleFullscreen()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
                     title="전체화면">
