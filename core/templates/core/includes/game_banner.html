@@ -1,49 +1,30 @@
 {# 쉬는 시간 게임 배너 - V2 홈 #}
 {# 사용: {% include 'core/includes/game_banner.html' with games=games %} #}
 {% if games %}
-<style>
-    .game-banner-scroll {
-        -webkit-overflow-scrolling: touch;
-        touch-action: pan-x;
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 transparent;
-    }
-    .game-banner-scroll::-webkit-scrollbar {
-        height: 6px;
-    }
-    .game-banner-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .game-banner-scroll::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 999px;
-    }
-</style>
-<div class="bg-gradient-to-r from-rose-50 to-orange-50 rounded-3xl p-5 md:p-6 border border-rose-100">
-    <div class="flex items-center justify-between gap-3 mb-4">
-        <div class="flex items-center gap-2">
-            <span class="text-2xl">🎮</span>
-            <h3 class="font-bold text-base text-slate-800">쉬는 시간</h3>
-            <span class="text-xs text-slate-400">잠깐 쉬어가요</span>
-        </div>
+<div>
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-bold text-slate-500 flex items-center gap-1.5">
+            <span class="text-base leading-none">🎮</span> 쉬는 시간 
+            <span class="font-normal text-xs text-slate-400 ml-1">잠깐 쉬어가요</span>
+        </h3>
         {% if request.user.is_authenticated and student_games_launch_url and student_games_qr_data_url %}
         <button type="button"
             onclick="openHomeStudentGamesQrModal()"
-            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 transition"
+            class="flex-shrink-0 flex items-center gap-1.5 bg-white rounded-xl px-2.5 py-1.5 border border-slate-200 text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-xs font-bold shadow-sm"
             title="학생 게임 QR 열기">
             <i class="fa-solid fa-qrcode"></i>
-            학생용 QR
+            <span>학생용 QR</span>
         </button>
         {% endif %}
     </div>
-    <div class="game-banner-scroll flex flex-nowrap md:flex-wrap gap-3 overflow-x-auto md:overflow-visible pb-1 md:pb-0 snap-x snap-mandatory">
+    <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
         {% for game in games %}
         <a href="{% if game.external_url %}{{ game.external_url }}{% else %}#{% endif %}"
-            class="snap-start flex-shrink-0 flex items-center gap-2.5 bg-white rounded-xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-rose-200 transition-all group"
+            class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
             data-track="game_banner" data-track-label="{{ game.title }}"
             onclick="{% if not game.external_url %}event.preventDefault(); if(window.openModal) openModal({{ game.id }});{% endif %}">
-            <span class="text-xl">{% if "fa-" in game.icon %}<i class="{{ game.icon }} text-red-400"></i>{% else %}{{ game.icon }}{% endif %}</span>
-            <span class="font-bold text-sm text-slate-700 group-hover:text-rose-600 transition-colors whitespace-nowrap">{{ game.title }}</span>
+            <span class="text-lg">{% if "fa-" in game.icon %}<i class="{{ game.icon }} text-red-500"></i>{% else %}{{ game.icon }}{% endif %}</span>
+            <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ game.title }}</span>
         </a>
         {% endfor %}
     </div>
