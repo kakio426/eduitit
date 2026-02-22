@@ -8,7 +8,7 @@
                 </h3>
                 <p class="text-xs sm:text-sm text-slate-500 mt-1">홈 화면과 캘린더 서비스가 같은 일정 데이터를 사용합니다.</p>
             </div>
-            <div class="flex items-center gap-2 self-start sm:self-auto">
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
                 <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-extrabold text-indigo-700" x-text="`오늘 ${todayEventsCount}`"></span>
                 <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-extrabold text-emerald-700" x-text="`이번 주 ${weekEventsCount}`"></span>
                 <a href="{% url 'classcalendar:main' %}" class="inline-flex items-center rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition">
