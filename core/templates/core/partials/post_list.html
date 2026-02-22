@@ -1,28 +1,5 @@
 {% for post in posts %}
-{% if forloop.first %}
-{% include 'core/partials/post_item.html' with is_first=True %}
-{% if posts.count > 1 and not expand_all_mobile %}
-<div class="md:hidden text-center my-3 relative group" data-older-posts-group>
-    <div class="absolute inset-0 flex items-center" aria-hidden="true">
-        <div class="w-full border-t border-indigo-100"></div>
-    </div>
-    <div class="relative flex justify-center">
-        <button
-            onclick="const group = this.closest('[data-older-posts-group]'); const container = group && group.nextElementSibling; if (container && container.hasAttribute('data-older-posts-container')) { container.classList.remove('hidden'); } if (group) { group.remove(); }"
-            class="bg-white px-4 py-1.5 text-xs font-bold text-slate-500 rounded-full border border-indigo-100 shadow-sm hover:text-indigo-600 hover:border-indigo-300 transition-all flex items-center gap-1.5 ring-4 ring-slate-50">
-            <span>이전 대화 보기</span>
-            <i class="ph-bold ph-caret-down"></i>
-        </button>
-    </div>
-</div>
-<div data-older-posts-container class="hidden md:block space-y-3">
-    {% endif %}
-    {% else %}
-    {% include 'core/partials/post_item.html' with is_first=False %}
-    {% endif %}
-    {% if forloop.last and posts.count > 1 and not expand_all_mobile %}
-</div>
-{% endif %}
+{% include 'core/partials/post_item.html' with is_first=forloop.first %}
 {% empty %}
 <div class="text-center py-12 text-slate-400">
     <i class="ph ph-chat-circle-dots text-5xl mb-3 opacity-30"></i>
@@ -38,3 +15,33 @@
     {% endif %}
 </div>
 {% endfor %}
+
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-between gap-2 mt-6 mb-2 border-t border-indigo-100 pt-4 px-2">
+    {% if page_obj.has_next %}
+    <button hx-get="?page={{ page_obj.next_page_number }}" hx-target="#post-list-container" hx-swap="innerHTML" class="flex-1 bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-100 rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm">
+        <i class="ph-bold ph-caret-left"></i>
+        <span>이전 대화</span>
+    </button>
+    {% else %}
+    <button disabled class="flex-1 bg-slate-50 text-slate-400 border border-slate-100 rounded-xl py-2 px-3 text-xs font-bold flex items-center justify-center gap-1.5 opacity-50 cursor-not-allowed">
+        <i class="ph-bold ph-caret-left"></i>
+        <span>이전 대화</span>
+    </button>
+    {% endif %}
+    
+    <span class="text-xs font-medium text-slate-400 px-2 min-w-[50px] text-center">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_previous %}
+    <button hx-get="?page={{ page_obj.previous_page_number }}" hx-target="#post-list-container" hx-swap="innerHTML" class="flex-1 bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-100 rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm">
+        <span>최신 대화</span>
+        <i class="ph-bold ph-caret-right"></i>
+    </button>
+    {% else %}
+    <button disabled class="flex-1 bg-slate-50 text-slate-400 border border-slate-100 rounded-xl py-2 px-3 text-xs font-bold flex items-center justify-center gap-1.5 opacity-50 cursor-not-allowed">
+        <span>최신 대화</span>
+        <i class="ph-bold ph-caret-right"></i>
+    </button>
+    {% endif %}
+</div>
+{% endif %}

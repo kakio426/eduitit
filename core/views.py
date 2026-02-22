@@ -245,7 +245,7 @@ def _build_today_context(request):
     }
 
 
-def _home_v2(request, products, posts):
+def _home_v2(request, products, posts, page_obj):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = list(products)
     sections, games = get_purpose_sections(product_list, preview_limit=2)
@@ -271,6 +271,7 @@ def _home_v2(request, products, posts):
             'games': games,
             'quick_actions': quick_action_items,
             'posts': posts,
+            'page_obj': page_obj,
             **_build_today_context(request),
             **_build_home_student_games_qr_context(request),
         })
@@ -282,6 +283,7 @@ def _home_v2(request, products, posts):
         'sections': sections,
         'games': games,
         'posts': posts,
+        'page_obj': page_obj,
     })
 
 def home(request):
@@ -302,9 +304,19 @@ def home(request):
         comments_count_annotated=Count('comments', distinct=True)
     ).order_by('-created_at')
 
+    # 페이징 처리 (PC 우측 및 모바일 하단 SNS 위젯용)
+    from django.core.paginator import Paginator
+    paginator = Paginator(posts, 5) # 한 페이지에 5개씩
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # HTMX 요청이면 post_list 영역만 반환
+    if request.headers.get('HX-Request') and request.GET.get('page'):
+        return render(request, 'core/partials/post_list.html', {'posts': page_obj, 'page_obj': page_obj})
+
     # V2 홈: Feature flag on 시 분기
     if settings.HOME_V2_ENABLED:
-        return _home_v2(request, products, posts)
+        return _home_v2(request, products, page_obj, page_obj)
 
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
@@ -323,7 +335,8 @@ def home(request):
 
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
-            'posts': posts
+            'posts': page_obj,
+            'page_obj': page_obj
         })
 
     # Else show the public home
@@ -335,7 +348,8 @@ def home(request):
     return render(request, 'core/home.html', {
         'products': products,
         'featured_product': featured_product,
-        'posts': posts
+        'posts': page_obj,
+        'page_obj': page_obj
     })
 
 @login_required
@@ -392,7 +406,12 @@ def post_create(request):
             likes_count_annotated=Count('likes', distinct=True),
             comments_count_annotated=Count('comments', distinct=True)
         ).order_by('-created_at')
-        return render(request, 'core/partials/post_list.html', {'posts': posts})
+        
+        from django.core.paginator import Paginator
+        paginator = Paginator(posts, 5) # 등록 후에는 무조건 1페이지로
+        page_obj = paginator.get_page(1)
+        
+        return render(request, 'core/partials/post_list.html', {'posts': page_obj, 'page_obj': page_obj})
 
     return redirect('home')
 
