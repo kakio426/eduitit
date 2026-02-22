@@ -43,7 +43,8 @@ TEMPLATE_GUIDE_ROWS = {
         ["※작성안내: 선생님코드(T001)", "요일(월~금)", "시간칸(기본설정의 시간칸과 동일)", "사유 메모(선택)"],
     ],
     "배치조건": [
-        ["※작성안내", "적용대상: 교과/선생님/학년", "대상값 예: 영어, T001, 3학년", "배치방법: 피하기/나눠배치", "피하기: 월,수 / 나눠배치: 2+1", "중요도: 반드시/권장"],
+        ["※작성안내", "적용대상: 교과/선생님/학년", "대상값 예: 영어, T001, 3학년", "배치방법: 피하기/나눠배치/순환배치", "피하기: 월,수 / 나눠배치: 2+1 / 순환배치: ON/OFF", "중요도: 반드시/권장"],
+        ["※기본규칙", "같은 학급 같은 교과는 하루 1회", "2시간 이상은 나눠배치(예: 2+1)로만 허용", "필요 시 순환배치 OFF", "기본은 순환배치 ON", ""],
     ],
     "수동고정": [
         ["※작성안내: 배정번호(A001)", "요일(월~금)", "시간칸(예: 2)", "처리: 고정/배치금지", "메모(선택)"],
@@ -55,6 +56,7 @@ TEMPLATE_GUIDE_ROWS = {
 
 ALLOWED_CHOICES = {
     ("전담배정표", "특별실처리"): {"자동배치", "예약연동", "해당없음"},
+    ("배치조건", "배치방법"): {"피하기", "나눠배치", "순환배치"},
     ("배치조건", "중요도"): {"반드시", "권장"},
     ("특별실설정", "운영방식"): {"자동배치", "예약연동"},
     ("특별실설정", "연동선택"): {"연동안함", "미리보기", "바로반영"},
@@ -92,6 +94,7 @@ def build_template_workbook():
     _add_sheet(wb, "배치조건", ALL_TEMPLATE_SHEETS["배치조건"], [
         ["과학 3시간 분리", "교과", "과학", "나눠배치", "2+1", "반드시"],
         ["영어 월요일 피하기", "교과", "영어", "피하기", "월", "권장"],
+        ["영어 순환배치 끄기(필요시)", "교과", "영어", "순환배치", "OFF", "권장"],
     ], guide_rows=TEMPLATE_GUIDE_ROWS.get("배치조건"))
     _add_sheet(wb, "수동고정", ALL_TEMPLATE_SHEETS["수동고정"], [
         ["A001", "화", "2", "고정", "교내 행사 연계"],
@@ -362,6 +365,10 @@ def _empty_schedule_state():
         "room_slot_mode": {},
         "teacher_day_count": defaultdict(int),
         "assignment_slots": defaultdict(list),
+        # Counts placed blocks (not hours) per assignment for round-robin control.
+        "assignment_block_count": defaultdict(int),
+        # Remembers each placed block's start position for chronological round-robin checks.
+        "assignment_block_starts": defaultdict(list),
     }
 
 
@@ -517,8 +524,16 @@ def _load_schedule_input(wb, result):
             "split_pattern": None,
             "split_required": False,
             "split_applied": False,
+            # Default rule: one lesson per day for same class+subject.
+            "daily_subject_limit": 1,
+            # Default ON: same grade/subject rotates turns across classes.
+            "rotation_enabled": True,
+            # Round-robin group: same grade + same subject.
+            "rotation_group_key": (grade, row.get("교과", "").strip()) if row.get("교과", "").strip() else None,
         }
         _apply_conditions_to_assignment(assignment, condition_rows, days, result)
+        if not assignment["rotation_enabled"]:
+            assignment["rotation_group_key"] = None
         assignments.append(assignment)
 
     if not assignments:
@@ -526,6 +541,13 @@ def _load_schedule_input(wb, result):
         return None
     if result["errors"]:
         return None
+
+    rotation_groups = defaultdict(list)
+    for assignment in assignments:
+        group_key = assignment.get("rotation_group_key")
+        if not group_key:
+            continue
+        rotation_groups[group_key].append(assignment["배정번호"])
 
     return {
         "settings": settings,
@@ -538,6 +560,7 @@ def _load_schedule_input(wb, result):
         "assignments": assignments,
         "assignment_map": {a["배정번호"]: a for a in assignments},
         "teacher_unavailable": teacher_unavailable,
+        "rotation_groups": dict(rotation_groups),
     }
 
 
@@ -555,6 +578,8 @@ def _resolve_room_mode(raw_mode, room_name, special_room_settings):
 def _apply_conditions_to_assignment(assignment, condition_rows, days, result):
     matched_split = None
     matched_split_required = False
+    matched_rotation = None
+    matched_rotation_required = False
 
     for row in condition_rows:
         if not _condition_matches_assignment(row, assignment):
@@ -583,10 +608,22 @@ def _apply_conditions_to_assignment(assignment, condition_rows, days, result):
             if matched_split is None or is_required:
                 matched_split = split
                 matched_split_required = is_required
+        elif method == "순환배치":
+            toggle = _parse_toggle(detail, default=None)
+            if toggle is None:
+                result["warnings"].append(
+                    f"[{assignment['배정번호']}] 순환배치 세부값 '{detail}'을 읽지 못해 기본값(ON)으로 진행합니다."
+                )
+                continue
+            if matched_rotation is None or is_required or not matched_rotation_required:
+                matched_rotation = toggle
+                matched_rotation_required = is_required
 
     if matched_split:
         assignment["split_pattern"] = matched_split
         assignment["split_required"] = matched_split_required
+    if matched_rotation is not None:
+        assignment["rotation_enabled"] = matched_rotation
 
 
 def _condition_matches_assignment(condition_row, assignment):
@@ -613,7 +650,15 @@ def _place_fixed_slots(assignment, parsed, state, result):
         return -1
 
     for day, slot in fixed_slots:
-        can_place = _can_place_block(assignment, day, [slot], parsed, state)
+        can_place = _can_place_block(
+            assignment,
+            day,
+            [slot],
+            parsed,
+            state,
+            check_rotation=False,
+            enforce_daily_limit=True,
+        )
         if not can_place:
             result["errors"].append(
                 f"[{assignment['배정번호']}] 수동고정 {day} {slot}칸을 배치할 수 없습니다. (겹침 또는 불가시간)"
@@ -648,6 +693,8 @@ def _build_assignment_tasks(assignment, remaining_count, result):
                 f"[{assignment['배정번호']}] 나눠배치 조건과 남은 시수가 달라 일반 배치로 진행합니다."
             )
 
+    assignment["daily_subject_limit"] = max([1] + block_lengths)
+
     tasks = []
     for idx, block_length in enumerate(block_lengths, start=1):
         tasks.append(
@@ -673,6 +720,8 @@ def _solve_tasks_backtracking(tasks, parsed, state):
         best_idx = -1
         best_candidates = None
         for idx, task in enumerate(remaining_tasks):
+            if not _is_task_unlocked(task, parsed, state):
+                continue
             candidates = _collect_candidates(task, parsed, state)
             if not candidates:
                 return False
@@ -681,6 +730,9 @@ def _solve_tasks_backtracking(tasks, parsed, state):
                 best_candidates = candidates
             if len(best_candidates) == 1:
                 break
+
+        if best_idx < 0:
+            return False
 
         task = remaining_tasks[best_idx]
         for candidate in best_candidates:
@@ -698,17 +750,90 @@ def _solve_tasks_backtracking(tasks, parsed, state):
 
 
 def _solve_tasks_greedy(tasks, parsed, state):
-    sorted_tasks = sorted(tasks, key=lambda item: item["length"], reverse=True)
+    remaining = sorted(tasks, key=lambda item: item["length"], reverse=True)
     unplaced = []
-    for task in sorted_tasks:
-        candidates = _collect_candidates(task, parsed, state)
-        if not candidates:
-            unplaced.append(task)
-            continue
-        assignment = parsed["assignment_map"][task["assignment_id"]]
-        best = candidates[0]
-        _apply_block(assignment, best["day"], best["slots"], state)
+
+    while remaining:
+        progressed = False
+        next_round = []
+
+        for task in remaining:
+            if not _is_task_unlocked(task, parsed, state):
+                next_round.append(task)
+                continue
+
+            candidates = _collect_candidates(task, parsed, state)
+            progressed = True
+            if not candidates:
+                unplaced.append(task)
+                continue
+
+            assignment = parsed["assignment_map"][task["assignment_id"]]
+            best = candidates[0]
+            _apply_block(assignment, best["day"], best["slots"], state)
+
+        if not progressed:
+            unplaced.extend(next_round)
+            break
+
+        remaining = next_round
+
     return unplaced
+
+
+def _is_task_unlocked(task, parsed, state):
+    assignment = parsed["assignment_map"][task["assignment_id"]]
+    return _is_rotation_unlocked(assignment, parsed, state)
+
+
+def _is_rotation_unlocked(assignment, parsed, state):
+    group_key = assignment.get("rotation_group_key")
+    if not group_key:
+        return True
+
+    group_assignment_ids = parsed.get("rotation_groups", {}).get(group_key, [])
+    if len(group_assignment_ids) <= 1:
+        return True
+
+    assignment_id = assignment["배정번호"]
+    current_count = state["assignment_block_count"][assignment_id]
+    min_count = min(state["assignment_block_count"][aid] for aid in group_assignment_ids)
+    return current_count <= min_count
+
+
+def _is_rotation_position_valid(assignment, day, block_slots, parsed, state):
+    group_key = assignment.get("rotation_group_key")
+    if not group_key:
+        return True
+
+    group_assignment_ids = parsed.get("rotation_groups", {}).get(group_key, [])
+    if len(group_assignment_ids) <= 1:
+        return True
+
+    assignment_id = assignment["배정번호"]
+    target_round = state["assignment_block_count"][assignment_id] + 1
+    if target_round <= 1:
+        return True
+
+    prereq_round = target_round - 1
+    candidate_position = (parsed["day_index"][day], parsed["slot_index"][block_slots[0]])
+
+    for other_assignment_id in group_assignment_ids:
+        if other_assignment_id == assignment_id:
+            continue
+
+        starts = state["assignment_block_starts"][other_assignment_id]
+        if len(starts) < prereq_round:
+            return False
+
+        ordered_positions = sorted(
+            ((parsed["day_index"][d], parsed["slot_index"][s]) for d, s in starts),
+            key=lambda item: (item[0], item[1]),
+        )
+        if ordered_positions[prereq_round - 1] > candidate_position:
+            return False
+
+    return True
 
 
 def _collect_candidates(task, parsed, state):
@@ -748,12 +873,31 @@ def _candidate_score(assignment, day, start, parsed, state):
     )
 
 
-def _can_place_block(assignment, day, block_slots, parsed, state):
+def _can_place_block(
+    assignment,
+    day,
+    block_slots,
+    parsed,
+    state,
+    check_rotation=True,
+    enforce_daily_limit=True,
+):
     teacher_id = assignment["선생님코드"]
+    assignment_id = assignment["배정번호"]
     class_id = assignment["학급ID"]
     grade = assignment["학년"]
     room_name = assignment["특별실명"]
     room_mode = assignment["특별실처리"]
+
+    if check_rotation and not _is_rotation_unlocked(assignment, parsed, state):
+        return False
+    if check_rotation and not _is_rotation_position_valid(assignment, day, block_slots, parsed, state):
+        return False
+
+    if enforce_daily_limit:
+        day_count = sum(1 for placed_day, _ in state["assignment_slots"][assignment_id] if placed_day == day)
+        if day_count + len(block_slots) > assignment.get("daily_subject_limit", 1):
+            return False
 
     allowed_slots = parsed["grade_slot_map"].get(grade, set(parsed["slot_labels"]))
     max_daily = parsed["teachers"][teacher_id]["max_daily"]
@@ -791,6 +935,8 @@ def _apply_block(assignment, day, block_slots, state):
             state["room_slot_mode"][(room_name, day, slot)] = room_mode
         state["assignment_slots"][assignment_id].append((day, slot))
         state["teacher_day_count"][(teacher_id, day)] += 1
+    state["assignment_block_count"][assignment_id] += 1
+    state["assignment_block_starts"][assignment_id].append((day, block_slots[0]))
 
 
 def _revert_block(assignment, day, block_slots, state):
@@ -809,6 +955,9 @@ def _revert_block(assignment, day, block_slots, state):
         if (day, slot) in state["assignment_slots"][assignment_id]:
             state["assignment_slots"][assignment_id].remove((day, slot))
         state["teacher_day_count"][(teacher_id, day)] -= 1
+    state["assignment_block_count"][assignment_id] -= 1
+    if (day, block_slots[0]) in state["assignment_block_starts"][assignment_id]:
+        state["assignment_block_starts"][assignment_id].remove((day, block_slots[0]))
 
 
 def _check_split_conditions(parsed, state, result):
@@ -1120,6 +1269,22 @@ def _parse_split_pattern(text):
             return []
         values.append(value)
     return values
+
+
+def _parse_toggle(text, default=True):
+    raw = (text or "").strip()
+    if not raw:
+        return default
+
+    normalized = raw.lower()
+    truthy = {"on", "true", "yes", "y", "1", "켜기", "사용", "적용"}
+    falsy = {"off", "false", "no", "n", "0", "끄기", "미사용", "해제"}
+
+    if normalized in truthy or raw in truthy:
+        return True
+    if normalized in falsy or raw in falsy:
+        return False
+    return None
 
 
 def apply_schedule_to_reservations(
