@@ -48,3 +48,17 @@ class EnsureInsightsCommandTest(TestCase):
         self.assertEqual(product.color_theme, "purple")
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(manual.sections.count(), 3)
+
+    def test_command_deactivates_legacy_insight_product(self):
+        legacy = Product.objects.create(
+            title="인사이트",
+            description="legacy",
+            price=0,
+            is_active=True,
+            service_type="edutech",
+        )
+
+        call_command("ensure_insights")
+
+        legacy.refresh_from_db()
+        self.assertFalse(legacy.is_active)

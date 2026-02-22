@@ -7,6 +7,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from products.models import Product, ProductFeature, ServiceManual, ManualSection
 
+        legacy_titles = ("인사이트",)
         title = 'Insight Library'
         defaults = {
             'lead_text': '선생님의 시선으로 AI 시대를 기록하다',
@@ -57,6 +58,20 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     f"[ensure_insights] Product fields updated: {', '.join(changed_fields)}"
+                )
+            )
+
+        # 기존 레거시 카드(인사이트)는 중복 노출 방지를 위해 비활성화한다.
+        deactivated_count = (
+            Product.objects.filter(title__in=legacy_titles)
+            .exclude(pk=product.pk)
+            .filter(is_active=True)
+            .update(is_active=False)
+        )
+        if deactivated_count:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"[ensure_insights] Deactivated legacy product count: {deactivated_count}"
                 )
             )
 
