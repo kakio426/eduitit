@@ -1,6 +1,24 @@
 {# 쉬는 시간 게임 배너 - V2 홈 #}
 {# 사용: {% include 'core/includes/game_banner.html' with games=games %} #}
 {% if games %}
+<style>
+    .game-banner-scroll {
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+    .game-banner-scroll::-webkit-scrollbar {
+        height: 6px;
+    }
+    .game-banner-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .game-banner-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+</style>
 <div class="bg-gradient-to-r from-rose-50 to-orange-50 rounded-3xl p-5 md:p-6 border border-rose-100">
     <div class="flex items-center justify-between gap-3 mb-4">
         <div class="flex items-center gap-2">
@@ -18,14 +36,14 @@
         </button>
         {% endif %}
     </div>
-    <div class="flex gap-3 overflow-x-auto pb-1" style="-ms-overflow-style:none;scrollbar-width:none;">
+    <div class="game-banner-scroll flex flex-nowrap md:flex-wrap gap-3 overflow-x-auto md:overflow-visible pb-1 md:pb-0 snap-x snap-mandatory">
         {% for game in games %}
         <a href="{% if game.external_url %}{{ game.external_url }}{% else %}#{% endif %}"
-            class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-rose-200 transition-all group"
+            class="snap-start flex-shrink-0 flex items-center gap-2.5 bg-white rounded-xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-rose-200 transition-all group"
             data-track="game_banner" data-track-label="{{ game.title }}"
             onclick="{% if not game.external_url %}event.preventDefault(); if(window.openModal) openModal({{ game.id }});{% endif %}">
             <span class="text-xl">{% if "fa-" in game.icon %}<i class="{{ game.icon }} text-red-400"></i>{% else %}{{ game.icon }}{% endif %}</span>
-            <span class="font-bold text-sm text-slate-700 group-hover:text-rose-600 transition-colors">{{ game.title }}</span>
+            <span class="font-bold text-sm text-slate-700 group-hover:text-rose-600 transition-colors whitespace-nowrap">{{ game.title }}</span>
         </a>
         {% endfor %}
     </div>
