@@ -61,7 +61,7 @@ CSV_CANONICAL_HEADERS = [
 ]
 
 CSV_KOREAN_HEADERS = [
-    "세트코드",
+    "묶음이름",
     "주제",
     "학년",
     "문제",
@@ -75,17 +75,17 @@ CSV_KOREAN_HEADERS = [
 ]
 
 CSV_GUIDE_COLUMNS = [
-    {"ko": "세트코드", "en": "set_title", "required": "필수", "desc": "세트 고유 코드 (예: SQ-orthography-basic-L1-G3-S001-V1)"},
-    {"ko": "주제", "en": "preset_type", "required": "필수", "desc": "주제 키 또는 한글 주제명 (예: orthography 또는 맞춤법)"},
-    {"ko": "학년", "en": "grade", "required": "필수", "desc": "1~6 숫자"},
-    {"ko": "문제", "en": "question_text", "required": "필수", "desc": "문항 본문"},
-    {"ko": "보기1", "en": "choice_1", "required": "필수", "desc": "선택지 1"},
-    {"ko": "보기2", "en": "choice_2", "required": "필수", "desc": "선택지 2"},
-    {"ko": "보기3", "en": "choice_3", "required": "필수", "desc": "선택지 3"},
-    {"ko": "보기4", "en": "choice_4", "required": "필수", "desc": "선택지 4"},
-    {"ko": "정답번호", "en": "correct_index", "required": "필수", "desc": "0~3 (보기1=0, 보기2=1, 보기3=2, 보기4=3)"},
-    {"ko": "해설", "en": "explanation", "required": "선택", "desc": "정답 설명"},
-    {"ko": "난이도", "en": "difficulty", "required": "선택", "desc": "쉬움/보통/어려움 또는 easy/medium/hard"},
+    {"ko": "묶음이름", "required": "필수", "desc": "같은 묶음 3문제에 모두 같은 이름을 붙이세요. 자유롭게 지으세요. (예: 맞춤법기초-1)"},
+    {"ko": "주제", "required": "필수", "desc": "한글 주제명 (예: 맞춤법, 띄어쓰기, 속담 등)"},
+    {"ko": "학년", "required": "필수", "desc": "1~6 중 하나. 학년 구분이 없으면 0 또는 학년무관"},
+    {"ko": "문제", "required": "필수", "desc": "문항 내용"},
+    {"ko": "보기1", "required": "필수", "desc": "선택지 1"},
+    {"ko": "보기2", "required": "필수", "desc": "선택지 2"},
+    {"ko": "보기3", "required": "필수", "desc": "선택지 3"},
+    {"ko": "보기4", "required": "필수", "desc": "선택지 4"},
+    {"ko": "정답번호", "required": "필수", "desc": "1~4 중 하나 (보기1이 정답이면 1, 보기2이면 2, 보기3이면 3, 보기4이면 4)"},
+    {"ko": "해설", "required": "선택", "desc": "정답 설명 (없어도 됩니다)"},
+    {"ko": "난이도", "required": "선택", "desc": "쉬움, 보통, 어려움 중 하나 (없으면 보통으로 처리)"},
 ]
 
 CSV_XLSX_COLUMN_WIDTHS = [36, 16, 8, 42, 22, 22, 22, 22, 12, 36, 12]
@@ -159,7 +159,7 @@ def _parse_bank_filters(raw_preset: str, raw_grade: str):
         grade = int(raw_grade_value)
     except (TypeError, ValueError):
         grade = 3
-    if grade not in range(1, 7):
+    if grade not in range(0, 7):
         grade = 3
     return preset_type, grade
 
@@ -230,7 +230,7 @@ def teacher_dashboard(request, classroom_id):
     csv_limits = _get_csv_upload_limits()
     initial_preset, initial_grade = _parse_bank_filters(
         request.GET.get("preset_type", DEFAULT_TOPIC),
-        request.GET.get("grade", "3"),
+        request.GET.get("grade", "all"),
     )
     today_sets = SQQuizSet.objects.filter(
         classroom=classroom,
@@ -288,19 +288,19 @@ def download_csv_template(request, classroom_id):
     writer = csv.writer(output)
     writer.writerow(CSV_KOREAN_HEADERS)
     for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
-        set_title = f"SQ-{topic_key}-basic-L1-G3-S001-V1"
+        set_title = f"{topic_label}-3학년-001"
         for q_no in range(1, 4):
             writer.writerow(
                 [
                     set_title,
-                    topic_key,
+                    topic_label,
                     3,
                     f"[{topic_label}] 예시 문제 {q_no}",
                     f"{topic_label} 보기 A{q_no}",
                     f"{topic_label} 보기 B{q_no}",
                     f"{topic_label} 보기 C{q_no}",
                     f"{topic_label} 보기 D{q_no}",
-                    (q_no - 1) % 4,
+                    q_no % 4 + 1,
                     f"{topic_label} 예시 해설 {q_no}",
                     "쉬움",
                 ]
@@ -334,7 +334,7 @@ def download_xlsx_template(request, classroom_id):
 
     row_no = 2
     for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
-        set_title = f"SQ-{topic_key}-basic-L1-G3-S001-V1"
+        set_title = f"{topic_label}-3학년-001"
         for q_no in range(1, 4):
             ws.append(
                 [
@@ -346,7 +346,7 @@ def download_xlsx_template(request, classroom_id):
                     f"{topic_label} 보기 B{q_no}",
                     f"{topic_label} 보기 C{q_no}",
                     f"{topic_label} 보기 D{q_no}",
-                    (q_no - 1) % 4,
+                    q_no % 4 + 1,
                     f"{topic_label} 예시 해설 {q_no}",
                     "쉬움",
                 ]
@@ -380,32 +380,32 @@ def download_csv_sample_pack(request, classroom_id):
     buffer = BytesIO()
     with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zf:
         readme_lines = [
-            "Seed Quiz CSV 샘플 팩",
+            "씨앗 퀴즈 CSV 샘플 팩",
             "",
-            "- 모든 파일은 현재 업로드 검증 규칙을 통과하도록 구성되어 있습니다.",
-            "- 각 CSV는 1세트(3문항)이며, set_title 규칙을 따릅니다.",
-            "- 한글 헤더/영문 헤더 모두 업로드 가능합니다.",
-            "- 필요 시 문항/보기/해설을 수정해 업로드하세요.",
+            "- 모든 파일은 업로드 검증 규칙을 통과하도록 구성되어 있습니다.",
+            "- 각 CSV는 1묶음(3문제)입니다.",
+            "- 묶음이름은 자유롭게 정할 수 있습니다.",
+            "- 정답번호는 1~4 (보기1이 정답이면 1, 보기2이면 2).",
+            "- 문항/보기/해설을 수정해 업로드하세요.",
         ]
         zf.writestr("README.txt", "\n".join(readme_lines))
 
         for idx, (topic_key, topic_label) in enumerate(SQQuizSet.PRESET_CHOICES, start=1):
-            seq_no = 900 + idx
-            set_title = f"SQ-{topic_key}-basic-L1-G3-S{seq_no:03d}-V1"
+            set_title = f"{topic_label}-3학년-{idx:03d}"
             output = StringIO()
             writer = csv.writer(output)
             writer.writerow(headers)
             writer.writerow(
                 [
                     set_title,
-                    topic_key,
+                    topic_label,
                     3,
                     f"[{topic_label}] 예시 문제 1",
                     f"{topic_label} 정답 1",
                     f"{topic_label} 오답 1-1",
                     f"{topic_label} 오답 1-2",
                     f"{topic_label} 오답 1-3",
-                    0,
+                    1,
                     f"{topic_label} 예시 해설 1",
                     "쉬움",
                 ]
@@ -413,14 +413,14 @@ def download_csv_sample_pack(request, classroom_id):
             writer.writerow(
                 [
                     set_title,
-                    topic_key,
+                    topic_label,
                     3,
                     f"[{topic_label}] 예시 문제 2",
                     f"{topic_label} 오답 2-1",
                     f"{topic_label} 정답 2",
                     f"{topic_label} 오답 2-2",
                     f"{topic_label} 오답 2-3",
-                    1,
+                    2,
                     f"{topic_label} 예시 해설 2",
                     "쉬움",
                 ]
@@ -428,14 +428,14 @@ def download_csv_sample_pack(request, classroom_id):
             writer.writerow(
                 [
                     set_title,
-                    topic_key,
+                    topic_label,
                     3,
                     f"[{topic_label}] 예시 문제 3",
                     f"{topic_label} 오답 3-1",
                     f"{topic_label} 오답 3-2",
                     f"{topic_label} 정답 3",
                     f"{topic_label} 오답 3-3",
-                    2,
+                    3,
                     f"{topic_label} 예시 해설 3",
                     "쉬움",
                 ]
@@ -825,7 +825,7 @@ def htmx_csv_confirm(request, classroom_id):
             status=400,
         )
 
-    share_opt_in = (request.POST.get("share_opt_in") or "").lower() in {"on", "1", "true", "yes"}
+    share_opt_in = True
     created_count, updated_count, review_count = save_parsed_sets_to_bank(
         parsed_sets=parsed_sets,
         created_by=request.user,
@@ -1424,6 +1424,7 @@ def _do_finish(request, attempt: SQAttempt) -> HttpResponse:
 
 
 def _render_result(request, attempt: SQAttempt) -> HttpResponse:
+    attempt = SQAttempt.objects.select_related("quiz_set__classroom").get(id=attempt.id)
     answers_by_order = {
         a.item.order_no: a
         for a in attempt.answers.select_related("item")

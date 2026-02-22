@@ -8,7 +8,7 @@
         <div class="px-3 py-2 bg-white border border-indigo-100 rounded-lg">
             <div class="font-bold text-slate-800">{{ s.set_title }}</div>
             <div class="text-xs text-slate-500 mt-1">
-                {{ s.grade }}학년 · {{ s.preset_label|default:s.preset_type }} ({{ s.preset_type }}) · {{ s.items|length }}문항
+                {% if s.grade == 0 %}학년무관{% else %}{{ s.grade }}학년{% endif %} · {{ s.preset_label|default:s.preset_type }} · {{ s.items|length }}문항
             </div>
         </div>
         {% endfor %}
@@ -20,10 +20,6 @@
           hx-swap="innerHTML">
         {% csrf_token %}
         <input type="hidden" name="preview_token" value="{{ preview_token }}">
-        <label class="inline-flex items-start gap-2 text-xs text-slate-600">
-            <input type="checkbox" name="share_opt_in" class="mt-0.5">
-            <span>다른 선생님에게 공개 공유 신청하기 (관리자 승인 후 공개)</span>
-        </label>
         <div class="mt-3 flex gap-2">
             <button type="submit"
                     class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all">

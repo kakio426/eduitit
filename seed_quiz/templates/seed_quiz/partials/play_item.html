@@ -28,7 +28,8 @@
                     hx-target="#quiz-area"
                     hx-swap="innerHTML"
                     hx-vals='{"item_id": "{{ item.id }}", "selected_index": "{{ forloop.counter0 }}"}'
-                    hx-disabled-elt="find button">
+                    hx-disabled-elt="find button"
+                    onclick="this.classList.add('sq-choice-btn--selecting'); document.querySelectorAll('.sq-choice-btn').forEach(b => b.disabled = true);">
                 <span class="inline-flex items-center gap-3">
                     <span class="sq-number-badge">
                         {{ forloop.counter }}

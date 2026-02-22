@@ -21,7 +21,7 @@
                 <span class="text-xs text-gray-400">{{ item.difficulty }}</span>
             </div>
             <p class="font-bold text-gray-800 mb-3 leading-snug" style="word-break:keep-all">{{ item.question_text }}</p>
-            <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 {% for choice in item.choices %}
                 <div class="px-3 py-2 rounded-lg text-sm {% if forloop.counter0 == item.correct_index %}bg-green-100 border border-green-300 text-green-800 font-bold{% else %}bg-white border border-gray-200 text-gray-600{% endif %}">
                     {% if forloop.counter0 == item.correct_index %}✓ {% endif %}{{ choice }}

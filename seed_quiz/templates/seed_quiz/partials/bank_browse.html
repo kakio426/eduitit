@@ -40,7 +40,7 @@
                         {% endif %}
                     </div>
                     <p class="text-xs text-gray-500">
-                        {{ bank.grade }}학년 · {{ bank.get_preset_type_display }} · {{ bank.get_source_display }} · 사용 {{ bank.use_count }}회
+                        {% if bank.grade == 0 %}학년무관{% else %}{{ bank.grade }}학년{% endif %} · {{ bank.get_preset_type_display }} · {{ bank.get_source_display }} · 사용 {{ bank.use_count }}회
                     </p>
                 </div>
                 <form hx-post="{% url 'seed_quiz:htmx_bank_select' classroom_id=classroom.id bank_id=bank.id %}"

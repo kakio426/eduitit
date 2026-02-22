@@ -1,20 +1,27 @@
 /* ===== 씨앗 퀴즈 학생 화면 CSS ===== */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 
 body {
-    font-family: 'NanumSquareRound', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 
 /* 메인 컨테이너 */
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .sq-container {
     max-width: 768px;
     margin: 0 auto;
     min-height: 100dvh;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: fadeSlideIn 0.25s ease-out;
 }
 
 /* 문제 텍스트 */
 .sq-question {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
     word-break: keep-all;
     overflow-wrap: anywhere;
     line-height: 1.6;
@@ -51,6 +58,12 @@ body {
 }
 
 .sq-choice-btn:active {
+    transform: scale(0.97);
+}
+
+.sq-choice-btn--selecting {
+    border-color: #7c3aed;
+    background-color: #ede9fe;
     transform: scale(0.97);
 }
 
