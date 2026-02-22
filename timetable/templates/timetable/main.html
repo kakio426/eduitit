@@ -528,8 +528,19 @@
             <div class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 space-y-2">
                 <h3 class="text-sm font-black text-indigo-900">사용 방법 (처음 쓰는 선생님용)</h3>
                 <p class="text-sm text-indigo-900">아래 순서대로 하면 원하는 반영 내역만 빠르게 찾고, 같은 조건으로 CSV를 내려받을 수 있습니다.</p>
+                {% if request.user.is_superuser %}
+                <p class="text-xs text-indigo-800">관리자 계정은 전체 학교/전체 사용자 반영 내역을 볼 수 있습니다.</p>
+                {% else %}
+                <p class="text-xs text-indigo-800">일반 계정은 내 계정으로 실행한 반영 내역만 보입니다. 다른 선생님/다른 학교 내역은 표시되지 않습니다.</p>
+                {% endif %}
                 <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900">
-                    <li><span class="font-bold">학교 선택</span>: 한 학교만 보고 싶으면 학교를 고르고, 전체를 보고 싶으면 그대로 둡니다.</li>
+                    <li><span class="font-bold">학교 선택</span>:
+                        {% if request.user.is_superuser %}
+                        한 학교만 보고 싶으면 학교를 고르고, 전체를 보고 싶으면 그대로 둡니다.
+                        {% else %}
+                        내가 반영한 학교 중 한 학교만 보고 싶으면 학교를 고르고, 여러 학교를 보려면 <span class="font-bold">내 학교 전체</span>로 둡니다.
+                        {% endif %}
+                    </li>
                     <li><span class="font-bold">날짜 입력</span>: 시작 날짜와 끝 날짜를 넣고 <span class="font-bold">조회하기</span>를 누릅니다.</li>
                     <li><span class="font-bold">CSV 다운로드</span>: 지금 보이는 조건 그대로 내려받습니다.</li>
                 </ol>
@@ -544,7 +555,9 @@
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-600 mb-1">학교 선택</label>
                     <select name="log_school_slug" class="w-full rounded-lg border-slate-300 text-sm">
-                        <option value="">전체 학교</option>
+                        <option value="">
+                            {% if request.user.is_superuser %}전체 학교{% else %}내 학교 전체{% endif %}
+                        </option>
                         {% for slug, name in log_school_options %}
                         <option value="{{ slug }}" {% if log_filters.school_slug == slug %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
