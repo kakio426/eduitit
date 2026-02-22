@@ -65,7 +65,12 @@
         if (!raw) {
             return "";
         }
-        return raw.replace(/\\n/g, "\n");
+        // data-* 속성에 들어온 escapejs 문자열(\u000A, \n)을 실제 줄바꿈으로 복원
+        return raw
+            .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\\r\\n/g, "\n")
+            .replace(/\\n/g, "\n")
+            .replace(/\\r/g, "\n");
     }
 
     function setScreen(next) {
@@ -534,6 +539,17 @@
 
     if (!modeStarsBtn || !modeLadderBtn || !modeStars || !modeLadder || !els.setupScreen || !els.stageScreen) {
         return;
+    }
+
+    function decodeDefaultNames(raw) {
+        if (!raw) {
+            return "";
+        }
+        return raw
+            .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\\r\\n/g, "\n")
+            .replace(/\\n/g, "\n")
+            .replace(/\\r/g, "\n");
     }
 
     const MAX_LADDER_NAMES = 24;
