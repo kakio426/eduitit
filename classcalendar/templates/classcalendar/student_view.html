@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}학급 캘린더 - {{ classroom.name }}{% endblock %}
+
+{% block navbar %}
+    {% include "core/includes/navbar.html" %}
+{% endblock navbar %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen" x-data="studentCalendar()">
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white p-6 relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full mix-blend-multiply filter blur-2xl opacity-50 pointer-events-none"></div>
+        
+        <div class="text-center mb-8 relative z-10">
+            <span class="inline-flex items-center justify-center p-3 bg-indigo-50 rounded-2xl mb-4">
+                <span class="text-3xl">📅</span>
+            </span>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ classroom.name }} 캘린더</h1>
+            <p class="text-slate-500 mt-2 font-medium">우리 학급의 모든 일정을 확인해보세요</p>
+        </div>
+
+        <div class="relative z-10 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <template x-for="date in getAgendaDates()" :key="date">
+                <div class="mb-8 pl-4 border-l-2 border-indigo-100 relative">
+                    <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-indigo-200"></div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 sticky top-0 bg-white/90 backdrop-blur-md py-1 z-10">
+                        <span x-text="formatAgendaDate(date)"></span>
+                    </h3>
+                    <div class="space-y-3">
+                        <template x-for="event in getEventsByDateString(date)" :key="event.id">
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div class="w-1 h-8 rounded-full shrink-0" :class="getEventColorClass(event).split(' ')[0]"></div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-bold text-slate-900" x-text="event.title"></h4>
+                                    <p class="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span x-text="formatEventTime(event.start_time, event.is_all_day)"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <div x-show="getAgendaDates().length === 0" class="py-12 text-center text-slate-500">
+                <p>등록된 일정이 없습니다.</p>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+
+{{ events_json|json_script:"student-events-data" }}
+
+<script>
+function studentCalendar() {
+    return {
+        events: [],
+        init() {
+            try {
+                const dataElement = document.getElementById('student-events-data');
+                if (dataElement) {
+                    this.events = JSON.parse(dataElement.textContent);
+                    this.events.forEach(e => {
+                        e.start_time = new Date(e.start_time);
+                        e.end_time = new Date(e.end_time);
+                    });
+                }
+            } catch(e) { console.error('Error parsing events JSON', e); }
+        },
+        getAgendaDates() {
+            const dates = new Set();
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            this.events.forEach(e => {
+                // 오늘 이후의 일정만 보여주기 (옵션)
+                if (e.start_time >= today) {
+                    dates.add(e.start_time.toISOString().split('T')[0]);
+                }
+            });
+            return Array.from(dates).sort();
+        },
+        getEventsByDateString(dateStr) {
+            return this.events.filter(e => e.start_time.toISOString().split('T')[0] === dateStr)
+                              .sort((a, b) => a.start_time - b.start_time);
+        },
+        formatAgendaDate(dateStr) {
+            const date = new Date(dateStr);
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+        },
+        formatEventTime(date, isAllDay) {
+            if (isAllDay) return "하루 종일";
+            let h = date.getHours();
+            let m = date.getMinutes();
+            const ampm = h >= 12 ? '오후' : '오전';
+            h = h % 12 || 12;
+            m = m < 10 ? '0'+m : m;
+            return `${ampm} ${h}:${m}`;
+        },
+        getEventColorClass(event) {
+            const colors = {
+                'indigo': 'bg-indigo-100',
+                'rose': 'bg-rose-100',
+                'amber': 'bg-amber-100',
+                'emerald': 'bg-emerald-100',
+                'sky': 'bg-sky-100'
+            };
+            return colors[event.color] || colors['indigo'];
+        }
+    }
+}
+</script>
+<style>
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+</style>
+{% endblock %}

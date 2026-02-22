@@ -49,6 +49,7 @@ urlpatterns = [
     path('seed-quiz/', include('seed_quiz.urls', namespace='seed_quiz')),
     path('noticegen/', include('noticegen.urls', namespace='noticegen')),
     path('timetable/', include('timetable.urls', namespace='timetable')),
+    path('classcalendar/', include('classcalendar.urls', namespace='classcalendar')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 

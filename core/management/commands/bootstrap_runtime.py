@@ -32,6 +32,7 @@ class Command(BaseCommand):
             ("seed_quiz_bank", lambda: call_command("seed_quiz_bank")),
             ("ensure_noticegen", lambda: call_command("ensure_noticegen")),
             ("ensure_timetable", lambda: call_command("ensure_timetable")),
+            ("ensure_classcalendar", lambda: call_command("ensure_classcalendar")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
         ]
 
