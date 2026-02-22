@@ -4,8 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count
+from django.core.exceptions import ValidationError
 from .models import Insight
-from .forms import InsightForm
+from .forms import InsightForm, InsightPasteForm
+from .importer import upsert_insight_from_text
 
 
 def insight_list(request):
@@ -75,6 +77,32 @@ def insight_create(request):
     return render(request, 'insights/insight_form.html', {
         'form': form,
         'title': '새 인사이트 등록'
+    })
+
+
+@login_required
+def insight_paste_create(request):
+    if request.method == 'POST':
+        form = InsightPasteForm(request.POST)
+        if form.is_valid():
+            try:
+                insight, created = upsert_insight_from_text(form.cleaned_data['raw_text'])
+            except ValueError as exc:
+                form.add_error('raw_text', str(exc))
+            except ValidationError as exc:
+                form.add_error(None, "; ".join(exc.messages))
+            else:
+                if created:
+                    messages.success(request, '붙여넣기 내용으로 인사이트가 등록되었습니다.')
+                else:
+                    messages.success(request, '같은 영상 URL 항목을 찾아 인사이트를 업데이트했습니다.')
+                return redirect('insights:detail', pk=insight.pk)
+    else:
+        form = InsightPasteForm()
+
+    return render(request, 'insights/insight_paste_form.html', {
+        'form': form,
+        'title': '붙여넣기 등록',
     })
 
 

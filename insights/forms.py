@@ -40,3 +40,24 @@ class InsightForm(forms.ModelForm):
             'kakio_note': '나만의 노트',
             'tags': '태그',
         }
+
+
+class InsightPasteForm(forms.Form):
+    raw_text = forms.CharField(
+        label='붙여넣기 원문',
+        widget=forms.Textarea(
+            attrs={
+                'class': 'w-full px-5 py-4 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-lg',
+                'rows': 22,
+                'placeholder': (
+                    "Title: ...\n"
+                    "카테고리:\nYouTube Scrap\n\n"
+                    "Video url:\nhttps://www.youtube.com/watch?v=...\n\n"
+                    "Thumbnail url:\nhttps://img.youtube.com/vi/.../maxresdefault.jpg\n\n"
+                    "Content:\n...\n\n"
+                    "Kakio note:\n...\n\n"
+                    "Tags:\n#태그1, #태그2"
+                ),
+            }
+        ),
+    )

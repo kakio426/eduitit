@@ -42,6 +42,18 @@
             AI 시대를 이끄는 선생님의 시선.<br>
             유튜브 영상과 함께 선생님만의 통찰을 기록하고 공유합니다.
         </p>
+        {% if user.is_authenticated %}
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="{% url 'insights:paste_create' %}"
+                class="px-5 py-2 rounded-full bg-indigo-500 text-white font-bold text-base shadow-clay hover:bg-indigo-600 transition-all">
+                <i class="fa-solid fa-paste mr-1"></i>붙여넣기 등록
+            </a>
+            <a href="{% url 'insights:create' %}"
+                class="px-5 py-2 rounded-full bg-white text-gray-700 font-bold text-base shadow-clay-inner hover:bg-gray-100 transition-all">
+                <i class="fa-solid fa-pen mr-1"></i>수동 등록
+            </a>
+        </div>
+        {% endif %}
     </header>
 
     <!-- Filter Section -->
