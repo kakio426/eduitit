@@ -62,6 +62,19 @@ class ManualPipelineParserTest(TestCase):
             parse_manual_pipeline_result(json.dumps(payload, ensure_ascii=False))
         self.assertEqual(exc.exception.code, "DUPLICATED_STEPS")
 
+    def test_trims_steps_over_max_with_warning(self):
+        payload = {
+            "steps": [
+                {"summary": f"{idx}단계에서 도형을 그리고 색을 채운다."}
+                for idx in range(1, 31)
+            ]
+        }
+        result = parse_manual_pipeline_result(json.dumps(payload, ensure_ascii=False))
+
+        self.assertEqual(result["meta"]["step_count"], 24)
+        self.assertEqual(len(result["steps"]), 24)
+        self.assertTrue(any("앞 24개만 반영" in warning for warning in result["warnings"]))
+
 
 class ManualPipelineApiTest(TestCase):
     def test_parse_gemini_steps_api_success(self):

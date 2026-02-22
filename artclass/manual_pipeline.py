@@ -67,6 +67,13 @@ def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
         steps = _parse_steps_from_text(clean_input, warnings)
         mode = "plain_text"
 
+    if len(steps) > MAX_STEPS:
+        warnings.append(
+            f"단계가 {len(steps)}개로 많아 앞 {MAX_STEPS}개만 반영했습니다. "
+            "단계를 합쳐 다시 생성하면 더 안정적입니다."
+        )
+        steps = steps[:MAX_STEPS]
+
     _validate_steps(steps)
 
     return {
@@ -91,7 +98,7 @@ def build_manual_pipeline_prompt(video_url: str = "") -> str:
         "출력 규칙:\n"
         "1) 반드시 JSON만 출력 (코드블록/설명문/인사말 금지)\n"
         "2) 최상위는 객체이며 steps 배열 필수\n"
-        "3) steps는 4~12개 권장, 각 step은 summary 필수\n"
+        "3) steps는 6~12개 권장, 절대 24개를 넘기지 않기\n"
         "4) 가능한 경우 start/end를 MM:SS 형식으로 포함\n"
         "5) summary는 학생 활동 중심의 짧은 문장\n"
         "6) materials는 배열, teacher_tip은 문자열\n\n"

@@ -1,12 +1,8 @@
-import os
 import json
-import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from core.utils import ratelimit_key_for_master_only
-from openai import OpenAI
 from django.db.models import Count
 from .models import ArtClass, ArtStep
 from .manual_pipeline import (
@@ -14,23 +10,6 @@ from .manual_pipeline import (
     build_manual_pipeline_prompt,
     parse_manual_pipeline_result,
 )
-
-try:
-    from youtube_transcript_api import YouTubeTranscriptApi
-except ImportError:
-    YouTubeTranscriptApi = None
-
-
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-DEEPSEEK_MODEL_NAME = "deepseek-chat"
-
-
-def get_deepseek_client():
-    """DeepSeek client using server master key."""
-    api_key = os.environ.get('MASTER_DEEPSEEK_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
-    if not api_key:
-        return None
-    return OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=60.0)
 
 
 def setup_view(request, pk=None):
@@ -128,110 +107,6 @@ def classroom_view(request, pk):
         'data': data,
         'data_json': json.dumps(data, ensure_ascii=False)
     })
-
-
-def extract_video_id(url):
-    """Simple extractor"""
-    if 'v=' in url:
-        return url.split('v=')[1].split('&')[0]
-    elif 'youtu.be/' in url:
-        return url.split('youtu.be/')[1].split('?')[0]
-    return None
-
-
-def get_video_info(url):
-    """Get Title and Transcript"""
-    title = ""
-    transcript_text = ""
-    
-    try:
-        resp = requests.get(f"https://noembed.com/embed?url={url}", timeout=5)
-        if resp.status_code == 200:
-            title = resp.json().get('title', '')
-    except Exception as e:
-        print(f"Title fetch error: {e}")
-        
-    video_id = extract_video_id(url)
-    if video_id and YouTubeTranscriptApi:
-        try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['ko', 'en'])
-            transcript_text = " ".join([t['text'] for t in transcript_list])
-        except Exception as e:
-            print(f"Transcript fetch error: {e}")
-            transcript_text = ""
-            
-    return title, transcript_text
-
-
-@ratelimit(key=ratelimit_key_for_master_only, rate='5/h', method='POST', block=True)
-@ratelimit(key=ratelimit_key_for_master_only, rate='10/d', method='POST', block=True)
-def generate_steps_api(request):
-    """AI Step Generation API (Guest/Member Shared: 5/h, 10/d)"""
-    if getattr(request, 'limited', False):
-        return JsonResponse({
-            'error': 'LIMIT_EXCEEDED',
-            'message': '요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.'
-        }, status=429)
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-    try:
-        data = json.loads(request.body)
-        video_url = data.get('videoUrl')
-        user_transcript = data.get('transcript', '')
-
-        if not video_url:
-            return JsonResponse({'error': 'Video URL required'}, status=400)
-
-        title, auto_transcript = get_video_info(video_url)
-        effective_transcript = user_transcript if user_transcript else auto_transcript
-
-        if len(effective_transcript.strip()) < 20 and not title:
-             return JsonResponse({'error': 'LOW_INFO'}, status=400)
-
-        client = get_deepseek_client()
-        if not client:
-             return JsonResponse({'error': 'API_NOT_CONFIGURED'}, status=503)
-
-        prompt = f"""
-            당신은 유능한 미술 선생님입니다. 제공된 정보를 바탕으로 학생들이 따라 하기 좋은 '단계별 미술 수업 안내'를 만들어주세요.
-
-            [비디오 정보]
-            - 제목: {title or '알 수 없음'}
-            - 대본/설명: {effective_transcript or '자막 데이터 없음'}
-
-            ※주의사항:
-            1. 제공된 '제목'과 '대본'을 바탕으로 분석하십시오.
-            2. 자막에 구체적인 미술 활동(그리기, 만들기 등) 내용이 전혀 없다면, "요약할 수 있는 충분한 정보가 없습니다."라고 한 줄만 출력하세요.
-            3. 절대 임의로 상상해서 답변하지 마십시오. 모르면 모른다고 답변하십시오.
-            4. 학생들의 눈높이에 맞춰 쉽고 명확한 문장으로 작성하세요.
-            5. 각 단계는 한 줄씩 문장만 출력하세요 (번호, 기호, 타임스탬프 금지).
-            6. 서론이나 맺음말 없이 본론만 출력하세요.
-        """
-
-        response = client.chat.completions.create(
-            model=DEEPSEEK_MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "You are a helpful art class teacher."},
-                {"role": "user", "content": prompt},
-            ],
-            stream=False,
-        )
-
-        text = (response.choices[0].message.content or "").strip()
-        if "요약할 수 있는" in text or len(text.strip()) < 5:
-             return JsonResponse({'error': 'LOW_INFO'}, status=400)
-
-        steps = [line.strip() for line in text.split('\n') if line.strip()]
-        formatted_steps = [{'id': i, 'text': s} for i, s in enumerate(steps)]
-
-        return JsonResponse({'steps': formatted_steps})
-
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'INVALID_JSON'}, status=400)
-    except Exception:
-        return JsonResponse({'error': 'INTERNAL_ERROR'}, status=500)
 
 
 @ratelimit(key=ratelimit_key_for_master_only, rate='30/h', method='POST', block=True)
