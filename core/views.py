@@ -239,6 +239,30 @@ def _build_today_context(request):
             getattr(request.user, "id", None),
         )
 
+    try:
+        from classcalendar.models import CalendarEvent
+
+        calendar_event_count = CalendarEvent.objects.filter(
+            author=request.user,
+            start_time__date=today,
+        ).count()
+        if calendar_event_count > 0:
+            today_items.append(
+                {
+                    "title": "오늘 학급 일정",
+                    "count_text": f"{calendar_event_count}건",
+                    "description": "오늘 예정된 학급 일정이 있습니다. 캘린더를 확인해 보세요.",
+                    "emoji": "📅",
+                    "href": reverse("classcalendar:main"),
+                    "cta_text": "캘린더 열기",
+                }
+            )
+    except Exception:
+        logger.exception(
+            "[TodayContext] classcalendar 집계 실패 user_id=%s",
+            getattr(request.user, "id", None),
+        )
+
     return {
         "today_items": today_items,
         "today_date_text": today.strftime("%Y-%m-%d"),

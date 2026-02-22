@@ -3,6 +3,7 @@ import random
 import csv
 import io
 import json
+import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -246,42 +247,83 @@ def _parse_consent_note_payload(note):
     return payload if isinstance(payload, dict) else {}
 
 
+def _collect_linked_consent_request_ids(students):
+    linked_request_ids = []
+    seen = set()
+
+    for student in students:
+        consent = getattr(student, "consent", None)
+        payload = _parse_consent_note_payload(consent.note if consent else "")
+        raw_request_id = payload.get("consent_request_id")
+        if not raw_request_id:
+            continue
+        try:
+            normalized = str(uuid.UUID(str(raw_request_id)))
+        except (TypeError, ValueError):
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        linked_request_ids.append(normalized)
+
+    return linked_request_ids
+
+
+def _resolve_linked_consent_requests(request_user, linked_request_ids):
+    if not linked_request_ids:
+        return []
+
+    return list(
+        SignatureRequest.objects.filter(
+            request_id__in=linked_request_ids,
+            created_by=request_user,
+        )
+        .prefetch_related("recipients")
+        .order_by("-sent_at", "-created_at")
+    )
+
+
+def _extract_sign_token(sign_url):
+    if not sign_url:
+        return ""
+    match = re.search(r"/consent/public/([^/]+)/sign/?", sign_url)
+    return match.group(1) if match else ""
+
+
+def _should_student_be_active(consent_status):
+    return consent_status != "withdrawn"
+
+
 def _build_consent_manage_context(request, classroom, recipient_form=None):
     students = list(
-        classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+        classroom.students.select_related("consent").order_by("number", "name")
     )
     sign_talk_url = ""
-    linked_request_id = ""
+    linked_request_ids = _collect_linked_consent_request_ids(students)
+    linked_requests = _resolve_linked_consent_requests(request.user, linked_request_ids)
+    active_consent_request = linked_requests[0] if linked_requests else None
 
     for student in students:
         consent = getattr(student, "consent", None)
         if consent and consent.external_url and not sign_talk_url:
             sign_talk_url = consent.external_url
-        payload = _parse_consent_note_payload(consent.note if consent else "")
-        if payload.get("consent_request_id") and not linked_request_id:
-            linked_request_id = payload["consent_request_id"]
-
-    consent_request = None
-    if linked_request_id:
-        consent_request = (
-            SignatureRequest.objects.filter(request_id=linked_request_id, created_by=request.user)
-            .prefetch_related("recipients")
-            .first()
-        )
 
     unmatched_signatures = []
     consent_request_url = ""
-    if consent_request:
+    if active_consent_request:
         classroom_names = {student.name for student in students}
-        recipient_names = set(consent_request.recipients.values_list("student_name", flat=True))
+        recipient_names = set(active_consent_request.recipients.values_list("student_name", flat=True))
         unmatched_signatures = sorted(name for name in recipient_names if name not in classroom_names)
-        consent_request_url = reverse("consent:detail", kwargs={"request_id": consent_request.request_id})
+        consent_request_url = reverse("consent:detail", kwargs={"request_id": active_consent_request.request_id})
 
     return {
         "classroom": classroom,
         "students": students,
         "sign_talk_url": sign_talk_url,
         "consent_request_url": consent_request_url,
+        "sync_request_options": linked_requests,
+        "active_consent_request_id": active_consent_request.request_id if active_consent_request else None,
+        "has_multiple_consent_requests": len(linked_requests) > 1,
         "unmatched_signatures": unmatched_signatures,
         "pending_students": [
             student for student in students
@@ -538,7 +580,7 @@ def consent_request_via_sign_talk(request, classroom_id):
         context = _build_consent_manage_context(request, classroom, recipient_form=recipient_form)
         return render(request, "happy_seed/consent_manage.html", context, status=400)
 
-    students = list(classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"))
+    students = list(classroom.students.select_related("consent").order_by("number", "name"))
     student_name_map = {}
     for student in students:
         student_name_map.setdefault(student.name.strip(), []).append(student)
@@ -619,6 +661,9 @@ def consent_request_via_sign_talk(request, classroom_id):
             ensure_ascii=False,
         )
         consent.save()
+        if not student.is_active:
+            student.is_active = True
+            student.save(update_fields=["is_active"])
 
         log_class_event(
             classroom,
@@ -666,7 +711,118 @@ def consent_resend(request, student_id):
     consent.requested_at = timezone.now()
     consent.save(update_fields=["requested_at", "updated_at"])
     log_class_event(classroom, "CONSENT_REQUEST_SENT", student=student, meta={"resend": True})
-    messages.success(request, f"{student.name} 학생 동의 요청을 재발송 처리했습니다.")
+    messages.success(request, f"{student.name} 학생에게 기존 링크를 재안내 처리했습니다.")
+    return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
+
+
+@login_required
+@require_POST
+def consent_regenerate_link(request, student_id):
+    student = get_object_or_404(HSStudent, id=student_id)
+    classroom = get_teacher_classroom(request, student.classroom_id)
+    consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
+
+    payload = _parse_consent_note_payload(consent.note)
+    recipient = None
+    recipient_id = payload.get("recipient_id")
+
+    if recipient_id:
+        recipient = (
+            SignatureRecipient.objects.filter(
+                id=recipient_id,
+                request__created_by=request.user,
+            )
+            .select_related("request")
+            .first()
+        )
+
+    if not recipient:
+        token = _extract_sign_token(consent.external_url)
+        if token:
+            recipient = (
+                SignatureRecipient.objects.filter(
+                    access_token=token,
+                    request__created_by=request.user,
+                )
+                .select_related("request")
+                .first()
+            )
+
+    if not recipient:
+        messages.error(request, "재발급할 동의 수신자 정보를 찾을 수 없습니다. 먼저 동의 링크를 다시 생성해 주세요.")
+        return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
+
+    if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        messages.error(request, "이미 응답이 완료된 링크는 재발급할 수 없습니다. 새 동의 요청을 생성해 주세요.")
+        return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
+
+    new_token = uuid.uuid4().hex
+    while SignatureRecipient.objects.filter(access_token=new_token).exists():
+        new_token = uuid.uuid4().hex
+
+    now = timezone.now()
+    recipient.access_token = new_token
+    recipient.status = SignatureRecipient.STATUS_PENDING
+    recipient.decision = ""
+    recipient.decline_reason = ""
+    recipient.signature_data = ""
+    recipient.signed_at = None
+    recipient.ip_address = None
+    recipient.user_agent = ""
+    recipient.save(
+        update_fields=[
+            "access_token",
+            "status",
+            "decision",
+            "decline_reason",
+            "signature_data",
+            "signed_at",
+            "ip_address",
+            "user_agent",
+        ]
+    )
+
+    sign_url = request.build_absolute_uri(reverse("consent:sign", kwargs={"token": recipient.access_token}))
+    payload.update(
+        {
+            "consent_request_id": str(recipient.request.request_id),
+            "recipient_id": recipient.id,
+            "parent_name": recipient.parent_name,
+            "phone_number": recipient.phone_number,
+        }
+    )
+    consent.status = "pending"
+    consent.external_url = sign_url
+    consent.requested_at = now
+    consent.completed_at = None
+    consent.note = json.dumps(payload, ensure_ascii=False)
+    consent.save()
+
+    if not student.is_active:
+        student.is_active = True
+        student.save(update_fields=["is_active"])
+
+    ConsentAuditLog.objects.create(
+        request=recipient.request,
+        recipient=recipient,
+        event_type=ConsentAuditLog.EVENT_LINK_CREATED,
+        event_meta={
+            "source": "happy_seed",
+            "classroom_id": str(classroom.id),
+            "student_id": str(student.id),
+        },
+    )
+    log_class_event(
+        classroom,
+        "CONSENT_REQUEST_SENT",
+        student=student,
+        meta={
+            "regenerated": True,
+            "external_url": sign_url,
+            "consent_request_id": str(recipient.request.request_id),
+        },
+    )
+    messages.success(request, f"{student.name} 학생 동의 링크를 재발급했습니다.")
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
@@ -674,26 +830,34 @@ def consent_resend(request, student_id):
 @require_POST
 def consent_sync_from_sign_talk(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    students = list(classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"))
-    consent_request_id = ""
-    for student in students:
-        consent = getattr(student, "consent", None)
-        payload = _parse_consent_note_payload(consent.note if consent else "")
-        if payload.get("consent_request_id"):
-            consent_request_id = payload["consent_request_id"]
-            break
-
-    if not consent_request_id:
+    students = list(classroom.students.select_related("consent").order_by("number", "name"))
+    linked_request_ids = _collect_linked_consent_request_ids(students)
+    linked_requests = _resolve_linked_consent_requests(request.user, linked_request_ids)
+    if not linked_requests:
         messages.error(request, "연동된 consent 요청이 없어 동기화할 수 없습니다.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
-    consent_request = (
-        SignatureRequest.objects.filter(request_id=consent_request_id, created_by=request.user)
-        .prefetch_related("recipients")
-        .first()
-    )
+    requested_request_id = (request.POST.get("consent_request_id") or "").strip()
+    consent_request = None
+    if requested_request_id:
+        for req in linked_requests:
+            if str(req.request_id) == requested_request_id:
+                consent_request = req
+                break
+        if not consent_request:
+            messages.error(request, "선택한 consent 요청을 찾을 수 없습니다. 다시 선택해 주세요.")
+            return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
+    else:
+        consent_request = linked_requests[0]
+        if len(linked_requests) > 1:
+            messages.warning(
+                request,
+                "학생별로 연결된 동의 요청이 여러 개여서 최근 요청 기준으로 동기화했습니다. "
+                "필요하면 요청을 선택해 다시 동기화해 주세요.",
+            )
+
     if not consent_request:
-        messages.error(request, "consent 요청을 찾을 수 없습니다.")
+        messages.error(request, "동기화할 consent 요청을 결정하지 못했습니다.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
     recipient_map = {}
@@ -702,19 +866,24 @@ def consent_sync_from_sign_talk(request, classroom_id):
 
     approved_updated = 0
     rejected_updated = 0
+    expired_updated = 0
+    pending_updated = 0
     ambiguous_student_count = 0
     now = timezone.now()
+    consent_request_expired = consent_request.is_link_expired
+
     for student in students:
         consent = getattr(student, "consent", None)
         if not consent:
             consent = HSGuardianConsent.objects.create(student=student)
-        matches = recipient_map.get(student.name, [])
+        matches = recipient_map.get(student.name.strip(), [])
         if len(matches) != 1:
             if len(matches) > 1:
                 ambiguous_student_count += 1
             continue
 
         recipient = matches[0]
+        prev_status = consent.status
         consent.external_url = request.build_absolute_uri(
             reverse("consent:sign", kwargs={"token": recipient.access_token})
         )
@@ -732,22 +901,33 @@ def consent_sync_from_sign_talk(request, classroom_id):
             consent.requested_at = consent_request.sent_at or now
 
         if recipient.status == SignatureRecipient.STATUS_SIGNED and recipient.decision == SignatureRecipient.DECISION_AGREE:
-            if consent.status != "approved":
+            if prev_status != "approved":
                 approved_updated += 1
                 log_class_event(classroom, "CONSENT_SIGNED", student=student, meta={"by": "consent_sync"})
             consent.status = "approved"
             consent.completed_at = recipient.signed_at or now
-            if not student.is_active:
-                student.is_active = True
-                student.save(update_fields=["is_active"])
         elif recipient.status in (SignatureRecipient.STATUS_DECLINED, SignatureRecipient.STATUS_SIGNED) and (
             recipient.decision == SignatureRecipient.DECISION_DISAGREE
         ):
-            if consent.status != "rejected":
+            if prev_status != "rejected":
                 rejected_updated += 1
             consent.status = "rejected"
             consent.completed_at = recipient.signed_at or now
+        elif recipient.status == SignatureRecipient.STATUS_PENDING and consent_request_expired:
+            if prev_status != "expired":
+                expired_updated += 1
+            consent.status = "expired"
+            consent.completed_at = None
+        else:
+            if prev_status != "pending":
+                pending_updated += 1
+            consent.status = "pending"
+            consent.completed_at = None
 
+        should_be_active = _should_student_be_active(consent.status)
+        if student.is_active != should_be_active:
+            student.is_active = should_be_active
+            student.save(update_fields=["is_active"])
         consent.save()
 
     classroom_names = {student.name for student in students}
@@ -756,8 +936,9 @@ def consent_sync_from_sign_talk(request, classroom_id):
     messages.success(
         request,
         "동의 결과를 동기화했습니다. "
-        f"동의 완료 {approved_updated}명, 비동의 반영 {rejected_updated}명, "
-        f"명단 미일치 {unmatched_signature_count}건, 중복매칭 불가 {ambiguous_student_count}건",
+        f"동의 완료 {approved_updated}명, 비동의 반영 {rejected_updated}명, 만료 반영 {expired_updated}명, "
+        f"대기 반영 {pending_updated}명, 명단 미일치 {unmatched_signature_count}건, "
+        f"중복매칭 불가 {ambiguous_student_count}건",
     )
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
@@ -768,13 +949,19 @@ def consent_manual_approve(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
     student_id = request.POST.get("student_id", "")
     signer_name = request.POST.get("signer_name", "").strip()
-    student = HSStudent.objects.filter(id=student_id, classroom=classroom, is_active=True).select_related("consent").first()
+    student = HSStudent.objects.filter(id=student_id, classroom=classroom).select_related("consent").first()
     if not student:
         messages.error(request, "학생을 찾을 수 없습니다.")
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
-    student.consent.status = "approved"
-    student.consent.completed_at = timezone.now()
-    student.consent.save(update_fields=["status", "completed_at", "updated_at"])
+
+    consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
+    consent.status = "approved"
+    consent.completed_at = timezone.now()
+    consent.save(update_fields=["status", "completed_at", "updated_at"])
+    if not student.is_active:
+        student.is_active = True
+        student.save(update_fields=["is_active"])
+
     log_class_event(
         classroom,
         "CONSENT_SIGNED",
@@ -797,11 +984,18 @@ def consent_update(request, student_id):
         consent.status = new_status
         if new_status == "approved":
             consent.completed_at = timezone.now()
-            student.is_active = True
             log_class_event(classroom, "CONSENT_SIGNED", student=student, meta={"by": "teacher_manual"})
-        if new_status == "withdrawn":
-            student.is_active = False
-            student.save()
+        elif new_status in ("pending", "expired"):
+            consent.completed_at = None
+        elif new_status == "rejected" and not consent.completed_at:
+            consent.completed_at = timezone.now()
+        elif new_status == "withdrawn" and not consent.completed_at:
+            consent.completed_at = timezone.now()
+
+        should_be_active = _should_student_be_active(new_status)
+        if student.is_active != should_be_active:
+            student.is_active = should_be_active
+            student.save(update_fields=["is_active"])
         consent.save()
 
     return render(

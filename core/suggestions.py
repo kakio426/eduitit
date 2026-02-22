@@ -5,7 +5,8 @@ from products.models import Product
 
 # 완료 화면에서 다음으로 자연스럽게 이어갈 서비스 매핑
 SUGGESTIONS = {
-    "noticegen": ["qrgen", "consent"],
+    "noticegen": ["classcalendar", "qrgen", "consent"],
+    "classcalendar": ["reservations"],
     "collect": ["collect"],
     "studentmbti": ["ssambti"],
     "ssambti": ["fortune"],
@@ -23,6 +24,12 @@ SERVICE_META = {
         "title_keywords": ["알림장", "주간학습"],
         "default_icon": "📝",
         "fallback_summary": "알림장과 주간학습 멘트를 빠르게 만들어보세요.",
+    },
+    "classcalendar": {
+        "route_names": ["classcalendar:main"],
+        "title_keywords": ["캘린더", "일정"],
+        "default_icon": "📅",
+        "fallback_summary": "학급 일정과 구글 캘린더를 한 번에 관리하세요.",
     },
     "qrgen": {
         "route_names": ["qrgen:landing"],

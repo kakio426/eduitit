@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -23,6 +25,10 @@ class HappySeedViewTests(TestCase):
         HSClassroomConfig.objects.create(classroom=self.classroom)
         self.student = HSStudent.objects.create(classroom=self.classroom, name="하늘", number=1, ticket_count=1)
         HSGuardianConsent.objects.create(student=self.student, status="approved")
+
+    def _create_consent_request(self, recipients_text):
+        url = reverse("happy_seed:consent_request_via_sign_talk", kwargs={"classroom_id": self.classroom.id})
+        return self.client.post(url, {"recipients_text": recipients_text})
 
     def test_landing_is_public(self):
         res = self.client.get(reverse("happy_seed:landing"))
@@ -71,11 +77,7 @@ class HappySeedViewTests(TestCase):
         self.student.consent.status = "pending"
         self.student.consent.save(update_fields=["status"])
 
-        create_url = reverse("happy_seed:consent_request_via_sign_talk", kwargs={"classroom_id": self.classroom.id})
-        create_res = self.client.post(
-            create_url,
-            {"recipients_text": f"{self.student.name},하늘 보호자,01012345678"},
-        )
+        create_res = self._create_consent_request(f"{self.student.name},하늘 보호자,01012345678")
         self.assertEqual(create_res.status_code, 302)
 
         recipient = SignatureRecipient.objects.filter(student_name=self.student.name).latest("id")
@@ -89,6 +91,57 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(sync_res.status_code, 302)
 
         self.student.refresh_from_db()
+        self.assertEqual(self.student.consent.status, "approved")
+
+    def test_consent_sync_uses_latest_linked_request_by_default(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.consent.status = "pending"
+        self.student.consent.save(update_fields=["status"])
+
+        student2 = HSStudent.objects.create(classroom=self.classroom, name="다온", number=2, ticket_count=0)
+        HSGuardianConsent.objects.create(student=student2, status="pending")
+
+        first_res = self._create_consent_request(f"{self.student.name},하늘 보호자,01012345678")
+        self.assertEqual(first_res.status_code, 302)
+        second_res = self._create_consent_request(f"{student2.name},다온 보호자,01000000000")
+        self.assertEqual(second_res.status_code, 302)
+
+        recipient = SignatureRecipient.objects.filter(student_name=student2.name).latest("id")
+        recipient.status = SignatureRecipient.STATUS_SIGNED
+        recipient.decision = SignatureRecipient.DECISION_AGREE
+        recipient.signed_at = timezone.now()
+        recipient.save(update_fields=["status", "decision", "signed_at"])
+
+        sync_url = reverse("happy_seed:consent_sync_from_sign_talk", kwargs={"classroom_id": self.classroom.id})
+        sync_res = self.client.post(sync_url)
+        self.assertEqual(sync_res.status_code, 302)
+
+        student2.refresh_from_db()
+        self.assertEqual(student2.consent.status, "approved")
+
+    def test_consent_sync_includes_inactive_student(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.consent.status = "pending"
+        self.student.consent.save(update_fields=["status"])
+
+        create_res = self._create_consent_request(f"{self.student.name},하늘 보호자,01012345678")
+        self.assertEqual(create_res.status_code, 302)
+
+        self.student.is_active = False
+        self.student.save(update_fields=["is_active"])
+
+        recipient = SignatureRecipient.objects.filter(student_name=self.student.name).latest("id")
+        recipient.status = SignatureRecipient.STATUS_SIGNED
+        recipient.decision = SignatureRecipient.DECISION_AGREE
+        recipient.signed_at = timezone.now()
+        recipient.save(update_fields=["status", "decision", "signed_at"])
+
+        sync_url = reverse("happy_seed:consent_sync_from_sign_talk", kwargs={"classroom_id": self.classroom.id})
+        sync_res = self.client.post(sync_url)
+        self.assertEqual(sync_res.status_code, 302)
+
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.is_active)
         self.assertEqual(self.student.consent.status, "approved")
 
     def test_group_mission_success_grants_ticket_to_random_member(self):
@@ -149,6 +202,66 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(res.status_code, 302)
         self.student.refresh_from_db()
         self.assertEqual(self.student.consent.status, "approved")
+
+    def test_consent_manual_approve_creates_missing_consent(self):
+        self.client.login(username="teacher2", password="pw12345")
+        HSGuardianConsent.objects.filter(student=self.student).delete()
+        self.student.is_active = False
+        self.student.save(update_fields=["is_active"])
+
+        url = reverse("happy_seed:consent_manual_approve", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(url, {"student_id": str(self.student.id), "signer_name": "보호자"})
+        self.assertEqual(res.status_code, 302)
+
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.is_active)
+        self.assertTrue(HSGuardianConsent.objects.filter(student=self.student, status="approved").exists())
+
+    def test_consent_update_approved_reactivates_student(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.consent.status = "withdrawn"
+        self.student.consent.save(update_fields=["status"])
+        self.student.is_active = False
+        self.student.save(update_fields=["is_active"])
+
+        url = reverse("happy_seed:consent_update", kwargs={"student_id": self.student.id})
+        res = self.client.post(url, {"status": "approved"})
+        self.assertEqual(res.status_code, 200)
+
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.is_active)
+        self.assertEqual(self.student.consent.status, "approved")
+
+    def test_consent_regenerate_link_updates_token_and_reactivates(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.consent.status = "pending"
+        self.student.consent.save(update_fields=["status"])
+
+        create_res = self._create_consent_request(f"{self.student.name},하늘 보호자,01012345678")
+        self.assertEqual(create_res.status_code, 302)
+
+        self.student.refresh_from_db()
+        old_url = self.student.consent.external_url
+        old_token = old_url.rstrip("/").split("/")[-2]
+        payload = json.loads(self.student.consent.note)
+        recipient = SignatureRecipient.objects.get(id=payload["recipient_id"])
+
+        self.student.is_active = False
+        self.student.save(update_fields=["is_active"])
+        self.student.consent.status = "withdrawn"
+        self.student.consent.save(update_fields=["status"])
+
+        regen_url = reverse("happy_seed:consent_regenerate_link", kwargs={"student_id": self.student.id})
+        regen_res = self.client.post(regen_url)
+        self.assertEqual(regen_res.status_code, 302)
+
+        recipient.refresh_from_db()
+        self.student.refresh_from_db()
+        new_token = self.student.consent.external_url.rstrip("/").split("/")[-2]
+        self.assertNotEqual(old_token, recipient.access_token)
+        self.assertEqual(new_token, recipient.access_token)
+        self.assertEqual(self.student.consent.status, "pending")
+        self.assertTrue(self.student.is_active)
 
     def test_activity_manage_manual_bonus_grant_without_score(self):
         self.client.login(username="teacher2", password="pw12345")

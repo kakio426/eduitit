@@ -29,6 +29,7 @@ urlpatterns = [
     path('<uuid:classroom_id>/consent/sync-sign-talk/', views.consent_sync_from_sign_talk, name='consent_sync_from_sign_talk'),
     path('<uuid:classroom_id>/consent/manual-approve/', views.consent_manual_approve, name='consent_manual_approve'),
     path('student/<uuid:student_id>/consent/resend/', views.consent_resend, name='consent_resend'),
+    path('student/<uuid:student_id>/consent/regenerate-link/', views.consent_regenerate_link, name='consent_regenerate_link'),
     path('student/<uuid:student_id>/consent/update/', views.consent_update, name='consent_update'),
 
     # Group manage

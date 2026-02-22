@@ -8,6 +8,8 @@
         <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">대기중</span>
         {% elif student.consent.status == 'rejected' %}
         <span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">거부</span>
+        {% elif student.consent.status == 'expired' %}
+        <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">만료</span>
         {% elif student.consent.status == 'withdrawn' %}
         <span class="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">철회</span>
         {% else %}
@@ -42,7 +44,11 @@
             </form>
             <form method="post" action="{% url 'happy_seed:consent_resend' student_id=student.id %}">
                 {% csrf_token %}
-                <button type="submit" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold hover:bg-blue-200" style="min-height: 44px;">재발송</button>
+                <button type="submit" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold hover:bg-blue-200" style="min-height: 44px;">재안내</button>
+            </form>
+            <form method="post" action="{% url 'happy_seed:consent_regenerate_link' student_id=student.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-bold hover:bg-indigo-200" style="min-height: 44px;">링크재발급</button>
             </form>
             <form hx-post="{% url 'happy_seed:consent_update' student_id=student.id %}" hx-target="#consent-row-{{ student.id }}" hx-swap="outerHTML">
                 {% csrf_token %}

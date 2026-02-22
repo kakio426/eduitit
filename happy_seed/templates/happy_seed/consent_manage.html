@@ -46,13 +46,28 @@
                     </div>
                 </form>
                 <div class="flex gap-2">
-                    <form method="post" action="{% url 'happy_seed:consent_sync_from_sign_talk' classroom_id=classroom.id %}">
+                    <form method="post" action="{% url 'happy_seed:consent_sync_from_sign_talk' classroom_id=classroom.id %}" class="flex flex-wrap items-end gap-2">
                         {% csrf_token %}
+                        {% if has_multiple_consent_requests %}
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">동기화 대상 요청</label>
+                            <select name="consent_request_id" class="px-3 py-2 rounded-xl border border-gray-200 text-sm">
+                                {% for req in sync_request_options %}
+                                <option value="{{ req.request_id }}" {% if req.request_id == active_consent_request_id %}selected{% endif %}>
+                                    {{ req.title }} ({{ req.sent_at|date:"Y-m-d H:i"|default:"미발송" }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
                         <button type="submit" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
                             consent 결과 동기화
                         </button>
                     </form>
                 </div>
+                {% if has_multiple_consent_requests %}
+                <p class="text-xs text-amber-700">학생별로 연결된 consent 요청이 서로 다릅니다. 동기화 대상을 선택해 실행하세요.</p>
+                {% endif %}
             </div>
             {% if consent_request_url %}
             <div class="mt-4 p-3 bg-blue-50 rounded-xl">
