@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {% url 'account_login' as login_url %}
 
 <div class="min-h-screen bg-[#E0E5EC]">
-    <div class="flex flex-col xl:flex-row max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+    <div class="flex flex-col xl:flex-row xl:gap-6 max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
 
         <!-- PC 전용 SNS 사이드바 -->
         <div class="hidden xl:block flex-shrink-0">
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- 메인 콘텐츠 -->
-        <main class="flex-1 pb-8 md:pb-12 px-3 md:px-5 lg:px-7 xl:px-8 pt-0">
+        <main class="flex-1 min-w-0 pb-8 md:pb-12 px-3 md:px-5 lg:px-7 xl:px-8 pt-0">
 
             <!-- Hero 섹션 -->
             <div class="flex flex-col justify-center text-center mb-5 md:mb-12" data-aos="fade-up">

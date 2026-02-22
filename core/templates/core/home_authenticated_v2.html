@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {% block content %}
 <div class="min-h-screen bg-[#E0E5EC] font-[Pretendard]">
-    <div class="flex flex-col xl:flex-row max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+    <div class="flex flex-col xl:flex-row xl:gap-6 max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
 
         <!-- PC 전용 SNS 사이드바 -->
         <div class="hidden xl:block flex-shrink-0">
@@ -67,16 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- 메인 콘텐츠 -->
-        <main class="flex-1 p-4 md:px-6 lg:px-8 xl:px-12 pt-0 md:pt-0">
+        <main class="flex-1 min-w-0 p-4 md:px-6 lg:px-8 xl:px-12 pt-0 md:pt-0">
 
             <!-- 인사말 + 검색 -->
-            <div class="mb-6 flex items-start justify-between gap-4">
-                <div>
+            <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0">
                     <h2 class="text-xl md:text-2xl font-bold text-slate-800">{% if request.user.userprofile and request.user.userprofile.nickname %}{{ request.user.userprofile.nickname }}{% else %}{{ request.user.username }}{% endif %} 선생님, 안녕하세요!</h2>
                     <p class="text-sm text-slate-500 mt-1">오늘도 스마트한 하루를 시작해 보세요.</p>
                 </div>
                 {% if search_products_json %}
-                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm" title="Ctrl+K">
+                <button onclick="if(window.openSearchModal) openSearchModal()" class="ml-auto flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm" title="Ctrl+K">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                     <span class="hidden sm:inline">검색</span>
                     <kbd class="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">⌘K</kbd>

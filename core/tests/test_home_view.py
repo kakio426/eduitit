@@ -72,6 +72,13 @@ class HomeViewTest(TestCase):
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth"', content)
 
+    def test_nav_uses_lg_breakpoint_to_prevent_mid_width_overflow(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('hidden lg:flex', content)
+        self.assertIn('class="lg:hidden w-12 h-12', content)
+        self.assertIn('class="fixed inset-x-0 z-40 lg:hidden', content)
+
 
 @override_settings(HOME_V2_ENABLED=True)
 class HomeV2ViewTest(TestCase):
@@ -207,6 +214,14 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('openSearchModal', content)
 
+    def test_v2_authenticated_search_row_is_wrap_safe(self):
+        self._login('searchlayout')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('mb-6 flex flex-wrap items-start justify-between gap-3', content)
+        self.assertIn('class="min-w-0"', content)
+        self.assertIn('class="ml-auto flex-shrink-0 flex items-center gap-2 bg-white', content)
+
     def test_v2_search_products_json_in_context(self):
         """V2 홈에 search_products_json 컨텍스트 존재"""
         response = self.client.get(reverse('home'))
@@ -332,6 +347,22 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
+
+    def test_v2_anonymous_layout_has_sidebar_gap_and_shrink_safe_main(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('xl:flex-row xl:gap-6', content)
+        self.assertIn('flex-1 min-w-0 pb-8', content)
+        self.assertIn('xl:w-[340px] 2xl:w-[380px]', content)
+        self.assertNotIn('overflow-hidden ml-6', content)
+
+    def test_v2_authenticated_layout_has_sidebar_gap_and_shrink_safe_main(self):
+        self._login('layoutauth')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('xl:flex-row xl:gap-6', content)
+        self.assertIn('flex-1 min-w-0 p-4', content)
+        self.assertIn('xl:w-[340px] 2xl:w-[380px]', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)
