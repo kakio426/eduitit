@@ -113,7 +113,7 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "오늘의 퀴즈 선택")
         self.assertContains(resp, 'id="csv-client-check"')
         self.assertContains(resp, "정확히 3문항 필요")
-        self.assertContains(resp, "제작 가이드(1P)")
+        self.assertContains(resp, "제작 가이드 보기")
 
     def test_download_csv_guide(self):
         url = reverse(
@@ -122,10 +122,10 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp["Content-Type"], "text/markdown; charset=utf-8")
-        body = resp.content.decode("utf-8-sig")
-        self.assertIn("교사용 Seed Quiz CSV 제작 가이드", body)
-        self.assertIn("set_title,preset_type,grade", body)
+        self.assertEqual(resp["Content-Type"], "text/html; charset=utf-8")
+        body = resp.content.decode("utf-8")
+        self.assertIn("CSV 업로드 제작 가이드", body)
+        self.assertIn("권장 헤더(한글)", body)
         self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
 
     def test_download_csv_template(self):
@@ -137,9 +137,21 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
         body = resp.content.decode("utf-8-sig")
-        self.assertIn("set_title,preset_type,grade", body)
-        self.assertIn("orthography", body)
+        self.assertIn("세트코드,주제,학년", body)
+        self.assertIn("맞춤법", body)
         self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
+
+    def test_download_xlsx_template(self):
+        url = reverse(
+            "seed_quiz:download_xlsx_template",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
     def test_download_csv_sample_pack(self):
         url = reverse(
@@ -411,6 +423,26 @@ class TeacherFlowTest(TestCase):
                 payload__teacher_id=self.teacher.id,
             ).exists()
         )
+
+    def test_csv_upload_with_korean_headers_is_supported(self):
+        csv_text = (
+            "세트코드,주제,학년,문제,보기1,보기2,보기3,보기4,정답번호,해설,난이도\n"
+            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,쉬움\n"
+            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,1+1은?,1,2,3,4,1,2입니다,쉬움\n"
+            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,쉬움\n"
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse(
+            "seed_quiz:htmx_csv_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            url,
+            {"csv_file": SimpleUploadedFile("quiz_ko.csv", csv_text.encode("utf-8"), content_type="text/csv")},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "CSV 미리보기 완료")
 
     @override_settings(SEED_QUIZ_CSV_MAX_ROWS=2)
     def test_csv_upload_rejects_when_row_limit_exceeded(self):

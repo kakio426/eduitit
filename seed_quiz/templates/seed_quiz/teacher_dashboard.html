@@ -84,11 +84,15 @@
             <div class="flex items-center gap-2">
                 <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors">
-                    제작 가이드(1P)
+                    제작 가이드 보기
+                </a>
+                <a href="{% url 'seed_quiz:download_xlsx_template' classroom_id=classroom.id %}"
+                   class="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors">
+                    XLSX 템플릿
                 </a>
                 <a href="{% url 'seed_quiz:download_csv_template' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
-                    템플릿 다운로드
+                    CSV 템플릿
                 </a>
                 <a href="{% url 'seed_quiz:download_csv_sample_pack' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
@@ -122,10 +126,10 @@
             </button>
         </form>
         <p class="mt-2 text-xs text-gray-500">
-            헤더: set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty (preset_type에는 주제 키 사용)
+            권장 헤더(한글): {{ csv_headers_ko_text }} / 호환 헤더(영문): {{ csv_headers_en_text }}
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            set_title 표준: <code>SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}</code> 예: <code>SQ-orthography-basic-L1-G3-S001-V1</code>
+            세트코드 표준: <code>SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}</code> 예: <code>SQ-orthography-basic-L1-G3-S001-V1</code>
         </p>
         <p class="mt-1 text-xs text-gray-400">
             업로드 제한: 파일 {{ csv_limits_human.max_file }} 이하 / 데이터 {{ csv_limits_human.max_rows }}행 이하 / {{ csv_limits_human.max_sets }}세트 이하
@@ -228,19 +232,62 @@
         return;
     }
 
+    const headerAliases = {
+        set_title: ['set_title', '세트코드', '세트명', '세트코드(set_title)'],
+        preset_type: ['preset_type', '주제'],
+        grade: ['grade', '학년'],
+        question_text: ['question_text', '문제', '문항'],
+        choice_1: ['choice_1', '보기1', '보기 1'],
+        choice_2: ['choice_2', '보기2', '보기 2'],
+        choice_3: ['choice_3', '보기3', '보기 3'],
+        choice_4: ['choice_4', '보기4', '보기 4'],
+        correct_index: ['correct_index', '정답번호', '정답인덱스', '정답'],
+        explanation: ['explanation', '해설'],
+        difficulty: ['difficulty', '난이도']
+    };
+    const headerLabels = {
+        set_title: '세트코드',
+        preset_type: '주제',
+        grade: '학년',
+        question_text: '문제',
+        choice_1: '보기1',
+        choice_2: '보기2',
+        choice_3: '보기3',
+        choice_4: '보기4',
+        correct_index: '정답번호',
+        explanation: '해설',
+        difficulty: '난이도'
+    };
     const requiredHeaders = [
         'set_title', 'preset_type', 'grade', 'question_text',
         'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
     ];
+    const aliasToCanonical = new Map();
+    Object.keys(headerAliases).forEach((canonical) => {
+        headerAliases[canonical].forEach((alias) => {
+            aliasToCanonical.set(String(alias || '').trim().toLowerCase(), canonical);
+        });
+    });
     const maxFileBytes = parseInt(form.dataset.maxFileBytes || '0', 10) || 0;
     const maxRows = parseInt(form.dataset.maxRows || '0', 10) || 0;
     const maxSets = parseInt(form.dataset.maxSets || '0', 10) || 0;
     const setTitleRegex = /^SQ-([a-z_]+)-basic-L1-G([1-6])-S(\d{3})-V(\d+)$/;
     const allowedPresetTypes = new Set(
         Array.from(document.querySelectorAll('#bank-filter-form select[name="preset_type"] option'))
-            .map((opt) => (opt.value || '').trim())
+            .flatMap((opt) => [
+                (opt.value || '').trim().toLowerCase(),
+                (opt.textContent || '').trim().toLowerCase()
+            ])
             .filter(Boolean)
     );
+
+    function normalizeHeaderName(raw) {
+        const normalized = String(raw || '').trim().toLowerCase();
+        if (!normalized) {
+            return '';
+        }
+        return aliasToCanonical.get(normalized) || normalized;
+    }
 
     function humanizeBytes(num) {
         let value = Number(num) || 0;
@@ -350,23 +397,27 @@
             return ['CSV 내용이 비어 있습니다.'];
         }
 
-        const headers = rows[0].map((h) => (h || '').trim());
+        const headers = rows[0].map((h) => normalizeHeaderName(h));
         const headerIndex = {};
-        headers.forEach((h, idx) => { headerIndex[h] = idx; });
+        headers.forEach((h, idx) => {
+            if (!h) {
+                return;
+            }
+            if (!(h in headerIndex)) {
+                headerIndex[h] = idx;
+            }
+        });
 
         requiredHeaders.forEach((col) => {
             if (!(col in headerIndex)) {
-                addError('필수 헤더 누락: ' + col);
+                addError('필수 헤더 누락: ' + (headerLabels[col] || col));
             }
         });
         if (errors.length) {
             return errors;
         }
 
-        const rowRequired = [
-            'set_title', 'preset_type', 'grade', 'question_text',
-            'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
-        ];
+        const rowRequired = requiredHeaders;
 
         for (let i = 1; i < rows.length; i += 1) {
             const raw = rows[i];
@@ -403,7 +454,7 @@
 
             rowRequired.forEach((col) => {
                 if (!get(col)) {
-                    addError(lineNo + '행: ' + col + ' 값이 비어 있습니다.');
+                    addError(lineNo + '행: ' + (headerLabels[col] || col) + ' 값이 비어 있습니다.');
                 }
             });
 
@@ -415,7 +466,7 @@
 
             const ci = get('correct_index');
             if (ci && !/^[0-3]$/.test(ci)) {
-                addError(lineNo + '행: correct_index는 0~3이어야 합니다.');
+                addError(lineNo + '행: 정답번호는 0~3이어야 합니다.');
             }
 
             let parsedTitleTopic = '';
@@ -423,15 +474,15 @@
             const setTitleMatch = setTitle.match(setTitleRegex);
             if (!setTitleMatch) {
                 addError(
-                    lineNo + '행: set_title 형식 오류 (예: SQ-orthography-basic-L1-G3-S001-V1)'
+                    lineNo + '행: 세트코드 형식 오류 (예: SQ-orthography-basic-L1-G3-S001-V1)'
                 );
             } else {
                 parsedTitleTopic = setTitleMatch[1];
                 parsedTitleGrade = setTitleMatch[2];
             }
 
-            if (presetRaw && !allowedPresetTypes.has(presetRaw)) {
-                addError(lineNo + '행: preset_type이 허용 주제가 아닙니다 (' + presetRaw + ')');
+            if (presetRaw && !allowedPresetTypes.has(String(presetRaw).toLowerCase())) {
+                addError(lineNo + '행: 주제가 허용 목록에 없습니다 (' + presetRaw + ')');
             }
             if (gradeRaw && !/^[1-6]$/.test(gradeRaw)) {
                 addError(lineNo + '행: grade는 1~6이어야 합니다.');
@@ -439,12 +490,12 @@
 
             if (setTitleMatch && presetRaw && parsedTitleTopic !== presetRaw) {
                 addError(
-                    lineNo + '행: set_title topic(' + parsedTitleTopic + ')과 preset_type(' + presetRaw + ')이 다릅니다.'
+                    lineNo + '행: 세트코드 주제(' + parsedTitleTopic + ')와 주제(' + presetRaw + ')가 다릅니다.'
                 );
             }
             if (setTitleMatch && gradeRaw && parsedTitleGrade !== gradeRaw) {
                 addError(
-                    lineNo + '행: set_title grade(' + parsedTitleGrade + ')와 grade(' + gradeRaw + ')가 다릅니다.'
+                    lineNo + '행: 세트코드 학년(' + parsedTitleGrade + ')과 학년(' + gradeRaw + ')이 다릅니다.'
                 );
             }
         }

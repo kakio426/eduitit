@@ -6,6 +6,7 @@ from io import BytesIO, StringIO
 from zipfile import ZIP_DEFLATED, ZipFile
 from uuid import uuid4
 
+import openpyxl
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -15,6 +16,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 from happy_seed.models import HSClassroom, HSStudent
 from seed_quiz.models import SQAttempt, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
@@ -43,67 +46,49 @@ CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
 CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
 CSV_ERROR_REPORT_ROWS_KEY = "sq_csv_error_report_rows"
 
-CSV_TEACHER_GUIDE_MD = """# 교사용 Seed Quiz CSV 제작 가이드 (1페이지)
+CSV_CANONICAL_HEADERS = [
+    "set_title",
+    "preset_type",
+    "grade",
+    "question_text",
+    "choice_1",
+    "choice_2",
+    "choice_3",
+    "choice_4",
+    "correct_index",
+    "explanation",
+    "difficulty",
+]
 
-## 1) 업로드 파일 기본 형식
+CSV_KOREAN_HEADERS = [
+    "세트코드",
+    "주제",
+    "학년",
+    "문제",
+    "보기1",
+    "보기2",
+    "보기3",
+    "보기4",
+    "정답번호",
+    "해설",
+    "난이도",
+]
 
-헤더(고정):
-`set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty`
+CSV_GUIDE_COLUMNS = [
+    {"ko": "세트코드", "en": "set_title", "required": "필수", "desc": "세트 고유 코드 (예: SQ-orthography-basic-L1-G3-S001-V1)"},
+    {"ko": "주제", "en": "preset_type", "required": "필수", "desc": "주제 키 또는 한글 주제명 (예: orthography 또는 맞춤법)"},
+    {"ko": "학년", "en": "grade", "required": "필수", "desc": "1~6 숫자"},
+    {"ko": "문제", "en": "question_text", "required": "필수", "desc": "문항 본문"},
+    {"ko": "보기1", "en": "choice_1", "required": "필수", "desc": "선택지 1"},
+    {"ko": "보기2", "en": "choice_2", "required": "필수", "desc": "선택지 2"},
+    {"ko": "보기3", "en": "choice_3", "required": "필수", "desc": "선택지 3"},
+    {"ko": "보기4", "en": "choice_4", "required": "필수", "desc": "선택지 4"},
+    {"ko": "정답번호", "en": "correct_index", "required": "필수", "desc": "0~3 (보기1=0, 보기2=1, 보기3=2, 보기4=3)"},
+    {"ko": "해설", "en": "explanation", "required": "선택", "desc": "정답 설명"},
+    {"ko": "난이도", "en": "difficulty", "required": "선택", "desc": "쉬움/보통/어려움 또는 easy/medium/hard"},
+]
 
-- 파일 형식: `.csv`
-- 인코딩: `UTF-8` 권장 (엑셀 저장 시 CSV UTF-8 선택)
-- 한 세트 문항 수: 정확히 3문항
-
-## 2) set_title 표준 (반드시 준수)
-
-`SQ-{topic}-basic-L1-G{grade}-S{seq}-V{ver}`
-
-예시:
-`SQ-orthography-basic-L1-G3-S001-V1`
-
-- `{topic}`: `preset_type`와 동일해야 함
-- `{grade}`: `grade`와 동일해야 함
-- `{seq}`: 3자리 숫자 (예: 001, 102)
-- `{ver}`: 버전 숫자 (예: 1, 2)
-
-## 3) 필수 검수 체크리스트
-
-1. `preset_type`이 허용 주제 키인지 확인
-2. `grade`가 1~6인지 확인
-3. 각 문항의 선택지 4개가 모두 채워졌는지 확인
-4. 선택지 중복이 없는지 확인
-5. `correct_index`가 0~3인지 확인
-6. 정답과 해설이 서로 일치하는지 확인
-7. 세트별 문항 수가 정확히 3개인지 확인
-
-## 4) 자주 발생하는 오류
-
-- `set_title 형식 오류`
-  - 원인: 규격이 다르거나 `S001`/`V1` 형식 누락
-- `set_title topic/grade 불일치`
-  - 원인: `preset_type`, `grade` 값과 `set_title` 내 값이 다름
-- `선택지 중복`
-  - 원인: 같은 보기 텍스트를 두 칸 이상에 입력
-- `correct_index 오류`
-  - 원인: 0~3이 아닌 값 입력
-
-## 5) 제작 권장 절차 (실수 최소화)
-
-1. 대시보드에서 템플릿 다운로드
-2. 한 세트(3문항)만 먼저 작성
-3. 업로드하여 미리보기/오류 리포트 확인
-4. 이상 없으면 동일 규칙으로 대량 작성
-5. 최종 업로드 후 미리보기 검수 후 확정
-
-## 6) 빠른 예시 (3문항 1세트)
-
-```csv
-set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty
-SQ-orthography-basic-L1-G3-S001-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울이 수도입니다,easy
-SQ-orthography-basic-L1-G3-S001-V1,orthography,3,1+1은?,1,2,3,4,1,1+1=2 입니다,easy
-SQ-orthography-basic-L1-G3-S001-V1,orthography,3,바다 색은?,파랑,빨강,노랑,검정,0,일반적으로 파랑으로 보입니다,easy
-```
-"""
+CSV_XLSX_COLUMN_WIDTHS = [36, 16, 8, 42, 22, 22, 22, 22, 12, 36, 12]
 
 
 def _get_positive_int_setting(name: str, default: int) -> int:
@@ -269,6 +254,26 @@ def teacher_dashboard(request, classroom_id):
                 "max_rows": csv_limits["max_rows"],
                 "max_sets": csv_limits["max_sets"],
             },
+            "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
+            "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
+            "csv_guide_columns": CSV_GUIDE_COLUMNS,
+        },
+    )
+
+
+@login_required
+def download_csv_guide(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    if not classroom:
+        return HttpResponseForbidden("권한이 없습니다.")
+    return render(
+        request,
+        "seed_quiz/csv_guide.html",
+        {
+            "classroom": classroom,
+            "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
+            "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
+            "csv_guide_columns": CSV_GUIDE_COLUMNS,
         },
     )
 
@@ -281,21 +286,7 @@ def download_csv_template(request, classroom_id):
 
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(
-        [
-            "set_title",
-            "preset_type",
-            "grade",
-            "question_text",
-            "choice_1",
-            "choice_2",
-            "choice_3",
-            "choice_4",
-            "correct_index",
-            "explanation",
-            "difficulty",
-        ]
-    )
+    writer.writerow(CSV_KOREAN_HEADERS)
     for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
         set_title = f"SQ-{topic_key}-basic-L1-G3-S001-V1"
         for q_no in range(1, 4):
@@ -311,7 +302,7 @@ def download_csv_template(request, classroom_id):
                     f"{topic_label} 보기 D{q_no}",
                     (q_no - 1) % 4,
                     f"{topic_label} 예시 해설 {q_no}",
-                    "easy",
+                    "쉬움",
                 ]
             )
 
@@ -323,15 +314,58 @@ def download_csv_template(request, classroom_id):
 
 
 @login_required
-def download_csv_guide(request, classroom_id):
+def download_xlsx_template(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     if not classroom:
         return HttpResponseForbidden("권한이 없습니다.")
 
-    response = HttpResponse(content_type="text/markdown; charset=utf-8")
-    response["Content-Disposition"] = 'attachment; filename="seed_quiz_csv_teacher_guide.md"'
-    response.write("\ufeff")
-    response.write(CSV_TEACHER_GUIDE_MD)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "씨앗퀴즈 템플릿"
+    ws.append(CSV_KOREAN_HEADERS)
+
+    header_fill = PatternFill(fill_type="solid", start_color="E8F0FE", end_color="E8F0FE")
+    for col_idx, header in enumerate(CSV_KOREAN_HEADERS, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = Font(bold=True, color="1F2937")
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.column_dimensions[get_column_letter(col_idx)].width = CSV_XLSX_COLUMN_WIDTHS[col_idx - 1]
+
+    row_no = 2
+    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
+        set_title = f"SQ-{topic_key}-basic-L1-G3-S001-V1"
+        for q_no in range(1, 4):
+            ws.append(
+                [
+                    set_title,
+                    topic_label,
+                    3,
+                    f"[{topic_label}] 예시 문제 {q_no}",
+                    f"{topic_label} 보기 A{q_no}",
+                    f"{topic_label} 보기 B{q_no}",
+                    f"{topic_label} 보기 C{q_no}",
+                    f"{topic_label} 보기 D{q_no}",
+                    (q_no - 1) % 4,
+                    f"{topic_label} 예시 해설 {q_no}",
+                    "쉬움",
+                ]
+            )
+            for col_idx in range(1, len(CSV_KOREAN_HEADERS) + 1):
+                ws.cell(row=row_no, column=col_idx).alignment = Alignment(vertical="top", wrap_text=True)
+            row_no += 1
+
+    ws.freeze_panes = "A2"
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.xlsx"'
     return response
 
 
@@ -341,27 +375,16 @@ def download_csv_sample_pack(request, classroom_id):
     if not classroom:
         return HttpResponseForbidden("권한이 없습니다.")
 
-    headers = [
-        "set_title",
-        "preset_type",
-        "grade",
-        "question_text",
-        "choice_1",
-        "choice_2",
-        "choice_3",
-        "choice_4",
-        "correct_index",
-        "explanation",
-        "difficulty",
-    ]
+    headers = CSV_KOREAN_HEADERS
 
     buffer = BytesIO()
     with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zf:
         readme_lines = [
-            "Seed Quiz CSV Sample Pack",
+            "Seed Quiz CSV 샘플 팩",
             "",
             "- 모든 파일은 현재 업로드 검증 규칙을 통과하도록 구성되어 있습니다.",
             "- 각 CSV는 1세트(3문항)이며, set_title 규칙을 따릅니다.",
+            "- 한글 헤더/영문 헤더 모두 업로드 가능합니다.",
             "- 필요 시 문항/보기/해설을 수정해 업로드하세요.",
         ]
         zf.writestr("README.txt", "\n".join(readme_lines))
@@ -384,7 +407,7 @@ def download_csv_sample_pack(request, classroom_id):
                     f"{topic_label} 오답 1-3",
                     0,
                     f"{topic_label} 예시 해설 1",
-                    "easy",
+                    "쉬움",
                 ]
             )
             writer.writerow(
@@ -399,7 +422,7 @@ def download_csv_sample_pack(request, classroom_id):
                     f"{topic_label} 오답 2-3",
                     1,
                     f"{topic_label} 예시 해설 2",
-                    "easy",
+                    "쉬움",
                 ]
             )
             writer.writerow(
@@ -414,7 +437,7 @@ def download_csv_sample_pack(request, classroom_id):
                     f"{topic_label} 오답 3-3",
                     2,
                     f"{topic_label} 예시 해설 3",
-                    "easy",
+                    "쉬움",
                 ]
             )
 

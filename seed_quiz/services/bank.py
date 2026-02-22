@@ -26,6 +26,47 @@ SET_TITLE_RE = re.compile(
     r"^SQ-(?P<topic>[a-z_]+)-basic-L1-G(?P<grade>[1-6])-S(?P<seq>\d{3})-V(?P<version>\d+)$"
 )
 
+CSV_HEADER_ALIASES = {
+    "set_title": ["set_title", "세트코드", "세트명", "세트코드(set_title)"],
+    "preset_type": ["preset_type", "주제"],
+    "grade": ["grade", "학년"],
+    "question_text": ["question_text", "문제", "문항"],
+    "choice_1": ["choice_1", "보기1", "보기 1"],
+    "choice_2": ["choice_2", "보기2", "보기 2"],
+    "choice_3": ["choice_3", "보기3", "보기 3"],
+    "choice_4": ["choice_4", "보기4", "보기 4"],
+    "correct_index": ["correct_index", "정답번호", "정답인덱스", "정답"],
+    "explanation": ["explanation", "해설"],
+    "difficulty": ["difficulty", "난이도"],
+}
+CSV_HEADER_ALIAS_MAP = {
+    alias.strip().lower(): canonical
+    for canonical, aliases in CSV_HEADER_ALIASES.items()
+    for alias in aliases
+}
+DIFFICULTY_ALIASES = {
+    "easy": "easy",
+    "쉬움": "easy",
+    "medium": "medium",
+    "보통": "medium",
+    "중간": "medium",
+    "hard": "hard",
+    "어려움": "hard",
+}
+CSV_HEADER_DISPLAY = {
+    "set_title": "세트코드(set_title)",
+    "preset_type": "주제(preset_type)",
+    "grade": "학년(grade)",
+    "question_text": "문제(question_text)",
+    "choice_1": "보기1(choice_1)",
+    "choice_2": "보기2(choice_2)",
+    "choice_3": "보기3(choice_3)",
+    "choice_4": "보기4(choice_4)",
+    "correct_index": "정답번호(correct_index)",
+    "explanation": "해설(explanation)",
+    "difficulty": "난이도(difficulty)",
+}
+
 
 def _normalize_source_text(source_text: str) -> str:
     # 연속 공백을 하나로 압축해 의미가 같은 입력은 같은 해시로 취급한다.
@@ -113,6 +154,24 @@ def _decode_csv_text(csv_file_or_bytes) -> str:
     return raw
 
 
+def _canonical_header(name: str) -> str:
+    key = str(name or "").strip().lower()
+    if not key:
+        return ""
+    return CSV_HEADER_ALIAS_MAP.get(key, key)
+
+
+def _canonicalize_row(raw_row: dict) -> dict:
+    normalized: dict = {}
+    for raw_key, value in (raw_row or {}).items():
+        canonical = _canonical_header(raw_key)
+        if not canonical:
+            continue
+        if canonical not in normalized or not str(normalized[canonical] or "").strip():
+            normalized[canonical] = value
+    return normalized
+
+
 def parse_csv_upload(
     csv_file_or_bytes,
     max_rows: int | None = None,
@@ -145,13 +204,16 @@ def parse_csv_upload(
     if not reader.fieldnames:
         return [], ["CSV 헤더가 없습니다."]
 
-    missing_cols = required_cols - set(reader.fieldnames)
+    canonical_fieldnames = {_canonical_header(name) for name in reader.fieldnames}
+    missing_cols = required_cols - canonical_fieldnames
     if missing_cols:
-        return [], [f"필수 컬럼 누락: {', '.join(sorted(missing_cols))}"]
+        missing_labels = [CSV_HEADER_DISPLAY.get(col, col) for col in sorted(missing_cols)]
+        return [], [f"필수 컬럼 누락: {', '.join(missing_labels)}"]
 
     grouped: dict[str, list[tuple[int, dict]]] = {}
     data_row_count = 0
-    for row_no, row in enumerate(reader, start=2):
+    for row_no, raw_row in enumerate(reader, start=2):
+        row = _canonicalize_row(raw_row)
         if not any(str(v or "").strip() for v in row.values()):
             continue
         data_row_count += 1
@@ -263,7 +325,12 @@ def parse_csv_upload(
                 row_error = True
                 break
 
-            difficulty = (row.get("difficulty") or "medium").strip() or "medium"
+            difficulty_raw = (row.get("difficulty") or "medium").strip() or "medium"
+            difficulty = (
+                DIFFICULTY_ALIASES.get(difficulty_raw.lower())
+                or DIFFICULTY_ALIASES.get(difficulty_raw)
+                or "medium"
+            )
             if difficulty not in VALID_DIFFICULTIES:
                 difficulty = "medium"
 
