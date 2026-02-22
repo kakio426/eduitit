@@ -1,0 +1,1 @@
+[{"title": "토닥토닥 선생님 운세", "is_active": true, "solve": "오늘의 운세를 가볍게 확인해요"}, {"title": "선생님 사주", "is_active": true, "solve": "교사 맞춤 사주를 확인해요"}]

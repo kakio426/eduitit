@@ -1,0 +1,17 @@
+[DATABASE] Using SQLite (development)
+================================================================================
+[CLOUDINARY] Environment variable check
+================================================================================
+CLOUDINARY_URL: [X] NOT SET
+CLOUDINARY_CLOUD_NAME: dl5pq1o6o
+CLOUDINARY_API_KEY: [X] NOT SET
+CLOUDINARY_API_SECRET: SET
+[CLOUDINARY] Using individual environment variables
+[CLOUDINARY] USE_CLOUDINARY = False
+[INFO] Cloudinary disabled - using local file system
+================================================================================
+[SENTRY] DSN=NOT SET, DEBUG=True
+[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)
+113 objects imported automatically (use -v 2 for details).
+
+[{"title": "선생님 사주", "is_active": true, "solve": "교사 맞춤 사주를 확인해요"}]

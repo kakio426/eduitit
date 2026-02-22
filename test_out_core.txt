@@ -1,0 +1,245 @@
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+
+[DATABASE] Using SQLite (development)
+================================================================================
+[CLOUDINARY] Environment variable check
+================================================================================
+CLOUDINARY_URL: [X] NOT SET
+CLOUDINARY_CLOUD_NAME: dl5pq1o6o
+CLOUDINARY_API_KEY: [X] NOT SET
+CLOUDINARY_API_SECRET: SET
+[CLOUDINARY] Using individual environment variables
+[CLOUDINARY] USE_CLOUDINARY = False
+[INFO] Cloudinary disabled - using local file system
+================================================================================
+[SENTRY] DSN=NOT SET, DEBUG=True
+[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)
+Found 1 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: allauth, cloudinary, cloudinary_storage, django_htmx, fairy_games, humanize, hwpxchat, kakao, messages, naver, ppobgi, staticfiles
+  Apply all migrations: account, admin, artclass, auth, autoarticle, classcalendar, collect, consent, contenttypes, core, encyclopedia, fortune, happy_seed, insights, janggi, noticegen, portfolio, products, reservations, seed_quiz, sessions, signatures, sites, socialaccount, ssambti, studentmbti, timetable, version_manager
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying account.0001_initial... OK
+  Applying account.0002_email_max_length... OK
+  Applying account.0003_alter_emailaddress_create_unique_verified_email... OK
+  Applying account.0004_alter_emailaddress_drop_unique_email... OK
+  Applying account.0005_emailaddress_idx_upper_email... OK
+  Applying account.0006_emailaddress_lower... OK
+  Applying account.0007_emailaddress_idx_email... OK
+  Applying account.0008_emailaddress_unique_primary_email_fixup... OK
+  Applying account.0009_emailaddress_unique_primary_email... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying artclass.0001_initial... OK
+  Applying artclass.0002_artclass_is_shared_artclass_view_count... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying autoarticle.0001_initial... OK
+  Applying autoarticle.0002_generatedarticle_event_date_and_more... OK
+  Applying autoarticle.0003_generatedarticle_class_name... OK
+  Applying autoarticle.0004_alter_generatedarticle_school_name... OK
+  Applying happy_seed.0001_initial... OK
+  Applying happy_seed.0002_hsprize_win_rate_percent... OK
+  Applying happy_seed.0003_hsclasseventlog... OK
+  Applying happy_seed.0004_alter_hsclasseventlog_type... OK
+  Applying classcalendar.0001_initial... OK
+  Applying classcalendar.0002_eventexternalmap_googleaccount_googlesyncstate... OK
+  Applying collect.0001_initial... OK
+  Applying collect.0002_alter_collectionrequest_max_file_size_mb... OK
+  Applying collect.0003_collectionrequest_expected_submitters... OK
+  Applying collect.0004_alter_collectionrequest_template_file_and_more... OK
+  Applying collect.0005_submission_management_id... OK
+  Applying collect.0006_alter_submission_management_id... OK
+  Applying collect.0007_collectionrequest_closed_at_and_more... OK
+  Applying signatures.0001_initial... OK
+  Applying signatures.0002_signature_participant_affiliation... OK
+  Applying signatures.0003_signaturestyle... OK
+  Applying signatures.0004_savedsignature... OK
+  Applying signatures.0005_trainingsession_expected_count... OK
+  Applying signatures.0006_expectedparticipant... OK
+  Applying signatures.0007_signaturedocument_signaturerequest_and_more... OK
+  Applying signatures.0008_signatureposition_h_ratio_signatureposition_w_ratio_and_more... OK
+  Applying signatures.0009_trainingsession_print_title... OK
+  Applying consent.0001_initial... OK
+  Applying consent.0002_signaturerequest_link_expire_days... OK
+  Applying consent.0003_alter_consent_filefields_storage... OK
+  Applying consent.0004_alter_signaturedocument_original_file_storage... OK
+  Applying consent.0005_signaturerequest_document_evidence_fields... OK
+  Applying products.0001_initial... OK
+  Applying products.0002_product_image... OK
+  Applying products.0003_userownedproduct... OK
+  Applying products.0004_add_yut_product... OK
+  Applying products.0005_product_is_featured... OK
+  Applying products.0006_product_card_size_product_color_theme_and_more... OK
+  Applying products.0007_alter_product_card_size_alter_product_color_theme_and_more... OK
+  Applying products.0008_productfeature... OK
+  Applying products.0009_update_prompt_recipe_size... OK
+  Applying products.0010_add_saju_product... OK
+  Applying products.0011_add_dutyticker_product... OK
+  Applying products.0012_add_signatures_product... OK
+  Applying products.0013_product_lead_text... OK
+  Applying products.0014_dtrole_dtschedule_dtsettings_dtstudent_and_more... OK
+  Applying products.0015_dtsettings_last_broadcast_message_and_more... OK
+  Applying products.0016_dtsettings_mission_desc_dtsettings_mission_title... OK
+  Applying products.0017_product_is_guest_allowed... OK
+  Applying products.0018_add_ssambti_product...[OK] Ssambti product created successfully!
+ OK
+  Applying products.0019_recreate_ssambti_product...[OK] Ssambti product recreated successfully with correct settings!
+ OK
+  Applying products.0020_add_hwp_converter_product...[OK] HWP to PDF converter product created.
+ OK
+  Applying products.0021_alter_product_service_type... OK
+  Applying products.0022_alter_product_service_type... OK
+  Applying products.0023_alter_product_service_type... OK
+  Applying products.0024_update_product_service_types_data... OK
+  Applying products.0025_fix_service_types_by_title... OK
+  Applying products.0026_fix_notebooklm_service_type... OK
+  Applying products.0027_servicemanual_manualsection... OK
+  Applying products.0028_create_service_manual_data...Product '학교 예약 시스템' does not exist. Skipping manual creation.
+Product '선생님 사주' does not exist. Skipping manual creation.
+ OK
+  Applying products.0029_rich_service_manuals...[OK] Processed manual for 쌤BTI
+[SKIP] Product not found for title: 우리반 캐릭터 친구 찾기
+[SKIP] Product not found for title: 교사 백과사전
+[SKIP] Product not found for title: 간편 수합
+[SKIP] Product not found for title: 반짝반짝 우리반 알림판
+[SKIP] Product not found for title: 가뿐하게 서명 톡
+[SKIP] Product not found for title: 학교폭력 사안 처리 비서
+[SKIP] Product not found for title: 두뇌 풀가동! 교실 체스
+ OK
+  Applying products.0030_backfill_missing_service_manuals... OK
+  Applying products.0031_update_hwp_converter_external_url... OK
+  Applying products.0032_add_v2_home_fields...[backfill] '간편 수합' not found or already filled
+[backfill] '서명 수집' not found or already filled
+[backfill] '학교 예약 시스템' not found or already filled
+[backfill] '학생 MBTI' not found or already filled
+[backfill] '미술 수업 도우미' not found or already filled
+[backfill] '사주팔자' not found or already filled
+[backfill] '학교폭력 상담 AI' not found or already filled
+[backfill] 'AI 기사 생성' not found or already filled
+[backfill] '문서 버전 관리' not found or already filled
+[backfill] '패들릿 봇' not found or already filled
+[backfill] '교사 백과사전' not found or already filled
+[backfill] '체스' not found or already filled
+[backfill] '장기' not found or already filled
+[backfill] '윷놀이' not found or already filled
+[backfill] '학급 당번 관리' not found or already filled
+ OK
+  Applying core.0001_initial... OK
+  Applying core.0002_userprofile_role... OK
+  Applying core.0003_userprofile_nickname... OK
+  Applying core.0004_userprofile_padlet_api_key... OK
+  Applying core.0005_post... OK
+  Applying core.0006_comment... OK
+  Applying core.0007_visitorlog... OK
+  Applying core.0008_alter_visitorlog_visit_date... OK
+  Applying core.0009_alter_visitorlog_visit_date... OK
+  Applying core.0010_comment_updated_at_post_updated_at... OK
+  Applying core.0011_feedback_siteconfig... OK
+  Applying core.0012_visitorlog_is_bot_visitorlog_user_agent... OK
+  Applying core.0013_siteconfig_notebook_manual_url... OK
+  Applying core.0014_remove_siteconfig_notebook_manual_url... OK
+  Applying core.0015_siteconfig_featured_manuals... OK
+  Applying core.0016_add_product_usage_log... OK
+  Applying encyclopedia.0001_initial... OK
+  Applying fortune.0001_initial... OK
+  Applying fortune.0002_interpretationrule... OK
+  Applying fortune.0003_fortuneresult... OK
+  Applying fortune.0004_zooresult... OK
+  Applying fortune.0005_usersajuprofile_dailyfortunelog_favoritedate... OK
+  Applying fortune.0006_fortuneresult_natal_hash_fortuneresult_topic_and_more... OK
+  Applying fortune.0007_alter_fortuneresult_topic... OK
+  Applying fortune.0008_clear_old_fortune_data... OK
+  Applying fortune.0009_remove_fortuneresult_natal_hash_and_more... OK
+  Applying fortune.0010_chatsession_chatmessage... OK
+  Applying insights.0001_initial... OK
+  Applying insights.0002_insight_category_alter_insight_video_url... OK
+  Applying insights.0003_insight_likes... OK
+  Applying janggi.0001_initial... OK
+  Applying noticegen.0001_initial... OK
+  Applying portfolio.0001_initial... OK
+  Applying portfolio.0002_alter_inquiry_options_alter_inquiry_message_and_more... OK
+  Applying products.0033_rename_latest_center_title... OK
+  Applying products.0034_add_parent_consent_product... OK
+  Applying products.0035_update_collect_solve_text... OK
+  Applying products.0036_remove_padlet_and_school_violence_services... OK
+  Applying products.0037_product_launch_route_name... OK
+  Applying products.0038_backfill_launch_route_names... OK
+  Applying products.0039_backfill_happy_seed_launch_route... OK
+  Applying products.0040_update_consent_feature_title... OK
+  Applying products.0041_rename_studentmbti_product_title... OK
+  Applying products.0042_add_hwpxchat_service... OK
+  Applying products.0043_rename_hwpxchat_service_title... OK
+  Applying products.0044_move_ppobgi_to_classroom... OK
+  Applying products.0045_deactivate_legacy_insight_product... OK
+  Applying products.0046_alter_product_solve_text... OK
+  Applying reservations.0001_initial... OK
+  Applying reservations.0002_alter_schoolconfig_school... OK
+  Applying reservations.0003_schoolconfig_period_labels... OK
+  Applying reservations.0004_schoolconfig_weekly_opening_hour_and_more... OK
+  Applying reservations.0005_schoolconfig_period_times... OK
+  Applying seed_quiz.0001_initial... OK
+  Applying seed_quiz.0002_alter_sqquizset_source_sqquizbank_and_more... OK
+  Applying seed_quiz.0003_sqbatchjob_sqragdailyusage_sqquizbank_available_from_and_more... OK
+  Applying seed_quiz.0004_sqquizbank_source_hash_and_more... OK
+  Applying seed_quiz.0005_alter_sqquizbank_preset_type_and_more... OK
+  Applying seed_quiz.0006_migrate_legacy_preset_types... OK
+  Applying seed_quiz.0007_grade_choices... OK
+  Applying sessions.0001_initial... OK
+  Applying signatures.0010_detach_consent_models... OK
+  Applying sites.0001_initial... OK
+  Applying sites.0002_alter_domain_unique... OK
+  Applying socialaccount.0001_initial... OK
+  Applying socialaccount.0002_token_max_lengths... OK
+  Applying socialaccount.0003_extra_data_default_dict... OK
+  Applying socialaccount.0004_app_provider_id_settings... OK
+  Applying socialaccount.0005_socialtoken_nullable_app... OK
+  Applying socialaccount.0006_alter_socialaccount_extra_data... OK
+  Applying ssambti.0001_initial... OK
+  Applying ssambti.0002_alter_ssambtiresult_user... OK
+  Applying studentmbti.0001_initial... OK
+  Applying studentmbti.0002_testsession_access_code... OK
+  Applying studentmbti.0003_alter_studentmbtiresult_animal_name_and_more... OK
+  Applying studentmbti.0004_alter_testsession_access_code... OK
+  Applying studentmbti.0005_testsession_test_type... OK
+  Applying studentmbti.0006_add_mac_hash_to_result... OK
+  Applying studentmbti.0007_add_classroom_to_testsession... OK
+  Applying timetable.0001_initial... OK
+  Applying version_manager.0001_initial... OK
+  Applying version_manager.0002_documentversion_diff_error_and_more... OK
+test_classcalendar_in_today_context (core.tests.test_today_context.TodayContextIntegrationTest.test_classcalendar_in_today_context) ... [INFO] 2026-02-22 23:46:54,807 [87830cf91fc6] core.middleware - [REQUEST] rid=87830cf91fc6 method=GET path=/ status=302 latency_ms=5
+FAIL
+
+======================================================================
+FAIL: test_classcalendar_in_today_context (core.tests.test_today_context.TodayContextIntegrationTest.test_classcalendar_in_today_context)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\kakio\eduitit\core\tests\test_today_context.py", line 29, in test_classcalendar_in_today_context
+    self.assertEqual(response.status_code, 200)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 302 != 200
+
+----------------------------------------------------------------------
+Ran 1 test in 1.907s
+
+FAILED (failures=1)
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+
+  Applying version_manager.0003_alter_documentversion_upload... OK
+System check identified no issues (0 silenced).

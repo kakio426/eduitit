@@ -1,0 +1,201 @@
+Creating test database for alias 'default'...
+
+[INFO] 2026-02-22 23:35:30,115 [8bfa85d766aa] core.middleware - [VISITOR] Path: /classcalendar/s/test-class-123/ | IP: 127.0.0.1 | Already recorded: False
+[INFO] 2026-02-22 23:35:30,117 [8bfa85d766aa] core.middleware - [VISITOR] DB operation - Created: True | IP: 127.0.0.1 | Bot: False | Date: 2026-02-22
+[ERROR] 2026-02-22 23:35:30,147 [8bfa85d766aa] django.request - Internal Server Error: /classcalendar/s/test-class-123/
+Traceback (most recent call last):
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 174, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\utils.py", line 114, in instrumented_test_render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 135, in render
+    compiled_parent = self.get_parent(context)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 132, in get_parent
+    return self.find_template(parent, context)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 110, in find_template
+    template, origin = context.template.engine.find_template(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        template_name,
+        ^^^^^^^^^^^^^^
+        skip=history,
+        ^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\engine.py", line 163, in find_template
+    raise TemplateDoesNotExist(name, tried=tried)
+django.template.exceptions.TemplateDoesNotExist: core/base.html
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\kakio\eduitit\classcalendar\views.py", line 56, in student_view
+    return render(request, 'classcalendar/student_view.html', context)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 109, in render
+    reraise(exc, self.backend)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 130, in reraise
+    raise new from exc
+django.template.exceptions.TemplateDoesNotExist: core/base.html
+[INFO] 2026-02-22 23:35:30,153 [8bfa85d766aa] core.middleware - [REQUEST] rid=8bfa85d766aa method=GET path=/classcalendar/s/test-class-123/ status=500 latency_ms=44
+E[INFO] 2026-02-22 23:35:33,000 [ab109c2c8ee8] core.middleware - [VISITOR] Path: /classcalendar/api/events/create/ | IP: 127.0.0.1 | Already recorded: False
+[INFO] 2026-02-22 23:35:33,001 [ab109c2c8ee8] core.middleware - [VISITOR] DB operation - Created: True | IP: 127.0.0.1 | Bot: False | Date: 2026-02-22
+[INFO] 2026-02-22 23:35:33,003 [ab109c2c8ee8] core.middleware - [REQUEST] rid=ab109c2c8ee8 method=POST path=/classcalendar/api/events/create/ status=302 latency_ms=2
+.[INFO] 2026-02-22 23:35:35,763 [c58f8042288f] core.middleware - [VISITOR] Path: /classcalendar/api/events/create/ | IP: 127.0.0.1 | Already recorded: False
+[INFO] 2026-02-22 23:35:35,764 [c58f8042288f] core.middleware - [VISITOR] DB operation - Created: True | IP: 127.0.0.1 | Bot: False | Date: 2026-02-22
+[INFO] 2026-02-22 23:35:35,767 [c58f8042288f] core.middleware - [REQUEST] rid=c58f8042288f method=POST path=/classcalendar/api/events/create/ status=200 latency_ms=5
+.
+======================================================================
+ERROR: test_student_can_read_events (classcalendar.tests.test_permissions.PermissionTest.test_student_can_read_events)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 174, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\utils.py", line 114, in instrumented_test_render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 135, in render
+    compiled_parent = self.get_parent(context)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 132, in get_parent
+    return self.find_template(parent, context)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader_tags.py", line 110, in find_template
+    template, origin = context.template.engine.find_template(
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        template_name,
+        ^^^^^^^^^^^^^^
+        skip=history,
+        ^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\engine.py", line 163, in find_template
+    raise TemplateDoesNotExist(name, tried=tried)
+django.template.exceptions.TemplateDoesNotExist: core/base.html
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\kakio\eduitit\classcalendar\tests\test_permissions.py", line 62, in test_student_can_read_events
+    response = self.client_student.get(url)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\client.py", line 1124, in get
+    response = super().get(
+        path,
+    ...<4 lines>...
+        **extra,
+    )
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\client.py", line 475, in get
+    return self.generic(
+           ~~~~~~~~~~~~^
+        "GET",
+        ^^^^^^
+    ...<4 lines>...
+        **extra,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\client.py", line 671, in generic
+    return self.request(**r)
+           ~~~~~~~~~~~~^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\client.py", line 1087, in request
+    self.check_exception(response)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\test\client.py", line 802, in check_exception
+    raise exc_value
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\kakio\eduitit\classcalendar\views.py", line 56, in student_view
+    return render(request, 'classcalendar/student_view.html', context)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 109, in render
+    reraise(exc, self.backend)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kakio\AppData\Roaming\Python\Python313\site-packages\django\template\backends\django.py", line 130, in reraise
+    raise new from exc
+django.template.exceptions.TemplateDoesNotExist: core/base.html
+
+----------------------------------------------------------------------
+Ran 3 tests in 8.575s
+
+FAILED (errors=1)
+Destroying test database for alias 'default'...
+
+[DATABASE] Using SQLite (development)
+================================================================================
+[CLOUDINARY] Environment variable check
+================================================================================
+CLOUDINARY_URL: [X] NOT SET
+CLOUDINARY_CLOUD_NAME: dl5pq1o6o
+CLOUDINARY_API_KEY: [X] NOT SET
+CLOUDINARY_API_SECRET: SET
+[CLOUDINARY] Using individual environment variables
+[CLOUDINARY] USE_CLOUDINARY = False
+[INFO] Cloudinary disabled - using local file system
+================================================================================
+[SENTRY] DSN=NOT SET, DEBUG=True
+[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)
+Found 3 test(s).
+[OK] Ssambti product created successfully!
+[OK] Ssambti product recreated successfully with correct settings!
+[OK] HWP to PDF converter product created.
+Product '학교 예약 시스템' does not exist. Skipping manual creation.
+Product '선생님 사주' does not exist. Skipping manual creation.
+[OK] Processed manual for 쌤BTI
+[SKIP] Product not found for title: 우리반 캐릭터 친구 찾기
+[SKIP] Product not found for title: 교사 백과사전
+[SKIP] Product not found for title: 간편 수합
+[SKIP] Product not found for title: 반짝반짝 우리반 알림판
+[SKIP] Product not found for title: 가뿐하게 서명 톡
+[SKIP] Product not found for title: 학교폭력 사안 처리 비서
+[SKIP] Product not found for title: 두뇌 풀가동! 교실 체스
+[backfill] '간편 수합' not found or already filled
+[backfill] '서명 수집' not found or already filled
+[backfill] '학교 예약 시스템' not found or already filled
+[backfill] '학생 MBTI' not found or already filled
+[backfill] '미술 수업 도우미' not found or already filled
+[backfill] '사주팔자' not found or already filled
+[backfill] '학교폭력 상담 AI' not found or already filled
+[backfill] 'AI 기사 생성' not found or already filled
+[backfill] '문서 버전 관리' not found or already filled
+[backfill] '패들릿 봇' not found or already filled
+[backfill] '교사 백과사전' not found or already filled
+[backfill] '체스' not found or already filled
+[backfill] '장기' not found or already filled
+[backfill] '윷놀이' not found or already filled
+[backfill] '학급 당번 관리' not found or already filled
+System check identified no issues (0 silenced).
