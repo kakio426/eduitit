@@ -303,7 +303,7 @@ class DutyTickerManager {
             textEl.classList.add('text-yellow-100');
         } else {
             titleEl.innerHTML = '<i class="fa-regular fa-bell text-slate-500"></i> 알림사항 없음';
-            textEl.textContent = "클릭해서 공지사항을 입력하세요.";
+            textEl.textContent = "클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.";
             textEl.classList.remove('text-yellow-100');
         }
     }
