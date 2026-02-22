@@ -61,6 +61,28 @@ class InsightModelTest(TestCase):
         self.assertContains(response, "원본 영상 열기")
         self.assertNotContains(response, "https://www.youtube.com/embed/")
 
+    def test_save_auto_formats_long_single_paragraph_content(self):
+        insight = Insight.objects.create(
+            title="Formatting",
+            content="첫 문장입니다. 두 번째 문장입니다. 세 번째 문장입니다. 네 번째 문장입니다.",
+            category="column",
+        )
+        self.assertIn("\n\n", insight.content)
+
+    def test_detail_contains_embed_fallback_elements_for_youtube(self):
+        insight = Insight.objects.create(
+            title="YouTube Embed Fallback",
+            content="Content",
+            category="youtube",
+            video_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+        )
+        response = self.client.get(reverse("insights:detail", args=[insight.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="insight-video-embed-shell"')
+        self.assertContains(response, 'id="insight-video-fallback"')
+        self.assertContains(response, insight.thumbnail_url)
+        self.assertContains(response, "원본 영상 열기")
+
 
 class InsightListModalTemplateTest(TestCase):
     def setUp(self):

@@ -143,26 +143,96 @@
         <!-- Video Player -->
         {% with video_id=insight.get_video_id %}
         {% if video_id %}
-        <div class="mb-8 rounded-2xl overflow-hidden shadow-clay">
-            <iframe src="https://www.youtube.com/embed/{{ video_id }}"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-                class="w-full h-64 md:h-96">
-            </iframe>
+        <div id="insight-video-embed-shell" data-video-id="{{ video_id }}" class="mb-8 rounded-2xl overflow-hidden shadow-clay max-w-3xl mx-auto">
+            <div id="insight-youtube-player" class="w-full h-56 md:h-80"></div>
         </div>
+        <div id="insight-video-fallback" class="mb-8 clay-card p-6 rounded-3xl bg-[#E0E5EC] border border-slate-200 hidden">
+            <div class="max-w-2xl mx-auto">
+                {% if insight.thumbnail_url %}
+                <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                    class="group relative block rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+                    <img src="{{ insight.thumbnail_url|optimize }}" alt="{{ insight.title }} 썸네일" loading="lazy"
+                        class="w-full h-48 md:h-56 object-cover">
+                    <div class="absolute inset-0 bg-black/35 flex items-center justify-center group-hover:bg-black/45 transition">
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 text-slate-800 text-sm font-bold">
+                            <i class="fa-solid fa-play"></i> 원본 영상 열기
+                        </span>
+                    </div>
+                </a>
+                <p class="mt-3 text-sm text-slate-600">임베드가 차단된 영상이라 앱 안에서는 재생되지 않습니다. 위 썸네일을 눌러 유튜브에서 재생해 주세요.</p>
+                {% else %}
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-circle-info text-slate-500 mt-1"></i>
+                    <div>
+                        <p class="text-slate-700 font-bold mb-1">이 영상은 임베드 재생이 제한되어 있어요.</p>
+                        <p class="text-sm text-slate-500 mb-3">유튜브 정책상 사이트 안에서 바로 재생할 수 없어서, 원본 영상으로 이동해 주세요.</p>
+                        <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition">
+                            원본 영상 열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <noscript>
+            <div class="mb-8 clay-card p-6 rounded-3xl bg-[#E0E5EC] border border-slate-200">
+                <div class="max-w-2xl mx-auto">
+                    {% if insight.thumbnail_url %}
+                    <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                        class="group relative block rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+                        <img src="{{ insight.thumbnail_url|optimize }}" alt="{{ insight.title }} 썸네일" loading="lazy"
+                            class="w-full h-48 md:h-56 object-cover">
+                        <div class="absolute inset-0 bg-black/35 flex items-center justify-center">
+                            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 text-slate-800 text-sm font-bold">
+                                <i class="fa-solid fa-play"></i> 원본 영상 열기
+                            </span>
+                        </div>
+                    </a>
+                    <p class="mt-3 text-sm text-slate-600">브라우저 스크립트가 꺼져 있어 앱 내 재생 대신 원본 영상으로 이동합니다.</p>
+                    {% else %}
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-slate-500 mt-1"></i>
+                        <div>
+                            <p class="text-slate-700 font-bold mb-1">브라우저 스크립트가 꺼져 있습니다.</p>
+                            <p class="text-sm text-slate-500 mb-3">아래 버튼으로 원본 영상을 열어 주세요.</p>
+                            <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition">
+                                원본 영상 열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </noscript>
         {% elif insight.video_url %}
         <div class="mb-8 clay-card p-6 rounded-3xl bg-[#E0E5EC] border border-slate-200">
-            <div class="flex items-start gap-3">
-                <i class="fa-solid fa-circle-info text-slate-500 mt-1"></i>
-                <div>
-                    <p class="text-slate-700 font-bold mb-1">이 영상은 임베드가 제한되어 있어요.</p>
-                    <p class="text-sm text-slate-500 mb-3">아래 버튼으로 원본 영상을 새 창에서 열 수 있습니다.</p>
-                    <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition">
-                        원본 영상 열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-                    </a>
+            <div class="max-w-2xl mx-auto">
+                {% if insight.thumbnail_url %}
+                <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                    class="group relative block rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+                    <img src="{{ insight.thumbnail_url|optimize }}" alt="{{ insight.title }} 썸네일" loading="lazy"
+                        class="w-full h-48 md:h-56 object-cover">
+                    <div class="absolute inset-0 bg-black/35 flex items-center justify-center group-hover:bg-black/45 transition">
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 text-slate-800 text-sm font-bold">
+                            <i class="fa-solid fa-play"></i> 원본 영상 열기
+                        </span>
+                    </div>
+                </a>
+                {% else %}
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-circle-info text-slate-500 mt-1"></i>
+                    <div>
+                        <p class="text-slate-700 font-bold mb-1">이 영상은 임베드가 제한되어 있어요.</p>
+                        <p class="text-sm text-slate-500 mb-3">아래 버튼으로 원본 영상을 새 창에서 열 수 있습니다.</p>
+                        <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition">
+                            원본 영상 열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                    </div>
                 </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -229,6 +299,75 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-django.min.js"></script>
 <script>
+    (function initializeInsightYoutubePlayer() {
+        const shell = document.getElementById('insight-video-embed-shell');
+        const fallback = document.getElementById('insight-video-fallback');
+        if (!shell || !fallback) return;
+
+        const videoId = shell.dataset.videoId;
+        if (!videoId) return;
+
+        const showFallback = () => {
+            shell.classList.add('hidden');
+            fallback.classList.remove('hidden');
+        };
+
+        const initPlayer = () => {
+            if (!(window.YT && window.YT.Player)) {
+                showFallback();
+                return;
+            }
+
+            let isReady = false;
+            const timeoutId = window.setTimeout(() => {
+                if (!isReady) showFallback();
+            }, 4000);
+
+            new window.YT.Player('insight-youtube-player', {
+                videoId: videoId,
+                playerVars: {
+                    rel: 0,
+                    modestbranding: 1,
+                    playsinline: 1,
+                },
+                events: {
+                    onReady: () => {
+                        isReady = true;
+                        window.clearTimeout(timeoutId);
+                    },
+                    onError: () => {
+                        window.clearTimeout(timeoutId);
+                        showFallback();
+                    },
+                },
+            });
+        };
+
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+            return;
+        }
+
+        const previousReadyHandler = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+            if (typeof previousReadyHandler === 'function') {
+                previousReadyHandler();
+            }
+            initPlayer();
+        };
+
+        if (!document.getElementById('youtube-iframe-api')) {
+            const script = document.createElement('script');
+            script.id = 'youtube-iframe-api';
+            script.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(script);
+        }
+
+        window.setTimeout(() => {
+            if (!(window.YT && window.YT.Player)) showFallback();
+        }, 7000);
+    })();
+
     async function toggleLikeDetail(insightId, button) {
         try {
             const response = await fetch(`/insights/${insightId}/like/`, {

@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from urllib.parse import parse_qs, urlparse
 
+from .text_formatting import auto_format_insight_text
+
 class Insight(models.Model):
     CATEGORY_CHOICES = [
         ('youtube', 'YouTube Scrap'),
@@ -53,6 +55,10 @@ class Insight(models.Model):
         return None
 
     def save(self, *args, **kwargs):
+        self.content = auto_format_insight_text(self.content)
+        if self.kakio_note:
+            self.kakio_note = auto_format_insight_text(self.kakio_note)
+
         if not self.thumbnail_url and self.video_url:
             vid_id = self.get_video_id()
             if vid_id:
