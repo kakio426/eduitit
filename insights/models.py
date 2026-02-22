@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from urllib.parse import parse_qs, urlparse
 
 class Insight(models.Model):
     CATEGORY_CHOICES = [
@@ -28,13 +29,27 @@ class Insight(models.Model):
         return self.likes.count()
 
     def get_video_id(self):
-        """Extracts video ID from YouTube URL"""
-        if "youtu.be" in self.video_url:
-            return self.video_url.split("/")[-1]
-        if "youtube.com" in self.video_url:
-            import urllib.parse as urlparse
-            query = urlparse.parse_qs(urlparse.urlparse(self.video_url).query)
-            return query.get("v", [None])[0]
+        """Extract a YouTube video ID from common URL formats."""
+        if not self.video_url:
+            return None
+
+        parsed = urlparse(self.video_url.strip())
+        host = parsed.netloc.lower()
+        path_parts = [part for part in parsed.path.split("/") if part]
+
+        if "youtu.be" in host:
+            return path_parts[0] if path_parts else None
+
+        if "youtube.com" not in host and "youtube-nocookie.com" not in host:
+            return None
+
+        query_video_id = parse_qs(parsed.query).get("v", [None])[0]
+        if query_video_id:
+            return query_video_id
+
+        if path_parts and path_parts[0] in {"shorts", "embed", "live", "v"}:
+            return path_parts[1] if len(path_parts) >= 2 else None
+
         return None
 
     def save(self, *args, **kwargs):

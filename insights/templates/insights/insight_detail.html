@@ -7,6 +7,48 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .insight-reading-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .insight-reading-body p {
+        margin: 0 0 1rem;
+        color: #1f2937;
+        font-size: 1.1rem;
+        line-height: 1.95;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+    }
+
+    .insight-reading-body p:last-child {
+        margin-bottom: 0;
+    }
+
+    .insight-note-card {
+        background: #fffdf6;
+        border: 1px solid #fde68a;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .insight-note-body p {
+        margin: 0 0 0.85rem;
+        color: #334155;
+        font-size: 1.03rem;
+        line-height: 1.85;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+    }
+
+    .insight-note-body p:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-3xl mx-auto">
@@ -99,35 +141,60 @@
         </header>
 
         <!-- Video Player -->
-        {% if insight.video_url %}
+        {% with video_id=insight.get_video_id %}
+        {% if video_id %}
         <div class="mb-8 rounded-2xl overflow-hidden shadow-clay">
-            <iframe src="https://www.youtube.com/embed/{{ insight.get_video_id }}"
+            <iframe src="https://www.youtube.com/embed/{{ video_id }}"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen
                 class="w-full h-64 md:h-96">
             </iframe>
         </div>
+        {% elif insight.video_url %}
+        <div class="mb-8 clay-card p-6 rounded-3xl bg-[#E0E5EC] border border-slate-200">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-slate-500 mt-1"></i>
+                <div>
+                    <p class="text-slate-700 font-bold mb-1">이 영상은 임베드가 제한되어 있어요.</p>
+                    <p class="text-sm text-slate-500 mb-3">아래 버튼으로 원본 영상을 새 창에서 열 수 있습니다.</p>
+                    <a href="{{ insight.video_url }}" target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition">
+                        원본 영상 열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
         {% endif %}
+        {% endwith %}
 
         <!-- Content -->
-        <article class="clay-card p-8 rounded-3xl bg-[#E0E5EC] mb-8">
-            <i class="fa-solid fa-quote-left text-4xl text-gray-300 mb-4 block"></i>
-            <div class="prose prose-lg max-w-none text-neutral-700">
+        <article class="insight-reading-card rounded-3xl p-6 md:p-8 mb-8">
+            <header class="pb-4 mb-5 border-b border-slate-100">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-quote-left text-slate-400"></i>
+                    <h2 class="text-xl md:text-2xl font-extrabold text-slate-900">핵심 인사이트</h2>
+                </div>
+                <p class="text-sm text-slate-500">영상에서 뽑은 핵심 내용을 읽기 쉽게 정리했습니다.</p>
+            </header>
+            <div class="insight-reading-body">
                 {{ insight.content|linebreaks }}
             </div>
         </article>
 
         <!-- Kakio's Note -->
         {% if insight.kakio_note %}
-        <div class="clay-card p-8 rounded-3xl bg-purple-50 border border-purple-100 mb-8">
-            <div class="flex items-center gap-2 mb-4">
-                <div class="w-8 h-8 rounded-full bg-purple-200 text-purple-600 flex items-center justify-center">
-                    <i class="fa-solid fa-pen"></i>
+        <div class="insight-note-card rounded-3xl p-6 md:p-8 mb-8">
+            <div class="flex items-start gap-3 pb-4 mb-4 border-b border-amber-100">
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-lightbulb"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-purple-700 font-hand">💡 Kakio's Note</h3>
+                <div>
+                    <h3 class="text-2xl font-bold text-amber-900 font-hand">Kakio's Note</h3>
+                    <p class="text-sm text-amber-700">수업 적용 관점에서 덧붙인 메모입니다.</p>
+                </div>
             </div>
-            <div class="text-purple-800 leading-relaxed">
+            <div class="insight-note-body">
                 {{ insight.kakio_note|linebreaks }}
             </div>
         </div>

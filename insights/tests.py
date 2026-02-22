@@ -31,6 +31,59 @@ class InsightModelTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "insights/insight_list.html")
 
+    def test_get_video_id_supports_shorts_url(self):
+        insight = Insight.objects.create(
+            title="Shorts Test",
+            content="Content",
+            category="youtube",
+            video_url="https://www.youtube.com/shorts/2bBhnfh4StU?si=test123",
+        )
+        self.assertEqual(insight.get_video_id(), "2bBhnfh4StU")
+
+    def test_get_video_id_returns_none_for_non_youtube_url(self):
+        insight = Insight.objects.create(
+            title="External Video",
+            content="Content",
+            category="column",
+            video_url="https://example.com/video/123",
+        )
+        self.assertIsNone(insight.get_video_id())
+
+    def test_detail_shows_fallback_link_when_embed_id_missing(self):
+        insight = Insight.objects.create(
+            title="Blocked Embed",
+            content="Content",
+            category="column",
+            video_url="https://example.com/video/123",
+        )
+        response = self.client.get(reverse("insights:detail", args=[insight.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "원본 영상 열기")
+        self.assertNotContains(response, "https://www.youtube.com/embed/")
+
+
+class InsightListModalTemplateTest(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="modal_admin",
+            email="modal_admin@example.com",
+            password="pw12345",
+        )
+        self.admin.userprofile.nickname = "modal_admin_nick"
+        self.admin.userprofile.save(update_fields=["nickname"])
+        Insight.objects.create(
+            title="Modal Target Insight",
+            content="Body",
+            category="devlog",
+        )
+
+    def test_list_uses_body_teleport_for_delete_modal(self):
+        self.client.login(username="modal_admin", password="pw12345")
+        response = self.client.get(reverse("insights:list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'x-teleport="body"')
+        self.assertContains(response, "x-transition.opacity")
+
 
 class InsightPermissionTest(TestCase):
     def setUp(self):

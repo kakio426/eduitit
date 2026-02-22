@@ -71,9 +71,9 @@
     <div class="mt-auto rounded-xl bg-violet-50 border border-violet-100 p-3 mb-3">
         <div class="flex items-center gap-1.5 mb-1.5">
             <i class="fa-solid fa-pen text-violet-500 text-xs"></i>
-            <span class="text-xs font-bold text-violet-700">Kakio's Note</span>
+            <span class="text-sm font-bold text-violet-800">Kakio's Note</span>
         </div>
-        <p class="text-xs text-violet-700/90 leading-5">
+        <p class="text-sm font-medium text-violet-900/90 leading-6">
             {{ insight.kakio_note|truncatechars:120 }}
         </p>
     </div>
@@ -126,28 +126,30 @@
 </div>
 
 {% if user.is_superuser %}
-<div x-show="showDeleteModal" x-cloak
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    @click.self="showDeleteModal = false">
-    <div class="clay-card p-7 rounded-3xl max-w-sm w-full mx-4 bg-[#E0E5EC]">
-        <div class="text-center mb-5">
-            <div class="text-4xl mb-2">🗑️</div>
-            <h3 class="text-xl font-bold text-gray-700 mb-1">이 인사이트를 삭제할까요?</h3>
-            <p class="text-sm text-gray-500">되돌릴 수 없습니다.</p>
-        </div>
-        <div class="flex gap-2.5">
-            <button @click="showDeleteModal = false"
-                class="flex-1 py-2.5 rounded-lg bg-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-400 transition-all">
-                취소
-            </button>
-            <form method="POST" action="{% url 'insights:delete' insight.pk %}" class="flex-1">
-                {% csrf_token %}
-                <button type="submit"
-                    class="w-full py-2.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-all">
-                    삭제
+<template x-teleport="body">
+    <div x-show="showDeleteModal" x-cloak x-transition.opacity
+        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        @click.self="showDeleteModal = false">
+        <div class="clay-card p-7 rounded-3xl max-w-sm w-full mx-4 bg-[#E0E5EC]">
+            <div class="text-center mb-5">
+                <div class="text-4xl mb-2">🗑️</div>
+                <h3 class="text-xl font-bold text-gray-700 mb-1">이 인사이트를 삭제할까요?</h3>
+                <p class="text-sm text-gray-500">되돌릴 수 없습니다.</p>
+            </div>
+            <div class="flex gap-2.5">
+                <button @click="showDeleteModal = false"
+                    class="flex-1 py-2.5 rounded-lg bg-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-400 transition-all">
+                    취소
                 </button>
-            </form>
+                <form method="POST" action="{% url 'insights:delete' insight.pk %}" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="w-full py-2.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-all">
+                        삭제
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
-</div>
+</template>
 {% endif %}
