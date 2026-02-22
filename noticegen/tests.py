@@ -7,7 +7,12 @@ from django.urls import reverse
 from core.models import UserProfile
 
 from .models import NoticeGenerationAttempt, NoticeGenerationCache
-from .prompts import get_tone_for_target
+from .prompts import (
+    PROMPT_VERSION,
+    build_system_prompt,
+    build_user_prompt,
+    get_tone_for_target,
+)
 from .views import _build_cache_key_data
 
 
@@ -86,7 +91,7 @@ class NoticeGenViewTests(TestCase):
         )
         NoticeGenerationCache.objects.create(
             key_hash=key_data["key_hash"],
-            prompt_version="v1",
+            prompt_version=PROMPT_VERSION,
             target=payload["target"],
             topic=payload["topic"],
             tone=tone,
@@ -136,3 +141,17 @@ class NoticeGenViewTests(TestCase):
         attempt = NoticeGenerationAttempt.objects.filter(charged=True).latest("id")
         self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_SUCCESS)
         self.assertEqual(NoticeGenerationCache.objects.count(), 1)
+
+    def test_parent_prompt_has_hard_length_and_style_rules(self):
+        system_prompt = build_system_prompt("parent")
+        user_prompt = build_user_prompt("parent", "notice", "실내화를 챙겨 주세요", "")
+
+        self.assertIn("정확히 3문장", system_prompt)
+        self.assertIn("문장 역할 순서", system_prompt)
+        self.assertIn("같은 종결어미를 3문장 연속으로 반복하지 않습니다.", system_prompt)
+        self.assertIn("공백 포함 90자 이상 140자 이하", system_prompt)
+        self.assertIn("공백 포함 90자 이상 140자 이하", user_prompt)
+
+    def test_student_prompt_does_not_include_parent_length_rule(self):
+        user_prompt = build_user_prompt("student_low", "notice", "줄넘기 준비", "")
+        self.assertNotIn("공백 포함 90자 이상 140자 이하", user_prompt)
