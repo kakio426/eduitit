@@ -127,3 +127,35 @@ class PermissionTest(TestCase):
             },
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_teacher_cannot_update_locked_integration_event(self):
+        event = self._create_event()
+        event.is_locked = True
+        event.integration_source = "collect_deadline"
+        event.integration_key = "collect:test"
+        event.save(update_fields=["is_locked", "integration_source", "integration_key", "updated_at"])
+
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_update_event", kwargs={"event_id": str(event.id)}),
+            {
+                "title": "잠금 수정 시도",
+                "start_time": "2026-03-01T13:00",
+                "end_time": "2026-03-01T14:00",
+                "color": "rose",
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "integration_event_readonly")
+
+    def test_teacher_cannot_delete_locked_integration_event(self):
+        event = self._create_event()
+        event.is_locked = True
+        event.integration_source = "consent_expiry"
+        event.integration_key = "consent:test"
+        event.save(update_fields=["is_locked", "integration_source", "integration_key", "updated_at"])
+
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_delete_event", kwargs={"event_id": str(event.id)})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "integration_event_readonly")

@@ -1,16 +1,24 @@
+import logging
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from happy_seed.models import HSClassroom
 from products.models import Product
 
 from .forms import CalendarEventCreateForm
+from .integrations import sync_user_calendar_integrations
 from .models import CalendarEvent
 
 SERVICE_ROUTE = "classcalendar:main"
+INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
+INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize_event(event):
@@ -23,6 +31,8 @@ def _serialize_event(event):
         "color": event.color or "indigo",
         "source": event.source,
         "visibility": event.visibility,
+        "integration_source": event.integration_source,
+        "is_locked": event.is_locked,
     }
 
 
@@ -45,13 +55,88 @@ def _get_owned_event(request, event_id):
     return get_object_or_404(CalendarEvent, id=event_id, author=request.user)
 
 
+def _sync_integrations_if_needed(request, force=False):
+    if not request.user.is_authenticated:
+        return
+    now_epoch = timezone.now().timestamp()
+    last_synced = float(request.session.get(INTEGRATION_SYNC_SESSION_KEY) or 0.0)
+    if not force and (now_epoch - last_synced) < INTEGRATION_SYNC_MIN_INTERVAL_SECONDS:
+        return
+    try:
+        sync_user_calendar_integrations(request.user)
+        request.session[INTEGRATION_SYNC_SESSION_KEY] = now_epoch
+        request.session.modified = True
+    except Exception:
+        logger.exception(
+            "[ClassCalendar] integration sync failed user_id=%s",
+            getattr(request.user, "id", None),
+        )
+
+
+def _build_reservation_windows_for_user(user):
+    try:
+        from reservations.models import School
+        from reservations.utils import get_max_booking_date
+    except Exception:
+        logger.exception(
+            "[ClassCalendar] reservation window import failed user_id=%s",
+            getattr(user, "id", None),
+        )
+        return []
+
+    weekdays = ["월", "화", "수", "목", "금", "토", "일"]
+    windows = []
+    schools = School.objects.filter(owner=user).select_related("config").order_by("name")
+
+    for school in schools:
+        school_config = getattr(school, "config", None)
+        max_booking_date = get_max_booking_date(school)
+        available_until = (
+            f"{max_booking_date.strftime('%m월 %d일')}까지 예약 가능"
+            if max_booking_date
+            else "날짜 제한 없이 예약 가능"
+        )
+        if school_config and school_config.weekly_opening_mode:
+            weekday_index = school_config.weekly_opening_weekday
+            if weekday_index < 0 or weekday_index > 6:
+                weekday_index = 4
+            opening_rule = (
+                f"매주 {weekdays[weekday_index]}요일 "
+                f"{school_config.weekly_opening_hour:02d}:00 다음 주 오픈"
+            )
+        else:
+            opening_rule = "상시 오픈"
+
+        windows.append(
+            {
+                "school_name": school.name,
+                "available_until": available_until,
+                "opening_rule": opening_rule,
+            }
+        )
+    return windows
+
+
+def _integration_event_readonly_response():
+    return JsonResponse(
+        {
+            "status": "error",
+            "code": "integration_event_readonly",
+            "message": "자동 연동 일정은 원본 서비스에서 수정하거나 삭제해 주세요.",
+        },
+        status=403,
+    )
+
+
 @login_required
 def main_view(request):
+    _sync_integrations_if_needed(request)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     context = {
         "service": service,
         "title": service.title if service else "학급 캘린더 (Eduitit Calendar)",
         "events_json": [_serialize_event(event) for event in _get_teacher_visible_events(request)],
+        "reservation_windows": _build_reservation_windows_for_user(request.user),
     }
     return render(request, "classcalendar/main.html", context)
 
@@ -59,6 +144,7 @@ def main_view(request):
 @login_required
 @require_GET
 def api_events(request):
+    _sync_integrations_if_needed(request)
     events_data = [_serialize_event(event) for event in _get_teacher_visible_events(request)]
     return JsonResponse({"status": "success", "events": events_data})
 
@@ -106,6 +192,8 @@ def api_create_event(request):
 @require_POST
 def api_update_event(request, event_id):
     event = _get_owned_event(request, event_id)
+    if event.is_locked:
+        return _integration_event_readonly_response()
     form = CalendarEventCreateForm(request.POST)
     if not form.is_valid():
         return JsonResponse(
@@ -143,6 +231,8 @@ def api_update_event(request, event_id):
 @require_POST
 def api_delete_event(request, event_id):
     event = _get_owned_event(request, event_id)
+    if event.is_locked:
+        return _integration_event_readonly_response()
     event_id_str = str(event.id)
     event.delete()
     return JsonResponse({"status": "success", "deleted_id": event_id_str})

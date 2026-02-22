@@ -5,8 +5,18 @@ from .models import CalendarEvent, EventPageBlock
 
 @admin.register(CalendarEvent)
 class CalendarEventAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "classroom", "start_time", "end_time", "source", "visibility")
-    list_filter = ("source", "visibility", "is_all_day")
+    list_display = (
+        "title",
+        "author",
+        "classroom",
+        "start_time",
+        "end_time",
+        "source",
+        "integration_source",
+        "is_locked",
+        "visibility",
+    )
+    list_filter = ("source", "integration_source", "is_locked", "visibility", "is_all_day")
     search_fields = ("title", "author__username", "classroom__name")
     ordering = ("-start_time",)
 

@@ -39,6 +39,9 @@ class CalendarEvent(models.Model):
     # Reserved for source classification (currently local-only).
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_LOCAL)
     color = models.CharField(max_length=20, blank=True, null=True)
+    integration_source = models.CharField(max_length=40, blank=True, default="")
+    integration_key = models.CharField(max_length=255, blank=True, default="")
+    is_locked = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -48,6 +51,8 @@ class CalendarEvent(models.Model):
         indexes = [
             models.Index(fields=["author", "start_time"]),
             models.Index(fields=["classroom", "start_time"]),
+            models.Index(fields=["author", "integration_source"]),
+            models.Index(fields=["author", "integration_source", "integration_key"]),
         ]
 
     def __str__(self):
