@@ -12,7 +12,7 @@ from products.models import Product
 
 from .forms import CalendarEventCreateForm
 from .integrations import sync_user_calendar_integrations
-from .models import CalendarEvent
+from .models import CalendarEvent, EventPageBlock
 
 SERVICE_ROUTE = "classcalendar:main"
 INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
@@ -25,6 +25,7 @@ def _serialize_event(event):
     return {
         "id": str(event.id),
         "title": event.title,
+        "note": _extract_primary_note(event),
         "start_time": event.start_time.isoformat(),
         "end_time": event.end_time.isoformat(),
         "is_all_day": event.is_all_day,
@@ -48,11 +49,52 @@ def _get_teacher_visible_events(request):
     queryset = CalendarEvent.objects.filter(author=request.user)
     if active_classroom:
         queryset = CalendarEvent.objects.filter(Q(author=request.user) | Q(classroom=active_classroom))
-    return queryset.select_related("classroom").distinct().order_by("start_time", "id")
+    return queryset.select_related("classroom").prefetch_related("blocks").distinct().order_by("start_time", "id")
 
 
 def _get_owned_event(request, event_id):
     return get_object_or_404(CalendarEvent, id=event_id, author=request.user)
+
+
+def _extract_primary_note(event):
+    text_blocks = sorted(
+        (block for block in event.blocks.all() if block.block_type == "text"),
+        key=lambda block: (block.order, block.id),
+    )
+    if not text_blocks:
+        return ""
+    content = text_blocks[0].content
+    if isinstance(content, dict):
+        note_text = content.get("text") or content.get("note") or ""
+    elif isinstance(content, str):
+        note_text = content
+    else:
+        note_text = ""
+    return str(note_text).strip()
+
+
+def _persist_primary_note(event, note_value):
+    note_text = (note_value or "").strip()
+    text_blocks = event.blocks.filter(block_type="text").order_by("order", "id")
+    primary_block = text_blocks.first()
+
+    if not note_text:
+        text_blocks.delete()
+        return
+
+    if primary_block:
+        primary_block.content = {"text": note_text}
+        primary_block.order = 0
+        primary_block.save(update_fields=["content", "order"])
+        text_blocks.exclude(id=primary_block.id).delete()
+        return
+
+    EventPageBlock.objects.create(
+        event=event,
+        block_type="text",
+        content={"text": note_text},
+        order=0,
+    )
 
 
 def _sync_integrations_if_needed(request, force=False):
@@ -153,15 +195,6 @@ def api_events(request):
 @require_POST
 def api_create_event(request):
     classroom = _get_active_classroom_for_user(request)
-    if not classroom:
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "active_classroom_required",
-                "message": "활성 학급이 없어 일정을 생성할 수 없습니다.",
-            },
-            status=400,
-        )
 
     form = CalendarEventCreateForm(request.POST)
     if not form.is_valid():
@@ -185,6 +218,7 @@ def api_create_event(request):
         classroom=classroom,
         source=CalendarEvent.SOURCE_LOCAL,
     )
+    _persist_primary_note(event, form.cleaned_data.get("note", ""))
     return JsonResponse({"status": "success", "event": _serialize_event(event)}, status=201)
 
 
@@ -224,6 +258,7 @@ def api_update_event(request, event_id):
             "updated_at",
         ]
     )
+    _persist_primary_note(event, form.cleaned_data.get("note", ""))
     return JsonResponse({"status": "success", "event": _serialize_event(event)})
 
 

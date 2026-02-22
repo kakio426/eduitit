@@ -17,6 +17,16 @@
 
     .sns-preview-card { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.3s ease; }
     .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+    .home-calendar-day {
+        min-height: 74px;
+    }
+
+    @media (min-width: 640px) {
+        .home-calendar-day {
+            min-height: 88px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -24,14 +34,38 @@
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // 미니 카드 & 기존 product-card 모달 바인딩
+    const launchCard = (card) => {
+        const href = card.dataset.launchHref || `/products/${card.dataset.productId}/`;
+        if (!href) return;
+        const isExternal = card.dataset.launchExternal === 'true';
+        if (isExternal) {
+            window.open(href, '_blank', 'noopener');
+            return;
+        }
+        window.location.href = href;
+    };
+
+    // 카드 클릭: 즉시 서비스 진입
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', function(e) {
-            const id = this.getAttribute('data-product-id');
-            if (window.openModal) window.openModal(id);
+            if (e.target.closest('.product-info-trigger')) return;
+            launchCard(this);
         });
         card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                launchCard(card);
+            }
+        });
+    });
+
+    // 우측 상세 버튼: 모달 열기
+    document.querySelectorAll('.product-info-trigger').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = this.dataset.productId || this.closest('[data-product-id]')?.dataset.productId;
+            if (id && window.openModal) window.openModal(id);
         });
     });
 
@@ -54,6 +88,215 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+function homeCalendarWidget() {
+    return {
+        currentDate: new Date(),
+        events: [],
+        createModalOpen: false,
+        isSubmitting: false,
+        createContextDateText: '',
+        refreshTicker: null,
+        createForm: {
+            title: '',
+            note: '',
+            start_time: '',
+            end_time: '',
+            is_all_day: false,
+            color: 'indigo',
+        },
+
+        init() {
+            this.refreshEvents();
+            this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
+            window.addEventListener('focus', () => this.refreshEvents());
+        },
+
+        async refreshEvents() {
+            try {
+                const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
+                this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
+            } catch (err) {
+                if (window.showToast) {
+                    window.showToast('홈 캘린더를 불러오지 못했습니다.', 'error');
+                }
+            }
+        },
+
+        normalizeEvent(event) {
+            return {
+                ...event,
+                start_time: new Date(event.start_time),
+                end_time: new Date(event.end_time),
+            };
+        },
+
+        getCsrfToken() {
+            const field = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (field && field.value) return field.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        },
+
+        async requestJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const err = new Error(payload.message || '요청 처리에 실패했습니다.');
+                err.payload = payload;
+                throw err;
+            }
+            return payload;
+        },
+
+        pad(value) {
+            return String(value).padStart(2, '0');
+        },
+
+        dateKey(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+        },
+
+        parseDateKey(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        },
+
+        toDatetimeLocal(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}T${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        get currentMonthText() {
+            return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`;
+        },
+
+        get todayEventsCount() {
+            return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length;
+        },
+
+        get weekEventsCount() {
+            const now = new Date();
+            const start = new Date(now);
+            const mondayOffset = (now.getDay() + 6) % 7;
+            start.setDate(now.getDate() - mondayOffset);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return this.events.filter((e) => e.start_time >= start && e.start_time < end).length;
+        },
+
+        get calendarDates() {
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            const first = new Date(y, m, 1);
+            const last = new Date(y, m + 1, 0);
+            const start = new Date(first);
+            start.setDate(start.getDate() - start.getDay());
+            const end = new Date(last);
+            if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
+            const dates = [];
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                dates.push(new Date(cursor));
+            }
+            return dates;
+        },
+
+        prevMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+        },
+
+        nextMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+        },
+
+        isCurrentMonth(date) {
+            return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear();
+        },
+
+        isToday(date) {
+            const t = new Date();
+            return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear();
+        },
+
+        getEventsForDate(date) {
+            return this.events
+                .filter((e) => this.dateKey(e.start_time) === this.dateKey(date))
+                .sort((a, b) => a.start_time - b.start_time);
+        },
+
+        getVisibleEventsForDate(date) {
+            return this.getEventsForDate(date).slice(0, 2);
+        },
+
+        eventBarClass(event) {
+            const map = {
+                indigo: 'bg-indigo-200 border-indigo-300',
+                rose: 'bg-rose-200 border-rose-300',
+                amber: 'bg-amber-200 border-amber-300',
+                emerald: 'bg-emerald-200 border-emerald-300',
+                sky: 'bg-sky-200 border-sky-300',
+            };
+            return map[event.color] || map.indigo;
+        },
+
+        formatAgendaDate(dateStr) {
+            const date = this.parseDateKey(dateStr);
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+        },
+
+        openCreateModalForDate(date) {
+            const base = new Date(date);
+            const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
+            const end = new Date(start);
+            end.setHours(start.getHours() + 1, 0, 0, 0);
+            this.createContextDateText = this.formatAgendaDate(this.dateKey(start));
+            this.createForm = {
+                title: '',
+                note: '',
+                start_time: this.toDatetimeLocal(start),
+                end_time: this.toDatetimeLocal(end),
+                is_all_day: false,
+                color: 'indigo',
+            };
+            this.createModalOpen = true;
+        },
+
+        async submitCreateEvent() {
+            this.isSubmitting = true;
+            const body = new URLSearchParams();
+            body.set('title', this.createForm.title);
+            body.set('note', this.createForm.note || '');
+            body.set('start_time', this.createForm.start_time);
+            body.set('end_time', this.createForm.end_time);
+            body.set('color', this.createForm.color);
+            if (this.createForm.is_all_day) body.set('is_all_day', 'on');
+            try {
+                await this.requestJson('{% url "classcalendar:api_create_event" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: body.toString(),
+                });
+                this.createModalOpen = false;
+                await this.refreshEvents();
+                if (window.showToast) window.showToast('일정을 저장했습니다.', 'success');
+            } catch (err) {
+                const isValidationError = err.payload && err.payload.code === 'validation_error';
+                const message = isValidationError
+                    ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
+                    : (err.message || '일정 저장에 실패했습니다.');
+                if (window.showToast) window.showToast(message, 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+    };
+}
 </script>
 {% endblock %}
 
@@ -138,6 +381,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="mb-6">
                 {% include 'core/includes/game_banner.html' with games=games %}
             </div>
+
+            <!-- 홈 동기화 캘린더 -->
+            {% include 'core/partials/home_calendar_panel.html' %}
 
             <!-- 모바일 전용 SNS 미리보기 -->
             <div x-data="{ snsOpen: false }" class="block xl:hidden mt-4 px-1">

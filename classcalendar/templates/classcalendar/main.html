@@ -10,21 +10,21 @@
     }
 
     .calendar-grid-day {
-        min-height: 132px;
+        min-height: 112px;
     }
 
     @media (max-width: 1023px) {
         .calendar-grid-day {
-            min-height: 116px;
+            min-height: 96px;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="pt-28 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen" x-data="calendarApp()">
+<section class="pt-20 md:pt-24 pb-10 md:pb-12 px-4 sm:px-6 lg:px-8 min-h-screen" x-data="calendarApp()">
     <div class="max-w-7xl mx-auto">
-        <div class="calendar-hero rounded-[2rem] p-6 sm:p-8 border border-white/20 shadow-[0_20px_50px_rgba(15,23,42,0.35)] mb-6 text-white">
+        <div class="calendar-hero rounded-[2rem] p-5 sm:p-6 border border-white/20 shadow-[0_14px_32px_rgba(15,23,42,0.28)] mb-4 text-white">
             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div>
                     <p class="text-xs sm:text-sm font-semibold uppercase tracking-[0.12em] text-indigo-100/90 mb-2">Teacher Workspace</p>
@@ -51,27 +51,27 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">오늘 일정</p>
-                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="todayEventsCount"></p>
+                <p class="mt-1.5 text-2xl font-extrabold text-slate-900" x-text="todayEventsCount"></p>
             </div>
-            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">이번 주 일정</p>
-                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="weekEventsCount"></p>
+                <p class="mt-1.5 text-2xl font-extrabold text-slate-900" x-text="weekEventsCount"></p>
             </div>
-            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">이번 달 일정</p>
-                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="monthEventsCount"></p>
+                <p class="mt-1.5 text-2xl font-extrabold text-slate-900" x-text="monthEventsCount"></p>
             </div>
         </div>
 
         {% if reservation_windows %}
-        <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm mb-6">
+        <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm mb-4">
             <h3 class="text-sm font-extrabold text-slate-900 tracking-tight mb-3">예약 가능 안내</h3>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                 {% for window in reservation_windows %}
-                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <p class="text-sm font-bold text-slate-900">{{ window.school_name }}</p>
                     <p class="mt-1 text-sm font-semibold text-indigo-700">{{ window.available_until }}</p>
                     <p class="mt-1 text-xs font-medium text-slate-600">{{ window.opening_rule }}</p>
@@ -81,8 +81,8 @@
         </div>
         {% endif %}
 
-        <div class="bg-white rounded-[2rem] border border-slate-200 shadow-xl p-4 sm:p-6">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+        <div class="bg-white rounded-[2rem] border border-slate-200 shadow-xl p-3.5 sm:p-5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight" x-text="currentMonthText"></h2>
                 <div class="flex items-center justify-between md:justify-end gap-2">
                     <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -118,7 +118,11 @@
                         <div class="bg-slate-100 py-3 text-center text-sm font-bold text-slate-600" x-text="day"></div>
                     </template>
                     <template x-for="date in calendarDates" :key="date.toISOString()">
-                        <div class="calendar-grid-day bg-white p-2.5 hover:bg-slate-50 transition">
+                        <div
+                            class="calendar-grid-day bg-white p-2.5 hover:bg-slate-50 transition cursor-pointer"
+                            @click="openCreateModalForDate(date)"
+                            title="날짜를 눌러 일정 추가"
+                        >
                             <span
                                 class="text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full"
                                 :class="{
@@ -129,10 +133,18 @@
                                 x-text="date.getDate()"
                             ></span>
                             <div class="mt-2 space-y-1.5">
+                                <div class="space-y-1">
+                                    <template x-for="rangeEvent in getRangeEventsForDate(date)" :key="`${rangeEvent.id}-${dateKey(date)}`">
+                                        <div
+                                            class="h-1.5 border transition"
+                                            :class="getRangeStrokeClass(rangeEvent, date)"
+                                        ></div>
+                                    </template>
+                                </div>
                                 <template x-for="event in getVisibleEventsForDate(date)" :key="event.id">
                                     <button
                                         type="button"
-                                        @click="openEventDetail(event)"
+                                        @click.stop="openEventDetail(event)"
                                         class="w-full text-left px-2.5 py-1.5 rounded-lg text-sm font-medium truncate border transition"
                                         :class="getEventChipClass(event)"
                                     >
@@ -180,6 +192,7 @@
     <div x-show="createModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="createModalOpen = false">
         <div class="w-full max-w-xl bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
             <h3 class="text-xl font-extrabold text-slate-900 mb-4">새 일정 만들기</h3>
+            <p class="mb-4 text-xs font-semibold text-slate-500" x-text="createContextDateText ? `${createContextDateText} 일정` : ''"></p>
             <form @submit.prevent="submitCreateEvent" class="space-y-4">
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
@@ -208,6 +221,15 @@
                 <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
                     <input x-model="createForm.is_all_day" type="checkbox" class="rounded border-slate-300"> 하루 종일
                 </label>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">노트</label>
+                    <textarea
+                        x-model="createForm.note"
+                        rows="4"
+                        class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        placeholder="수업 준비 메모, 할 일, 체크포인트를 적어두세요."
+                    ></textarea>
+                </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" @click="createModalOpen = false" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">취소</button>
                     <button type="submit" :disabled="isSubmitting" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60">저장</button>
@@ -247,6 +269,15 @@
                 <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
                     <input x-model="editForm.is_all_day" type="checkbox" class="rounded border-slate-300"> 하루 종일
                 </label>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">노트</label>
+                    <textarea
+                        x-model="editForm.note"
+                        rows="4"
+                        class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        placeholder="개인 메모를 수정하세요."
+                    ></textarea>
+                </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" @click="editModalOpen = false" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">취소</button>
                     <button type="submit" :disabled="isEditing" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60">수정 저장</button>
@@ -258,7 +289,12 @@
     <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="detailModalOpen = false">
         <div class="w-full max-w-lg bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
             <h3 class="text-xl font-extrabold text-slate-900 mb-2" x-text="selectedEvent ? selectedEvent.title : ''"></h3>
-            <p class="text-sm font-medium text-slate-600 mb-5" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
+            <p class="text-sm font-medium text-slate-600 mb-3" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
+            <p
+                x-show="selectedEvent && selectedEvent.note"
+                class="mb-5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line"
+                x-text="selectedEvent ? selectedEvent.note : ''"
+            ></p>
             <p
                 x-show="selectedEvent && selectedEvent.is_locked"
                 class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800"
@@ -315,9 +351,10 @@ function calendarApp() {
         isSubmitting: false,
         isEditing: false,
         isDeleting: false,
+        createContextDateText: '',
         calendarBaseUrl: '{% url "classcalendar:main" %}',
-        createForm: { title: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
-        editForm: { title: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
+        createForm: { title: '', note: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
+        editForm: { title: '', note: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
 
         init() {
             if (window.innerWidth < 768) this.view = 'agenda';
@@ -325,7 +362,12 @@ function calendarApp() {
         },
 
         normalizeEvent(event) {
-            return { ...event, start_time: new Date(event.start_time), end_time: new Date(event.end_time) };
+            return {
+                ...event,
+                note: event.note || '',
+                start_time: new Date(event.start_time),
+                end_time: new Date(event.end_time),
+            };
         },
 
         loadEventsFromScript() {
@@ -377,14 +419,21 @@ function calendarApp() {
             this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
         },
 
-        openCreateModal() {
-            const now = new Date();
-            const next = new Date(now);
-            now.setMinutes(0, 0, 0);
-            next.setHours(now.getHours() + 1, 0, 0, 0);
+        openCreateModal(selectedDate = null) {
+            let start = new Date();
+            if (selectedDate) {
+                const base = new Date(selectedDate);
+                start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
+            } else {
+                start.setMinutes(0, 0, 0);
+            }
+            const next = new Date(start);
+            next.setHours(start.getHours() + 1, 0, 0, 0);
+            this.createContextDateText = this.formatAgendaDate(this.dateKey(start));
             this.createForm = {
                 title: '',
-                start_time: this.toDatetimeLocal(now),
+                note: '',
+                start_time: this.toDatetimeLocal(start),
                 end_time: this.toDatetimeLocal(next),
                 is_all_day: false,
                 color: 'indigo',
@@ -392,10 +441,15 @@ function calendarApp() {
             this.createModalOpen = true;
         },
 
+        openCreateModalForDate(date) {
+            this.openCreateModal(date);
+        },
+
         async submitCreateEvent() {
             this.isSubmitting = true;
             const body = new URLSearchParams();
             body.set('title', this.createForm.title);
+            body.set('note', this.createForm.note || '');
             body.set('start_time', this.createForm.start_time);
             body.set('end_time', this.createForm.end_time);
             body.set('color', this.createForm.color);
@@ -436,6 +490,7 @@ function calendarApp() {
             this.detailModalOpen = false;
             this.editForm = {
                 title: this.selectedEvent.title,
+                note: this.selectedEvent.note || '',
                 start_time: this.toDatetimeLocal(this.selectedEvent.start_time),
                 end_time: this.toDatetimeLocal(this.selectedEvent.end_time),
                 is_all_day: !!this.selectedEvent.is_all_day,
@@ -449,6 +504,7 @@ function calendarApp() {
             this.isEditing = true;
             const body = new URLSearchParams();
             body.set('title', this.editForm.title);
+            body.set('note', this.editForm.note || '');
             body.set('start_time', this.editForm.start_time);
             body.set('end_time', this.editForm.end_time);
             body.set('color', this.editForm.color);
@@ -541,6 +597,45 @@ function calendarApp() {
         isCurrentMonth(date) { return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear(); },
         isToday(date) { const t = new Date(); return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear(); },
 
+        isRangeEvent(event) {
+            return this.dateKey(event.start_time) !== this.dateKey(event.end_time);
+        },
+        overlapsDate(event, date) {
+            const startOfDate = new Date(date);
+            startOfDate.setHours(0, 0, 0, 0);
+            const endOfDate = new Date(date);
+            endOfDate.setHours(23, 59, 59, 999);
+            return event.start_time <= endOfDate && event.end_time >= startOfDate;
+        },
+        getRangeEventsForDate(date) {
+            return this.events
+                .filter((event) => this.isRangeEvent(event) && this.overlapsDate(event, date))
+                .sort((a, b) => a.start_time - b.start_time)
+                .slice(0, 2);
+        },
+        getRangeStrokeClass(event, date) {
+            const baseMap = {
+                indigo: 'bg-indigo-200 border-indigo-300',
+                rose: 'bg-rose-200 border-rose-300',
+                amber: 'bg-amber-200 border-amber-300',
+                emerald: 'bg-emerald-200 border-emerald-300',
+                sky: 'bg-sky-200 border-sky-300',
+            };
+            const startKey = this.dateKey(event.start_time);
+            const endKey = this.dateKey(event.end_time);
+            const dateStr = this.dateKey(date);
+            const isStart = startKey === dateStr;
+            const isEnd = endKey === dateStr;
+            let radiusClass = 'rounded-none';
+            if (isStart && isEnd) {
+                radiusClass = 'rounded-full';
+            } else if (isStart) {
+                radiusClass = 'rounded-l-full rounded-r-md';
+            } else if (isEnd) {
+                radiusClass = 'rounded-r-full rounded-l-md';
+            }
+            return `${baseMap[event.color] || baseMap.indigo} ${radiusClass}`;
+        },
         getEventsForDate(date) {
             return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(date)).sort((a, b) => a.start_time - b.start_time);
         },

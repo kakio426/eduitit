@@ -12,6 +12,7 @@ EVENT_COLORS = (
 
 class CalendarEventCreateForm(forms.Form):
     title = forms.CharField(max_length=200)
+    note = forms.CharField(required=False, max_length=5000)
     start_time = forms.DateTimeField(
         input_formats=[
             "%Y-%m-%dT%H:%M",
