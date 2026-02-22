@@ -194,6 +194,20 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
 
+    def test_v2_cards_use_direct_launch_with_separate_info_trigger(self):
+        """V2 카드는 직접 진입 메타데이터 + 별도 상세 버튼을 함께 렌더링"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-launch-href="', content)
+        self.assertIn('class="product-info-trigger', content)
+
+    def test_v2_game_banner_has_separate_info_trigger(self):
+        """게임 배너도 직접 진입 링크와 별도 상세 버튼을 제공"""
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-track="game_banner"', content)
+        self.assertIn(f'aria-label="{self.p3.title} 상세 설명 열기"', content)
+
     def test_v2_context_sections_count(self):
         """V2 컨텍스트에 sections 존재"""
         response = self.client.get(reverse('home'))

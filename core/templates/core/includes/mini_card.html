@@ -1,9 +1,11 @@
 {# 미니 서비스 카드 - V2 홈 목적별 섹션용 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
-<div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group"
-    data-product-id="{{ product.id }}" data-track="mini_card" data-track-label="{{ product.title }}"
-    onclick="if(window.openModal) openModal({{ product.id }})" role="button" tabindex="0"
-    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+<div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group product-card"
+    data-product-id="{{ product.id }}"
+    data-launch-href="{{ product.launch_href|default:'' }}"
+    data-launch-external="{{ product.launch_is_external|yesno:'true,false' }}"
+    data-track="mini_card" data-track-label="{{ product.title }}"
+    role="button" tabindex="0">
     <div class="flex items-start gap-3">
         <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
             {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
@@ -18,6 +20,17 @@
             </div>
             {% endif %}
         </div>
-        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-indigo-400 transition-colors mt-1 flex-shrink-0"></i>
+        <div class="flex flex-col items-end gap-2 mt-0.5 flex-shrink-0">
+            <span class="inline-flex w-6 h-6 items-center justify-center rounded-full bg-slate-50 text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </span>
+            <button type="button"
+                class="product-info-trigger rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                data-product-id="{{ product.id }}"
+                aria-label="{{ product.title }} 상세 설명 열기"
+                title="서비스 설명">
+                상세
+            </button>
+        </div>
     </div>
 </div>

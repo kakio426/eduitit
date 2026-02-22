@@ -93,6 +93,17 @@ def _resolve_product_launch_url(product):
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
+def _attach_product_launch_meta(products):
+    """Attach launch target metadata so templates can navigate directly without modal."""
+    prepared = []
+    for product in products:
+        launch_href, launch_is_external = _resolve_product_launch_url(product)
+        product.launch_href = launch_href
+        product.launch_is_external = launch_is_external
+        prepared.append(product)
+    return prepared
+
+
 def _get_usage_based_quick_actions(user, product_list, limit=5):
     """사용 빈도 기반 퀵 액션 목록 생성. 기록 없으면 featured 기반 폴백."""
     from django.utils import timezone
@@ -271,7 +282,7 @@ def _build_today_context(request):
 
 def _home_v2(request, products, posts, page_obj):
     """Feature flag on 시 호출되는 V2 홈."""
-    product_list = list(products)
+    product_list = _attach_product_launch_meta(list(products))
     sections, games = get_purpose_sections(product_list, preview_limit=2)
 
     if request.user.is_authenticated:
@@ -356,6 +367,7 @@ def home(request):
         ).exclude(
             Q(title__icontains="인사이트") | Q(title__icontains="사주")
         ).distinct()
+        available_products = _attach_product_launch_meta(list(available_products))
 
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
@@ -364,10 +376,11 @@ def home(request):
         })
 
     # Else show the public home
-    featured_product = products.filter(is_featured=True).first()
+    products = _attach_product_launch_meta(list(products))
+    featured_product = next((product for product in products if product.is_featured), None)
     # Fallback if no featured product
     if not featured_product:
-         featured_product = products.first()
+        featured_product = products[0] if products else None
 
     return render(request, 'core/home.html', {
         'products': products,

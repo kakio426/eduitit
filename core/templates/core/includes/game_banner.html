@@ -19,13 +19,22 @@
     </div>
     <div class="flex gap-3 overflow-x-auto quick-scroll pb-2 md:flex-wrap md:overflow-visible md:pb-0">
         {% for game in games %}
-        <a href="{% if game.external_url %}{{ game.external_url }}{% else %}#{% endif %}"
-            class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
-            data-track="game_banner" data-track-label="{{ game.title }}"
-            onclick="{% if not game.external_url %}event.preventDefault(); if(window.openModal) openModal({{ game.id }});{% endif %}">
-            <span class="text-lg">{% if "fa-" in game.icon %}<i class="{{ game.icon }} text-red-500"></i>{% else %}{{ game.icon }}{% endif %}</span>
-            <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ game.title }}</span>
-        </a>
+        <div class="flex-shrink-0 flex items-center gap-2">
+            <a href="{% if game.launch_href %}{{ game.launch_href }}{% else %}/products/{{ game.id }}/{% endif %}"
+                {% if game.launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                class="flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
+                data-track="game_banner" data-track-label="{{ game.title }}">
+                <span class="text-lg">{% if "fa-" in game.icon %}<i class="{{ game.icon }} text-red-500"></i>{% else %}{{ game.icon }}{% endif %}</span>
+                <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ game.title }}</span>
+            </a>
+            <button type="button"
+                class="product-info-trigger rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                data-product-id="{{ game.id }}"
+                aria-label="{{ game.title }} 상세 설명 열기"
+                title="서비스 설명">
+                상세
+            </button>
+        </div>
         {% endfor %}
     </div>
 </div>

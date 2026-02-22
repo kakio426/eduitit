@@ -2,11 +2,13 @@
 {# 필터링 모드: 외부 래퍼에 grid span이 있으므로 내부는 순수 카드만 #}
 <div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
     role="button" tabindex="0" data-product-id="{{ product.id }}"
+    data-launch-href="{{ product.launch_href|default:'' }}"
+    data-launch-external="{{ product.launch_is_external|yesno:'true,false' }}"
     data-aos="fade-up" data-aos-delay="0" data-aos-offset="0">
 
     <div class="relative z-10 flex flex-col h-full justify-between">
         <div class="space-y-2 md:space-y-3">
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start gap-2">
                 <div
                     class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
                     {% if "fa-" in product.icon %}
@@ -15,10 +17,19 @@
                     {{ product.icon }}
                     {% endif %}
                 </div>
-                {% if product.card_size == 'hero' %}
-                <span
-                    class="px-2 py-0.5 md:px-3 md:py-1 theme-badge rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
-                {% endif %}
+                <div class="flex items-center gap-2">
+                    {% if product.card_size == 'hero' %}
+                    <span
+                        class="px-2 py-0.5 md:px-3 md:py-1 theme-badge rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
+                    {% endif %}
+                    <button type="button"
+                        class="product-info-trigger inline-flex items-center rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-1 text-[10px] md:text-xs font-bold text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                        data-product-id="{{ product.id }}"
+                        aria-label="{{ product.title }} 상세 설명 열기"
+                        title="서비스 설명">
+                        상세
+                    </button>
+                </div>
             </div>
 
             <div>
@@ -38,7 +49,7 @@
         <div class="mt-4 md:mt-6 flex items-center justify-between">
             <div
                 class="flex items-center gap-1 md:gap-2 font-bold text-gray-400 group-hover:text-purple-600 transition-colors">
-                <span class="text-xs md:text-sm">보기</span>
+                <span class="text-xs md:text-sm">바로 시작</span>
                 <i
                     class="fa-solid fa-arrow-right text-[10px] md:text-xs group-hover:translate-x-1 transition-transform"></i>
             </div>
@@ -60,11 +71,13 @@
 <div class="{% if product.card_size == 'hero' and product.description|length > 100 %}col-span-2 md:col-span-2 md:row-span-2{% elif product.card_size == 'wide' %}col-span-2 md:col-span-2{% elif product.card_size == 'tall' %}md:row-span-2{% endif %}"
     data-aos="fade-up" data-aos-delay="0" data-aos-offset="0">
     <div class="clay-card p-4 md:p-6 lg:p-8 h-full relative overflow-hidden group cursor-pointer transition-all card-{{ product.color_theme }} product-card bg-white/60 backdrop-blur-sm"
-        role="button" tabindex="0" data-product-id="{{ product.id }}">
+        role="button" tabindex="0" data-product-id="{{ product.id }}"
+        data-launch-href="{{ product.launch_href|default:'' }}"
+        data-launch-external="{{ product.launch_is_external|yesno:'true,false' }}">
 
         <div class="relative z-10 flex flex-col h-full justify-between">
             <div class="space-y-2 md:space-y-3">
-                <div class="flex justify-between items-start">
+                <div class="flex justify-between items-start gap-2">
                     <div
                         class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
                         {% if "fa-" in product.icon %}
@@ -73,10 +86,19 @@
                         {{ product.icon }}
                         {% endif %}
                     </div>
-                    {% if product.card_size == 'hero' %}
-                    <span
-                        class="px-2 py-0.5 md:px-3 md:py-1 theme-badge rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
-                    {% endif %}
+                    <div class="flex items-center gap-2">
+                        {% if product.card_size == 'hero' %}
+                        <span
+                            class="px-2 py-0.5 md:px-3 md:py-1 theme-badge rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">Featured</span>
+                        {% endif %}
+                        <button type="button"
+                            class="product-info-trigger inline-flex items-center rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-1 text-[10px] md:text-xs font-bold text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                            data-product-id="{{ product.id }}"
+                            aria-label="{{ product.title }} 상세 설명 열기"
+                            title="서비스 설명">
+                            상세
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -96,7 +118,7 @@
             <div class="mt-4 md:mt-6 flex items-center justify-between">
                 <div
                     class="flex items-center gap-1 md:gap-2 font-bold text-gray-400 group-hover:text-purple-600 transition-colors">
-                    <span class="text-xs md:text-sm">보기</span>
+                    <span class="text-xs md:text-sm">바로 시작</span>
                     <i
                         class="fa-solid fa-arrow-right text-[10px] md:text-xs group-hover:translate-x-1 transition-transform"></i>
                 </div>

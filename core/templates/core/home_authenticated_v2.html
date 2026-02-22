@@ -78,7 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (productId) {
             const token = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
             if (token) {
-                const sourceMap = { quick_action: 'home_quick', mini_card: 'home_section', game_card: 'home_game', section_more_toggle: 'home_section' };
+                const sourceMap = {
+                    quick_action: 'home_quick',
+                    mini_card: 'home_section',
+                    game_card: 'home_game',
+                    game_banner: 'home_game',
+                    section_more_toggle: 'home_section',
+                };
                 fetch('/api/track-usage/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },

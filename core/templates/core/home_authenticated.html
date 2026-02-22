@@ -166,21 +166,39 @@
 <script>
 
     document.addEventListener('DOMContentLoaded', () => {
+        const launchCard = (card) => {
+            const href = card.dataset.launchHref || `/products/${card.dataset.productId}/`;
+            if (!href) return;
+            const isExternal = card.dataset.launchExternal === 'true';
+            if (isExternal) {
+                window.open(href, '_blank', 'noopener');
+                return;
+            }
+            window.location.href = href;
+        };
 
-        // Product Cards Modal Logic - Using event delegation or direct binding
+        // Product card direct launch
         document.querySelectorAll('.product-card').forEach(card => {
             card.addEventListener('click', function (e) {
-                const id = this.getAttribute('data-product-id');
-                if (window.openModal) {
-                    window.openModal(id);
-                }
+                if (e.target.closest('.product-info-trigger')) return;
+                launchCard(this);
             });
 
             card.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    card.click();
+                    launchCard(card);
                 }
+            });
+        });
+
+        // Separate modal opener button
+        document.querySelectorAll('.product-info-trigger').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = this.dataset.productId || this.closest('[data-product-id]')?.dataset.productId;
+                if (id && window.openModal) window.openModal(id);
             });
         });
     });
