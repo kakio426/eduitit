@@ -697,6 +697,7 @@
 .pbl-bottom-row {
     display: grid;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .pbl-top-row {
@@ -712,8 +713,8 @@
     border: 1px solid rgba(147, 197, 253, 0.45);
     background: rgba(30, 64, 175, 0.18);
     color: #dbeafe;
-    min-height: 3.1rem;
-    padding: 0.4rem 0.38rem;
+    min-height: 3rem;
+    padding: 0.38rem 0.3rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -743,6 +744,9 @@
     font-size: 0.9rem;
     font-weight: 800;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .pbl-svg-wrap {
@@ -784,7 +788,7 @@
     border-radius: 0.85rem;
     border: 1px solid rgba(196, 181, 253, 0.42);
     background: rgba(91, 33, 182, 0.2);
-    min-height: 3.1rem;
+    min-height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -793,6 +797,50 @@
     font-weight: 800;
     color: #ede9fe;
     transition: all 180ms ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pbl-top-row.is-compact,
+.pbl-bottom-row.is-compact {
+    gap: 0.35rem;
+}
+
+.pbl-top-row.is-compact .pbl-top-node,
+.pbl-bottom-row.is-compact .pbl-bottom-node {
+    min-height: 2.6rem;
+    padding: 0.3rem 0.2rem;
+}
+
+.pbl-top-row.is-compact .pbl-node-index {
+    font-size: 0.62rem;
+}
+
+.pbl-top-row.is-compact .pbl-node-name,
+.pbl-bottom-row.is-compact .pbl-bottom-node {
+    font-size: 0.78rem;
+}
+
+.pbl-top-row.is-dense,
+.pbl-bottom-row.is-dense {
+    gap: 0.25rem;
+}
+
+.pbl-top-row.is-dense .pbl-top-node,
+.pbl-bottom-row.is-dense .pbl-bottom-node {
+    min-height: 2.35rem;
+    padding: 0.24rem 0.14rem;
+    border-radius: 0.6rem;
+}
+
+.pbl-top-row.is-dense .pbl-node-index {
+    font-size: 0.56rem;
+}
+
+.pbl-top-row.is-dense .pbl-node-name,
+.pbl-bottom-row.is-dense .pbl-bottom-node {
+    font-size: 0.68rem;
 }
 
 .pbl-bottom-node.is-hidden-result {

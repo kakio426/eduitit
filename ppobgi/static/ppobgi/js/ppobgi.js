@@ -772,9 +772,19 @@
     function drawNodes() {
         const scene = state.scene;
         if (!scene || !els.topRow || !els.bottomRow) return;
-        const cols = `repeat(${scene.participants.length}, minmax(72px, 1fr))`;
+        const count = scene.participants.length;
+        const cols = `repeat(${count}, minmax(0, 1fr))`;
         els.topRow.style.gridTemplateColumns = cols;
         els.bottomRow.style.gridTemplateColumns = cols;
+        els.topRow.classList.remove("is-compact", "is-dense");
+        els.bottomRow.classList.remove("is-compact", "is-dense");
+        if (count >= 18) {
+            els.topRow.classList.add("is-dense");
+            els.bottomRow.classList.add("is-dense");
+        } else if (count >= 13) {
+            els.topRow.classList.add("is-compact");
+            els.bottomRow.classList.add("is-compact");
+        }
 
         const topFrag = document.createDocumentFragment();
         scene.participants.forEach((name, i) => {
@@ -897,12 +907,14 @@
         const length = path.getTotalLength();
         path.style.strokeDasharray = String(length);
         path.style.strokeDashoffset = String(length);
-        const duration = isReducedMotion() ? 180 : 1050;
-        path.style.transition = `stroke-dashoffset ${duration}ms cubic-bezier(0.2,0.75,0.2,1)`;
+        const duration = isReducedMotion()
+            ? 220
+            : Math.max(1600, Math.min(3200, Math.round(length * 2.2)));
+        path.style.transition = `stroke-dashoffset ${duration}ms cubic-bezier(0.16,1,0.3,1)`;
         window.requestAnimationFrame(() => {
             path.style.strokeDashoffset = "0";
         });
-        await sleep(duration + 40);
+        await sleep(duration + (isReducedMotion() ? 40 : 180));
     }
 
     async function reveal(index, source) {
