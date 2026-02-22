@@ -59,13 +59,13 @@ class StudentGamesAccessTests(TestCase):
         response = self.client.get(launch_url)
         self.assertEqual(response.status_code, 403)
 
-    def test_student_mode_blocks_home_and_redirects_to_portal(self):
+    def test_student_mode_does_not_block_home(self):
         session = self.client.session
         session[product_views.STUDENT_GAMES_SESSION_KEY] = {"issuer_id": self.user.id}
         session.save()
 
         response = self.client.get(reverse("home"))
-        self.assertRedirects(response, reverse("dt_student_games_portal"))
+        self.assertEqual(response.status_code, 200)
 
     def test_student_mode_allows_game_routes(self):
         session = self.client.session
@@ -76,10 +76,10 @@ class StudentGamesAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["hide_navbar"])
 
-    def test_game_page_shows_banner_when_not_in_student_mode(self):
+    def test_game_page_does_not_show_global_banner(self):
         response = self.client.get(reverse("chess:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="globalBanner"', html=False)
+        self.assertNotContains(response, 'id="globalBanner"', html=False)
 
     def test_student_mode_hides_global_banner_on_game_page(self):
         session = self.client.session
