@@ -72,6 +72,63 @@
                     </div>
                 </div>
                 <p id="aiStatus" class="mt-4 text-center text-purple-600 font-bold hidden"></p>
+
+                <div class="mt-8 border-t border-purple-100 pt-6">
+                    <div class="rounded-2xl bg-indigo-50/70 border border-indigo-100 p-5 md:p-6 space-y-4">
+                        <h3 class="text-lg font-heavy text-indigo-900 flex items-center gap-2">
+                            <i class="fa-solid fa-paste"></i> Gemini 수동 복사-붙여넣기 모드
+                        </h3>
+                        <p class="text-sm text-indigo-900/80 leading-relaxed">
+                            API 호출 없이 Gemini 화면에서 결과를 직접 복사해 붙여넣어도 됩니다. 아래 순서를 그대로 따라 하면
+                            파서가 자동으로 형식을 점검하고 단계로 변환합니다.
+                        </p>
+                        <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900/85">
+                            <li>유튜브 주소를 먼저 입력합니다.</li>
+                            <li><b>프롬프트 복사</b> 버튼으로 Gemini용 지시문을 복사합니다.</li>
+                            <li>Gemini 답변(JSON 권장)을 아래 결과 칸에 붙여넣습니다.</li>
+                            <li><b>결과 붙여넣기 적용</b>을 누르면 단계 목록으로 자동 반영됩니다.</li>
+                        </ol>
+                        <p class="text-xs text-indigo-800">
+                            권장 출력 형식: JSON 객체 + <code>steps</code> 배열. 각 step은
+                            <code>summary</code> 필수, <code>start/end</code> 선택입니다.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label for="geminiPromptBox" class="text-sm font-heavy text-gray-700">1) Gemini 프롬프트</label>
+                                <div class="flex items-center gap-2">
+                                    <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer"
+                                        class="px-3 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-xs font-heavy hover:bg-indigo-50 transition-all">
+                                        Gemini 열기
+                                    </a>
+                                    <button type="button" id="btnCopyGeminiPrompt"
+                                        class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-heavy hover:bg-indigo-700 transition-all">
+                                        프롬프트 복사
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea id="geminiPromptBox" readonly
+                                class="w-full h-56 p-3 rounded-xl bg-gray-900 text-gray-100 text-xs leading-relaxed shadow-inner border border-gray-800">{{ manual_prompt_template }}</textarea>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label for="geminiResultInput" class="text-sm font-heavy text-gray-700">2) Gemini 결과 붙여넣기</label>
+                                <button type="button" id="btnApplyGeminiResult"
+                                    class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-heavy hover:bg-emerald-700 transition-all">
+                                    결과 붙여넣기 적용
+                                </button>
+                            </div>
+                            <textarea id="geminiResultInput"
+                                class="w-full h-56 p-3 rounded-xl bg-white border-2 border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
+                                placeholder='예: {"steps":[{"start":"00:35","summary":"..."}]}'></textarea>
+                            <p id="geminiManualStatus" class="text-sm font-bold text-indigo-700 hidden"></p>
+                            <ul id="geminiWarningList" class="space-y-1 text-xs text-amber-700 hidden"></ul>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 2. Main Lab Area -->
@@ -162,6 +219,12 @@
     const youtubePreviewContainer = document.getElementById('youtubePreviewContainer');
     const youtubePreviewFrame = document.getElementById('youtubePreviewFrame');
     const youtubeDirectLink = document.getElementById('youtubeDirectLink');
+    const geminiPromptBoxEl = document.getElementById('geminiPromptBox');
+    const geminiResultInputEl = document.getElementById('geminiResultInput');
+    const geminiManualStatusEl = document.getElementById('geminiManualStatus');
+    const geminiWarningListEl = document.getElementById('geminiWarningList');
+    const btnCopyGeminiPromptEl = document.getElementById('btnCopyGeminiPrompt');
+    const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
 
     function extractVideoId(url) {
         const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
@@ -181,9 +244,74 @@
             youtubePreviewFrame.src = '';
             youtubePreviewContainer.classList.add('hidden');
         }
+
+        updateGeminiPrompt();
     }
 
     videoUrlEl.addEventListener('input', updateYoutubePreview);
+
+    function buildGeminiPrompt(videoUrl) {
+        const targetUrl = videoUrl || '(여기에 유튜브 URL 입력)';
+        return `당신은 초등 미술 수업 설계 도우미입니다.
+아래 영상/자료를 보고 학생이 따라 하기 쉬운 단계별 수업안을 JSON으로만 출력하세요.
+
+대상 영상 URL: ${targetUrl}
+
+출력 규칙:
+1) 반드시 JSON만 출력 (코드블록/설명문/인사말 금지)
+2) 최상위는 객체이며 steps 배열 필수
+3) steps는 4~12개 권장, 각 step은 summary 필수
+4) 가능한 경우 start/end를 MM:SS 형식으로 포함
+5) summary는 학생 활동 중심의 짧은 문장
+6) materials는 배열, teacher_tip은 문자열
+
+JSON 스키마 예시:
+{
+  "video_title": "수업 제목",
+  "steps": [
+    {
+      "start": "00:35",
+      "end": "01:20",
+      "summary": "도화지 중앙에 큰 원을 그리고 배경 색을 고른다.",
+      "materials": ["도화지", "연필", "색연필"],
+      "teacher_tip": "선 굵기를 달리하면 입체감이 살아난다."
+    }
+  ]
+}`;
+    }
+
+    function updateGeminiPrompt() {
+        if (!geminiPromptBoxEl) return;
+        geminiPromptBoxEl.value = buildGeminiPrompt(videoUrlEl.value.trim());
+    }
+
+    function setGeminiStatus(message, tone = 'indigo') {
+        if (!geminiManualStatusEl) return;
+        geminiManualStatusEl.textContent = message || '';
+        geminiManualStatusEl.classList.remove('hidden', 'text-indigo-700', 'text-emerald-700', 'text-red-700');
+        if (!message) {
+            geminiManualStatusEl.classList.add('hidden');
+            return;
+        }
+        const classByTone = {
+            indigo: 'text-indigo-700',
+            success: 'text-emerald-700',
+            error: 'text-red-700',
+        };
+        geminiManualStatusEl.classList.add(classByTone[tone] || classByTone.indigo);
+    }
+
+    function renderGeminiWarnings(warnings) {
+        if (!geminiWarningListEl) return;
+        const items = Array.isArray(warnings) ? warnings.filter(Boolean) : [];
+        if (!items.length) {
+            geminiWarningListEl.innerHTML = '';
+            geminiWarningListEl.classList.add('hidden');
+            return;
+        }
+        geminiWarningListEl.innerHTML = items.map(msg => `<li>• ${msg}</li>`).join('');
+        geminiWarningListEl.classList.remove('hidden');
+    }
 
     function renderSteps() {
         stepCountInput.value = steps.length;
@@ -301,8 +429,71 @@
         finally { btnAiGenerate.disabled = false; btnAiGenerate.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI 수업 설계`; }
     });
 
+    if (btnCopyGeminiPromptEl) {
+        btnCopyGeminiPromptEl.addEventListener('click', async () => {
+            updateGeminiPrompt();
+            try {
+                await navigator.clipboard.writeText(geminiPromptBoxEl.value);
+                setGeminiStatus('프롬프트를 클립보드에 복사했습니다.', 'success');
+            } catch (err) {
+                setGeminiStatus('복사에 실패했습니다. 프롬프트를 직접 선택해 복사해 주세요.', 'error');
+            }
+        });
+    }
+
+    if (btnApplyGeminiResultEl) {
+        btnApplyGeminiResultEl.addEventListener('click', async () => {
+            const rawText = (geminiResultInputEl?.value || '').trim();
+            if (!rawText) {
+                setGeminiStatus('Gemini 결과를 붙여넣어 주세요.', 'error');
+                return;
+            }
+
+            btnApplyGeminiResultEl.disabled = true;
+            btnApplyGeminiResultEl.innerHTML = '검증 중...';
+            setGeminiStatus('형식을 점검하고 단계로 변환하고 있습니다...', 'indigo');
+            renderGeminiWarnings([]);
+
+            try {
+                const response = await fetch('{% url "artclass:parse_gemini_steps_api" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: JSON.stringify({
+                        rawText,
+                        videoUrl: videoUrlEl.value.trim(),
+                    }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || data.error || '결과를 해석하지 못했습니다.');
+                }
+
+                steps = (data.steps || []).map(step => ({
+                    text: step.text || '',
+                    imagePreview: null,
+                }));
+                renderSteps();
+                renderGeminiWarnings(data.warnings || []);
+
+                const parsedCount = data?.meta?.step_count || steps.length;
+                setGeminiStatus(`검증 완료: ${parsedCount}개 단계를 반영했습니다.`, 'success');
+            } catch (err) {
+                setGeminiStatus(err.message || '결과 처리 중 오류가 발생했습니다.', 'error');
+            } finally {
+                btnApplyGeminiResultEl.disabled = false;
+                btnApplyGeminiResultEl.innerHTML = '결과 붙여넣기 적용';
+            }
+        });
+    }
+
     // Init
     updateYoutubePreview();
+    updateGeminiPrompt();
+    renderGeminiWarnings([]);
     renderSteps();
 </script>
 {% endblock %}

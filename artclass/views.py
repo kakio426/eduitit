@@ -9,6 +9,11 @@ from core.utils import ratelimit_key_for_master_only
 from openai import OpenAI
 from django.db.models import Count
 from .models import ArtClass, ArtStep
+from .manual_pipeline import (
+    ManualPipelineError,
+    build_manual_pipeline_prompt,
+    parse_manual_pipeline_result,
+)
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
@@ -85,7 +90,8 @@ def setup_view(request, pk=None):
 
     return render(request, 'artclass/setup.html', {
         'art_class': art_class,
-        'initial_steps_json': initial_steps_json
+        'initial_steps_json': initial_steps_json,
+        'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
     })
 
 
@@ -226,6 +232,45 @@ def generate_steps_api(request):
         return JsonResponse({'error': 'INVALID_JSON'}, status=400)
     except Exception:
         return JsonResponse({'error': 'INTERNAL_ERROR'}, status=500)
+
+
+@ratelimit(key=ratelimit_key_for_master_only, rate='30/h', method='POST', block=True)
+def parse_gemini_steps_api(request):
+    """Gemini 수동 복붙 결과 파싱/검증 API."""
+    if getattr(request, 'limited', False):
+        return JsonResponse(
+            {'error': 'LIMIT_EXCEEDED', 'message': '요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.'},
+            status=429,
+        )
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'INVALID_JSON', 'message': '요청 본문이 JSON 형식이 아닙니다.'}, status=400)
+
+    raw_text = (data.get('rawText') or '').strip()
+    if not raw_text:
+        return JsonResponse({'error': 'EMPTY_INPUT', 'message': '붙여넣은 결과를 입력해 주세요.'}, status=400)
+
+    try:
+        parsed = parse_manual_pipeline_result(raw_text)
+    except ManualPipelineError as exc:
+        return JsonResponse({'error': exc.code, 'message': str(exc)}, status=400)
+    except Exception:
+        return JsonResponse({'error': 'INTERNAL_ERROR', 'message': '결과를 해석하는 중 오류가 발생했습니다.'}, status=500)
+
+    prompt_template = build_manual_pipeline_prompt(data.get('videoUrl') or '')
+    return JsonResponse(
+        {
+            'steps': parsed['steps'],
+            'warnings': parsed['warnings'],
+            'meta': parsed['meta'],
+            'promptTemplate': prompt_template,
+        }
+    )
 
 
 def library_view(request):
