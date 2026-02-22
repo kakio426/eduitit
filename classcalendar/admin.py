@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CalendarEvent, EventExternalMap, EventPageBlock, GoogleAccount, GoogleSyncState
+from .models import CalendarEvent, EventPageBlock
 
 
 @admin.register(CalendarEvent)
@@ -17,21 +17,3 @@ class EventPageBlockAdmin(admin.ModelAdmin):
     list_filter = ("block_type",)
     search_fields = ("event__title",)
     ordering = ("event", "order")
-
-
-@admin.register(GoogleAccount)
-class GoogleAccountAdmin(admin.ModelAdmin):
-    list_display = ("user", "email", "updated_at")
-    search_fields = ("user__username", "email")
-
-
-@admin.register(GoogleSyncState)
-class GoogleSyncStateAdmin(admin.ModelAdmin):
-    list_display = ("account", "google_calendar_id", "last_sync")
-    search_fields = ("account__user__username", "google_calendar_id")
-
-
-@admin.register(EventExternalMap)
-class EventExternalMapAdmin(admin.ModelAdmin):
-    list_display = ("event", "account", "google_calendar_id", "google_event_id")
-    search_fields = ("event__title", "google_event_id", "google_calendar_id")

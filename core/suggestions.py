@@ -29,7 +29,7 @@ SERVICE_META = {
         "route_names": ["classcalendar:main"],
         "title_keywords": ["캘린더", "일정"],
         "default_icon": "📅",
-        "fallback_summary": "학급 일정과 구글 캘린더를 한 번에 관리하세요.",
+        "fallback_summary": "학급 일정을 한 번에 관리하세요.",
     },
     "qrgen": {
         "route_names": ["qrgen:landing"],

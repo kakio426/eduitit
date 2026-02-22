@@ -1,7 +1,5 @@
 from django import forms
 
-from .models import CalendarEvent
-
 
 EVENT_COLORS = (
     ("indigo", "인디고"),
@@ -32,11 +30,6 @@ class CalendarEventCreateForm(forms.Form):
     )
     is_all_day = forms.BooleanField(required=False)
     color = forms.ChoiceField(choices=EVENT_COLORS, required=False)
-    visibility = forms.ChoiceField(
-        choices=CalendarEvent.VISIBILITY_CHOICES,
-        required=False,
-        initial=CalendarEvent.VISIBILITY_CLASS,
-    )
 
     def clean(self):
         cleaned_data = super().clean()

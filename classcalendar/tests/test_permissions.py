@@ -24,7 +24,17 @@ class PermissionTest(TestCase):
         session["active_classroom_id"] = str(self.classroom.id)
         session.save()
 
-        self.client_student = Client()
+    def _create_event(self, title="기존 일정", author=None):
+        owner = author or self.teacher
+        return CalendarEvent.objects.create(
+            title=title,
+            classroom=self.classroom,
+            author=owner,
+            start_time="2026-03-01T10:00:00Z",
+            end_time="2026-03-01T11:00:00Z",
+            color="indigo",
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
 
     def test_teacher_can_create_event(self):
         response = self.client_teacher.post(
@@ -39,7 +49,9 @@ class PermissionTest(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["status"], "success")
-        self.assertTrue(CalendarEvent.objects.filter(title="Test Event", author=self.teacher).exists())
+        event = CalendarEvent.objects.filter(title="Test Event", author=self.teacher).first()
+        self.assertIsNotNone(event)
+        self.assertEqual(event.visibility, CalendarEvent.VISIBILITY_TEACHER)
 
     def test_create_event_rejects_invalid_time_range(self):
         response = self.client_teacher.post(
@@ -67,36 +79,51 @@ class PermissionTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "active_classroom_required")
 
-    def test_student_cannot_create_event(self):
-        response = self.client_student.post(
+    def test_unauthenticated_user_cannot_create_event(self):
+        response = Client().post(
             reverse("classcalendar:api_create_event"),
             {
-                "title": "Student Event",
+                "title": "Anonymous Event",
                 "start_time": "2026-03-01T10:00",
                 "end_time": "2026-03-01T11:00",
             },
         )
         self.assertEqual(response.status_code, 302)
 
-    def test_student_view_hides_teacher_only_events(self):
-        CalendarEvent.objects.create(
-            title="Class Event",
-            classroom=self.classroom,
-            author=self.teacher,
-            start_time="2026-03-01T10:00:00Z",
-            end_time="2026-03-01T11:00:00Z",
-            visibility=CalendarEvent.VISIBILITY_CLASS,
+    def test_teacher_can_update_own_event(self):
+        event = self._create_event()
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_update_event", kwargs={"event_id": str(event.id)}),
+            {
+                "title": "수정된 일정",
+                "start_time": "2026-03-01T13:00",
+                "end_time": "2026-03-01T14:30",
+                "color": "emerald",
+            },
         )
-        CalendarEvent.objects.create(
-            title="Teacher Secret",
-            classroom=self.classroom,
-            author=self.teacher,
-            start_time="2026-03-01T12:00:00Z",
-            end_time="2026-03-01T13:00:00Z",
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-        )
-
-        response = self.client_student.get(reverse("classcalendar:student_view", kwargs={"slug": self.classroom.slug}))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Class Event")
-        self.assertNotContains(response, "Teacher Secret")
+        event.refresh_from_db()
+        self.assertEqual(event.title, "수정된 일정")
+        self.assertEqual(event.color, "emerald")
+        self.assertEqual(event.visibility, CalendarEvent.VISIBILITY_TEACHER)
+
+    def test_teacher_can_delete_own_event(self):
+        event = self._create_event()
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_delete_event", kwargs={"event_id": str(event.id)})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CalendarEvent.objects.filter(id=event.id).exists())
+
+    def test_teacher_cannot_update_other_teacher_event(self):
+        event = self._create_event(author=self.other_teacher)
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_update_event", kwargs={"event_id": str(event.id)}),
+            {
+                "title": "권한없는 수정",
+                "start_time": "2026-03-01T13:00",
+                "end_time": "2026-03-01T14:30",
+                "color": "rose",
+            },
+        )
+        self.assertEqual(response.status_code, 404)

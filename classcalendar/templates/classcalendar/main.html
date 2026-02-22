@@ -3,79 +3,95 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .calendar-hero {
+        background: linear-gradient(140deg, rgba(15, 23, 42, 0.95) 0%, rgba(51, 65, 85, 0.9) 45%, rgba(79, 70, 229, 0.86) 100%);
+    }
+
+    .calendar-grid-day {
+        min-height: 132px;
+    }
+
+    @media (max-width: 1023px) {
+        .calendar-grid-day {
+            min-height: 116px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen" x-data="calendarApp()">
+<section class="pt-28 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen" x-data="calendarApp()">
     <div class="max-w-7xl mx-auto">
-        <div class="sm:flex sm:items-center sm:justify-between mb-8">
-            <div>
-                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                    <span class="text-4xl">{{ service.icon|default:'📅' }}</span>
-                    {{ title }}
-                </h1>
-                <p class="mt-2 text-sm text-slate-600 font-medium">
-                    {{ service.lead_text|default:'학급 일정과 구글 캘린더를 함께 관리하세요.' }}
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0 flex flex-wrap gap-2 items-center">
-                {% if google_connected %}
-                <button
-                    type="button"
-                    @click="syncGoogle()"
-                    class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    구글 동기화
-                </button>
-                <button
-                    type="button"
-                    @click="disconnectGoogle()"
-                    class="inline-flex items-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-                >
-                    구글 연결 해제
-                </button>
-                {% else %}
-                <a
-                    href="{% url 'classcalendar:oauth_login' %}"
-                    class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    구글 계정 연결
-                </a>
-                {% endif %}
-                <button
-                    type="button"
-                    @click="openCreateModal()"
-                    class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                >
-                    새 일정
-                </button>
+        <div class="calendar-hero rounded-[2rem] p-6 sm:p-8 border border-white/20 shadow-[0_20px_50px_rgba(15,23,42,0.35)] mb-6 text-white">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+                <div>
+                    <p class="text-xs sm:text-sm font-semibold uppercase tracking-[0.12em] text-indigo-100/90 mb-2">Teacher Workspace</p>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight flex items-center gap-3 leading-tight">
+                        <span class="text-4xl sm:text-5xl">{{ service.icon|default:'📅' }}</span>
+                        <span>{{ title }}</span>
+                    </h1>
+                    <p class="mt-3 text-sm sm:text-base text-indigo-100/95 font-medium break-keep">
+                        {{ service.lead_text|default:'학급 일정을 한 화면에서 명확하게 관리하세요.' }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <span class="inline-flex items-center rounded-xl border border-emerald-200/70 bg-emerald-100/95 px-3.5 py-2 text-sm font-semibold text-emerald-800">
+                        교사 전용 캘린더
+                    </span>
+                    <button
+                        type="button"
+                        @click="openCreateModal()"
+                        class="inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
+                    >
+                        새 일정
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-slate-800" x-text="currentMonthText"></h2>
-                <div class="flex items-center gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">오늘 일정</p>
+                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="todayEventsCount"></p>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">이번 주 일정</p>
+                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="weekEventsCount"></p>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">이번 달 일정</p>
+                <p class="mt-2 text-2xl font-extrabold text-slate-900" x-text="monthEventsCount"></p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] border border-slate-200 shadow-xl p-4 sm:p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight" x-text="currentMonthText"></h2>
+                <div class="flex items-center justify-between md:justify-end gap-2">
                     <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                         <button
+                            type="button"
                             @click="view='month'"
                             :class="view === 'month' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
-                            class="px-4 py-1.5 rounded-lg text-sm font-semibold transition"
-                            type="button"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold transition"
                         >
                             월
                         </button>
                         <button
+                            type="button"
                             @click="view='agenda'"
                             :class="view === 'agenda' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
-                            class="px-4 py-1.5 rounded-lg text-sm font-semibold transition"
-                            type="button"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold transition"
                         >
                             아젠다
                         </button>
                     </div>
-                    <button @click="prevMonth()" type="button" class="p-2 rounded-xl text-slate-500 hover:bg-slate-100">
+                    <button type="button" @click="prevMonth()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition" aria-label="이전 달">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <button @click="nextMonth()" type="button" class="p-2 rounded-xl text-slate-500 hover:bg-slate-100">
+                    <button type="button" @click="nextMonth()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition" aria-label="다음 달">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 </div>
@@ -83,54 +99,55 @@
 
             <div x-show="view === 'month'">
                 <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
-                    <template x-for="day in ['일','월','화','수','목','금','토']">
-                        <div class="bg-slate-50 py-3 text-center text-xs font-semibold text-slate-500" x-text="day"></div>
+                    <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
+                        <div class="bg-slate-100 py-3 text-center text-sm font-bold text-slate-600" x-text="day"></div>
                     </template>
                     <template x-for="date in calendarDates" :key="date.toISOString()">
-                        <div class="bg-white min-h-[120px] p-2 hover:bg-slate-50 transition">
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full"
-                                    :class="{
-                                        'bg-indigo-600 text-white': isToday(date),
-                                        'text-slate-400': !isCurrentMonth(date),
-                                        'text-slate-700': isCurrentMonth(date) && !isToday(date)
-                                    }"
-                                    x-text="date.getDate()"
-                                ></span>
-                            </div>
-                            <div class="mt-2 space-y-1">
-                                <template x-for="event in getEventsForDate(date).slice(0, 3)" :key="event.id">
+                        <div class="calendar-grid-day bg-white p-2.5 hover:bg-slate-50 transition">
+                            <span
+                                class="text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full"
+                                :class="{
+                                    'bg-indigo-600 text-white': isToday(date),
+                                    'text-slate-400': !isCurrentMonth(date),
+                                    'text-slate-700': isCurrentMonth(date) && !isToday(date)
+                                }"
+                                x-text="date.getDate()"
+                            ></span>
+                            <div class="mt-2 space-y-1.5">
+                                <template x-for="event in getVisibleEventsForDate(date)" :key="event.id">
                                     <button
                                         type="button"
                                         @click="openEventDetail(event)"
-                                        class="w-full text-left px-2 py-1 text-xs rounded-lg font-medium truncate border border-black/5"
-                                        :class="getEventColorClass(event)"
-                                        x-text="event.title"
-                                    ></button>
+                                        class="w-full text-left px-2.5 py-1.5 rounded-lg text-sm font-medium truncate border transition"
+                                        :class="getEventChipClass(event)"
+                                    >
+                                        <span class="mr-1.5 text-[11px] font-semibold opacity-80" x-text="formatEventTimeShort(event.start_time, event.is_all_day)"></span>
+                                        <span x-text="event.title"></span>
+                                    </button>
                                 </template>
+                                <p x-show="getOverflowCountForDate(date) > 0" class="text-xs font-semibold text-slate-500 px-1" x-text="`+ ${getOverflowCountForDate(date)}개 더`"></p>
                             </div>
                         </div>
                     </template>
                 </div>
             </div>
 
-            <div x-show="view === 'agenda'" x-cloak class="space-y-6">
+            <div x-show="view === 'agenda'" x-cloak class="space-y-5">
                 <template x-for="date in getAgendaDates()" :key="date">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800 mb-3" x-text="formatAgendaDate(date)"></h3>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 mb-3" x-text="formatAgendaDate(date)"></h3>
                         <div class="space-y-2">
                             <template x-for="event in getEventsByDateString(date)" :key="event.id">
                                 <button
                                     type="button"
                                     @click="openEventDetail(event)"
-                                    class="w-full text-left bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition"
+                                    class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
                                 >
                                     <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-10 rounded-full" :class="getEventColorClass(event).split(' ')[0]"></div>
-                                        <div class="flex-1">
-                                            <p class="text-base font-bold text-slate-900" x-text="event.title"></p>
-                                            <p class="text-sm text-slate-500" x-text="formatEventTime(event.start_time, event.is_all_day)"></p>
+                                        <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-base sm:text-lg font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
                                         </div>
                                     </div>
                                 </button>
@@ -138,97 +155,116 @@
                         </div>
                     </div>
                 </template>
-                <div x-show="getAgendaDates().length === 0" class="py-10 text-center text-slate-500">
-                    등록된 일정이 없습니다.
+                <div x-show="getAgendaDates().length === 0" class="py-12 text-center text-slate-500 text-sm font-medium">
+                    등록된 일정이 없습니다. 오른쪽 위의 새 일정을 눌러 시작해보세요.
                 </div>
             </div>
         </div>
     </div>
 
-    <div
-        x-show="createModalOpen"
-        x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-        @click.self="createModalOpen = false"
-    >
-        <div class="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl">
-            <h3 class="text-xl font-bold text-slate-900 mb-4">새 일정 만들기</h3>
+    <div x-show="createModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="createModalOpen = false">
+        <div class="w-full max-w-xl bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
+            <h3 class="text-xl font-extrabold text-slate-900 mb-4">새 일정 만들기</h3>
             <form @submit.prevent="submitCreateEvent" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">제목</label>
-                    <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2" required maxlength="200">
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
+                    <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">시작</label>
-                        <input x-model="createForm.start_time" type="datetime-local" class="w-full rounded-xl border border-slate-200 px-3 py-2" required>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">시작</label>
+                        <input x-model="createForm.start_time" type="datetime-local" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">종료</label>
-                        <input x-model="createForm.end_time" type="datetime-local" class="w-full rounded-xl border border-slate-200 px-3 py-2" required>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">종료</label>
+                        <input x-model="createForm.end_time" type="datetime-local" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">색상</label>
-                        <select x-model="createForm.color" class="w-full rounded-xl border border-slate-200 px-3 py-2">
-                            <option value="indigo">인디고</option>
-                            <option value="rose">로즈</option>
-                            <option value="amber">앰버</option>
-                            <option value="emerald">에메랄드</option>
-                            <option value="sky">스카이</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">가시성</label>
-                        <select x-model="createForm.visibility" class="w-full rounded-xl border border-slate-200 px-3 py-2">
-                            <option value="class_readonly">학급 공유</option>
-                            <option value="teacher_only">교사 전용</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">색상</label>
+                    <select x-model="createForm.color" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="indigo">인디고</option>
+                        <option value="rose">로즈</option>
+                        <option value="amber">앰버</option>
+                        <option value="emerald">에메랄드</option>
+                        <option value="sky">스카이</option>
+                    </select>
                 </div>
-                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                    <input x-model="createForm.is_all_day" type="checkbox" class="rounded border-slate-300">
-                    하루 종일
+                <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input x-model="createForm.is_all_day" type="checkbox" class="rounded border-slate-300"> 하루 종일
                 </label>
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" @click="createModalOpen = false" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700">취소</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold" :disabled="isSubmitting">
-                        저장
-                    </button>
+                    <button type="button" @click="createModalOpen = false" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">취소</button>
+                    <button type="submit" :disabled="isSubmitting" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60">저장</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div
-        x-show="detailModalOpen"
-        x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-        @click.self="detailModalOpen = false"
-    >
-        <div class="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl">
-            <h3 class="text-lg font-bold text-slate-900 mb-2" x-text="selectedEvent ? selectedEvent.title : ''"></h3>
-            <p class="text-sm text-slate-500 mb-5" x-text="selectedEvent ? formatEventTime(selectedEvent.start_time, selectedEvent.is_all_day) : ''"></p>
-            <div class="flex justify-between items-center">
-                <button
-                    type="button"
-                    @click="exportEventToGoogle()"
-                    class="px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    구글로 내보내기
-                </button>
-                <button type="button" @click="detailModalOpen = false" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">
-                    닫기
-                </button>
+    <div x-show="editModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="editModalOpen = false">
+        <div class="w-full max-w-xl bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
+            <h3 class="text-xl font-extrabold text-slate-900 mb-4">일정 수정</h3>
+            <form @submit.prevent="submitEditEvent" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
+                    <input x-model="editForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">시작</label>
+                        <input x-model="editForm.start_time" type="datetime-local" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">종료</label>
+                        <input x-model="editForm.end_time" type="datetime-local" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">색상</label>
+                    <select x-model="editForm.color" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="indigo">인디고</option>
+                        <option value="rose">로즈</option>
+                        <option value="amber">앰버</option>
+                        <option value="emerald">에메랄드</option>
+                        <option value="sky">스카이</option>
+                    </select>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input x-model="editForm.is_all_day" type="checkbox" class="rounded border-slate-300"> 하루 종일
+                </label>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">취소</button>
+                    <button type="submit" :disabled="isEditing" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60">수정 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="detailModalOpen = false">
+        <div class="w-full max-w-lg bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
+            <h3 class="text-xl font-extrabold text-slate-900 mb-2" x-text="selectedEvent ? selectedEvent.title : ''"></h3>
+            <p class="text-sm font-medium text-slate-600 mb-5" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
+            <div class="flex flex-wrap justify-end gap-2">
+                <button type="button" @click="openEditModal()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">수정</button>
+                <button type="button" @click="openDeleteConfirm()" class="px-3.5 py-2 rounded-xl border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-50 transition">삭제</button>
+                <button type="button" @click="detailModalOpen = false" class="px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="deleteConfirmOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="deleteConfirmOpen = false">
+        <div class="w-full max-w-md bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-2">이 일정을 삭제할까요?</h3>
+            <p class="text-sm text-slate-600 mb-5" x-text="selectedEvent ? selectedEvent.title : ''"></p>
+            <div class="flex justify-end gap-2">
+                <button type="button" @click="deleteConfirmOpen = false" class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">취소</button>
+                <button type="button" @click="deleteSelectedEvent()" :disabled="isDeleting" class="px-3.5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold disabled:opacity-60">삭제</button>
             </div>
         </div>
     </div>
 </section>
 
 {{ events_json|json_script:"events-data" }}
-{{ oauth_error|json_script:"oauth-error-data" }}
-{{ oauth_success|json_script:"oauth-success-data" }}
 
 <script>
 function calendarApp() {
@@ -236,48 +272,34 @@ function calendarApp() {
         view: 'month',
         currentDate: new Date(),
         events: [],
-        createModalOpen: false,
-        detailModalOpen: false,
-        isSubmitting: false,
         selectedEvent: null,
-        createForm: {
-            title: '',
-            start_time: '',
-            end_time: '',
-            is_all_day: false,
-            color: 'indigo',
-            visibility: 'class_readonly',
-        },
+        createModalOpen: false,
+        editModalOpen: false,
+        detailModalOpen: false,
+        deleteConfirmOpen: false,
+        isSubmitting: false,
+        isEditing: false,
+        isDeleting: false,
+        calendarBaseUrl: '{% url "classcalendar:main" %}',
+        createForm: { title: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
+        editForm: { title: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
 
         init() {
+            if (window.innerWidth < 768) this.view = 'agenda';
             this.loadEventsFromScript();
-            this.showOAuthToast();
+        },
+
+        normalizeEvent(event) {
+            return { ...event, start_time: new Date(event.start_time), end_time: new Date(event.end_time) };
         },
 
         loadEventsFromScript() {
             try {
-                const dataElement = document.getElementById('events-data');
-                const raw = dataElement ? JSON.parse(dataElement.textContent) : [];
-                this.events = raw.map((event) => ({
-                    ...event,
-                    start_time: new Date(event.start_time),
-                    end_time: new Date(event.end_time),
-                }));
+                const raw = JSON.parse(document.getElementById('events-data').textContent || '[]');
+                this.events = raw.map((event) => this.normalizeEvent(event));
             } catch (e) {
                 window.showToast('일정 데이터를 읽는 중 오류가 발생했습니다.', 'error');
             }
-        },
-
-        showOAuthToast() {
-            try {
-                const errorText = JSON.parse(document.getElementById('oauth-error-data').textContent || '""');
-                const successText = JSON.parse(document.getElementById('oauth-success-data').textContent || '""');
-                if (successText === 'google_connected') {
-                    window.showToast('구글 계정 연결이 완료되었습니다.', 'success');
-                } else if (errorText) {
-                    window.showToast('구글 연동 중 문제가 발생했습니다. 다시 시도해 주세요.', 'error');
-                }
-            } catch (e) {}
         },
 
         getCsrfToken() {
@@ -293,215 +315,245 @@ function calendarApp() {
             if (!response.ok) {
                 const err = new Error(payload.message || '요청 처리에 실패했습니다.');
                 err.payload = payload;
-                err.status = response.status;
                 throw err;
             }
             return payload;
         },
 
+        pad(value) { return String(value).padStart(2, '0'); },
+        dateKey(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+        },
+        parseDateKey(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        },
+        toDatetimeLocal(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}T${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        buildUpdateUrl(eventId) { return `${this.calendarBaseUrl}api/events/${eventId}/update/`; },
+        buildDeleteUrl(eventId) { return `${this.calendarBaseUrl}api/events/${eventId}/delete/`; },
+
         async refreshEvents() {
-            try {
-                const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
-                const rows = payload.events || [];
-                this.events = rows.map((event) => ({
-                    ...event,
-                    start_time: new Date(event.start_time),
-                    end_time: new Date(event.end_time),
-                }));
-            } catch (err) {
-                window.showToast(err.message || '일정 목록을 불러오지 못했습니다.', 'error');
-            }
+            const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
+            this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
         },
 
         openCreateModal() {
-            this.createModalOpen = true;
+            const now = new Date();
+            const next = new Date(now);
+            now.setMinutes(0, 0, 0);
+            next.setHours(now.getHours() + 1, 0, 0, 0);
             this.createForm = {
                 title: '',
-                start_time: '',
-                end_time: '',
+                start_time: this.toDatetimeLocal(now),
+                end_time: this.toDatetimeLocal(next),
                 is_all_day: false,
                 color: 'indigo',
-                visibility: 'class_readonly',
             };
+            this.createModalOpen = true;
         },
 
         async submitCreateEvent() {
             this.isSubmitting = true;
-            const formData = new URLSearchParams();
-            formData.set('title', this.createForm.title);
-            formData.set('start_time', this.createForm.start_time);
-            formData.set('end_time', this.createForm.end_time);
-            formData.set('color', this.createForm.color);
-            formData.set('visibility', this.createForm.visibility);
-            if (this.createForm.is_all_day) formData.set('is_all_day', 'on');
-
+            const body = new URLSearchParams();
+            body.set('title', this.createForm.title);
+            body.set('start_time', this.createForm.start_time);
+            body.set('end_time', this.createForm.end_time);
+            body.set('color', this.createForm.color);
+            if (this.createForm.is_all_day) body.set('is_all_day', 'on');
             try {
                 await this.requestJson('{% url "classcalendar:api_create_event" %}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
-                    body: formData.toString(),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRFToken': this.getCsrfToken() },
+                    body: body.toString(),
                 });
                 this.createModalOpen = false;
                 await this.refreshEvents();
                 window.showToast('일정을 저장했습니다.', 'success');
             } catch (err) {
-                if (err.payload && err.payload.code === 'validation_error') {
-                    window.showToast('입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.', 'error');
-                } else {
-                    window.showToast(err.message || '일정 저장에 실패했습니다.', 'error');
-                }
+                const isValidationError = err.payload && err.payload.code === 'validation_error';
+                window.showToast(
+                    isValidationError
+                        ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
+                        : (err.message || '일정 저장에 실패했습니다.'),
+                    'error'
+                );
             } finally {
                 this.isSubmitting = false;
             }
         },
 
-        async syncGoogle() {
-            const body = new URLSearchParams();
-            body.set('google_calendar_id', 'primary');
-            try {
-                const payload = await this.requestJson('{% url "classcalendar:api_google_sync" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
-                    body: body.toString(),
-                });
-                await this.refreshEvents();
-                const counts = payload.counts || {};
-                window.showToast(
-                    `동기화 완료 (생성 ${counts.created || 0}, 갱신 ${counts.updated || 0}, 삭제 ${counts.deleted || 0})`,
-                    'success'
-                );
-            } catch (err) {
-                window.showToast(err.message || '구글 동기화에 실패했습니다.', 'error');
-            }
-        },
-
-        async disconnectGoogle() {
-            try {
-                await this.requestJson('{% url "classcalendar:api_google_disconnect" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
-                });
-                window.showToast('구글 계정 연결을 해제했습니다.', 'success');
-                window.location.reload();
-            } catch (err) {
-                window.showToast(err.message || '구글 연결 해제에 실패했습니다.', 'error');
-            }
-        },
-
         openEventDetail(event) {
-            this.selectedEvent = event;
+            this.selectedEvent = { ...event };
             this.detailModalOpen = true;
         },
 
-        async exportEventToGoogle() {
+        openEditModal() {
             if (!this.selectedEvent) return;
+            this.detailModalOpen = false;
+            this.editForm = {
+                title: this.selectedEvent.title,
+                start_time: this.toDatetimeLocal(this.selectedEvent.start_time),
+                end_time: this.toDatetimeLocal(this.selectedEvent.end_time),
+                is_all_day: !!this.selectedEvent.is_all_day,
+                color: this.selectedEvent.color || 'indigo',
+            };
+            this.editModalOpen = true;
+        },
+
+        async submitEditEvent() {
+            if (!this.selectedEvent) return;
+            this.isEditing = true;
             const body = new URLSearchParams();
-            body.set('google_calendar_id', 'primary');
+            body.set('title', this.editForm.title);
+            body.set('start_time', this.editForm.start_time);
+            body.set('end_time', this.editForm.end_time);
+            body.set('color', this.editForm.color);
+            if (this.editForm.is_all_day) body.set('is_all_day', 'on');
             try {
-                await this.requestJson(`/classcalendar/api/export/${this.selectedEvent.id}/`, {
+                await this.requestJson(this.buildUpdateUrl(this.selectedEvent.id), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRFToken': this.getCsrfToken() },
                     body: body.toString(),
                 });
-                window.showToast('구글 캘린더로 내보냈습니다.', 'success');
+                this.editModalOpen = false;
+                this.selectedEvent = null;
+                await this.refreshEvents();
+                window.showToast('일정을 수정했습니다.', 'success');
             } catch (err) {
-                window.showToast(err.message || '내보내기에 실패했습니다.', 'error');
+                const isValidationError = err.payload && err.payload.code === 'validation_error';
+                window.showToast(
+                    isValidationError
+                        ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
+                        : (err.message || '일정 수정에 실패했습니다.'),
+                    'error'
+                );
+            } finally {
+                this.isEditing = false;
             }
         },
 
-        get currentMonthText() {
-            return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`;
+        openDeleteConfirm() {
+            if (!this.selectedEvent) return;
+            this.detailModalOpen = false;
+            this.deleteConfirmOpen = true;
+        },
+
+        async deleteSelectedEvent() {
+            if (!this.selectedEvent) return;
+            this.isDeleting = true;
+            try {
+                await this.requestJson(this.buildDeleteUrl(this.selectedEvent.id), {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                });
+                this.deleteConfirmOpen = false;
+                this.selectedEvent = null;
+                await this.refreshEvents();
+                window.showToast('일정을 삭제했습니다.', 'success');
+            } catch (err) {
+                window.showToast(err.message || '일정 삭제에 실패했습니다.', 'error');
+            } finally {
+                this.isDeleting = false;
+            }
+        },
+
+        get currentMonthText() { return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`; },
+        get todayEventsCount() { return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length; },
+        get weekEventsCount() {
+            const now = new Date();
+            const start = new Date(now);
+            const mondayOffset = (now.getDay() + 6) % 7;
+            start.setDate(now.getDate() - mondayOffset);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return this.events.filter((e) => e.start_time >= start && e.start_time < end).length;
+        },
+        get monthEventsCount() {
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            return this.events.filter((e) => e.start_time.getFullYear() === y && e.start_time.getMonth() === m).length;
         },
 
         get calendarDates() {
-            const year = this.currentDate.getFullYear();
-            const month = this.currentDate.getMonth();
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - startDate.getDay());
-            const endDate = new Date(lastDay);
-            if (endDate.getDay() !== 6) endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            const first = new Date(y, m, 1);
+            const last = new Date(y, m + 1, 0);
+            const start = new Date(first);
+            start.setDate(start.getDate() - start.getDay());
+            const end = new Date(last);
+            if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
             const dates = [];
-            let cursor = new Date(startDate);
-            while (cursor <= endDate) {
-                dates.push(new Date(cursor));
-                cursor.setDate(cursor.getDate() + 1);
-            }
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) dates.push(new Date(cursor));
             return dates;
         },
-
-        prevMonth() {
-            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
-        },
-
-        nextMonth() {
-            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
-        },
-
-        isCurrentMonth(date) {
-            return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear();
-        },
-
-        isToday(date) {
-            const today = new Date();
-            return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-        },
+        prevMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1); },
+        nextMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1); },
+        isCurrentMonth(date) { return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear(); },
+        isToday(date) { const t = new Date(); return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear(); },
 
         getEventsForDate(date) {
-            return this.events.filter((event) => {
-                const d = event.start_time;
-                return d.getDate() === date.getDate() && d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
-            });
+            return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(date)).sort((a, b) => a.start_time - b.start_time);
         },
-
+        getVisibleEventsForDate(date) { return this.getEventsForDate(date).slice(0, 3); },
+        getOverflowCountForDate(date) { const total = this.getEventsForDate(date).length; return total > 3 ? total - 3 : 0; },
         getAgendaDates() {
             const set = new Set();
-            this.events.forEach((event) => set.add(event.start_time.toISOString().split('T')[0]));
+            this.events.forEach((e) => set.add(this.dateKey(e.start_time)));
             return Array.from(set).sort();
         },
-
         getEventsByDateString(dateStr) {
-            return this.events
-                .filter((event) => event.start_time.toISOString().split('T')[0] === dateStr)
-                .sort((a, b) => a.start_time - b.start_time);
+            return this.events.filter((e) => this.dateKey(e.start_time) === dateStr).sort((a, b) => a.start_time - b.start_time);
         },
 
         formatAgendaDate(dateStr) {
-            const date = new Date(dateStr);
+            const date = this.parseDateKey(dateStr);
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
         },
-
-        formatEventTime(date, isAllDay) {
-            if (isAllDay) return '하루 종일';
-            let hour = date.getHours();
-            let minute = date.getMinutes();
-            const period = hour >= 12 ? '오후' : '오전';
-            hour = hour % 12 || 12;
-            minute = minute < 10 ? `0${minute}` : minute;
-            return `${period} ${hour}:${minute}`;
+        formatClock(date) {
+            let h = date.getHours();
+            let m = date.getMinutes();
+            const p = h >= 12 ? '오후' : '오전';
+            h = h % 12 || 12;
+            m = m < 10 ? `0${m}` : m;
+            return `${p} ${h}:${m}`;
         },
-
-        getEventColorClass(event) {
+        formatEventTimeShort(date, isAllDay) {
+            if (isAllDay) return '종일';
+            let h = date.getHours();
+            let m = date.getMinutes();
+            const p = h >= 12 ? '오후' : '오전';
+            h = h % 12 || 12;
+            m = m < 10 ? `0${m}` : m;
+            return `${p}${h}:${m}`;
+        },
+        formatEventRange(event) {
+            if (!event) return '';
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            if (event.is_all_day) return `${this.formatAgendaDate(this.dateKey(start))} · 하루 종일`;
+            if (this.dateKey(start) === this.dateKey(end)) return `${this.formatAgendaDate(this.dateKey(start))} · ${this.formatClock(start)} - ${this.formatClock(end)}`;
+            return `${this.formatAgendaDate(this.dateKey(start))} ${this.formatClock(start)} ~ ${this.formatAgendaDate(this.dateKey(end))} ${this.formatClock(end)}`;
+        },
+        getEventChipClass(event) {
             const map = {
-                indigo: 'bg-indigo-100 text-indigo-800',
-                rose: 'bg-rose-100 text-rose-800',
-                amber: 'bg-amber-100 text-amber-800',
-                emerald: 'bg-emerald-100 text-emerald-800',
-                sky: 'bg-sky-100 text-sky-800',
+                indigo: 'bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100',
+                rose: 'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100',
+                amber: 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100',
+                emerald: 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100',
+                sky: 'bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100',
             };
+            return map[event.color] || map.indigo;
+        },
+        getEventBarClass(event) {
+            const map = { indigo: 'bg-indigo-500', rose: 'bg-rose-500', amber: 'bg-amber-500', emerald: 'bg-emerald-500', sky: 'bg-sky-500' };
             return map[event.color] || map.indigo;
         },
     };

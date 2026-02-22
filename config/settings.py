@@ -440,7 +440,7 @@ AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
-ONBOARDING_EXEMPT_PATH_PREFIXES = ['/classcalendar/oauth/callback/']
+ONBOARDING_EXEMPT_PATH_PREFIXES = []
 if TESTING:
     ONBOARDING_EXEMPT_PATH_PREFIXES.append('/autoarticle/')
 DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS = int(os.environ.get('DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS', '28800'))

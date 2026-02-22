@@ -41,35 +41,19 @@ def _get_teacher_visible_events(request):
     return queryset.select_related("classroom").distinct().order_by("start_time", "id")
 
 
+def _get_owned_event(request, event_id):
+    return get_object_or_404(CalendarEvent, id=event_id, author=request.user)
+
+
 @login_required
 def main_view(request):
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
-    events_data = [_serialize_event(event) for event in _get_teacher_visible_events(request)]
     context = {
         "service": service,
         "title": service.title if service else "학급 캘린더 (Eduitit Calendar)",
-        "events_json": events_data,
-        "google_connected": hasattr(request.user, "calendar_google_account"),
-        "oauth_error": (request.GET.get("error") or "").strip(),
-        "oauth_success": (request.GET.get("success") or "").strip(),
+        "events_json": [_serialize_event(event) for event in _get_teacher_visible_events(request)],
     }
     return render(request, "classcalendar/main.html", context)
-
-
-def student_view(request, slug):
-    classroom = get_object_or_404(HSClassroom, slug=slug, is_active=True)
-    events = (
-        CalendarEvent.objects.filter(
-            classroom=classroom,
-            visibility=CalendarEvent.VISIBILITY_CLASS,
-        )
-        .order_by("start_time", "id")
-    )
-    context = {
-        "classroom": classroom,
-        "events_json": [_serialize_event(event) for event in events],
-    }
-    return render(request, "classcalendar/student_view.html", context)
 
 
 @login_required
@@ -110,9 +94,55 @@ def api_create_event(request):
         end_time=form.cleaned_data["end_time"],
         is_all_day=form.cleaned_data.get("is_all_day", False),
         color=form.cleaned_data.get("color") or "indigo",
-        visibility=form.cleaned_data.get("visibility") or CalendarEvent.VISIBILITY_CLASS,
+        visibility=CalendarEvent.VISIBILITY_TEACHER,
         author=request.user,
         classroom=classroom,
         source=CalendarEvent.SOURCE_LOCAL,
     )
     return JsonResponse({"status": "success", "event": _serialize_event(event)}, status=201)
+
+
+@login_required
+@require_POST
+def api_update_event(request, event_id):
+    event = _get_owned_event(request, event_id)
+    form = CalendarEventCreateForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "errors": form.errors.get_json_data(),
+            },
+            status=400,
+        )
+
+    event.title = form.cleaned_data["title"]
+    event.start_time = form.cleaned_data["start_time"]
+    event.end_time = form.cleaned_data["end_time"]
+    event.is_all_day = form.cleaned_data.get("is_all_day", False)
+    event.color = form.cleaned_data.get("color") or "indigo"
+    event.visibility = CalendarEvent.VISIBILITY_TEACHER
+    event.source = CalendarEvent.SOURCE_LOCAL
+    event.save(
+        update_fields=[
+            "title",
+            "start_time",
+            "end_time",
+            "is_all_day",
+            "color",
+            "visibility",
+            "source",
+            "updated_at",
+        ]
+    )
+    return JsonResponse({"status": "success", "event": _serialize_event(event)})
+
+
+@login_required
+@require_POST
+def api_delete_event(request, event_id):
+    event = _get_owned_event(request, event_id)
+    event_id_str = str(event.id)
+    event.delete()
+    return JsonResponse({"status": "success", "deleted_id": event_id_str})

@@ -11,8 +11,8 @@ class Command(BaseCommand):
             launch_route_name='classcalendar:main',
             defaults={
                 'title': '학급 캘린더',
-                'lead_text': '에듀잇과 구글 일정을 한곳에서!',
-                'description': '에듀잇의 예약/수합 일정과 구글 캘린더를 함께 확인하고 관리하는 강력한 학급 전용 캘린더입니다.',
+                'lead_text': '학급 일정을 한눈에 관리하세요!',
+                'description': '학급 운영 일정을 한곳에서 정리하고 공유하는 학급 전용 캘린더입니다.',
                 'price': 0.00,
                 'is_active': True,
                 'icon': '📅',
@@ -47,8 +47,8 @@ class Command(BaseCommand):
         # 2. Product Features
         features = [
             {'title': '에듀잇 일정 통합', 'description': '예약, 수합, 상담 등 에듀잇의 모든 일정을 한눈에 모아봅니다.', 'icon': '🔗'},
-            {'title': '구글 캘린더 연동', 'description': '기존에 쓰시던 구글 캘린더 일정을 그대로 불러와 통합 관리할 수 있습니다.', 'icon': '☁️'},
-            {'title': '노션형 이벤트 페이지', 'description': '단순한 일정을 넘어 텍스트, 체크리스트, 파일 등이 포함된 풍부한 이벤트 페이지를 만듭니다.', 'icon': '📝'},
+            {'title': '블록형 일정 노트', 'description': '일정마다 텍스트, 체크리스트, 링크/파일 메모를 블록으로 정리할 수 있습니다.', 'icon': '📝'},
+            {'title': '교사 전용 운영', 'description': '일정은 교사 계정 내부에서만 관리되며 외부 공개 링크가 없습니다.', 'icon': '🔒'},
         ]
 
         for feat in features:
@@ -72,7 +72,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 'title': f'{product.title} 사용법',
-                'description': '학급 일정 관리와 구글 캘린더 연동 방법을 단계별로 안내합니다.',
+                'description': '학급 일정 관리 방법을 단계별로 안내합니다.',
                 'is_published': True
             }
         )
@@ -84,7 +84,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_update_fields.append('is_published')
-        expected_manual_description = '학급 일정 관리와 구글 캘린더 연동 방법을 단계별로 안내합니다.'
+        expected_manual_description = '학급 일정 관리 방법을 단계별로 안내합니다.'
         if manual.description != expected_manual_description:
             manual.description = expected_manual_description
             manual_update_fields.append('description')
@@ -94,12 +94,12 @@ class Command(BaseCommand):
         section_specs = [
             (
                 '시작하기',
-                '학급 캘린더에 오신 것을 환영합니다! 먼저 구글 캘린더 연동을 완료하면 기존 일정을 빠르게 불러올 수 있습니다.',
+                '학급 캘린더에 오신 것을 환영합니다! 먼저 학급 일정을 등록해 보세요.',
                 1,
             ),
             (
                 '주요 기능',
-                '- 구글 일정 가져오기\n- 노션형 이벤트 블록 메모\n- 학생용 아젠다 공유',
+                '- 에듀잇 일정 통합\n- 블록형 일정 노트\n- 교사 전용 운영',
                 2,
             ),
             (
