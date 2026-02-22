@@ -28,6 +28,7 @@ class PpobgiViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "추첨 준비")
         self.assertContains(response, "추첨 우주 시작")
+        self.assertContains(response, "사다리 뽑기")
 
     def test_roster_names_returns_active_students(self):
         self.client.force_login(self.user)
