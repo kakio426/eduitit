@@ -22,7 +22,7 @@ class Command(BaseCommand):
             "color_theme": "dark",
             "card_size": "small",
             "display_order": 31,
-            "service_type": "game",
+            "service_type": "classroom",
             "external_url": "",
             "launch_route_name": "ppobgi:main",
         }
