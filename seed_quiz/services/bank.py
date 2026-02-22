@@ -8,7 +8,6 @@ import logging
 import json
 import os
 import hashlib
-import re
 
 from django.db import transaction
 from django.db.models import F
@@ -22,12 +21,9 @@ logger = logging.getLogger("seed_quiz.bank")
 
 VALID_PRESET_TYPES = set(TOPIC_LABELS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
-SET_TITLE_RE = re.compile(
-    r"^SQ-(?P<topic>[a-z_]+)-basic-L1-G(?P<grade>[1-6])-S(?P<seq>\d{3})-V(?P<version>\d+)$"
-)
 
 CSV_HEADER_ALIASES = {
-    "set_title": ["set_title", "세트코드", "세트명", "세트코드(set_title)"],
+    "set_title": ["set_title", "묶음이름", "세트코드", "세트명", "세트코드(set_title)"],
     "preset_type": ["preset_type", "주제"],
     "grade": ["grade", "학년"],
     "question_text": ["question_text", "문제", "문항"],
@@ -54,17 +50,17 @@ DIFFICULTY_ALIASES = {
     "어려움": "hard",
 }
 CSV_HEADER_DISPLAY = {
-    "set_title": "세트코드(set_title)",
-    "preset_type": "주제(preset_type)",
-    "grade": "학년(grade)",
-    "question_text": "문제(question_text)",
-    "choice_1": "보기1(choice_1)",
-    "choice_2": "보기2(choice_2)",
-    "choice_3": "보기3(choice_3)",
-    "choice_4": "보기4(choice_4)",
-    "correct_index": "정답번호(correct_index)",
-    "explanation": "해설(explanation)",
-    "difficulty": "난이도(difficulty)",
+    "set_title": "묶음이름",
+    "preset_type": "주제",
+    "grade": "학년",
+    "question_text": "문제",
+    "choice_1": "보기1",
+    "choice_2": "보기2",
+    "choice_3": "보기3",
+    "choice_4": "보기4",
+    "correct_index": "정답번호",
+    "explanation": "해설",
+    "difficulty": "난이도",
 }
 
 
@@ -75,19 +71,6 @@ def _normalize_source_text(source_text: str) -> str:
 
 def _source_hash(source_text: str) -> str:
     return hashlib.sha256(source_text.encode("utf-8")).hexdigest()
-
-
-def _parse_set_title_meta(set_title: str) -> dict | None:
-    match = SET_TITLE_RE.match(set_title or "")
-    if not match:
-        return None
-    topic = normalize_topic(match.group("topic"))
-    if not topic:
-        return None
-    return {
-        "topic": topic,
-        "grade": int(match.group("grade")),
-    }
 
 
 def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
@@ -246,34 +229,18 @@ def parse_csv_upload(
             errors.append(f"세트 '{set_title}': 잘못된 preset_type '{preset_raw}'.")
             continue
 
-        try:
-            grade = int((first.get("grade") or "3").strip())
-        except ValueError:
-            errors.append(f"세트 '{set_title}': grade가 정수가 아닙니다.")
-            continue
-        if grade not in range(1, 7):
-            errors.append(f"세트 '{set_title}': grade는 1~6이어야 합니다.")
-            continue
-
-        set_title_meta = _parse_set_title_meta(set_title)
-        if not set_title_meta:
-            errors.append(
-                f"세트 '{set_title}': set_title 형식이 올바르지 않습니다. "
-                "(예: SQ-orthography-basic-L1-G3-S001-V1)"
-            )
-            continue
-        if set_title_meta["topic"] != preset_type:
-            errors.append(
-                f"세트 '{set_title}': set_title의 topic({set_title_meta['topic']})과 "
-                f"preset_type({preset_type})이 일치하지 않습니다."
-            )
-            continue
-        if set_title_meta["grade"] != grade:
-            errors.append(
-                f"세트 '{set_title}': set_title의 grade({set_title_meta['grade']})와 "
-                f"grade 컬럼({grade})이 일치하지 않습니다."
-            )
-            continue
+        grade_raw = (first.get("grade") or "3").strip()
+        if grade_raw in ("학년무관", "0"):
+            grade = 0
+        else:
+            try:
+                grade = int(grade_raw)
+            except ValueError:
+                errors.append(f"세트 '{set_title}': 학년이 올바르지 않습니다 (1~6 또는 학년무관).")
+                continue
+            if grade not in range(1, 7):
+                errors.append(f"세트 '{set_title}': 학년은 1~6 또는 학년무관이어야 합니다.")
+                continue
 
         items_data = []
         row_error = False
@@ -307,15 +274,16 @@ def parse_csv_upload(
                 break
 
             try:
-                correct_index = int((row.get("correct_index") or "0").strip())
+                correct_index_raw = int((row.get("correct_index") or "1").strip())
             except ValueError:
-                errors.append(f"행 {row_no}: correct_index가 정수가 아닙니다.")
+                errors.append(f"행 {row_no}: 정답번호가 정수가 아닙니다.")
                 row_error = True
                 break
-            if correct_index not in range(4):
-                errors.append(f"행 {row_no}: correct_index는 0~3이어야 합니다.")
+            if correct_index_raw not in range(1, 5):
+                errors.append(f"행 {row_no}: 정답번호는 1~4이어야 합니다 (보기1=1, 보기2=2, 보기3=3, 보기4=4).")
                 row_error = True
                 break
+            correct_index = correct_index_raw - 1  # 1-기반 입력 → 0-기반 저장
 
             explanation_raw = (row.get("explanation") or "").strip()
             try:

@@ -9,6 +9,16 @@ from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_CHOICES
 
 User = get_user_model()
 
+GRADE_CHOICES = [
+    (0, "학년무관"),
+    (1, "1학년"),
+    (2, "2학년"),
+    (3, "3학년"),
+    (4, "4학년"),
+    (5, "5학년"),
+    (6, "6학년"),
+]
+
 
 class SQQuizBank(models.Model):
     """관리자/공유용 퀴즈 은행 세트."""
@@ -33,7 +43,7 @@ class SQQuizBank(models.Model):
         default=DEFAULT_TOPIC,
         verbose_name="주제",
     )
-    grade = models.IntegerField(default=3, verbose_name="학년")
+    grade = models.IntegerField(default=3, choices=GRADE_CHOICES, verbose_name="학년")
     title = models.CharField(max_length=200, verbose_name="제목")
     source = models.CharField(
         max_length=10,
@@ -88,7 +98,8 @@ class SQQuizBank(models.Model):
         ]
 
     def __str__(self):
-        return f"[{self.get_preset_type_display()}·{self.grade}학년] {self.title}"
+        grade_label = "학년무관" if self.grade == 0 else f"{self.grade}학년"
+        return f"[{self.get_preset_type_display()}·{grade_label}] {self.title}"
 
 
 class SQQuizBankItem(models.Model):
@@ -152,7 +163,7 @@ class SQQuizSet(models.Model):
         default=DEFAULT_TOPIC,
         verbose_name="주제",
     )
-    grade = models.IntegerField(default=3, verbose_name="학년")
+    grade = models.IntegerField(default=3, choices=GRADE_CHOICES, verbose_name="학년")
     title = models.CharField(max_length=100, verbose_name="제목")
     status = models.CharField(
         max_length=10,
