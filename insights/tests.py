@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import Insight
+from .templatetags.insight_extras import parse_tags
 
 
 class InsightModelTest(TestCase):
@@ -140,12 +141,12 @@ class InsightPasteImportTest(TestCase):
         self.assertEqual(insight.tags, "#태그하나,#태그둘")
         self.assertRedirects(response, reverse("insights:detail", args=[insight.pk]))
 
-    def test_authenticated_user_can_access_paste_create(self):
+    def test_non_superuser_cannot_access_paste_create(self):
         self.client.login(username="teacher2", password="pw12345")
-        response = self.client.get(reverse("insights:paste_create"))
+        response = self.client.get(reverse("insights:paste_create"), follow=True)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "insights/insight_paste_form.html")
+        self.assertRedirects(response, reverse("insights:list"))
+        self.assertContains(response, "붙여넣기 등록 권한이 없습니다.")
 
     def test_same_video_url_is_updated_instead_of_creating_new(self):
         existing = Insight.objects.create(
@@ -168,3 +169,13 @@ class InsightPasteImportTest(TestCase):
         self.assertEqual(existing.content, "본문 내용입니다.")
         self.assertEqual(existing.tags, "#태그하나,#태그둘")
         self.assertEqual(Insight.objects.filter(video_url=existing.video_url).count(), 1)
+
+
+class InsightTemplateTagsTest(TestCase):
+    def test_parse_tags_from_comma_string(self):
+        tags = parse_tags("#AI,#교육,#AI")
+        self.assertEqual(tags, ["#AI", "#교육"])
+
+    def test_parse_tags_from_mixed_input(self):
+        tags = parse_tags("AI, 교육\n#수업")
+        self.assertEqual(tags, ["#AI", "#교육", "#수업"])

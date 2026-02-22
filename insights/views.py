@@ -82,6 +82,10 @@ def insight_create(request):
 
 @login_required
 def insight_paste_create(request):
+    if not request.user.is_superuser:
+        messages.error(request, '붙여넣기 등록 권한이 없습니다.')
+        return redirect('insights:list')
+
     if request.method == 'POST':
         form = InsightPasteForm(request.POST)
         if form.is_valid():

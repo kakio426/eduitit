@@ -1,190 +1,123 @@
 {% extends 'base.html' %}
-{% load cloudinary_extras %}
 
 {% block title %}Insight Library - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
-    .filter-tab {
-        transition: all 0.2s ease;
-    }
-    .filter-tab.active {
-        transform: scale(1.05);
-    }
-    .tag-chip {
-        cursor: pointer;
+    .insight-chip {
         transition: all 0.15s ease;
     }
-    .tag-chip:hover {
+    .insight-chip.active {
         transform: translateY(-1px);
     }
-    .featured-badge {
-        background: linear-gradient(135deg, #f59e0b, #ef4444);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    .insight-scroll {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .insight-scroll::-webkit-scrollbar {
+        display: none;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen max-w-7xl mx-auto">
-
-    <!-- Header Section -->
-    <header class="text-center mb-10">
-        <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-600 font-bold text-2xl mb-4 shadow-sm font-hand tracking-wide">
-            ✨ Teacher's Inspiration
-        </span>
-        <h1 class="text-6xl md:text-8xl font-bold text-gray-700 font-hand mb-2 leading-none"
-            style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1)">
-            Insight Library
-        </h1>
-        <p class="text-2xl md:text-3xl text-gray-500 font-hand max-w-2xl mx-auto leading-tight">
-            AI 시대를 이끄는 선생님의 시선.<br>
-            유튜브 영상과 함께 선생님만의 통찰을 기록하고 공유합니다.
-        </p>
-        {% if user.is_authenticated %}
-        <div class="mt-6 flex flex-wrap justify-center gap-3">
+<main class="pt-28 md:pt-32 pb-16 px-3 md:px-6 min-h-screen max-w-6xl mx-auto">
+    <section class="mb-5">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">Insight Library</h1>
+                <p class="text-sm text-slate-500 mt-1">콘텐츠가 먼저 보이도록 간결하게 정리했습니다.</p>
+            </div>
+            {% if user.is_superuser %}
             <a href="{% url 'insights:paste_create' %}"
-                class="px-5 py-2 rounded-full bg-indigo-500 text-white font-bold text-base shadow-clay hover:bg-indigo-600 transition-all">
-                <i class="fa-solid fa-paste mr-1"></i>붙여넣기 등록
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-sm hover:bg-indigo-500 transition">
+                <i class="fa-solid fa-plus"></i> 등록
             </a>
-            <a href="{% url 'insights:create' %}"
-                class="px-5 py-2 rounded-full bg-white text-gray-700 font-bold text-base shadow-clay-inner hover:bg-gray-100 transition-all">
-                <i class="fa-solid fa-pen mr-1"></i>수동 등록
-            </a>
+            {% endif %}
         </div>
-        {% endif %}
-    </header>
+    </section>
 
-    <!-- Filter Section -->
-    <section class="mb-8">
-        <!-- Category Tabs -->
-        <div class="flex flex-wrap justify-center gap-3 mb-4">
+    <section class="mb-6 space-y-2.5">
+        <div class="flex gap-2 overflow-x-auto insight-scroll pb-1">
             <a href="?sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if not current_category %}bg-gray-700 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-gray-100{% endif %}">
-                🌐 전체
+                class="insight-chip active flex-shrink-0 px-3.5 py-2 rounded-lg text-sm font-bold border {% if not current_category %}bg-slate-800 text-white border-slate-800{% else %}bg-white text-slate-600 border-slate-200 hover:border-slate-300{% endif %}">
+                전체
             </a>
             <a href="?category=youtube&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'youtube' %}bg-red-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-red-50{% endif %}">
-                ▶️ YouTube
+                class="insight-chip active flex-shrink-0 px-3.5 py-2 rounded-lg text-sm font-bold border {% if current_category == 'youtube' %}bg-red-500 text-white border-red-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-red-200{% endif %}">
+                YouTube
             </a>
             <a href="?category=devlog&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'devlog' %}bg-green-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-green-50{% endif %}">
-                💻 DevLog
+                class="insight-chip active flex-shrink-0 px-3.5 py-2 rounded-lg text-sm font-bold border {% if current_category == 'devlog' %}bg-emerald-500 text-white border-emerald-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-emerald-200{% endif %}">
+                DevLog
             </a>
             <a href="?category=column&sort={{ current_sort }}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="filter-tab px-5 py-2 rounded-full font-bold text-lg transition-all {% if current_category == 'column' %}bg-blue-500 text-white shadow-clay active{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-blue-50{% endif %}">
-                📝 Column
+                class="insight-chip active flex-shrink-0 px-3.5 py-2 rounded-lg text-sm font-bold border {% if current_category == 'column' %}bg-blue-500 text-white border-blue-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-blue-200{% endif %}">
+                Column
             </a>
         </div>
 
-        <!-- Sort Buttons -->
-        <div class="flex justify-center gap-3">
+        <div class="flex gap-2 overflow-x-auto insight-scroll pb-1">
             <a href="?sort=recent{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'recent' %}bg-indigo-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-indigo-100{% endif %}">
-                <i class="fa-solid fa-clock mr-1"></i>최신순
+                class="insight-chip active flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border {% if current_sort == 'recent' %}bg-indigo-500 text-white border-indigo-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-indigo-200{% endif %}">
+                최신순
             </a>
             <a href="?sort=popular{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'popular' %}bg-pink-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-pink-100{% endif %}">
-                <i class="fa-solid fa-fire mr-1"></i>인기순
+                class="insight-chip active flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border {% if current_sort == 'popular' %}bg-pink-500 text-white border-pink-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-pink-200{% endif %}">
+                인기순
             </a>
             <a href="?sort=oldest{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
-                class="px-5 py-2 rounded-full font-bold text-base transition-all {% if current_sort == 'oldest' %}bg-purple-500 text-white shadow-clay{% else %}bg-white text-gray-600 shadow-clay-inner hover:bg-purple-100{% endif %}">
-                <i class="fa-solid fa-history mr-1"></i>오래된순
+                class="insight-chip active flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border {% if current_sort == 'oldest' %}bg-violet-500 text-white border-violet-500{% else %}bg-white text-slate-600 border-slate-200 hover:border-violet-200{% endif %}">
+                오래된순
             </a>
         </div>
 
-        <!-- Active Tag Filter Notice -->
         {% if current_tag %}
-        <div class="flex justify-center mt-4">
-            <span class="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-full text-indigo-700 font-bold">
-                <i class="fa-solid fa-tag text-sm"></i>
-                #{{ current_tag }} 필터 중
+        <div class="pt-0.5">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700 text-xs font-bold">
+                #{{ current_tag }}
                 <a href="?sort={{ current_sort }}{% if current_category %}&category={{ current_category }}{% endif %}"
-                    class="ml-1 text-indigo-400 hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-circle-xmark"></i>
+                    class="text-indigo-400 hover:text-red-500 transition-colors" aria-label="태그 필터 해제">
+                    <i class="fa-solid fa-xmark"></i>
                 </a>
             </span>
         </div>
         {% endif %}
     </section>
 
-    <!-- Featured Section (상단 고정) -->
-    {% if featured_insights and not current_tag %}
-    <section class="mb-12">
-        <div class="flex items-center gap-3 mb-6">
-            <span class="text-3xl">⭐</span>
-            <h2 class="text-3xl font-bold featured-badge font-hand">Featured Insights</h2>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {% for insight in featured_insights %}
-            <article class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-gradient-to-br from-[#E0E5EC] to-[#d4dae8] shadow-clay relative group ring-2 ring-amber-300/50"
-                x-data="{ showDeleteModal: false }">
-
-                <!-- Featured Badge -->
-                <div class="absolute -top-3 -right-3 z-10">
-                    <span class="px-3 py-1 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-sm font-bold rounded-full shadow-md">
-                        ⭐ Featured
-                    </span>
-                </div>
-
-                {% include 'insights/partials/insight_card_body.html' with insight=insight %}
-            </article>
-            {% endfor %}
-        </div>
-        <div class="mt-8 border-t-2 border-dashed border-gray-200"></div>
-    </section>
-    {% endif %}
-
-    <!-- Main Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-
-        {% for insight in insights %}
-        <article
-            class="clay-card p-6 rounded-[2rem] hover:scale-[1.02] transition-transform duration-300 flex flex-col h-full bg-[#E0E5EC] shadow-clay relative group"
+    {% if featured_insights or insights %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
+        {% for insight in featured_insights %}
+        <article class="clay-card p-4 md:p-5 rounded-3xl bg-[#E0E5EC] shadow-clay relative ring-2 ring-amber-300/50"
             x-data="{ showDeleteModal: false }">
-
+            <div class="absolute top-3 right-3 z-10">
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                    Featured
+                </span>
+            </div>
             {% include 'insights/partials/insight_card_body.html' with insight=insight %}
         </article>
-        {% empty %}
-        <div class="col-span-3 text-center py-20 text-gray-400">
-            <i class="fa-solid fa-inbox text-6xl mb-4 block"></i>
-            <p class="text-2xl font-hand">
-                {% if current_category or current_tag %}
-                    해당 조건의 인사이트가 없습니다.
-                {% else %}
-                    아직 등록된 인사이트가 없습니다.
-                {% endif %}
-            </p>
-        </div>
         {% endfor %}
 
-        <!-- Add Button -->
-        {% if user.is_authenticated %}
-        <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-purple-400 hover:text-purple-500 cursor-pointer transition-all min-h-[400px] bg-[#E0E5EC]/50 hover:bg-white/40 group"
-            onclick="location.href='{% url 'insights:create' %}'">
-            <div class="w-24 h-24 rounded-full shadow-clay flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform bg-[#E0E5EC]">
-                <i class="fa-solid fa-plus"></i>
-            </div>
-            <span class="font-hand text-4xl font-bold mb-2">기록하기</span>
-            <p class="font-sans text-lg text-center px-4">
-                유튜브 링크만 있으면<br>나만의 인사이트 카드가 완성됩니다.
-            </p>
-        </div>
-        {% else %}
-        <div class="clay-card p-6 rounded-[2rem] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 transition-all min-h-[400px] bg-[#E0E5EC]/50 cursor-pointer"
-            onclick="location.href='{% url 'account_login' %}?next={% url 'insights:create' %}'">
-            <div class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-4xl mb-6 bg-[#E0E5EC]">
-                <i class="fa-solid fa-lock"></i>
-            </div>
-            <span class="font-hand text-4xl font-bold mb-2">로그인 필요</span>
-            <p class="font-sans text-lg text-center px-4">
-                인사이트를 등록하려면<br>로그인이 필요합니다.
-            </p>
-        </div>
-        {% endif %}
-
+        {% for insight in insights %}
+        <article class="clay-card p-4 md:p-5 rounded-3xl bg-[#E0E5EC] shadow-clay relative"
+            x-data="{ showDeleteModal: false }">
+            {% include 'insights/partials/insight_card_body.html' with insight=insight %}
+        </article>
+        {% endfor %}
     </div>
+    {% else %}
+    <div class="clay-card rounded-3xl p-14 text-center text-slate-400">
+        <i class="fa-solid fa-inbox text-4xl mb-4 block"></i>
+        <p class="text-lg font-bold">
+            {% if current_category or current_tag %}
+                해당 조건의 인사이트가 없습니다.
+            {% else %}
+                아직 등록된 인사이트가 없습니다.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
 </main>
 
 {% endblock %}
@@ -214,7 +147,6 @@
             }
 
             document.querySelector(`.like-count-${insightId}`).textContent = data.total_likes;
-
         } catch (error) {
             console.error('Error:', error);
         }
