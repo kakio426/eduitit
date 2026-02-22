@@ -5,6 +5,8 @@
 - Validate behavior parity first (routing, modal close, ESC, focus)
 - If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
 - Run python manage.py check (and node --check for changed JS)
+- For changed JS, do a runtime smoke test (load page + click core tabs/buttons once) and confirm browser console has zero `ReferenceError`
+- For user-triggered `fetch` actions, never use empty `catch`; enforce `response.ok` check and show failure feedback (toast/alert)
 - For form pages: never hide required model fields without making them optional/defaulted, and always render form errors
 - For JS confirmation UX (modal/step): keep a non-JS submit fallback so critical actions never become "no response"
 - In dirty workspace, commit only request-scoped files after `git diff --cached` review
@@ -132,6 +134,8 @@
 
 ## 작업 완료 후 체크리스트
 - [ ] Django Check 통과 (`python manage.py check`)
+- [ ] 변경 페이지 핵심 인터랙션 스모크 테스트 (탭 전환/주요 버튼/저장·해제 액션 최소 1회)
+- [ ] 브라우저 Console 에러 0건 + 의도치 않은 Network 4xx/5xx 0건 확인
 - [ ] console.log 및 debug print 제거
 - [ ] **[Manual]** 서비스 매뉴얼(`ServiceManual`) 데이터 및 레이아웃 포함 여부 확인
 - [ ] 보안 검토 (API 키, 시크릿 노출 여부)
@@ -465,6 +469,54 @@ Django 템플릿에서 JSON 전달 시:
 ```
 
 > **이유**: 캐싱 여부와 관계없이 View에서 `chart_data`를 항상 생성해야 한다. 없으면 `json_script`가 빈 값을 생성하고 JS 파싱 실패.
+
+### 20-1. 다중 IIFE 스코프 누락으로 이벤트 미바인딩 방지 (2026-02-22)
+```javascript
+// ❌ 첫 번째 IIFE에만 있는 함수를 두 번째 IIFE bootstrap에서 호출
+(function () {
+    function decodeDefaultNames(raw) { ... }
+})();
+
+(function () {
+    function bootstrap() {
+        decodeDefaultNames(window.someData); // ReferenceError
+        bindEvents(); // 실행되지 않음
+    }
+})();
+```
+
+- 위 패턴에서 `bootstrap` 단계 예외가 나면 이벤트 리스너가 등록되지 않아 탭/버튼이 "무반응"처럼 보인다.
+- `node --check`는 문법만 검사하므로 이런 런타임 스코프 오류를 잡지 못한다.
+- 재발 방지 규칙:
+  - 다중 IIFE를 유지한다면, 헬퍼 함수는 **각 IIFE 내부에 명시적으로 두거나** 파일 공용 스코프로 올린다.
+  - `bindEvents()` 전에 호출되는 초기화 코드(`bootstrap`)에서 외부 스코프 심볼 참조를 금지한다.
+  - JS 수정 후에는 반드시 브라우저에서 핵심 탭/버튼 클릭 스모크 테스트 + 콘솔 에러 0건을 확인한다.
+
+### 20-2. 사용자 액션 "무반응" 방지 게이트 (2026-02-22)
+```javascript
+// ✅ 사용자 클릭으로 호출되는 fetch 기본 패턴
+async function postJSON(url, body) {
+    const token = getCsrfToken(); // hidden input 우선, cookie fallback
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": token },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+```
+
+- 금지:
+  - 사용자 클릭 액션에 `.catch(function(){})` 같은 침묵 실패 처리
+  - `fetch(...).then(r => r.json())`에서 `r.ok` 확인 누락
+- 필수:
+  - 실패 시 사용자에게 즉시 보이는 피드백(토스트/alert/인라인 메시지)
+  - 실패 원인을 콘솔에 남겨 QA 중 추적 가능하게 유지
+  - CSRF는 쿠키 직접 파싱 단독 의존 금지 (`CSRF_COOKIE_HTTPONLY` 환경 고려)
+- 커밋 전 검증:
+  - 변경 화면에서 핵심 클릭 플로우를 실제로 눌러 보고, 콘솔/네트워크 에러가 있으면 커밋 금지
+  - "동작 안 함" 이슈는 재현 절차(클릭 순서/기대 결과/실제 결과)를 PR/커밋 메모에 1줄로 기록
 
 ### 21. JS 데이터 전달 — json_script 활용
 ```html
