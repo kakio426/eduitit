@@ -354,7 +354,6 @@
 
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex gap-4 xl:gap-6 mt-1 text-base xl:text-lg font-bold text-gray-500 items-center min-w-0">
-                    <a href="{% url 'service_guide_list' %}" class="hover:text-purple-600 transition">이용방법</a>
                     <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
 
                     {% if show_visitor_counts %}
@@ -487,10 +486,6 @@
             aria-hidden="true">
             <div class="mx-4 clay-card p-6 bg-[#E0E5EC]/95 backdrop-blur-sm">
                 <div class="flex flex-col gap-4 text-2xl font-bold text-gray-600">
-                    <a href="{% url 'service_guide_list' %}"
-                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                        <i class="fa-solid fa-circle-info mr-3 text-purple-400"></i> 이용방법
-                    </a>
                     <a href="{% url 'portfolio:list' %}"
                         class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                         <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
@@ -590,7 +585,6 @@
                 <div class="flex flex-wrap justify-center gap-8 text-sm font-bold text-gray-500">
                     <a href="{% url 'policy' %}#terms" class="hover:text-purple-600 transition">이용약관</a>
                     <a href="{% url 'policy' %}#privacy" class="hover:text-purple-600 transition">개인정보처리방침</a>
-                    <a href="{% url 'service_guide_list' %}" class="hover:text-purple-600 transition">이용방법</a>
                 </div>
             </div>
         </footer>
