@@ -13,6 +13,7 @@
     class="ppb-root"
     data-default-names="{{ default_names|escapejs }}"
     data-roster-url="{% url 'ppobgi:roster_names' %}"
+    {% if active_classroom %}data-classroom-url="{% url 'ppobgi:classroom_students' active_classroom.pk %}" data-classroom-name="{{ active_classroom.name|escapejs }}"{% endif %}
 >
     <div class="ppb-bg-gradient" aria-hidden="true"></div>
     <div id="ppb-stars" class="ppb-stars" aria-hidden="true"></div>
@@ -280,4 +281,35 @@
 
 {% block extra_js %}
 <script src="{% static 'ppobgi/js/ppobgi.js' %}"></script>
+{% if active_classroom %}
+<script>
+(function() {
+    var root = document.getElementById('ppobgi-app');
+    if (!root) return;
+    var classroomUrl = root.dataset.classroomUrl;
+    var classroomName = root.dataset.classroomName;
+    if (!classroomUrl) return;
+    // 세션 학급이 설정된 경우 자동으로 학생 명단 로드
+    var textarea = document.getElementById('ppb-name-input');
+    var laderTextarea = document.getElementById('pbl-name-input');
+    var msgEl = document.getElementById('ppb-setup-message');
+    if (!textarea) return;
+    fetch(classroomUrl, {credentials: 'same-origin'})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var names = Array.isArray(d.names) ? d.names : [];
+            if (!names.length) return;
+            textarea.value = names.join('\n');
+            if (laderTextarea) laderTextarea.value = names.join('\n');
+            textarea.dispatchEvent(new Event('input'));
+            if (laderTextarea) laderTextarea.dispatchEvent(new Event('input'));
+            if (msgEl) {
+                msgEl.textContent = '현재 학급 [' + classroomName + '] 명단 ' + names.length + '명이 자동으로 불러와졌습니다.';
+                msgEl.className = 'ppb-message ppb-message--info';
+            }
+        })
+        .catch(function() {});
+})();
+</script>
+{% endif %}
 {% endblock %}

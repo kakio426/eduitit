@@ -107,3 +107,19 @@ def roster_names(request):
         .values_list("name", flat=True)
     )
     return JsonResponse({"names": names})
+
+
+@login_required
+def classroom_students(request, pk):
+    """HSClassroom 기반 학생 목록 API (ppobgi 자동 채우기용)."""
+    try:
+        from happy_seed.models import HSClassroom
+        classroom = HSClassroom.objects.get(pk=pk, teacher=request.user, is_active=True)
+    except Exception:
+        return JsonResponse({"error": "classroom not found"}, status=404)
+    names = list(
+        classroom.students.filter(is_active=True)
+        .order_by("number", "name")
+        .values_list("name", flat=True)
+    )
+    return JsonResponse({"names": names, "classroom_name": classroom.name})

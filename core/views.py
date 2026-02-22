@@ -9,6 +9,7 @@ from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import UserProfile, Post, Comment, Feedback, SiteConfig, ProductUsageLog
 from django.contrib import messages
 from django.db.models import Count
+from django.utils import timezone
 from PIL import Image
 import logging
 
@@ -63,9 +64,13 @@ def get_purpose_sections(products_qs, preview_limit=None):
                 preview_items = items[:preview_limit]
             else:
                 preview_items = items
+            remaining_count = max(0, len(items) - len(preview_items))
             sections.append({
                 **sec,
                 'products': preview_items,
+                'total_count': len(items),
+                'remaining_count': remaining_count,
+                'has_more': remaining_count > 0,
             })
     games = [p for p in products_qs if p.service_type == 'game']
     return sections, games
@@ -146,10 +151,68 @@ def _build_home_student_games_qr_context(request):
     }
 
 
+def _build_today_context(request):
+    """홈 V2용 오늘 할 일 위젯 데이터."""
+    if not request.user.is_authenticated:
+        return {"today_items": []}
+
+    today = timezone.localdate()
+    today_items = []
+
+    try:
+        from reservations.models import Reservation
+
+        reservation_count = Reservation.objects.filter(
+            room__school__owner=request.user,
+            date=today,
+        ).count()
+        if reservation_count > 0:
+            today_items.append(
+                {
+                    "title": "오늘 특별실 예약 확인",
+                    "count_text": f"{reservation_count}건",
+                    "description": "오늘 예약 현황을 확인하고 필요한 변경을 빠르게 처리하세요.",
+                    "emoji": "🗓️",
+                    "href": reverse("reservations:dashboard_landing"),
+                    "cta_text": "예약 대시보드 열기",
+                }
+            )
+    except Exception:
+        pass
+
+    try:
+        from collect.models import CollectionRequest
+
+        collect_due_count = CollectionRequest.objects.filter(
+            creator=request.user,
+            status="active",
+            deadline__isnull=False,
+            deadline__date=today,
+        ).count()
+        if collect_due_count > 0:
+            today_items.append(
+                {
+                    "title": "오늘 마감 수합 점검",
+                    "count_text": f"{collect_due_count}건",
+                    "description": "마감일이 오늘인 수합 요청이 있습니다. 미제출자를 확인해 주세요.",
+                    "emoji": "📥",
+                    "href": reverse("collect:dashboard"),
+                    "cta_text": "수합 대시보드 열기",
+                }
+            )
+    except Exception:
+        pass
+
+    return {
+        "today_items": today_items,
+        "today_date_text": today.strftime("%Y-%m-%d"),
+    }
+
+
 def _home_v2(request, products, posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = list(products)
-    sections, games = get_purpose_sections(product_list)
+    sections, games = get_purpose_sections(product_list, preview_limit=2)
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
@@ -172,6 +235,7 @@ def _home_v2(request, products, posts):
             'games': games,
             'quick_actions': quick_action_items,
             'posts': posts,
+            **_build_today_context(request),
             **_build_home_student_games_qr_context(request),
         })
 
@@ -806,6 +870,38 @@ def track_product_usage(request):
         source=source,
     )
     return JsonResponse({'status': 'ok'})
+
+
+@require_POST
+@login_required
+def set_active_classroom(request):
+    """네비게이션 학급 단축키 — 세션에 현재 학급 저장."""
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'invalid json'}, status=400)
+
+    source = data.get('source', '')
+    cid = data.get('classroom_id', '')
+
+    # 선택 해제
+    if not cid:
+        request.session.pop('active_classroom_source', None)
+        request.session.pop('active_classroom_id', None)
+        return JsonResponse({'status': 'cleared'})
+
+    if source == 'hs':
+        try:
+            from happy_seed.models import HSClassroom
+            classroom = HSClassroom.objects.get(pk=cid, teacher=request.user)
+        except Exception:
+            return JsonResponse({'error': 'classroom not found'}, status=404)
+        request.session['active_classroom_source'] = 'hs'
+        request.session['active_classroom_id'] = str(classroom.pk)
+        return JsonResponse({'status': 'ok', 'name': classroom.name})
+
+    return JsonResponse({'error': 'unknown source'}, status=400)
 
 
 def health_check(request):

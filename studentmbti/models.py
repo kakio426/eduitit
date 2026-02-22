@@ -7,6 +7,13 @@ class TestSession(models.Model):
     """교사가 생성하는 검사 세션"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='student_mbti_sessions')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='mbti_sessions',
+        help_text="연결된 학급 (학운위 학급 단축키)",
+    )
     session_name = models.CharField(max_length=100, help_text="예: 3학년 1반 MBTI 검사")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)

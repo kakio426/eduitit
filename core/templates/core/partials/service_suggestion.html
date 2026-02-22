@@ -1,0 +1,28 @@
+{% load service_suggestions %}
+{% load_service_suggestions service_key as suggestion_items %}
+{% if suggestion_items %}
+<div class="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 md:p-5">
+    <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">🔗</span>
+        <h3 class="text-sm md:text-base font-black text-indigo-900">다음에 같이 쓰면 더 편해요</h3>
+    </div>
+    <p class="text-xs md:text-sm text-indigo-800 mb-4">지금 하신 작업과 자주 함께 사용하는 서비스를 바로 이어서 실행할 수 있습니다.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% for item in suggestion_items %}
+        <a href="{{ item.url }}"
+            {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+            class="group rounded-xl border border-indigo-200 bg-white px-3 py-3 hover:border-indigo-300 hover:shadow-sm transition-all">
+            <div class="flex items-start gap-3">
+                <span class="text-2xl leading-none">{{ item.icon }}</span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-black text-slate-800 group-hover:text-indigo-700 truncate">{{ item.title }}</p>
+                    <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.summary }}</p>
+                    <p class="text-xs font-bold text-indigo-600 mt-2">바로 가기</p>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

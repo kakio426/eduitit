@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from .models import TestSession, StudentMBTIResult
 from .student_mbti_data import STUDENT_QUESTIONS_LOW, STUDENT_QUESTIONS_HIGH
+from happy_seed.models import HSClassroom
 
 class StudentMBTITest(TestCase):
     def setUp(self):
@@ -43,6 +44,24 @@ class StudentMBTITest(TestCase):
         self.assertEqual(response.status_code, 302)
         session = TestSession.objects.get(session_name='High Grade Session')
         self.assertEqual(session.test_type, 'high')
+
+    def test_session_create_uses_active_classroom_when_available(self):
+        """세션 학급 단축키가 있으면 TestSession.classroom에 자동 연결"""
+        classroom = HSClassroom.objects.create(teacher=self.user, name='3학년 2반')
+
+        session_store = self.client.session
+        session_store['active_classroom_source'] = 'hs'
+        session_store['active_classroom_id'] = str(classroom.id)
+        session_store.save()
+
+        response = self.client.post('/studentmbti/session/create/', {
+            'session_name': 'Classroom Linked Session',
+            'test_type': 'low',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        created = TestSession.objects.get(session_name='Classroom Linked Session')
+        self.assertEqual(created.classroom_id, classroom.id)
 
     def test_session_test_serves_correct_questions(self):
         """세션 유형에 따라 다른 질문 개수를 반환하는지 확인"""

@@ -148,11 +148,27 @@ def session_create(request):
         
         if not session_name:
             session_name = f"검사 세션 ({timezone.now().strftime('%Y-%m-%d %H:%M')})"
-        
+
+        classroom = None
+        source = request.session.get('active_classroom_source')
+        classroom_id = request.session.get('active_classroom_id')
+        if source == 'hs' and classroom_id:
+            try:
+                from happy_seed.models import HSClassroom
+
+                classroom = HSClassroom.objects.get(
+                    pk=classroom_id,
+                    teacher=request.user,
+                    is_active=True,
+                )
+            except Exception:
+                classroom = None
+
         session = TestSession.objects.create(
             teacher=request.user,
             session_name=session_name,
-            test_type=test_type
+            test_type=test_type,
+            classroom=classroom,
         )
         logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}, Type: {test_type}")
         return redirect('studentmbti:session_detail', session_id=session.id)
