@@ -59,6 +59,26 @@ class CalendarEvent(models.Model):
         return f"{self.title} ({self.start_time.date()})"
 
 
+class CalendarIntegrationSetting(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="calendar_integration_setting",
+    )
+    collect_deadline_enabled = models.BooleanField(default=True)
+    consent_expiry_enabled = models.BooleanField(default=True)
+    reservation_enabled = models.BooleanField(default=True)
+    signatures_training_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "캘린더 연동 설정"
+        verbose_name_plural = "캘린더 연동 설정"
+
+    def __str__(self):
+        return f"{self.user.username} 캘린더 연동 설정"
+
+
 class EventPageBlock(models.Model):
     event = models.ForeignKey(CalendarEvent, on_delete=models.CASCADE, related_name='blocks')
     block_type = models.CharField(max_length=20)  # 'text', 'checklist', 'link', 'file'

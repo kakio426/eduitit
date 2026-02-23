@@ -1,14 +1,92 @@
+import base64
+import io
+import logging
+from datetime import timedelta
+
+import qrcode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
+from django.urls import reverse
+from django.utils import timezone
 from .models import TrainingSession, Signature
 from .forms import TrainingSessionForm, SignatureForm
 import csv
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
+CALENDAR_INTEGRATION_SOURCE = "signatures_training"
+
+
+def _build_qr_data_url(raw_text):
+    if not raw_text:
+        return ""
+
+    qr_image = qrcode.make(raw_text)
+    with io.BytesIO() as buffer:
+        qr_image.save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _to_aware_datetime(value):
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return timezone.localtime(value)
+
+
+def _sync_calendar_event_for_training(session):
+    """
+    Keep signatures training schedule in classcalendar in sync.
+    Fails safely if classcalendar app/model is unavailable.
+    """
+    try:
+        from classcalendar.models import CalendarEvent
+        from classcalendar.integrations import is_integration_enabled
+    except Exception:
+        logger.exception("[signatures] classcalendar import failed")
+        return
+
+    if not is_integration_enabled(session.created_by, CALENDAR_INTEGRATION_SOURCE):
+        return
+
+    start_at = _to_aware_datetime(session.datetime)
+    end_at = start_at + timedelta(minutes=60)
+    integration_key = f"signatures:{session.uuid}"
+    CalendarEvent.objects.update_or_create(
+        author=session.created_by,
+        integration_source=CALENDAR_INTEGRATION_SOURCE,
+        integration_key=integration_key,
+        defaults={
+            "title": f"[서명 연수] {session.title}"[:200],
+            "start_time": start_at,
+            "end_time": end_at,
+            "is_all_day": False,
+            "color": "indigo",
+            "visibility": CalendarEvent.VISIBILITY_TEACHER,
+            "source": CalendarEvent.SOURCE_LOCAL,
+            "classroom": None,
+            "is_locked": True,
+        },
+    )
+
+
+def _delete_calendar_event_for_training(session):
+    try:
+        from classcalendar.models import CalendarEvent
+    except Exception:
+        logger.exception("[signatures] classcalendar import failed")
+        return
+
+    CalendarEvent.objects.filter(
+        author=session.created_by,
+        integration_source=CALENDAR_INTEGRATION_SOURCE,
+        integration_key=f"signatures:{session.uuid}",
+    ).delete()
 
 
 @login_required
@@ -27,6 +105,7 @@ def session_create(request):
             session = form.save(commit=False)
             session.created_by = request.user
             session.save()
+            _sync_calendar_event_for_training(session)
             messages.success(request, '연수가 생성되었습니다.')
             return redirect('signatures:detail', uuid=session.uuid)
     else:
@@ -76,7 +155,11 @@ def session_detail(request, uuid):
             sig_dict[key].append(sig)
         
         duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
-        
+        share_link = request.build_absolute_uri(
+            reverse("signatures:sign", kwargs={"uuid": session.uuid})
+        )
+        share_qr_data_url = _build_qr_data_url(share_link)
+
         return render(request, 'signatures/detail.html', {
             'session': session,
             'signatures': signatures,
@@ -85,6 +168,8 @@ def session_detail(request, uuid):
             'duplicates': duplicates,
             'has_unmatched': len(suggestions) > 0,
             'has_duplicates': len(duplicates) > 0,
+            'share_link': share_link,
+            'share_qr_data_url': share_qr_data_url,
         })
     except Exception as e:
         traceback.print_exc()
@@ -99,7 +184,8 @@ def session_edit(request, uuid):
     if request.method == 'POST':
         form = TrainingSessionForm(request.POST, instance=session)
         if form.is_valid():
-            form.save()
+            session = form.save()
+            _sync_calendar_event_for_training(session)
             messages.success(request, '연수 정보가 수정되었습니다.')
             return redirect('signatures:detail', uuid=session.uuid)
     else:
@@ -112,6 +198,7 @@ def session_delete(request, uuid):
     """연수 삭제"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
     if request.method == 'POST':
+        _delete_calendar_event_for_training(session)
         session.delete()
         messages.success(request, '연수가 삭제되었습니다.')
         return redirect('signatures:list')

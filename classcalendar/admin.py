@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CalendarEvent, EventPageBlock
+from .models import CalendarEvent, CalendarIntegrationSetting, EventPageBlock
 
 
 @admin.register(CalendarEvent)
@@ -27,3 +27,16 @@ class EventPageBlockAdmin(admin.ModelAdmin):
     list_filter = ("block_type",)
     search_fields = ("event__title",)
     ordering = ("event", "order")
+
+
+@admin.register(CalendarIntegrationSetting)
+class CalendarIntegrationSettingAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "collect_deadline_enabled",
+        "consent_expiry_enabled",
+        "reservation_enabled",
+        "signatures_training_enabled",
+        "updated_at",
+    )
+    search_fields = ("user__username", "user__email")

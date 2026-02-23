@@ -1,9 +1,12 @@
 import logging
+import uuid
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
@@ -11,7 +14,16 @@ from happy_seed.models import HSClassroom
 from products.models import Product
 
 from .forms import CalendarEventCreateForm
-from .integrations import sync_user_calendar_integrations
+from .integrations import (
+    SOURCE_COLLECT_DEADLINE,
+    SOURCE_CONSENT_EXPIRY,
+    SOURCE_RESERVATION,
+    SOURCE_SETTING_FIELD_MAP,
+    SOURCE_SIGNATURES_TRAINING,
+    get_or_create_integration_setting,
+    serialize_integration_setting,
+    sync_user_calendar_integrations,
+)
 from .models import CalendarEvent, EventPageBlock
 
 SERVICE_ROUTE = "classcalendar:main"
@@ -22,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def _serialize_event(event):
+    source_url, source_label = _resolve_integration_source_meta(event)
     return {
         "id": str(event.id),
         "title": event.title,
@@ -33,8 +46,93 @@ def _serialize_event(event):
         "source": event.source,
         "visibility": event.visibility,
         "integration_source": event.integration_source,
+        "source_url": source_url,
+        "source_label": source_label,
         "is_locked": event.is_locked,
     }
+
+
+def _split_integration_key(raw_key):
+    if not raw_key or ":" not in raw_key:
+        return "", ""
+    return raw_key.split(":", 1)
+
+
+def _resolve_integration_source_meta(event):
+    source = (event.integration_source or "").strip()
+    key = (event.integration_key or "").strip()
+    _, payload = _split_integration_key(key)
+
+    if not source:
+        return "", ""
+
+    if source == SOURCE_COLLECT_DEADLINE:
+        if payload:
+            try:
+                request_uuid = uuid.UUID(payload)
+                return (
+                    reverse("collect:request_detail", kwargs={"request_id": request_uuid}),
+                    "수합 요청으로 이동",
+                )
+            except (ValueError, TypeError):
+                pass
+        return reverse("collect:dashboard"), "수합 대시보드로 이동"
+
+    if source == SOURCE_CONSENT_EXPIRY:
+        if payload:
+            try:
+                request_uuid = uuid.UUID(payload)
+                return (
+                    reverse("consent:detail", kwargs={"request_id": request_uuid}),
+                    "동의서 요청으로 이동",
+                )
+            except (ValueError, TypeError):
+                pass
+        return reverse("consent:dashboard"), "동의서 대시보드로 이동"
+
+    if source == SOURCE_RESERVATION:
+        reservation_parts = key.split(":")
+        if len(reservation_parts) >= 4:
+            school_slug = reservation_parts[2]
+            date_text = reservation_parts[3]
+            base_url = reverse("reservations:reservation_index", kwargs={"school_slug": school_slug})
+            return f"{base_url}?{urlencode({'date': date_text})}", "예약 화면으로 이동"
+        if payload and payload.isdigit():
+            try:
+                from reservations.models import Reservation
+
+                reservation = (
+                    Reservation.objects.select_related("room__school")
+                    .filter(id=int(payload), room__school__owner=event.author)
+                    .first()
+                )
+                if reservation:
+                    base_url = reverse(
+                        "reservations:reservation_index",
+                        kwargs={"school_slug": reservation.room.school.slug},
+                    )
+                    return f"{base_url}?{urlencode({'date': reservation.date.strftime('%Y-%m-%d')})}", "예약 화면으로 이동"
+            except Exception:
+                logger.exception("[ClassCalendar] reservation source link resolve failed event_id=%s", event.id)
+        return reverse("reservations:dashboard_landing"), "예약 대시보드로 이동"
+
+    if source == SOURCE_SIGNATURES_TRAINING:
+        if payload:
+            try:
+                session_uuid = uuid.UUID(payload)
+                return (
+                    reverse("signatures:detail", kwargs={"uuid": session_uuid}),
+                    "서명 연수 상세로 이동",
+                )
+            except (ValueError, TypeError):
+                pass
+        return reverse("signatures:list"), "서명 연수 목록으로 이동"
+
+    return "", ""
+
+
+def _get_integration_setting_for_user(user):
+    return get_or_create_integration_setting(user)
 
 
 def _get_active_classroom_for_user(request):
@@ -173,11 +271,13 @@ def _integration_event_readonly_response():
 @login_required
 def main_view(request):
     _sync_integrations_if_needed(request)
+    integration_setting = _get_integration_setting_for_user(request.user)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     context = {
         "service": service,
         "title": service.title if service else "학급 캘린더 (Eduitit Calendar)",
         "events_json": [_serialize_event(event) for event in _get_teacher_visible_events(request)],
+        "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
     }
     return render(request, "classcalendar/main.html", context)
@@ -189,6 +289,55 @@ def api_events(request):
     _sync_integrations_if_needed(request)
     events_data = [_serialize_event(event) for event in _get_teacher_visible_events(request)]
     return JsonResponse({"status": "success", "events": events_data})
+
+
+def _parse_bool_value(raw_value):
+    return str(raw_value).strip().lower() in {"1", "true", "on", "yes"}
+
+
+@login_required
+@require_POST
+def api_integration_settings(request):
+    integration_setting = _get_integration_setting_for_user(request.user)
+    changed_fields = []
+
+    editable_fields = (
+        "collect_deadline_enabled",
+        "consent_expiry_enabled",
+        "reservation_enabled",
+        "signatures_training_enabled",
+    )
+    for field_name in editable_fields:
+        if field_name not in request.POST:
+            continue
+        new_value = _parse_bool_value(request.POST.get(field_name))
+        if getattr(integration_setting, field_name) != new_value:
+            setattr(integration_setting, field_name, new_value)
+            changed_fields.append(field_name)
+
+    if changed_fields:
+        integration_setting.save(update_fields=[*changed_fields, "updated_at"])
+
+    disabled_sources = [
+        source
+        for source, field_name in SOURCE_SETTING_FIELD_MAP.items()
+        if not getattr(integration_setting, field_name, True)
+    ]
+    if disabled_sources:
+        CalendarEvent.objects.filter(
+            author=request.user,
+            integration_source__in=disabled_sources,
+            is_locked=True,
+        ).delete()
+
+    _sync_integrations_if_needed(request, force=True)
+    refreshed = _get_integration_setting_for_user(request.user)
+    return JsonResponse(
+        {
+            "status": "success",
+            "settings": serialize_integration_setting(refreshed),
+        }
+    )
 
 
 @login_required

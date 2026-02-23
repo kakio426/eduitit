@@ -311,13 +311,33 @@
             </h2>
             <div class="flex gap-2">
                 <input type="text" id="shareLink" readonly
-                    value="{{ request.scheme }}://{{ request.get_host }}{% url 'signatures:sign' uuid=session.uuid %}"
+                    value="{{ share_link }}"
                     class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
                 <button onclick="copyLink()"
                     class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
                     <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">복사</span>
                 </button>
             </div>
+            {% if share_qr_data_url %}
+            <div class="mt-4 md:mt-5 rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-4 md:p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                    <p class="text-sm md:text-base font-bold text-gray-700">
+                        <i class="fa-solid fa-qrcode text-purple-500 mr-1"></i>프로젝터용 참여 QR
+                    </p>
+                    <button type="button" onclick="openQrModal()"
+                        class="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs md:text-sm font-bold hover:bg-purple-100 transition w-fit">
+                        <i class="fa-solid fa-up-right-and-down-left-from-center mr-1"></i>크게 보기
+                    </button>
+                </div>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <img src="{{ share_qr_data_url }}" alt="연수 참여 QR 코드"
+                        class="w-40 h-40 md:w-52 md:h-52 rounded-xl border border-purple-200 bg-white p-2">
+                    <p class="text-xs md:text-sm text-gray-600 leading-relaxed">
+                        연수 화면(프로젝터)에 QR을 띄우면 참석자가 휴대폰으로 바로 서명 페이지에 접속할 수 있습니다.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Signature List -->
@@ -364,6 +384,23 @@
         </div>
     </div>
 </main>
+
+<!-- QR Fullscreen Modal -->
+<div id="qrModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
+    <div class="relative w-full max-w-2xl rounded-2xl bg-white p-4 md:p-6 shadow-2xl">
+        <button type="button" onclick="closeQrModal()"
+            class="absolute right-3 top-3 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 class="text-lg md:text-2xl font-black text-gray-800 mb-3">연수 참여 QR</h3>
+        {% if share_qr_data_url %}
+        <div class="flex justify-center">
+            <img src="{{ share_qr_data_url }}" alt="연수 참여 QR 코드(확대)" class="w-72 h-72 md:w-[420px] md:h-[420px] max-w-full">
+        </div>
+        <p class="text-center text-sm text-gray-500 mt-3 break-all">{{ share_link }}</p>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -402,6 +439,18 @@
         input.select();
         navigator.clipboard.writeText(input.value);
         alert('링크가 복사되었습니다!');
+    }
+
+    function openQrModal() {
+        const modal = document.getElementById('qrModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeQrModal() {
+        const modal = document.getElementById('qrModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 
     function toggleActive() {
@@ -502,6 +551,17 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', loadParticipants);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadParticipants();
+        const qrModal = document.getElementById('qrModal');
+        if (qrModal) {
+            qrModal.addEventListener('click', (event) => {
+                if (event.target === qrModal) closeQrModal();
+            });
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeQrModal();
+    });
 </script>
 {% endblock %}
