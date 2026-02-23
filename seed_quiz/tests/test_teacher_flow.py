@@ -117,6 +117,9 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "문제는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
         self.assertContains(resp, "내 문제 보관함 찾기")
+        self.assertContains(resp, "둘 다 넣을 필요가 없습니다")
+        self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
+        self.assertContains(resp, "방법 B. 파일 올리기")
 
     def test_landing_redirects_to_first_active_classroom_dashboard(self):
         url = reverse("seed_quiz:landing")
@@ -570,6 +573,26 @@ class TeacherFlowTest(TestCase):
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
         self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.items.count(), 3)
+
+    def test_text_upload_save_mode_creates_bank_immediately(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "한글 맞춤법\t3\t대한민국 수도는?\t서울\t부산\t대구\t광주\t1\t서울입니다\t쉬움\n"
+            "한글 맞춤법\t3\t1+1은?\t2\t1\t3\t4\t1\t2입니다\t쉬움\n"
+            "한글 맞춤법\t3\t바다 색은?\t파랑\t빨강\t검정\t흰색\t1\t파랑이 일반적입니다\t보통\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            upload_url,
+            {"pasted_text": pasted_text, "submit_mode": "save"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "문제 만들기가 완료되었습니다")
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertEqual(bank.items.count(), 3)
 

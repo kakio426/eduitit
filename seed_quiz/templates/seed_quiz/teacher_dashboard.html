@@ -98,10 +98,30 @@
         </form>
     </div>
 
+    <!-- 입력 방식 선택 -->
+    <div class="clay-card p-5 rounded-2xl mb-4 border border-violet-200 bg-violet-50/60">
+        <p class="text-sm font-bold text-violet-800">문제 넣는 방법은 <span class="underline">하나만</span> 선택하면 됩니다.</p>
+        <p class="mt-1 text-xs text-violet-700">
+            방법 A(붙여넣기) 또는 방법 B(파일 올리기) 중 하나만 진행하세요. 둘 다 넣을 필요가 없습니다.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button"
+                    data-input-method="paste"
+                    class="px-4 py-2 rounded-lg text-sm font-bold transition-colors bg-violet-600 text-white">
+                방법 A. 붙여넣기 (권장)
+            </button>
+            <button type="button"
+                    data-input-method="file"
+                    class="px-4 py-2 rounded-lg text-sm font-bold transition-colors bg-white border border-violet-200 text-violet-700 hover:bg-violet-100">
+                방법 B. 파일 올리기
+            </button>
+        </div>
+    </div>
+
     <!-- 파일 업로드 -->
-    <div class="clay-card p-6 rounded-2xl mb-6">
+    <div id="input-method-file" class="clay-card p-6 rounded-2xl mb-6 hidden">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-gray-700">문제 파일 올리기 (선택)</h2>
+            <h2 class="font-bold text-gray-700">방법 B) 문제 파일 올리기</h2>
             <div class="flex items-center gap-2">
                 <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors">
@@ -115,12 +135,23 @@
                    class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
                     CSV 템플릿
                 </a>
-                <a href="{% url 'seed_quiz:download_csv_sample_pack' classroom_id=classroom.id %}"
-                   class="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
-                    샘플 팩 다운로드
-                </a>
             </div>
         </div>
+        <p class="mb-3 text-xs text-gray-500">
+            파일 방식은 <strong>파일 확인</strong> 후, 아래 미리보기에서 <strong>문제 만들기</strong>를 눌러 저장이 완료됩니다.
+        </p>
+        <details class="mb-3">
+            <summary class="cursor-pointer text-xs font-bold text-gray-500 list-none inline-flex items-center gap-1">
+                고급 자료(샘플 팩)
+            </summary>
+            <div class="mt-2">
+                <a href="{% url 'seed_quiz:download_csv_sample_pack' classroom_id=classroom.id %}"
+                   class="inline-flex px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
+                    샘플 팩 다운로드
+                </a>
+                <p class="mt-1 text-xs text-gray-400">LLM으로 생성이 어려울 때 참고용으로만 사용합니다.</p>
+            </div>
+        </details>
         <form id="csv-upload-form"
               data-client-check-state="idle"
               data-max-file-bytes="{{ csv_limits.max_file_bytes }}"
@@ -142,7 +173,7 @@
             </div>
             <button type="submit"
                     class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
-                파일 미리보기
+                파일 확인
             </button>
         </form>
         <p class="mt-2 text-xs text-gray-500">
@@ -155,23 +186,39 @@
             파일 제한: {{ csv_limits_human.max_file }} 이하 / 최대 {{ csv_limits_human.max_rows }}문항
         </p>
         <div id="csv-client-check" class="mt-2 hidden"></div>
-        <div id="csv-upload-result" class="mt-3"></div>
     </div>
 
     <!-- 텍스트 붙여넣기 업로드 -->
-    <div class="clay-card p-6 rounded-2xl mb-6">
+    <div id="input-method-paste" class="clay-card p-6 rounded-2xl mb-6">
         <div class="flex items-center justify-between mb-3">
-            <h2 class="font-bold text-gray-700">1) 문제 붙여넣기 (가장 쉬운 방법)</h2>
-            <button type="button"
-                    id="copy-seed-quiz-template"
-                    class="px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition-colors">
-                붙여넣기 양식 복사
-            </button>
+            <h2 class="font-bold text-gray-700">방법 A) 문제 붙여넣기 (가장 쉬운 방법)</h2>
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        id="copy-seed-quiz-prompt"
+                        class="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
+                    GPT/GEMS 지침 복사
+                </button>
+                <button type="button"
+                        id="copy-seed-quiz-template"
+                        class="px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition-colors">
+                    헤더 줄 복사
+                </button>
+            </div>
+        </div>
+        <div class="mb-3 p-3 rounded-xl bg-violet-50 border border-violet-200">
+            <p class="text-xs font-bold text-violet-800">GPT/GEMS로 만드는 순서 (30초)</p>
+            <ol class="mt-1 text-xs text-violet-700 space-y-0.5 list-decimal list-inside">
+                <li><strong>GPT/GEMS 지침 복사</strong>를 눌러 새 채팅에 붙여넣습니다.</li>
+                <li>원하는 요청을 한 줄로 보냅니다. 예: <code>맞춤법, 3학년, 20문항</code></li>
+                <li>모델이 만든 표 전체를 아래 입력칸에 붙여넣습니다.</li>
+                <li><strong>문제 만들기(바로 저장)</strong>를 누르면 즉시 저장됩니다. 불안하면 먼저 <strong>형식만 확인</strong>을 눌러 보세요.</li>
+            </ol>
         </div>
         <form id="text-upload-form"
               hx-post="{% url 'seed_quiz:htmx_text_upload' classroom_id=classroom.id %}"
               hx-target="#csv-upload-result"
               hx-swap="innerHTML"
+              hx-indicator="#text-upload-indicator"
               class="space-y-3">
             {% csrf_token %}
             <div>
@@ -179,31 +226,66 @@
                 <textarea name="pasted_text"
                           rows="8"
                           required
-                          placeholder="다른 화면에서 복사한 문제를 여기에 붙여넣으세요."
+                          placeholder="GPT/GEMS 또는 엑셀에서 복사한 표 전체를 여기에 붙여넣으세요."
                           class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white resize-y"></textarea>
             </div>
             <div class="flex items-center gap-2">
                 <button type="submit"
+                        name="submit_mode"
+                        value="save"
                         class="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
-                    붙여넣기 미리보기
+                    문제 만들기(바로 저장)
                 </button>
+                <button type="submit"
+                        name="submit_mode"
+                        value="preview"
+                        class="px-4 py-2 bg-white border border-violet-200 text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-50 transition-colors">
+                    형식만 확인
+                </button>
+                <span id="text-upload-indicator" class="htmx-indicator text-xs text-violet-600 font-bold">
+                    처리 중...
+                </span>
             </div>
         </form>
         <p class="mt-2 text-xs text-gray-500">
-            첫 줄에 항목 이름(주제, 학년, 문제, 보기1~4, 정답번호, 해설, 난이도)이 있으면 가장 정확하게 읽습니다.
+            <strong>GPT/GEMS 지침 복사</strong>: 모델이 이 서비스 입력 형식으로 답하게 만듭니다.
+        </p>
+        <p class="mt-1 text-xs text-gray-500">
+            <strong>헤더 줄 복사</strong>: 결과 맨 윗줄에 열 이름이 없을 때 빠르게 붙여 넣는 용도입니다.
+        </p>
+        <p class="mt-1 text-xs text-gray-500">
+            <strong>문제 만들기(바로 저장)</strong>: 붙여넣은 내용을 즉시 세트로 저장합니다.
+        </p>
+        <p class="mt-1 text-xs text-gray-500">
+            <strong>형식만 확인</strong>: 저장 없이 오류(열 누락, 정답번호 범위, 주제/학년 혼합)만 먼저 확인합니다.
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            표 형태 붙여넣기, 줄별 붙여넣기 모두 가능합니다. 최대 {{ text_limits.max_chars }}자.
+            이 칸은 사람이 한 줄씩 쓰는 용도가 아니라, GPT/GEMS가 만든 표 전체를 한 번에 붙여넣는 용도입니다. 최대 {{ text_limits.max_chars }}자.
         </p>
     </div>
 
+    <div id="csv-upload-result" class="mb-6"></div>
+
     <!-- CSV 업로드 이력 -->
-    <div class="clay-card p-6 rounded-2xl mb-6"
-         hx-get="{% url 'seed_quiz:htmx_csv_history' classroom_id=classroom.id %}"
-         hx-trigger="load, csvHistoryUpdated from:body, every 20s"
-         hx-swap="innerHTML">
-        <p class="text-sm text-gray-400">CSV 업로드 이력을 불러오는 중...</p>
-    </div>
+    <details class="clay-card p-6 rounded-2xl mb-6">
+        <summary class="cursor-pointer text-sm font-bold text-gray-700 list-none flex items-center justify-between">
+            <span>CSV 업로드 이력 (필요할 때만 확인)</span>
+            <span class="text-xs text-gray-400">펼치기</span>
+        </summary>
+        <div class="mt-3">
+            <p class="text-xs text-gray-500 mb-2">문제가 생겼을 때만 아래 버튼으로 불러오면 됩니다.</p>
+            <button type="button"
+                    hx-get="{% url 'seed_quiz:htmx_csv_history' classroom_id=classroom.id %}"
+                    hx-target="#csv-history-area"
+                    hx-swap="innerHTML"
+                    class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
+                이력 불러오기
+            </button>
+            <div id="csv-history-area" class="mt-3">
+                <p class="text-sm text-gray-400">아직 불러온 이력이 없습니다.</p>
+            </div>
+        </div>
+    </details>
 
     <!-- 내 문제 보관함 -->
     <div class="clay-card p-6 rounded-2xl mb-6">
@@ -238,32 +320,6 @@
                     {% endfor %}
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">난이도</label>
-                <select name="difficulty" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    <option value="all">전체</option>
-                    <option value="easy">쉬움 포함</option>
-                    <option value="medium">보통 포함</option>
-                    <option value="hard">어려움 포함</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">기간</label>
-                <select name="period_days" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    <option value="all">전체</option>
-                    <option value="7">최근 7일</option>
-                    <option value="30">최근 30일</option>
-                    <option value="90">최근 90일</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">정렬</label>
-                <select name="sort" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    <option value="latest">최신순</option>
-                    <option value="use_count">사용 많은 순</option>
-                    <option value="oldest">오래된 순</option>
-                </select>
-            </div>
             <div class="min-w-[220px] flex-1">
                 <label class="block text-xs font-bold text-gray-500 mb-1">검색</label>
                 <input type="text"
@@ -283,6 +339,39 @@
                     class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
                 조건으로 랜덤 1세트
             </button>
+            <details class="w-full mt-1">
+                <summary class="cursor-pointer text-xs font-bold text-gray-500 list-none inline-flex items-center gap-1">
+                    고급 필터(난이도/기간/정렬)
+                </summary>
+                <div class="mt-2 flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">난이도</label>
+                        <select name="difficulty" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                            <option value="all">전체</option>
+                            <option value="easy">쉬움 포함</option>
+                            <option value="medium">보통 포함</option>
+                            <option value="hard">어려움 포함</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">기간</label>
+                        <select name="period_days" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                            <option value="all">전체</option>
+                            <option value="7">최근 7일</option>
+                            <option value="30">최근 30일</option>
+                            <option value="90">최근 90일</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">정렬</label>
+                        <select name="sort" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                            <option value="latest">최신순</option>
+                            <option value="use_count">사용 많은 순</option>
+                            <option value="oldest">오래된 순</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
         </form>
 
         <div id="my-bank-area"
@@ -372,6 +461,44 @@
 
 {% block extra_js %}
 <script>
+(function () {
+    const pasteSection = document.getElementById('input-method-paste');
+    const fileSection = document.getElementById('input-method-file');
+    const modeButtons = Array.from(document.querySelectorAll('[data-input-method]'));
+    if (!pasteSection || !fileSection || !modeButtons.length) {
+        return;
+    }
+
+    function applyButtonState(button, selected) {
+        button.classList.remove(
+            'bg-violet-600', 'text-white',
+            'bg-white', 'border', 'border-violet-200', 'text-violet-700', 'hover:bg-violet-100'
+        );
+        if (selected) {
+            button.classList.add('bg-violet-600', 'text-white');
+        } else {
+            button.classList.add('bg-white', 'border', 'border-violet-200', 'text-violet-700', 'hover:bg-violet-100');
+        }
+    }
+
+    function setMode(mode) {
+        const showPaste = mode !== 'file';
+        pasteSection.classList.toggle('hidden', !showPaste);
+        fileSection.classList.toggle('hidden', showPaste);
+        modeButtons.forEach((button) => {
+            applyButtonState(button, button.dataset.inputMethod === (showPaste ? 'paste' : 'file'));
+        });
+    }
+
+    modeButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+            setMode(button.dataset.inputMethod || 'paste');
+        });
+    });
+
+    setMode('paste');
+})();
+
 (function () {
     const form = document.getElementById('csv-upload-form');
     const input = document.getElementById('csv-file-input');
@@ -724,33 +851,81 @@
 })();
 
 (function () {
-    const btn = document.getElementById('copy-seed-quiz-template');
-    if (!btn) {
+    const templateBtn = document.getElementById('copy-seed-quiz-template');
+    const promptBtn = document.getElementById('copy-seed-quiz-prompt');
+    if (!templateBtn && !promptBtn) {
         return;
     }
     const header = '주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도';
-    btn.addEventListener('click', async function () {
-        try {
-            await navigator.clipboard.writeText(header + '\n');
-            btn.textContent = '복사 완료';
-            btn.classList.remove('bg-violet-100', 'text-violet-700');
-            btn.classList.add('bg-emerald-100', 'text-emerald-700');
+    const promptTemplate = [
+        '당신은 초등 퀴즈 제작 도우미입니다.',
+        '아래 규칙을 지켜 탭(Tab)으로 구분된 표(TSV)만 출력하세요.',
+        '설명 문장, 번호 목록, 마크다운 코드블록은 출력하지 마세요.',
+        '',
+        '첫 줄은 반드시 헤더를 그대로 사용하세요.',
+        header,
+        '',
+        '규칙:',
+        '- 한 번에 한 주제, 한 학년만 사용',
+        '- 정답번호는 1~4',
+        '- 난이도는 쉬움/보통/어려움',
+        '- 요청한 문항 수를 정확히 맞춤',
+        '',
+        '요청 예시: 맞춤법, 3학년, 20문항',
+    ].join('\n');
+
+    function flashButtonState(button, idleText, successText, failText, idleClass, successClass, failClass) {
+        return function (ok) {
+            button.textContent = ok ? successText : failText;
+            button.classList.remove(...idleClass, ...successClass, ...failClass);
+            button.classList.add(...(ok ? successClass : failClass));
             window.setTimeout(function () {
-                btn.textContent = '붙여넣기 양식 복사';
-                btn.classList.remove('bg-emerald-100', 'text-emerald-700');
-                btn.classList.add('bg-violet-100', 'text-violet-700');
+                button.textContent = idleText;
+                button.classList.remove(...successClass, ...failClass);
+                button.classList.add(...idleClass);
             }, 1200);
-        } catch (e) {
-            btn.textContent = '복사 실패';
-            btn.classList.remove('bg-violet-100', 'text-violet-700');
-            btn.classList.add('bg-red-100', 'text-red-700');
-            window.setTimeout(function () {
-                btn.textContent = '붙여넣기 양식 복사';
-                btn.classList.remove('bg-red-100', 'text-red-700');
-                btn.classList.add('bg-violet-100', 'text-violet-700');
-            }, 1200);
-        }
-    });
+        };
+    }
+
+    if (templateBtn) {
+        const flash = flashButtonState(
+            templateBtn,
+            '헤더 줄 복사',
+            '복사 완료',
+            '복사 실패',
+            ['bg-violet-100', 'text-violet-700'],
+            ['bg-emerald-100', 'text-emerald-700'],
+            ['bg-red-100', 'text-red-700']
+        );
+        templateBtn.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(header + '\n');
+                flash(true);
+            } catch (e) {
+                flash(false);
+            }
+        });
+    }
+
+    if (promptBtn) {
+        const flash = flashButtonState(
+            promptBtn,
+            'GPT/GEMS 지침 복사',
+            '복사 완료',
+            '복사 실패',
+            ['bg-indigo-100', 'text-indigo-700'],
+            ['bg-emerald-100', 'text-emerald-700'],
+            ['bg-red-100', 'text-red-700']
+        );
+        promptBtn.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(promptTemplate);
+                flash(true);
+            } catch (e) {
+                flash(false);
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}

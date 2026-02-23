@@ -1209,6 +1209,7 @@ def htmx_text_upload(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     _clear_csv_error_report(request)
     text_limits = _get_text_upload_limits()
+    submit_mode = (request.POST.get("submit_mode") or "preview").strip().lower()
     raw_text = (request.POST.get("pasted_text") or "").strip()
     if not raw_text:
         errors = ["붙여넣기 내용이 비어 있습니다."]
@@ -1373,6 +1374,42 @@ def htmx_text_upload(request, classroom_id):
                 ),
             },
             status=400,
+        )
+
+    if submit_mode == "save":
+        created_count, updated_count, shared_count = save_parsed_sets_to_bank(
+            parsed_sets=parsed_sets,
+            created_by=request.user,
+            share_opt_in=True,
+        )
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_SAVE_SUCCESS",
+            level="info",
+            message=f"붙여넣기 즉시 저장 완료: 생성 {created_count}, 갱신 {updated_count}",
+            payload={
+                "format": source_format,
+                "char_count": len(raw_text),
+                "set_count": len(parsed_sets),
+                "row_count": sum(len(s.get("items", [])) for s in parsed_sets),
+                "created_count": created_count,
+                "updated_count": updated_count,
+                "shared_count": shared_count,
+            },
+        )
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": created_count,
+                "updated_count": updated_count,
+                "shared_count": shared_count,
+                "success_title": "문제 만들기가 완료되었습니다.",
+                "errors": [],
+            },
+            status=200,
         )
 
     _log_csv_event(
