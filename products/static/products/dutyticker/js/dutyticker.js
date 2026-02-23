@@ -423,7 +423,7 @@ class DutyTickerManager {
         this.roleSpotlightTimer = setInterval(() => {
             this.currentRoleHighlightIndex = (this.currentRoleHighlightIndex + 1) % this.currentRoleIdsForSlot.length;
             this.renderRoleList(true);
-        }, 3400);
+        }, 4200);
     }
 
     renderRoleList(skipSpotlightRefresh = false) {
@@ -979,7 +979,7 @@ class DutyTickerManager {
         if (!this.callModeRoles.length) return;
         this.callModeIndex = (this.callModeIndex + 1) % this.callModeRoles.length;
         this.renderCallMode();
-        if (!fromAuto || this.callModeAutoPlaying) this.playCallChime();
+        this.playCallChime(fromAuto ? 'soft' : 'normal');
     }
 
     prevCallRole() {
@@ -995,7 +995,7 @@ class DutyTickerManager {
         if (this.callModeRoles.length <= 1) return;
         this.callModeAutoTimer = setInterval(() => {
             this.nextCallRole(true);
-        }, 3600);
+        }, 4500);
     }
 
     stopCallModeAuto() {
@@ -1165,14 +1165,22 @@ class DutyTickerManager {
         this.playNote(523.25, now, 0.05); this.playNote(659.25, now + 0.05, 0.1);
     }
 
-    playCallChime() {
+    playCallChime(mode = 'normal') {
         this.resumeAudioContext();
         const ctx = this.getAudioCtx();
         if (!ctx || !this.isSoundEnabled) return;
         const now = ctx.currentTime + 0.02;
-        this.playNote(659.25, now, 0.2, 0.09);
-        this.playNote(783.99, now + 0.14, 0.22, 0.08);
-        this.playNote(987.77, now + 0.3, 0.26, 0.07);
+
+        if (mode === 'soft') {
+            this.playNote(659.25, now, 0.18, 0.05);
+            this.playNote(783.99, now + 0.16, 0.2, 0.045);
+            this.playNote(987.77, now + 0.34, 0.22, 0.04);
+            return;
+        }
+
+        this.playNote(659.25, now, 0.2, 0.08);
+        this.playNote(783.99, now + 0.14, 0.22, 0.07);
+        this.playNote(987.77, now + 0.3, 0.26, 0.06);
     }
 
     toggleBroadcastSound() {
