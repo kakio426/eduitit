@@ -100,6 +100,10 @@ function homeCalendarWidget() {
         currentDate: new Date(),
         events: [],
         createModalOpen: false,
+        dayEventsModalOpen: false,
+        selectedDateKey: '',
+        selectedDateLabel: '',
+        selectedDateEvents: [],
         isSubmitting: false,
         createContextDateText: '',
         refreshTicker: null,
@@ -122,6 +126,10 @@ function homeCalendarWidget() {
             try {
                 const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
                 this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
+                if (this.dayEventsModalOpen && this.selectedDateKey) {
+                    const selectedDate = this.parseDateKey(this.selectedDateKey);
+                    this.selectedDateEvents = this.getEventsForDate(selectedDate);
+                }
             } catch (err) {
                 if (window.showToast) {
                     window.showToast('홈 캘린더를 불러오지 못했습니다.', 'error');
@@ -261,9 +269,7 @@ function homeCalendarWidget() {
             if (!events.length) {
                 return `${dateText} 일정 추가`;
             }
-            const preview = events.slice(0, 3).map((event) => this.eventLabel(event)).join(' / ');
-            const overflow = events.length > 3 ? ` 외 ${events.length - 3}개` : '';
-            return `${dateText}: ${preview}${overflow}`;
+            return `${dateText} 일정 ${events.length}건 보기`;
         },
 
         eventChipClass(event) {
@@ -283,7 +289,58 @@ function homeCalendarWidget() {
             return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
         },
 
+        formatClock(dateValue) {
+            const d = new Date(dateValue);
+            const h = this.pad(d.getHours());
+            const m = this.pad(d.getMinutes());
+            return `${h}:${m}`;
+        },
+
+        formatEventRange(event) {
+            if (!event) return '';
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            if (event.is_all_day) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · 하루 종일`;
+            }
+            if (this.dateKey(start) === this.dateKey(end)) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · ${this.formatClock(start)} - ${this.formatClock(end)}`;
+            }
+            return `${this.formatAgendaDate(this.dateKey(start))} ${this.formatClock(start)} ~ ${this.formatAgendaDate(this.dateKey(end))} ${this.formatClock(end)}`;
+        },
+
+        handleDateClick(date) {
+            const events = this.getEventsForDate(date);
+            if (events.length) {
+                this.openDayEventsModalForDate(date);
+                return;
+            }
+            this.openCreateModalForDate(date);
+        },
+
+        openDayEventsModalForDate(date) {
+            const key = this.dateKey(date);
+            this.selectedDateKey = key;
+            this.selectedDateLabel = this.formatAgendaDate(key);
+            this.selectedDateEvents = this.getEventsForDate(date);
+            this.dayEventsModalOpen = true;
+        },
+
+        closeDayEventsModal() {
+            this.dayEventsModalOpen = false;
+        },
+
+        openCreateModalForSelectedDate() {
+            if (!this.selectedDateKey) {
+                this.openCreateModalForDate(new Date());
+                return;
+            }
+            const date = this.parseDateKey(this.selectedDateKey);
+            this.openCreateModalForDate(date);
+        },
+
         openCreateModalForDate(date) {
+            this.dayEventsModalOpen = false;
             const base = new Date(date);
             const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
             const end = new Date(start);
