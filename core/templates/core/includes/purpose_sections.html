@@ -29,22 +29,8 @@
             {% for product in section.products %}
             {% include 'core/includes/mini_card.html' with product=product %}
             {% endfor %}
-        </div>
 
-        {% if section.has_more %}
-        <div class="mt-3 md:hidden">
-            <button
-                type="button"
-                @click="openSection = openSection === '{{ section.key }}' ? null : '{{ section.key }}'"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs flex items-center justify-between hover:border-indigo-300 hover:text-indigo-600 transition-all"
-                :aria-expanded="openSection === '{{ section.key }}'"
-                data-track="section_more_toggle"
-                data-track-label="{{ section.key }}"
-            >
-                <span x-text="openSection === '{{ section.key }}' ? '접기' : '더보기 {{ section.remaining_count }}개'"></span>
-                <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300" :class="openSection === '{{ section.key }}' ? 'rotate-180' : ''"></i>
-            </button>
-
+            {% if section.has_more %}
             <div
                 x-show="openSection === '{{ section.key }}'"
                 x-transition:enter="transition ease-out duration-250"
@@ -53,14 +39,42 @@
                 x-transition:leave="transition ease-in duration-180"
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 -translate-y-2"
-                class="mt-2 space-y-2"
+                class="space-y-2"
             >
                 {% for product in section.overflow_products %}
                 {% include 'core/includes/mini_card.html' with product=product %}
                 {% endfor %}
             </div>
+
+            <div class="pt-1">
+                <button
+                    type="button"
+                    x-show="openSection !== '{{ section.key }}'"
+                    @click="openSection = '{{ section.key }}'"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs flex items-center justify-between hover:border-indigo-300 hover:text-indigo-600 transition-all"
+                    aria-expanded="false"
+                    data-track="section_more_toggle"
+                    data-track-label="{{ section.key }}"
+                >
+                    <span>더보기 {{ section.remaining_count }}개</span>
+                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </button>
+
+                <button
+                    type="button"
+                    x-show="openSection === '{{ section.key }}'"
+                    @click="openSection = null"
+                    class="w-full py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
+                    aria-expanded="true"
+                    data-track="section_more_toggle"
+                    data-track-label="{{ section.key }}"
+                >
+                    <span>접기</span>
+                    <i class="fa-solid fa-chevron-up text-[10px]"></i>
+                </button>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 {% endfor %}
 </div>
