@@ -46,6 +46,7 @@ class SignatureDocument(models.Model):
     original_file = models.FileField(
         upload_to="signatures/consent/originals/%Y/%m/%d",
         storage=get_document_storage,
+        max_length=500,
     )
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -99,6 +100,7 @@ class SignatureRequest(models.Model):
     merged_pdf = models.FileField(
         upload_to="signatures/consent/merged/%Y/%m/%d",
         storage=get_raw_storage,
+        max_length=500,
         blank=True,
         null=True,
     )
@@ -183,6 +185,7 @@ class SignatureRecipient(models.Model):
     signed_pdf = models.FileField(
         upload_to="signatures/consent/signed/%Y/%m/%d",
         storage=get_raw_storage,
+        max_length=500,
         blank=True,
         null=True,
     )

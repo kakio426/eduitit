@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count
-from django.db.utils import OperationalError, ProgrammingError
+from django.db.utils import DataError, OperationalError, ProgrammingError
 from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -59,6 +59,10 @@ def _snapshot_file_metadata(file_obj):
     if not file_obj:
         return "", None, ""
     name = (getattr(file_obj, "name", "") or "").split("/")[-1]
+    # Keep snapshot within DB field size even for very long client filenames.
+    if len(name) > 255:
+        root, ext = os.path.splitext(name)
+        name = f"{root[:240]}{ext}"[:255]
     size = getattr(file_obj, "size", None)
     digest = hashlib.sha256()
     try:
@@ -519,11 +523,22 @@ def consent_create_step1(request):
             if not (consent_request.legal_notice or "").strip():
                 consent_request.legal_notice = DEFAULT_LEGAL_NOTICE
             try:
-                document.save()
-                consent_request.document = document
-                consent_request.save()
+                # Isolate DB write failures so outer atomic block can continue safely.
+                with transaction.atomic():
+                    document.save()
+                    consent_request.document = document
+                    consent_request.save()
             except (OperationalError, ProgrammingError) as exc:
                 return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
+            except DataError as exc:
+                logger.warning("[consent] step1 data error user_id=%s err=%s", request.user.id, exc)
+                if "character varying(100)" in str(exc):
+                    document_form.add_error(
+                        "original_file",
+                        "파일 경로가 너무 길어 저장할 수 없습니다. 파일명을 짧게 바꿔 다시 업로드해 주세요.",
+                    )
+                else:
+                    document_form.add_error("original_file", "문서 업로드 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
             except Exception:
                 logger.exception("[consent] step1 create failed user_id=%s", request.user.id)
                 document_form.add_error("original_file", "문서 업로드 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")

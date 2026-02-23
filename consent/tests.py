@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.utils import DataError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -215,6 +216,24 @@ class ConsentFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "문서 업로드 처리 중 오류가 발생했습니다.")
+
+    @patch("consent.models.SignatureDocument.save", side_effect=DataError("value too long for type character varying(100)"))
+    def test_create_step1_handles_path_length_data_error_without_500(self, mocked_save):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:create_step1")
+        file_obj = SimpleUploadedFile("sample.png", b"\x89PNG\r\n\x1a\n", content_type="image/png")
+        response = self.client.post(
+            url,
+            {
+                "title": "테스트 동의서",
+                "message": "안내",
+                "legal_notice": "",
+                "link_expire_days": 14,
+                "original_file": file_obj,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "파일 경로가 너무 길어 저장할 수 없습니다.")
 
     @patch("consent.views.SignatureRecipient.objects.get_or_create", side_effect=RuntimeError("db failure"))
     def test_recipients_handles_save_exception_without_500(self, mocked_get_or_create):
