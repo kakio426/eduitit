@@ -6,7 +6,6 @@
                     <i class="fa-solid fa-calendar-days text-indigo-500"></i>
                     개인 캘린더
                 </h3>
-                <p class="text-xs sm:text-sm text-slate-500 mt-1">홈 화면과 캘린더 서비스가 같은 일정 데이터를 사용합니다.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
                 <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-extrabold text-indigo-700" x-text="`오늘 ${todayEventsCount}`"></span>
@@ -38,7 +37,7 @@
                     type="button"
                     class="home-calendar-day bg-white p-1.5 sm:p-2 text-left hover:bg-slate-50 transition"
                     @click="openCreateModalForDate(date)"
-                    :title="`${formatAgendaDate(dateKey(date))} 일정 추가`"
+                    :title="dayTooltip(date)"
                 >
                     <span
                         class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
@@ -51,8 +50,15 @@
                     ></span>
                     <div class="mt-1 space-y-1">
                         <template x-for="event in getVisibleEventsForDate(date)" :key="event.id">
-                            <span class="block h-1.5 rounded-full border" :class="eventBarClass(event)"></span>
+                            <span
+                                class="block rounded border px-1 py-0.5 text-[10px] sm:text-[11px] font-semibold truncate"
+                                :class="eventChipClass(event)"
+                                x-text="eventLabel(event)"
+                            ></span>
                         </template>
+                        <p x-show="getOverflowCountForDate(date) > 0"
+                           class="px-0.5 text-[10px] font-semibold text-slate-500"
+                           x-text="`+${getOverflowCountForDate(date)}개`"></p>
                     </div>
                 </button>
             </template>

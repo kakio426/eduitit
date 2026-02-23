@@ -19,12 +19,12 @@
     .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
 
     .home-calendar-day {
-        min-height: 74px;
+        min-height: 88px;
     }
 
     @media (min-width: 640px) {
         .home-calendar-day {
-            min-height: 88px;
+            min-height: 104px;
         }
     }
 </style>
@@ -132,6 +132,9 @@ function homeCalendarWidget() {
         normalizeEvent(event) {
             return {
                 ...event,
+                title: event.title || '일정',
+                color: event.color || 'indigo',
+                is_all_day: !!event.is_all_day,
                 start_time: new Date(event.start_time),
                 end_time: new Date(event.end_time),
             };
@@ -236,13 +239,40 @@ function homeCalendarWidget() {
             return this.getEventsForDate(date).slice(0, 2);
         },
 
-        eventBarClass(event) {
+        getOverflowCountForDate(date) {
+            const total = this.getEventsForDate(date).length;
+            return total > 2 ? total - 2 : 0;
+        },
+
+        formatEventTimeShort(dateValue, isAllDay = false) {
+            if (isAllDay) return '종일';
+            const d = new Date(dateValue);
+            return `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        eventLabel(event) {
+            const title = event.title || '일정';
+            return `${this.formatEventTimeShort(event.start_time, event.is_all_day)} ${title}`;
+        },
+
+        dayTooltip(date) {
+            const dateText = this.formatAgendaDate(this.dateKey(date));
+            const events = this.getEventsForDate(date);
+            if (!events.length) {
+                return `${dateText} 일정 추가`;
+            }
+            const preview = events.slice(0, 3).map((event) => this.eventLabel(event)).join(' / ');
+            const overflow = events.length > 3 ? ` 외 ${events.length - 3}개` : '';
+            return `${dateText}: ${preview}${overflow}`;
+        },
+
+        eventChipClass(event) {
             const map = {
-                indigo: 'bg-indigo-200 border-indigo-300',
-                rose: 'bg-rose-200 border-rose-300',
-                amber: 'bg-amber-200 border-amber-300',
-                emerald: 'bg-emerald-200 border-emerald-300',
-                sky: 'bg-sky-200 border-sky-300',
+                indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+                rose: 'bg-rose-50 border-rose-200 text-rose-700',
+                amber: 'bg-amber-50 border-amber-200 text-amber-700',
+                emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                sky: 'bg-sky-50 border-sky-200 text-sky-700',
             };
             return map[event.color] || map.indigo;
         },
