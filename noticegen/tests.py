@@ -149,9 +149,28 @@ class NoticeGenViewTests(TestCase):
         self.assertIn("정확히 3문장", system_prompt)
         self.assertIn("문장 역할 순서", system_prompt)
         self.assertIn("같은 종결어미를 3문장 연속으로 반복하지 않습니다.", system_prompt)
+        self.assertIn("문어체", system_prompt)
+        self.assertIn("거예요", system_prompt)
+        self.assertIn("않을 거야", system_prompt)
         self.assertIn("공백 포함 90자 이상 140자 이하", system_prompt)
         self.assertIn("공백 포함 90자 이상 140자 이하", user_prompt)
+        self.assertIn("문어체 공지문", user_prompt)
 
     def test_student_prompt_does_not_include_parent_length_rule(self):
         user_prompt = build_user_prompt("student_low", "notice", "줄넘기 준비", "")
         self.assertNotIn("공백 포함 90자 이상 140자 이하", user_prompt)
+
+    def test_student_prompts_enforce_written_style(self):
+        low_system_prompt = build_system_prompt("student_low")
+        high_system_prompt = build_system_prompt("student_high")
+        low_user_prompt = build_user_prompt("student_low", "notice", "실내화와 물통 준비", "")
+        high_user_prompt = build_user_prompt("student_high", "notice", "실내화와 물통 준비", "")
+
+        for prompt_text in (low_system_prompt, high_system_prompt):
+            self.assertIn("문어체", prompt_text)
+            self.assertIn("거예요", prompt_text)
+            self.assertIn("않을 거야", prompt_text)
+
+        for prompt_text in (low_user_prompt, high_user_prompt):
+            self.assertIn("구어체", prompt_text)
+            self.assertIn("문어체 공지문", prompt_text)
