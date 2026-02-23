@@ -6,12 +6,23 @@
  */
 class DutyTickerManager {
     constructor() {
+        this.api = window.dtApiEndpoints || {};
         this.roles = [];
         this.students = [];
         this.todaySchedule = [];
         this.isBroadcasting = false;
         this.broadcastMessage = '';
         this.isSoundEnabled = localStorage.getItem('dt-broadcast-sound') !== 'false';
+        this.selectedRoleId = null;
+        this.pendingConflict = null;
+        this.currentRoleIdsForSlot = [];
+        this.currentRoleHighlightIndex = 0;
+        this.roleSpotlightTimer = null;
+        this.callModeIndex = 0;
+        this.callModeRoles = [];
+        this.callModeAutoTimer = null;
+        this.callModeAutoPlaying = false;
+        this.boundGlobalKeydown = null;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -29,6 +40,7 @@ class DutyTickerManager {
         this.restoreTimerState();
         this.updateTimerDisplay();
         this.updateSoundUI();
+        this.bindGlobalShortcuts();
 
         // Anti-cache check
         console.log("DutyTicker V3 Loaded and Ready");
@@ -56,6 +68,27 @@ class DutyTickerManager {
         this.updateTimerDisplay();
     }
 
+    bindGlobalShortcuts() {
+        if (this.boundGlobalKeydown) return;
+        this.boundGlobalKeydown = (event) => {
+            const callModal = document.getElementById('callModeModal');
+            const isCallModeOpen = !!callModal && !callModal.classList.contains('hidden');
+            if (!isCallModeOpen) return;
+
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                this.nextCallRole();
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                this.prevCallRole();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                this.closeCallMode();
+            }
+        };
+        document.addEventListener('keydown', this.boundGlobalKeydown);
+    }
+
     // --- CSRF Helper ---
     getCookie(name) {
         let cookieValue = null;
@@ -76,7 +109,54 @@ class DutyTickerManager {
         const csrftoken = this.getCookie('csrftoken');
         if (!options.headers) options.headers = {};
         if (csrftoken) options.headers['X-CSRFToken'] = csrftoken;
+        if (options.body && !options.headers['Content-Type']) {
+            options.headers['Content-Type'] = 'application/json;charset=UTF-8';
+        }
         return fetch(url, options);
+    }
+
+    async parseJsonResponse(response, fallbackMessage = '요청을 처리하지 못했습니다.') {
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            const reason = payload?.error || payload?.message || fallbackMessage;
+            throw new Error(reason);
+        }
+
+        if (payload && payload.success === false) {
+            throw new Error(payload.error || fallbackMessage);
+        }
+
+        return payload || {};
+    }
+
+    getApiUrl(key, fallback = '') {
+        return this.api[key] || fallback;
+    }
+
+    buildTemplateUrl(templateValue, idValue) {
+        const template = String(templateValue || '');
+        if (!template) return '';
+        return template.replace('999999', encodeURIComponent(String(idValue)));
+    }
+
+    getToggleMissionUrl(studentId) {
+        return this.buildTemplateUrl(
+            this.getApiUrl('toggleMissionUrlTemplate', '/products/dutyticker/api/student/999999/toggle_mission/'),
+            studentId
+        );
+    }
+
+    getToggleAssignmentUrl(assignmentId) {
+        return this.buildTemplateUrl(
+            this.getApiUrl('toggleAssignmentUrlTemplate', '/products/dutyticker/api/assignment/999999/toggle/'),
+            assignmentId
+        );
     }
 
     // --- Safety / State Helpers ---
@@ -164,8 +244,12 @@ class DutyTickerManager {
     // --- Data ---
     async loadData() {
         try {
-            const response = await fetch('/dutyticker/api/data/');
+            const response = await fetch(this.getApiUrl('dataUrl', '/products/dutyticker/api/data/'));
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || '데이터를 불러오지 못했습니다.');
+            }
 
             this.roles = data.roles.map(role => {
                 const assignment = data.assignments.find(a => a.role_id === role.id);
@@ -198,6 +282,33 @@ class DutyTickerManager {
             this.renderAll();
         } catch (error) {
             console.error("Fetch Error:", error);
+            this.renderLoadFailure();
+        }
+    }
+
+    renderLoadFailure() {
+        const roleContainer = document.getElementById('mainRoleList');
+        if (roleContainer) {
+            roleContainer.innerHTML = `
+                <div class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-center">
+                    <p class="text-sm font-bold text-rose-200">역할 데이터를 불러오지 못했습니다.</p>
+                    <button type="button" onclick="window.dtApp.loadData()" class="mt-3 px-4 py-2 rounded-xl bg-rose-500/80 hover:bg-rose-400 text-white text-sm font-bold transition">
+                        다시 시도
+                    </button>
+                </div>
+            `;
+        }
+
+        const studentContainer = document.getElementById('mainStudentGrid');
+        if (studentContainer) {
+            studentContainer.innerHTML = `
+                <div class="col-span-full rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-center">
+                    <p class="text-sm font-bold text-rose-200">학생 데이터를 불러오지 못했습니다.</p>
+                    <button type="button" onclick="window.dtApp.loadData()" class="mt-3 px-4 py-2 rounded-xl bg-rose-500/80 hover:bg-rose-400 text-white text-sm font-bold transition">
+                        다시 시도
+                    </button>
+                </div>
+            `;
         }
     }
 
@@ -207,6 +318,9 @@ class DutyTickerManager {
         this.renderRoleList();
         this.renderStudentGrid();
         this.renderNotices();
+        const callModal = document.getElementById('callModeModal');
+        const isCallModeOpen = !!callModal && !callModal.classList.contains('hidden');
+        if (isCallModeOpen) this.renderCallMode();
     }
 
     renderSchedule() {
@@ -230,9 +344,105 @@ class DutyTickerManager {
         if (descEl) descEl.textContent = this.missionDesc;
     }
 
-    renderRoleList() {
+    parseClockToMinutes(clockText) {
+        if (!clockText || typeof clockText !== 'string') return null;
+        const parts = clockText.split(':').map(Number);
+        if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+        return (parts[0] * 60) + parts[1];
+    }
+
+    getCurrentDutyContext() {
+        const now = new Date();
+        const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const schedule = (this.todaySchedule || [])
+            .map((slot) => ({
+                ...slot,
+                startMinutes: this.parseClockToMinutes(slot.startTime),
+                endMinutes: this.parseClockToMinutes(slot.endTime),
+            }))
+            .filter((slot) => Number.isFinite(slot.startMinutes) && Number.isFinite(slot.endMinutes))
+            .sort((a, b) => a.startMinutes - b.startMinutes);
+
+        if (schedule.length === 0) {
+            if (nowMinutes < 540) return { type: 'morning', label: '아침시간' };
+            if (nowMinutes >= 720 && nowMinutes < 810) return { type: 'lunch', label: '점심시간' };
+            if (nowMinutes >= 870) return { type: 'homeroom', label: '종례시간' };
+            return { type: 'break', label: '쉬는시간' };
+        }
+
+        for (const slot of schedule) {
+            if (nowMinutes >= slot.startMinutes && nowMinutes < slot.endMinutes) {
+                return {
+                    type: 'period',
+                    period: slot.period,
+                    label: `${slot.period}교시`,
+                };
+            }
+        }
+
+        if (nowMinutes < schedule[0].startMinutes) return { type: 'morning', label: '아침시간' };
+
+        const lastSlot = schedule[schedule.length - 1];
+        if (nowMinutes >= lastSlot.endMinutes) return { type: 'homeroom', label: '종례시간' };
+
+        for (let i = 0; i < schedule.length - 1; i += 1) {
+            const current = schedule[i];
+            const next = schedule[i + 1];
+            if (nowMinutes >= current.endMinutes && nowMinutes < next.startMinutes) {
+                if (nowMinutes >= 720 && nowMinutes < 810) {
+                    return { type: 'lunch', label: '점심시간' };
+                }
+                return { type: 'break', label: '쉬는시간' };
+            }
+        }
+
+        return { type: 'break', label: '쉬는시간' };
+    }
+
+    isRoleInCurrentContext(role, context) {
+        const raw = String(role?.timeSlot || '').trim();
+        if (!raw) return false;
+        const token = raw.replace(/\s+/g, '').toLowerCase();
+        if (context.type === 'period') {
+            const periodLabel = `${context.period}교시`;
+            return raw.includes(periodLabel) || token.includes('수업시간');
+        }
+        if (context.type === 'break') return token.includes('쉬는') || token.includes('휴식') || token.includes('교시후');
+        if (context.type === 'morning') return token.includes('아침') || token.includes('조회');
+        if (context.type === 'lunch') return token.includes('점심');
+        if (context.type === 'homeroom') return token.includes('종례') || token.includes('하교') || token.includes('청소');
+        return false;
+    }
+
+    refreshRoleSpotlightTimer() {
+        if (this.roleSpotlightTimer) {
+            clearInterval(this.roleSpotlightTimer);
+            this.roleSpotlightTimer = null;
+        }
+        if (this.currentRoleIdsForSlot.length <= 1) return;
+        this.roleSpotlightTimer = setInterval(() => {
+            this.currentRoleHighlightIndex = (this.currentRoleHighlightIndex + 1) % this.currentRoleIdsForSlot.length;
+            this.renderRoleList(true);
+        }, 3400);
+    }
+
+    renderRoleList(skipSpotlightRefresh = false) {
         const container = document.getElementById('mainRoleList');
         if (!container) return;
+
+        if (!this.roles.length) {
+            container.innerHTML = `
+                <div class="rounded-2xl border border-slate-700 bg-slate-800/50 p-5 text-center">
+                    <p class="text-sm font-bold text-slate-300">등록된 역할이 없습니다.</p>
+                    <a href="/products/dutyticker/admin/" class="inline-flex mt-3 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition">
+                        설정에서 역할 추가
+                    </a>
+                </div>
+            `;
+            this.currentRoleIdsForSlot = [];
+            if (!skipSpotlightRefresh) this.refreshRoleSpotlightTimer();
+            return;
+        }
 
         const roleIcons = {
             '칠판 지우기': 'fa-solid fa-broom',
@@ -242,6 +452,16 @@ class DutyTickerManager {
             '식물': 'fa-solid fa-leaf'
         };
 
+        const context = this.getCurrentDutyContext();
+        const currentRoles = this.roles.filter((role) => this.isRoleInCurrentContext(role, context));
+        this.currentRoleIdsForSlot = currentRoles.map((role) => Number(role.id));
+        if (this.currentRoleHighlightIndex >= this.currentRoleIdsForSlot.length) {
+            this.currentRoleHighlightIndex = 0;
+        }
+        const spotlightRoleId = this.currentRoleIdsForSlot.length
+            ? this.currentRoleIdsForSlot[this.currentRoleHighlightIndex % this.currentRoleIdsForSlot.length]
+            : null;
+
         container.innerHTML = this.roles.map(role => {
             const iconClass = roleIcons[role.name] || 'fa-solid fa-circle-user';
             const isCompleted = role.status === 'completed';
@@ -249,8 +469,15 @@ class DutyTickerManager {
             const safeTimeSlot = this.escapeHtml(role.timeSlot || 'TASK');
             const safeRoleName = this.escapeHtml(role.name);
             const safeAssignee = this.escapeHtml(role.assignee || '미배정');
+            const numericRoleId = Number(role.id);
+            const isCurrentSlotRole = this.currentRoleIdsForSlot.includes(numericRoleId);
+            const isSpotlightRole = isCurrentSlotRole && numericRoleId === spotlightRoleId;
+            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : (isCurrentSlotRole ? 'dt-role-current-muted' : '');
+            const nowBadge = isCurrentSlotRole
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black ${isSpotlightRole ? 'bg-indigo-500/30 text-indigo-100 border border-indigo-300/40' : 'bg-sky-500/20 text-sky-200 border border-sky-300/20'}">지금 ${this.escapeHtml(context.label)}</span>`
+                : '';
             return `
-                <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg"
+                <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
                     onclick="window.dtApp.openStudentModal(${roleId})">
                     <div class="w-14 h-14 bg-slate-900/60 rounded-2xl flex items-center justify-center border border-white/5 group-hover:border-indigo-500/50 transition-all">
                         <i class="${iconClass} text-2xl ${isCompleted ? 'text-emerald-400' : 'text-slate-400 group-hover:text-indigo-400'}"></i>
@@ -261,18 +488,33 @@ class DutyTickerManager {
                             ${isCompleted ? '<span class="text-emerald-400 text-[10px] font-black uppercase"><i class="fa-solid fa-check-circle"></i> DONE</span>' : ''}
                         </div>
                         <div class="flex justify-between items-center text-xl font-black text-slate-100">
-                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}</p>
-                             <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
+                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}${nowBadge}</p>
+                              <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
+
+        if (!skipSpotlightRefresh) this.refreshRoleSpotlightTimer();
     }
 
     renderStudentGrid() {
         const container = document.getElementById('mainStudentGrid');
         if (!container) return;
+
+        if (!this.students.length) {
+            container.innerHTML = `
+                <div class="col-span-full rounded-2xl border border-slate-700 bg-slate-800/50 p-5 text-center">
+                    <p class="text-sm font-bold text-slate-300">등록된 학생이 없습니다.</p>
+                    <a href="/products/dutyticker/admin/" class="inline-flex mt-3 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition">
+                        설정에서 학생 추가
+                    </a>
+                </div>
+            `;
+            this.updateProgress();
+            return;
+        }
 
         container.innerHTML = this.students.map(student => {
             const isDone = student.status === 'done';
@@ -310,11 +552,15 @@ class DutyTickerManager {
 
     updateProgress() {
         const total = this.students.length;
-        if (total === 0) return;
-        const done = this.students.filter(s => s.status === 'done').length;
-        const percent = Math.round((done / total) * 100);
         const bar = document.getElementById('missionProgressBar');
         const text = document.getElementById('missionProgressText');
+        if (total === 0) {
+            if (bar) bar.style.width = '0%';
+            if (text) text.textContent = '0%';
+            return;
+        }
+        const done = this.students.filter(s => s.status === 'done').length;
+        const percent = Math.round((done / total) * 100);
         if (bar) bar.style.width = `${percent}%`;
         if (text) text.textContent = `${percent}%`;
     }
@@ -331,8 +577,10 @@ class DutyTickerManager {
         if (student.status === 'done') this.playSuccessSound();
 
         try {
-            await this.secureFetch(`/dutyticker/api/student/${studentId}/toggle_mission/`, { method: 'POST' });
+            const response = await this.secureFetch(this.getToggleMissionUrl(studentId), { method: 'POST' });
+            await this.parseJsonResponse(response, '학생 미션 상태를 바꾸지 못했습니다.');
         } catch (e) {
+            console.error(e);
             student.status = original;
             this.renderStudentGrid();
         }
@@ -517,15 +765,78 @@ class DutyTickerManager {
         this.closeModal('studentModal');
     }
 
+    async assignRoleRequest(roleId, studentId) {
+        const response = await this.secureFetch(this.getApiUrl('assignUrl', '/products/dutyticker/api/assign/'), {
+            method: 'POST',
+            body: JSON.stringify({ role_id: roleId, student_id: studentId })
+        });
+        return this.parseJsonResponse(response, '역할 배정을 저장하지 못했습니다.');
+    }
+
+    openConflictModal(conflict) {
+        this.pendingConflict = conflict;
+        const studentEl = document.getElementById('conflictStudentName');
+        const fromRoleEl = document.getElementById('conflictFromRole');
+        const toRoleEl = document.getElementById('conflictToRole');
+        if (studentEl) studentEl.textContent = conflict.studentName;
+        if (fromRoleEl) fromRoleEl.textContent = conflict.fromRoleName;
+        if (toRoleEl) toRoleEl.textContent = conflict.toRoleName;
+        this.openModal('assignmentConflictModal');
+    }
+
+    closeConflictModal() {
+        this.pendingConflict = null;
+        this.closeModal('assignmentConflictModal');
+    }
+
+    async resolveConflict(action) {
+        const conflict = this.pendingConflict;
+        if (!conflict) return;
+        this.closeConflictModal();
+        this.closeStudentModal();
+        try {
+            if (action === 'swap') {
+                await this.assignRoleRequest(conflict.toRoleId, conflict.studentId);
+                await this.assignRoleRequest(conflict.fromRoleId, conflict.toRolePreviousStudentId || null);
+            } else if (action === 'move') {
+                await this.assignRoleRequest(conflict.fromRoleId, null);
+                await this.assignRoleRequest(conflict.toRoleId, conflict.studentId);
+            } else {
+                return;
+            }
+            this.loadData();
+        } catch (error) {
+            console.error(error);
+            this.loadData();
+        }
+    }
+
     async assignStudent(studentId) {
         if (!this.selectedRoleId) return;
-        try {
-            await this.secureFetch('/dutyticker/api/assign/', {
-                method: 'POST',
-                body: JSON.stringify({ role_id: this.selectedRoleId, student_id: studentId })
+        const targetRole = this.roles.find(r => Number(r.id) === Number(this.selectedRoleId));
+        if (!targetRole) return;
+
+        const conflictingRole = this.roles.find(
+            (role) => Number(role.id) !== Number(this.selectedRoleId) && Number(role.assigneeId) === Number(studentId)
+        );
+
+        if (conflictingRole) {
+            this.openConflictModal({
+                studentId: Number(studentId),
+                studentName: conflictingRole.assignee || '담당 학생',
+                fromRoleId: Number(conflictingRole.id),
+                fromRoleName: conflictingRole.name,
+                toRoleId: Number(targetRole.id),
+                toRoleName: targetRole.name,
+                toRolePreviousStudentId: targetRole.assigneeId ? Number(targetRole.assigneeId) : null,
             });
+            return;
+        }
+
+        try {
+            await this.assignRoleRequest(this.selectedRoleId, studentId);
             this.loadData();
-            this.closeModal('studentModal');
+            this.closeStudentModal();
         } catch (e) { console.error(e); }
     }
 
@@ -543,10 +854,11 @@ class DutyTickerManager {
         this.closeStudentModal();
 
         try {
-            await this.secureFetch(`/dutyticker/api/assignment/${role.assignmentId}/toggle/`, {
+            const response = await this.secureFetch(this.getToggleAssignmentUrl(role.assignmentId), {
                 method: 'POST',
                 body: JSON.stringify({ is_completed: nextStatus })
             });
+            await this.parseJsonResponse(response, '역할 완료 상태를 저장하지 못했습니다.');
             this.loadData();
         } catch (error) {
             console.error(error);
@@ -554,44 +866,233 @@ class DutyTickerManager {
         }
     }
 
-    openBroadcastModal() { this.openModal('broadcastModal'); document.getElementById('broadcastInput').focus(); }
-    closeBroadcastModal() { this.closeModal('broadcastModal'); }
+    syncCallModeRoles() {
+        const previousRoleId = this.callModeRoles[this.callModeIndex]?.id;
+        this.callModeRoles = this.roles.filter((role) => Number(role.assigneeId));
+
+        if (!this.callModeRoles.length) {
+            this.callModeIndex = 0;
+            return;
+        }
+
+        if (Number(previousRoleId)) {
+            const previousIndex = this.callModeRoles.findIndex((role) => Number(role.id) === Number(previousRoleId));
+            if (previousIndex >= 0) {
+                this.callModeIndex = previousIndex;
+                return;
+            }
+        }
+
+        if (this.callModeIndex >= this.callModeRoles.length) {
+            this.callModeIndex = 0;
+        }
+    }
+
+    flashCallModeCard() {
+        const card = document.getElementById('callModeFocusCard');
+        if (!card || typeof card.animate !== 'function') return;
+        card.animate(
+            [
+                { transform: 'scale(0.985)', filter: 'brightness(0.92)' },
+                { transform: 'scale(1.015)', filter: 'brightness(1.1)' },
+                { transform: 'scale(1)', filter: 'brightness(1)' },
+            ],
+            { duration: 620, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+        );
+    }
+
+    openCallMode() {
+        this.syncCallModeRoles();
+        const spotlightRoleId = this.currentRoleIdsForSlot.length
+            ? this.currentRoleIdsForSlot[this.currentRoleHighlightIndex % this.currentRoleIdsForSlot.length]
+            : null;
+
+        if (spotlightRoleId) {
+            const spotlightIndex = this.callModeRoles.findIndex((role) => Number(role.id) === Number(spotlightRoleId));
+            if (spotlightIndex >= 0) this.callModeIndex = spotlightIndex;
+        }
+
+        this.callModeAutoPlaying = this.callModeRoles.length > 1;
+        this.openModal('callModeModal');
+        this.renderCallMode();
+        if (this.callModeAutoPlaying) this.startCallModeAuto();
+        else this.stopCallModeAuto();
+        if (this.callModeRoles.length) this.playCallChime();
+    }
+
+    closeCallMode() {
+        this.stopCallModeAuto();
+        this.callModeAutoPlaying = false;
+        this.closeModal('callModeModal');
+    }
+
+    renderCallMode() {
+        this.syncCallModeRoles();
+
+        const timeSlotEl = document.getElementById('callModeTimeSlot');
+        const roleNameEl = document.getElementById('callModeRoleName');
+        const studentNameEl = document.getElementById('callModeStudentName');
+        const indexTextEl = document.getElementById('callModeIndexText');
+        const autoBtn = document.getElementById('callModeAutoBtn');
+
+        if (!this.callModeRoles.length) {
+            if (timeSlotEl) timeSlotEl.textContent = '배정 필요';
+            if (roleNameEl) roleNameEl.textContent = '배정된 역할이 없습니다';
+            if (studentNameEl) studentNameEl.textContent = '설정 화면에서 먼저 역할을 배정하세요';
+            if (indexTextEl) indexTextEl.textContent = '0 / 0';
+            if (autoBtn) {
+                autoBtn.textContent = '자동 재생 불가';
+                autoBtn.disabled = true;
+                autoBtn.classList.remove('bg-emerald-600/90', 'hover:bg-emerald-500', 'bg-slate-700', 'hover:bg-slate-600');
+                autoBtn.classList.add('bg-slate-700', 'cursor-not-allowed');
+            }
+            this.stopCallModeAuto();
+            this.callModeAutoPlaying = false;
+            return;
+        }
+
+        if (this.callModeIndex >= this.callModeRoles.length) this.callModeIndex = 0;
+        const selectedRole = this.callModeRoles[this.callModeIndex];
+        if (timeSlotEl) timeSlotEl.textContent = selectedRole.timeSlot || 'TASK';
+        if (roleNameEl) roleNameEl.textContent = selectedRole.name || '역할 이름';
+        if (studentNameEl) studentNameEl.textContent = selectedRole.assignee || '미배정';
+        if (indexTextEl) indexTextEl.textContent = `${this.callModeIndex + 1} / ${this.callModeRoles.length}`;
+
+        if (autoBtn) {
+            autoBtn.disabled = this.callModeRoles.length <= 1;
+            autoBtn.textContent = this.callModeAutoPlaying ? '자동 재생 끄기' : '자동 재생 켜기';
+            autoBtn.classList.remove('bg-emerald-600/90', 'hover:bg-emerald-500', 'bg-slate-700', 'hover:bg-slate-600', 'cursor-not-allowed');
+            if (this.callModeRoles.length <= 1) {
+                autoBtn.classList.add('bg-slate-700', 'cursor-not-allowed');
+            } else if (this.callModeAutoPlaying) {
+                autoBtn.classList.add('bg-emerald-600/90', 'hover:bg-emerald-500');
+            } else {
+                autoBtn.classList.add('bg-slate-700', 'hover:bg-slate-600');
+            }
+        }
+
+        this.flashCallModeCard();
+    }
+
+    nextCallRole(fromAuto = false) {
+        this.syncCallModeRoles();
+        if (!this.callModeRoles.length) return;
+        this.callModeIndex = (this.callModeIndex + 1) % this.callModeRoles.length;
+        this.renderCallMode();
+        if (!fromAuto || this.callModeAutoPlaying) this.playCallChime();
+    }
+
+    prevCallRole() {
+        this.syncCallModeRoles();
+        if (!this.callModeRoles.length) return;
+        this.callModeIndex = (this.callModeIndex - 1 + this.callModeRoles.length) % this.callModeRoles.length;
+        this.renderCallMode();
+        this.playCallChime();
+    }
+
+    startCallModeAuto() {
+        this.stopCallModeAuto();
+        if (this.callModeRoles.length <= 1) return;
+        this.callModeAutoTimer = setInterval(() => {
+            this.nextCallRole(true);
+        }, 3600);
+    }
+
+    stopCallModeAuto() {
+        if (this.callModeAutoTimer) {
+            clearInterval(this.callModeAutoTimer);
+            this.callModeAutoTimer = null;
+        }
+    }
+
+    toggleCallAuto() {
+        this.syncCallModeRoles();
+        if (this.callModeRoles.length <= 1) return;
+        this.callModeAutoPlaying = !this.callModeAutoPlaying;
+        if (this.callModeAutoPlaying) this.startCallModeAuto();
+        else this.stopCallModeAuto();
+        this.renderCallMode();
+    }
+
+    openBroadcastModal() {
+        const input = document.getElementById('broadcastInput');
+        if (input) input.value = this.broadcastMessage || '';
+        this.openModal('broadcastModal');
+        if (input) input.focus();
+    }
+
+    closeBroadcastModal() {
+        this.closeModal('broadcastModal');
+    }
 
     async handleStartBroadcast() {
-        const msg = document.getElementById('broadcastInput').value;
+        const input = document.getElementById('broadcastInput');
+        const msg = input ? input.value : '';
+        const prevMessage = this.broadcastMessage;
+        const prevState = this.isBroadcasting;
+
         this.broadcastMessage = msg;
         this.isBroadcasting = !!msg;
         this.closeBroadcastModal();
         this.renderNotices();
-        await this.secureFetch('/dutyticker/api/broadcast/update/', {
-            method: 'POST',
-            body: JSON.stringify({ message: msg })
-        });
+
+        try {
+            const response = await this.secureFetch(this.getApiUrl('broadcastUrl', '/products/dutyticker/api/broadcast/update/'), {
+                method: 'POST',
+                body: JSON.stringify({ message: msg })
+            });
+            await this.parseJsonResponse(response, '알림사항을 저장하지 못했습니다.');
+        } catch (error) {
+            console.error(error);
+            this.broadcastMessage = prevMessage;
+            this.isBroadcasting = prevState;
+            this.renderNotices();
+        }
     }
 
     openMissionModal() {
-        document.getElementById('missionTitleInput').value = this.missionTitle;
-        document.getElementById('missionDescInput').value = this.missionDesc;
+        const titleInput = document.getElementById('missionTitleInput');
+        const descInput = document.getElementById('missionDescInput');
+        if (titleInput) titleInput.value = this.missionTitle;
+        if (descInput) descInput.value = this.missionDesc;
         this.openModal('missionModal');
     }
-    closeMissionModal() { this.closeModal('missionModal'); }
+
+    closeMissionModal() {
+        this.closeModal('missionModal');
+    }
 
     async handleUpdateMission() {
-        const title = document.getElementById('missionTitleInput').value;
-        const desc = document.getElementById('missionDescInput').value;
+        const titleInput = document.getElementById('missionTitleInput');
+        const descInput = document.getElementById('missionDescInput');
+        const title = titleInput ? titleInput.value : this.missionTitle;
+        const desc = descInput ? descInput.value : this.missionDesc;
+        const prevTitle = this.missionTitle;
+        const prevDesc = this.missionDesc;
+
         this.missionTitle = title;
         this.missionDesc = desc;
         this.renderMission();
         this.closeMissionModal();
-        await this.secureFetch('/dutyticker/api/mission/update/', {
-            method: 'POST',
-            body: JSON.stringify({ title, description: desc })
-        });
+
+        try {
+            const response = await this.secureFetch(this.getApiUrl('missionUrl', '/products/dutyticker/api/mission/update/'), {
+                method: 'POST',
+                body: JSON.stringify({ title, description: desc })
+            });
+            await this.parseJsonResponse(response, '미션 내용을 저장하지 못했습니다.');
+        } catch (error) {
+            console.error(error);
+            this.missionTitle = prevTitle;
+            this.missionDesc = prevDesc;
+            this.renderMission();
+        }
     }
 
     async rotateRolesManually() {
         try {
-            await this.secureFetch('/dutyticker/api/rotate/', { method: 'POST' });
+            const response = await this.secureFetch(this.getApiUrl('rotateUrl', '/products/dutyticker/api/rotate/'), { method: 'POST' });
+            await this.parseJsonResponse(response, '역할 순환에 실패했습니다.');
             this.loadData();
         } catch (error) {
             console.error(error);
@@ -603,7 +1104,8 @@ class DutyTickerManager {
         if (!shouldReset) return;
 
         try {
-            await this.secureFetch('/dutyticker/api/reset/', { method: 'POST' });
+            const response = await this.secureFetch(this.getApiUrl('resetUrl', '/products/dutyticker/api/reset/'), { method: 'POST' });
+            await this.parseJsonResponse(response, '데이터 초기화에 실패했습니다.');
             this.pauseTimer();
             this.timerMaxSeconds = 300;
             this.timerSeconds = 300;
@@ -661,6 +1163,16 @@ class DutyTickerManager {
         if (!ctx) return;
         const now = ctx.currentTime;
         this.playNote(523.25, now, 0.05); this.playNote(659.25, now + 0.05, 0.1);
+    }
+
+    playCallChime() {
+        this.resumeAudioContext();
+        const ctx = this.getAudioCtx();
+        if (!ctx || !this.isSoundEnabled) return;
+        const now = ctx.currentTime + 0.02;
+        this.playNote(659.25, now, 0.2, 0.09);
+        this.playNote(783.99, now + 0.14, 0.22, 0.08);
+        this.playNote(987.77, now + 0.3, 0.26, 0.07);
     }
 
     toggleBroadcastSound() {

@@ -65,3 +65,37 @@ def delete_role(request, pk):
     role = get_object_or_404(DTRole, pk=pk, user=request.user)
     role.delete()
     return redirect('dt_admin_dashboard')
+
+
+@login_required
+def print_sheet(request):
+    user = request.user
+    roles = list(DTRole.objects.filter(user=user).order_by('time_slot', 'id'))
+    assignments_qs = (
+        DTRoleAssignment.objects
+        .filter(user=user, role__in=roles)
+        .select_related('role', 'student')
+        .order_by('role_id', '-date', '-id')
+    )
+
+    assignment_by_role_id = {}
+    for assignment in assignments_qs:
+        if assignment.role_id not in assignment_by_role_id:
+            assignment_by_role_id[assignment.role_id] = assignment
+
+    rows = []
+    for idx, role in enumerate(roles, start=1):
+        assignment = assignment_by_role_id.get(role.id)
+        rows.append({
+            'index': idx,
+            'role_name': role.name,
+            'time_slot': role.time_slot or '-',
+            'student_name': assignment.student.name if assignment and assignment.student else '미배정',
+            'description': role.description or '-',
+        })
+
+    return render(request, 'products/dutyticker/print_sheet.html', {
+        'rows': rows,
+        'row_count': len(rows),
+        'row_count_safe': max(len(rows), 1),
+    })

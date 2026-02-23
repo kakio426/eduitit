@@ -59,6 +59,41 @@
         animation: pulse-soft 2s infinite ease-in-out;
     }
 
+    @keyframes dt-role-glow {
+        0%,
+        100% {
+            box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+        }
+        50% {
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.28);
+        }
+    }
+
+    @keyframes dt-role-spotlight-sweep {
+        0% {
+            background-position: 0% 50%;
+        }
+        100% {
+            background-position: 100% 50%;
+        }
+    }
+
+    .dt-role-current-muted {
+        border-color: rgba(56, 189, 248, 0.32) !important;
+        background: rgba(15, 23, 42, 0.62) !important;
+    }
+
+    .dt-role-current-spotlight {
+        border-color: rgba(129, 140, 248, 0.68) !important;
+        background: linear-gradient(120deg, rgba(15, 23, 42, 0.65), rgba(30, 41, 59, 0.88), rgba(30, 64, 175, 0.58));
+        background-size: 220% 220%;
+        animation: dt-role-glow 2.1s ease-in-out infinite, dt-role-spotlight-sweep 2.8s linear infinite;
+    }
+
+    .dt-callmode-overlay {
+        background: radial-gradient(circle at top, rgba(79, 70, 229, 0.28), rgba(2, 6, 23, 0.95) 60%);
+    }
+
     #mainAppContainer {
         min-height: 100dvh;
     }
@@ -451,7 +486,9 @@
                 <!-- Student Grid Container -->
                 <div id="mainStudentGrid"
                     class="dt-student-grid grid grid-cols-6 lg:grid-cols-8 gap-4 overflow-y-auto pr-2 custom-scrollbar h-full content-start">
-                    <!-- JS populated -->
+                    <div class="col-span-full text-center text-sm font-semibold text-slate-500 py-8">
+                        학생 데이터를 불러오는 중입니다.
+                    </div>
                 </div>
             </div>
         </div>
@@ -468,43 +505,21 @@
                             class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
                         오늘의 역할
                     </h3>
-                    <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-slate-700 transition-all">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.dtApp.openCallMode()" title="호명 모드"
+                            class="w-10 h-10 flex items-center justify-center rounded-xl text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 transition-all border border-transparent hover:border-amber-300/30">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </button>
+                        <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환"
+                            class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-slate-700 transition-all">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="mainRoleList" class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
-                    <!-- JS populated -->
-                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
-                        <div
-                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
-                            <i class="fa-solid fa-user-tie"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
-                            <div class="text-slate-400 text-sm">담당 학생</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
-                        <div
-                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
-                            <i class="fa-solid fa-hand-sparkles"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
-                            <div class="text-slate-400 text-sm">담당 학생</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
-                        <div
-                            class="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-slate-400 text-xl">
-                            <i class="fa-solid fa-book-open"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg text-slate-300">역할 이름</div>
-                            <div class="text-slate-400 text-sm">담당 학생</div>
-                        </div>
+                    <div class="text-center text-sm font-semibold text-slate-500 py-8">
+                        역할 데이터를 불러오는 중입니다.
                     </div>
                 </div>
             </div>
@@ -535,6 +550,80 @@
     <footer class="mt-4 text-center text-slate-600 text-sm font-medium">
         "천리 길도 한 걸음부터! 오늘도 멋진 하루 보내자! 🚀"
     </footer>
+
+    <!-- Conflict Resolution Modal -->
+    <div id="assignmentConflictModal"
+        class="fixed inset-0 z-[220] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
+            <h3 class="text-2xl font-black text-white mb-2">배정 충돌</h3>
+            <p class="text-slate-300 leading-relaxed">
+                <span id="conflictStudentName" class="font-black text-indigo-300"></span> 학생은 이미
+                <span id="conflictFromRole" class="font-black text-rose-300"></span> 역할에 배정되어 있습니다.
+            </p>
+            <p class="text-slate-400 text-sm mt-2 mb-6">
+                <span id="conflictToRole" class="font-bold text-sky-300"></span> 역할로 옮길 방법을 선택하세요.
+            </p>
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="window.dtApp.resolveConflict('swap')"
+                    class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                    스왑 배정 (추천)
+                </button>
+                <button onclick="window.dtApp.resolveConflict('move')"
+                    class="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold transition">
+                    기존 역할 해제 후 이동
+                </button>
+                <button onclick="window.dtApp.closeConflictModal()"
+                    class="w-full py-3 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700/60 font-bold transition">
+                    취소
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Mode Modal -->
+    <div id="callModeModal"
+        class="fixed inset-0 z-[230] hidden items-center justify-center dt-callmode-overlay backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div
+            class="w-full max-w-3xl mx-4 bg-slate-900/85 border border-indigo-400/25 rounded-[2rem] p-8 shadow-2xl">
+            <div class="flex justify-between items-center gap-3 mb-6">
+                <h3 class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                    <span class="text-amber-300 text-3xl">📣</span>
+                    호명 모드
+                </h3>
+                <button onclick="window.dtApp.closeCallMode()"
+                    class="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div id="callModeFocusCard" class="rounded-3xl border border-indigo-300/20 bg-slate-800/70 p-8 text-center">
+                <p class="text-xs uppercase tracking-[0.18em] font-extrabold text-indigo-300 mb-3" id="callModeTimeSlot">TIME SLOT</p>
+                <p class="text-4xl md:text-5xl font-black text-white leading-tight break-keep" id="callModeRoleName">역할 이름</p>
+                <p class="mt-4 text-5xl md:text-6xl font-black text-emerald-300 break-keep" id="callModeStudentName">담당 학생</p>
+                <p class="mt-6 text-sm font-bold text-slate-400" id="callModeIndexText">1 / 1</p>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <button onclick="window.dtApp.prevCallRole()"
+                    class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold transition">
+                    이전
+                </button>
+                <button onclick="window.dtApp.nextCallRole()"
+                    class="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                    다음
+                </button>
+                <button id="callModeAutoBtn" onclick="window.dtApp.toggleCallAuto()"
+                    class="py-3 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-black transition">
+                    자동 재생 켜기
+                </button>
+                <button onclick="window.dtApp.playCallChime()"
+                    class="py-3 rounded-xl bg-amber-500/90 hover:bg-amber-400 text-slate-900 font-black transition">
+                    효과음 미리듣기
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modals (Hidden) -->
     <div id="broadcastModal"
@@ -682,6 +771,18 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    window.dtApiEndpoints = {
+        dataUrl: "{% url 'dt_api_data' %}",
+        assignUrl: "{% url 'dt_api_assign' %}",
+        rotateUrl: "{% url 'dt_api_rotate' %}",
+        broadcastUrl: "{% url 'dt_api_broadcast_update' %}",
+        missionUrl: "{% url 'dt_api_mission_update' %}",
+        resetUrl: "{% url 'dt_api_reset' %}",
+        toggleMissionUrlTemplate: "{% url 'dt_api_toggle_mission' 999999 %}",
+        toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
+    };
+</script>
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
 <script>
     // Header Clock Logic

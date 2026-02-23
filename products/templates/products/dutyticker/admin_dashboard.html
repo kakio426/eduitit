@@ -10,11 +10,18 @@
             <h1 class="text-4xl md:text-5xl font-black text-gray-700 tracking-tight mb-2">설정 및 관리</h1>
             <p class="text-xl text-gray-400 font-bold">학생 명단과 역할, 순환 규칙을 관리하세요.</p>
         </div>
-        <a href="{% url 'dutyticker' %}"
-            class="group flex items-center gap-3 bg-white hover:text-purple-600 text-gray-500 font-bold py-3 px-6 rounded-full shadow-clay hover:shadow-clay-hover hover:scale-105 transition-all text-lg">
-            <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
-            <span>메인으로</span>
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'dt_admin_print_sheet' %}" target="_blank" rel="noopener noreferrer"
+                class="group flex items-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full shadow-clay hover:shadow-clay-hover hover:scale-105 transition-all text-base">
+                <i class="fa-solid fa-print"></i>
+                <span>1인 1역 인쇄</span>
+            </a>
+            <a href="{% url 'dutyticker' %}"
+                class="group flex items-center gap-3 bg-white hover:text-purple-600 text-gray-500 font-bold py-3 px-6 rounded-full shadow-clay hover:shadow-clay-hover hover:scale-105 transition-all text-lg">
+                <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                <span>메인으로</span>
+            </a>
+        </div>
     </div>
 
     <!-- Rotation Control Panel -->
