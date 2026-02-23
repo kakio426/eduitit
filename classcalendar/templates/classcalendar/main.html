@@ -42,7 +42,7 @@
                     </span>
                     <button
                         type="button"
-                        @click="openCreateModal()"
+                        @click="openCreateModalForSelectedDate()"
                         class="inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
                     >
                         새 일정
@@ -120,16 +120,18 @@
                     <template x-for="date in calendarDates" :key="date.toISOString()">
                         <div
                             class="calendar-grid-day bg-white p-2.5 hover:bg-slate-50 transition cursor-pointer"
-                            @click="openCreateModalForDate(date)"
-                            title="날짜를 눌러 일정 추가"
+                            @click="selectDate(date)"
+                            title="날짜를 눌러 일정 보기"
                         >
                             <span
                                 class="text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full"
-                                :class="{
-                                    'bg-indigo-600 text-white': isToday(date),
-                                    'text-slate-400': !isCurrentMonth(date),
-                                    'text-slate-700': isCurrentMonth(date) && !isToday(date)
-                                }"
+                                :class="[
+                                    isToday(date) ? 'bg-indigo-600 text-white' : '',
+                                    isSelectedDate(date) && !isToday(date) ? 'bg-slate-900 text-white' : '',
+                                    !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
+                                    !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : '',
+                                    isSelectedDate(date) ? 'ring-2 ring-indigo-300 ring-offset-2' : ''
+                                ]"
                                 x-text="date.getDate()"
                             ></span>
                             <div class="mt-2 space-y-1.5">
@@ -157,9 +159,134 @@
                         </div>
                     </template>
                 </div>
+
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">선택한 날짜</p>
+                            <h3 class="mt-1 text-lg sm:text-xl font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
+                        </div>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="inline-flex items-center rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition"
+                        >
+                            일정 추가
+                        </button>
+                    </div>
+
+                    <div class="mt-3 space-y-2" x-show="getEventsForSelectedDate().length > 0">
+                        <template x-for="event in getEventsForSelectedDate()" :key="`selected-${event.id}-${selectedDateKey}`">
+                            <button
+                                type="button"
+                                @click="openEventDetail(event)"
+                                class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                        <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
+                                    </div>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div
+                        class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
+                        x-show="getEventsForSelectedDate().length === 0"
+                    >
+                        <p class="text-sm font-semibold text-slate-600">일정이 없습니다.</p>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="mt-3 inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
+                        >
+                            일정 추가
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div x-show="view === 'agenda'" x-cloak class="space-y-5">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                    <div class="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            @click="moveSelectedDate(-1)"
+                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                            aria-label="선택 날짜 이전"
+                        >
+                            이전
+                        </button>
+                        <div class="text-center">
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">선택한 날짜</p>
+                            <h3 class="mt-1 text-base sm:text-lg font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
+                        </div>
+                        <button
+                            type="button"
+                            @click="moveSelectedDate(1)"
+                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                            aria-label="선택 날짜 다음"
+                        >
+                            다음
+                        </button>
+                    </div>
+
+                    <div class="mt-3 flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            @click="selectToday()"
+                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                        >
+                            오늘
+                        </button>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="inline-flex items-center rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition"
+                        >
+                            일정 추가
+                        </button>
+                    </div>
+
+                    <div class="mt-3 space-y-2" x-show="getEventsForSelectedDate().length > 0">
+                        <template x-for="event in getEventsForSelectedDate()" :key="`agenda-selected-${event.id}-${selectedDateKey}`">
+                            <button
+                                type="button"
+                                @click="openEventDetail(event)"
+                                class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                        <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
+                                    </div>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div
+                        class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
+                        x-show="getEventsForSelectedDate().length === 0"
+                    >
+                        <p class="text-sm font-semibold text-slate-600">일정이 없습니다.</p>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="mt-3 inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
+                        >
+                            일정 추가
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-1">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">전체 일정</p>
+                </div>
                 <template x-for="date in getAgendaDates()" :key="date">
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <h3 class="text-base sm:text-lg font-extrabold text-slate-900 mb-3" x-text="formatAgendaDate(date)"></h3>
@@ -342,6 +469,7 @@ function calendarApp() {
     return {
         view: 'month',
         currentDate: new Date(),
+        selectedDateKey: '',
         events: [],
         selectedEvent: null,
         createModalOpen: false,
@@ -359,6 +487,7 @@ function calendarApp() {
         init() {
             if (window.innerWidth < 768) this.view = 'agenda';
             this.loadEventsFromScript();
+            this.selectedDateKey = this.dateKey(new Date());
         },
 
         normalizeEvent(event) {
@@ -441,8 +570,22 @@ function calendarApp() {
             this.createModalOpen = true;
         },
 
-        openCreateModalForDate(date) {
-            this.openCreateModal(date);
+        selectDate(date) {
+            const selected = new Date(date);
+            this.selectedDateKey = this.dateKey(selected);
+            this.currentDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        },
+        moveSelectedDate(dayOffset) {
+            const selected = this.selectedDateKey ? this.parseDateKey(this.selectedDateKey) : new Date();
+            selected.setDate(selected.getDate() + dayOffset);
+            this.selectDate(selected);
+        },
+        selectToday() {
+            this.selectDate(new Date());
+        },
+        openCreateModalForSelectedDate() {
+            const selectedDate = this.selectedDateKey ? this.parseDateKey(this.selectedDateKey) : new Date();
+            this.openCreateModal(selectedDate);
         },
 
         async submitCreateEvent() {
@@ -596,6 +739,7 @@ function calendarApp() {
         nextMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1); },
         isCurrentMonth(date) { return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear(); },
         isToday(date) { const t = new Date(); return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear(); },
+        isSelectedDate(date) { return this.selectedDateKey && this.dateKey(date) === this.selectedDateKey; },
 
         isRangeEvent(event) {
             return this.dateKey(event.start_time) !== this.dateKey(event.end_time);
@@ -638,6 +782,11 @@ function calendarApp() {
         },
         getEventsForDate(date) {
             return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(date)).sort((a, b) => a.start_time - b.start_time);
+        },
+        getEventsForSelectedDate() {
+            if (!this.selectedDateKey) return [];
+            const selectedDate = this.parseDateKey(this.selectedDateKey);
+            return this.events.filter((event) => this.overlapsDate(event, selectedDate)).sort((a, b) => a.start_time - b.start_time);
         },
         getVisibleEventsForDate(date) { return this.getEventsForDate(date).slice(0, 3); },
         getOverflowCountForDate(date) { const total = this.getEventsForDate(date).length; return total > 3 ? total - 3 : 0; },
