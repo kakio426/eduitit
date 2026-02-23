@@ -115,6 +115,24 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "문항 수는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
 
+    def test_landing_redirects_to_first_active_classroom_dashboard(self):
+        url = reverse("seed_quiz:landing")
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(
+            resp["Location"],
+            reverse("seed_quiz:teacher_dashboard", kwargs={"classroom_id": self.classroom.id}),
+        )
+
+    def test_landing_redirects_to_classroom_create_when_no_classroom(self):
+        teacher_without_classroom = _make_teacher("tf_no_class")
+        no_class_client = Client()
+        no_class_client.force_login(teacher_without_classroom)
+        url = reverse("seed_quiz:landing")
+        resp = no_class_client.get(url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], reverse("happy_seed:classroom_create"))
+
     def test_download_csv_guide(self):
         url = reverse(
             "seed_quiz:download_csv_guide",

@@ -15,6 +15,7 @@ class Command(BaseCommand):
             "is_guest_allowed",
             "icon",
             "external_url",
+            "launch_route_name",
         ]
 
         product, created = Product.objects.get_or_create(title=title, defaults=defaults)
@@ -91,13 +92,13 @@ class Command(BaseCommand):
         Product.objects.filter(title="Fairy 전략 게임 5종").update(is_active=False)
 
         variants = [
-            ("동물 장기", "🦁", "Dobutsu Shogi", "/fairy-games/dobutsu/play/?mode=local", 17),
-            ("커넥트 포", "🟡", "Connect Four", "/fairy-games/cfour/play/?mode=local", 18),
-            ("이솔레이션", "🧱", "Isolation", "/fairy-games/isolation/play/?mode=local", 19),
-            ("아택스", "⚔", "Ataxx", "/fairy-games/ataxx/play/?mode=local", 20),
-            ("브레이크스루", "🏁", "Breakthrough", "/fairy-games/breakthrough/play/?mode=local", 21),
+            ("동물 장기", "🦁", "Dobutsu Shogi", "fairy_games:play_dobutsu", 17),
+            ("커넥트 포", "🟡", "Connect Four", "fairy_games:play_cfour", 18),
+            ("이솔레이션", "🧱", "Isolation", "fairy_games:play_isolation", 19),
+            ("아택스", "⚔", "Ataxx", "fairy_games:play_ataxx", 20),
+            ("브레이크스루", "🏁", "Breakthrough", "fairy_games:play_breakthrough", 21),
         ]
-        for title, icon, subtitle, url, order in variants:
+        for title, icon, subtitle, route_name, order in variants:
             self.upsert_product(
                 title=title,
                 defaults={
@@ -107,7 +108,8 @@ class Command(BaseCommand):
                     "icon": icon,
                     "color_theme": "green",
                     "display_order": order,
-                    "external_url": url,
+                    "external_url": "",
+                    "launch_route_name": route_name,
                 },
                 features=[
                     ("👥", "로컬 대결", "같은 화면에서 번갈아 두는 2인 모드"),

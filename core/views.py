@@ -80,15 +80,22 @@ def get_purpose_sections(products_qs, preview_limit=None):
 
 def _resolve_product_launch_url(product):
     """Resolve direct launch URL for quick actions."""
-    if product.external_url:
-        return product.external_url, True
-
     route_name = (product.launch_route_name or '').strip()
+    external_url = (product.external_url or '').strip()
+
+    # Absolute URLs are treated as truly external services.
+    if external_url.startswith("http://") or external_url.startswith("https://"):
+        return external_url, True
+
     if route_name:
         try:
             return reverse(route_name), False
         except NoReverseMatch:
             logger.warning("Launch route missing for product '%s' (%s).", product.title, route_name)
+
+    # Legacy internal path fallback (e.g. /products/yut/)
+    if external_url:
+        return external_url, False
 
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 

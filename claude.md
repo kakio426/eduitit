@@ -64,10 +64,16 @@
 - JS 확인 UX에는 `noscript` 또는 직접 제출 폴백을 반드시 제공한다
 
 ### 5) 신규 서비스 추가 가드레일
-- 라우팅 SSOT를 먼저 정한다. 가능하면 `title` 문자열 분기 대신 명시적 route 필드를 사용한다.
-- `title` 분기를 유지해야 한다면 최소 2곳을 동시 반영:
-  - `core/views.py` (`_resolve_product_launch_url`)
-  - `products/templates/products/partials/preview_modal.html`
+- 서비스 시작 URL의 SSOT는 `core/views.py`의 `_resolve_product_launch_url`이다.
+- 내부 서비스는 `Product.launch_route_name`을 반드시 채운다.
+  - 예: `collect:landing`, `seed_quiz:landing`, `fairy_games:play_dobutsu`
+- 외부 서비스만 `Product.external_url`을 사용한다.
+  - 허용 형식: `http://` 또는 `https://` 절대 URL
+  - 금지: `/app/path/` 같은 내부 경로를 `external_url`에 저장
+- URL kwargs가 필요한 서비스는 kwargs 없는 고정 alias 라우트를 추가해 `launch_route_name`으로 사용한다.
+  - 예: `fairy_games:play_dobutsu` (내부적으로 `variant='dobutsu'` 바인딩)
+- 제품 카드 진입이 다른 서비스로 넘어가야 하면 "무조건 redirect" 대신 명시적 안내 메시지/중간 화면을 제공한다.
+- 신규 서비스 등록 시 라우팅 데이터는 마이그레이션으로 남긴다 (`RunPython` 백필 포함).
 - 대화면 전용 서비스는 phone 차단 + 롤백 플래그(`ALLOW_TABLET_ACCESS`) + 우회 경로(`force_desktop=1`) 제공
 - 기능 플래그는 목적별로 분리한다 (공통 기능을 화면 플래그에 묶지 않기)
 - 모바일/태블릿에서 핵심 액션은 hover 의존 금지
@@ -775,7 +781,7 @@ if not product.is_active:
 
 **현재 Procfile 실행 순서:**
 ```
-migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensure_collect → ensure_reservations → check_visitors → gunicorn
+bootstrap_runtime → uvicorn
 ```
 
 ### 42. 새 Django 앱 추가 체크리스트
@@ -786,22 +792,30 @@ migrate → ensure_ssambti → ensure_studentmbti → ensure_notebooklm → ensu
 | 2 | `config/settings.py` | `INSTALLED_APPS`에 추가 |
 | 3 | `config/settings_production.py` | `INSTALLED_APPS`에 동일하게 추가 |
 | 4 | `config/urls.py` | `path('앱/', include('앱.urls', namespace='앱'))` 추가 |
-| 5 | `preview_modal.html` | 시작 버튼 URL 분기 추가 |
-| 6 | `ensure_*` 명령어 | Product 생성 보장, Admin 필드 덮어쓰기 금지 |
-| 7 | `settings_production.py` | `run_startup_tasks()`에 `call_command('ensure_*')` 추가 |
-| 8 | `Procfile` | `ensure_*` 명령어 체인에 추가 |
-| 9 | `nixpacks.toml` | Procfile과 동기화 |
-| 10 | `admin.py` | `select_related` + `annotate` + `raw_id_fields` |
-| 11 | 마이그레이션 | `makemigrations` + `migrate` |
-| 12 | 검증 | `python manage.py check` |
+| 5 | `products` 데이터 | `launch_route_name` 설정 (내부), `external_url` 절대 URL만 허용 (외부) |
+| 6 | `config/urls.py`/앱 `urls.py` | kwargs 없는 시작 alias 라우트 필요 시 추가 |
+| 7 | `ensure_*` 명령어 | Product 존재 보장 + 라우팅 메타 불일치 보정(필수 필드만) |
+| 8 | `core/management/commands/bootstrap_runtime.py` | 필요한 `ensure_*` 단계 추가 |
+| 9 | `admin.py` | `select_related` + `annotate` + `raw_id_fields` |
+| 10 | 마이그레이션 | 스키마 + 데이터 백필(`RunPython`) 포함 |
+| 11 | 검증 | `python manage.py check` + 서비스 카드 시작 버튼 실클릭 확인 |
 
-### 43. 서비스 시작 버튼 URL 라우팅 — preview_modal.html 수정 필수
-```html
-<!-- 한 줄로 작성 (줄바꿈 금지) -->
-{% if product.external_url %}{{ product.external_url }}{% elif product.title == '쌤BTI' %}{% url 'ssambti:main' %}{% elif product.title == '간편 수합' %}{% url 'collect:landing' %}{% elif product.title == '교사 백과사전' %}{% url 'encyclopedia:landing' %}{% elif product.title == '학교 예약 시스템' %}{% url 'reservations:reservation_index' %}{% else %}{% url 'home' %}{% endif %}
+### 43. 서비스 시작 버튼 URL 라우팅 표준 (`launch_route_name` 우선)
+```python
+# SSOT: core/views.py::_resolve_product_launch_url
+# 1) external_url이 절대 URL(http/https)이면 외부 서비스로 처리
+# 2) 아니면 launch_route_name reverse
+# 3) 아니면 legacy internal path(external_url='/...') 폴백
+# 4) 모두 없으면 product_detail 폴백
 ```
 
-새 서비스 추가 시 `{% elif product.title == '서비스명' %}{% url 'app:landing' %}` 분기 추가 필수.
+금지:
+- `product.title` 기반 템플릿 분기 라우팅
+- 내부 경로를 `external_url`에 저장
+
+권장:
+- 시작 버튼 템플릿은 `launch_href`, `launch_is_external`만 사용
+- 신규 서비스는 `launch_route_name` 데이터 백필 마이그레이션까지 같은 PR/커밋에서 처리
 
 ### 44. 서비스 카테고리 시스템
 | 코드 | 이름 | 탭 색상 |

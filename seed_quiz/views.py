@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import openpyxl
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, F, Max, Q
@@ -370,8 +371,24 @@ def _store_csv_error_report(request, errors: list[str]) -> str:
 
 @login_required
 def landing(request):
-    """제품 카드 클릭 시 happy_seed 대시보드로 이동."""
-    return redirect("happy_seed:dashboard")
+    """씨앗 퀴즈 교사 진입점.
+
+    - 활성 학급이 있으면 첫 학급 대시보드로 이동
+    - 없으면 학급 생성 화면으로 안내
+    """
+    classroom = (
+        HSClassroom.objects.filter(teacher=request.user, is_active=True)
+        .order_by("created_at")
+        .first()
+    )
+    if classroom:
+        return redirect("seed_quiz:teacher_dashboard", classroom_id=classroom.id)
+
+    messages.info(
+        request,
+        "씨앗 퀴즈를 시작하려면 먼저 학급을 만들어 주세요.",
+    )
+    return redirect("happy_seed:classroom_create")
 
 
 # ---------------------------------------------------------------------------

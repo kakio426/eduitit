@@ -35,20 +35,24 @@ class FairyGamesRoutingTests(TestCase):
 
 
 class FairyGamesEnsureCommandTests(TestCase):
-    def test_ensure_fairy_games_creates_expected_urls_and_published_manuals(self):
+    def test_ensure_fairy_games_sets_launch_routes_and_published_manuals(self):
         call_command("ensure_fairy_games")
-        expected_urls = [
-            "/fairy-games/dobutsu/play/?mode=local",
-            "/fairy-games/cfour/play/?mode=local",
-            "/fairy-games/isolation/play/?mode=local",
-            "/fairy-games/ataxx/play/?mode=local",
-            "/fairy-games/breakthrough/play/?mode=local",
-        ]
+        expected_routes = {
+            "동물 장기": "fairy_games:play_dobutsu",
+            "커넥트 포": "fairy_games:play_cfour",
+            "이솔레이션": "fairy_games:play_isolation",
+            "아택스": "fairy_games:play_ataxx",
+            "브레이크스루": "fairy_games:play_breakthrough",
+        }
 
-        products = Product.objects.filter(external_url__in=expected_urls, is_active=True)
-        self.assertEqual(products.count(), 5, msg="expected 5 fairy products with valid urls")
+        products = Product.objects.filter(title__in=expected_routes.keys(), is_active=True)
+        self.assertEqual(products.count(), 5, msg="expected 5 fairy products")
 
         for product in products:
+            expected_route = expected_routes[product.title]
+            self.assertEqual(product.launch_route_name, expected_route)
+            self.assertEqual(product.external_url, "")
+            self.assertTrue(reverse(expected_route).endswith("/play/"))
             self.assertTrue(hasattr(product, "manual"), msg=f"manual missing: {product.title}")
             self.assertTrue(product.manual.is_published, msg=f"manual unpublished: {product.title}")
             section_titles = list(product.manual.sections.values_list("title", flat=True))

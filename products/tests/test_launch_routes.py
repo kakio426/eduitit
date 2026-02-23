@@ -53,3 +53,17 @@ class ProductLaunchRouteTests(TestCase):
         href, is_external = _resolve_product_launch_url(product)
         self.assertEqual(href, reverse("product_detail", kwargs={"pk": product.pk}))
         self.assertFalse(is_external)
+
+    def test_resolver_prefers_launch_route_over_internal_external_path(self):
+        product = Product.objects.create(
+            title="Legacy Internal Path Product",
+            description="desc",
+            price=0,
+            is_active=True,
+            launch_route_name="collect:landing",
+            external_url="/collect/",
+        )
+
+        href, is_external = _resolve_product_launch_url(product)
+        self.assertEqual(href, reverse("collect:landing"))
+        self.assertFalse(is_external)
