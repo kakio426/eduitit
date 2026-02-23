@@ -5,6 +5,8 @@ FORBIDDEN_CHARS = "\ufffd"  # 깨진 문자
 MAX_Q_LEN = 120
 MAX_C_LEN = 40
 MAX_E_LEN = 200
+MIN_ITEM_COUNT = 1
+MAX_ITEM_COUNT = 200
 
 
 def normalize_and_check(text: str) -> str:
@@ -25,9 +27,12 @@ def validate_quiz_payload(payload: dict) -> tuple[bool, list[str]]:
     errors: list[str] = []
     items = payload.get("items", [])
 
-    if len(items) != 3:
-        errors.append("item_count_not_3")
-        return False, errors  # 이후 검증 불가
+    if len(items) < MIN_ITEM_COUNT:
+        errors.append("item_count_too_small")
+        return False, errors
+    if len(items) > MAX_ITEM_COUNT:
+        errors.append("item_count_too_large")
+        return False, errors
 
     for idx, item in enumerate(items, start=1):
         # 텍스트 정규화 시도

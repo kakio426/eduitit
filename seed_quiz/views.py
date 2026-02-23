@@ -10,7 +10,7 @@ import openpyxl
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, F, Max, Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -47,7 +47,6 @@ CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
 CSV_ERROR_REPORT_ROWS_KEY = "sq_csv_error_report_rows"
 
 CSV_CANONICAL_HEADERS = [
-    "set_title",
     "preset_type",
     "grade",
     "question_text",
@@ -61,7 +60,6 @@ CSV_CANONICAL_HEADERS = [
 ]
 
 CSV_KOREAN_HEADERS = [
-    "묶음이름",
     "주제",
     "학년",
     "문제",
@@ -75,9 +73,12 @@ CSV_KOREAN_HEADERS = [
 ]
 
 CSV_GUIDE_COLUMNS = [
-    {"ko": "묶음이름", "required": "필수", "desc": "같은 묶음 3문제에 모두 같은 이름을 붙이세요. 자유롭게 지으세요. (예: 맞춤법기초-1)"},
-    {"ko": "주제", "required": "필수", "desc": "한글 주제명 (예: 맞춤법, 띄어쓰기, 속담 등)"},
-    {"ko": "학년", "required": "필수", "desc": "1~6 중 하나. 학년 구분이 없으면 0 또는 학년무관"},
+    {
+        "ko": "주제",
+        "required": "필수",
+        "desc": "한 파일에서는 모든 행이 같은 주제여야 합니다. 입력 예: 맞춤법, 띄어쓰기, 어휘 뜻, 속담, 관용어, 사자성어, 한자어 뜻, 중심문장 찾기, 문장 순서 배열, 주제/제목 고르기, 사실/의견 구분, 영어 단어 뜻, 영어 문장 의미, 영어 빈칸 채우기, 수학 연산, 규칙 찾기, 분수/소수 비교, 시간/달력 계산, 단위 변환, 생활 안전 상식",
+    },
+    {"ko": "학년", "required": "필수", "desc": "1~6 중 하나. 학년 구분이 없으면 0 또는 학년무관. 한 파일에서 학년은 동일해야 합니다."},
     {"ko": "문제", "required": "필수", "desc": "문항 내용"},
     {"ko": "보기1", "required": "필수", "desc": "선택지 1"},
     {"ko": "보기2", "required": "필수", "desc": "선택지 2"},
@@ -88,7 +89,160 @@ CSV_GUIDE_COLUMNS = [
     {"ko": "난이도", "required": "선택", "desc": "쉬움, 보통, 어려움 중 하나 (없으면 보통으로 처리)"},
 ]
 
-CSV_XLSX_COLUMN_WIDTHS = [36, 16, 8, 42, 22, 22, 22, 22, 12, 36, 12]
+CSV_XLSX_COLUMN_WIDTHS = [16, 8, 42, 22, 22, 22, 22, 12, 36, 12]
+
+TOPIC_TEMPLATE_HELP = {
+    "orthography": {
+        "focus": "철자, 받침, 헷갈리는 맞춤법 표현을 묻는 문제",
+        "examples": "되/돼, 안/않, 왠지/웬지, 어이없다",
+        "tip": "짧은 문장 속에서 바른 표기를 고르게 하면 좋습니다.",
+    },
+    "spacing": {
+        "focus": "띄어쓰기 원칙을 적용해 바른 문장을 고르는 문제",
+        "examples": "할 수 있다, 함께 가다, 집에 가는 길",
+        "tip": "비슷한 보기 4개를 넣고 한 칸 차이를 분명히 보여주세요.",
+    },
+    "vocabulary": {
+        "focus": "낱말 뜻, 유의어/반의어, 문맥 속 어휘 의미를 묻는 문제",
+        "examples": "유의어 찾기, 낱말 뜻 풀이, 문맥에 맞는 단어",
+        "tip": "학년 수준보다 어려운 한자어는 해설에 뜻을 짧게 덧붙이세요.",
+    },
+    "proverb": {
+        "focus": "속담의 의미와 상황 적용을 묻는 문제",
+        "examples": "가는 말이 고와야 오는 말이 곱다, 티끌 모아 태산",
+        "tip": "생활 장면을 먼저 제시하고 어울리는 속담을 고르게 하세요.",
+    },
+    "idiom": {
+        "focus": "관용어의 실제 의미와 쓰임을 묻는 문제",
+        "examples": "발이 넓다, 귀가 얇다, 손이 크다",
+        "tip": "글자 그대로 뜻이 아닌 관용적 의미를 구분하도록 구성하세요.",
+    },
+    "sino_idiom": {
+        "focus": "사자성어 뜻과 쓰임 상황을 묻는 문제",
+        "examples": "유비무환, 동문서답, 자업자득",
+        "tip": "뜻풀이 보기와 상황 보기를 섞어 난이도를 조절하세요.",
+    },
+    "hanja_word": {
+        "focus": "교과서 수준 한자어의 의미를 이해하는 문제",
+        "examples": "보호, 관찰, 책임, 협동",
+        "tip": "낱말의 실제 문장 활용 예시를 문제에 함께 넣으면 좋습니다.",
+    },
+    "main_sentence": {
+        "focus": "짧은 글에서 중심문장을 찾는 독해 문제",
+        "examples": "설명문 핵심 문장 찾기, 글쓴이 주장 찾기",
+        "tip": "지문은 2~4문장 정도로 간결하게 유지하세요.",
+    },
+    "sentence_order": {
+        "focus": "문장 배열 순서와 글의 흐름을 판단하는 문제",
+        "examples": "도입-전개-마무리 순서, 사건 순서 배열",
+        "tip": "연결어(먼저, 다음에, 그래서)를 활용하면 풀이가 명확해집니다.",
+    },
+    "topic_title": {
+        "focus": "글의 주제 또는 제목을 고르는 문제",
+        "examples": "가장 알맞은 제목, 글의 중심 생각",
+        "tip": "정답과 오답의 차이를 해설에서 짧게 설명해 주세요.",
+    },
+    "fact_opinion": {
+        "focus": "사실과 의견을 구분하는 문해력 문제",
+        "examples": "관찰 사실 vs 개인 생각, 객관 정보 vs 주장",
+        "tip": "숫자/날짜가 들어간 문장을 사실 보기로 활용하면 구분이 쉽습니다.",
+    },
+    "eng_vocab": {
+        "focus": "영어 단어의 기본 뜻을 묻는 문제",
+        "examples": "apple, library, beautiful, quickly",
+        "tip": "보기는 모두 같은 품사 수준으로 맞추면 학습 효과가 큽니다.",
+    },
+    "eng_sentence": {
+        "focus": "짧은 영어 문장의 의미를 묻는 문제",
+        "examples": "I have a dog. / She is reading a book.",
+        "tip": "문장은 5~10단어 내외로 유지하고 핵심 어휘를 반복하세요.",
+    },
+    "eng_cloze": {
+        "focus": "문맥에 맞는 영어 낱말/표현을 빈칸에 넣는 문제",
+        "examples": "I ___ to school. (go/goes/went/going)",
+        "tip": "시제나 수일치처럼 한 가지 규칙만 묻도록 설계하세요.",
+    },
+    "arithmetic": {
+        "focus": "사칙연산과 기초 계산 정확도를 묻는 문제",
+        "examples": "두 자리 수 덧셈/뺄셈, 곱셈표, 나눗셈",
+        "tip": "보기는 계산 실수 패턴(자리올림 누락 등)을 반영하면 좋습니다.",
+    },
+    "pattern": {
+        "focus": "수열/도형/규칙 찾기 문제",
+        "examples": "2,4,6,?, 모양 반복 규칙",
+        "tip": "규칙의 단서를 문제 본문에 명확히 드러내 주세요.",
+    },
+    "fraction_decimal": {
+        "focus": "분수와 소수의 크기 비교·변환 문제",
+        "examples": "1/2 vs 0.4, 0.75를 분수로",
+        "tip": "같은 값의 다른 표현을 보기로 섞어 개념 연결을 돕습니다.",
+    },
+    "time_calendar": {
+        "focus": "시각 읽기와 달력 계산 문제",
+        "examples": "경과 시간, 요일 계산, 일정 날짜 찾기",
+        "tip": "현실 상황(수업 시작/끝 시간)을 넣으면 이해가 쉬워집니다.",
+    },
+    "unit_conversion": {
+        "focus": "길이·무게·들이·시간 단위 변환 문제",
+        "examples": "cm-m, g-kg, mL-L, 분-시간",
+        "tip": "숫자 단위가 바뀌는 기준(10, 100, 1000)을 해설에 써 주세요.",
+    },
+    "safety_common": {
+        "focus": "생활 안전 지식과 상황 대처를 묻는 문제",
+        "examples": "횡단보도 안전, 화재 대피, 감염 예방",
+        "tip": "정답 문항은 실제 행동 지침과 일치하도록 작성하세요.",
+    },
+}
+
+
+def _get_topic_template_rows() -> list[dict]:
+    rows: list[dict] = []
+    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
+        info = TOPIC_TEMPLATE_HELP.get(topic_key, {})
+        rows.append(
+            {
+                "key": topic_key,
+                "label": topic_label,
+                "focus": info.get("focus", "해당 주제의 핵심 개념을 묻는 문제"),
+                "examples": info.get("examples", "교과서 핵심 단원 중심"),
+                "tip": info.get("tip", "문항 수준을 학년에 맞춰 주세요."),
+            }
+        )
+    return rows
+
+
+def _build_template_guide_rows() -> list[list[str]]:
+    topic_rows = _get_topic_template_rows()
+    topic_labels = ", ".join(row["label"] for row in topic_rows)
+    topic_pairs = ", ".join(f"{row['label']}({row['key']})" for row in topic_rows)
+    return [
+        [f"#가이드: 한 파일은 1세트로 저장됩니다. 문항 수는 1~200개까지 자유롭게 작성할 수 있습니다."] + [""] * 9,
+        [f"#가이드: 한 파일의 모든 행은 같은 주제와 같은 학년을 사용하세요."] + [""] * 9,
+        [f"#가이드: 주제(한글) 입력 예시: {topic_labels}"] + [""] * 9,
+        [f"#가이드: 주제(코드) 입력 예시: {topic_pairs}"] + [""] * 9,
+        [f"#가이드: 정답번호는 1~4입니다. (보기1=1, 보기2=2, 보기3=3, 보기4=4)"] + [""] * 9,
+        [f"#가이드: 난이도는 쉬움/보통/어려움. 비우면 보통으로 처리됩니다."] + [""] * 9,
+        [f"#가이드: 아래 샘플 5문항은 그대로 업로드해도 통과됩니다."] + [""] * 9,
+    ]
+
+
+def _build_default_sample_rows() -> list[list[str]]:
+    return [
+        ["맞춤법", 3, "다음 중 띄어쓰기가 올바른 것은?", "할수있다", "할 수 있다", "할 수있다", "할수 있다", 2, "'할 수 있다'처럼 의존 명사는 띄어 씁니다.", "쉬움"],
+        ["맞춤법", 3, "다음 중 맞춤법이 올바른 것은?", "왠지", "웬지", "왠 지", "웬 지", 1, "'왠지'가 맞는 표기입니다.", "보통"],
+        ["맞춤법", 3, "다음 중 표기가 바른 것은?", "되요", "돼요", "되욤", "되여", 2, "'되어요'가 줄어 '돼요'가 됩니다.", "쉬움"],
+        ["맞춤법", 3, "다음 중 맞춤법이 올바른 문장은?", "않 가요", "안 가요", "안가요", "않가요", 2, "부정 부사 '안'은 띄어 씁니다.", "보통"],
+        ["맞춤법", 3, "다음 중 알맞은 표현은?", "어의없다", "어이없다", "어이 업다", "어의 업다", 2, "'어이없다'가 바른 표현입니다.", "보통"],
+    ]
+
+
+def _build_topic_sample_rows(topic_label: str, grade: int = 3) -> list[list[str]]:
+    return [
+        [topic_label, grade, f"[{topic_label}] 예시 문제 1", f"{topic_label} 정답 1", f"{topic_label} 오답 1-1", f"{topic_label} 오답 1-2", f"{topic_label} 오답 1-3", 1, f"{topic_label} 예시 해설 1", "쉬움"],
+        [topic_label, grade, f"[{topic_label}] 예시 문제 2", f"{topic_label} 오답 2-1", f"{topic_label} 정답 2", f"{topic_label} 오답 2-2", f"{topic_label} 오답 2-3", 2, f"{topic_label} 예시 해설 2", "쉬움"],
+        [topic_label, grade, f"[{topic_label}] 예시 문제 3", f"{topic_label} 오답 3-1", f"{topic_label} 오답 3-2", f"{topic_label} 정답 3", f"{topic_label} 오답 3-3", 3, f"{topic_label} 예시 해설 3", "보통"],
+        [topic_label, grade, f"[{topic_label}] 예시 문제 4", f"{topic_label} 오답 4-1", f"{topic_label} 오답 4-2", f"{topic_label} 오답 4-3", f"{topic_label} 정답 4", 4, f"{topic_label} 예시 해설 4", "보통"],
+    ]
 
 
 def _get_positive_int_setting(name: str, default: int) -> int:
@@ -257,6 +411,7 @@ def teacher_dashboard(request, classroom_id):
             "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
             "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
             "csv_guide_columns": CSV_GUIDE_COLUMNS,
+            "topic_guide_rows": _get_topic_template_rows(),
         },
     )
 
@@ -274,6 +429,7 @@ def download_csv_guide(request, classroom_id):
             "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
             "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
             "csv_guide_columns": CSV_GUIDE_COLUMNS,
+            "topic_guide_rows": _get_topic_template_rows(),
         },
     )
 
@@ -287,24 +443,10 @@ def download_csv_template(request, classroom_id):
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(CSV_KOREAN_HEADERS)
-    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
-        set_title = f"{topic_label}-3학년-001"
-        for q_no in range(1, 4):
-            writer.writerow(
-                [
-                    set_title,
-                    topic_label,
-                    3,
-                    f"[{topic_label}] 예시 문제 {q_no}",
-                    f"{topic_label} 보기 A{q_no}",
-                    f"{topic_label} 보기 B{q_no}",
-                    f"{topic_label} 보기 C{q_no}",
-                    f"{topic_label} 보기 D{q_no}",
-                    q_no % 4 + 1,
-                    f"{topic_label} 예시 해설 {q_no}",
-                    "쉬움",
-                ]
-            )
+    for guide_row in _build_template_guide_rows():
+        writer.writerow(guide_row)
+    for sample_row in _build_default_sample_rows():
+        writer.writerow(sample_row)
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="seed_quiz_template.csv"'
@@ -333,29 +475,70 @@ def download_xlsx_template(request, classroom_id):
         ws.column_dimensions[get_column_letter(col_idx)].width = CSV_XLSX_COLUMN_WIDTHS[col_idx - 1]
 
     row_no = 2
-    for topic_key, topic_label in SQQuizSet.PRESET_CHOICES:
-        set_title = f"{topic_label}-3학년-001"
-        for q_no in range(1, 4):
-            ws.append(
-                [
-                    set_title,
-                    topic_label,
-                    3,
-                    f"[{topic_label}] 예시 문제 {q_no}",
-                    f"{topic_label} 보기 A{q_no}",
-                    f"{topic_label} 보기 B{q_no}",
-                    f"{topic_label} 보기 C{q_no}",
-                    f"{topic_label} 보기 D{q_no}",
-                    q_no % 4 + 1,
-                    f"{topic_label} 예시 해설 {q_no}",
-                    "쉬움",
-                ]
-            )
-            for col_idx in range(1, len(CSV_KOREAN_HEADERS) + 1):
-                ws.cell(row=row_no, column=col_idx).alignment = Alignment(vertical="top", wrap_text=True)
-            row_no += 1
+    guide_fill = PatternFill(fill_type="solid", start_color="FFF4D6", end_color="FFF4D6")
+    guide_font = Font(color="7C4A03")
+    for guide_row in _build_template_guide_rows():
+        ws.append(guide_row)
+        for col_idx in range(1, len(CSV_KOREAN_HEADERS) + 1):
+            cell = ws.cell(row=row_no, column=col_idx)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.fill = guide_fill
+            if col_idx == 1:
+                cell.font = guide_font
+        row_no += 1
+
+    sample_fill = PatternFill(fill_type="solid", start_color="F9FBFF", end_color="F9FBFF")
+    for sample_row in _build_default_sample_rows():
+        ws.append(sample_row)
+        for col_idx in range(1, len(CSV_KOREAN_HEADERS) + 1):
+            cell = ws.cell(row=row_no, column=col_idx)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.fill = sample_fill
+        row_no += 1
 
     ws.freeze_panes = "A2"
+
+    topic_ws = wb.create_sheet("주제 가이드")
+    topic_ws.merge_cells("A1:E1")
+    title_cell = topic_ws["A1"]
+    title_cell.value = "씨앗 퀴즈 주제 입력 가이드"
+    title_cell.font = Font(bold=True, size=14, color="1E3A8A")
+    title_cell.alignment = Alignment(horizontal="left", vertical="center")
+    topic_ws["A2"] = "주제 열에는 한글 이름(예: 맞춤법) 또는 영문 코드(예: orthography)를 입력할 수 있습니다."
+    topic_ws["A3"] = "중요: 한 파일의 모든 행은 같은 주제/같은 학년을 사용해야 하며, 문항 수는 1~200개까지 자유롭게 작성할 수 있습니다."
+    topic_ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
+    topic_ws["A3"].alignment = Alignment(wrap_text=True, vertical="top")
+    topic_ws.row_dimensions[2].height = 34
+    topic_ws.row_dimensions[3].height = 34
+
+    topic_headers = ["주제(한글)", "주제 코드(영문)", "어떤 문제를 넣나요?", "문제 소재 예시", "작성 팁"]
+    topic_header_row = 5
+    for col_idx, header in enumerate(topic_headers, start=1):
+        cell = topic_ws.cell(row=topic_header_row, column=col_idx, value=header)
+        cell.font = Font(bold=True, color="1F2937")
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    topic_ws.column_dimensions["A"].width = 18
+    topic_ws.column_dimensions["B"].width = 24
+    topic_ws.column_dimensions["C"].width = 40
+    topic_ws.column_dimensions["D"].width = 42
+    topic_ws.column_dimensions["E"].width = 42
+
+    topic_data_start = topic_header_row + 1
+    for offset, row in enumerate(_get_topic_template_rows()):
+        current_row = topic_data_start + offset
+        topic_ws.cell(row=current_row, column=1, value=row["label"])
+        topic_ws.cell(row=current_row, column=2, value=row["key"])
+        topic_ws.cell(row=current_row, column=3, value=row["focus"])
+        topic_ws.cell(row=current_row, column=4, value=row["examples"])
+        topic_ws.cell(row=current_row, column=5, value=row["tip"])
+        for col_idx in range(1, 6):
+            topic_ws.cell(row=current_row, column=col_idx).alignment = Alignment(
+                vertical="top",
+                wrap_text=True,
+            )
+    topic_ws.freeze_panes = "A6"
 
     output = BytesIO()
     wb.save(output)
@@ -379,67 +562,31 @@ def download_csv_sample_pack(request, classroom_id):
 
     buffer = BytesIO()
     with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zf:
+        topic_rows = _get_topic_template_rows()
+        topic_labels = ", ".join(row["label"] for row in topic_rows)
+        topic_pairs = ", ".join(f"{row['label']}({row['key']})" for row in topic_rows)
         readme_lines = [
             "씨앗 퀴즈 CSV 샘플 팩",
             "",
             "- 모든 파일은 업로드 검증 규칙을 통과하도록 구성되어 있습니다.",
-            "- 각 CSV는 1묶음(3문제)입니다.",
-            "- 묶음이름은 자유롭게 정할 수 있습니다.",
+            "- 각 CSV 파일은 1세트로 저장됩니다.",
+            "- 한 파일에 문항을 1~200개까지 원하는 개수로 넣을 수 있습니다.",
+            "- 한 파일의 모든 행은 같은 주제/같은 학년이어야 합니다.",
+            f"- 사용 가능한 주제(한글): {topic_labels}",
+            f"- 사용 가능한 주제(코드): {topic_pairs}",
             "- 정답번호는 1~4 (보기1이 정답이면 1, 보기2이면 2).",
             "- 문항/보기/해설을 수정해 업로드하세요.",
         ]
         zf.writestr("README.txt", "\n".join(readme_lines))
 
         for idx, (topic_key, topic_label) in enumerate(SQQuizSet.PRESET_CHOICES, start=1):
-            set_title = f"{topic_label}-3학년-{idx:03d}"
             output = StringIO()
             writer = csv.writer(output)
             writer.writerow(headers)
-            writer.writerow(
-                [
-                    set_title,
-                    topic_label,
-                    3,
-                    f"[{topic_label}] 예시 문제 1",
-                    f"{topic_label} 정답 1",
-                    f"{topic_label} 오답 1-1",
-                    f"{topic_label} 오답 1-2",
-                    f"{topic_label} 오답 1-3",
-                    1,
-                    f"{topic_label} 예시 해설 1",
-                    "쉬움",
-                ]
-            )
-            writer.writerow(
-                [
-                    set_title,
-                    topic_label,
-                    3,
-                    f"[{topic_label}] 예시 문제 2",
-                    f"{topic_label} 오답 2-1",
-                    f"{topic_label} 정답 2",
-                    f"{topic_label} 오답 2-2",
-                    f"{topic_label} 오답 2-3",
-                    2,
-                    f"{topic_label} 예시 해설 2",
-                    "쉬움",
-                ]
-            )
-            writer.writerow(
-                [
-                    set_title,
-                    topic_label,
-                    3,
-                    f"[{topic_label}] 예시 문제 3",
-                    f"{topic_label} 오답 3-1",
-                    f"{topic_label} 오답 3-2",
-                    f"{topic_label} 정답 3",
-                    f"{topic_label} 오답 3-3",
-                    3,
-                    f"{topic_label} 예시 해설 3",
-                    "쉬움",
-                ]
-            )
+            for guide_row in _build_template_guide_rows():
+                writer.writerow(guide_row)
+            for sample_row in _build_topic_sample_rows(topic_label=topic_label, grade=3):
+                writer.writerow(sample_row)
 
             csv_text = output.getvalue()
             parsed_sets, errors = parse_csv_upload(csv_text.encode("utf-8"))
@@ -1191,7 +1338,7 @@ def htmx_progress(request, classroom_id):
             "total": total,
             "started": attempts.count(),
             "submitted": attempts.filter(status__in=["submitted", "rewarded"]).count(),
-            "perfect": attempts.filter(score=3).count(),
+            "perfect": attempts.filter(score=F("max_score")).count(),
         }
     return render(
         request,
@@ -1326,13 +1473,14 @@ def htmx_play_current(request):
         return _do_finish(request, attempt)
 
     answered_count = attempt.answers.count()
+    total_count = attempt.quiz_set.items.count()
     return render(
         request,
         "seed_quiz/partials/play_item.html",
         {
             "item": item,
             "item_no": answered_count + 1,
-            "total": 3,
+            "total": total_count,
         },
     )
 
@@ -1368,10 +1516,11 @@ def htmx_play_answer(request):
         if next_item is None:
             return _do_finish(request, attempt)
         answered_count = attempt.answers.count()
+        total_count = attempt.quiz_set.items.count()
         return render(
             request,
             "seed_quiz/partials/play_item.html",
-            {"item": next_item, "item_no": answered_count + 1, "total": 3},
+            {"item": next_item, "item_no": answered_count + 1, "total": total_count},
         )
 
     # 답변 저장 (이미 답변한 경우 get_or_create로 무시)
@@ -1398,10 +1547,11 @@ def htmx_play_answer(request):
         return _do_finish(request, attempt)
 
     answered_count = attempt.answers.count()
+    total_count = attempt.quiz_set.items.count()
     return render(
         request,
         "seed_quiz/partials/play_item.html",
-        {"item": next_item, "item_no": answered_count + 1, "total": 3},
+        {"item": next_item, "item_no": answered_count + 1, "total": total_count},
     )
 
 

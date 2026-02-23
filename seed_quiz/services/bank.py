@@ -23,6 +23,7 @@ VALID_PRESET_TYPES = set(TOPIC_LABELS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 CSV_HEADER_ALIASES = {
+    # Legacy compatibility: old templates may still include set_title.
     "set_title": ["set_title", "묶음이름", "세트코드", "세트명", "세트코드(set_title)"],
     "preset_type": ["preset_type", "주제"],
     "grade": ["grade", "학년"],
@@ -50,7 +51,7 @@ DIFFICULTY_ALIASES = {
     "어려움": "hard",
 }
 CSV_HEADER_DISPLAY = {
-    "set_title": "묶음이름",
+    "set_title": "내부세트이름",
     "preset_type": "주제",
     "grade": "학년",
     "question_text": "문제",
@@ -62,6 +63,38 @@ CSV_HEADER_DISPLAY = {
     "explanation": "해설",
     "difficulty": "난이도",
 }
+
+
+def _is_guide_row(row: dict) -> bool:
+    """CSV 템플릿 안내행(주석/가이드)을 업로드 시 무시한다."""
+    if not row:
+        return False
+    ordered_keys = [
+        "preset_type",
+        "grade",
+        "question_text",
+        "choice_1",
+        "choice_2",
+        "choice_3",
+        "choice_4",
+        "correct_index",
+        "explanation",
+        "difficulty",
+        "set_title",
+    ]
+    first_non_empty = ""
+    for key in ordered_keys:
+        value = str(row.get(key) or "").strip()
+        if value:
+            first_non_empty = value
+            break
+    if not first_non_empty:
+        for value in row.values():
+            raw = str(value or "").strip()
+            if raw:
+                first_non_empty = raw
+                break
+    return first_non_empty.startswith("#") or first_non_empty.startswith("※")
 
 
 def _normalize_source_text(source_text: str) -> str:
@@ -80,8 +113,8 @@ def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
     """
     bank = SQQuizBank.objects.prefetch_related("items").get(id=bank_id, is_active=True)
     bank_items = list(bank.items.order_by("order_no"))
-    if len(bank_items) != 3:
-        raise ValueError("퀴즈 은행 세트는 정확히 3문항이어야 합니다.")
+    if not bank_items:
+        raise ValueError("퀴즈 은행 세트에 문항이 없습니다.")
     target_date = timezone.localdate()
 
     with transaction.atomic():
@@ -155,6 +188,41 @@ def _canonicalize_row(raw_row: dict) -> dict:
     return normalized
 
 
+def _parse_grade_value(raw_grade: str) -> tuple[int | None, str | None]:
+    grade_text = (raw_grade or "3").strip()
+    if grade_text in ("학년무관", "0"):
+        return 0, None
+    try:
+        grade_value = int(grade_text)
+    except ValueError:
+        return None, "학년이 올바르지 않습니다 (1~6 또는 학년무관)."
+    if grade_value not in range(1, 7):
+        return None, "학년은 1~6 또는 학년무관이어야 합니다."
+    return grade_value, None
+
+
+def _build_auto_set_title(preset_type: str, grade: int, items_data: list[dict]) -> str:
+    grade_token = "ANY" if grade == 0 else f"G{grade}"
+    signature_payload = {
+        "preset_type": preset_type,
+        "grade": grade,
+        "items": [
+            {
+                "question_text": item.get("question_text", ""),
+                "choices": item.get("choices", []),
+                "correct_index": item.get("correct_index", 0),
+                "explanation": item.get("explanation", ""),
+                "difficulty": item.get("difficulty", "medium"),
+            }
+            for item in items_data
+        ],
+    }
+    digest = hashlib.sha1(
+        json.dumps(signature_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:12]
+    return f"CSV-{preset_type}-{grade_token}-{digest}"
+
+
 def parse_csv_upload(
     csv_file_or_bytes,
     max_rows: int | None = None,
@@ -174,7 +242,6 @@ def parse_csv_upload(
 
     reader = csv.DictReader(io.StringIO(text))
     required_cols = {
-        "set_title",
         "preset_type",
         "grade",
         "question_text",
@@ -193,10 +260,12 @@ def parse_csv_upload(
         missing_labels = [CSV_HEADER_DISPLAY.get(col, col) for col in sorted(missing_cols)]
         return [], [f"필수 컬럼 누락: {', '.join(missing_labels)}"]
 
-    grouped: dict[str, list[tuple[int, dict]]] = {}
+    data_rows: list[tuple[int, dict]] = []
     data_row_count = 0
     for row_no, raw_row in enumerate(reader, start=2):
         row = _canonicalize_row(raw_row)
+        if _is_guide_row(row):
+            continue
         if not any(str(v or "").strip() for v in row.values()):
             continue
         data_row_count += 1
@@ -205,131 +274,128 @@ def parse_csv_upload(
                 f"CSV 행 수가 제한({max_rows}행)을 초과했습니다. "
                 "파일을 분할해 다시 업로드해 주세요."
             ]
-        set_title = (row.get("set_title") or "").strip()
-        if not set_title:
-            errors.append(f"행 {row_no}: set_title이 비어있습니다.")
-            continue
-        grouped.setdefault(set_title, []).append((row_no, row))
+        data_rows.append((row_no, row))
 
-    if max_sets and len(grouped) > max_sets:
+    if not data_rows:
+        return [], []
+
+    # 묶음이름 없는 단순 모드: 파일 전체를 1세트로 처리한다.
+    set_count = 1
+    if max_sets and set_count > max_sets:
         return [], [
             f"CSV 세트 수가 제한({max_sets}세트)을 초과했습니다. "
             "파일을 분할해 다시 업로드해 주세요."
         ]
 
-    for set_title, rows in grouped.items():
-        if len(rows) != 3:
-            errors.append(f"세트 '{set_title}': 행이 {len(rows)}개입니다 (정확히 3개 필요).")
-            continue
+    first_row_no, first = data_rows[0]
+    last_row_no = data_rows[-1][0]
+    set_label = f"업로드 세트(행 {first_row_no}~{last_row_no})"
+    preset_raw = (first.get("preset_type") or "").strip()
+    preset_type = normalize_topic(preset_raw)
+    if not preset_type:
+        return [], [f"{set_label}: 잘못된 주제 '{preset_raw}'."]
 
-        _, first = rows[0]
-        preset_raw = (first.get("preset_type") or "").strip()
-        preset_type = normalize_topic(preset_raw)
-        if not preset_type:
-            errors.append(f"세트 '{set_title}': 잘못된 preset_type '{preset_raw}'.")
-            continue
+    grade, grade_error = _parse_grade_value(first.get("grade") or "3")
+    if grade_error:
+        return [], [f"{set_label}: {grade_error}"]
 
-        grade_raw = (first.get("grade") or "3").strip()
-        if grade_raw in ("학년무관", "0"):
-            grade = 0
-        else:
-            try:
-                grade = int(grade_raw)
-            except ValueError:
-                errors.append(f"세트 '{set_title}': 학년이 올바르지 않습니다 (1~6 또는 학년무관).")
-                continue
-            if grade not in range(1, 7):
-                errors.append(f"세트 '{set_title}': 학년은 1~6 또는 학년무관이어야 합니다.")
-                continue
+    items_data = []
+    for row_no, row in data_rows:
+        raw_preset = (row.get("preset_type") or "").strip()
+        row_preset = normalize_topic(raw_preset)
+        if not row_preset:
+            errors.append(f"행 {row_no}: 잘못된 주제 '{raw_preset}'.")
+            break
+        if row_preset != preset_type:
+            errors.append(f"{set_label}: 주제는 모든 문항에서 동일해야 합니다.")
+            break
 
-        items_data = []
-        row_error = False
-        for row_no, row in rows:
-            question_text = (row.get("question_text") or "").strip()
-            if not question_text:
-                errors.append(f"행 {row_no}: question_text가 비어있습니다.")
-                row_error = True
-                break
+        row_grade, row_grade_error = _parse_grade_value(row.get("grade") or "3")
+        if row_grade_error:
+            errors.append(f"행 {row_no}: {row_grade_error}")
+            break
+        if row_grade != grade:
+            errors.append(f"{set_label}: 학년은 모든 문항에서 동일해야 합니다.")
+            break
 
-            try:
-                question_text = normalize_and_check(question_text)
-                choices = [
-                    normalize_and_check((row.get("choice_1") or "").strip()),
-                    normalize_and_check((row.get("choice_2") or "").strip()),
-                    normalize_and_check((row.get("choice_3") or "").strip()),
-                    normalize_and_check((row.get("choice_4") or "").strip()),
-                ]
-            except ValueError:
-                errors.append(f"행 {row_no}: 텍스트에 허용되지 않는 문자가 포함되어 있습니다.")
-                row_error = True
-                break
+        question_text = (row.get("question_text") or "").strip()
+        if not question_text:
+            errors.append(f"행 {row_no}: question_text가 비어있습니다.")
+            break
 
-            if any(not c for c in choices):
-                errors.append(f"행 {row_no}: 선택지에 빈 항목이 있습니다.")
-                row_error = True
-                break
-            if len(set(choices)) != 4:
-                errors.append(f"행 {row_no}: 선택지에 중복이 있습니다.")
-                row_error = True
-                break
+        try:
+            question_text = normalize_and_check(question_text)
+            choices = [
+                normalize_and_check((row.get("choice_1") or "").strip()),
+                normalize_and_check((row.get("choice_2") or "").strip()),
+                normalize_and_check((row.get("choice_3") or "").strip()),
+                normalize_and_check((row.get("choice_4") or "").strip()),
+            ]
+        except ValueError:
+            errors.append(f"행 {row_no}: 텍스트에 허용되지 않는 문자가 포함되어 있습니다.")
+            break
 
-            try:
-                correct_index_raw = int((row.get("correct_index") or "1").strip())
-            except ValueError:
-                errors.append(f"행 {row_no}: 정답번호가 정수가 아닙니다.")
-                row_error = True
-                break
-            if correct_index_raw not in range(1, 5):
-                errors.append(f"행 {row_no}: 정답번호는 1~4이어야 합니다 (보기1=1, 보기2=2, 보기3=3, 보기4=4).")
-                row_error = True
-                break
-            correct_index = correct_index_raw - 1  # 1-기반 입력 → 0-기반 저장
+        if any(not c for c in choices):
+            errors.append(f"행 {row_no}: 선택지에 빈 항목이 있습니다.")
+            break
+        if len(set(choices)) != 4:
+            errors.append(f"행 {row_no}: 선택지에 중복이 있습니다.")
+            break
 
-            explanation_raw = (row.get("explanation") or "").strip()
-            try:
-                explanation = normalize_and_check(explanation_raw) if explanation_raw else ""
-            except ValueError:
-                errors.append(f"행 {row_no}: 해설에 허용되지 않는 문자가 포함되어 있습니다.")
-                row_error = True
-                break
+        try:
+            correct_index_raw = int((row.get("correct_index") or "1").strip())
+        except ValueError:
+            errors.append(f"행 {row_no}: 정답번호가 정수가 아닙니다.")
+            break
+        if correct_index_raw not in range(1, 5):
+            errors.append(f"행 {row_no}: 정답번호는 1~4이어야 합니다 (보기1=1, 보기2=2, 보기3=3, 보기4=4).")
+            break
+        correct_index = correct_index_raw - 1  # 1-기반 입력 -> 0-기반 저장
 
-            difficulty_raw = (row.get("difficulty") or "medium").strip() or "medium"
-            difficulty = (
-                DIFFICULTY_ALIASES.get(difficulty_raw.lower())
-                or DIFFICULTY_ALIASES.get(difficulty_raw)
-                or "medium"
-            )
-            if difficulty not in VALID_DIFFICULTIES:
-                difficulty = "medium"
+        explanation_raw = (row.get("explanation") or "").strip()
+        try:
+            explanation = normalize_and_check(explanation_raw) if explanation_raw else ""
+        except ValueError:
+            errors.append(f"행 {row_no}: 해설에 허용되지 않는 문자가 포함되어 있습니다.")
+            break
 
-            items_data.append(
-                {
-                    "question_text": question_text,
-                    "choices": choices,
-                    "correct_index": correct_index,
-                    "explanation": explanation,
-                    "difficulty": difficulty,
-                }
-            )
+        difficulty_raw = (row.get("difficulty") or "medium").strip() or "medium"
+        difficulty = (
+            DIFFICULTY_ALIASES.get(difficulty_raw.lower())
+            or DIFFICULTY_ALIASES.get(difficulty_raw)
+            or "medium"
+        )
+        if difficulty not in VALID_DIFFICULTIES:
+            difficulty = "medium"
 
-        if row_error:
-            continue
-
-        payload = {"items": items_data}
-        ok, validate_errors = validate_quiz_payload(payload)
-        if not ok:
-            errors.append(f"세트 '{set_title}': 규칙 검증 실패({', '.join(validate_errors)}).")
-            continue
-
-        parsed_sets.append(
+        items_data.append(
             {
-                "set_title": set_title,
-                "preset_type": preset_type,
-                "preset_label": TOPIC_LABELS.get(preset_type, preset_type),
-                "grade": grade,
-                "items": items_data,
+                "question_text": question_text,
+                "choices": choices,
+                "correct_index": correct_index,
+                "explanation": explanation,
+                "difficulty": difficulty,
             }
         )
+
+    if errors:
+        return [], errors
+
+    payload = {"items": items_data}
+    ok, validate_errors = validate_quiz_payload(payload)
+    if not ok:
+        return [], [f"{set_label}: 규칙 검증 실패({', '.join(validate_errors)})."]
+
+    set_title = _build_auto_set_title(preset_type, grade, items_data)
+    parsed_sets.append(
+        {
+            "set_title": set_title,
+            "preset_type": preset_type,
+            "preset_label": TOPIC_LABELS.get(preset_type, preset_type),
+            "grade": grade,
+            "items": items_data,
+        }
+    )
 
     return parsed_sets, errors
 

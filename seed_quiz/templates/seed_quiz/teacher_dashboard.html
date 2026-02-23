@@ -105,7 +105,6 @@
               data-client-check-state="idle"
               data-max-file-bytes="{{ csv_limits.max_file_bytes }}"
               data-max-rows="{{ csv_limits.max_rows }}"
-              data-max-sets="{{ csv_limits.max_sets }}"
               hx-post="{% url 'seed_quiz:htmx_csv_upload' classroom_id=classroom.id %}"
               hx-encoding="multipart/form-data"
               hx-target="#csv-upload-result"
@@ -130,10 +129,10 @@
             열 순서: {{ csv_headers_ko_text }}
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            묶음이름은 자유롭게 지으세요. 같은 묶음 3문제에 같은 이름을 써야 합니다. 정답번호: 1~4 (보기1이 정답이면 1)
+            한 파일은 한 세트로 저장됩니다. 문항 수는 1~200개까지 자유롭게 넣을 수 있으며, 파일 내 모든 행의 주제/학년은 동일해야 합니다.
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            업로드 제한: 파일 {{ csv_limits_human.max_file }} 이하 / 데이터 {{ csv_limits_human.max_rows }}행 이하 / {{ csv_limits_human.max_sets }}묶음 이하
+            업로드 제한: 파일 {{ csv_limits_human.max_file }} 이하 / 데이터 {{ csv_limits_human.max_rows }}행 이하
         </p>
         <div id="csv-client-check" class="mt-2 hidden"></div>
         <div id="csv-upload-result" class="mt-3"></div>
@@ -234,7 +233,6 @@
     }
 
     const headerAliases = {
-        set_title: ['set_title', '묶음이름', '세트코드', '세트명', '세트코드(set_title)'],
         preset_type: ['preset_type', '주제'],
         grade: ['grade', '학년'],
         question_text: ['question_text', '문제', '문항'],
@@ -247,7 +245,6 @@
         difficulty: ['difficulty', '난이도']
     };
     const headerLabels = {
-        set_title: '묶음이름',
         preset_type: '주제',
         grade: '학년',
         question_text: '문제',
@@ -260,7 +257,7 @@
         difficulty: '난이도'
     };
     const requiredHeaders = [
-        'set_title', 'preset_type', 'grade', 'question_text',
+        'preset_type', 'grade', 'question_text',
         'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_index'
     ];
     const aliasToCanonical = new Map();
@@ -271,15 +268,19 @@
     });
     const maxFileBytes = parseInt(form.dataset.maxFileBytes || '0', 10) || 0;
     const maxRows = parseInt(form.dataset.maxRows || '0', 10) || 0;
-    const maxSets = parseInt(form.dataset.maxSets || '0', 10) || 0;
-    const allowedPresetTypes = new Set(
-        Array.from(document.querySelectorAll('#bank-filter-form select[name="preset_type"] option'))
-            .flatMap((opt) => [
-                (opt.value || '').trim().toLowerCase(),
-                (opt.textContent || '').trim().toLowerCase()
-            ])
-            .filter(Boolean)
-    );
+    const presetCanonicalMap = new Map();
+    Array.from(document.querySelectorAll('#bank-filter-form select[name="preset_type"] option'))
+        .forEach((opt) => {
+            const key = (opt.value || '').trim().toLowerCase();
+            const label = (opt.textContent || '').trim().toLowerCase();
+            if (key) {
+                presetCanonicalMap.set(key, key);
+            }
+            if (label) {
+                presetCanonicalMap.set(label, key || label);
+            }
+        });
+    const allowedPresetTypes = new Set(Array.from(presetCanonicalMap.keys()));
 
     function normalizeHeaderName(raw) {
         const normalized = String(raw || '').trim().toLowerCase();
@@ -378,12 +379,26 @@
         return rows;
     }
 
+    function isGuideRow(raw) {
+        if (!raw || !raw.length) {
+            return false;
+        }
+        const firstNonEmpty = raw
+            .map((v) => String(v || '').trim())
+            .find((v) => v.length > 0);
+        if (!firstNonEmpty) {
+            return false;
+        }
+        return firstNonEmpty.startsWith('#') || firstNonEmpty.startsWith('※');
+    }
+
     function validateRows(rows) {
         const errors = [];
         const maxErrors = 120;
-        const groupedSetStats = {};
         let isOverflow = false;
         let dataRowsCount = 0;
+        let basePreset = '';
+        let baseGrade = '';
 
         function addError(msg) {
             if (errors.length < maxErrors) {
@@ -417,11 +432,12 @@
             return errors;
         }
 
-        const rowRequired = requiredHeaders;
-
         for (let i = 1; i < rows.length; i += 1) {
             const raw = rows[i];
             if (!raw || !raw.length || raw.every((v) => String(v || '').trim() === '')) {
+                continue;
+            }
+            if (isGuideRow(raw)) {
                 continue;
             }
             dataRowsCount += 1;
@@ -429,30 +445,14 @@
                 addError('CSV 행 수가 제한(' + maxRows + '행)을 초과했습니다.');
                 break;
             }
+
             const lineNo = i + 1;
             const get = (key) => (raw[headerIndex[key]] || '').trim();
-            const setTitle = get('set_title');
             const presetRaw = get('preset_type');
+            const presetCanonical = presetCanonicalMap.get(String(presetRaw).toLowerCase()) || String(presetRaw).toLowerCase();
             const gradeRaw = get('grade');
 
-            if (!groupedSetStats[setTitle]) {
-                groupedSetStats[setTitle] = {
-                    count: 0,
-                    lines: [],
-                    presets: new Set(),
-                    grades: new Set(),
-                };
-            }
-            groupedSetStats[setTitle].count += 1;
-            groupedSetStats[setTitle].lines.push(lineNo);
-            if (presetRaw) {
-                groupedSetStats[setTitle].presets.add(presetRaw);
-            }
-            if (gradeRaw) {
-                groupedSetStats[setTitle].grades.add(gradeRaw);
-            }
-
-            rowRequired.forEach((col) => {
+            requiredHeaders.forEach((col) => {
                 if (!get(col)) {
                     addError(lineNo + '행: ' + (headerLabels[col] || col) + ' 값이 비어 있습니다.');
                 }
@@ -475,28 +475,21 @@
             if (gradeRaw && gradeRaw !== '학년무관' && !/^[0-6]$/.test(gradeRaw)) {
                 addError(lineNo + '행: 학년은 0~6 또는 학년무관이어야 합니다.');
             }
+
+            if (!basePreset && presetCanonical) {
+                basePreset = presetCanonical;
+            } else if (basePreset && presetCanonical && presetCanonical !== basePreset) {
+                addError('한 파일의 주제는 모두 같아야 합니다. (' + lineNo + '행)');
+            }
+            if (!baseGrade && gradeRaw) {
+                baseGrade = gradeRaw;
+            } else if (baseGrade && gradeRaw && gradeRaw !== baseGrade) {
+                addError('한 파일의 학년은 모두 같아야 합니다. (' + lineNo + '행)');
+            }
         }
 
-        Object.keys(groupedSetStats).forEach((setTitle) => {
-            const stat = groupedSetStats[setTitle];
-            if (stat.count !== 3) {
-                addError(
-                    "세트 '" + setTitle + "': 문항 수 " + stat.count + "개 (정확히 3문항 필요)"
-                );
-            }
-            if (stat.presets.size > 1) {
-                addError(
-                    "세트 '" + setTitle + "': preset_type 값이 행마다 다릅니다."
-                );
-            }
-            if (stat.grades.size > 1) {
-                addError(
-                    "세트 '" + setTitle + "': grade 값이 행마다 다릅니다."
-                );
-            }
-        });
-        if (maxSets && Object.keys(groupedSetStats).length > maxSets) {
-            addError('CSV 세트 수가 제한(' + maxSets + '세트)을 초과했습니다.');
+        if (dataRowsCount === 0) {
+            addError('업로드 가능한 실제 문항 행이 없습니다. 안내행(#가이드) 아래에 문항을 입력해 주세요.');
         }
 
         if (isOverflow) {

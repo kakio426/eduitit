@@ -6,7 +6,7 @@
     <div class="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1">
         {% for s in parsed_sets %}
         <div class="px-3 py-2 bg-white border border-indigo-100 rounded-lg">
-            <div class="font-bold text-slate-800">{{ s.set_title }}</div>
+            <div class="font-bold text-slate-800">업로드 세트 {{ forloop.counter }}</div>
             <div class="text-xs text-slate-500 mt-1">
                 {% if s.grade == 0 %}학년무관{% else %}{{ s.grade }}학년{% endif %} · {{ s.preset_label|default:s.preset_type }} · {{ s.items|length }}문항
             </div>

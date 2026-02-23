@@ -7,7 +7,7 @@
         <div class="seed-reward-anim text-7xl mb-4">🌟</div>
         <h2 class="text-3xl font-black text-gray-800 mb-2">완벽해요!</h2>
         <p class="text-lg text-gray-600 mb-1">{{ attempt.score }}문제 모두 맞혔어요</p>
-        <div class="flex gap-1 justify-center mb-4">{% for i in "123" %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
+        <div class="flex gap-1 justify-center mb-4">{% for _ in ""|ljust:attempt.max_score %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
         <div class="px-6 py-3 bg-gradient-to-r from-yellow-400 to-amber-400 rounded-2xl shadow-lg mb-6">
             <p class="text-white font-black text-xl">🌱 씨앗 +{{ attempt.reward_seed_amount }}개 획득!</p>
         </div>
@@ -16,7 +16,7 @@
         <div class="text-7xl mb-4">🌸</div>
         <h2 class="text-3xl font-black text-gray-800 mb-2">대단해요!</h2>
         <p class="text-lg text-gray-600 mb-1">{{ attempt.score }}문제 모두 맞혔어요</p>
-        <div class="flex gap-1 justify-center mb-4">{% for i in "123" %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
+        <div class="flex gap-1 justify-center mb-4">{% for _ in ""|ljust:attempt.max_score %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
         <div class="px-5 py-3 bg-blue-50 border border-blue-200 rounded-2xl mb-6">
             <p class="text-blue-700 text-sm font-medium">학습 완료! 씨앗 보상은 보호자 동의 후 지급됩니다.</p>
         </div>
@@ -25,7 +25,7 @@
         <div class="text-7xl mb-4">💪</div>
         <h2 class="text-3xl font-black text-gray-800 mb-2">수고했어요!</h2>
         <p class="text-lg text-gray-600 mb-1">{{ attempt.score }}/{{ attempt.max_score }}문제 맞혔어요</p>
-        <div class="flex gap-1 justify-center mb-4">{% for i in "123" %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
+        <div class="flex gap-1 justify-center mb-4">{% for _ in ""|ljust:attempt.max_score %}<span class="text-3xl">{% if forloop.counter <= attempt.score %}⭐{% else %}☆{% endif %}</span>{% endfor %}</div>
         <div class="px-5 py-3 bg-gray-50 rounded-2xl mb-6">
             <p class="text-gray-500 text-sm">다음엔 더 잘할 수 있어요! 💚</p>
         </div>

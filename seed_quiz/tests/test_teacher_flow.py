@@ -112,7 +112,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "오늘의 퀴즈 선택")
         self.assertContains(resp, 'id="csv-client-check"')
-        self.assertContains(resp, "정확히 3문항 필요")
+        self.assertContains(resp, "문항 수는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
 
     def test_download_csv_guide(self):
@@ -124,9 +124,9 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp["Content-Type"], "text/html; charset=utf-8")
         body = resp.content.decode("utf-8")
-        self.assertIn("CSV 업로드 제작 가이드", body)
-        self.assertIn("권장 헤더(한글)", body)
-        self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
+        self.assertIn("문제 파일 만들기 가이드", body)
+        self.assertIn("주제 입력 가이드 (매우 중요)", body)
+        self.assertIn("주제 코드(영문)", body)
 
     def test_download_csv_template(self):
         url = reverse(
@@ -137,9 +137,9 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
         body = resp.content.decode("utf-8-sig")
-        self.assertIn("세트코드,주제,학년", body)
+        self.assertIn("주제,학년,문제", body)
+        self.assertIn("#가이드:", body)
         self.assertIn("맞춤법", body)
-        self.assertIn("SQ-orthography-basic-L1-G3-S001-V1", body)
 
     def test_download_xlsx_template(self):
         url = reverse(
@@ -172,7 +172,7 @@ class TeacherFlowTest(TestCase):
         parsed_sets, errors = parse_csv_upload(first_csv)
         self.assertFalse(errors)
         self.assertEqual(len(parsed_sets), 1)
-        self.assertEqual(len(parsed_sets[0]["items"]), 3)
+        self.assertEqual(len(parsed_sets[0]["items"]), 4)
 
     def test_download_csv_error_report_requires_valid_token(self):
         url = reverse(
@@ -335,7 +335,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(draft.source, "bank")
         self.assertEqual(draft.items.count(), 3)
 
-    def test_bank_select_rejects_non_three_items(self):
+    def test_bank_select_allows_more_than_three_items(self):
         SQQuizBankItem.objects.create(
             bank=self.bank,
             order_no=4,
@@ -350,15 +350,18 @@ class TeacherFlowTest(TestCase):
             kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
         )
         resp = self.client.post(url)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("정확히 3문항", resp.content.decode("utf-8"))
+        self.assertEqual(resp.status_code, 200)
+        draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(draft)
+        self.assertEqual(draft.items.count(), 4)
 
     def test_csv_upload_creates_bank(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "SQ-orthography-basic-L1-G3-S010-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S010-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S010-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
+            "orthography,3,1+1은?,2,1,3,4,1,2입니다,easy\n"
+            "orthography,3,바다 색은?,파랑,빨강,검정,흰색,1,파랑이 일반적입니다,easy\n"
+            "orthography,3,낮과 밤이 반복되는 이유는?,지구 자전,지구 공전,달 공전,태양 공전,1,지구가 자전하기 때문입니다,medium\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -384,16 +387,15 @@ class TeacherFlowTest(TestCase):
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
         self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
-        self.assertTrue(
-            SQQuizBank.objects.filter(title="SQ-orthography-basic-L1-G3-S010-V1", source="csv").exists()
-        )
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertTrue(bank.title.startswith("CSV-orthography-G3-"))
+        self.assertEqual(bank.items.count(), 4)
 
-    def test_csv_upload_rejects_invalid_set_title_format(self):
+    def test_csv_upload_rejects_mixed_topic_in_single_file(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "CSV 세트 A,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "CSV 세트 A,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "CSV 세트 A,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
+            "vocabulary,3,낱말 뜻은?,의미,뜻,내용,문맥,2,뜻과 의미를 확인합니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -406,7 +408,7 @@ class TeacherFlowTest(TestCase):
             {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertContains(resp, "set_title 형식이 올바르지 않습니다", status_code=400)
+        self.assertContains(resp, "주제는 모든 문항에서 동일해야 합니다", status_code=400)
         body = resp.content.decode("utf-8")
         report_match = re.search(r'href="([^"]+/csv-error-report/[^"]+/)"', body)
         self.assertIsNotNone(report_match)
@@ -415,7 +417,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(report_resp.status_code, 200)
         report_body = report_resp.content.decode("utf-8-sig")
         self.assertIn("no,error_message", report_body)
-        self.assertIn("set_title 형식이 올바르지 않습니다", report_body)
+        self.assertIn("주제는 모든 문항에서 동일해야 합니다", report_body)
         self.assertTrue(
             SQGenerationLog.objects.filter(
                 code="CSV_UPLOAD_PREVIEW_FAILED",
@@ -426,10 +428,10 @@ class TeacherFlowTest(TestCase):
 
     def test_csv_upload_with_korean_headers_is_supported(self):
         csv_text = (
-            "세트코드,주제,학년,문제,보기1,보기2,보기3,보기4,정답번호,해설,난이도\n"
-            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,쉬움\n"
-            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,1+1은?,1,2,3,4,1,2입니다,쉬움\n"
-            "SQ-orthography-basic-L1-G3-S030-V1,맞춤법,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,쉬움\n"
+            "주제,학년,문제,보기1,보기2,보기3,보기4,정답번호,해설,난이도\n"
+            "맞춤법,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,쉬움\n"
+            "맞춤법,3,1+1은?,2,1,3,4,1,2입니다,쉬움\n"
+            "맞춤법,3,바다 색은?,파랑,빨강,검정,흰색,1,파랑이 일반적입니다,쉬움\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -447,10 +449,10 @@ class TeacherFlowTest(TestCase):
     @override_settings(SEED_QUIZ_CSV_MAX_ROWS=2)
     def test_csv_upload_rejects_when_row_limit_exceeded(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S020-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
+            "orthography,3,1+1은?,2,1,3,4,1,2입니다,easy\n"
+            "orthography,3,바다 색은?,파랑,빨강,검정,흰색,1,파랑이 일반적입니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -465,16 +467,11 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "CSV 행 수가 제한(2행)을 초과했습니다.", status_code=400)
 
-    @override_settings(SEED_QUIZ_CSV_MAX_SETS=1)
-    def test_csv_upload_rejects_when_set_limit_exceeded(self):
+    def test_csv_upload_rejects_when_grade_is_mixed_in_single_file(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제1,가,나,다,라,0,해설,easy\n"
-            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제2,가,나,다,라,1,해설,easy\n"
-            "SQ-orthography-basic-L1-G3-S021-V1,orthography,3,문제3,가,나,다,라,2,해설,easy\n"
-            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제4,가,나,다,라,0,해설,easy\n"
-            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제5,가,나,다,라,1,해설,easy\n"
-            "SQ-vocabulary-basic-L1-G3-S022-V1,vocabulary,3,문제6,가,나,다,라,2,해설,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,문제1,가,나,다,라,1,해설,easy\n"
+            "orthography,4,문제2,가,나,다,라,2,해설,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -487,15 +484,15 @@ class TeacherFlowTest(TestCase):
             {"csv_file": SimpleUploadedFile("quiz.csv", csv_text.encode("utf-8"), content_type="text/csv")},
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertContains(resp, "CSV 세트 수가 제한(1세트)을 초과했습니다.", status_code=400)
+        self.assertContains(resp, "학년은 모든 문항에서 동일해야 합니다", status_code=400)
 
     @override_settings(SEED_QUIZ_CSV_MAX_FILE_BYTES=120)
     def test_csv_upload_rejects_when_file_size_exceeded(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,대한민국 수도는 어디인가요?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S023-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,대한민국 수도는 어디인가요?,서울,부산,대구,광주,1,서울입니다,easy\n"
+            "orthography,3,1+1은?,2,1,3,4,1,2입니다,easy\n"
+            "orthography,3,바다 색은?,파랑,빨강,검정,흰색,1,파랑이 일반적입니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -512,10 +509,10 @@ class TeacherFlowTest(TestCase):
 
     def test_csv_confirm_with_share_opt_in_sets_review_status(self):
         csv_text = (
-            "set_title,preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
-            "SQ-orthography-basic-L1-G3-S011-V1,orthography,3,대한민국 수도는?,부산,서울,대구,광주,1,서울입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S011-V1,orthography,3,1+1은?,1,2,3,4,1,2입니다,easy\n"
-            "SQ-orthography-basic-L1-G3-S011-V1,orthography,3,바다 색은?,파랑,빨강,검정,흰색,0,파랑이 일반적입니다,easy\n"
+            "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
+            "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
+            "orthography,3,1+1은?,2,1,3,4,1,2입니다,easy\n"
+            "orthography,3,바다 색은?,파랑,빨강,검정,흰색,1,파랑이 일반적입니다,easy\n"
         )
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -543,10 +540,10 @@ class TeacherFlowTest(TestCase):
         )
         self.assertEqual(confirm_resp.status_code, 200)
         bank = SQQuizBank.objects.get(
-            title="SQ-orthography-basic-L1-G3-S011-V1",
             source="csv",
             created_by=self.teacher,
         )
+        self.assertTrue(bank.title.startswith("CSV-orthography-G3-"))
         self.assertEqual(bank.quality_status, "review")
         self.assertFalse(bank.is_public)
         self.assertTrue(bank.share_opt_in)

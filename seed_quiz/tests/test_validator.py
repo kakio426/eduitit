@@ -46,16 +46,17 @@ class ValidateQuizPayloadTest(SimpleTestCase):
         self.assertEqual(errors, [])
 
     def test_too_few_items(self):
-        payload = {"items": [_make_payload()["items"][0], _make_payload()["items"][1]]}
+        payload = {"items": []}
         ok, errors = validate_quiz_payload(payload)
         self.assertFalse(ok)
-        self.assertIn("item_count_not_3", errors)
+        self.assertIn("item_count_too_small", errors)
 
     def test_too_many_items(self):
-        payload = {"items": _make_payload()["items"] + [_make_payload()["items"][0]]}
+        base_item = _make_payload()["items"][0]
+        payload = {"items": [base_item for _ in range(201)]}
         ok, errors = validate_quiz_payload(payload)
         self.assertFalse(ok)
-        self.assertIn("item_count_not_3", errors)
+        self.assertIn("item_count_too_large", errors)
 
     def test_duplicate_choice(self):
         payload = _make_payload()

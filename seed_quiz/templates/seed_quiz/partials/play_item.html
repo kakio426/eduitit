@@ -7,7 +7,7 @@
             <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-bold">{{ item_no }}/{{ total }}</span>
         </div>
         <div class="flex gap-1">
-            {% for i in "123" %}
+            {% for _ in ""|ljust:total %}
             <div class="w-4 h-4 rounded-full {% if forloop.counter <= item_no %}bg-purple-500{% else %}bg-gray-200{% endif %}"></div>
             {% endfor %}
         </div>
