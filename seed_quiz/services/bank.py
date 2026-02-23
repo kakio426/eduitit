@@ -390,17 +390,18 @@ def parse_csv_upload(
     return parsed_sets, errors
 
 
-def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: bool = False) -> tuple[int, int, int]:
+def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: bool = True) -> tuple[int, int, int]:
     """
     parse 완료 데이터를 SQQuizBank에 저장한다.
-    반환: (created_count, updated_count, review_count)
+    반환: (created_count, updated_count, shared_count)
     """
     created_count = 0
     updated_count = 0
-    review_count = 0
+    shared_count = 0
 
-    quality_status = "review" if share_opt_in else "approved"
-    is_public = False
+    share_flag = bool(share_opt_in)
+    quality_status = "approved"
+    is_public = share_flag
 
     for parsed in parsed_sets:
         set_title = parsed["set_title"]
@@ -419,7 +420,7 @@ def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: 
                 is_active=True,
                 is_public=is_public,
                 is_official=False,
-                share_opt_in=share_opt_in,
+                share_opt_in=share_flag,
                 quality_status=quality_status,
             )
             created = True
@@ -435,20 +436,20 @@ def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: 
                 payload={
                     "bank_id": str(bank.id),
                     "created": created,
-                    "share_opt_in": share_opt_in,
+                    "share_opt_in": share_flag,
                     "quality_status": quality_status,
                 },
             )
 
-            if quality_status == "review":
-                review_count += 1
+            if is_public:
+                shared_count += 1
 
-    return created_count, updated_count, review_count
+    return created_count, updated_count, shared_count
 
 
 def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
     """
-    호환용 래퍼: CSV를 즉시 저장한다(공유 신청 없음).
+    호환용 래퍼: CSV를 즉시 저장하고 기본 공개로 반영한다.
     """
     parsed_sets, errors = parse_csv_upload(csv_file)
     if errors:
@@ -456,7 +457,7 @@ def import_csv_to_bank(csv_file, created_by) -> tuple[int, list[str]]:
     created_count, _, _ = save_parsed_sets_to_bank(
         parsed_sets=parsed_sets,
         created_by=created_by,
-        share_opt_in=False,
+        share_opt_in=True,
     )
     return created_count, []
 
@@ -484,8 +485,8 @@ def generate_bank_from_ai(preset_type: str, grade: int, created_by) -> SQQuizBan
             title=title,
             source="ai",
             is_official=False,
-            is_public=False,
-            share_opt_in=False,
+            is_public=True,
+            share_opt_in=True,
             quality_status="approved",
             is_active=True,
             created_by=created_by,
@@ -599,8 +600,8 @@ def generate_bank_from_context_ai(preset_type: str, grade: int, source_text: str
             title=title,
             source="ai",
             is_official=False,
-            is_public=False,
-            share_opt_in=False,
+            is_public=True,
+            share_opt_in=True,
             quality_status="approved",
             is_active=True,
             created_by=created_by,

@@ -15,8 +15,8 @@
                 <div>
                     <div class="flex items-center gap-2 mb-1">
                         <h3 class="font-bold text-gray-800">{{ bank.title }}</h3>
-                        {% if bank.share_opt_in and bank.quality_status == 'review' %}
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">검토중</span>
+                        {% if bank.is_public and bank.quality_status == 'approved' %}
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">공유중</span>
                         {% endif %}
                     </div>
                     <p class="text-xs text-gray-500">
@@ -49,4 +49,3 @@
     </div>
     {% endif %}
 </div>
-

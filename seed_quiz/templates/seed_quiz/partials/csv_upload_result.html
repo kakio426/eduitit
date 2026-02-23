@@ -22,8 +22,8 @@
      hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated')); document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold">CSV 저장이 완료되었습니다.</p>
     <p class="mt-1">신규 생성: {{ created_count }}개 / 기존 갱신: {{ updated_count|default:0 }}개</p>
-    {% if review_count %}
-    <p class="mt-1 text-amber-700">공유 신청 대기: {{ review_count }}개 (관리자 승인 후 공개)</p>
+    {% if shared_count %}
+    <p class="mt-1 text-emerald-700">공유 완료: {{ shared_count }}개</p>
     {% endif %}
 </div>
 {% endif %}

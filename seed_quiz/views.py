@@ -1088,7 +1088,7 @@ def htmx_csv_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": [
                     "CSV 파일 용량이 제한을 초과했습니다. "
                     f"(최대 {_humanize_bytes(csv_limits['max_file_bytes'])})"
@@ -1128,7 +1128,7 @@ def htmx_csv_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1161,7 +1161,7 @@ def htmx_csv_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": ["저장할 수 있는 문제 세트가 없습니다."],
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1228,7 +1228,7 @@ def htmx_text_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1261,7 +1261,7 @@ def htmx_text_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1295,7 +1295,7 @@ def htmx_text_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1332,7 +1332,7 @@ def htmx_text_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1365,7 +1365,7 @@ def htmx_text_upload(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": errors,
                 "error_report_url": reverse(
                     "seed_quiz:download_csv_error_report",
@@ -1439,14 +1439,14 @@ def htmx_csv_confirm(request, classroom_id):
                 "classroom": classroom,
                 "created_count": 0,
                 "updated_count": 0,
-                "review_count": 0,
+                "shared_count": 0,
                 "errors": ["CSV 미리보기 세션이 만료되었습니다. 다시 업로드해 주세요."],
             },
             status=400,
         )
 
     share_opt_in = True
-    created_count, updated_count, review_count = save_parsed_sets_to_bank(
+    created_count, updated_count, shared_count = save_parsed_sets_to_bank(
         parsed_sets=parsed_sets,
         created_by=request.user,
         share_opt_in=share_opt_in,
@@ -1461,7 +1461,7 @@ def htmx_csv_confirm(request, classroom_id):
             "set_count": len(parsed_sets),
             "created_count": created_count,
             "updated_count": updated_count,
-            "review_count": review_count,
+            "shared_count": shared_count,
             "share_opt_in": bool(share_opt_in),
         },
     )
@@ -1477,7 +1477,7 @@ def htmx_csv_confirm(request, classroom_id):
             "classroom": classroom,
             "created_count": created_count,
             "updated_count": updated_count,
-            "review_count": review_count,
+            "shared_count": shared_count,
             "errors": [],
         },
         status=200,
@@ -1834,7 +1834,6 @@ def htmx_topic_summary(request, classroom_id):
             total_count=Count("id"),
             official_count=Count("id", filter=Q(is_official=True)),
             public_count=Count("id", filter=Q(is_public=True)),
-            review_count=Count("id", filter=Q(quality_status="review")),
             last_created=Max("created_at"),
         )
     }
@@ -1855,7 +1854,6 @@ def htmx_topic_summary(request, classroom_id):
                 "total_count": row.get("total_count", 0),
                 "official_count": row.get("official_count", 0),
                 "public_count": row.get("public_count", 0),
-                "review_count": row.get("review_count", 0),
                 "last_used": last_used_by_topic.get(topic_key),
             }
         )
@@ -2071,3 +2069,4 @@ def _render_result(request, attempt: SQAttempt) -> HttpResponse:
             "items_with_answers": items_with_answers,
         },
     )
+
