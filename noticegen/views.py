@@ -19,6 +19,9 @@ from .models import (
     TOPIC_CHOICES,
 )
 from .prompts import (
+    LENGTH_CHOICES,
+    LENGTH_LABELS,
+    LENGTH_MEDIUM,
     PROMPT_VERSION,
     TARGET_LABELS,
     TOPIC_LABELS,
@@ -71,6 +74,7 @@ def _build_page_context():
         "target_options": TARGET_CHOICES,
         "topic_options": TOPIC_CHOICES,
         "context_options": CONTEXT_CHOICES,
+        "length_options": LENGTH_CHOICES,
     }
 
 
@@ -139,12 +143,14 @@ def _normalize_context_values(raw_values):
     return cleaned
 
 
-def _build_cache_key_data(target, topic, tone, keywords, context_values):
+def _build_cache_key_data(target, topic, tone, keywords, context_values, length_style=LENGTH_MEDIUM):
+    length_norm = length_style if length_style in LENGTH_LABELS else LENGTH_MEDIUM
     keywords_norm = _normalize_text(keywords)
     context_norm = "|".join(context_values)
-    signature = f"{PROMPT_VERSION}|{target}|{topic}|{tone}|{keywords_norm}|{context_norm}"
+    signature = f"{PROMPT_VERSION}|{target}|{topic}|{tone}|{length_norm}|{keywords_norm}|{context_norm}"
     key_hash = hashlib.sha256(signature.encode("utf-8")).hexdigest()
     return {
+        "length_style": length_norm,
         "keywords_norm": keywords_norm,
         "context_norm": context_norm,
         "signature": signature,
@@ -168,12 +174,14 @@ def _find_exact_cache(key_hash):
     return NoticeGenerationCache.objects.filter(key_hash=key_hash).first()
 
 
-def _collect_similar_caches(target, topic, tone, signature):
+def _collect_similar_caches(target, topic, tone, length_style, signature):
+    prefix = f"{PROMPT_VERSION}|{target}|{topic}|{tone}|{length_style}|"
     candidates = NoticeGenerationCache.objects.filter(
         target=target,
         topic=topic,
         tone=tone,
         prompt_version=PROMPT_VERSION,
+        signature__startswith=prefix,
     ).order_by("-last_used_at")[:SIMILAR_CANDIDATE_LIMIT]
 
     scored = []
@@ -227,12 +235,8 @@ def _sanitize_output_text(raw_text):
         return ""
 
     compact = " ".join(lines)
-    sentence_candidates = [s.strip() for s in re.split(r"(?<=[.!?])\s+", compact) if s.strip()]
-    if not sentence_candidates:
-        sentence_candidates = lines
-
-    selected = sentence_candidates[:3]
-    return "\n".join(selected).strip()
+    compact = re.sub(r"\s+", " ", compact).strip()
+    return compact
 
 
 def _render_result(request, payload, *, status=200):
@@ -258,7 +262,10 @@ def generate_notice(request):
     target = (request.POST.get("target") or "").strip()
     topic = (request.POST.get("topic") or "").strip()
     keywords = (request.POST.get("keywords") or "").strip()
+    length_style = (request.POST.get("length_style") or "").strip()
     context_values = _normalize_context_values(request.POST.getlist("contexts"))
+    if length_style not in LENGTH_LABELS:
+        length_style = LENGTH_MEDIUM
 
     if target not in TARGET_LABELS or topic not in TOPIC_LABELS or len(keywords) < 2:
         tone = get_tone_for_target(target)
@@ -280,7 +287,7 @@ def generate_notice(request):
         )
 
     tone = get_tone_for_target(target)
-    key_data = _build_cache_key_data(target, topic, tone, keywords, context_values)
+    key_data = _build_cache_key_data(target, topic, tone, keywords, context_values, length_style)
     key_hash = key_data["key_hash"]
 
     exact_cache = _find_exact_cache(key_hash)
@@ -326,7 +333,7 @@ def generate_notice(request):
             status=429,
         )
 
-    similar_scored = _collect_similar_caches(target, topic, tone, key_data["signature"])
+    similar_scored = _collect_similar_caches(target, topic, tone, key_data["length_style"], key_data["signature"])
     best_reuse = similar_scored[0] if similar_scored else None
     similar_items = [
         {
@@ -370,8 +377,8 @@ def generate_notice(request):
     )
 
     context_text = _serialize_context_values(context_values)
-    system_prompt = build_system_prompt(target)
-    user_prompt = build_user_prompt(target, topic, keywords, context_text)
+    system_prompt = build_system_prompt(target, key_data["length_style"])
+    user_prompt = build_user_prompt(target, topic, keywords, context_text, key_data["length_style"])
 
     try:
         raw_output = _call_deepseek(system_prompt, user_prompt)
@@ -434,4 +441,3 @@ def generate_notice(request):
             "similar_items": similar_items,
         },
     )
-

@@ -39,10 +39,9 @@
             <textarea x-ref="output" class="hidden">{{ result_text }}</textarea>
         </div>
 
-        <textarea
-            readonly
-            class="w-full h-40 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed focus:outline-none"
-        >{{ result_text }}</textarea>
+        <div class="w-full min-h-40 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed">
+            {{ result_text }}
+        </div>
     </div>
     {% else %}
     <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">

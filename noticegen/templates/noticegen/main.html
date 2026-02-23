@@ -63,6 +63,19 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">분량 선택</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                {% for value, label in length_options %}
+                                <label class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
+                                    <input type="radio" name="length_style" value="{{ value }}" {% if value == 'medium' %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <span class="font-medium text-gray-700">{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <p class="mt-2 text-xs text-gray-500">짧게/보통/길게 중 원하는 분량을 선택해 주세요.</p>
+                        </div>
+
+                        <div>
                             <label for="noticegen-keywords" class="block text-sm font-bold text-gray-600 mb-2">전달 사항</label>
                             <textarea
                                 id="noticegen-keywords"

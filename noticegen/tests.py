@@ -8,6 +8,8 @@ from core.models import UserProfile
 
 from .models import NoticeGenerationAttempt, NoticeGenerationCache
 from .prompts import (
+    LENGTH_LONG,
+    LENGTH_SHORT,
     PROMPT_VERSION,
     build_system_prompt,
     build_user_prompt,
@@ -142,23 +144,25 @@ class NoticeGenViewTests(TestCase):
         self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_SUCCESS)
         self.assertEqual(NoticeGenerationCache.objects.count(), 1)
 
-    def test_parent_prompt_has_hard_length_and_style_rules(self):
-        system_prompt = build_system_prompt("parent")
-        user_prompt = build_user_prompt("parent", "notice", "실내화를 챙겨 주세요", "")
+    def test_parent_prompt_has_length_and_natural_flow_rules(self):
+        system_prompt = build_system_prompt("parent", LENGTH_LONG)
+        user_prompt = build_user_prompt("parent", "notice", "실내화를 챙겨 주세요", "", LENGTH_LONG)
 
-        self.assertIn("정확히 3문장", system_prompt)
-        self.assertIn("문장 역할 순서", system_prompt)
-        self.assertIn("같은 종결어미를 3문장 연속으로 반복하지 않습니다.", system_prompt)
+        self.assertIn("분량 규칙", system_prompt)
+        self.assertIn("선택 분량: 길게", system_prompt)
+        self.assertIn("문장은 한 단락처럼 읽히도록 자연스럽게 연결", system_prompt)
+        self.assertNotIn("정확히 3문장", system_prompt)
         self.assertIn("문어체", system_prompt)
         self.assertIn("거예요", system_prompt)
         self.assertIn("않을 거야", system_prompt)
-        self.assertIn("공백 포함 90자 이상 140자 이하", system_prompt)
-        self.assertIn("공백 포함 90자 이상 140자 이하", user_prompt)
+        self.assertIn("분량: 길게", user_prompt)
+        self.assertIn("공백 포함 180~260자", user_prompt)
         self.assertIn("문어체 공지문", user_prompt)
 
-    def test_student_prompt_does_not_include_parent_length_rule(self):
-        user_prompt = build_user_prompt("student_low", "notice", "줄넘기 준비", "")
-        self.assertNotIn("공백 포함 90자 이상 140자 이하", user_prompt)
+    def test_student_prompt_does_not_include_parent_only_guidance(self):
+        user_prompt = build_user_prompt("student_low", "notice", "줄넘기 준비", "", LENGTH_SHORT)
+        self.assertIn("분량: 짧게", user_prompt)
+        self.assertNotIn("협조 요청 표현은 명령형보다 완곡한 안내형", user_prompt)
 
     def test_student_prompts_enforce_written_style(self):
         low_system_prompt = build_system_prompt("student_low")
@@ -174,3 +178,23 @@ class NoticeGenViewTests(TestCase):
         for prompt_text in (low_user_prompt, high_user_prompt):
             self.assertIn("구어체", prompt_text)
             self.assertIn("문어체 공지문", prompt_text)
+
+    def test_cache_key_changes_when_length_style_changes(self):
+        base = _build_cache_key_data(
+            "parent",
+            "notice",
+            get_tone_for_target("parent"),
+            "준비물을 챙겨 주세요",
+            [],
+            "medium",
+        )
+        short = _build_cache_key_data(
+            "parent",
+            "notice",
+            get_tone_for_target("parent"),
+            "준비물을 챙겨 주세요",
+            [],
+            LENGTH_SHORT,
+        )
+
+        self.assertNotEqual(base["key_hash"], short["key_hash"])
