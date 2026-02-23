@@ -4,7 +4,7 @@
             <h2 class="font-bold text-gray-700">퀴즈 은행 목록</h2>
             <p class="text-xs text-gray-500 mt-1">
                 {% if grade %}{{ grade }}학년{% else %}전체학년{% endif %} · {{ preset_label }} ·
-                {% if scope == 'official' %}공식{% elif scope == 'public' %}공유{% else %}전체{% endif %}
+                {% if scope == 'official' %}공식{% elif scope == 'public' %}공유{% elif scope == 'mine' %}내 세트{% else %}전체{% endif %}
             </p>
         </div>
         {% if allow_inline_ai %}
@@ -58,7 +58,7 @@
     </div>
     {% else %}
     <div class="p-5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500">
-        조건에 맞는 퀴즈 세트가 없습니다. 범위를 `전체`로 바꾸거나 CSV 업로드로 문제 세트를 추가해 주세요.
+        조건에 맞는 퀴즈 세트가 없습니다. 범위를 `전체`로 바꾸거나 문제 붙여넣기/파일 올리기로 새 세트를 추가해 주세요.
     </div>
     {% endif %}
 </div>

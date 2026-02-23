@@ -104,13 +104,17 @@ class GenerationTest(TestCase):
         )
 
     @patch("seed_quiz.services.generation._call_ai")
-    def test_regeneration_replaces_items(self, mock_call_ai):
+    def test_regeneration_creates_new_draft_set(self, mock_call_ai):
         mock_call_ai.return_value = VALID_AI_RESPONSE
         # 첫 번째 생성
         qs1 = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
         self.assertEqual(qs1.items.count(), 3)
 
-        # 두 번째 생성 (재생성)
+        # 두 번째 생성
         qs2 = generate_and_save_draft(self.classroom, "orthography", 3, self.teacher)
-        self.assertEqual(qs1.id, qs2.id)  # 같은 draft 세트
-        self.assertEqual(qs2.items.count(), 3)  # 여전히 3개 (재생성)
+        self.assertNotEqual(qs1.id, qs2.id)  # 새 draft 세트로 보존
+        self.assertEqual(qs2.items.count(), 3)
+        self.assertEqual(
+            SQQuizSet.objects.filter(classroom=self.classroom, status="draft").count(),
+            2,
+        )

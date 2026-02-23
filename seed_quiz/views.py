@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 
 from happy_seed.models import HSClassroom, HSStudent
 from seed_quiz.models import SQAttempt, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
@@ -36,6 +37,7 @@ from seed_quiz.services.gate import (
     set_session,
 )
 from seed_quiz.services.generation import generate_and_save_draft
+from seed_quiz.services.paste_parser import parse_pasted_text_to_csv_bytes
 from seed_quiz.services.grading import submit_and_reward
 from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
 from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
@@ -213,17 +215,14 @@ def _get_topic_template_rows() -> list[dict]:
 
 
 def _build_template_guide_rows() -> list[list[str]]:
-    topic_rows = _get_topic_template_rows()
-    topic_labels = ", ".join(row["label"] for row in topic_rows)
-    topic_pairs = ", ".join(f"{row['label']}({row['key']})" for row in topic_rows)
     return [
-        [f"#가이드: 한 파일은 1세트로 저장됩니다. 문항 수는 1~200개까지 자유롭게 작성할 수 있습니다."] + [""] * 9,
-        [f"#가이드: 한 파일의 모든 행은 같은 주제와 같은 학년을 사용하세요."] + [""] * 9,
-        [f"#가이드: 주제(한글) 입력 예시: {topic_labels}"] + [""] * 9,
-        [f"#가이드: 주제(코드) 입력 예시: {topic_pairs}"] + [""] * 9,
-        [f"#가이드: 정답번호는 1~4입니다. (보기1=1, 보기2=2, 보기3=3, 보기4=4)"] + [""] * 9,
-        [f"#가이드: 난이도는 쉬움/보통/어려움. 비우면 보통으로 처리됩니다."] + [""] * 9,
-        [f"#가이드: 아래 샘플 5문항은 그대로 업로드해도 통과됩니다."] + [""] * 9,
+        ["#가이드: 한 파일은 1세트로 저장되며 문항은 1~200개까지 자유롭게 작성할 수 있습니다."] + [""] * 9,
+        ["#가이드: 한 파일 안에서는 주제와 학년을 섞지 마세요."] + [""] * 9,
+        ["#가이드: 주제는 한글 이름 또는 영문 코드로 입력합니다."] + [""] * 9,
+        ["#가이드: 학년은 0~6(0=학년무관), 정답번호는 1~4입니다."] + [""] * 9,
+        ["#가이드: 난이도는 쉬움/보통/어려움이며 비우면 보통으로 처리됩니다."] + [""] * 9,
+        ["#가이드: 상세 주제 예시는 XLSX의 '필독_작성가이드' 시트 또는 CSV 가이드를 참고하세요."] + [""] * 9,
+        ["#가이드: 아래 샘플 문항은 그대로 업로드해도 통과됩니다."] + [""] * 9,
     ]
 
 
@@ -259,6 +258,15 @@ def _get_csv_upload_limits() -> dict:
         "max_file_bytes": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_FILE_BYTES", 2 * 1024 * 1024),
         "max_rows": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_ROWS", 1200),
         "max_sets": _get_positive_int_setting("SEED_QUIZ_CSV_MAX_SETS", 400),
+    }
+
+
+def _get_text_upload_limits() -> dict:
+    csv_limits = _get_csv_upload_limits()
+    return {
+        "max_chars": _get_positive_int_setting("SEED_QUIZ_TEXT_MAX_CHARS", 500_000),
+        "max_rows": csv_limits["max_rows"],
+        "max_sets": csv_limits["max_sets"],
     }
 
 
@@ -333,7 +341,9 @@ def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, s
         (Q(available_from__isnull=True) | Q(available_from__lte=today))
         & (Q(available_to__isnull=True) | Q(available_to__gte=today))
     )
-    if scope == "official":
+    if scope == "mine":
+        banks_qs = banks_qs.filter(created_by=user)
+    elif scope == "official":
         banks_qs = banks_qs.filter(is_official=True).filter(approved_filter).filter(available_filter)
     elif scope == "public":
         banks_qs = banks_qs.filter(is_public=True).filter(approved_filter).filter(available_filter)
@@ -344,6 +354,58 @@ def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, s
             | Q(created_by=user)
         ).distinct()
     return banks_qs
+
+
+def _parse_optional_grade(raw_grade: str | None) -> int | None:
+    raw = (raw_grade or "").strip().lower()
+    if raw in {"", "all", "*"}:
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if value not in range(0, 7):
+        return None
+    return value
+
+
+def _build_my_bank_queryset(
+    *,
+    user,
+    preset_type: str | None,
+    grade: int | None,
+    difficulty: str,
+    period_days: int | None,
+    query: str,
+):
+    qs = SQQuizBank.objects.filter(
+        created_by=user,
+        is_active=True,
+    ).prefetch_related("items")
+
+    if preset_type:
+        qs = qs.filter(preset_type=preset_type)
+    if grade is not None:
+        qs = qs.filter(grade=grade)
+
+    if difficulty in {"easy", "medium", "hard"}:
+        qs = qs.filter(items__difficulty=difficulty)
+
+    if period_days and period_days > 0:
+        cutoff = timezone.now() - timedelta(days=period_days)
+        qs = qs.filter(created_at__gte=cutoff)
+
+    if query:
+        q = query.strip()
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(items__question_text__icontains=q))
+
+    return qs.annotate(
+        item_count=Count("items", distinct=True),
+        easy_count=Count("items", filter=Q(items__difficulty="easy"), distinct=True),
+        medium_count=Count("items", filter=Q(items__difficulty="medium"), distinct=True),
+        hard_count=Count("items", filter=Q(items__difficulty="hard"), distinct=True),
+    ).distinct()
 
 
 def _clear_csv_error_report(request):
@@ -399,6 +461,7 @@ def landing(request):
 def teacher_dashboard(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     csv_limits = _get_csv_upload_limits()
+    text_limits = _get_text_upload_limits()
     initial_preset, initial_grade = _parse_bank_filters(
         request.GET.get("preset_type", DEFAULT_TOPIC),
         request.GET.get("grade", "all"),
@@ -425,6 +488,7 @@ def teacher_dashboard(request, classroom_id):
                 "max_rows": csv_limits["max_rows"],
                 "max_sets": csv_limits["max_sets"],
             },
+            "text_limits": text_limits,
             "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
             "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
             "csv_guide_columns": CSV_GUIDE_COLUMNS,
@@ -491,19 +555,43 @@ def download_xlsx_template(request, classroom_id):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         ws.column_dimensions[get_column_letter(col_idx)].width = CSV_XLSX_COLUMN_WIDTHS[col_idx - 1]
 
-    row_no = 2
-    guide_fill = PatternFill(fill_type="solid", start_color="FFF4D6", end_color="FFF4D6")
-    guide_font = Font(color="7C4A03")
-    for guide_row in _build_template_guide_rows():
-        ws.append(guide_row)
-        for col_idx in range(1, len(CSV_KOREAN_HEADERS) + 1):
-            cell = ws.cell(row=row_no, column=col_idx)
-            cell.alignment = Alignment(vertical="top", wrap_text=True)
-            cell.fill = guide_fill
-            if col_idx == 1:
-                cell.font = guide_font
-        row_no += 1
+    # 메인 시트는 입력 중심으로 단순하게 유지하고, 상세 설명은 별도 가이드 시트로 분리한다.
+    guide_sheet_name = "필독_작성가이드"
 
+    ws.merge_cells(
+        start_row=2,
+        start_column=1,
+        end_row=2,
+        end_column=len(CSV_KOREAN_HEADERS),
+    )
+    guide_cell = ws.cell(
+        row=2,
+        column=1,
+        value="#필독: 하단 시트 탭 '필독_작성가이드'를 먼저 확인하세요.",
+    )
+    guide_cell.font = Font(color="1E40AF", bold=True, underline="single")
+    guide_cell.fill = PatternFill(fill_type="solid", start_color="FFF4D6", end_color="FFF4D6")
+    guide_cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
+    guide_cell.hyperlink = f"#'{guide_sheet_name}'!A1"
+    ws.row_dimensions[2].height = 22
+
+    ws.merge_cells(
+        start_row=3,
+        start_column=1,
+        end_row=3,
+        end_column=len(CSV_KOREAN_HEADERS),
+    )
+    input_hint_cell = ws.cell(
+        row=3,
+        column=1,
+        value="#가이드: 샘플은 4행부터 시작합니다. 실제 입력도 4행부터 이어서 작성하세요.",
+    )
+    input_hint_cell.font = Font(color="7C4A03", bold=True)
+    input_hint_cell.fill = PatternFill(fill_type="solid", start_color="FFF4D6", end_color="FFF4D6")
+    input_hint_cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
+    ws.row_dimensions[3].height = 22
+
+    row_no = 4
     sample_fill = PatternFill(fill_type="solid", start_color="F9FBFF", end_color="F9FBFF")
     for sample_row in _build_default_sample_rows():
         ws.append(sample_row)
@@ -513,30 +601,65 @@ def download_xlsx_template(request, classroom_id):
             cell.fill = sample_fill
         row_no += 1
 
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = "A4"
 
-    topic_ws = wb.create_sheet("주제 가이드")
+    # 입력 오류를 줄이기 위한 드롭다운(파서 규칙과 동일)
+    dv_grade = DataValidation(type="list", formula1='"0,1,2,3,4,5,6,학년무관"', allow_blank=False)
+    dv_correct = DataValidation(type="list", formula1='"1,2,3,4"', allow_blank=False)
+    dv_difficulty = DataValidation(type="list", formula1='"쉬움,보통,어려움"', allow_blank=True)
+    ws.add_data_validation(dv_grade)
+    ws.add_data_validation(dv_correct)
+    ws.add_data_validation(dv_difficulty)
+    dv_grade.add("B4:B1003")
+    dv_correct.add("H4:H1003")
+    dv_difficulty.add("J4:J1003")
+
+    topic_ws = wb.create_sheet(guide_sheet_name)
+    topic_ws.sheet_properties.tabColor = "F59E0B"
     topic_ws.merge_cells("A1:E1")
     title_cell = topic_ws["A1"]
-    title_cell.value = "씨앗 퀴즈 주제 입력 가이드"
+    title_cell.value = "씨앗 퀴즈 작성 가이드"
     title_cell.font = Font(bold=True, size=14, color="1E3A8A")
     title_cell.alignment = Alignment(horizontal="left", vertical="center")
-    topic_ws["A2"] = "주제 열에는 한글 이름(예: 맞춤법) 또는 영문 코드(예: orthography)를 입력할 수 있습니다."
-    topic_ws["A3"] = "중요: 한 파일의 모든 행은 같은 주제/같은 학년을 사용해야 하며, 문항 수는 1~200개까지 자유롭게 작성할 수 있습니다."
-    topic_ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
-    topic_ws["A3"].alignment = Alignment(wrap_text=True, vertical="top")
-    topic_ws.row_dimensions[2].height = 34
-    topic_ws.row_dimensions[3].height = 34
+    topic_ws["A2"] = "이 템플릿은 CSV 파서 규칙과 100% 동일합니다."
+    topic_ws["A3"] = "메인 시트(씨앗퀴즈 템플릿)의 1행 헤더는 수정하지 말고, 3행부터 입력하세요."
+    topic_ws["A4"] = "한 파일(한 번 업로드)은 같은 주제/같은 학년으로만 작성합니다."
+    topic_ws["A5"] = "문항 수는 1~200개, 정답번호는 1~4, 난이도는 쉬움/보통/어려움(빈칸=보통)."
+    for row_idx in range(2, 6):
+        topic_ws[f"A{row_idx}"].alignment = Alignment(wrap_text=True, vertical="top")
+
+    rule_header_row = 7
+    rule_headers = ["항목", "허용 입력", "예시", "비고", ""]
+    for col_idx, header in enumerate(rule_headers, start=1):
+        cell = topic_ws.cell(row=rule_header_row, column=col_idx, value=header)
+        cell.font = Font(bold=True, color="1F2937")
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    rules = [
+        ["주제", "한글 또는 영문 코드", "맞춤법 / orthography", "한 파일 안에서는 같은 값 유지", ""],
+        ["학년", "0~6", "0(학년무관), 3", "한 파일 안에서는 같은 값 유지", ""],
+        ["정답번호", "1~4", "보기2가 정답이면 2", "필수 입력", ""],
+        ["난이도", "쉬움/보통/어려움", "비우면 보통 처리", "선택 입력", ""],
+    ]
+    for offset, rule in enumerate(rules):
+        row_idx = rule_header_row + 1 + offset
+        for col_idx, value in enumerate(rule, start=1):
+            topic_ws.cell(row=row_idx, column=col_idx, value=value)
+            topic_ws.cell(row=row_idx, column=col_idx).alignment = Alignment(
+                vertical="top",
+                wrap_text=True,
+            )
 
     topic_headers = ["주제(한글)", "주제 코드(영문)", "어떤 문제를 넣나요?", "문제 소재 예시", "작성 팁"]
-    topic_header_row = 5
+    topic_header_row = rule_header_row + len(rules) + 3
     for col_idx, header in enumerate(topic_headers, start=1):
         cell = topic_ws.cell(row=topic_header_row, column=col_idx, value=header)
         cell.font = Font(bold=True, color="1F2937")
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    topic_ws.column_dimensions["A"].width = 18
+    topic_ws.column_dimensions["A"].width = 24
     topic_ws.column_dimensions["B"].width = 24
     topic_ws.column_dimensions["C"].width = 40
     topic_ws.column_dimensions["D"].width = 42
@@ -555,7 +678,7 @@ def download_xlsx_template(request, classroom_id):
                 vertical="top",
                 wrap_text=True,
             )
-    topic_ws.freeze_panes = "A6"
+    topic_ws.freeze_panes = f"A{topic_header_row + 1}"
 
     output = BytesIO()
     wb.save(output)
@@ -655,7 +778,7 @@ def htmx_bank_browse(request, classroom_id):
         request.GET.get("grade", "3"),
     )
     scope = (request.GET.get("scope", "official") or "official").strip().lower()
-    if scope not in {"official", "public", "all"}:
+    if scope not in {"official", "public", "all", "mine"}:
         scope = "official"
 
     banks_qs = _build_bank_queryset(
@@ -684,6 +807,126 @@ def htmx_bank_browse(request, classroom_id):
 
 
 @login_required
+def htmx_my_bank_library(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    raw_preset = (request.GET.get("preset_type") or "all").strip().lower()
+    preset_type = None if raw_preset in {"", "all"} else (normalize_topic(raw_preset) or raw_preset)
+    if preset_type and preset_type not in TOPIC_LABELS:
+        preset_type = None
+
+    grade = _parse_optional_grade(request.GET.get("grade"))
+    difficulty = (request.GET.get("difficulty") or "all").strip().lower()
+    if difficulty not in {"all", "easy", "medium", "hard"}:
+        difficulty = "all"
+
+    period_raw = (request.GET.get("period_days") or "all").strip().lower()
+    period_days = None
+    if period_raw in {"7", "30", "90"}:
+        period_days = int(period_raw)
+
+    query = (request.GET.get("q") or "").strip()
+    sort = (request.GET.get("sort") or "latest").strip().lower()
+    if sort not in {"latest", "oldest", "use_count"}:
+        sort = "latest"
+
+    qs = _build_my_bank_queryset(
+        user=request.user,
+        preset_type=preset_type,
+        grade=grade,
+        difficulty=difficulty,
+        period_days=period_days,
+        query=query,
+    )
+    if sort == "oldest":
+        qs = qs.order_by("created_at")
+    elif sort == "use_count":
+        qs = qs.order_by("-use_count", "-created_at")
+    else:
+        qs = qs.order_by("-created_at")
+
+    banks = list(qs[:50])
+
+    return render(
+        request,
+        "seed_quiz/partials/my_bank_library.html",
+        {
+            "classroom": classroom,
+            "banks": banks,
+            "filter_state": {
+                "preset_type": "all" if not preset_type else preset_type,
+                "grade": "all" if grade is None else str(grade),
+                "difficulty": difficulty,
+                "period_days": "all" if period_days is None else str(period_days),
+                "q": query,
+                "sort": sort,
+            },
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_my_bank_random_select(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    raw_preset = (request.POST.get("preset_type") or "all").strip().lower()
+    preset_type = None if raw_preset in {"", "all"} else (normalize_topic(raw_preset) or raw_preset)
+    if preset_type and preset_type not in TOPIC_LABELS:
+        preset_type = None
+
+    grade = _parse_optional_grade(request.POST.get("grade"))
+    difficulty = (request.POST.get("difficulty") or "all").strip().lower()
+    if difficulty not in {"all", "easy", "medium", "hard"}:
+        difficulty = "all"
+
+    period_raw = (request.POST.get("period_days") or "all").strip().lower()
+    period_days = int(period_raw) if period_raw in {"7", "30", "90"} else None
+
+    query = (request.POST.get("q") or "").strip()
+
+    qs = _build_my_bank_queryset(
+        user=request.user,
+        preset_type=preset_type,
+        grade=grade,
+        difficulty=difficulty,
+        period_days=period_days,
+        query=query,
+    ).order_by("-created_at")
+
+    candidates = list(qs[:100])
+    if not candidates:
+        return HttpResponse(
+            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
+            "조건에 맞는 내 문제 세트가 없습니다. 필터를 줄이거나 새 문제를 저장해 주세요.</div>",
+            status=404,
+        )
+
+    selected_bank = random.choice(candidates)
+    try:
+        quiz_set = copy_bank_to_draft(
+            bank_id=selected_bank.id,
+            classroom=classroom,
+            teacher=request.user,
+        )
+    except ValueError as e:
+        return HttpResponse(
+            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{e}</div>',
+            status=400,
+        )
+
+    items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": items,
+            "rag_notice": f"내 보관함 랜덤 선택: {selected_bank.get_preset_type_display()}",
+        },
+    )
+
+
+@login_required
 @require_POST
 def htmx_bank_random_select(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
@@ -692,7 +935,7 @@ def htmx_bank_random_select(request, classroom_id):
         request.POST.get("grade", "all"),
     )
     scope = (request.POST.get("scope", "all") or "all").strip().lower()
-    if scope not in {"official", "public", "all"}:
+    if scope not in {"official", "public", "all", "mine"}:
         scope = "all"
 
     banks_qs = _build_bank_queryset(
@@ -955,6 +1198,219 @@ def htmx_csv_upload(request, classroom_id):
             "preview_token": token,
             "parsed_sets": parsed_sets,
             "set_count": len(parsed_sets),
+            "preview_title": "CSV 미리보기 완료",
+        },
+    )
+
+
+@login_required
+@require_POST
+def htmx_text_upload(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    _clear_csv_error_report(request)
+    text_limits = _get_text_upload_limits()
+    raw_text = (request.POST.get("pasted_text") or "").strip()
+    if not raw_text:
+        errors = ["붙여넣기 내용이 비어 있습니다."]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="붙여넣기 미리보기 실패: 빈 입력",
+            payload={"error_count": 1, "errors": _trim_errors(errors)},
+        )
+        token = _store_csv_error_report(request, errors)
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    if len(raw_text) > text_limits["max_chars"]:
+        errors = [f"붙여넣기 글자 수가 제한을 초과했습니다. (최대 {text_limits['max_chars']:,}자)"]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="붙여넣기 미리보기 실패: 입력 길이 초과",
+            payload={
+                "char_count": len(raw_text),
+                "max_chars": text_limits["max_chars"],
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
+        token = _store_csv_error_report(request, errors)
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    converted_csv_bytes, source_format, convert_errors = parse_pasted_text_to_csv_bytes(raw_text)
+    if convert_errors or not converted_csv_bytes:
+        errors = convert_errors or ["붙여넣기 텍스트를 처리할 수 없습니다."]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="붙여넣기 미리보기 실패: 파싱/변환 오류",
+            payload={
+                "format": source_format,
+                "char_count": len(raw_text),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
+        token = _store_csv_error_report(request, errors)
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    parsed_sets, errors = parse_csv_upload(
+        converted_csv_bytes,
+        max_rows=text_limits["max_rows"],
+        max_sets=text_limits["max_sets"],
+    )
+    if errors:
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="붙여넣기 미리보기 실패: CSV 규칙 검증 오류",
+            payload={
+                "format": source_format,
+                "char_count": len(raw_text),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
+        token = _store_csv_error_report(request, errors)
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    if not parsed_sets:
+        errors = ["저장할 수 있는 문제 세트가 없습니다."]
+        _log_csv_event(
+            classroom=classroom,
+            teacher=request.user,
+            code="TEXT_UPLOAD_PREVIEW_FAILED",
+            level="warn",
+            message="붙여넣기 미리보기 실패: 유효 세트 없음",
+            payload={
+                "format": source_format,
+                "char_count": len(raw_text),
+                "error_count": len(errors),
+                "errors": _trim_errors(errors),
+            },
+        )
+        token = _store_csv_error_report(request, errors)
+        return render(
+            request,
+            "seed_quiz/partials/csv_upload_result.html",
+            {
+                "classroom": classroom,
+                "created_count": 0,
+                "updated_count": 0,
+                "review_count": 0,
+                "errors": errors,
+                "error_report_url": reverse(
+                    "seed_quiz:download_csv_error_report",
+                    kwargs={"classroom_id": classroom.id, "token": token},
+                ),
+            },
+            status=400,
+        )
+
+    _log_csv_event(
+        classroom=classroom,
+        teacher=request.user,
+        code="TEXT_UPLOAD_PREVIEW_READY",
+        level="info",
+        message=f"붙여넣기 미리보기 성공: {len(parsed_sets)}세트",
+        payload={
+            "format": source_format,
+            "char_count": len(raw_text),
+            "set_count": len(parsed_sets),
+            "row_count": sum(len(s.get("items", [])) for s in parsed_sets),
+        },
+    )
+    token = uuid4().hex
+    request.session[CSV_PREVIEW_TOKEN_KEY] = token
+    request.session[CSV_PREVIEW_PAYLOAD_KEY] = parsed_sets
+    request.session.modified = True
+    _clear_csv_error_report(request)
+
+    format_labels = {
+        "tsv": "TSV",
+        "csv_text": "CSV 텍스트",
+        "markdown_table": "마크다운 표",
+        "json": "JSON",
+        "stacked_lines": "세로 나열",
+    }
+    return render(
+        request,
+        "seed_quiz/partials/csv_upload_preview.html",
+        {
+            "classroom": classroom,
+            "preview_token": token,
+            "parsed_sets": parsed_sets,
+            "set_count": len(parsed_sets),
+            "preview_title": "붙여넣기 미리보기 완료",
+            "preview_source": format_labels.get(source_format, source_format),
         },
     )
 

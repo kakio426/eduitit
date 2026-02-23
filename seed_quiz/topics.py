@@ -27,10 +27,13 @@ DEFAULT_TOPIC = "orthography"
 LEGACY_TOPIC_ALIASES = {
     "general": "vocabulary",
     "korean": "main_sentence",
+    "korean_orthography": "orthography",
     "english": "eng_vocab",
     "math": "arithmetic",
     "science": "safety_common",
     "social": "fact_opinion",
+    "한글 맞춤법": "orthography",
+    "국어 맞춤법": "orthography",
 }
 
 KOREAN_TOPIC_ALIASES = {label: key for key, label in TOPIC_CHOICES}

@@ -109,7 +109,7 @@ def _source_hash(source_text: str) -> str:
 def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
     """
     은행 세트를 교실용 draft SQQuizSet으로 복사한다.
-    같은 날짜/과목 draft가 있으면 문항을 교체해 재사용한다.
+    stage1 정책: 기존 draft를 재사용하지 않고 항상 새 세트를 생성해 이력을 보존한다.
     """
     bank = SQQuizBank.objects.prefetch_related("items").get(id=bank_id, is_active=True)
     bank_items = list(bank.items.order_by("order_no"))
@@ -118,27 +118,17 @@ def copy_bank_to_draft(bank_id, classroom, teacher) -> SQQuizSet:
     target_date = timezone.localdate()
 
     with transaction.atomic():
-        quiz_set, created = SQQuizSet.objects.get_or_create(
+        quiz_set = SQQuizSet.objects.create(
             classroom=classroom,
             target_date=target_date,
             preset_type=bank.preset_type,
+            grade=bank.grade,
+            title=bank.title,
             status="draft",
-            defaults={
-                "grade": bank.grade,
-                "title": bank.title,
-                "source": "bank",
-                "bank_source": bank,
-                "created_by": teacher,
-            },
+            source="bank",
+            bank_source=bank,
+            created_by=teacher,
         )
-        if not created:
-            quiz_set.items.all().delete()
-            quiz_set.title = bank.title
-            quiz_set.grade = bank.grade
-            quiz_set.source = "bank"
-            quiz_set.bank_source = bank
-            quiz_set.save(update_fields=["title", "grade", "source", "bank_source"])
-
         for bank_item in bank_items:
             SQQuizItem.objects.create(
                 quiz_set=quiz_set,
@@ -419,43 +409,21 @@ def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: 
         items_data = parsed["items"]
 
         with transaction.atomic():
-            bank, created = SQQuizBank.objects.get_or_create(
+            # stage1 정책: 교사가 만든 세트는 항상 새 자산으로 저장한다.
+            bank = SQQuizBank.objects.create(
                 title=set_title,
                 preset_type=preset_type,
                 grade=grade,
                 source="csv",
                 created_by=created_by,
-                defaults={
-                    "is_active": True,
-                    "is_public": is_public,
-                    "is_official": False,
-                    "share_opt_in": share_opt_in,
-                    "quality_status": quality_status,
-                },
+                is_active=True,
+                is_public=is_public,
+                is_official=False,
+                share_opt_in=share_opt_in,
+                quality_status=quality_status,
             )
-            if created:
-                created_count += 1
-            else:
-                bank.items.all().delete()
-                bank.is_active = True
-                bank.is_official = False
-                bank.is_public = is_public
-                bank.share_opt_in = share_opt_in
-                bank.quality_status = quality_status
-                bank.reviewed_by = None
-                bank.reviewed_at = None
-                bank.save(
-                    update_fields=[
-                        "is_active",
-                        "is_official",
-                        "is_public",
-                        "share_opt_in",
-                        "quality_status",
-                        "reviewed_by",
-                        "reviewed_at",
-                    ]
-                )
-                updated_count += 1
+            created = True
+            created_count += 1
 
             for order_no, item_data in enumerate(items_data, start=1):
                 SQQuizBankItem.objects.create(bank=bank, order_no=order_no, **item_data)

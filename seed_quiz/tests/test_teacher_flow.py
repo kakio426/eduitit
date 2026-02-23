@@ -5,6 +5,7 @@ import zipfile
 from datetime import timedelta
 from unittest.mock import patch
 
+import openpyxl
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -111,9 +112,11 @@ class TeacherFlowTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "오늘의 퀴즈 선택")
+        self.assertContains(resp, "3단계로 끝나요")
         self.assertContains(resp, 'id="csv-client-check"')
-        self.assertContains(resp, "문항 수는 1~200개")
+        self.assertContains(resp, "문제는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
+        self.assertContains(resp, "내 문제 보관함 찾기")
 
     def test_landing_redirects_to_first_active_classroom_dashboard(self):
         url = reverse("seed_quiz:landing")
@@ -170,6 +173,15 @@ class TeacherFlowTest(TestCase):
             resp["Content-Type"],
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+        wb = openpyxl.load_workbook(io.BytesIO(resp.content))
+        self.assertIn("씨앗퀴즈 템플릿", wb.sheetnames)
+        self.assertIn("필독_작성가이드", wb.sheetnames)
+
+        ws = wb["씨앗퀴즈 템플릿"]
+        self.assertEqual(ws["A1"].value, "주제")
+        self.assertIn("필독_작성가이드", str(ws["A2"].value or ""))
+        self.assertIn("4행부터", str(ws["A3"].value or ""))
+        self.assertEqual(ws["A4"].value, "맞춤법")
 
     def test_download_csv_sample_pack(self):
         url = reverse(
@@ -281,7 +293,7 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(url, {"preset_type": "orthography", "grade": "all", "scope": "official"})
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "선택된 퀴즈 미리보기")
+        self.assertContains(resp, "2) 저장된 문제 확인")
 
     def test_bank_browse_hides_future_official_set(self):
         SQQuizBank.objects.create(
@@ -347,7 +359,7 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "선택된 퀴즈 미리보기")
+        self.assertContains(resp, "2) 저장된 문제 확인")
         draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
         self.assertIsNotNone(draft)
         self.assertEqual(draft.source, "bank")
@@ -372,6 +384,74 @@ class TeacherFlowTest(TestCase):
         draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
         self.assertIsNotNone(draft)
         self.assertEqual(draft.items.count(), 4)
+
+    def test_bank_select_creates_new_draft_each_time(self):
+        url = reverse(
+            "seed_quiz:htmx_bank_select",
+            kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
+        )
+        first = self.client.post(url)
+        second = self.client.post(url)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        drafts = SQQuizSet.objects.filter(classroom=self.classroom, status="draft")
+        self.assertEqual(drafts.count(), 2)
+
+    @patch("seed_quiz.services.generation._call_ai")
+    def test_generate_creates_new_draft_each_time(self, mock_ai):
+        mock_ai.return_value = VALID_AI_RESPONSE
+        url = reverse(
+            "seed_quiz:htmx_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        self.client.post(url, {"preset_type": "orthography", "grade": "3"})
+        self.client.post(url, {"preset_type": "orthography", "grade": "3"})
+        drafts = SQQuizSet.objects.filter(classroom=self.classroom, status="draft")
+        self.assertEqual(drafts.count(), 2)
+
+    def test_my_bank_library_returns_only_mine(self):
+        my_bank = SQQuizBank.objects.create(
+            title="내 보관함 세트",
+            preset_type="orthography",
+            grade=3,
+            source="csv",
+            created_by=self.teacher,
+        )
+        SQQuizBankItem.objects.create(
+            bank=my_bank,
+            order_no=1,
+            question_text="문제",
+            choices=["A", "B", "C", "D"],
+            correct_index=0,
+            explanation="",
+            difficulty="easy",
+        )
+
+        other_bank = SQQuizBank.objects.create(
+            title="다른 사람 세트",
+            preset_type="orthography",
+            grade=3,
+            source="csv",
+            created_by=self.other_teacher,
+        )
+        SQQuizBankItem.objects.create(
+            bank=other_bank,
+            order_no=1,
+            question_text="문제",
+            choices=["A", "B", "C", "D"],
+            correct_index=0,
+            explanation="",
+            difficulty="easy",
+        )
+
+        url = reverse(
+            "seed_quiz:htmx_my_bank_library",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "all", "grade": "all", "difficulty": "all"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "내 보관함 세트")
+        self.assertNotContains(resp, "다른 사람 세트")
 
     def test_csv_upload_creates_bank(self):
         csv_text = (
@@ -463,6 +543,59 @@ class TeacherFlowTest(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "CSV 미리보기 완료")
+
+    def test_text_upload_tsv_creates_bank(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "한글 맞춤법\t3\t대한민국 수도는?\t서울\t부산\t대구\t광주\t1\t서울입니다\t쉬움\n"
+            "한글 맞춤법\t3\t1+1은?\t2\t1\t3\t4\t1\t2입니다\t쉬움\n"
+            "한글 맞춤법\t3\t바다 색은?\t파랑\t빨강\t검정\t흰색\t1\t파랑이 일반적입니다\t보통\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        upload_resp = self.client.post(upload_url, {"pasted_text": pasted_text})
+        self.assertEqual(upload_resp.status_code, 200)
+        self.assertContains(upload_resp, "붙여넣기 미리보기 완료")
+
+        match = re.search(r'name="preview_token" value="([^"]+)"', upload_resp.content.decode("utf-8"))
+        self.assertIsNotNone(match)
+        token = match.group(1)
+
+        confirm_url = reverse(
+            "seed_quiz:htmx_csv_confirm",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        confirm_resp = self.client.post(confirm_url, {"preview_token": token})
+        self.assertEqual(confirm_resp.status_code, 200)
+        self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.items.count(), 3)
+
+    def test_text_upload_supports_stacked_lines_format(self):
+        pasted_text = (
+            "주제\n학년\n문제\n보기1\n보기2\n보기3\n보기4\n정답번호\n해설\n난이도\n"
+            "맞춤법\n3\n대한민국 수도는?\n서울\n부산\n대구\n광주\n1\n서울입니다\n쉬움\n"
+            "맞춤법\n3\n1+1은?\n2\n1\n3\n4\n1\n2입니다\n쉬움\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(upload_url, {"pasted_text": pasted_text})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "붙여넣기 미리보기 완료")
+        self.assertContains(resp, "세로 나열")
+
+    def test_text_upload_rejects_empty(self):
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(upload_url, {"pasted_text": "   "})
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "붙여넣기 내용이 비어 있습니다", status_code=400)
 
     @override_settings(SEED_QUIZ_CSV_MAX_ROWS=2)
     def test_csv_upload_rejects_when_row_limit_exceeded(self):

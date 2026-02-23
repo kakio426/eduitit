@@ -1,7 +1,11 @@
 <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50 text-slate-700 text-sm"
      hx-on::after-settle="document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
-    <p class="font-bold text-indigo-700">CSV 미리보기 완료</p>
+    <p class="font-bold text-indigo-700">{{ preview_title|default:"CSV 미리보기 완료" }}</p>
+    {% if preview_source %}
+    <p class="mt-1 text-xs text-indigo-700/90">입력 형식: {{ preview_source }}</p>
+    {% endif %}
     <p class="mt-1">저장 예정 세트: {{ set_count }}개</p>
+    <p class="mt-1 text-xs text-slate-600">내용이 맞으면 아래 `확인 후 저장`을 눌러 주세요.</p>
 
     <div class="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1">
         {% for s in parsed_sets %}

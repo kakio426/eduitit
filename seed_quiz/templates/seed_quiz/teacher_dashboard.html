@@ -15,6 +15,25 @@
         </div>
     </div>
 
+    <!-- 3단계 안내 -->
+    <div class="clay-card p-6 rounded-2xl mb-6 border border-indigo-100 bg-indigo-50/40">
+        <h2 class="font-bold text-indigo-800 mb-3">3단계로 끝나요</h2>
+        <div class="grid md:grid-cols-3 gap-3 text-sm">
+            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
+                <p class="font-bold text-indigo-700">1) 문제 준비</p>
+                <p class="text-gray-600 mt-1">문제를 붙여넣거나 파일로 올립니다.</p>
+            </div>
+            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
+                <p class="font-bold text-indigo-700">2) 미리보기 확인</p>
+                <p class="text-gray-600 mt-1">문제 수와 정답 번호를 확인하고 저장합니다.</p>
+            </div>
+            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
+                <p class="font-bold text-indigo-700">3) 학생에게 배포</p>
+                <p class="text-gray-600 mt-1">배포 버튼을 누르면 학생이 바로 풀 수 있습니다.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- 퀴즈 은행 선택 카드 -->
     <div class="clay-card p-6 rounded-2xl mb-6">
         <h2 class="font-bold text-gray-700 mb-4">오늘의 퀴즈 선택</h2>
@@ -32,6 +51,7 @@
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">범위</label>
                 <select name="scope" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="mine">내 세트</option>
                     <option value="official">공식</option>
                     <option value="public">공유</option>
                     <option value="all">전체</option>
@@ -78,10 +98,10 @@
         </form>
     </div>
 
-    <!-- CSV 업로드 -->
+    <!-- 파일 업로드 -->
     <div class="clay-card p-6 rounded-2xl mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-gray-700">CSV 업로드</h2>
+            <h2 class="font-bold text-gray-700">문제 파일 올리기 (선택)</h2>
             <div class="flex items-center gap-2">
                 <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
                    class="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors">
@@ -112,7 +132,7 @@
               class="flex flex-wrap items-end gap-3">
             {% csrf_token %}
             <div class="flex-1 min-w-[260px]">
-                <label class="block text-xs font-bold text-gray-500 mb-1">CSV 파일</label>
+                <label class="block text-xs font-bold text-gray-500 mb-1">문제 파일</label>
                 <input type="file"
                        id="csv-file-input"
                        name="csv_file"
@@ -122,20 +142,59 @@
             </div>
             <button type="submit"
                     class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
-                CSV 가져오기
+                파일 미리보기
             </button>
         </form>
         <p class="mt-2 text-xs text-gray-500">
-            열 순서: {{ csv_headers_ko_text }}
+            파일 첫 줄은 이 순서로 맞춰 주세요: {{ csv_headers_ko_text }}
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            한 파일은 한 세트로 저장됩니다. 문항 수는 1~200개까지 자유롭게 넣을 수 있으며, 파일 내 모든 행의 주제/학년은 동일해야 합니다.
+            한 파일은 한 세트로 저장됩니다. 문제는 1~200개까지 넣을 수 있고, 한 파일 안에서는 같은 주제/같은 학년으로 맞춰 주세요.
         </p>
         <p class="mt-1 text-xs text-gray-400">
-            업로드 제한: 파일 {{ csv_limits_human.max_file }} 이하 / 데이터 {{ csv_limits_human.max_rows }}행 이하
+            파일 제한: {{ csv_limits_human.max_file }} 이하 / 최대 {{ csv_limits_human.max_rows }}문항
         </p>
         <div id="csv-client-check" class="mt-2 hidden"></div>
         <div id="csv-upload-result" class="mt-3"></div>
+    </div>
+
+    <!-- 텍스트 붙여넣기 업로드 -->
+    <div class="clay-card p-6 rounded-2xl mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-gray-700">1) 문제 붙여넣기 (가장 쉬운 방법)</h2>
+            <button type="button"
+                    id="copy-seed-quiz-template"
+                    class="px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition-colors">
+                붙여넣기 양식 복사
+            </button>
+        </div>
+        <form id="text-upload-form"
+              hx-post="{% url 'seed_quiz:htmx_text_upload' classroom_id=classroom.id %}"
+              hx-target="#csv-upload-result"
+              hx-swap="innerHTML"
+              class="space-y-3">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">문제 내용</label>
+                <textarea name="pasted_text"
+                          rows="8"
+                          required
+                          placeholder="다른 화면에서 복사한 문제를 여기에 붙여넣으세요."
+                          class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white resize-y"></textarea>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                        class="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
+                    붙여넣기 미리보기
+                </button>
+            </div>
+        </form>
+        <p class="mt-2 text-xs text-gray-500">
+            첫 줄에 항목 이름(주제, 학년, 문제, 보기1~4, 정답번호, 해설, 난이도)이 있으면 가장 정확하게 읽습니다.
+        </p>
+        <p class="mt-1 text-xs text-gray-400">
+            표 형태 붙여넣기, 줄별 붙여넣기 모두 가능합니다. 최대 {{ text_limits.max_chars }}자.
+        </p>
     </div>
 
     <!-- CSV 업로드 이력 -->
@@ -144,6 +203,95 @@
          hx-trigger="load, csvHistoryUpdated from:body, every 20s"
          hx-swap="innerHTML">
         <p class="text-sm text-gray-400">CSV 업로드 이력을 불러오는 중...</p>
+    </div>
+
+    <!-- 내 문제 보관함 -->
+    <div class="clay-card p-6 rounded-2xl mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="font-bold text-gray-700">내 문제 보관함 찾기</h2>
+                <p class="text-xs text-gray-500 mt-1">주제/학년/난이도로 찾고 다시 배포할 수 있어요.</p>
+            </div>
+        </div>
+        <form id="my-bank-filter-form"
+              class="flex flex-wrap gap-3 items-end mb-4"
+              hx-get="{% url 'seed_quiz:htmx_my_bank_library' classroom_id=classroom.id %}"
+              hx-target="#my-bank-area"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">주제</label>
+                <select name="preset_type" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all">전체</option>
+                    {% for value, label in preset_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">학년</label>
+                <select name="grade" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all">전체</option>
+                    <option value="0">학년무관</option>
+                    {% for g in "123456"|make_list %}
+                    <option value="{{ g }}">{{ g }}학년</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">난이도</label>
+                <select name="difficulty" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all">전체</option>
+                    <option value="easy">쉬움 포함</option>
+                    <option value="medium">보통 포함</option>
+                    <option value="hard">어려움 포함</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">기간</label>
+                <select name="period_days" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all">전체</option>
+                    <option value="7">최근 7일</option>
+                    <option value="30">최근 30일</option>
+                    <option value="90">최근 90일</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">정렬</label>
+                <select name="sort" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="latest">최신순</option>
+                    <option value="use_count">사용 많은 순</option>
+                    <option value="oldest">오래된 순</option>
+                </select>
+            </div>
+            <div class="min-w-[220px] flex-1">
+                <label class="block text-xs font-bold text-gray-500 mb-1">검색</label>
+                <input type="text"
+                       name="q"
+                       placeholder="세트 제목/문제 내용"
+                       class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+            </div>
+            <button type="submit"
+                    class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
+                보관함 조회
+            </button>
+            <button type="button"
+                    hx-post="{% url 'seed_quiz:htmx_my_bank_random_select' classroom_id=classroom.id %}"
+                    hx-include="#my-bank-filter-form"
+                    hx-target="#preview-area"
+                    hx-swap="innerHTML"
+                    class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
+                조건으로 랜덤 1세트
+            </button>
+        </form>
+
+        <div id="my-bank-area"
+             hx-get="{% url 'seed_quiz:htmx_my_bank_library' classroom_id=classroom.id %}"
+             hx-trigger="load, bankUpdated from:body"
+             hx-include="#my-bank-filter-form"
+             hx-swap="innerHTML">
+            <p class="text-sm text-gray-400">내 문제 보관함을 불러오는 중...</p>
+        </div>
     </div>
 
     {% if allow_rag %}
@@ -572,6 +720,36 @@
                 showErrors(['1차 검사 오류를 먼저 수정한 뒤 다시 업로드해 주세요.']);
             }
         });
+    });
+})();
+
+(function () {
+    const btn = document.getElementById('copy-seed-quiz-template');
+    if (!btn) {
+        return;
+    }
+    const header = '주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도';
+    btn.addEventListener('click', async function () {
+        try {
+            await navigator.clipboard.writeText(header + '\n');
+            btn.textContent = '복사 완료';
+            btn.classList.remove('bg-violet-100', 'text-violet-700');
+            btn.classList.add('bg-emerald-100', 'text-emerald-700');
+            window.setTimeout(function () {
+                btn.textContent = '붙여넣기 양식 복사';
+                btn.classList.remove('bg-emerald-100', 'text-emerald-700');
+                btn.classList.add('bg-violet-100', 'text-violet-700');
+            }, 1200);
+        } catch (e) {
+            btn.textContent = '복사 실패';
+            btn.classList.remove('bg-violet-100', 'text-violet-700');
+            btn.classList.add('bg-red-100', 'text-red-700');
+            window.setTimeout(function () {
+                btn.textContent = '붙여넣기 양식 복사';
+                btn.classList.remove('bg-red-100', 'text-red-700');
+                btn.classList.add('bg-violet-100', 'text-violet-700');
+            }, 1200);
+        }
     });
 })();
 </script>

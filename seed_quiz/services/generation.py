@@ -87,22 +87,18 @@ def generate_and_save_draft(classroom, preset_type: str, grade: int, created_by)
     """
     target_date = timezone.localdate()
 
-    # quiz_set 확보 (get_or_create, atomic으로 race condition 방지)
+    # stage1 정책: draft 재사용 대신 항상 새 세트를 생성해 이력을 보존한다.
     with transaction.atomic():
-        quiz_set, created = SQQuizSet.objects.get_or_create(
+        quiz_set = SQQuizSet.objects.create(
             classroom=classroom,
             target_date=target_date,
             preset_type=preset_type,
+            grade=grade,
+            title=f"{target_date} {PRESET_LABELS.get(preset_type, '주제')} 퀴즈",
             status="draft",
-            defaults={
-                "grade": grade,
-                "title": f"{target_date} {PRESET_LABELS.get(preset_type, '주제')} 퀴즈",
-                "source": "ai",
-                "created_by": created_by,
-            },
+            source="ai",
+            created_by=created_by,
         )
-        if not created:
-            quiz_set.items.all().delete()  # 재생성: 기존 문항 삭제
 
     source = "ai"
     payload = None
