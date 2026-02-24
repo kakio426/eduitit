@@ -15,7 +15,9 @@
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4">
-      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">학부모 제출 링크 만들기</a>
+      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
+        {% if links_released %}학부모 링크 재발송(만료 재설정){% else %}학부모 링크 발송 시작{% endif %}
+      </a>
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">수신자 등록/수정</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
       <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출 결과 PDF 다운로드</a>
@@ -30,6 +32,12 @@
     {% if not source_file_available %}
     <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
       업로드한 안내문 파일을 찾을 수 없어 링크 발송이 불가합니다. 문서를 다시 업로드해 주세요.
+    </div>
+    {% endif %}
+
+    {% if not links_released %}
+    <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+      아직 발송이 시작되지 않아 제출 링크가 숨김 상태입니다. <strong>학부모 링크 발송 시작</strong> 버튼을 누르면 전체 링크가 공개됩니다.
     </div>
     {% endif %}
 
@@ -88,6 +96,7 @@
         </div>
 
         <div class="rounded-xl bg-gray-50 border border-gray-200 p-3 space-y-3">
+          {% if links_released %}
           <div class="flex items-start gap-3">
             <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="학부모 제출 링크 QR 코드" class="w-16 h-16 rounded border border-gray-200 bg-white p-1 shrink-0">
             <div class="min-w-0 w-full space-y-2">
@@ -102,6 +111,18 @@
               </div>
             </div>
           </div>
+          {% else %}
+          <div class="flex items-start gap-3">
+            <div class="w-16 h-16 rounded border border-gray-200 bg-white text-gray-400 text-xs font-semibold flex items-center justify-center shrink-0">잠금</div>
+            <div class="min-w-0 w-full space-y-2">
+              <input type="text" readonly value="발송 시작 후 수신자 링크가 표시됩니다." class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs text-gray-500">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-indigo-300 text-white text-xs font-semibold cursor-not-allowed">링크 복사</button>
+                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-purple-300 text-white text-xs font-semibold cursor-not-allowed">안내문+링크 복사</button>
+              </div>
+            </div>
+          </div>
+          {% endif %}
         </div>
 
         {% if r.status == "pending" or r.status == "verified" %}

@@ -46,7 +46,11 @@ class ConsentFlowTests(TestCase):
     def test_verify_redirects_to_sign(self):
         url = reverse("consent:verify", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
-        self.assertRedirects(response, reverse("consent:sign", kwargs={"token": self.recipient.access_token}))
+        self.assertRedirects(
+            response,
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token}),
+            fetch_redirect_response=False,
+        )
 
     def test_send_marks_request_as_sent(self):
         self.client.login(username="teacher", password="pw123456")
@@ -55,6 +59,7 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.request_obj.refresh_from_db()
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_SENT)
+        self.assertIsNotNone(self.request_obj.sent_at)
 
     def test_send_blocks_when_source_document_missing(self):
         self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"
@@ -69,6 +74,9 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_DRAFT)
 
     def test_sign_submission_updates_status(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
         sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.post(
             sign_url,
@@ -84,6 +92,12 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_SIGNED)
         self.assertEqual(self.recipient.decision, SignatureRecipient.DECISION_AGREE)
         self.assertTrue(bool(self.recipient.signature_data))
+
+    def test_sign_link_blocked_before_send_start(self):
+        url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "아직 발송이 시작되지 않았습니다.", status_code=403)
 
     def test_csv_download(self):
         self.client.login(username="teacher", password="pw123456")
@@ -130,6 +144,12 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
+
+    def test_public_document_blocked_before_send_start(self):
+        url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "아직 발송이 시작되지 않았습니다.", status_code=403)
 
     def test_public_document_korean_filename_returns_file(self):
         file_obj = SimpleUploadedFile("안내문.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
@@ -201,12 +221,23 @@ class ConsentFlowTests(TestCase):
         )
 
     def test_detail_includes_copy_buttons_and_qr(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "안내문+링크 복사")
         self.assertContains(response, "data:image/png;base64,")
+
+    def test_detail_hides_links_before_send_start(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "제출 링크가 숨김 상태")
+        self.assertContains(response, "발송 시작 후 수신자 링크가 표시됩니다.")
 
     def test_detail_shows_progress_dashboard_counts(self):
         self.recipient.status = SignatureRecipient.STATUS_SIGNED
@@ -293,6 +324,9 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "수신자 저장 중 오류가 발생했습니다.")
 
     def test_public_document_missing_file_returns_404_page(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
         self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"
         self.document.save(update_fields=["original_file"])
         url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
@@ -414,6 +448,9 @@ class ConsentEvidenceTests(TestCase):
         )
 
     def test_sign_page_shows_document_evidence_block(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
         url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -421,6 +458,9 @@ class ConsentEvidenceTests(TestCase):
         self.assertContains(response, "abc123")
 
     def test_sign_audit_log_contains_document_evidence(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
         url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.post(
             url,

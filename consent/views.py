@@ -453,6 +453,25 @@ def _is_active_link_expired(recipient: SignatureRecipient) -> bool:
     return recipient.request.is_link_expired
 
 
+def _is_public_link_released(recipient: SignatureRecipient) -> bool:
+    return recipient.request.status in (
+        SignatureRequest.STATUS_SENT,
+        SignatureRequest.STATUS_COMPLETED,
+    )
+
+
+def _link_not_ready_response(request, recipient: SignatureRecipient):
+    return render(
+        request,
+        "consent/link_not_ready.html",
+        {
+            "recipient": recipient,
+            "consent_request": recipient.request,
+        },
+        status=403,
+    )
+
+
 def _expired_link_response(request, recipient: SignatureRecipient):
     return render(
         request,
@@ -676,6 +695,10 @@ def consent_detail(request, request_id):
     )
     recipients = list(consent_request.recipients.all().order_by("student_name"))
     recipient_stats = _build_recipient_stats(recipients)
+    links_released = consent_request.status in (
+        SignatureRequest.STATUS_SENT,
+        SignatureRequest.STATUS_COMPLETED,
+    )
     source_file_available = _is_file_accessible(consent_request.document.original_file)
     recipient_rows = []
     for recipient in recipients:
@@ -698,6 +721,7 @@ def consent_detail(request, request_id):
             "link_expires_at": consent_request.link_expires_at,
             "source_file_available": source_file_available,
             "recipient_stats": recipient_stats,
+            "links_released": links_released,
         },
     )
 
@@ -727,14 +751,23 @@ def consent_send(request, request_id):
         messages.error(request, "안내문 파일을 찾을 수 없어 발송 링크를 생성할 수 없습니다. 문서를 다시 업로드해 주세요.")
         return redirect("consent:detail", request_id=consent_request.request_id)
 
-    consent_request.status = SignatureRequest.STATUS_SENT
+    already_released = consent_request.status in (
+        SignatureRequest.STATUS_SENT,
+        SignatureRequest.STATUS_COMPLETED,
+    )
+    if consent_request.status != SignatureRequest.STATUS_COMPLETED:
+        consent_request.status = SignatureRequest.STATUS_SENT
     consent_request.sent_at = timezone.now()
-    consent_request.save(update_fields=["status", "sent_at"])
+    update_fields = ["sent_at"]
+    if consent_request.status != SignatureRequest.STATUS_COMPLETED:
+        update_fields.append("status")
+    consent_request.save(update_fields=update_fields)
     ConsentAuditLog.objects.create(
         request=consent_request,
         event_type=ConsentAuditLog.EVENT_REQUEST_SENT,
         event_meta={
             "recipient_count": consent_request.recipients.count(),
+            "resend": already_released,
             "link_expire_days": consent_request.link_expire_days,
             "expires_at": (
                 timezone.localtime(consent_request.link_expires_at).isoformat()
@@ -743,7 +776,10 @@ def consent_send(request, request_id):
             ),
         },
     )
-    messages.success(request, "발송 링크 생성이 완료되었습니다. 수신자별 링크를 복사해 전달해 주세요.")
+    if already_released:
+        messages.success(request, "발송 시각을 갱신했습니다. 수신자별 링크를 다시 전달해 주세요.")
+    else:
+        messages.success(request, "학부모 링크 발송을 시작했습니다. 수신자별 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 
@@ -859,6 +895,8 @@ def consent_sign(request, token):
         return schema_block
 
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
+    if not _is_public_link_released(recipient):
+        return _link_not_ready_response(request, recipient)
     evidence = _request_document_evidence(recipient.request)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
@@ -935,6 +973,8 @@ def consent_public_document(request, token):
         return schema_block
 
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
+    if not _is_public_link_released(recipient):
+        return _link_not_ready_response(request, recipient)
     if _is_active_link_expired(recipient):
         return _expired_link_response(request, recipient)
 
@@ -964,6 +1004,8 @@ def consent_public_document_inline(request, token):
         SignatureRecipient.objects.select_related("request__document"),
         access_token=token,
     )
+    if not _is_public_link_released(recipient):
+        return _link_not_ready_response(request, recipient)
     if _is_active_link_expired(recipient):
         return _expired_link_response(request, recipient)
 
