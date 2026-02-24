@@ -15,6 +15,40 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+POST_LIST_TARGET_DEFAULT = 'post-list-container'
+POST_LIST_TARGET_ALLOWED = {
+    POST_LIST_TARGET_DEFAULT,
+    'mobile-post-list-container',
+}
+
+
+def _get_post_list_target_id(request):
+    """Resolve the SNS list target id from HTMX request context."""
+    raw_target = (
+        request.GET.get('target')
+        or request.POST.get('post_list_target_id')
+        or request.headers.get('HX-Target')
+    )
+    if not raw_target:
+        return POST_LIST_TARGET_DEFAULT
+
+    target_id = str(raw_target).strip().lstrip('#')
+    if target_id in POST_LIST_TARGET_ALLOWED:
+        return target_id
+    return POST_LIST_TARGET_DEFAULT
+
+
+def _render_post_list_partial(request, page_obj):
+    return render(
+        request,
+        'core/partials/post_list.html',
+        {
+            'posts': page_obj,
+            'page_obj': page_obj,
+            'post_list_target_id': _get_post_list_target_id(request),
+        },
+    )
+
 # =============================================================================
 # V2 홈 목적별 섹션 매핑
 # =============================================================================
@@ -354,7 +388,7 @@ def home(request):
     
     # HTMX 요청이면 post_list 영역만 반환
     if request.headers.get('HX-Request') and request.GET.get('page'):
-        return render(request, 'core/partials/post_list.html', {'posts': page_obj, 'page_obj': page_obj})
+        return _render_post_list_partial(request, page_obj)
 
     # V2 홈: Feature flag on 시 분기
     if settings.HOME_V2_ENABLED:
@@ -455,7 +489,7 @@ def post_create(request):
         paginator = Paginator(posts, 5) # 등록 후에는 무조건 1페이지로
         page_obj = paginator.get_page(1)
         
-        return render(request, 'core/partials/post_list.html', {'posts': page_obj, 'page_obj': page_obj})
+        return _render_post_list_partial(request, page_obj)
 
     return redirect('home')
 

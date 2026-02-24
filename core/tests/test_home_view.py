@@ -2,7 +2,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from products.models import Product
-from core.models import UserProfile
+from core.models import UserProfile, Post, Comment
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -25,6 +25,12 @@ class HomeViewTest(TestCase):
             title="테스트 서비스", description="설명", price=0,
             is_active=True, service_type='classroom',
         )
+
+    def _seed_sns_posts(self, count=6):
+        author = _create_onboarded_user('snsauthor')
+        for i in range(count):
+            Post.objects.create(author=author, content=f'테스트 글 {i + 1}')
+        return author
 
     def test_home_anonymous_200(self):
         """비로그인 홈 200 응답"""
@@ -78,6 +84,74 @@ class HomeViewTest(TestCase):
         self.assertIn('hidden lg:flex', content)
         self.assertIn('class="lg:hidden w-12 h-12', content)
         self.assertIn('class="fixed inset-x-0 z-40 lg:hidden', content)
+
+    def test_mobile_widget_create_button_targets_mobile_container(self):
+        _create_onboarded_user('mobilewidgetuser')
+        self.client.login(username='mobilewidgetuser', password='pass1234')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('hx-post="/post/create/" hx-target="#mobile-post-list-container"', content)
+
+    def test_pagination_buttons_render_per_widget_target(self):
+        self._seed_sns_posts(count=6)
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('?page=2&target=post-list-container', content)
+        self.assertIn('?page=2&target=mobile-post-list-container', content)
+        self.assertIn('hx-target="#post-list-container"', content)
+        self.assertIn('hx-target="#mobile-post-list-container"', content)
+
+    def test_home_htmx_pagination_uses_mobile_target_from_header(self):
+        self._seed_sns_posts(count=6)
+        response = self.client.get(
+            reverse('home'),
+            {'page': 2},
+            HTTP_HX_REQUEST='true',
+            HTTP_HX_TARGET='mobile-post-list-container',
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('hx-target="#mobile-post-list-container"', content)
+        self.assertIn('?page=1&target=mobile-post-list-container', content)
+
+    def test_home_htmx_pagination_invalid_target_falls_back_to_desktop(self):
+        self._seed_sns_posts(count=6)
+        response = self.client.get(
+            reverse('home'),
+            {'page': 2},
+            HTTP_HX_REQUEST='true',
+            HTTP_HX_TARGET='invalid-container',
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('hx-target="#post-list-container"', content)
+        self.assertIn('?page=1&target=post-list-container', content)
+
+    def test_post_create_htmx_uses_mobile_target_from_header(self):
+        self._seed_sns_posts(count=6)
+        _create_onboarded_user('mobilewriter')
+        self.client.login(username='mobilewriter', password='pass1234')
+        response = self.client.post(
+            reverse('post_create'),
+            {'content': '모바일 새 글'},
+            HTTP_HX_REQUEST='true',
+            HTTP_HX_TARGET='mobile-post-list-container',
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('hx-target="#mobile-post-list-container"', content)
+        self.assertIn('?page=2&target=mobile-post-list-container', content)
+
+    def test_sns_post_comment_buttons_use_local_htmx_targets(self):
+        user = _create_onboarded_user('snsbtnuser')
+        post = Post.objects.create(author=user, content='버튼 점검용 게시글')
+        Comment.objects.create(post=post, author=user, content='버튼 점검용 댓글')
+        self.client.login(username='snsbtnuser', password='pass1234')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('hx-target="closest [data-post-root]"', content)
+        self.assertIn('hx-target="closest [data-comment-root]"', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)

@@ -74,7 +74,7 @@
 
         <!-- Feed List Container - 모든 사용자에게 표시 -->
         <div id="post-list-container" class="space-y-4 pb-10">
-            {% include 'core/partials/post_list.html' %}
+            {% include 'core/partials/post_list.html' with post_list_target_id='post-list-container' %}
         </div>
 
     </div>
