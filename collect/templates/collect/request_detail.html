@@ -224,7 +224,7 @@
                         {% if not_submitted %}
                         <p class="text-base md:text-lg text-red-500 font-bold mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>미제출 {{ not_submitted|length }}명</p>
                         <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto dashboard-scrollbar pr-1">
-                            {% for name in not_submitted %}<span class="px-2 py-1 bg-red-100 text-red-600 rounded-lg text-base font-medium">{{ name }}</span>{% endfor %}
+                            {% for name in not_submitted %}<span class="px-2 py-1 bg-red-100 text-red-600 rounded-lg text-base font-medium whitespace-nowrap">{{ name }}</span>{% endfor %}
                         </div>
                         {% else %}
                         <p class="text-base md:text-lg text-emerald-600 font-bold mb-2"><i class="fa-solid fa-circle-check mr-1"></i>전원 제출 완료</p>
