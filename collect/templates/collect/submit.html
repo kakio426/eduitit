@@ -73,12 +73,12 @@
                             </template>
                         </div>
                         {% else %}
-                        <input type="text" name="contributor_name" required value="{{ submission.contributor_name }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                        <input type="text" name="contributor_name" required value="{% if is_edit %}{{ submission.contributor_name }}{% elif form_data %}{{ form_data.contributor_name }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
                         {% endif %}
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
-                        <input type="text" name="contributor_affiliation" value="{{ submission.contributor_affiliation }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
+                        <input type="text" name="contributor_affiliation" value="{% if is_edit %}{{ submission.contributor_affiliation }}{% elif form_data %}{{ form_data.contributor_affiliation }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
                     </div>
                 </div>
 
@@ -87,7 +87,7 @@
                     {% if is_edit %}
                     <div class="mb-4">
                         <span class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm border border-emerald-200">
-                            <i class="fa-solid {% if submission.submission_type == 'file' %}fa-file{% elif submission.submission_type == 'link' %}fa-link{% else %}fa-align-left{% endif %} mr-1"></i>
+                            <i class="fa-solid {% if submission.submission_type == 'file' %}fa-file{% elif submission.submission_type == 'link' %}fa-link{% elif submission.submission_type == 'choice' %}fa-list-check{% else %}fa-align-left{% endif %} mr-1"></i>
                             {{ submission.get_submission_type_display }}
                         </span>
                         <input type="hidden" name="submission_type" value="{{ submission.submission_type }}">
@@ -97,6 +97,7 @@
                         {% if req.allow_file %}<button type="button" @click="tab='file'" :class="tab==='file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-file mr-1"></i>파일</button>{% endif %}
                         {% if req.allow_link %}<button type="button" @click="tab='link'" :class="tab==='link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-link mr-1"></i>링크</button>{% endif %}
                         {% if req.allow_text %}<button type="button" @click="tab='text'" :class="tab==='text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-align-left mr-1"></i>텍스트</button>{% endif %}
+                        {% if req.allow_choice %}<button type="button" @click="tab='choice'" :class="tab==='choice' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-list-check mr-1"></i>선택형</button>{% endif %}
                     </div>
                     <input type="hidden" name="submission_type" :value="tab">
                     {% endif %}
@@ -127,17 +128,89 @@
                             <div x-show="fileError" class="mt-3 text-sm text-red-600 font-medium"><i class="fa-solid fa-circle-exclamation mr-1"></i><span x-text="fileError"></span></div>
                         </div>
                         <p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-info-circle mr-1"></i>파일이 {{ req.max_file_size_mb }}MB를 초과하면 링크 제출을 이용하세요.</p>
-                        <textarea name="file_description" rows="3" placeholder="파일 설명이나 메모를 입력하세요 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% endif %}</textarea>
+                        <textarea name="file_description" rows="3" placeholder="파일 설명이나 메모를 입력하세요 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% elif form_data %}{{ form_data.file_description }}{% endif %}</textarea>
                     </div>
 
                     <div x-show="tab==='link'" class="space-y-3">
-                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." {% if is_edit %}value="{{ submission.link_url }}"{% endif %} :required="tab==='link'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" {% if is_edit %}value="{{ submission.link_description }}"{% endif %} class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." value="{% if is_edit %}{{ submission.link_url }}{% elif form_data %}{{ form_data.link_url }}{% endif %}" :required="tab==='link'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" value="{% if is_edit %}{{ submission.link_description }}{% elif form_data %}{{ form_data.link_description }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                     </div>
 
                     <div x-show="tab==='text'">
-                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab==='text'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">{% if is_edit %}{{ submission.text_content }}{% endif %}</textarea>
+                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab==='text'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">{% if is_edit %}{{ submission.text_content }}{% elif form_data %}{{ form_data.text_content }}{% endif %}</textarea>
                     </div>
+
+                    {% if req.allow_choice or submission.submission_type == 'choice' %}
+                    <div x-show="tab==='choice'" class="space-y-3">
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <p class="text-sm text-gray-600 mb-3">
+                                <i class="fa-solid fa-list-check mr-1 text-emerald-600"></i>
+                                {% if req.choice_mode == 'single' %}
+                                보기 중 한 가지를 선택하세요.
+                                {% else %}
+                                보기 중 여러 개를 선택할 수 있습니다.
+                                {% endif %}
+                            </p>
+
+                            {% if req.normalized_choice_options %}
+                            <div class="space-y-2">
+                                {% for option in req.normalized_choice_options %}
+                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                    <input
+                                        type="{% if req.choice_mode == 'single' %}radio{% else %}checkbox{% endif %}"
+                                        name="choice_answers"
+                                        value="{{ option }}"
+                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                        {% if option in choice_values %}checked{% endif %}
+                                        {% if req.choice_mode == 'single' %}:required="tab==='choice'" @change="useOtherChoice = false"{% endif %}
+                                    >
+                                    <span>{{ option }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            {% if req.choice_allow_other %}
+                            <div class="mt-3 pt-3 border-t border-gray-200">
+                                <label class="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                                    <input
+                                        type="{% if req.choice_mode == 'single' %}radio{% else %}checkbox{% endif %}"
+                                        name="choice_answers"
+                                        value="__other__"
+                                        class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                        {% if "__other__" in choice_values %}checked{% endif %}
+                                        {% if req.choice_mode == 'single' %}:required="tab==='choice'" @change="useOtherChoice = true"{% else %}@change="useOtherChoice = $event.target.checked"{% endif %}
+                                    >
+                                    <span>기타(직접 입력)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="choice_other_text"
+                                    value="{{ choice_other_text }}"
+                                    placeholder="직접 입력 내용을 작성하세요"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                                    :disabled="tab !== 'choice' || !useOtherChoice"
+                                    :required="tab==='choice' && useOtherChoice"
+                                >
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <p class="text-sm text-red-600">선택형 보기가 설정되지 않았습니다. 요청 생성자에게 문의해주세요.</p>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            {% if req.choice_mode == 'single' %}
+                            단일 선택 요청입니다.
+                            {% else %}
+                            최소 {{ req.choice_min_selections|default:1 }}개 이상
+                            {% if req.choice_max_selections %}
+                            / 최대 {{ req.choice_max_selections }}개 이하로 선택해주세요.
+                            {% else %}
+                            선택할 수 있습니다.
+                            {% endif %}
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <button type="submit" :disabled="(tab==='file' && fileError) || isSubmitting" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
@@ -173,12 +246,18 @@
 <script>
     function submitForm() {
         return {
-            tab: '{% if is_edit %}{{ submission.submission_type }}{% else %}{{ req.allow_file|yesno:"file," }}{% endif %}'.split(',')[0] || 'link',
+            tab: '{{ initial_submission_type|default:"link" }}' || 'link',
             isEdit: {{ is_edit|yesno:"true,false" }},
+            useOtherChoice: {% if "__other__" in choice_values %}true{% else %}false{% endif %},
             fileName: '',
             fileSizeMB: '',
             fileError: '',
             isSubmitting: false,
+            init() {
+                if (this.tab !== 'choice') {
+                    this.useOtherChoice = false;
+                }
+            },
             checkFileSize(event) {
                 const file = event.target.files[0];
                 if (!file) {

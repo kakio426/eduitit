@@ -51,6 +51,7 @@
                                 class="w-8 h-8 rounded-lg bg-emerald-100 flex-shrink-0 flex items-center justify-center text-emerald-600">
                                 {% if submission.submission_type == 'file' %}<i class="fa-solid fa-file"></i>
                                 {% elif submission.submission_type == 'link' %}<i class="fa-solid fa-link"></i>
+                                {% elif submission.submission_type == 'choice' %}<i class="fa-solid fa-list-check"></i>
                                 {% else %}<i class="fa-solid fa-align-left"></i>{% endif %}
                             </div>
                             <div class="min-w-0 flex-1">
@@ -59,6 +60,7 @@
                                 <p class="font-bold text-gray-700 truncate">
                                     {% if submission.submission_type == 'file' %}{{ submission.original_filename }}
                                     {% elif submission.submission_type == 'link' %}{{ submission.link_url }}
+                                    {% elif submission.submission_type == 'choice' %}{{ submission.choice_summary|default:"선택형 응답" }}
                                     {% else %}{{ submission.text_content|truncatechars:100 }}{% endif %}
                                 </p>
                             </div>

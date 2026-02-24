@@ -15,6 +15,7 @@
             {% if sub.submission_type == 'file' %}<span class="px-2 py-0.5 bg-blue-100 text-blue-600 rounded-md font-bold">파일</span>{% endif %}
             {% if sub.submission_type == 'link' %}<span class="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-md font-bold">링크</span>{% endif %}
             {% if sub.submission_type == 'text' %}<span class="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-md font-bold">텍스트</span>{% endif %}
+            {% if sub.submission_type == 'choice' %}<span class="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md font-bold">선택형</span>{% endif %}
         </div>
         <div class="mt-2 text-sm text-gray-600 break-all">
             {% if sub.submission_type == 'file' %}
@@ -22,6 +23,8 @@
             {% elif sub.submission_type == 'link' %}
             <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:60 }}</a>
             {% if sub.link_description %}<p class="text-xs text-gray-400 mt-1">{{ sub.link_description }}</p>{% endif %}
+            {% elif sub.submission_type == 'choice' %}
+            {{ sub.choice_summary|truncatechars:90 }}
             {% else %}
             {{ sub.text_content|truncatechars:90 }}
             {% endif %}
@@ -59,6 +62,7 @@
                     {% if sub.submission_type == 'file' %}<span class="px-2 py-1 bg-blue-100 text-blue-600 rounded-lg text-xs font-bold">파일</span>{% endif %}
                     {% if sub.submission_type == 'link' %}<span class="px-2 py-1 bg-purple-100 text-purple-600 rounded-lg text-xs font-bold">링크</span>{% endif %}
                     {% if sub.submission_type == 'text' %}<span class="px-2 py-1 bg-amber-100 text-amber-600 rounded-lg text-xs font-bold">텍스트</span>{% endif %}
+                    {% if sub.submission_type == 'choice' %}<span class="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">선택형</span>{% endif %}
                 </td>
                 <td class="py-3 pr-3 text-gray-600 max-w-[320px]">
                     {% if sub.submission_type == 'file' %}
@@ -66,6 +70,8 @@
                     {% elif sub.submission_type == 'link' %}
                     <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">{{ sub.link_url|truncatechars:50 }}</a>
                     {% if sub.link_description %}<div class="text-xs text-gray-400 mt-1">{{ sub.link_description }}</div>{% endif %}
+                    {% elif sub.submission_type == 'choice' %}
+                    {{ sub.choice_summary|truncatechars:80 }}
                     {% else %}
                     {{ sub.text_content|truncatechars:80 }}
                     {% endif %}

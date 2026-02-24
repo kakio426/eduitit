@@ -61,6 +61,119 @@ def _parse_extension_days(raw_days, fallback):
     return days
 
 
+def _get_submit_context(
+    collection_req,
+    submission=None,
+    is_edit=False,
+    error=None,
+    form_data=None,
+    initial_submission_type=None,
+    choice_values=None,
+    choice_other_text=None,
+):
+    allowed_types = collection_req.allowed_submission_types
+    initial_type = initial_submission_type
+    if is_edit and submission:
+        initial_type = submission.submission_type
+    if not (is_edit and submission) and initial_type not in allowed_types:
+        initial_type = allowed_types[0] if allowed_types else ""
+
+    resolved_choice_values = choice_values
+    resolved_choice_other_text = choice_other_text
+
+    if resolved_choice_values is None and submission and submission.submission_type == "choice":
+        stored = submission.choice_answers if isinstance(submission.choice_answers, list) else []
+        resolved_choice_values = [str(value).strip() for value in stored if str(value).strip()]
+        if submission.choice_other_text.strip():
+            resolved_choice_values.append("__other__")
+    if resolved_choice_values is None:
+        resolved_choice_values = []
+
+    if resolved_choice_other_text is None and submission and submission.submission_type == "choice":
+        resolved_choice_other_text = submission.choice_other_text
+    if resolved_choice_other_text is None:
+        resolved_choice_other_text = ""
+
+    return {
+        "req": collection_req,
+        "submission": submission,
+        "is_edit": is_edit,
+        "error": error,
+        "form_data": form_data,
+        "allowed_submission_types": allowed_types,
+        "initial_submission_type": initial_type,
+        "choice_values": resolved_choice_values,
+        "choice_other_text": resolved_choice_other_text,
+    }
+
+
+def _render_submit_error(
+    request,
+    collection_req,
+    error_message,
+    submission_type="",
+    is_edit=False,
+    submission=None,
+    form_data=None,
+):
+    posted = form_data or request.POST
+    choice_values = posted.getlist("choice_answers") if posted else []
+    choice_other_text = posted.get("choice_other_text", "").strip() if posted else ""
+    return render(
+        request,
+        "collect/submit.html",
+        _get_submit_context(
+            collection_req,
+            submission=submission,
+            is_edit=is_edit,
+            error=error_message,
+            form_data=posted,
+            initial_submission_type=submission_type,
+            choice_values=choice_values,
+            choice_other_text=choice_other_text,
+        ),
+    )
+
+
+def _extract_choice_submission_data(collection_req, post_data):
+    options = collection_req.normalized_choice_options
+    if not options:
+        return None, None, "선택형 보기가 아직 설정되지 않았습니다. 요청 생성자에게 문의해주세요."
+
+    selected_raw = [value.strip() for value in post_data.getlist("choice_answers") if value.strip()]
+    selected_options = []
+    seen = set()
+    for value in selected_raw:
+        if value in options and value not in seen:
+            selected_options.append(value)
+            seen.add(value)
+
+    other_text = post_data.get("choice_other_text", "").strip()
+    use_other = collection_req.choice_allow_other and ("__other__" in selected_raw or bool(other_text))
+
+    if collection_req.choice_allow_other:
+        if use_other and not other_text:
+            return None, None, "기타 내용을 입력해주세요."
+        if not use_other:
+            other_text = ""
+    else:
+        other_text = ""
+
+    selected_count = len(selected_options) + (1 if other_text else 0)
+    if collection_req.choice_mode == "single":
+        if selected_count != 1:
+            return None, None, "선택형은 한 가지 보기만 선택해주세요."
+    else:
+        min_count = max(collection_req.choice_min_selections or 1, 1)
+        max_count = collection_req.choice_max_selections
+        if selected_count < min_count:
+            return None, None, f"최소 {min_count}개 이상 선택해주세요."
+        if max_count is not None and selected_count > max_count:
+            return None, None, f"최대 {max_count}개까지 선택할 수 있습니다."
+
+    return selected_options, other_text, None
+
+
 def get_collect_service():
     """서비스 정보 로드"""
     return Product.objects.filter(title__icontains="간편 수합").first()
@@ -277,6 +390,8 @@ def export_csv(request, request_id):
             content = sub.original_filename
         elif sub.submission_type == 'link':
             content = sub.link_url
+        elif sub.submission_type == 'choice':
+            content = sub.choice_summary
         else:
             content = sub.text_content[:100]
 
@@ -350,9 +465,13 @@ def submit(request, request_id):
             'reason': '최대 제출 건수에 도달했습니다.',
         })
 
-    return render(request, 'collect/submit.html', {
-        'req': collection_req,
-    })
+    if not collection_req.allowed_submission_types:
+        return render(request, 'collect/request_closed.html', {
+            'req': collection_req,
+            'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
+        })
+
+    return render(request, 'collect/submit.html', _get_submit_context(collection_req))
 
 
 @require_POST
@@ -362,6 +481,13 @@ def submit_process(request, request_id):
 
     if collection_req.status != 'active':
         return render(request, 'collect/request_closed.html', {'req': collection_req})
+
+    allowed_types = collection_req.allowed_submission_types
+    if not allowed_types:
+        return render(request, 'collect/request_closed.html', {
+            'req': collection_req,
+            'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
+        })
 
     # 이름: 직접 입력 > 셀렉트 > 일반 입력
     contributor_name = request.POST.get('contributor_name_custom', '').strip()
@@ -375,16 +501,28 @@ def submit_process(request, request_id):
     submission_type = request.POST.get('submission_type', '')
 
     if not contributor_name:
-        return render(request, 'collect/submit.html', {
-            'req': collection_req,
-            'error': '이름을 입력해주세요.',
-        })
+        return _render_submit_error(
+            request,
+            collection_req,
+            '이름을 입력해주세요.',
+            submission_type=submission_type,
+        )
 
-    if submission_type not in ('file', 'link', 'text'):
-        return render(request, 'collect/submit.html', {
-            'req': collection_req,
-            'error': '제출 유형을 선택해주세요.',
-        })
+    valid_types = {choice[0] for choice in Submission.TYPE_CHOICES}
+    if submission_type not in valid_types:
+        return _render_submit_error(
+            request,
+            collection_req,
+            '제출 유형을 선택해주세요.',
+            submission_type=submission_type,
+        )
+    if submission_type not in allowed_types:
+        return _render_submit_error(
+            request,
+            collection_req,
+            '이 요청에서는 해당 제출 유형을 사용할 수 없습니다.',
+            submission_type=submission_type,
+        )
 
     submission = Submission(
         collection_request=collection_req,
@@ -396,16 +534,20 @@ def submit_process(request, request_id):
     if submission_type == 'file':
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '파일을 선택해주세요.',
-            })
+            return _render_submit_error(
+                request,
+                collection_req,
+                '파일을 선택해주세요.',
+                submission_type=submission_type,
+            )
         max_size = collection_req.max_file_size_mb * 1024 * 1024
         if uploaded_file.size > max_size:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
-            })
+            return _render_submit_error(
+                request,
+                collection_req,
+                f'파일 크기가 {collection_req.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
+                submission_type=submission_type,
+            )
         submission.file = uploaded_file
         submission.original_filename = uploaded_file.name
         submission.file_size = uploaded_file.size
@@ -417,21 +559,37 @@ def submit_process(request, request_id):
         link_url = request.POST.get('link_url', '').strip()
         link_description = request.POST.get('link_description', '').strip()
         if not link_url:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '링크를 입력해주세요.',
-            })
+            return _render_submit_error(
+                request,
+                collection_req,
+                '링크를 입력해주세요.',
+                submission_type=submission_type,
+            )
         submission.link_url = link_url
         submission.link_description = link_description
 
     elif submission_type == 'text':
         text_content = request.POST.get('text_content', '').strip()
         if not text_content:
-            return render(request, 'collect/submit.html', {
-                'req': collection_req,
-                'error': '내용을 입력해주세요.',
-            })
+            return _render_submit_error(
+                request,
+                collection_req,
+                '내용을 입력해주세요.',
+                submission_type=submission_type,
+            )
         submission.text_content = text_content
+
+    elif submission_type == 'choice':
+        choice_answers, choice_other_text, choice_error = _extract_choice_submission_data(collection_req, request.POST)
+        if choice_error:
+            return _render_submit_error(
+                request,
+                collection_req,
+                choice_error,
+                submission_type=submission_type,
+            )
+        submission.choice_answers = choice_answers
+        submission.choice_other_text = choice_other_text
 
     submission.save()
     logger.info(f"[Collect] Submission saved: {submission.id}")
@@ -465,41 +623,100 @@ def submission_edit(request, management_id):
     # UUID 기반으로 동작하므로 세션 체크 생략 (링크를 가진 사람이 권한자)
         
     if request.method == 'POST':
-        contributor_name = request.POST.get('contributor_name', '').strip()
+        contributor_name = request.POST.get('contributor_name_custom', '').strip()
+        if not contributor_name:
+            selected = request.POST.get('contributor_name_select', '').strip()
+            if selected and selected != '__custom__':
+                contributor_name = selected
+        if not contributor_name:
+            contributor_name = request.POST.get('contributor_name', '').strip()
         contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
-        
-        if contributor_name:
-            submission.contributor_name = contributor_name
-            submission.contributor_affiliation = contributor_affiliation
-            
-            if submission.submission_type == 'file':
-                # 파일 교체 지원
-                uploaded_file = request.FILES.get('file')
-                if uploaded_file:
-                    max_size = submission.collection_request.max_file_size_mb * 1024 * 1024
-                    if uploaded_file.size <= max_size:
-                        submission.file = uploaded_file
-                        submission.original_filename = uploaded_file.name
-                        submission.file_size = uploaded_file.size
-                
-                # 파일 설명(텍스트 내용) 업데이트
-                submission.text_content = request.POST.get('file_description', submission.text_content)
 
-            elif submission.submission_type == 'link':
-                submission.link_url = request.POST.get('link_url', submission.link_url)
-                submission.link_description = request.POST.get('link_description', submission.link_description)
-            elif submission.submission_type == 'text':
-                submission.text_content = request.POST.get('text_content', submission.text_content)
-            
-            submission.save()
-            messages.success(request, '제출 정보가 수정되었습니다.')
-            return redirect('collect:submission_manage', management_id=management_id)
+        if not contributor_name:
+            return _render_submit_error(
+                request,
+                submission.collection_request,
+                "이름을 입력해주세요.",
+                submission_type=submission.submission_type,
+                is_edit=True,
+                submission=submission,
+            )
 
-    return render(request, 'collect/submit.html', {
-        'req': submission.collection_request,
-        'submission': submission,
-        'is_edit': True
-    })
+        submission.contributor_name = contributor_name
+        submission.contributor_affiliation = contributor_affiliation
+
+        if submission.submission_type == 'file':
+            uploaded_file = request.FILES.get('file')
+            if uploaded_file:
+                max_size = submission.collection_request.max_file_size_mb * 1024 * 1024
+                if uploaded_file.size > max_size:
+                    return _render_submit_error(
+                        request,
+                        submission.collection_request,
+                        f'파일 크기가 {submission.collection_request.max_file_size_mb}MB를 초과합니다. 링크로 제출해주세요.',
+                        submission_type=submission.submission_type,
+                        is_edit=True,
+                        submission=submission,
+                    )
+                submission.file = uploaded_file
+                submission.original_filename = uploaded_file.name
+                submission.file_size = uploaded_file.size
+
+            submission.text_content = request.POST.get('file_description', submission.text_content).strip()
+
+        elif submission.submission_type == 'link':
+            link_url = request.POST.get('link_url', '').strip()
+            if not link_url:
+                return _render_submit_error(
+                    request,
+                    submission.collection_request,
+                    "링크를 입력해주세요.",
+                    submission_type=submission.submission_type,
+                    is_edit=True,
+                    submission=submission,
+                )
+            submission.link_url = link_url
+            submission.link_description = request.POST.get('link_description', '').strip()
+
+        elif submission.submission_type == 'text':
+            text_content = request.POST.get('text_content', '').strip()
+            if not text_content:
+                return _render_submit_error(
+                    request,
+                    submission.collection_request,
+                    "내용을 입력해주세요.",
+                    submission_type=submission.submission_type,
+                    is_edit=True,
+                    submission=submission,
+                )
+            submission.text_content = text_content
+
+        elif submission.submission_type == 'choice':
+            choice_answers, choice_other_text, choice_error = _extract_choice_submission_data(
+                submission.collection_request,
+                request.POST,
+            )
+            if choice_error:
+                return _render_submit_error(
+                    request,
+                    submission.collection_request,
+                    choice_error,
+                    submission_type=submission.submission_type,
+                    is_edit=True,
+                    submission=submission,
+                )
+            submission.choice_answers = choice_answers
+            submission.choice_other_text = choice_other_text
+
+        submission.save()
+        messages.success(request, '제출 정보가 수정되었습니다.')
+        return redirect('collect:submission_manage', management_id=management_id)
+
+    return render(
+        request,
+        'collect/submit.html',
+        _get_submit_context(submission.collection_request, submission=submission, is_edit=True),
+    )
 
 
 @require_POST

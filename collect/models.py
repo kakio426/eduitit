@@ -27,6 +27,10 @@ class CollectionRequest(models.Model):
         ('closed', '마감'),
         ('archived', '보관'),
     ]
+    CHOICE_MODE_CHOICES = [
+        ('single', '단일 선택'),
+        ('multi', '복수 선택'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_requests')
@@ -36,6 +40,21 @@ class CollectionRequest(models.Model):
     allow_file = models.BooleanField(default=True, help_text="파일 업로드 허용")
     allow_link = models.BooleanField(default=True, help_text="링크 제출 허용")
     allow_text = models.BooleanField(default=True, help_text="텍스트 제출 허용")
+    allow_choice = models.BooleanField(default=False, help_text="선택형 제출 허용")
+    choice_mode = models.CharField(
+        max_length=10,
+        choices=CHOICE_MODE_CHOICES,
+        default='single',
+        help_text="선택형 제출 모드",
+    )
+    choice_options = models.JSONField(default=list, blank=True, help_text="선택형 보기 목록")
+    choice_min_selections = models.PositiveIntegerField(default=1, help_text="복수 선택 최소 개수")
+    choice_max_selections = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="복수 선택 최대 개수 (비우면 제한 없음)",
+    )
+    choice_allow_other = models.BooleanField(default=False, help_text="기타 직접 입력 허용")
     deadline = models.DateTimeField(null=True, blank=True, help_text="마감일시")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     closed_at = models.DateTimeField(null=True, blank=True, help_text="마감 처리 시각")
@@ -95,6 +114,33 @@ class CollectionRequest(models.Model):
         return [name.strip() for name in self.expected_submitters.strip().splitlines() if name.strip()]
 
     @property
+    def allowed_submission_types(self):
+        submission_types = []
+        if self.allow_file:
+            submission_types.append('file')
+        if self.allow_link:
+            submission_types.append('link')
+        if self.allow_text:
+            submission_types.append('text')
+        if self.allow_choice:
+            submission_types.append('choice')
+        return submission_types
+
+    @property
+    def normalized_choice_options(self):
+        if not isinstance(self.choice_options, list):
+            return []
+        options = []
+        seen = set()
+        for raw_option in self.choice_options:
+            option = str(raw_option).strip()
+            if not option or option in seen:
+                continue
+            options.append(option)
+            seen.add(option)
+        return options
+
+    @property
     def is_deadline_passed(self):
         if not self.deadline:
             return False
@@ -121,6 +167,7 @@ class Submission(models.Model):
         ('file', '파일'),
         ('link', '링크'),
         ('text', '텍스트'),
+        ('choice', '선택형'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -141,6 +188,9 @@ class Submission(models.Model):
     link_description = models.CharField(max_length=200, blank=True)
     # 텍스트 제출
     text_content = models.TextField(blank=True)
+    # 선택형 제출
+    choice_answers = models.JSONField(default=list, blank=True)
+    choice_other_text = models.TextField(blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     is_downloaded = models.BooleanField(default=False, help_text="다운로드 여부")
 
@@ -151,3 +201,13 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.contributor_name} - {self.get_submission_type_display()}"
+
+    @property
+    def choice_summary(self):
+        if self.submission_type != 'choice':
+            return ''
+        answers = self.choice_answers if isinstance(self.choice_answers, list) else []
+        tokens = [str(answer).strip() for answer in answers if str(answer).strip()]
+        if self.choice_other_text.strip():
+            tokens.append(f"기타: {self.choice_other_text.strip()}")
+        return ", ".join(tokens)

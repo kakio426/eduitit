@@ -28,6 +28,10 @@
             <div class="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-600 text-left">
                 <i class="fa-solid fa-align-left mr-1"></i> {{ submission.text_content|truncatechars:100 }}
             </div>
+            {% elif submission.submission_type == 'choice' %}
+            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-sm text-gray-600 text-left">
+                <i class="fa-solid fa-list-check mr-1"></i> {{ submission.choice_summary|default:"선택형 응답" }}
+            </div>
             {% endif %}
 
             <div class="space-y-3">

@@ -128,6 +128,10 @@
                             <div class="flex justify-between mb-1"><span class="text-gray-500">텍스트</span><span class="font-bold">{{ type_stats.text|default:"0" }}건</span></div>
                             <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-amber-500" style="width: {% widthratio type_stats.text|default:0 total_count|default:1 100 %}%"></div></div>
                         </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span class="text-gray-500">선택형</span><span class="font-bold">{{ type_stats.choice|default:"0" }}건</span></div>
+                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: {% widthratio type_stats.choice|default:0 total_count|default:1 100 %}%"></div></div>
+                        </div>
                     </div>
                 </div>
 
@@ -145,7 +149,7 @@
                 </div>
                 {% endif %}
 
-                {% if total_count > 0 %}
+                {% if files_data %}
                 <button id="download-all-btn" onclick="downloadAllFiles()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-sm">
                     <i class="fa-solid fa-download mr-2"></i><span id="download-label">전체 파일 다운로드 (ZIP)</span>
                 </button>
