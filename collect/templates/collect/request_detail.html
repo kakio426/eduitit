@@ -22,14 +22,32 @@
         margin: 0 auto;
         border-radius: 12px;
     }
+
+    .dashboard-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .dashboard-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .dashboard-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    .dashboard-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]" x-data="requestDetailPage()">
-    <div class="max-w-6xl mx-auto">
+<section class="pt-32 pb-10 px-4 md:px-6 min-h-screen bg-[#E0E5EC] text-base md:text-lg" x-data="requestDetailPage()">
+    <div class="max-w-7xl mx-auto">
         <div class="mb-6">
-            <a href="{% url 'collect:dashboard' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+            <a href="{% url 'collect:dashboard' %}" class="inline-flex items-center gap-2 text-base md:text-lg text-gray-600 hover:text-gray-800 transition-colors font-semibold">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-medium">대시보드로 돌아가기</span>
             </a>
@@ -38,9 +56,9 @@
         <div class="clay-card p-6 mb-5">
             <div class="flex items-start justify-between flex-wrap gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-700 mb-2">{{ req.title }}</h1>
-                    {% if req.description %}<p class="text-gray-500 mb-3">{{ req.description }}</p>{% endif %}
-                    <div class="flex items-center gap-4 flex-wrap text-sm text-gray-500">
+                    <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">{{ req.title }}</h1>
+                    {% if req.description %}<p class="text-lg md:text-xl text-gray-600 mb-3">{{ req.description }}</p>{% endif %}
+                    <div class="flex items-center gap-4 flex-wrap text-base md:text-lg text-gray-600">
                         {% if req.status == 'active' %}
                         <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">진행중</span>
                         {% elif req.status == 'closed' %}
@@ -59,27 +77,27 @@
                         <form action="{% url 'collect:request_toggle' req.id %}" method="post">
                             {% csrf_token %}
                             {% if req.status == 'active' %}
-                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-stop mr-1"></i>마감하기</button>
+                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-base md:text-lg"><i class="fa-solid fa-stop mr-1"></i>마감하기</button>
                             {% else %}
-                            <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-sm"><i class="fa-solid fa-play mr-1"></i>재개하기</button>
+                            <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-base md:text-lg"><i class="fa-solid fa-play mr-1"></i>재개하기</button>
                             {% endif %}
                         </form>
-                        <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-sm"><i class="fa-solid fa-file-csv mr-1"></i>CSV</a>
+                        <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-base md:text-lg"><i class="fa-solid fa-file-csv mr-1"></i>CSV</a>
                         <form action="{% url 'collect:request_delete' req.id %}" method="post" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
                             {% csrf_token %}
-                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
+                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-base md:text-lg"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
                         </form>
                     </div>
                     <div class="flex gap-2 flex-wrap justify-end">
                         <form action="{% url 'collect:request_extend_deadline' req.id %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="days" value="1">
-                            <button type="submit" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition text-sm"><i class="fa-solid fa-clock mr-1"></i>마감 +1일</button>
+                            <button type="submit" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition text-base md:text-lg"><i class="fa-solid fa-clock mr-1"></i>마감 +1일</button>
                         </form>
                         <form action="{% url 'collect:request_extend_retention' req.id %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="days" value="7">
-                            <button type="submit" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200 transition text-sm"><i class="fa-solid fa-hourglass-end mr-1"></i>보관 +7일</button>
+                            <button type="submit" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200 transition text-base md:text-lg"><i class="fa-solid fa-hourglass-end mr-1"></i>보관 +7일</button>
                         </form>
                     </div>
                 </div>
@@ -87,93 +105,165 @@
         </div>
 
         <div class="mb-5">
-            <button type="button" @click="showRetention=!showRetention" class="text-sm text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1">
+            <button type="button" @click="showRetention=!showRetention" class="text-base md:text-lg text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1">
                 <i class="fa-solid" :class="showRetention ? 'fa-chevron-down' : 'fa-chevron-right'"></i> 자동 정리 안내
             </button>
-            <div x-show="showRetention" x-transition class="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+            <div x-show="showRetention" x-transition class="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-base md:text-lg text-amber-700">
                 <p>자동 삭제/정리는 백그라운드에서 처리됩니다.</p>
                 <p>제출 기간은 <strong>마감 연장</strong>, 보관 기간은 <strong>보관 연장</strong>으로 각각 조정할 수 있습니다.</p>
             </div>
         </div>
 
-        <div class="grid lg:grid-cols-3 gap-6">
-            <div class="space-y-6">
-                <div class="qr-container">
-                    <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image mb-3">
-                    <p class="text-sm text-gray-500 mb-3">QR 코드를 스캔하면 제출 페이지로 이동합니다.</p>
-                    <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-between gap-2">
-                        <div class="flex flex-col items-start px-1">
-                            <span class="text-xs text-gray-400 font-medium">입장코드</span>
-                            <span class="text-2xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+            <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-3">
+                <p class="text-base md:text-lg text-slate-500 font-semibold">총 제출</p>
+                <p class="text-4xl md:text-5xl font-black text-slate-800">{{ total_count }}건</p>
+            </div>
+            <div class="rounded-2xl bg-emerald-50 border border-emerald-200 shadow-sm p-3">
+                <p class="text-base md:text-lg text-emerald-700 font-semibold">선택형 응답자</p>
+                <p class="text-4xl md:text-5xl font-black text-emerald-700">{{ type_stats.choice|default:"0" }}명</p>
+            </div>
+            <div class="rounded-2xl bg-violet-50 border border-violet-200 shadow-sm p-3">
+                <p class="text-base md:text-lg text-violet-700 font-semibold">최다 선택 항목</p>
+                <p class="text-2xl md:text-3xl font-black text-violet-700 truncate">
+                    {% if req.allow_choice and choice_stats.top_label %}{{ choice_stats.top_label }}{% else %}-{% endif %}
+                </p>
+            </div>
+            <div class="rounded-2xl bg-amber-50 border border-amber-200 shadow-sm p-3">
+                <p class="text-base md:text-lg text-amber-700 font-semibold">선택 집중도</p>
+                <p class="text-4xl md:text-5xl font-black text-amber-700">
+                    {% if req.allow_choice and choice_stats.has_responses %}{{ choice_stats.top_pct|floatformat:1 }}%{% else %}0%{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="grid gap-5 xl:grid-cols-12 xl:max-h-[70vh]">
+            <div class="space-y-5 xl:col-span-8 xl:min-h-0 xl:flex xl:flex-col">
+                <div class="clay-card p-4">
+                    <h3 class="text-xl md:text-2xl font-bold text-gray-700 mb-3">
+                        <i class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i>제출 유형 분포
+                    </h3>
+                    <div class="space-y-3 text-base md:text-lg">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-500">파일</span>
+                                <span class="font-bold">{{ type_stats.file|default:"0" }}건</span>
+                            </div>
+                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500" style="width: {% widthratio type_stats.file|default:0 total_count|default:1 100 %}%"></div>
+                            </div>
                         </div>
-                        <button @click="copyInvite()" class="px-4 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm text-sm">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-500">링크</span>
+                                <span class="font-bold">{{ type_stats.link|default:"0" }}건</span>
+                            </div>
+                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-500" style="width: {% widthratio type_stats.link|default:0 total_count|default:1 100 %}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-500">텍스트</span>
+                                <span class="font-bold">{{ type_stats.text|default:"0" }}건</span>
+                            </div>
+                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-amber-500" style="width: {% widthratio type_stats.text|default:0 total_count|default:1 100 %}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-500">선택형</span>
+                                <span class="font-bold">{{ type_stats.choice|default:"0" }}건</span>
+                            </div>
+                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500" style="width: {% widthratio type_stats.choice|default:0 total_count|default:1 100 %}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if req.allow_choice %}
+                <div id="choice-stats-panel" data-url="{% url 'collect:choice_stats_partial' req.id %}" class="xl:min-h-0 xl:flex-1 xl:overflow-y-auto dashboard-scrollbar pr-1">
+                    {% include 'collect/partials/choice_stats_panel.html' %}
+                </div>
+                {% else %}
+                <div class="clay-card p-5 text-center text-slate-500">
+                    <p class="font-bold mb-1">이 요청은 선택형 제출을 사용하지 않습니다.</p>
+                    <p class="text-base md:text-lg">선택형을 켜면 항목별 비율 대시보드가 여기에 표시됩니다.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <aside class="space-y-5 xl:col-span-4 xl:min-h-0 xl:flex xl:flex-col">
+                <div class="qr-container">
+                    <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image mb-3 max-w-[160px] max-h-[160px]">
+                    <p class="text-base md:text-lg text-gray-600 mb-3">QR을 스캔하면 제출 페이지로 이동합니다.</p>
+                    <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-between gap-2">
+                        <div class="flex flex-col items-start px-1 min-w-0">
+                            <span class="text-base text-gray-500 font-medium">입장코드</span>
+                            <span class="text-3xl md:text-4xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
+                        </div>
+                        <button @click="copyInvite()" class="px-3 py-2.5 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm text-base md:text-lg">
                             <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
                             <span x-text="copied ? '복사됨' : '초대문구 복사'"></span>
                         </button>
                     </div>
                 </div>
 
-                <div class="clay-card p-4">
-                    <h3 class="font-bold text-gray-700 mb-3"><i class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i>제출 현황</h3>
-                    <div class="space-y-3 text-sm">
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="text-gray-500">파일</span><span class="font-bold">{{ type_stats.file|default:"0" }}건</span></div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width: {% widthratio type_stats.file|default:0 total_count|default:1 100 %}%"></div></div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="text-gray-500">링크</span><span class="font-bold">{{ type_stats.link|default:"0" }}건</span></div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-purple-500" style="width: {% widthratio type_stats.link|default:0 total_count|default:1 100 %}%"></div></div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="text-gray-500">텍스트</span><span class="font-bold">{{ type_stats.text|default:"0" }}건</span></div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-amber-500" style="width: {% widthratio type_stats.text|default:0 total_count|default:1 100 %}%"></div></div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="text-gray-500">선택형</span><span class="font-bold">{{ type_stats.choice|default:"0" }}건</span></div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: {% widthratio type_stats.choice|default:0 total_count|default:1 100 %}%"></div></div>
-                        </div>
-                    </div>
-                </div>
-
                 {% if expected_submitters %}
-                <div class="clay-card p-4">
-                    <h3 class="font-bold text-gray-700 mb-3"><i class="fa-solid fa-user-check text-emerald-500 mr-2"></i>제출 대상자 <span class="text-xs font-normal text-gray-400 ml-1">{{ expected_submitters|length }}명</span></h3>
-                    {% if not_submitted %}
-                    <p class="text-xs text-red-500 font-bold mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>미제출 {{ not_submitted|length }}명</p>
-                    <div class="flex flex-wrap gap-1.5 mb-3">
-                        {% for name in not_submitted %}<span class="px-2 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-medium">{{ name }}</span>{% endfor %}
+                <details class="clay-card p-4" open>
+                    <summary class="cursor-pointer list-none flex items-center justify-between">
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-700">
+                            <i class="fa-solid fa-user-check text-emerald-500 mr-2"></i>제출 대상자
+                            <span class="text-base font-normal text-gray-500 ml-1">{{ expected_submitters|length }}명</span>
+                        </h3>
+                        <i class="fa-solid fa-chevron-down text-base text-gray-400"></i>
+                    </summary>
+                    <div class="mt-3">
+                        {% if not_submitted %}
+                        <p class="text-base md:text-lg text-red-500 font-bold mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>미제출 {{ not_submitted|length }}명</p>
+                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto dashboard-scrollbar pr-1">
+                            {% for name in not_submitted %}<span class="px-2 py-1 bg-red-100 text-red-600 rounded-lg text-base font-medium">{{ name }}</span>{% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-base md:text-lg text-emerald-600 font-bold mb-2"><i class="fa-solid fa-circle-check mr-1"></i>전원 제출 완료</p>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <p class="text-xs text-emerald-600 font-bold mb-2"><i class="fa-solid fa-circle-check mr-1"></i>전원 제출 완료</p>
-                    {% endif %}
-                </div>
+                </details>
                 {% endif %}
 
-                {% if files_data %}
-                <button id="download-all-btn" onclick="downloadAllFiles()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-sm">
-                    <i class="fa-solid fa-download mr-2"></i><span id="download-label">전체 파일 다운로드 (ZIP)</span>
-                </button>
-                {% endif %}
-            </div>
-
-            <div class="lg:col-span-2">
-                <div class="clay-card p-5">
+                <div class="clay-card p-5 xl:min-h-0 xl:flex-1 xl:flex xl:flex-col">
                     <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                        <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-inbox text-emerald-500"></i>제출물 목록</h2>
-                        <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-inbox text-emerald-500"></i>제출물 목록</h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span id="submission-filter-pill" class="hidden px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-base md:text-lg font-bold"></span>
+                            <button id="submission-filter-clear" type="button" onclick="clearSubmissionFilter()" class="hidden px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-base md:text-lg font-bold hover:bg-slate-200 transition">
+                                필터 해제
+                            </button>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-base md:text-lg text-gray-600">
                             <input id="auto-refresh" type="checkbox" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             5초 자동 갱신
                         </label>
                     </div>
 
-                    <div id="submissions-list" data-url="{% url 'collect:submissions_partial' req.id %}">
+                    <div id="submissions-list" data-url="{% url 'collect:submissions_partial' req.id %}" data-choice-filter="" data-choice-filter-label="" class="xl:min-h-0 xl:flex-1 xl:overflow-y-auto dashboard-scrollbar pr-1">
                         {% include 'collect/partials/submissions_list.html' %}
                     </div>
                 </div>
-            </div>
+
+                {% if files_data %}
+                <button id="download-all-btn" onclick="downloadAllFiles()" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-lg md:text-xl">
+                    <i class="fa-solid fa-download mr-2"></i><span id="download-label">전체 파일 다운로드 (ZIP)</span>
+                </button>
+                {% endif %}
+            </aside>
         </div>
 
-        {% include 'core/partials/service_suggestion.html' with service_key='collect' %}
+        <div class="mt-6 xl:hidden">
+            {% include 'core/partials/service_suggestion.html' with service_key='collect' %}
+        </div>
     </div>
 </section>
 
@@ -184,7 +274,7 @@
     function requestDetailPage() {
         return {
             copied: false,
-            showRetention: true,
+            showRetention: false,
             copyInvite() {
                 const title = '{{ req.title|escapejs }}';
                 const code = '{{ req.access_code }}';
@@ -201,14 +291,80 @@
     window.collectFiles = filesDataElement ? JSON.parse(filesDataElement.textContent) : [];
     window.collectTitle = "{{ req.title|escapejs }}";
 
+    function buildFilteredUrl(baseUrl, choiceFilter) {
+        const target = new URL(baseUrl, window.location.origin);
+        if (choiceFilter) {
+            target.searchParams.set('choice_filter', choiceFilter);
+        } else {
+            target.searchParams.delete('choice_filter');
+        }
+        return `${target.pathname}${target.search}`;
+    }
+
+    function syncSubmissionFilterUI() {
+        const list = document.getElementById('submissions-list');
+        const pill = document.getElementById('submission-filter-pill');
+        const clearBtn = document.getElementById('submission-filter-clear');
+        if (!list || !pill || !clearBtn) return;
+
+        const filterKey = (list.dataset.choiceFilter || '').trim();
+        const filterLabel = (list.dataset.choiceFilterLabel || '').trim();
+        if (filterKey && filterLabel) {
+            pill.textContent = `필터: ${filterLabel}`;
+            pill.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+        } else {
+            pill.textContent = '';
+            pill.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+        }
+    }
+
+    window.applySubmissionFilter = function(filterKey, filterLabel) {
+        const list = document.getElementById('submissions-list');
+        const statsPanel = document.getElementById('choice-stats-panel');
+        if (!list || !window.htmx) return;
+
+        list.dataset.choiceFilter = filterKey || '';
+        list.dataset.choiceFilterLabel = filterLabel || '';
+        syncSubmissionFilterUI();
+
+        const listUrl = buildFilteredUrl(list.getAttribute('data-url'), list.dataset.choiceFilter);
+        htmx.ajax('GET', listUrl, { target: '#submissions-list', swap: 'innerHTML' });
+
+        if (statsPanel) {
+            const statsUrl = buildFilteredUrl(statsPanel.getAttribute('data-url'), list.dataset.choiceFilter);
+            htmx.ajax('GET', statsUrl, { target: '#choice-stats-panel', swap: 'innerHTML' });
+        }
+    };
+
+    window.clearSubmissionFilter = function() {
+        window.applySubmissionFilter('', '');
+    };
+
+    document.addEventListener('DOMContentLoaded', syncSubmissionFilterUI);
+
     setInterval(() => {
         const list = document.getElementById('submissions-list');
+        const statsPanel = document.getElementById('choice-stats-panel');
         const toggle = document.getElementById('auto-refresh');
-        if (!list || !toggle || !window.htmx) return;
+        if (!toggle || !window.htmx) return;
         if (!toggle.checked) return;
-        const url = list.getAttribute('data-url');
-        if (url) {
-            htmx.ajax('GET', url, { target: '#submissions-list', swap: 'innerHTML' });
+
+        if (list) {
+            const filterKey = (list.dataset.choiceFilter || '').trim();
+            const url = buildFilteredUrl(list.getAttribute('data-url'), filterKey);
+            if (url) {
+                htmx.ajax('GET', url, { target: '#submissions-list', swap: 'innerHTML' });
+            }
+        }
+
+        if (statsPanel) {
+            const filterKey = list ? (list.dataset.choiceFilter || '').trim() : '';
+            const statsUrl = buildFilteredUrl(statsPanel.getAttribute('data-url'), filterKey);
+            if (statsUrl) {
+                htmx.ajax('GET', statsUrl, { target: '#choice-stats-panel', swap: 'innerHTML' });
+            }
         }
     }, 5000);
 </script>

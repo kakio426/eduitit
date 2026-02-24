@@ -27,6 +27,21 @@ DEFAULT_DEADLINE_EXTENSION_DAYS = 1
 DEFAULT_RETENTION_EXTENSION_DAYS = 7
 ALLOWED_EXTENSION_DAYS = {1, 3, 7, 14, 30}
 _STREAM_END = object()
+CHOICE_COLOR_PALETTE = [
+    "#2563EB",  # blue
+    "#F59E0B",  # amber
+    "#10B981",  # emerald
+    "#EF4444",  # red
+    "#8B5CF6",  # violet
+    "#06B6D4",  # cyan
+    "#EC4899",  # pink
+    "#84CC16",  # lime
+]
+CHOICE_OTHER_COLOR = "#6B7280"
+CHOICE_LEGACY_COLOR = "#9CA3AF"
+CHOICE_FILTER_OPTION_PREFIX = "option::"
+CHOICE_FILTER_OTHER = "__other__"
+CHOICE_FILTER_LEGACY = "__legacy__"
 
 
 def _next_or_end(iterator):
@@ -174,6 +189,174 @@ def _extract_choice_submission_data(collection_req, post_data):
     return selected_options, other_text, None
 
 
+def _normalized_choice_answers(submission):
+    raw_answers = submission.choice_answers if isinstance(submission.choice_answers, list) else []
+    normalized = []
+    seen = set()
+    for raw in raw_answers:
+        answer = str(raw).strip()
+        if not answer or answer in seen:
+            continue
+        normalized.append(answer)
+        seen.add(answer)
+    return normalized
+
+
+def _filter_submissions_for_choice(collection_req, submissions, raw_filter_key):
+    filter_key = (raw_filter_key or "").strip()
+    if not filter_key:
+        return submissions, "", ""
+
+    options = collection_req.normalized_choice_options
+    option_set = set(options)
+
+    if filter_key.startswith(CHOICE_FILTER_OPTION_PREFIX):
+        option = filter_key[len(CHOICE_FILTER_OPTION_PREFIX):].strip()
+        if not option or option not in option_set:
+            return submissions, "", ""
+
+        filtered = [
+            sub for sub in submissions
+            if sub.submission_type == "choice" and option in _normalized_choice_answers(sub)
+        ]
+        return filtered, option, filter_key
+
+    if filter_key == CHOICE_FILTER_OTHER:
+        filtered = [
+            sub for sub in submissions
+            if sub.submission_type == "choice" and sub.choice_other_text.strip()
+        ]
+        return filtered, "기타", filter_key
+
+    if filter_key == CHOICE_FILTER_LEGACY:
+        filtered = []
+        for sub in submissions:
+            if sub.submission_type != "choice":
+                continue
+            answers = _normalized_choice_answers(sub)
+            if any(answer not in option_set for answer in answers):
+                filtered.append(sub)
+        return filtered, "삭제된 보기", filter_key
+
+    return submissions, "", ""
+
+
+def _choice_color(index):
+    if index < len(CHOICE_COLOR_PALETTE):
+        return CHOICE_COLOR_PALETTE[index]
+    hue = (index * 43) % 360
+    return f"hsl({hue} 72% 45%)"
+
+
+def _build_choice_stats(collection_req, submissions):
+    if not collection_req.allow_choice:
+        return {
+            "enabled": False,
+            "has_responses": False,
+            "response_count": 0,
+            "total_picks": 0,
+            "items": [],
+            "choice_mode": collection_req.choice_mode,
+            "is_multi": collection_req.choice_mode == "multi",
+            "top_label": "",
+            "top_count": 0,
+            "top_pct": 0.0,
+        }
+
+    options = collection_req.normalized_choice_options
+    option_counts = {option: 0 for option in options}
+
+    response_count = 0
+    other_count = 0
+    legacy_count = 0
+
+    for sub in submissions:
+        if sub.submission_type != "choice":
+            continue
+
+        response_count += 1
+        raw_answers = sub.choice_answers if isinstance(sub.choice_answers, list) else []
+
+        # 한 응답에서 중복 선택이 들어오더라도 1건으로만 집계
+        seen_answers = set()
+        for raw in raw_answers:
+            answer = str(raw).strip()
+            if not answer or answer in seen_answers:
+                continue
+            seen_answers.add(answer)
+
+            if answer in option_counts:
+                option_counts[answer] += 1
+            else:
+                legacy_count += 1
+
+        if sub.choice_other_text.strip():
+            other_count += 1
+
+    total_picks = sum(option_counts.values()) + other_count + legacy_count
+    items = []
+
+    for idx, option in enumerate(options):
+        count = option_counts.get(option, 0)
+        respondent_pct = (count / response_count * 100) if response_count else 0
+        selection_pct = (count / total_picks * 100) if total_picks else 0
+        items.append({
+            "label": option,
+            "filter_key": f"{CHOICE_FILTER_OPTION_PREFIX}{option}",
+            "count": count,
+            "respondent_pct": respondent_pct,
+            "selection_pct": selection_pct,
+            "color": _choice_color(idx),
+            "order": idx,
+        })
+
+    if other_count:
+        respondent_pct = (other_count / response_count * 100) if response_count else 0
+        selection_pct = (other_count / total_picks * 100) if total_picks else 0
+        items.append({
+            "label": "기타",
+            "filter_key": CHOICE_FILTER_OTHER,
+            "count": other_count,
+            "respondent_pct": respondent_pct,
+            "selection_pct": selection_pct,
+            "color": CHOICE_OTHER_COLOR,
+            "order": len(items),
+        })
+
+    if legacy_count:
+        respondent_pct = (legacy_count / response_count * 100) if response_count else 0
+        selection_pct = (legacy_count / total_picks * 100) if total_picks else 0
+        items.append({
+            "label": "삭제된 보기",
+            "filter_key": CHOICE_FILTER_LEGACY,
+            "count": legacy_count,
+            "respondent_pct": respondent_pct,
+            "selection_pct": selection_pct,
+            "color": CHOICE_LEGACY_COLOR,
+            "order": len(items),
+        })
+
+    ranked_items = sorted(items, key=lambda x: (-x["count"], x["order"]))
+    for rank, item in enumerate(ranked_items, start=1):
+        item["rank"] = rank
+
+    top_item = next((item for item in ranked_items if item["count"] > 0), None)
+
+    return {
+        "enabled": True,
+        "has_responses": response_count > 0,
+        "response_count": response_count,
+        "total_picks": total_picks,
+        "items": ranked_items,
+        "active_items": [item for item in ranked_items if item["count"] > 0],
+        "choice_mode": collection_req.choice_mode,
+        "is_multi": collection_req.choice_mode == "multi",
+        "top_label": top_item["label"] if top_item else "",
+        "top_count": top_item["count"] if top_item else 0,
+        "top_pct": top_item["respondent_pct"] if top_item else 0.0,
+    }
+
+
 def get_collect_service():
     """서비스 정보 로드"""
     return Product.objects.filter(title__icontains="간편 수합").first()
@@ -279,6 +462,7 @@ def request_detail(request, request_id):
 
     # 제출 유형별 통계
     type_stats = submissions.values('submission_type').annotate(count=Count('id'))
+    choice_stats = _build_choice_stats(collection_req, submissions)
 
     # 제출 대상자 현황
     expected = collection_req.expected_submitters_list
@@ -303,6 +487,9 @@ def request_detail(request, request_id):
         'qr_code_base64': qr_code_base64,
         'total_count': submissions.count(),
         'type_stats': {s['submission_type']: s['count'] for s in type_stats},
+        'choice_stats': choice_stats,
+        'choice_filter_key': '',
+        'active_choice_filter_label': '',
         'expected_submitters': expected,
         'not_submitted': not_submitted,
         'files_data': files_data,
@@ -313,15 +500,47 @@ def request_detail(request, request_id):
 def submissions_partial(request, request_id):
     """HTMX 폴링용 - 제출물 목록 부분 렌더링"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
-    submissions = collection_req.submissions.all()
+    all_submissions = list(collection_req.submissions.all())
+    full_total_count = len(all_submissions)
+    filtered_submissions, active_choice_filter_label, active_choice_filter_key = _filter_submissions_for_choice(
+        collection_req,
+        all_submissions,
+        request.GET.get("choice_filter"),
+    )
     expected = collection_req.expected_submitters_list
-    submitted_names = set(submissions.values_list('contributor_name', flat=True))
+    submitted_names = {sub.contributor_name for sub in all_submissions}
     not_submitted = [name for name in expected if name not in submitted_names]
     return render(request, 'collect/partials/submissions_list.html', {
-        'submissions': submissions,
-        'total_count': submissions.count(),
+        'submissions': filtered_submissions,
+        'total_count': full_total_count,
+        'filtered_count': len(filtered_submissions),
+        'active_choice_filter_label': active_choice_filter_label,
+        'active_choice_filter_key': active_choice_filter_key,
         'expected_submitters': expected,
         'not_submitted': not_submitted,
+    })
+
+
+@login_required
+def choice_stats_partial(request, request_id):
+    """HTMX 폴링용 - 선택형 응답 통계 카드 부분 렌더링"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
+    submissions = collection_req.submissions.all()
+    _, _, active_choice_filter_key = _filter_submissions_for_choice(
+        collection_req,
+        [],
+        request.GET.get("choice_filter"),
+    )
+    _, active_choice_filter_label, _ = _filter_submissions_for_choice(
+        collection_req,
+        [],
+        request.GET.get("choice_filter"),
+    )
+    return render(request, 'collect/partials/choice_stats_panel.html', {
+        'req': collection_req,
+        'choice_stats': _build_choice_stats(collection_req, submissions),
+        'choice_filter_key': active_choice_filter_key,
+        'active_choice_filter_label': active_choice_filter_label,
     })
 
 

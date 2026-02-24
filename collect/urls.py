@@ -13,6 +13,7 @@ urlpatterns = [
     path('create/', views.request_create, name='request_create'),
     path('<uuid:request_id>/detail/', views.request_detail, name='request_detail'),
     path('<uuid:request_id>/submissions-partial/', views.submissions_partial, name='submissions_partial'),
+    path('<uuid:request_id>/choice-stats-partial/', views.choice_stats_partial, name='choice_stats_partial'),
     path('<uuid:request_id>/toggle/', views.request_toggle, name='request_toggle'),
     path('<uuid:request_id>/extend-deadline/', views.request_extend_deadline, name='request_extend_deadline'),
     path('<uuid:request_id>/extend-retention/', views.request_extend_retention, name='request_extend_retention'),

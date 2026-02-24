@@ -171,3 +171,163 @@ class ChoiceSubmissionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         csv_text = response.content.decode("utf-8-sig")
         self.assertIn("A, B, 기타: 직접", csv_text)
+
+    def test_request_detail_builds_choice_stats_for_dashboard(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="통계 대시보드",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="multi",
+            choice_options=["A", "B", "C"],
+            choice_allow_other=True,
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생1",
+            submission_type="choice",
+            choice_answers=["A", "B"],
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생2",
+            submission_type="choice",
+            choice_answers=["B"],
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생3",
+            submission_type="choice",
+            choice_answers=[],
+            choice_other_text="직접 입력",
+        )
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("collect:request_detail", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        choice_stats = response.context["choice_stats"]
+        self.assertTrue(choice_stats["enabled"])
+        self.assertTrue(choice_stats["is_multi"])
+        self.assertEqual(choice_stats["response_count"], 3)
+        self.assertEqual(choice_stats["total_picks"], 4)
+        self.assertEqual(choice_stats["top_label"], "B")
+        self.assertEqual(choice_stats["top_count"], 2)
+
+        by_label = {item["label"]: item for item in choice_stats["items"]}
+        self.assertEqual(by_label["A"]["count"], 1)
+        self.assertEqual(by_label["B"]["count"], 2)
+        self.assertEqual(by_label["기타"]["count"], 1)
+
+    def test_choice_stats_partial_renders_dashboard_copy(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="통계 부분 갱신",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="single",
+            choice_options=["찬성", "반대"],
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생1",
+            submission_type="choice",
+            choice_answers=["찬성"],
+        )
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("collect:choice_stats_partial", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "선택형 응답 대시보드")
+        self.assertContains(response, "응답자 대비")
+        self.assertContains(response, "선택 비중")
+
+    def test_submissions_partial_filters_by_choice_option(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="필터 테스트",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="multi",
+            choice_options=["A", "B", "C"],
+            choice_allow_other=True,
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생A",
+            submission_type="choice",
+            choice_answers=["A"],
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생B",
+            submission_type="choice",
+            choice_answers=["B"],
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생기타",
+            submission_type="choice",
+            choice_answers=[],
+            choice_other_text="직접",
+        )
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(
+            reverse("collect:submissions_partial", args=[req.id]),
+            data={"choice_filter": "option::A"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "학생A")
+        self.assertNotContains(response, "학생B")
+        self.assertNotContains(response, "학생기타")
+        self.assertContains(response, "A 제출 보기")
+
+    def test_submissions_partial_filters_by_choice_other(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="기타 필터 테스트",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="multi",
+            choice_options=["A", "B"],
+            choice_allow_other=True,
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생1",
+            submission_type="choice",
+            choice_answers=["A"],
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생기타",
+            submission_type="choice",
+            choice_answers=[],
+            choice_other_text="직접",
+        )
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(
+            reverse("collect:submissions_partial", args=[req.id]),
+            data={"choice_filter": "__other__"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "학생기타")
+        self.assertNotContains(response, "학생1")
+        self.assertContains(response, "기타 제출 보기")
