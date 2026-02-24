@@ -100,6 +100,15 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("application/pdf", response["Content-Type"])
 
+    @patch("django.db.models.fields.files.FieldFile.save", side_effect=RuntimeError("storage down"))
+    def test_summary_pdf_download_falls_back_when_storage_save_fails(self, mocked_save):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/pdf", response["Content-Type"])
+        self.assertIn("attachment;", response.get("Content-Disposition", ""))
+
     def test_sign_link_expired(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
         self.request_obj.sent_at = timezone.now() - timezone.timedelta(days=20)
@@ -198,6 +207,40 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "안내문+링크 복사")
         self.assertContains(response, "data:image/png;base64,")
+
+    def test_detail_shows_progress_dashboard_counts(self):
+        self.recipient.status = SignatureRecipient.STATUS_SIGNED
+        self.recipient.decision = SignatureRecipient.DECISION_AGREE
+        self.recipient.signed_at = timezone.now()
+        self.recipient.save(update_fields=["status", "decision", "signed_at"])
+        SignatureRecipient.objects.create(
+            request=self.request_obj,
+            student_name="학생B",
+            parent_name="학부모B",
+            phone_number="",
+        )
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "전체 수신자")
+        self.assertContains(response, "응답 완료")
+        self.assertContains(response, "완료율")
+        self.assertContains(response, "50%")
+
+    def test_delete_request_allows_when_submitted_response_exists(self):
+        self.recipient.status = SignatureRecipient.STATUS_SIGNED
+        self.recipient.decision = SignatureRecipient.DECISION_AGREE
+        self.recipient.signature_data = "data:image/png;base64,AAA"
+        self.recipient.signed_at = timezone.now()
+        self.recipient.save(update_fields=["status", "decision", "signature_data", "signed_at"])
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:delete_request", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.post(url, {}, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SignatureRequest.objects.filter(id=self.request_obj.id).exists())
 
     @patch("consent.models.SignatureDocument.save", side_effect=RuntimeError("storage failure"))
     def test_create_step1_handles_upload_exception_without_500(self, mocked_save):

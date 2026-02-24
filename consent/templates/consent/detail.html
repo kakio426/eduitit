@@ -38,6 +38,33 @@
       <p>각 수신자 카드의 <code>안내문+링크 복사</code> 버튼으로 메시지와 제출 링크를 함께 복사할 수 있습니다.</p>
     </div>
 
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+      <article class="rounded-xl border border-gray-200 bg-white px-3 py-3">
+        <p class="text-xs text-gray-500">전체 수신자</p>
+        <p class="text-xl font-bold text-gray-800 mt-1">{{ recipient_stats.total }}명</p>
+      </article>
+      <article class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+        <p class="text-xs text-emerald-700">응답 완료</p>
+        <p class="text-xl font-bold text-emerald-800 mt-1">{{ recipient_stats.responded }}명</p>
+      </article>
+      <article class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+        <p class="text-xs text-amber-700">미응답</p>
+        <p class="text-xl font-bold text-amber-800 mt-1">{{ recipient_stats.pending }}명</p>
+      </article>
+      <article class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3">
+        <p class="text-xs text-indigo-700">동의</p>
+        <p class="text-xl font-bold text-indigo-800 mt-1">{{ recipient_stats.agree }}명</p>
+      </article>
+      <article class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3">
+        <p class="text-xs text-rose-700">비동의</p>
+        <p class="text-xl font-bold text-rose-800 mt-1">{{ recipient_stats.disagree }}명</p>
+      </article>
+      <article class="rounded-xl border border-purple-200 bg-purple-50 px-3 py-3">
+        <p class="text-xs text-purple-700">완료율</p>
+        <p class="text-xl font-bold text-purple-800 mt-1">{{ recipient_stats.completion_rate }}%</p>
+      </article>
+    </section>
+
     <section class="clay-card p-4 sm:p-5 space-y-4">
       <h2 class="text-lg font-bold text-gray-700">수신자별 진행상태</h2>
 

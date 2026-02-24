@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Count
 from django.db.utils import DataError, OperationalError, ProgrammingError
@@ -418,6 +419,27 @@ def _policy_panel_context():
     }
 
 
+def _build_recipient_stats(recipients):
+    total = len(recipients)
+    responded = sum(
+        1
+        for recipient in recipients
+        if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED)
+    )
+    pending = max(total - responded, 0)
+    agree = sum(1 for recipient in recipients if recipient.decision == SignatureRecipient.DECISION_AGREE)
+    disagree = sum(1 for recipient in recipients if recipient.decision == SignatureRecipient.DECISION_DISAGREE)
+    completion_rate = int(round((responded / total) * 100)) if total else 0
+    return {
+        "total": total,
+        "responded": responded,
+        "pending": pending,
+        "agree": agree,
+        "disagree": disagree,
+        "completion_rate": completion_rate,
+    }
+
+
 def _issue_access_token():
     while True:
         token = secrets.token_urlsafe(24)
@@ -477,16 +499,9 @@ def consent_delete_request(request, request_id):
     if request.method != "POST":
         return redirect("consent:dashboard")
 
-    has_submitted = consent_request.recipients.filter(
-        status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
-    ).exists()
-    if has_submitted:
-        messages.error(request, "이미 응답이 제출된 동의서는 삭제할 수 없습니다.")
-        return redirect("consent:dashboard")
-
     title = consent_request.title
     consent_request.delete()
-    messages.success(request, f"'{title}' 동의서를 삭제했습니다.")
+    messages.success(request, f"'{title}' 동의서를 삭제했습니다. 제출 응답 기록도 함께 삭제되었습니다.")
     return redirect("consent:dashboard")
 
 
@@ -659,7 +674,8 @@ def consent_detail(request, request_id):
         request_id=request_id,
         created_by=request.user,
     )
-    recipients = consent_request.recipients.all().order_by("student_name")
+    recipients = list(consent_request.recipients.all().order_by("student_name"))
+    recipient_stats = _build_recipient_stats(recipients)
     source_file_available = _is_file_accessible(consent_request.document.original_file)
     recipient_rows = []
     for recipient in recipients:
@@ -681,6 +697,7 @@ def consent_detail(request, request_id):
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
             "source_file_available": source_file_available,
+            "recipient_stats": recipient_stats,
         },
     )
 
@@ -769,12 +786,26 @@ def consent_download_summary_pdf(request, request_id):
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     try:
         summary_file = generate_summary_pdf(consent_request)
-        consent_request.merged_pdf.save(summary_file.name, summary_file, save=True)
-        return FileResponse(
-            consent_request.merged_pdf.open("rb"),
-            as_attachment=True,
-            filename=consent_request.merged_pdf.name.split("/")[-1],
-        )
+        filename = (getattr(summary_file, "name", "") or f"summary_{consent_request.request_id}.pdf").split("/")[-1]
+        if hasattr(summary_file, "seek"):
+            summary_file.seek(0)
+        pdf_bytes = summary_file.read() if hasattr(summary_file, "read") else b""
+        if not pdf_bytes:
+            raise ValueError("summary pdf is empty")
+
+        # 다운로드는 생성 직후 메모리 바이트를 우선 사용해 스토리지 open 실패에 영향받지 않도록 한다.
+        try:
+            consent_request.merged_pdf.save(filename, ContentFile(pdf_bytes), save=True)
+        except Exception:
+            logger.exception(
+                "[consent] summary save failed but download fallback used request_id=%s",
+                consent_request.request_id,
+            )
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        response["Cache-Control"] = "no-store"
+        return response
     except Exception:
         logger.exception("[consent] summary download failed request_id=%s", consent_request.request_id)
         messages.error(request, "요약 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
