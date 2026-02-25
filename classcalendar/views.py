@@ -1,11 +1,13 @@
 import logging
 import uuid
+from datetime import timedelta
 from urllib.parse import urlencode
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -24,7 +26,7 @@ from .integrations import (
     serialize_integration_setting,
     sync_user_calendar_integrations,
 )
-from .models import CalendarEvent, EventPageBlock
+from .models import CalendarEvent, CalendarIntegrationSetting, EventPageBlock
 
 SERVICE_ROUTE = "classcalendar:main"
 INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
@@ -268,6 +270,40 @@ def _integration_event_readonly_response():
     )
 
 
+def _build_share_url(request, share_uuid):
+    return request.build_absolute_uri(reverse("classcalendar:shared", kwargs={"share_uuid": share_uuid}))
+
+
+def _build_shared_event_groups(events):
+    grouped = []
+    current_date = None
+    current_group = None
+
+    for event in events:
+        start_local = timezone.localtime(event.start_time)
+        end_local = timezone.localtime(event.end_time)
+        event_date = start_local.date()
+
+        if current_date != event_date:
+            current_date = event_date
+            current_group = {"date": event_date, "events": []}
+            grouped.append(current_group)
+
+        current_group["events"].append(
+            {
+                "id": str(event.id),
+                "title": event.title,
+                "note": _extract_primary_note(event),
+                "start_time": start_local,
+                "end_time": end_local,
+                "is_all_day": event.is_all_day,
+                "color": event.color or "indigo",
+            }
+        )
+
+    return grouped
+
+
 @login_required
 def main_view(request):
     _sync_integrations_if_needed(request)
@@ -279,8 +315,70 @@ def main_view(request):
         "events_json": [_serialize_event(event) for event in _get_teacher_visible_events(request)],
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
+        "share_enabled": bool(integration_setting.share_enabled),
+        "share_url": _build_share_url(request, integration_setting.share_uuid),
     }
     return render(request, "classcalendar/main.html", context)
+
+
+@login_required
+@require_POST
+def share_enable(request):
+    setting = _get_integration_setting_for_user(request.user)
+    if not setting.share_enabled:
+        setting.share_enabled = True
+        setting.save(update_fields=["share_enabled", "updated_at"])
+    messages.success(request, "공유 링크를 활성화했습니다.")
+    return redirect("classcalendar:main")
+
+
+@login_required
+@require_POST
+def share_disable(request):
+    setting = _get_integration_setting_for_user(request.user)
+    if setting.share_enabled:
+        setting.share_enabled = False
+        setting.save(update_fields=["share_enabled", "updated_at"])
+    messages.info(request, "공유 링크를 비활성화했습니다.")
+    return redirect("classcalendar:main")
+
+
+@login_required
+@require_POST
+def share_rotate(request):
+    setting = _get_integration_setting_for_user(request.user)
+    setting.share_uuid = uuid.uuid4()
+    setting.share_enabled = True
+    setting.save(update_fields=["share_uuid", "share_enabled", "updated_at"])
+    messages.success(request, "공유 링크를 재발급했습니다.")
+    return redirect("classcalendar:main")
+
+
+@require_GET
+def shared_view(request, share_uuid):
+    setting = (
+        CalendarIntegrationSetting.objects.select_related("user")
+        .filter(share_uuid=share_uuid, share_enabled=True)
+        .first()
+    )
+    if not setting:
+        return render(request, "classcalendar/shared_unavailable.html", status=404)
+
+    window_start = timezone.now() - timedelta(days=7)
+    events = (
+        CalendarEvent.objects.filter(author=setting.user, end_time__gte=window_start)
+        .prefetch_related("blocks")
+        .order_by("start_time", "id")
+    )
+    grouped_events = _build_shared_event_groups(events)
+
+    context = {
+        "owner_name": setting.user.get_full_name() or setting.user.username,
+        "grouped_events": grouped_events,
+        "event_count": sum(len(group["events"]) for group in grouped_events),
+        "generated_at": timezone.localtime(),
+    }
+    return render(request, "classcalendar/shared.html", context)
 
 
 @login_required

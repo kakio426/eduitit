@@ -103,6 +103,72 @@
         {% endif %}
 
         <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm mb-4">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">공유 링크</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">링크를 아는 사람은 로그인 없이 읽기 전용으로 캘린더를 볼 수 있습니다.</p>
+                </div>
+                {% if share_enabled %}
+                <span class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                    활성화
+                </span>
+                {% else %}
+                <span class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                    비활성화
+                </span>
+                {% endif %}
+            </div>
+            {% if share_enabled %}
+            <div class="flex flex-col sm:flex-row gap-2.5">
+                <input
+                    id="calendarShareUrl"
+                    type="text"
+                    readonly
+                    value="{{ share_url }}"
+                    class="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700"
+                >
+                <div class="flex gap-2">
+                    <button
+                        type="button"
+                        onclick="copyCalendarShareUrl()"
+                        class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                    >
+                        링크 복사
+                    </button>
+                    <form action="{% url 'classcalendar:share_rotate' %}" method="post">
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                        >
+                            재발급
+                        </button>
+                    </form>
+                    <form action="{% url 'classcalendar:share_disable' %}" method="post">
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition"
+                        >
+                            비활성화
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <form action="{% url 'classcalendar:share_enable' %}" method="post">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
+                >
+                    공유 링크 활성화
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm mb-4">
             <div class="flex items-center justify-between gap-3 mb-3">
                 <div>
                     <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">연동 설정</h3>
@@ -532,6 +598,22 @@
 {{ events_json|json_script:"events-data" }}
 
 <script>
+function copyCalendarShareUrl() {
+    const input = document.getElementById('calendarShareUrl');
+    if (!input) return;
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        window.showToast('이 브라우저에서는 자동 복사가 지원되지 않습니다.', 'error');
+        return;
+    }
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(() => {
+        window.showToast('공유 링크를 복사했습니다.', 'success');
+    }).catch(() => {
+        window.showToast('링크 복사에 실패했습니다. 직접 복사해 주세요.', 'error');
+    });
+}
+
 function calendarApp() {
     return {
         view: 'month',

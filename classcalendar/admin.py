@@ -37,6 +37,8 @@ class CalendarIntegrationSettingAdmin(admin.ModelAdmin):
         "consent_expiry_enabled",
         "reservation_enabled",
         "signatures_training_enabled",
+        "share_enabled",
+        "share_uuid",
         "updated_at",
     )
     search_fields = ("user__username", "user__email")

@@ -22,7 +22,7 @@ class Command(BaseCommand):
             "color_theme": "blue",
             "card_size": "small",
             "display_order": 35,
-            "service_type": "classroom",
+            "service_type": "work",
             "external_url": "",
             "launch_route_name": "timetable:main",
         }
@@ -33,6 +33,7 @@ class Command(BaseCommand):
             "is_active",
             "is_guest_allowed",
             "icon",
+            "service_type",
             "external_url",
             "launch_route_name",
         ]
@@ -149,4 +150,3 @@ class Command(BaseCommand):
                     section.save(update_fields=changed)
 
         self.stdout.write(self.style.SUCCESS("ensure_timetable completed"))
-

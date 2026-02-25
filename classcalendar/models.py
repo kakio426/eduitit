@@ -69,6 +69,8 @@ class CalendarIntegrationSetting(models.Model):
     consent_expiry_enabled = models.BooleanField(default=True)
     reservation_enabled = models.BooleanField(default=True)
     signatures_training_enabled = models.BooleanField(default=True)
+    share_enabled = models.BooleanField(default=False)
+    share_uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
