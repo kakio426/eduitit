@@ -1,6 +1,6 @@
 {# 미니 서비스 카드 - V2 홈 목적별 섹션용 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
-<div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group product-card"
+<div class="relative bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group product-card"
     data-product-id="{{ product.id }}"
     data-launch-href="{{ product.launch_href|default:'' }}"
     data-launch-external="{{ product.launch_is_external|yesno:'true,false' }}"
@@ -24,17 +24,6 @@
             <span class="inline-flex w-6 h-6 items-center justify-center rounded-full bg-slate-50 text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">
                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </span>
-            {% if request.user.is_authenticated %}
-            <button type="button"
-                class="favorite-toggle-btn inline-flex w-6 h-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                data-product-id="{{ product.id }}"
-                data-favorite-toggle="true"
-                aria-pressed="false"
-                aria-label="{{ product.title }} 즐겨찾기 토글"
-                title="즐겨찾기">
-                <i class="fa-solid fa-star text-[10px]"></i>
-            </button>
-            {% endif %}
             <button type="button"
                 class="product-info-trigger rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
                 data-product-id="{{ product.id }}"
@@ -44,4 +33,15 @@
             </button>
         </div>
     </div>
+    {% if request.user.is_authenticated %}
+    <button type="button"
+        class="favorite-toggle-btn absolute top-4 right-14 inline-flex w-6 h-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+        data-product-id="{{ product.id }}"
+        data-favorite-toggle="true"
+        aria-pressed="false"
+        aria-label="{{ product.title }} 즐겨찾기 토글"
+        title="즐겨찾기">
+        <i class="fa-solid fa-star text-[10px]"></i>
+    </button>
+    {% endif %}
 </div>

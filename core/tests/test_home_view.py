@@ -224,13 +224,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
-    def test_v2_authenticated_has_greeting(self):
-        """V2 로그인 홈에 인사말 존재"""
+    def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
+        """V2 로그인 홈 상단은 큰 인사말 대신 압축된 검색 행을 사용"""
         self._login('greetuser', nickname='홍길동')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('홍길동', content)
-        self.assertIn('선생님, 안녕하세요', content)
+        self.assertNotIn('선생님, 안녕하세요', content)
+        self.assertIn('openSearchModal', content)
 
     def test_v2_authenticated_has_quick_actions(self):
         """V2 로그인 홈에 퀵 액션 존재"""
@@ -306,9 +306,8 @@ class HomeV2ViewTest(TestCase):
         self._login('searchlayout')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('mb-6 flex flex-wrap items-start justify-between gap-3', content)
-        self.assertIn('class="min-w-0"', content)
-        self.assertIn('class="ml-auto flex-shrink-0 flex items-center gap-2 bg-white', content)
+        self.assertIn('mb-4 flex justify-end', content)
+        self.assertIn('class="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl', content)
 
     def test_v2_search_products_json_in_context(self):
         """V2 홈에 search_products_json 컨텍스트 존재"""
@@ -352,14 +351,14 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(favorite_items[0]['product'].id, self.p2.id)
         self.assertIn(self.p2.id, favorite_product_ids)
 
-    def test_v2_authenticated_renders_favorite_toggle_and_strip(self):
+    def test_v2_authenticated_renders_favorite_toggle_and_quick_slot(self):
         user = self._login('favoriteui')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-favorite-toggle="true"', content)
-        self.assertIn('내 즐겨찾기', content)
+        self.assertIn('즐겨찾기', content)
         self.assertIn('home-favorite-ids-data', content)
 
 

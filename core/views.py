@@ -226,6 +226,9 @@ def get_purpose_sections(products_qs, preview_limit=None):
 
     main_sections = []
     for section in HOME_MAIN_SECTIONS:
+        # 교실 활동은 전용 배너(game_banner)로만 노출해 중복을 방지한다.
+        if section["key"] == "class_activity":
+            continue
         items = bucket.get(section["key"], [])
         if items:
             main_sections.append(_build_section_payload(section, items, preview_limit=preview_limit))

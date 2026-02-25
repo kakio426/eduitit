@@ -511,20 +511,15 @@ function homeCalendarWidget() {
         <!-- 메인 콘텐츠 -->
         <main class="flex-1 min-w-0 p-4 md:px-6 lg:px-8 xl:px-12 pt-0 md:pt-0">
 
-            <!-- 인사말 + 검색 -->
-            <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <h2 class="text-xl md:text-2xl font-bold text-slate-800">{% if request.user.userprofile and request.user.userprofile.nickname %}{{ request.user.userprofile.nickname }}{% else %}{{ request.user.username }}{% endif %} 선생님, 안녕하세요!</h2>
-                    <p class="text-sm text-slate-500 mt-1">오늘도 스마트한 하루를 시작해 보세요.</p>
-                </div>
-                {% if search_products_json %}
-                <button onclick="if(window.openSearchModal) openSearchModal()" class="ml-auto flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm" title="Ctrl+K">
+            {% if search_products_json %}
+            <div class="mb-4 flex justify-end">
+                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm" title="Ctrl+K">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                     <span class="hidden sm:inline">검색</span>
                     <kbd class="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">⌘K</kbd>
                 </button>
-                {% endif %}
             </div>
+            {% endif %}
 
             {% if today_items %}
             <div class="mb-6">
@@ -552,12 +547,28 @@ function homeCalendarWidget() {
             {% endif %}
 
             <!-- 추천 빠른 실행 -->
-            {% if quick_actions %}
+            {% if favorite_items or quick_actions %}
             <div class="mb-6">
                 <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    {% if favorite_items %}
+                    <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
+                    {% else %}
                     <i class="fa-solid fa-bolt text-amber-500"></i> 추천 빠른 실행
+                    {% endif %}
                 </h3>
                 <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
+                    {% if favorite_items %}
+                    {% for item in favorite_items %}
+                    <a href="{{ item.href }}"
+                        {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        data-product-id="{{ item.product.id }}"
+                        data-track="quick_action" data-track-label="{{ item.product.title }}"
+                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
+                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
+                    </a>
+                    {% endfor %}
+                    {% else %}
                     {% for qa in quick_actions %}
                     <a href="{{ qa.href }}"
                         {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
@@ -567,25 +578,7 @@ function homeCalendarWidget() {
                         <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
                     </a>
                     {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            {% if favorite_items %}
-            <div class="mb-6">
-                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-star text-amber-500"></i> 내 즐겨찾기
-                </h3>
-                <div class="flex gap-3 overflow-x-auto quick-scroll pb-2" id="favorite-strip-list">
-                    {% for item in favorite_items %}
-                    <a href="{{ item.href }}"
-                        {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                        data-product-id="{{ item.product.id }}"
-                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
-                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
-                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
-                    </a>
-                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
