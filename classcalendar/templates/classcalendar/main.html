@@ -169,6 +169,84 @@
         </div>
 
         <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm mb-4">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">협업 사용자</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">아이디 또는 이메일로 협업자를 추가하면 같은 캘린더를 함께 볼 수 있습니다.</p>
+                </div>
+            </div>
+            <form action="{% url 'classcalendar:collaborator_add' %}" method="post" class="flex flex-col lg:flex-row gap-2.5">
+                {% csrf_token %}
+                <input
+                    type="text"
+                    name="collaborator_query"
+                    placeholder="아이디 또는 이메일"
+                    class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                    required
+                >
+                <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <input type="checkbox" name="can_edit" checked class="rounded border-slate-300">
+                    편집 허용
+                </label>
+                <button
+                    type="submit"
+                    class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
+                >
+                    협업자 추가
+                </button>
+            </form>
+
+            <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내 캘린더 협업자</p>
+                    {% if owner_collaborators %}
+                    <div class="space-y-2">
+                        {% for collaborator in owner_collaborators %}
+                        <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-slate-900 truncate">{{ collaborator.name }}</p>
+                                <p class="text-xs font-medium text-slate-500 truncate">@{{ collaborator.username }}{% if collaborator.email %} · {{ collaborator.email }}{% endif %}</p>
+                                <p class="mt-1 text-[11px] font-semibold {% if collaborator.can_edit %}text-emerald-700{% else %}text-slate-600{% endif %}">
+                                    {% if collaborator.can_edit %}편집 가능{% else %}읽기 전용{% endif %}
+                                </p>
+                            </div>
+                            <form action="{% url 'classcalendar:collaborator_remove' collaborator.id %}" method="post">
+                                {% csrf_token %}
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
+                                >
+                                    제거
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm font-medium text-slate-500">등록된 협업자가 없습니다.</p>
+                    {% endif %}
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내가 공유받은 캘린더</p>
+                    {% if incoming_calendars %}
+                    <div class="space-y-2">
+                        {% for incoming in incoming_calendars %}
+                        <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <p class="text-sm font-bold text-slate-900 truncate">{{ incoming.owner_name }}</p>
+                            <p class="mt-1 text-[11px] font-semibold {% if incoming.can_edit %}text-emerald-700{% else %}text-slate-600{% endif %}">
+                                {% if incoming.can_edit %}편집 가능{% else %}읽기 전용{% endif %}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm font-medium text-slate-500">공유받은 캘린더가 없습니다.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 shadow-sm mb-4">
             <div class="flex items-center justify-between gap-3 mb-3">
                 <div>
                     <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">연동 설정</h3>
@@ -274,6 +352,11 @@
                                     >
                                         <span class="mr-1.5 text-[11px] font-semibold opacity-80" x-text="formatEventTimeShort(event.start_time, event.is_all_day)"></span>
                                         <span x-text="event.title"></span>
+                                        <span
+                                            x-show="event.is_shared_calendar"
+                                            class="ml-1 text-[10px] font-bold opacity-70"
+                                            x-text="`(${event.calendar_owner_name})`"
+                                        ></span>
                                     </button>
                                 </template>
                                 <p x-show="getOverflowCountForDate(date) > 0" class="text-xs font-semibold text-slate-500 px-1" x-text="`+ ${getOverflowCountForDate(date)}개 더`"></p>
@@ -307,7 +390,14 @@
                                 <div class="flex items-start gap-3">
                                     <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                        <div class="flex items-center gap-1.5">
+                                            <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                            <span
+                                                x-show="event.is_shared_calendar"
+                                                class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
+                                                x-text="event.calendar_owner_name"
+                                            ></span>
+                                        </div>
                                         <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
                                     </div>
                                 </div>
@@ -383,7 +473,14 @@
                                 <div class="flex items-start gap-3">
                                     <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                        <div class="flex items-center gap-1.5">
+                                            <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                            <span
+                                                x-show="event.is_shared_calendar"
+                                                class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
+                                                x-text="event.calendar_owner_name"
+                                            ></span>
+                                        </div>
                                         <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
                                     </div>
                                 </div>
@@ -422,7 +519,14 @@
                                     <div class="flex items-start gap-3">
                                         <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-base sm:text-lg font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                            <div class="flex items-center gap-1.5">
+                                                <p class="text-base sm:text-lg font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                                <span
+                                                    x-show="event.is_shared_calendar"
+                                                    class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
+                                                    x-text="event.calendar_owner_name"
+                                                ></span>
+                                            </div>
                                             <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
                                         </div>
                                     </div>
@@ -446,6 +550,14 @@
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
                     <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                </div>
+                <div x-show="calendarOwnerOptions.length > 1">
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">저장 캘린더</label>
+                    <select x-model="createForm.calendar_owner_id" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <template x-for="option in calendarOwnerOptions" :key="`owner-option-${option.id}`">
+                            <option :value="option.id" x-text="option.label"></option>
+                        </template>
+                    </select>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -540,6 +652,11 @@
             <h3 class="text-xl font-extrabold text-slate-900 mb-2" x-text="selectedEvent ? selectedEvent.title : ''"></h3>
             <p class="text-sm font-medium text-slate-600 mb-3" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
             <p
+                x-show="selectedEvent && selectedEvent.is_shared_calendar"
+                class="mb-3 text-xs font-semibold text-indigo-700"
+                x-text="selectedEvent ? `캘린더: ${selectedEvent.calendar_owner_name}` : ''"
+            ></p>
+            <p
                 x-show="selectedEvent && selectedEvent.note"
                 class="mb-5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line"
                 x-text="selectedEvent ? selectedEvent.note : ''"
@@ -549,6 +666,12 @@
                 class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800"
             >
                 자동 연동 일정입니다. 원본 서비스에서 수정하거나 삭제해 주세요.
+            </p>
+            <p
+                x-show="selectedEvent && !selectedEvent.is_locked && !selectedEvent.can_edit"
+                class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
+            >
+                읽기 전용으로 공유된 일정입니다.
             </p>
             <a
                 x-show="selectedEvent && selectedEvent.source_url"
@@ -563,7 +686,7 @@
             <div class="flex flex-wrap justify-end gap-2">
                 <button
                     type="button"
-                    x-show="selectedEvent && !selectedEvent.is_locked"
+                    x-show="selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit"
                     @click="openEditModal()"
                     class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
                 >
@@ -571,7 +694,7 @@
                 </button>
                 <button
                     type="button"
-                    x-show="selectedEvent && !selectedEvent.is_locked"
+                    x-show="selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit"
                     @click="openDeleteConfirm()"
                     class="px-3.5 py-2 rounded-xl border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-50 transition"
                 >
@@ -596,6 +719,7 @@
 
 {{ integration_settings_json|json_script:"integration-settings-data" }}
 {{ events_json|json_script:"events-data" }}
+{{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 
 <script>
 function copyCalendarShareUrl() {
@@ -637,13 +761,30 @@ function calendarApp() {
             reservation_enabled: true,
             signatures_training_enabled: true,
         },
-        createForm: { title: '', note: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
+        calendarOwnerOptions: [],
+        defaultCalendarOwnerId: '',
+        createForm: { title: '', note: '', calendar_owner_id: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
         editForm: { title: '', note: '', start_time: '', end_time: '', is_all_day: false, color: 'indigo' },
 
         init() {
+            this.loadCalendarOwnerOptions();
             this.loadIntegrationSettingsFromScript();
             this.loadEventsFromScript();
             this.selectedDateKey = this.dateKey(new Date());
+        },
+
+        loadCalendarOwnerOptions() {
+            try {
+                const raw = JSON.parse(document.getElementById('calendar-owner-options-data').textContent || '[]');
+                this.calendarOwnerOptions = Array.isArray(raw) ? raw : [];
+                const explicitDefault = this.calendarOwnerOptions.find((option) => option && option.is_default);
+                this.defaultCalendarOwnerId = explicitDefault
+                    ? String(explicitDefault.id)
+                    : (this.calendarOwnerOptions[0] ? String(this.calendarOwnerOptions[0].id) : '');
+            } catch (e) {
+                this.calendarOwnerOptions = [];
+                this.defaultCalendarOwnerId = '';
+            }
         },
 
         loadIntegrationSettingsFromScript() {
@@ -664,6 +805,10 @@ function calendarApp() {
             return {
                 ...event,
                 note: event.note || '',
+                calendar_owner_id: event.calendar_owner_id ? String(event.calendar_owner_id) : '',
+                calendar_owner_name: event.calendar_owner_name || '',
+                is_shared_calendar: !!event.is_shared_calendar,
+                can_edit: !!event.can_edit,
                 start_time: new Date(event.start_time),
                 end_time: new Date(event.end_time),
             };
@@ -763,6 +908,7 @@ function calendarApp() {
             this.createForm = {
                 title: '',
                 note: '',
+                calendar_owner_id: this.defaultCalendarOwnerId || '',
                 start_time: this.toDatetimeLocal(start),
                 end_time: this.toDatetimeLocal(next),
                 is_all_day: false,
@@ -794,6 +940,7 @@ function calendarApp() {
             const body = new URLSearchParams();
             body.set('title', this.createForm.title);
             body.set('note', this.createForm.note || '');
+            if (this.createForm.calendar_owner_id) body.set('calendar_owner_id', this.createForm.calendar_owner_id);
             body.set('start_time', this.createForm.start_time);
             body.set('end_time', this.createForm.end_time);
             body.set('color', this.createForm.color);
@@ -829,6 +976,10 @@ function calendarApp() {
             if (!this.selectedEvent) return;
             if (this.selectedEvent.is_locked) {
                 window.showToast('자동 연동 일정은 원본 서비스에서 수정해 주세요.', 'info');
+                return;
+            }
+            if (!this.selectedEvent.can_edit) {
+                window.showToast('읽기 전용으로 공유된 일정입니다.', 'info');
                 return;
             }
             this.detailModalOpen = false;
@@ -880,6 +1031,10 @@ function calendarApp() {
             if (!this.selectedEvent) return;
             if (this.selectedEvent.is_locked) {
                 window.showToast('자동 연동 일정은 원본 서비스에서 삭제해 주세요.', 'info');
+                return;
+            }
+            if (!this.selectedEvent.can_edit) {
+                window.showToast('읽기 전용으로 공유된 일정입니다.', 'info');
                 return;
             }
             this.detailModalOpen = false;

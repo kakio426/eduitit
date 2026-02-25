@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 import uuid
 
 
@@ -79,6 +80,41 @@ class CalendarIntegrationSetting(models.Model):
 
     def __str__(self):
         return f"{self.user.username} 캘린더 연동 설정"
+
+
+class CalendarCollaborator(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="calendar_collaborators",
+    )
+    collaborator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shared_calendars",
+    )
+    can_edit = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "캘린더 협업자"
+        verbose_name_plural = "캘린더 협업자"
+        unique_together = [("owner", "collaborator")]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(owner=models.F("collaborator")),
+                name="calendar_collaborator_owner_not_self",
+            )
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.owner_id and self.owner_id == self.collaborator_id:
+            raise ValidationError("본인을 협업자로 등록할 수 없습니다.")
+
+    def __str__(self):
+        permission = "편집" if self.can_edit else "읽기"
+        return f"{self.owner.username} -> {self.collaborator.username} ({permission})"
 
 
 class EventPageBlock(models.Model):

@@ -7,6 +7,8 @@ app_name = "classcalendar"
 urlpatterns = [
     # Teacher views
     path("", views.main_view, name="main"),
+    path("collaborators/add/", views.collaborator_add, name="collaborator_add"),
+    path("collaborators/<int:collaborator_id>/remove/", views.collaborator_remove, name="collaborator_remove"),
     path("share/enable/", views.share_enable, name="share_enable"),
     path("share/disable/", views.share_disable, name="share_disable"),
     path("share/rotate/", views.share_rotate, name="share_rotate"),

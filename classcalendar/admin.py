@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CalendarEvent, CalendarIntegrationSetting, EventPageBlock
+from .models import CalendarCollaborator, CalendarEvent, CalendarIntegrationSetting, EventPageBlock
 
 
 @admin.register(CalendarEvent)
@@ -42,3 +42,10 @@ class CalendarIntegrationSettingAdmin(admin.ModelAdmin):
         "updated_at",
     )
     search_fields = ("user__username", "user__email")
+
+
+@admin.register(CalendarCollaborator)
+class CalendarCollaboratorAdmin(admin.ModelAdmin):
+    list_display = ("owner", "collaborator", "can_edit", "created_at")
+    list_filter = ("can_edit",)
+    search_fields = ("owner__username", "owner__email", "collaborator__username", "collaborator__email")
