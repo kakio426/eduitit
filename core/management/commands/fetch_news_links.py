@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
-from core.models import NewsSource, Post
+from core.models import NewsSource, Post, UserProfile
 from core.news_ingest import (
     UnsafeNewsUrlError,
     assert_safe_public_url,
@@ -39,7 +39,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--bot-username",
             type=str,
-            default="newsbot",
+            default="ititnews",
             help="자동 업로드 작성자로 사용할 계정명",
         )
         parser.add_argument(
@@ -212,11 +212,23 @@ class Command(BaseCommand):
             username=username,
             defaults={
                 "email": f"{username}@eduitit.local",
+                "first_name": "ititnews",
                 "is_active": True,
             },
         )
         if created:
             bot_user.set_unusable_password()
             bot_user.save(update_fields=["password"])
-            self.stdout.write(f"[INFO] bot 계정 생성: {username}")
+            self.stdout.write(f"[INFO] 자동 작성자 계정 생성: {username}")
+
+        profile, _ = UserProfile.objects.get_or_create(user=bot_user)
+        changed = False
+        if profile.nickname != "ititnews":
+            profile.nickname = "ititnews"
+            changed = True
+        if not profile.role:
+            profile.role = "school"
+            changed = True
+        if changed:
+            profile.save()
         return bot_user
