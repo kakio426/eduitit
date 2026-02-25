@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import UserProfile, Post, SiteConfig, Feedback, ProductUsageLog
+from .models import UserProfile, Post, SiteConfig, Feedback, ProductUsageLog, ProductFavorite
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -94,6 +94,18 @@ class FeedbackAdmin(admin.ModelAdmin):
 class ProductUsageLogAdmin(admin.ModelAdmin):
     list_display = ['user', 'product', 'action', 'source', 'created_at']
     list_filter = ['action', 'source', 'created_at']
+    search_fields = ['user__username', 'product__title']
+    readonly_fields = ['created_at']
+    raw_id_fields = ['user', 'product']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'product')
+
+
+@admin.register(ProductFavorite)
+class ProductFavoriteAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'pin_order', 'created_at']
+    list_filter = ['created_at']
     search_fields = ['user__username', 'product__title']
     readonly_fields = ['created_at']
     raw_id_fields = ['user', 'product']

@@ -2,7 +2,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from products.models import Product
-from core.models import UserProfile, Post, Comment
+from core.models import UserProfile, Post, Comment, ProductFavorite
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -186,8 +186,8 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 목적별 섹션 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('수업 준비', content)
-        self.assertIn('문서·행정', content)
+        self.assertIn('수합·서명', content)
+        self.assertIn('문서·작성', content)
 
     def test_v2_anonymous_has_login_cta(self):
         """V2 비로그인 홈에 로그인 CTA 존재"""
@@ -199,7 +199,7 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 게임 배너 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('쉬는 시간', content)
+        self.assertIn('교실 활동', content)
         self.assertIn('테스트 게임', content)
         self.assertNotIn('학생용 QR', content)
 
@@ -245,8 +245,8 @@ class HomeV2ViewTest(TestCase):
         self._login('secuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('수업 준비', content)
-        self.assertIn('문서·행정', content)
+        self.assertIn('수합·서명', content)
+        self.assertIn('문서·작성', content)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
@@ -327,6 +327,41 @@ class HomeV2ViewTest(TestCase):
         # 가장 많이 사용한 p2가 첫 번째
         self.assertEqual(quick_actions[0]['product'].id, self.p2.id)
 
+    def test_v2_quick_actions_prioritize_favorites(self):
+        """즐겨찾기가 사용기록보다 먼저 퀵 액션에 노출된다."""
+        from core.models import ProductUsageLog
+        user = self._login('favoritepriority')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        for _ in range(3):
+            ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        quick_actions = response.context.get('quick_actions', [])
+        self.assertGreaterEqual(len(quick_actions), 1)
+        self.assertEqual(quick_actions[0]['product'].id, self.p1.id)
+
+    def test_v2_context_contains_favorites(self):
+        user = self._login('favoritecontext')
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        favorite_items = response.context.get('favorite_items', [])
+        favorite_product_ids = response.context.get('favorite_product_ids', [])
+
+        self.assertEqual(len(favorite_items), 1)
+        self.assertEqual(favorite_items[0]['product'].id, self.p2.id)
+        self.assertIn(self.p2.id, favorite_product_ids)
+
+    def test_v2_authenticated_renders_favorite_toggle_and_strip(self):
+        user = self._login('favoriteui')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('data-favorite-toggle="true"', content)
+        self.assertIn('내 즐겨찾기', content)
+        self.assertIn('home-favorite-ids-data', content)
+
 
     def test_v2_quick_action_prefers_launch_route_name(self):
         self.p2.launch_route_name = 'collect:landing'
@@ -359,12 +394,12 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
-        lesson = next((section for section in sections if section.get('key') == 'lesson'), None)
+        class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
 
-        self.assertIsNotNone(lesson)
-        self.assertLessEqual(len(lesson['products']), 2)
-        self.assertTrue(lesson['has_more'])
-        self.assertGreaterEqual(lesson['remaining_count'], 1)
+        self.assertIsNotNone(class_ops)
+        self.assertLessEqual(len(class_ops['products']), 2)
+        self.assertTrue(class_ops['has_more'])
+        self.assertGreaterEqual(class_ops['remaining_count'], 1)
 
     def test_v2_section_more_toggle_renders_when_overflow_exists(self):
         Product.objects.create(
@@ -500,3 +535,71 @@ class TrackUsageAPITest(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 404)
+
+
+@override_settings(HOME_V2_ENABLED=True)
+class ProductFavoriteAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.product = Product.objects.create(
+            title="즐겨찾기 테스트",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+
+    def _login(self, username='favoriteapiuser'):
+        user = _create_onboarded_user(username)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_toggle_favorite_requires_login(self):
+        import json
+        response = self.client.post(
+            reverse('toggle_product_favorite'),
+            data=json.dumps({'product_id': self.product.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_toggle_favorite_add_and_remove(self):
+        import json
+        user = self._login('favoriteapiadd')
+
+        add_response = self.client.post(
+            reverse('toggle_product_favorite'),
+            data=json.dumps({'product_id': self.product.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(add_response.status_code, 200)
+        self.assertTrue(add_response.json()['is_favorite'])
+        self.assertEqual(ProductFavorite.objects.filter(user=user, product=self.product).count(), 1)
+
+        remove_response = self.client.post(
+            reverse('toggle_product_favorite'),
+            data=json.dumps({'product_id': self.product.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(remove_response.status_code, 200)
+        self.assertFalse(remove_response.json()['is_favorite'])
+        self.assertEqual(ProductFavorite.objects.filter(user=user, product=self.product).count(), 0)
+
+    def test_favorites_list_returns_ordered_items(self):
+        user = self._login('favoriteapilist')
+        second = Product.objects.create(
+            title="즐겨찾기 둘째",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        ProductFavorite.objects.create(user=user, product=second, pin_order=2)
+        ProductFavorite.objects.create(user=user, product=self.product, pin_order=1)
+
+        response = self.client.get(reverse('list_product_favorites'))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(payload['favorites'][0]['product_id'], self.product.id)
+        self.assertEqual(payload['favorites'][1]['product_id'], second.id)

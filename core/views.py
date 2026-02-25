@@ -1,14 +1,14 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.urls import NoReverseMatch
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post, Comment, Feedback, SiteConfig, ProductUsageLog
+from .models import UserProfile, Post, Comment, Feedback, SiteConfig, ProductUsageLog, ProductFavorite
 from django.contrib import messages
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils import timezone
 from PIL import Image
 import logging
@@ -50,66 +50,194 @@ def _render_post_list_partial(request, page_obj):
     )
 
 # =============================================================================
-# V2 홈 목적별 섹션 매핑
+# V2 홈 목적별 섹션 매핑 (메인 4 + 보조 3)
 # =============================================================================
-PURPOSE_SECTIONS = [
+HOME_MAIN_SECTIONS = [
     {
-        'key': 'lesson',
-        'title': '수업 준비',
-        'subtitle': '수업을 더 풍성하게',
-        'icon': 'fa-solid fa-book-open',
-        'color': 'blue',
-        'types': ['classroom'],
+        "key": "collect_sign",
+        "title": "수합·서명",
+        "subtitle": "링크로 받고 증빙까지",
+        "icon": "fa-solid fa-inbox",
+        "color": "blue",
     },
     {
-        'key': 'admin',
-        'title': '문서·행정',
-        'subtitle': '반복 업무를 줄여요',
-        'icon': 'fa-solid fa-file-lines',
-        'color': 'emerald',
-        'types': ['work'],
+        "key": "doc_write",
+        "title": "문서·작성",
+        "subtitle": "문서 생성과 정리를 빠르게",
+        "icon": "fa-solid fa-file-lines",
+        "color": "emerald",
     },
     {
-        'key': 'consult',
-        'title': '상담·진단',
-        'subtitle': '학생을 더 깊이 이해해요',
-        'icon': 'fa-solid fa-hand-holding-heart',
-        'color': 'violet',
-        'types': ['counsel'],
+        "key": "class_ops",
+        "title": "수업·학급 운영",
+        "subtitle": "교실 진행과 운영을 한 번에",
+        "icon": "fa-solid fa-chalkboard-user",
+        "color": "violet",
     },
     {
-        'key': 'ai',
-        'title': 'AI 생성·에듀테크',
-        'subtitle': 'AI로 콘텐츠를 만들어요',
-        'icon': 'fa-solid fa-wand-magic-sparkles',
-        'color': 'cyan',
-        'types': ['edutech', 'etc'],
+        "key": "class_activity",
+        "title": "교실 활동",
+        "subtitle": "바로 시작하는 교실 활동",
+        "icon": "fa-solid fa-gamepad",
+        "color": "cyan",
     },
 ]
 
+HOME_AUXILIARY_SECTIONS = [
+    {
+        "key": "refresh",
+        "title": "상담·리프레시",
+        "subtitle": "성향·운세·리프레시",
+        "icon": "fa-solid fa-heart",
+        "color": "violet",
+    },
+    {
+        "key": "guide",
+        "title": "가이드·인사이트",
+        "subtitle": "도구 안내와 인사이트",
+        "icon": "fa-solid fa-lightbulb",
+        "color": "cyan",
+    },
+    {
+        "key": "external",
+        "title": "외부 서비스",
+        "subtitle": "연동/제휴 서비스",
+        "icon": "fa-solid fa-up-right-from-square",
+        "color": "emerald",
+    },
+]
+
+HOME_SECTION_BY_ROUTE = {
+    "collect:landing": "collect_sign",
+    "consent:landing": "collect_sign",
+    "signatures:landing": "collect_sign",
+    "signatures:list": "collect_sign",
+    "noticegen:main": "doc_write",
+    "hwpxchat:main": "doc_write",
+    "version_manager:landing": "doc_write",
+    "hwp_converter:landing": "doc_write",
+    "classcalendar:main": "class_ops",
+    "happy_seed:landing": "class_ops",
+    "reservations:dashboard_landing": "class_ops",
+    "reservations:landing": "class_ops",
+    "qrgen:landing": "class_ops",
+    "seed_quiz:landing": "class_ops",
+    "ppobgi:main": "class_ops",
+    "artclass:main": "class_ops",
+    "studentmbti:start": "refresh",
+    "ssambti:main": "refresh",
+    "fortune:landing": "refresh",
+    "saju:landing": "refresh",
+    "notebooklm_guide:main": "guide",
+    "prompt_recipe:main": "guide",
+    "insights:list": "guide",
+}
+
+HOME_SECTION_KEYWORDS = [
+    ("동의서", "collect_sign"),
+    ("수합", "collect_sign"),
+    ("서명", "collect_sign"),
+    ("소식지", "doc_write"),
+    ("멘트", "doc_write"),
+    ("문서", "doc_write"),
+    ("pdf", "doc_write"),
+    ("최종", "doc_write"),
+    ("캘린더", "class_ops"),
+    ("예약", "class_ops"),
+    ("알림판", "class_ops"),
+    ("퀴즈", "class_ops"),
+    ("qr", "class_ops"),
+    ("행복의 씨앗", "class_ops"),
+    ("추첨기", "class_ops"),
+    ("미술 수업", "class_ops"),
+    ("윷놀이", "class_activity"),
+    ("체스", "class_activity"),
+    ("장기", "class_activity"),
+    ("커넥트 포", "class_activity"),
+    ("이솔레이션", "class_activity"),
+    ("아택스", "class_activity"),
+    ("브레이크스루", "class_activity"),
+    ("bti", "refresh"),
+    ("운세", "refresh"),
+    ("사주", "refresh"),
+    ("가이드", "guide"),
+    ("레시피", "guide"),
+    ("백과사전", "guide"),
+    ("insight", "guide"),
+    ("스쿨잇", "external"),
+    ("탈알고리즘", "external"),
+]
+
+HOME_SECTION_FALLBACK_BY_TYPE = {
+    "classroom": "class_ops",
+    "work": "doc_write",
+    "game": "class_activity",
+    "counsel": "refresh",
+    "edutech": "guide",
+    "etc": "guide",
+}
+
+
+def _build_section_payload(section, items, preview_limit=None):
+    if preview_limit and preview_limit > 0:
+        preview_items = items[:preview_limit]
+    else:
+        preview_items = items
+    overflow_items = items[len(preview_items):]
+    remaining_count = max(0, len(items) - len(preview_items))
+    return {
+        **section,
+        "products": preview_items,
+        "overflow_products": overflow_items,
+        "total_count": len(items),
+        "remaining_count": remaining_count,
+        "has_more": remaining_count > 0,
+    }
+
+
+def _resolve_home_section_key(product):
+    route_name = (product.launch_route_name or "").strip().lower()
+    if route_name in HOME_SECTION_BY_ROUTE:
+        return HOME_SECTION_BY_ROUTE[route_name]
+
+    title = (product.title or "").strip().lower()
+    for keyword, section_key in HOME_SECTION_KEYWORDS:
+        if keyword.lower() in title:
+            return section_key
+
+    external_url = (product.external_url or "").strip().lower()
+    if external_url.startswith("http://") or external_url.startswith("https://"):
+        return "external"
+
+    return HOME_SECTION_FALLBACK_BY_TYPE.get(product.service_type, "guide")
+
 
 def get_purpose_sections(products_qs, preview_limit=None):
-    """Product queryset → 목적별 섹션 + 게임 분리."""
-    sections = []
-    for sec in PURPOSE_SECTIONS:
-        items = [p for p in products_qs if p.service_type in sec['types']]
+    """Product list -> 메인 섹션, 보조 섹션, 활동 배너."""
+    bucket = {}
+    for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]:
+        bucket[section["key"]] = []
+
+    for product in products_qs:
+        section_key = _resolve_home_section_key(product)
+        if section_key not in bucket:
+            section_key = HOME_SECTION_FALLBACK_BY_TYPE.get(product.service_type, "guide")
+        bucket.setdefault(section_key, []).append(product)
+
+    main_sections = []
+    for section in HOME_MAIN_SECTIONS:
+        items = bucket.get(section["key"], [])
         if items:
-            if preview_limit and preview_limit > 0:
-                preview_items = items[:preview_limit]
-            else:
-                preview_items = items
-            overflow_items = items[len(preview_items):]
-            remaining_count = max(0, len(items) - len(preview_items))
-            sections.append({
-                **sec,
-                'products': preview_items,
-                'overflow_products': overflow_items,
-                'total_count': len(items),
-                'remaining_count': remaining_count,
-                'has_more': remaining_count > 0,
-            })
-    games = [p for p in products_qs if p.service_type == 'game']
-    return sections, games
+            main_sections.append(_build_section_payload(section, items, preview_limit=preview_limit))
+
+    aux_sections = []
+    for section in HOME_AUXILIARY_SECTIONS:
+        items = bucket.get(section["key"], [])
+        if items:
+            aux_sections.append(_build_section_payload(section, items, preview_limit=preview_limit))
+
+    games = list(bucket.get("class_activity", []))
+    return main_sections, aux_sections, games
 
 
 def _resolve_product_launch_url(product):
@@ -145,11 +273,60 @@ def _attach_product_launch_meta(products):
     return prepared
 
 
+def _get_user_favorite_products(user, product_list, limit=None):
+    """홈에서 사용할 사용자 즐겨찾기 서비스 목록 반환."""
+    product_map = {p.id: p for p in product_list}
+    favorites_qs = (
+        ProductFavorite.objects
+        .filter(user=user, product__is_active=True)
+        .select_related('product')
+        .order_by('pin_order', '-created_at')
+    )
+
+    favorites = []
+    for favorite in favorites_qs:
+        product = product_map.get(favorite.product_id)
+        if not product:
+            continue
+        favorites.append(product)
+        if limit and len(favorites) >= limit:
+            break
+    return favorites
+
+
+def _build_product_link_items(products):
+    """템플릿에서 공통으로 쓰는 서비스 링크 아이템 구성."""
+    items = []
+    for product in products:
+        href, is_external = _resolve_product_launch_url(product)
+        items.append({
+            'product': product,
+            'href': href,
+            'is_external': is_external,
+        })
+    return items
+
+
 def _get_usage_based_quick_actions(user, product_list, limit=5):
-    """사용 빈도 기반 퀵 액션 목록 생성. 기록 없으면 featured 기반 폴백."""
+    """즐겨찾기 우선 + 사용 빈도 기반 퀵 액션 목록 생성."""
     from django.utils import timezone
     from datetime import timedelta
 
+    product_map = {p.id: p for p in product_list}
+    quick_actions = []
+    seen = set()
+
+    # 1) 즐겨찾기 우선
+    favorite_products = _get_user_favorite_products(user, product_list, limit=limit)
+    for product in favorite_products:
+        if product.id in seen:
+            continue
+        quick_actions.append(product)
+        seen.add(product.id)
+        if len(quick_actions) >= limit:
+            return quick_actions
+
+    # 2) 최근 사용 빈도
     since = timezone.now() - timedelta(days=14)
     usage_qs = (
         ProductUsageLog.objects
@@ -159,13 +336,17 @@ def _get_usage_based_quick_actions(user, product_list, limit=5):
         .order_by('-cnt')[:limit]
     )
     usage_ids = [row['product_id'] for row in usage_qs]
-    product_map = {p.id: p for p in product_list}
+    for pid in usage_ids:
+        product = product_map.get(pid)
+        if not product or product.id in seen:
+            continue
+        quick_actions.append(product)
+        seen.add(product.id)
+        if len(quick_actions) >= limit:
+            return quick_actions
 
-    quick_actions = [product_map[pid] for pid in usage_ids if pid in product_map]
-
-    # 사용 기록이 부족하면 featured → display_order 보충
+    # 3) 사용 기록이 부족하면 featured → display_order 보충
     if len(quick_actions) < limit:
-        seen = {p.id for p in quick_actions}
         for p in product_list:
             if p.is_featured and p.id not in seen:
                 quick_actions.append(p)
@@ -173,7 +354,6 @@ def _get_usage_based_quick_actions(user, product_list, limit=5):
                 if len(quick_actions) >= limit:
                     break
     if len(quick_actions) < limit:
-        seen = {p.id for p in quick_actions}
         for p in product_list:
             if p.id not in seen:
                 quick_actions.append(p)
@@ -324,28 +504,25 @@ def _build_today_context(request):
 def _home_v2(request, products, posts, page_obj):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
-    sections, games = get_purpose_sections(product_list, preview_limit=2)
+    sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=2)
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
+        favorite_products = _get_user_favorite_products(request.user, product_list, limit=8)
 
-        # 퀵 액션: 사용 빈도 기반 (폴백: featured → display_order)
+        # 퀵 액션: 즐겨찾기 우선 + 사용 빈도 기반 (폴백: featured → display_order)
         quick_actions = _get_usage_based_quick_actions(request.user, product_list)
-
-        quick_action_items = []
-        for product in quick_actions:
-            href, is_external = _resolve_product_launch_url(product)
-            quick_action_items.append({
-                'product': product,
-                'href': href,
-                'is_external': is_external,
-            })
+        quick_action_items = _build_product_link_items(quick_actions)
+        favorite_items = _build_product_link_items(favorite_products)
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
             'sections': sections,
+            'aux_sections': aux_sections,
             'games': games,
             'quick_actions': quick_action_items,
+            'favorite_items': favorite_items,
+            'favorite_product_ids': [p.id for p in favorite_products],
             'posts': posts,
             'page_obj': page_obj,
             **_build_today_context(request),
@@ -357,6 +534,7 @@ def _home_v2(request, products, posts, page_obj):
         'products': products,
         'featured_product': featured_product,
         'sections': sections,
+        'aux_sections': aux_sections,
         'games': games,
         'posts': posts,
         'page_obj': page_obj,
@@ -392,7 +570,7 @@ def home(request):
 
     # V2 홈: Feature flag on 시 분기
     if settings.HOME_V2_ENABLED:
-        return _home_v2(request, products, page_obj, page_obj)
+        return _home_v2(request, products, posts, page_obj)
 
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
@@ -1003,6 +1181,83 @@ def track_product_usage(request):
         source=source,
     )
     return JsonResponse({'status': 'ok'})
+
+
+@require_POST
+@login_required
+def toggle_product_favorite(request):
+    """서비스 즐겨찾기 토글 API."""
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'invalid json'}, status=400)
+
+    product_id = data.get('product_id')
+    if not product_id:
+        return JsonResponse({'error': 'product_id required'}, status=400)
+
+    try:
+        product = Product.objects.get(pk=product_id, is_active=True)
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'product not found'}, status=404)
+
+    favorite = ProductFavorite.objects.filter(user=request.user, product=product).first()
+    if favorite:
+        favorite.delete()
+        return JsonResponse({
+            'status': 'ok',
+            'is_favorite': False,
+            'product_id': product.id,
+        })
+
+    max_order = (
+        ProductFavorite.objects
+        .filter(user=request.user)
+        .aggregate(max_order=Max('pin_order'))
+        .get('max_order')
+        or 0
+    )
+    ProductFavorite.objects.create(
+        user=request.user,
+        product=product,
+        pin_order=max_order + 1,
+    )
+    return JsonResponse({
+        'status': 'ok',
+        'is_favorite': True,
+        'product_id': product.id,
+    })
+
+
+@require_GET
+@login_required
+def list_product_favorites(request):
+    """로그인 사용자의 즐겨찾기 목록 API."""
+    favorites_qs = (
+        ProductFavorite.objects
+        .filter(user=request.user, product__is_active=True)
+        .select_related('product')
+        .order_by('pin_order', '-created_at')
+    )
+
+    favorites = []
+    for favorite in favorites_qs:
+        product = favorite.product
+        href, is_external = _resolve_product_launch_url(product)
+        favorites.append({
+            'product_id': product.id,
+            'title': product.title,
+            'icon': product.icon,
+            'href': href,
+            'is_external': is_external,
+            'pin_order': favorite.pin_order,
+        })
+
+    return JsonResponse({
+        'status': 'ok',
+        'favorites': favorites,
+    })
 
 
 @require_POST

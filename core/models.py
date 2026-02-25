@@ -145,6 +145,29 @@ class ProductUsageLog(models.Model):
         return f"{self.user.username} → {self.product.title} ({self.action})"
 
 
+class ProductFavorite(models.Model):
+    """사용자별 서비스 즐겨찾기"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_favorites')
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='favorited_by_users')
+    pin_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['pin_order', '-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'product'], name='core_productfavorite_user_product_unique'),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'pin_order']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+        verbose_name = "서비스 즐겨찾기"
+        verbose_name_plural = "서비스 즐겨찾기"
+
+    def __str__(self):
+        return f"{self.user.username} ★ {self.product.title}"
+
+
 class VisitorLog(models.Model):
     ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
     user_agent = models.TextField(blank=True, null=True, verbose_name="User Agent")

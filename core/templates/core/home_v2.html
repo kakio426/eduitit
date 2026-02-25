@@ -101,7 +101,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% include 'core/includes/purpose_sections.html' with sections=sections %}
             </div>
 
-            <!-- 쉬는 시간 게임 배너 -->
+            {% if aux_sections %}
+            <div class="mb-6" data-aos="fade-up" data-aos-delay="80">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
+                </h3>
+                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+            </div>
+            {% endif %}
+
+            <!-- 교실 활동 배너 -->
             <div class="mb-6" data-aos="fade-up" data-aos-delay="100">
                 {% include 'core/includes/game_banner.html' with games=games %}
             </div>

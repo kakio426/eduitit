@@ -34,6 +34,59 @@
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const favoriteIds = new Set();
+    const favoriteDataEl = document.getElementById('home-favorite-ids-data');
+    if (favoriteDataEl) {
+        try {
+            const parsed = JSON.parse(favoriteDataEl.textContent || '[]');
+            parsed.forEach((id) => {
+                const parsedId = parseInt(id, 10);
+                if (!Number.isNaN(parsedId)) {
+                    favoriteIds.add(parsedId);
+                }
+            });
+        } catch (error) {
+            console.warn('[Favorites] 초기 데이터 파싱 실패', error);
+        }
+    }
+
+    const getCsrfToken = () => {
+        const field = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (field && field.value) return field.value;
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
+    const showFeedback = (message, type = 'info') => {
+        if (window.showToast) {
+            window.showToast(message, type);
+            return;
+        }
+        if (type === 'error') {
+            alert(message);
+        }
+    };
+
+    const updateFavoriteButtonState = (button, isFavorite) => {
+        if (!button) return;
+        button.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+        button.classList.toggle('border-amber-300', isFavorite);
+        button.classList.toggle('text-amber-500', isFavorite);
+        button.classList.toggle('bg-amber-50', isFavorite);
+        button.classList.toggle('border-slate-200', !isFavorite);
+        button.classList.toggle('text-slate-300', !isFavorite);
+        button.classList.toggle('bg-white', !isFavorite);
+        button.title = isFavorite ? '즐겨찾기 해제' : '즐겨찾기';
+    };
+
+    const syncFavoriteButtons = () => {
+        document.querySelectorAll('[data-favorite-toggle="true"]').forEach((button) => {
+            const pid = parseInt(button.dataset.productId || '', 10);
+            const isFavorite = !Number.isNaN(pid) && favoriteIds.has(pid);
+            updateFavoriteButtonState(button, isFavorite);
+        });
+    };
+
     const launchCard = (card) => {
         const href = card.dataset.launchHref || `/products/${card.dataset.productId}/`;
         if (!href) return;
@@ -48,13 +101,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // 카드 클릭: 즉시 서비스 진입
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', function(e) {
-            if (e.target.closest('.product-info-trigger')) return;
+            if (e.target.closest('.product-info-trigger') || e.target.closest('[data-favorite-toggle="true"]')) return;
             launchCard(this);
         });
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 launchCard(card);
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-favorite-toggle="true"]').forEach((button) => {
+        button.addEventListener('click', async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const pid = parseInt(this.dataset.productId || '', 10);
+            if (Number.isNaN(pid)) return;
+
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                showFeedback('보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('{% url "toggle_product_favorite" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ product_id: pid }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.status !== 'ok') {
+                    throw new Error(payload.error || '즐겨찾기 처리에 실패했습니다.');
+                }
+
+                if (payload.is_favorite) {
+                    favoriteIds.add(pid);
+                    showFeedback('즐겨찾기에 추가했습니다.', 'success');
+                } else {
+                    favoriteIds.delete(pid);
+                    showFeedback('즐겨찾기에서 제거했습니다.', 'success');
+                }
+                syncFavoriteButtons();
+            } catch (error) {
+                showFeedback(error.message || '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
             }
         });
     });
@@ -76,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const track = el.dataset.track;
         const productId = el.dataset.productId || el.closest('[data-product-id]')?.dataset?.productId;
         if (productId) {
-            const token = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            const token = getCsrfToken();
             if (token) {
                 const sourceMap = {
                     quick_action: 'home_quick',
@@ -89,10 +185,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                     body: JSON.stringify({ product_id: parseInt(productId), action: 'launch', source: sourceMap[track] || 'other' })
-                }).catch(function() {});
+                })
+                .then((response) => {
+                    if (!response.ok) {
+                        showFeedback('사용 기록 저장에 실패했습니다.', 'error');
+                    }
+                })
+                .catch(function() {
+                    showFeedback('사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
+                });
             }
         }
     });
+
+    syncFavoriteButtons();
 });
 
 function homeCalendarWidget() {
@@ -465,12 +571,40 @@ function homeCalendarWidget() {
             </div>
             {% endif %}
 
+            {% if favorite_items %}
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-star text-amber-500"></i> 내 즐겨찾기
+                </h3>
+                <div class="flex gap-3 overflow-x-auto quick-scroll pb-2" id="favorite-strip-list">
+                    {% for item in favorite_items %}
+                    <a href="{{ item.href }}"
+                        {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        data-product-id="{{ item.product.id }}"
+                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
+                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- 목적별 섹션 -->
             <div class="mb-6">
                 {% include 'core/includes/purpose_sections.html' with sections=sections %}
             </div>
 
-            <!-- 쉬는 시간 게임 배너 -->
+            {% if aux_sections %}
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
+                </h3>
+                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+            </div>
+            {% endif %}
+
+            <!-- 교실 활동 배너 -->
             <div class="mb-6">
                 {% include 'core/includes/game_banner.html' with games=games %}
             </div>
@@ -533,4 +667,5 @@ function homeCalendarWidget() {
         </main>
     </div>
 </div>
+{{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {% endblock %}
