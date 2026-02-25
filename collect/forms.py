@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from .models import CollectionRequest
 
@@ -59,7 +60,8 @@ class CollectionRequestForm(forms.ModelForm):
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
                     "type": "datetime-local",
-                }
+                },
+                format="%Y-%m-%dT%H:%M",
             ),
             "max_submissions": forms.NumberInput(
                 attrs={
@@ -114,6 +116,13 @@ class CollectionRequestForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk and not self.is_bound:
             self.initial["choice_options_text"] = "\n".join(self.instance.normalized_choice_options)
+            if self.instance.deadline:
+                self.initial["deadline"] = timezone.localtime(self.instance.deadline).strftime("%Y-%m-%dT%H:%M")
+        self.fields["deadline"].input_formats = [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
         self.fields["allow_choice"].widget.attrs.update({"x-model": "allowChoice"})
         self._parsed_choice_options = []
 

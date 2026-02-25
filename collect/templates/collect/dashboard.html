@@ -193,9 +193,14 @@
                         <p>코드: <span class="font-mono font-bold text-emerald-600">{{ req.access_code|default:'-' }}</span></p>
                         <p>마감: {% if req.deadline %}{{ req.deadline|date:"Y-m-d H:i" }}{% else %}-{% endif %}</p>
                     </div>
-                    <a href="{% url 'collect:request_detail' req.id %}" class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-white rounded-lg font-bold text-gray-700 shadow-sm">
-                        <i class="fa-solid fa-eye"></i>상세
-                    </a>
+                    <div class="grid grid-cols-2 gap-2">
+                        <a href="{% url 'collect:request_edit' req.id %}" class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-emerald-50 rounded-lg font-bold text-emerald-700 shadow-sm">
+                            <i class="fa-solid fa-pen-to-square"></i>수정
+                        </a>
+                        <a href="{% url 'collect:request_detail' req.id %}" class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-white rounded-lg font-bold text-gray-700 shadow-sm">
+                            <i class="fa-solid fa-eye"></i>상세
+                        </a>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -231,9 +236,14 @@
                             <td class="py-3 pr-3 text-gray-500">{{ req.created_at|date:"Y-m-d H:i" }}</td>
                             <td class="py-3 pr-3 text-gray-500">{% if req.deadline %}{{ req.deadline|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
                             <td class="py-3 text-right">
-                                <a href="{% url 'collect:request_detail' req.id %}" class="px-3 py-1.5 bg-white rounded-lg font-bold text-gray-700 shadow-sm hover:shadow-md transition inline-flex items-center gap-1">
-                                    <i class="fa-solid fa-eye"></i>상세
-                                </a>
+                                <div class="inline-flex items-center gap-2">
+                                    <a href="{% url 'collect:request_edit' req.id %}" class="px-3 py-1.5 bg-emerald-50 rounded-lg font-bold text-emerald-700 shadow-sm hover:shadow-md transition inline-flex items-center gap-1">
+                                        <i class="fa-solid fa-pen-to-square"></i>수정
+                                    </a>
+                                    <a href="{% url 'collect:request_detail' req.id %}" class="px-3 py-1.5 bg-white rounded-lg font-bold text-gray-700 shadow-sm hover:shadow-md transition inline-flex items-center gap-1">
+                                        <i class="fa-solid fa-eye"></i>상세
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}

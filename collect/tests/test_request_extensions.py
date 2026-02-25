@@ -125,3 +125,67 @@ class RequestExtensionTests(TestCase):
         req.refresh_from_db()
         self.assertEqual(req.status, "active")
         self.assertIsNone(req.closed_at)
+
+    def test_creator_can_edit_request(self):
+        self.client.force_login(self.teacher)
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="before-title",
+            description="before-desc",
+            allow_file=True,
+            allow_link=False,
+            allow_text=False,
+            status="active",
+        )
+
+        response = self.client.post(
+            reverse("collect:request_edit", args=[req.id]),
+            data={
+                "title": "after-title",
+                "description": "after-desc",
+                "expected_submitters": "학생1\n학생2",
+                "allow_file": "on",
+                "allow_text": "on",
+                "choice_mode": "single",
+                "choice_min_selections": "1",
+                "choice_max_selections": "",
+                "choice_options_text": "",
+                "deadline": "",
+                "max_submissions": "75",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("collect:request_detail", args=[req.id]))
+
+        req.refresh_from_db()
+        self.assertEqual(req.title, "after-title")
+        self.assertEqual(req.description, "after-desc")
+        self.assertTrue(req.allow_file)
+        self.assertFalse(req.allow_link)
+        self.assertTrue(req.allow_text)
+        self.assertEqual(req.max_submissions, 75)
+        self.assertEqual(req.expected_submitters_list, ["학생1", "학생2"])
+
+    def test_only_creator_can_access_edit_page(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="owner-only-edit",
+            status="active",
+        )
+        self.client.force_login(self.other_teacher)
+
+        response = self.client.get(reverse("collect:request_edit", args=[req.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_dashboard_renders_edit_link(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="dashboard-edit-link",
+            status="active",
+        )
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(reverse("collect:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("collect:request_edit", args=[req.id]))

@@ -451,6 +451,34 @@ def request_create(request):
 
 
 @login_required
+def request_edit(request, request_id):
+    """기존 수합 요청 수정"""
+    collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
+
+    if request.method == "POST":
+        form = CollectionRequestForm(request.POST, request.FILES, instance=collection_req)
+        if form.is_valid():
+            updated_req = form.save(commit=False)
+
+            uploaded_template = request.FILES.get("template_file")
+            if uploaded_template:
+                updated_req.template_file_name = uploaded_template.name
+            elif not updated_req.template_file:
+                updated_req.template_file_name = ""
+
+            updated_req.save()
+            messages.success(request, "수합 요청이 수정되었습니다.")
+            return redirect("collect:request_detail", request_id=str(updated_req.id))
+    else:
+        form = CollectionRequestForm(instance=collection_req)
+
+    return render(request, "collect/request_edit.html", {
+        "req": collection_req,
+        "form": form,
+    })
+
+
+@login_required
 def request_detail(request, request_id):
     """QR/코드 + 실시간 제출 현황 + 다운로드"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
