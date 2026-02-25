@@ -4,6 +4,32 @@ import uuid
 from django.db import migrations, models
 
 
+def _backfill_unique_share_uuid(apps, schema_editor):
+    CalendarIntegrationSetting = apps.get_model("classcalendar", "CalendarIntegrationSetting")
+
+    seen = set()
+    updates = []
+    queryset = CalendarIntegrationSetting.objects.all().only("id", "share_uuid")
+
+    for setting in queryset.iterator():
+        current = setting.share_uuid
+        if current is None or current in seen:
+            current = uuid.uuid4()
+            while current in seen:
+                current = uuid.uuid4()
+            setting.share_uuid = current
+            updates.append(setting)
+        seen.add(current)
+
+    if updates:
+        CalendarIntegrationSetting.objects.bulk_update(updates, ["share_uuid"])
+
+
+def _clear_share_uuid(apps, schema_editor):
+    CalendarIntegrationSetting = apps.get_model("classcalendar", "CalendarIntegrationSetting")
+    CalendarIntegrationSetting.objects.update(share_uuid=None)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -17,6 +43,12 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
+            model_name="calendarintegrationsetting",
+            name="share_uuid",
+            field=models.UUIDField(editable=False, null=True),
+        ),
+        migrations.RunPython(_backfill_unique_share_uuid, _clear_share_uuid),
+        migrations.AlterField(
             model_name="calendarintegrationsetting",
             name="share_uuid",
             field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
