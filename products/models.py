@@ -121,6 +121,13 @@ class UserOwnedProduct(models.Model):
 
 class DTSettings(models.Model):
     """User-specific settings for DutyTicker"""
+    ROTATION_MODE_CHOICES = [
+        ("auto_sequential", "자동 순차 (하루 1칸)"),
+        ("auto_random", "자동 랜덤 (하루 1회)"),
+        ("manual_sequential", "수동 순차"),
+        ("manual_random", "수동 랜덤"),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='dutyticker_settings')
     auto_rotation = models.BooleanField(default=False, help_text="Automatically rotate roles daily/weekly")
     rotation_frequency = models.CharField(
@@ -129,6 +136,12 @@ class DTSettings(models.Model):
         default='daily'
     )
     last_rotation_date = models.DateField(null=True, blank=True)
+    rotation_mode = models.CharField(
+        max_length=20,
+        choices=ROTATION_MODE_CHOICES,
+        default="manual_sequential",
+        help_text="역할 순환 모드",
+    )
     last_broadcast_message = models.TextField(blank=True, help_text="Persisted broadcast message")
     mission_title = models.CharField(max_length=200, default="오늘도 행복한 우리 교실", help_text="Main display mission title")
     mission_desc = models.TextField(default="선생님 말씀에 집중해 주세요.", help_text="Main display mission description")

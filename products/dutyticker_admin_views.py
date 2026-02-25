@@ -16,6 +16,25 @@ def admin_dashboard(request):
         'settings': settings
     })
 
+
+@login_required
+@require_http_methods(["POST"])
+def update_rotation_settings(request):
+    settings, _ = DTSettings.objects.get_or_create(user=request.user)
+    selected_mode = (request.POST.get("rotation_mode") or "").strip()
+    valid_modes = {choice[0] for choice in DTSettings.ROTATION_MODE_CHOICES}
+
+    if selected_mode in valid_modes:
+        settings.rotation_mode = selected_mode
+        settings.auto_rotation = selected_mode.startswith("auto_")
+        if settings.auto_rotation:
+            settings.rotation_frequency = "daily"
+        else:
+            settings.last_rotation_date = None
+        settings.save(update_fields=["rotation_mode", "auto_rotation", "rotation_frequency", "last_rotation_date"])
+
+    return redirect('dt_admin_dashboard')
+
 @login_required
 @require_http_methods(["POST"])
 def add_student(request):

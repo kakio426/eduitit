@@ -24,59 +24,6 @@
         </div>
     </div>
 
-    <!-- Rotation Control Panel -->
-    <div class="clay-card p-8 mb-12 bg-gradient-to-br from-purple-500 to-indigo-600 text-white relative overflow-hidden"
-        data-aos="fade-up">
-        <!-- Decor -->
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-center">
-            <div class="flex items-start gap-6">
-                <div
-                    class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shadow-inner border border-white/30">
-                    <i class="fa-solid fa-arrows-spin animate-spin-slow"></i>
-                </div>
-                <div>
-                    <h2 class="text-3xl font-black mb-2">역할 순환</h2>
-                    <p class="text-lg text-purple-100 font-medium opacity-90 leading-relaxed">
-                        버튼을 누르면 모든 학생의 역할이 한 칸씩 밀립니다.<br>
-                        <span class="text-sm opacity-75">* 주로 하루 일과가 끝난 후 또는 아침 조회 시간에 사용하세요.</span>
-                    </p>
-                </div>
-            </div>
-            <button onclick="rotateRoles()"
-                class="bg-white text-purple-600 hover:bg-gray-50 px-8 py-4 rounded-2xl font-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xl whitespace-nowrap flex items-center gap-3">
-                <i class="fa-solid fa-rotate"></i>
-                지금 순환하기
-            </button>
-        </div>
-    </div>
-
-    <script>
-        async function rotateRoles() {
-            if (!confirm('정말로 모든 역할을 한 칸씩 순환하시겠습니까?')) return;
-
-            try {
-                const res = await fetch("{% url 'dt_api_rotate' %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    }
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('역할이 순환되었습니다!');
-                    window.location.reload();
-                } else {
-                    alert('오류 발생: ' + data.error);
-                }
-            } catch (e) {
-                console.error(e);
-                alert('서버 통신 오류');
-            }
-        }
-    </script>
-
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
         <!-- Student Management -->
         <div class="clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="100">
@@ -136,6 +83,36 @@
                     <i class="fa-solid fa-clipboard-list"></i>
                 </div>
                 <h2 class="text-3xl font-bold text-gray-700">역할 관리</h2>
+            </div>
+
+            <div class="mb-8 p-4 rounded-2xl bg-white/70 border border-purple-100 shadow-sm">
+                <form action="{% url 'dt_admin_update_rotation_settings' %}" method="POST" class="space-y-3">
+                    {% csrf_token %}
+                    <label class="block text-sm font-bold text-gray-600">역할 순환 방식</label>
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <select id="rotationMode" name="rotation_mode"
+                            class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                            <option value="manual_sequential" {% if settings.rotation_mode == "manual_sequential" %}selected{% endif %}>수동 순차 순환</option>
+                            <option value="manual_random" {% if settings.rotation_mode == "manual_random" %}selected{% endif %}>수동 랜덤 순환</option>
+                            <option value="auto_sequential" {% if settings.rotation_mode == "auto_sequential" %}selected{% endif %}>자동 순차 순환 (하루 1칸)</option>
+                            <option value="auto_random" {% if settings.rotation_mode == "auto_random" %}selected{% endif %}>자동 랜덤 순환 (하루 1회)</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button type="submit"
+                                class="px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold transition whitespace-nowrap">
+                                모드 저장
+                            </button>
+                            <button type="button" onclick="rotateRolesNow()"
+                                class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition whitespace-nowrap flex items-center gap-2">
+                                <i class="fa-solid fa-rotate"></i>
+                                지금 1칸 순환
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        자동 모드는 데이터를 불러올 때 하루 1회 적용됩니다. 수동 모드에서는 버튼을 눌렀을 때만 순환됩니다.
+                    </p>
+                </form>
             </div>
 
             <form action="{% url 'dt_admin_add_role' %}" method="POST" class="mb-8 space-y-4">
@@ -199,4 +176,36 @@
         </div>
     </div>
 </div>
+
+<script>
+    async function rotateRolesNow() {
+        const modeSelect = document.getElementById('rotationMode');
+        const mode = modeSelect ? modeSelect.value : 'manual_sequential';
+        const behavior = mode.endsWith('_random') ? 'random' : 'sequential';
+        const modeLabel = modeSelect ? modeSelect.options[modeSelect.selectedIndex].text : '현재 모드';
+
+        if (!confirm(`${modeLabel} 기준으로 지금 바로 순환할까요?`)) return;
+
+        try {
+            const res = await fetch("{% url 'dt_api_rotate' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ behavior }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('역할 순환이 적용되었습니다.');
+                window.location.reload();
+            } else {
+                alert('오류 발생: ' + (data.error || '순환에 실패했습니다.'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('서버 통신 오류');
+        }
+    }
+</script>
 {% endblock %}

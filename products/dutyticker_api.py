@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import datetime
+import random
 import uuid
 from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTSettings
 
@@ -54,6 +55,7 @@ def get_guest_default_data():
         'settings': {
             'auto_rotation': False,
             'rotation_frequency': 'daily',
+            'rotation_mode': 'manual_sequential',
             'last_broadcast': "환영합니다! 게스트 모드로 체험 중입니다.",
             'mission_title': "오늘도 행복한 우리 교실",
             'mission_desc': "선생님 말씀에 집중해 주세요."
@@ -95,6 +97,164 @@ def create_mockup_data(user):
             )
     return True
 
+
+def _safe_json_body(request):
+    if not request.body:
+        return {}
+    try:
+        payload = json.loads(request.body)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _normalize_rotation_behavior(raw_behavior):
+    if str(raw_behavior).strip().lower() == "random":
+        return "random"
+    return "sequential"
+
+
+def _behavior_from_rotation_mode(rotation_mode):
+    mode = str(rotation_mode or "manual_sequential")
+    return "random" if mode.endswith("_random") else "sequential"
+
+
+def _sync_rotation_settings_flags(settings):
+    desired_auto = str(settings.rotation_mode or "").startswith("auto_")
+    updated_fields = []
+
+    if settings.auto_rotation != desired_auto:
+        settings.auto_rotation = desired_auto
+        updated_fields.append("auto_rotation")
+
+    if desired_auto and settings.rotation_frequency != "daily":
+        settings.rotation_frequency = "daily"
+        updated_fields.append("rotation_frequency")
+
+    if updated_fields:
+        settings.save(update_fields=updated_fields)
+
+
+def _shuffle_without_same_position(values):
+    shuffled = values[:]
+    if len(shuffled) < 2:
+        return shuffled
+    for _ in range(8):
+        random.shuffle(shuffled)
+        if shuffled != values:
+            break
+    return shuffled
+
+
+def _rotate_guest_assignments(guest_data, behavior="sequential"):
+    students = guest_data.get("students") if isinstance(guest_data, dict) else []
+    assignments = guest_data.get("assignments") if isinstance(guest_data, dict) else []
+    if not students or not assignments:
+        return False
+
+    student_ids = []
+    student_name_map = {}
+    for student in students:
+        student_id = student.get("id")
+        if student_id is None:
+            continue
+        student_ids.append(student_id)
+        student_name_map[student_id] = student.get("name", "Unassigned")
+
+    if not student_ids:
+        return False
+
+    if behavior == "random":
+        target_assignments = [a for a in assignments if a.get("student_id") in student_name_map]
+        source_ids = [a.get("student_id") for a in target_assignments]
+        if len(source_ids) < 2:
+            return False
+
+        shuffled_ids = _shuffle_without_same_position(source_ids)
+        for idx, assignment in enumerate(target_assignments):
+            next_student_id = shuffled_ids[idx]
+            assignment["student_id"] = next_student_id
+            assignment["student_name"] = student_name_map.get(next_student_id, "Unassigned")
+            assignment["is_completed"] = False
+        return True
+
+    index_map = {student_id: idx for idx, student_id in enumerate(student_ids)}
+    total_students = len(student_ids)
+    rotated = False
+    for assignment in assignments:
+        student_id = assignment.get("student_id")
+        if student_id not in index_map:
+            continue
+        next_idx = (index_map[student_id] + 1) % total_students
+        next_student_id = student_ids[next_idx]
+        assignment["student_id"] = next_student_id
+        assignment["student_name"] = student_name_map.get(next_student_id, "Unassigned")
+        assignment["is_completed"] = False
+        rotated = True
+
+    return rotated
+
+
+def _rotate_user_assignments(user, behavior="sequential"):
+    students = list(DTStudent.objects.filter(user=user, is_active=True).order_by("number", "id"))
+    assignments = list(
+        DTRoleAssignment.objects.filter(user=user)
+        .select_related("student", "role")
+        .order_by("role_id", "id")
+    )
+
+    if not students or not assignments:
+        return False
+
+    student_ids = [student.id for student in students]
+    student_map = {student.id: student for student in students}
+
+    updated_assignments = []
+    if behavior == "random":
+        target_assignments = [assignment for assignment in assignments if assignment.student_id in student_map]
+        source_ids = [assignment.student_id for assignment in target_assignments]
+        if len(source_ids) < 2:
+            return False
+
+        shuffled_ids = _shuffle_without_same_position(source_ids)
+        for idx, assignment in enumerate(target_assignments):
+            assignment.student = student_map[shuffled_ids[idx]]
+            assignment.is_completed = False
+            updated_assignments.append(assignment)
+    else:
+        index_map = {student_id: idx for idx, student_id in enumerate(student_ids)}
+        total_students = len(student_ids)
+        for assignment in assignments:
+            if assignment.student_id not in index_map:
+                continue
+            next_idx = (index_map[assignment.student_id] + 1) % total_students
+            assignment.student = student_map[student_ids[next_idx]]
+            assignment.is_completed = False
+            updated_assignments.append(assignment)
+
+    if updated_assignments:
+        DTRoleAssignment.objects.bulk_update(updated_assignments, ["student", "is_completed"])
+        return True
+    return False
+
+
+def _apply_auto_rotation_if_due(user, settings):
+    mode = str(settings.rotation_mode or "")
+    if not mode.startswith("auto_"):
+        return
+
+    today = timezone.localdate()
+    if settings.last_rotation_date == today:
+        return
+
+    behavior = _behavior_from_rotation_mode(mode)
+    _rotate_user_assignments(user, behavior=behavior)
+
+    settings.last_rotation_date = today
+    settings.auto_rotation = True
+    settings.rotation_frequency = "daily"
+    settings.save(update_fields=["last_rotation_date", "auto_rotation", "rotation_frequency"])
+
 def get_dutyticker_data(request):
     if not request.user.is_authenticated:
         if 'guest_dt_data' not in request.session:
@@ -103,6 +263,7 @@ def get_dutyticker_data(request):
 
     user = request.user
     settings, created = DTSettings.objects.get_or_create(user=user)
+    _sync_rotation_settings_flags(settings)
     
     students_qs = DTStudent.objects.filter(user=user, is_active=True)
     roles_qs = DTRole.objects.filter(user=user)
@@ -111,6 +272,8 @@ def get_dutyticker_data(request):
         create_mockup_data(user)
         students_qs = DTStudent.objects.filter(user=user, is_active=True)
         roles_qs = DTRole.objects.filter(user=user)
+
+    _apply_auto_rotation_if_due(user, settings)
 
     students = list(students_qs.values('id', 'name', 'number', 'is_mission_completed'))
     roles = list(roles_qs.values('id', 'name', 'description', 'time_slot', 'icon', 'color'))
@@ -139,7 +302,7 @@ def get_dutyticker_data(request):
             'endTime': s.end_time.strftime("%H:%M"),
             'period': s.period
         })
-        
+
     return JsonResponse({
         'students': students,
         'roles': roles,
@@ -148,6 +311,7 @@ def get_dutyticker_data(request):
         'settings': {
             'auto_rotation': settings.auto_rotation,
             'rotation_frequency': settings.rotation_frequency,
+            'rotation_mode': settings.rotation_mode,
             'last_broadcast': settings.last_broadcast_message,
             'mission_title': settings.mission_title,
             'mission_desc': settings.mission_desc
@@ -295,48 +459,39 @@ def assign_role(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def rotation_trigger(request):
+    payload = _safe_json_body(request)
+    requested_behavior = payload.get("behavior")
+    requested_behavior = _normalize_rotation_behavior(requested_behavior) if requested_behavior is not None else None
+
     if not request.user.is_authenticated:
         guest_data = request.session.get('guest_dt_data')
         if not guest_data or not guest_data['students']:
              return JsonResponse({'success': False, 'error': 'No data'})
-        
-        student_ids = [s['id'] for s in guest_data['students']]
-        total = len(student_ids)
-        for a in guest_data['assignments']:
-            if a['student_id']:
-                try:
-                    curr_idx = student_ids.index(a['student_id'])
-                    next_idx = (curr_idx + 1) % total
-                    a['student_id'] = student_ids[next_idx]
-                    a['student_name'] = guest_data['students'][next_idx]['name']
-                    a['is_completed'] = False
-                except ValueError: pass
+
+        behavior = requested_behavior or "sequential"
+        rotated = _rotate_guest_assignments(guest_data, behavior=behavior)
         request.session.modified = True
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True, 'behavior': behavior, 'rotated': rotated})
 
     user = request.user
-    students = list(DTStudent.objects.filter(user=user, is_active=True).order_by('number'))
-    if not students: return JsonResponse({'success': False, 'error': 'No students'})
-    assignments = list(DTRoleAssignment.objects.filter(user=user).select_related('student'))
-    student_ids = [s.id for s in students]
-    student_map = {s.id: s for s in students}
-    total_students = len(student_ids)
-    
-    updated_assignments = []
-    for assign in assignments:
-        if assign.student:
-            try:
-                current_idx = student_ids.index(assign.student.id)
-                next_idx = (current_idx + 1) % total_students
-                assign.student = student_map[student_ids[next_idx]]
-                assign.is_completed = False
-                updated_assignments.append(assign)
-            except (ValueError, KeyError): pass
-            
-    if updated_assignments:
-        DTRoleAssignment.objects.bulk_update(updated_assignments, ['student', 'is_completed'])
-        
-    return JsonResponse({'success': True, 'message': 'Rotated successfully'})
+    settings, _ = DTSettings.objects.get_or_create(user=user)
+    _sync_rotation_settings_flags(settings)
+
+    behavior = requested_behavior or _behavior_from_rotation_mode(settings.rotation_mode)
+    rotated = _rotate_user_assignments(user, behavior=behavior)
+
+    if str(settings.rotation_mode or "").startswith("auto_"):
+        today = timezone.localdate()
+        if settings.last_rotation_date != today:
+            settings.last_rotation_date = today
+            settings.save(update_fields=["last_rotation_date"])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Rotated successfully',
+        'behavior': behavior,
+        'rotated': rotated,
+    })
 
 @require_http_methods(["POST"])
 @csrf_exempt
