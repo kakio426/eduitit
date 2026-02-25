@@ -33,6 +33,16 @@ POST_LIST_TARGET_ALLOWED = {
     'mobile-post-list-container',
 }
 
+POST_FEED_SCOPE_ALL = 'all'
+POST_FEED_SCOPE_NOTICE = 'notice'
+POST_FEED_SCOPE_ALLOWED = {
+    POST_FEED_SCOPE_ALL,
+    POST_FEED_SCOPE_NOTICE,
+}
+POST_FEED_NOTICE_TYPES = (
+    'news_link',
+)
+
 
 def _get_post_list_target_id(request):
     """Resolve the SNS list target id from HTMX request context."""
@@ -50,20 +60,40 @@ def _get_post_list_target_id(request):
     return POST_LIST_TARGET_DEFAULT
 
 
-def _render_post_list_partial(request, page_obj):
+def _get_post_feed_scope(request):
+    raw_scope = request.GET.get('feed_scope') or request.POST.get('feed_scope')
+    if not raw_scope:
+        return POST_FEED_SCOPE_ALL
+
+    feed_scope = str(raw_scope).strip().lower()
+    if feed_scope in POST_FEED_SCOPE_ALLOWED:
+        return feed_scope
+    return POST_FEED_SCOPE_ALL
+
+
+def _render_post_list_partial(request, page_obj, feed_scope):
+    empty_title = None
+    empty_subtitle = None
+    if feed_scope == POST_FEED_SCOPE_NOTICE:
+        empty_title = "등록된 공지사항이 없습니다."
+        empty_subtitle = "새 공지가 올라오면 여기서 바로 확인할 수 있어요."
+
     return render(
         request,
-        'core/partials/post_list.html',
+        'core/partials/post_feed_container.html',
         {
             'posts': page_obj,
             'page_obj': page_obj,
             'post_list_target_id': _get_post_list_target_id(request),
+            'feed_scope': feed_scope,
+            'empty_title': empty_title,
+            'empty_subtitle': empty_subtitle,
         },
     )
 
 
-def _build_post_feed_queryset():
-    return (
+def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
+    queryset = (
         Post.objects
         .filter(approval_status='approved')
         .select_related(
@@ -80,8 +110,12 @@ def _build_post_feed_queryset():
             likes_count_annotated=Count('likes', distinct=True),
             comments_count_annotated=Count('comments', filter=Q(comments__is_hidden=False), distinct=True),
         )
-        .order_by('-created_at')
     )
+
+    if feed_scope == POST_FEED_SCOPE_NOTICE:
+        queryset = queryset.filter(post_type__in=POST_FEED_NOTICE_TYPES)
+
+    return queryset.order_by('-created_at')
 
 
 def _resolve_post_for_action(post_id, user):
@@ -186,6 +220,7 @@ HOME_SECTION_BY_ROUTE = {
     "consent:landing": "collect_sign",
     "signatures:landing": "collect_sign",
     "signatures:list": "collect_sign",
+    "handoff:landing": "collect_sign",
     "noticegen:main": "doc_write",
     "hwpxchat:main": "doc_write",
     "version_manager:landing": "doc_write",
@@ -211,6 +246,7 @@ HOME_SECTION_KEYWORDS = [
     ("동의서", "collect_sign"),
     ("수합", "collect_sign"),
     ("서명", "collect_sign"),
+    ("배부", "collect_sign"),
     ("소식지", "doc_write"),
     ("멘트", "doc_write"),
     ("문서", "doc_write"),
@@ -243,12 +279,13 @@ HOME_SECTION_KEYWORDS = [
 ]
 
 HOME_SECTION_FALLBACK_BY_TYPE = {
+    "collect_sign": "collect_sign",
     "classroom": "class_ops",
     "work": "doc_write",
     "game": "class_activity",
     "counsel": "refresh",
     "edutech": "guide",
-    "etc": "guide",
+    "etc": "external",
 }
 
 
@@ -578,7 +615,7 @@ def _build_today_context(request):
     }
 
 
-def _home_v2(request, products, posts, page_obj):
+def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
     sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=2)
@@ -602,6 +639,7 @@ def _home_v2(request, products, posts, page_obj):
             'favorite_product_ids': [p.id for p in favorite_products],
             'posts': posts,
             'page_obj': page_obj,
+            'feed_scope': feed_scope,
             **_build_today_context(request),
             **_build_home_student_games_qr_context(request),
         })
@@ -615,14 +653,16 @@ def _home_v2(request, products, posts, page_obj):
         'games': games,
         'posts': posts,
         'page_obj': page_obj,
+        'feed_scope': feed_scope,
     })
 
 def home(request):
     # Order by display_order first, then by creation date
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    feed_scope = _get_post_feed_scope(request)
 
     # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
-    posts = _build_post_feed_queryset()
+    posts = _build_post_feed_queryset(feed_scope=feed_scope)
 
     # 페이징 처리 (PC 우측 및 모바일 하단 SNS 위젯용)
     from django.core.paginator import Paginator
@@ -631,12 +671,12 @@ def home(request):
     page_obj = paginator.get_page(page_number)
     
     # HTMX 요청이면 post_list 영역만 반환
-    if request.headers.get('HX-Request') and request.GET.get('page'):
-        return _render_post_list_partial(request, page_obj)
+    if request.headers.get('HX-Request'):
+        return _render_post_list_partial(request, page_obj, feed_scope)
 
     # V2 홈: Feature flag on 시 분기
     if settings.HOME_V2_ENABLED:
-        return _home_v2(request, products, posts, page_obj)
+        return _home_v2(request, products, posts, page_obj, feed_scope)
 
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
@@ -657,7 +697,8 @@ def home(request):
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
             'posts': page_obj,
-            'page_obj': page_obj
+            'page_obj': page_obj,
+            'feed_scope': feed_scope,
         })
 
     # Else show the public home
@@ -671,7 +712,8 @@ def home(request):
         'products': products,
         'featured_product': featured_product,
         'posts': page_obj,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'feed_scope': feed_scope,
     })
 
 @login_required
@@ -716,13 +758,14 @@ def post_create(request):
 
     # HTMX 응답
     if request.headers.get('HX-Request'):
-        posts = _build_post_feed_queryset()
+        feed_scope = _get_post_feed_scope(request)
+        posts = _build_post_feed_queryset(feed_scope=feed_scope)
         
         from django.core.paginator import Paginator
         paginator = Paginator(posts, 5) # 등록 후에는 무조건 1페이지로
         page_obj = paginator.get_page(1)
         
-        return _render_post_list_partial(request, page_obj)
+        return _render_post_list_partial(request, page_obj, feed_scope)
 
     return redirect('home')
 

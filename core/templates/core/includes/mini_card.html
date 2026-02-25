@@ -7,7 +7,7 @@
     data-track="mini_card" data-track-label="{{ product.title }}"
     role="button" tabindex="0">
     <div class="flex items-start gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+        <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
             {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
         </div>
         <div class="flex-1 min-w-0">

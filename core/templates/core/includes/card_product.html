@@ -10,7 +10,7 @@
         <div class="space-y-2 md:space-y-3">
             <div class="flex justify-between items-start gap-2">
                 <div
-                    class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
+                    class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
                     {% if "fa-" in product.icon %}
                     <i class="{{ product.icon }}"></i>
                     {% else %}
@@ -34,7 +34,7 @@
 
             <div>
                 <span
-                    class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
+                    class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'collect_sign' %}text-blue-400{% elif product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
                 <h3
                     class="{% if product.card_size == 'hero' %}text-lg md:text-2xl lg:text-3xl{% else %}text-base md:text-xl lg:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-1 md:mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                     {{ product.title }}
@@ -79,7 +79,7 @@
             <div class="space-y-2 md:space-y-3">
                 <div class="flex justify-between items-start gap-2">
                     <div
-                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl md:text-2xl {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-blue-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-violet-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %} theme-icon">
                         {% if "fa-" in product.icon %}
                         <i class="{{ product.icon }}"></i>
                         {% else %}
@@ -103,7 +103,7 @@
 
                 <div>
                     <span
-                        class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
+                        class="text-[10px] md:text-xs font-bold tracking-widest uppercase {% if product.service_type == 'collect_sign' %}text-blue-400{% elif product.service_type == 'classroom' %}text-blue-400{% elif product.service_type == 'work' %}text-emerald-400{% elif product.service_type == 'game' %}text-red-400{% elif product.service_type == 'counsel' %}text-violet-400{% elif product.service_type == 'edutech' %}text-cyan-400{% else %}text-slate-400{% endif %} mb-1 block">{{ product.get_service_type_display }}</span>
                     <h3
                         class="{% if product.card_size == 'hero' %}text-lg md:text-2xl lg:text-3xl{% else %}text-base md:text-xl lg:text-2xl{% endif %} font-bold text-gray-800 leading-tight mb-1 md:mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-gray-800 group-hover:to-gray-500 transition-all font-title">
                         {{ product.title }}

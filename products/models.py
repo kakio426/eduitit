@@ -29,19 +29,25 @@ class Product(models.Model):
     ]
     
     SERVICE_CHOICES = [
-        ('classroom', '운영과 수업'),
-        ('work', '업무경감'),
-        ('game', '게임모음'),
-        ('counsel', '상담·운세'),
-        ('edutech', '에듀테크'),
-        ('etc', '기타'),
+        ('collect_sign', '수합·서명'),
+        ('classroom', '수업·학급 운영'),
+        ('work', '문서·작성'),
+        ('game', '교실 활동'),
+        ('counsel', '상담·리프레시'),
+        ('edutech', '가이드·인사이트'),
+        ('etc', '외부 서비스'),
     ]
     
     icon = models.CharField(max_length=50, default='🛠️', help_text="Emoji or FontAwesome class for card icon")
     color_theme = models.CharField(max_length=20, choices=COLOR_CHOICES, default='purple', help_text="Color theme")
     card_size = models.CharField(max_length=20, choices=SIZE_CHOICES, default='small', help_text="Card size")
     display_order = models.IntegerField(default=0, help_text="Order in which to display (lower numbers first)")
-    service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='etc', help_text="서비스 카테고리")
+    service_type = models.CharField(
+        max_length=20,
+        choices=SERVICE_CHOICES,
+        default='etc',
+        help_text="서비스 카테고리(수합·서명은 launch_route_name 매핑으로도 자동 분류됨)",
+    )
     external_url = models.URLField(blank=True, help_text="External URL for services hosted elsewhere")
     launch_route_name = models.CharField(
         max_length=120,

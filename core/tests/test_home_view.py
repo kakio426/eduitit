@@ -32,6 +32,17 @@ class HomeViewTest(TestCase):
             Post.objects.create(author=author, content=f'테스트 글 {i + 1}')
         return author
 
+    def _seed_notice_posts(self, count=6):
+        author = _create_onboarded_user('noticeauthor')
+        for i in range(count):
+            Post.objects.create(
+                author=author,
+                content=f'공지 글 {i + 1}',
+                post_type='news_link',
+                approval_status='approved',
+            )
+        return author
+
     def test_home_anonymous_200(self):
         """비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
@@ -126,6 +137,46 @@ class HomeViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('hx-target="#post-list-container"', content)
         self.assertIn('?page=1&target=post-list-container', content)
+
+    def test_sns_notice_inbox_button_renders(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('공지함', content)
+        self.assertIn('?feed_scope=notice&target=post-list-container', content)
+
+    def test_home_htmx_notice_feed_filters_to_notice_posts_only(self):
+        author = _create_onboarded_user('noticefeedauthor')
+        Post.objects.create(author=author, content='일반 글', post_type='general', approval_status='approved')
+        Post.objects.create(author=author, content='공지 글', post_type='news_link', approval_status='approved')
+        Post.objects.create(author=author, content='보류 공지', post_type='news_link', approval_status='pending')
+
+        response = self.client.get(
+            reverse('home'),
+            {'feed_scope': 'notice', 'target': 'post-list-container'},
+            HTTP_HX_REQUEST='true',
+            HTTP_HX_TARGET='post-list-container',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('data-feed-scope="notice"', content)
+        self.assertIn('공지 글', content)
+        self.assertNotIn('일반 글', content)
+        self.assertNotIn('보류 공지', content)
+
+    def test_home_htmx_notice_feed_pagination_keeps_scope(self):
+        self._seed_notice_posts(count=6)
+        response = self.client.get(
+            reverse('home'),
+            {'feed_scope': 'notice', 'page': 2, 'target': 'post-list-container'},
+            HTTP_HX_REQUEST='true',
+            HTTP_HX_TARGET='post-list-container',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('feed_scope=notice', content)
+        self.assertIn('hx-target="#post-list-container"', content)
 
     def test_post_create_htmx_uses_mobile_target_from_header(self):
         self._seed_sns_posts(count=6)
@@ -374,6 +425,42 @@ class HomeV2ViewTest(TestCase):
         self.assertIsNotNone(p2_action)
         self.assertEqual(p2_action['href'], reverse('collect:landing'))
         self.assertFalse(p2_action['is_external'])
+
+    def test_v2_handoff_route_maps_to_collect_sign_section(self):
+        handoff_product = Product.objects.create(
+            title="배부 체크",
+            description="배부 체크 서비스",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='handoff:landing',
+        )
+
+        response = self.client.get(reverse('home'))
+        sections = response.context.get('sections', [])
+        collect_sign = next((section for section in sections if section.get('key') == 'collect_sign'), None)
+
+        self.assertIsNotNone(collect_sign)
+        collect_ids = [product.id for product in collect_sign['products']]
+        self.assertIn(handoff_product.id, collect_ids)
+
+    def test_v2_collect_sign_service_type_falls_back_to_collect_sign_section(self):
+        collect_product = Product.objects.create(
+            title="수합 전용 도구",
+            description="수합·서명 섹션 테스트",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='',
+        )
+
+        response = self.client.get(reverse('home'))
+        sections = response.context.get('sections', [])
+        collect_sign = next((section for section in sections if section.get('key') == 'collect_sign'), None)
+
+        self.assertIsNotNone(collect_sign)
+        collect_ids = [product.id for product in collect_sign['products']]
+        self.assertIn(collect_product.id, collect_ids)
 
     def test_v2_sections_are_preview_capped(self):
         Product.objects.create(

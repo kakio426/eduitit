@@ -18,7 +18,9 @@
             </a>
             {% endif %}
             <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
-                hx-get="{% url 'home' %}" hx-select="#post-list-container" hx-target="#post-list-container"
+                hx-get="{% url 'home' %}?target=post-list-container"
+                hx-vals='js:{"feed_scope": (document.getElementById("post-list-container") ? document.getElementById("post-list-container").dataset.feedScope : "all")}'
+                hx-target="#post-list-container"
                 hx-swap="outerHTML">
                 <i class="ph ph-arrows-clockwise text-xl"></i>
             </button>
@@ -30,7 +32,8 @@
 
         {% if user.is_authenticated %}
         <!-- Write Input - 로그인 사용자만 -->
-        <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="innerHTML"
+        <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="outerHTML"
+            hx-vals='js:{"feed_scope": (document.getElementById("post-list-container") ? document.getElementById("post-list-container").dataset.feedScope : "all"), "post_list_target_id": "post-list-container"}'
             hx-on::after-request="this.reset(); document.getElementById('image-preview-container').classList.add('hidden'); document.getElementById('post-image-input').value = '';"
             hx-encoding="multipart/form-data"
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
@@ -80,9 +83,7 @@
         {% endif %}
 
         <!-- Feed List Container - 모든 사용자에게 표시 -->
-        <div id="post-list-container" class="space-y-4 pb-10">
-            {% include 'core/partials/post_list.html' with post_list_target_id='post-list-container' %}
-        </div>
+        {% include 'core/partials/post_feed_container.html' with post_list_target_id='post-list-container' feed_scope=feed_scope %}
 
     </div>
 </aside>

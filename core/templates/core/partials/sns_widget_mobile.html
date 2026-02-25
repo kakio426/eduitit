@@ -17,7 +17,9 @@
             </a>
             {% endif %}
             <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
-                hx-get="{% url 'home' %}" hx-select="#mobile-post-list-container" hx-target="#mobile-post-list-container"
+                hx-get="{% url 'home' %}?target=mobile-post-list-container"
+                hx-vals='js:{"feed_scope": (document.getElementById("mobile-post-list-container") ? document.getElementById("mobile-post-list-container").dataset.feedScope : "all")}'
+                hx-target="#mobile-post-list-container"
                 hx-swap="outerHTML">
                 <i class="ph ph-arrows-clockwise text-xl"></i>
             </button>
@@ -31,7 +33,8 @@
 
         {% if user.is_authenticated %}
         <!-- Write Input -->
-        <form hx-post="{% url 'post_create' %}" hx-target="#mobile-post-list-container" hx-swap="innerHTML"
+        <form hx-post="{% url 'post_create' %}" hx-target="#mobile-post-list-container" hx-swap="outerHTML"
+            hx-vals='js:{"feed_scope": (document.getElementById("mobile-post-list-container") ? document.getElementById("mobile-post-list-container").dataset.feedScope : "all"), "post_list_target_id": "mobile-post-list-container"}'
             hx-on::after-request="this.reset(); var previewEl = document.getElementById('mobile-image-preview-container'); if(previewEl) previewEl.classList.add('hidden'); var inputEl = document.getElementById('mobile-post-image-input'); if(inputEl) inputEl.value = '';"
             hx-encoding="multipart/form-data"
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
@@ -80,9 +83,7 @@
         {% endif %}
 
         <!-- Feed List Container -->
-        <div id="mobile-post-list-container" class="space-y-4 pb-4">
-            {% include 'core/partials/post_list.html' with expand_all_mobile=expand_all_mobile post_list_target_id='mobile-post-list-container' %}
-        </div>
+        {% include 'core/partials/post_feed_container.html' with expand_all_mobile=expand_all_mobile post_list_target_id='mobile-post-list-container' feed_scope=feed_scope %}
 
     </div>
 </div>

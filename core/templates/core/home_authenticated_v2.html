@@ -564,7 +564,7 @@ function homeCalendarWidget() {
                         data-product-id="{{ item.product.id }}"
                         data-track="quick_action" data-track-label="{{ item.product.title }}"
                         class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
-                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
                         <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
                     </a>
                     {% endfor %}
@@ -574,7 +574,7 @@ function homeCalendarWidget() {
                         {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                         class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
                         data-track="quick_action" data-track-label="{{ qa.product.title }}">
-                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
                         <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
                     </a>
                     {% endfor %}

@@ -1,0 +1,31 @@
+{% with list_target_id=post_list_target_id|default:'post-list-container' %}
+<div id="{{ list_target_id }}" class="space-y-4 {% if list_target_id == 'mobile-post-list-container' %}pb-4{% else %}pb-10{% endif %}" data-feed-scope="{{ feed_scope|default:'all' }}">
+    <div class="flex items-center justify-between gap-3">
+        <div class="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope != 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
+                hx-get="{% url 'home' %}?feed_scope=all&target={{ list_target_id }}"
+                hx-target="#{{ list_target_id }}"
+                hx-swap="outerHTML"
+            >
+                전체
+            </button>
+            <button
+                type="button"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope == 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
+                hx-get="{% url 'home' %}?feed_scope=notice&target={{ list_target_id }}"
+                hx-target="#{{ list_target_id }}"
+                hx-swap="outerHTML"
+            >
+                공지함
+            </button>
+        </div>
+        {% if feed_scope == 'notice' %}
+        <span class="text-[11px] font-medium text-indigo-500">공지사항만 모아보기</span>
+        {% endif %}
+    </div>
+
+    {% include 'core/partials/post_list.html' with post_list_target_id=list_target_id feed_scope=feed_scope empty_title=empty_title empty_subtitle=empty_subtitle %}
+</div>
+{% endwith %}
