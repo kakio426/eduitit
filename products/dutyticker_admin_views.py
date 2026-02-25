@@ -39,7 +39,7 @@ def _ensure_time_slots_for_scope(user, classroom):
     return list(apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom).order_by("slot_order", "id"))
 
 
-def _build_weekday_subject_rows(user, classroom):
+def _build_period_subject_rows(user, classroom):
     schedules = apply_classroom_scope(
         DTSchedule.objects.filter(user=user, day__in=[day for day, _ in WEEKDAY_LABELS], period__in=PERIOD_NUMBERS),
         classroom,
@@ -47,17 +47,17 @@ def _build_weekday_subject_rows(user, classroom):
     subject_map = {(row.day, row.period): row.subject for row in schedules}
 
     rows = []
-    for day, label in WEEKDAY_LABELS:
+    for period in PERIOD_NUMBERS:
         rows.append(
             {
-                "day": day,
-                "label": label,
-                "periods": [
+                "period": period,
+                "days": [
                     {
-                        "period": period,
+                        "day": day,
+                        "label": label,
                         "subject": subject_map.get((day, period), ""),
                     }
-                    for period in PERIOD_NUMBERS
+                    for day, label in WEEKDAY_LABELS
                 ],
             }
         )
@@ -81,7 +81,7 @@ def admin_dashboard(request):
     roles = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
     settings, _ = get_or_create_settings_for_scope(user, classroom)
     time_slots = _ensure_time_slots_for_scope(user, classroom)
-    weekday_rows = _build_weekday_subject_rows(user, classroom)
+    period_rows = _build_period_subject_rows(user, classroom)
     
     return render(request, 'products/dutyticker/admin_dashboard.html', {
         'students': students,
@@ -89,8 +89,9 @@ def admin_dashboard(request):
         'settings': settings,
         'active_classroom': classroom,
         'time_slots': time_slots,
-        'weekday_rows': weekday_rows,
+        'period_rows': period_rows,
         'period_numbers': PERIOD_NUMBERS,
+        'weekday_labels': WEEKDAY_LABELS,
     })
 
 
