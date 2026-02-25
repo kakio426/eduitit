@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}배부 체크 - 대시보드{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">배부 체크</h1>
+                <p class="text-lg text-gray-500 font-bold">명단 저장부터 배부 확인, 미수령 정리까지 한 번에 관리하세요.</p>
+            </div>
+            <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
+                <i class="fa-solid fa-house"></i>
+                <span>메인으로</span>
+            </a>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6 space-y-2" data-aos="fade-down" data-aos-delay="40">
+            {% for message in messages %}
+            <div class="rounded-xl px-4 py-3 font-bold text-sm border
+                {% if 'error' in message.tags %}
+                    bg-red-50 text-red-700 border-red-200
+                {% elif 'success' in message.tags %}
+                    bg-emerald-50 text-emerald-700 border-emerald-200
+                {% else %}
+                    bg-blue-50 text-blue-700 border-blue-200
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-gray-700">명단 만들기</h2>
+                </div>
+
+                <form action="{% url 'handoff:group_create' %}" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.name.label }}</label>
+                        {{ group_form.name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.description.label }}</label>
+                        {{ group_form.description }}
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer">
+                        {{ group_form.is_favorite }}
+                        <span>즐겨찾기 명단으로 등록</span>
+                    </label>
+                    <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black transition">
+                        <i class="fa-solid fa-plus mr-1"></i>명단 생성
+                    </button>
+                </form>
+            </div>
+
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shadow-sm">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-gray-700">배부 세션 시작</h2>
+                </div>
+
+                <form action="{% url 'handoff:session_create' %}" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.title.label }}</label>
+                        {{ session_form.title }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.roster_group.label }}</label>
+                        {{ session_form.roster_group }}
+                    </div>
+                    <div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.due_at.label }}</label>
+                            {{ session_form.due_at }}
+                        </div>
+                    </div>
+                    <div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.note.label }}</label>
+                            {{ session_form.note }}
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                        <i class="fa-solid fa-play mr-1"></i>세션 생성
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-black text-gray-700">명단 목록</h2>
+                    <span class="text-sm text-gray-500 font-bold">{{ groups|length }}개</span>
+                </div>
+
+                {% if groups %}
+                <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1 dt-scrollbar">
+                    {% for group in groups %}
+                    <div class="rounded-2xl border border-gray-200 bg-white/70 p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                                <p class="text-lg font-black text-gray-700 flex items-center gap-2">
+                                    {% if group.is_favorite %}
+                                    <i class="fa-solid fa-star text-amber-400"></i>
+                                    {% endif %}
+                                    <span>{{ group.name }}</span>
+                                </p>
+                                {% if group.description %}
+                                <p class="text-sm text-gray-500 font-bold mt-1">{{ group.description }}</p>
+                                {% endif %}
+                            </div>
+                            <form action="{% url 'handoff:group_delete' group.id %}" method="post" onsubmit="return confirm('명단을 삭제할까요?');">
+                                {% csrf_token %}
+                                <button type="submit" class="w-9 h-9 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="text-xs text-gray-500 font-bold mb-3">
+                            활성 {{ group.active_member_count }}명 / 전체 {{ group.total_member_count }}명
+                        </div>
+                        <a href="{% url 'handoff:group_detail' group.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">
+                            <i class="fa-solid fa-pen"></i>
+                            <span>명단 관리</span>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="py-10 text-center text-gray-400">
+                    <i class="fa-solid fa-users-slash text-4xl mb-3"></i>
+                    <p class="font-bold">아직 명단이 없습니다.</p>
+                    <p class="text-sm">왼쪽 폼에서 첫 명단을 만들어주세요.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-black text-gray-700">최근 배부 세션</h2>
+                    <span class="text-sm text-gray-500 font-bold">{{ sessions|length }}건</span>
+                </div>
+
+                {% if sessions %}
+                <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1 dt-scrollbar">
+                    {% for session in sessions %}
+                    <div class="rounded-2xl border border-gray-200 bg-white/70 p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                                <p class="text-lg font-black text-gray-700">{{ session.title }}</p>
+                                <p class="text-xs text-gray-500 font-bold mt-1">
+                                    명단: {{ session.roster_group_name|default:"삭제된 명단" }}
+                                    {% if session.due_at %}
+                                    · 마감 {{ session.due_at|date:"m/d H:i" }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% if session.status == "open" %}
+                            <span class="px-2 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700">진행중</span>
+                            {% else %}
+                            <span class="px-2 py-1 rounded-full text-xs font-black bg-gray-200 text-gray-700">마감</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="flex justify-between text-xs font-black text-gray-500 mb-1">
+                                <span>수령 {{ session.received_count }}</span>
+                                <span>미수령 {{ session.pending_count }}</span>
+                            </div>
+                            {% if session.total_count %}
+                            <div class="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                                <div class="h-full bg-indigo-500" style="width: {% widthratio session.received_count session.total_count 100 %}%"></div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{% url 'handoff:session_detail' session.id %}" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
+                                체크 화면
+                            </a>
+                            <a href="{% url 'handoff:session_edit' session.id %}" class="px-3 py-1.5 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-200">
+                                수정
+                            </a>
+                            <form action="{% url 'handoff:session_delete' session.id %}" method="post" onsubmit="return confirm('세션을 삭제할까요?');">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-bold text-sm border border-red-100">
+                                    삭제
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="py-10 text-center text-gray-400">
+                    <i class="fa-solid fa-clipboard text-4xl mb-3"></i>
+                    <p class="font-bold">아직 배부 세션이 없습니다.</p>
+                    <p class="text-sm">명단을 선택해 첫 세션을 시작해보세요.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

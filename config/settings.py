@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'ppobgi.apps.PpobgiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',
+    'handoff.apps.HandoffConfig',
     'qrgen.apps.QrgenConfig',
     'hwpxchat.apps.HwpxchatConfig',
     'encyclopedia.apps.EncyclopediaConfig',

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}명단 관리 - 배부 체크{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8" data-aos="fade-down">
+            <div>
+                <p class="text-sm text-blue-600 font-black mb-1">명단 관리</p>
+                <h1 class="text-4xl font-black text-gray-700">{{ group.name }}</h1>
+                <p class="text-gray-500 font-bold mt-1">활성 멤버 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 연결된 세션 {{ sessions_count }}건</p>
+            </div>
+            <a href="{% url 'handoff:dashboard' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>대시보드로</span>
+            </a>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6 space-y-2" data-aos="fade-down" data-aos-delay="40">
+            {% for message in messages %}
+            <div class="rounded-xl px-4 py-3 font-bold text-sm border
+                {% if 'error' in message.tags %}
+                    bg-red-50 text-red-700 border-red-200
+                {% elif 'success' in message.tags %}
+                    bg-emerald-50 text-emerald-700 border-emerald-200
+                {% else %}
+                    bg-blue-50 text-blue-700 border-blue-200
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                <h2 class="text-2xl font-black text-gray-700 mb-4">명단 정보</h2>
+                <form action="{% url 'handoff:group_update' group.id %}" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.name.label }}</label>
+                        {{ group_form.name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.description.label }}</label>
+                        {{ group_form.description }}
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer">
+                        {{ group_form.is_favorite }}
+                        <span>즐겨찾기 명단으로 고정</span>
+                    </label>
+                    <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black transition">
+                        명단 정보 저장
+                    </button>
+                </form>
+            </div>
+
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
+                <h2 class="text-2xl font-black text-gray-700 mb-4">멤버 일괄 추가</h2>
+                <form action="{% url 'handoff:group_members_add' group.id %}" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">{{ bulk_form.names_text.label }}</label>
+                        {{ bulk_form.names_text }}
+                    </div>
+                    <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                        <i class="fa-solid fa-user-plus mr-1"></i>멤버 추가
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="120">
+            <h2 class="text-2xl font-black text-gray-700 mb-4">멤버 수정/삭제</h2>
+
+            {% if members %}
+            <div class="space-y-3">
+                {% for member in members %}
+                <div class="rounded-2xl bg-white/70 border border-gray-200 p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <form action="{% url 'handoff:group_member_update' group.id member.id %}" method="post" class="md:col-span-11 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                            {% csrf_token %}
+                            <input type="text" name="display_name" value="{{ member.display_name }}" class="md:col-span-4 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
+                            <input type="text" name="note" value="{{ member.note }}" placeholder="메모 (선택)" class="md:col-span-5 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            <label class="md:col-span-2 inline-flex items-center gap-2 text-sm font-bold text-gray-600">
+                                <input type="checkbox" name="is_active" value="1" {% if member.is_active %}checked{% endif %} class="rounded border-gray-300 text-blue-600">
+                                <span>활성</span>
+                            </label>
+                            <button type="submit" class="md:col-span-1 w-full px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-black text-sm border border-blue-100">
+                                저장
+                            </button>
+                        </form>
+                        <form action="{% url 'handoff:group_member_delete' group.id member.id %}" method="post" class="md:col-span-1" onsubmit="return confirm('멤버를 삭제할까요?');">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-red-50 text-red-700 font-black text-sm border border-red-100">
+                                삭제
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="py-10 text-center text-gray-400">
+                <i class="fa-solid fa-user-slash text-4xl mb-3"></i>
+                <p class="font-bold">등록된 멤버가 없습니다.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

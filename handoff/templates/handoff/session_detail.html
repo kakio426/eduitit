@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ session.title }} - 배부 체크{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6" data-aos="fade-down">
+            <div>
+                <div class="inline-flex items-center gap-2 mb-2">
+                    {% if session.status == "open" %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700">진행중</span>
+                    {% else %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-gray-200 text-gray-700">마감</span>
+                    {% endif %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-indigo-100 text-indigo-700">{{ session.roster_group_name|default:"삭제된 명단" }}</span>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-gray-700">{{ session.title }}</h1>
+                <p class="text-sm text-gray-500 font-bold mt-1">
+                    생성 {{ session.created_at|date:"Y-m-d H:i" }}
+                    {% if session.due_at %} · 마감 {{ session.due_at|date:"Y-m-d H:i" }}{% endif %}
+                </p>
+                {% if session.note %}
+                <p class="mt-3 text-sm text-gray-600 font-bold bg-white/70 border border-gray-200 rounded-xl px-3 py-2 inline-block">{{ session.note }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{% url 'handoff:dashboard' %}" class="px-4 py-2 rounded-xl bg-white text-gray-600 font-bold shadow-clay">
+                    <i class="fa-solid fa-arrow-left mr-1"></i>대시보드
+                </a>
+                <a href="{% url 'handoff:session_edit' session.id %}" class="px-4 py-2 rounded-xl bg-white text-gray-700 font-bold border border-gray-200">
+                    수정
+                </a>
+                <form action="{% url 'handoff:session_toggle_status' session.id %}" method="post">
+                    {% csrf_token %}
+                    {% if session.status == "open" %}
+                    <input type="hidden" name="status" value="closed">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-black transition">
+                        세션 마감
+                    </button>
+                    {% else %}
+                    <input type="hidden" name="status" value="open">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black transition">
+                        다시 열기
+                    </button>
+                    {% endif %}
+                </form>
+                <form action="{% url 'handoff:session_delete' session.id %}" method="post" onsubmit="return confirm('세션을 삭제할까요?');">
+                    {% csrf_token %}
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-red-50 text-red-700 font-black border border-red-100">
+                        삭제
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-5 space-y-2">
+            {% for message in messages %}
+            <div class="rounded-xl px-4 py-3 font-bold text-sm border
+                {% if 'error' in message.tags %}
+                    bg-red-50 text-red-700 border-red-200
+                {% elif 'success' in message.tags %}
+                    bg-emerald-50 text-emerald-700 border-emerald-200
+                {% else %}
+                    bg-blue-50 text-blue-700 border-blue-200
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if session.status == "closed" %}
+        <div class="mb-5 rounded-2xl bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800 font-bold">
+            세션이 마감되어 체크를 수정할 수 없습니다. 다시 열기를 누르면 수정할 수 있습니다.
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            <div class="rounded-2xl bg-white p-4 border border-gray-200">
+                <p class="text-xs text-gray-500 font-black mb-1">전체</p>
+                <p id="countTotal" class="text-3xl font-black text-gray-700">{{ counts.total }}</p>
+            </div>
+            <div class="rounded-2xl bg-emerald-50 p-4 border border-emerald-200">
+                <p class="text-xs text-emerald-600 font-black mb-1">수령완료</p>
+                <p id="countReceived" class="text-3xl font-black text-emerald-700">{{ counts.received }}</p>
+            </div>
+            <div class="rounded-2xl bg-rose-50 p-4 border border-rose-200">
+                <p class="text-xs text-rose-600 font-black mb-1">미수령</p>
+                <p id="countPending" class="text-3xl font-black text-rose-700">{{ counts.pending }}</p>
+            </div>
+        </div>
+
+        <div class="clay-card p-5 md:p-6 mb-5">
+            <div class="flex flex-col md:flex-row md:items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <button type="button" class="filter-btn px-3 py-2 rounded-lg text-sm font-black bg-rose-600 text-white" data-filter="pending">미수령자만</button>
+                    <button type="button" class="filter-btn px-3 py-2 rounded-lg text-sm font-black bg-white text-gray-700 border border-gray-200" data-filter="all">전체</button>
+                    <button type="button" class="filter-btn px-3 py-2 rounded-lg text-sm font-black bg-white text-gray-700 border border-gray-200" data-filter="received">수령완료</button>
+                </div>
+                <div class="flex-1">
+                    <input id="searchInput" type="text" placeholder="이름/초성 검색 (예: ㄱㅁㅅ)" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="copyPendingBtn" type="button" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black">
+                        미수령 안내문 복사
+                    </button>
+                    <a href="{% url 'handoff:session_export_csv' session.id %}" class="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-black">
+                        CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="receiptList" class="space-y-3">
+            {% for receipt in receipts %}
+            <div
+                class="receipt-row rounded-2xl border bg-white p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 {% if receipt.state == 'received' %}border-emerald-200 bg-emerald-50/40{% else %}border-gray-200{% endif %}"
+                data-receipt-id="{{ receipt.id }}"
+                data-name="{{ receipt.member_name_snapshot }}"
+                data-state="{{ receipt.state }}"
+            >
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-lg md:text-xl font-black text-gray-700">{{ receipt.member_name_snapshot }}</p>
+                        <span class="state-badge px-2 py-1 rounded-full text-xs font-black {% if receipt.state == 'received' %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}">
+                            {{ receipt.get_state_display }}
+                        </span>
+                    </div>
+                    <p class="receipt-meta text-xs text-gray-500 font-bold">
+                        {% if receipt.state == "received" and receipt.received_at %}
+                        {{ receipt.received_at|date:"m/d H:i" }} 처리
+                        {% if receipt.received_by %} · {{ receipt.received_by.username }}{% endif %}
+                        {% if receipt.memo %} · {{ receipt.memo }}{% endif %}
+                        {% else %}
+                        아직 수령 확인 전
+                        {% endif %}
+                    </p>
+                </div>
+
+                <form action="{% url 'handoff:receipt_set_state' session.id receipt.id %}" method="post" class="receipt-state-form flex items-center gap-2">
+                    {% csrf_token %}
+                    {% if receipt.state == "pending" %}
+                    <input type="hidden" name="state" value="received">
+                    <button type="submit" class="state-button px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black transition" {% if session.status != "open" %}disabled{% endif %}>
+                        수령 체크
+                    </button>
+                    {% else %}
+                    <input type="hidden" name="state" value="pending">
+                    <button type="submit" class="state-button px-4 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-black transition" {% if session.status != "open" %}disabled{% endif %}>
+                        되돌리기
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="emptyState" class="hidden mt-6 rounded-2xl border border-gray-200 bg-white/70 p-8 text-center text-gray-400 font-bold">
+            조건에 맞는 대상이 없습니다.
+        </div>
+    </div>
+</section>
+
+<div id="undoToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+    <span id="undoText" class="text-sm font-bold"></span>
+    <button id="undoButton" type="button" class="text-sm font-black text-amber-300 hover:text-amber-200">실행 취소</button>
+</div>
+
+<script>
+    window.handoffSessionConfig = {
+        isOpen: {{ is_session_open|yesno:"true,false" }},
+        pendingNoticeTemplate: "{{ pending_notice_text|escapejs }}",
+        csrfToken: "{{ csrf_token }}",
+    };
+</script>
+<script src="{% static 'handoff/js/session_detail.js' %}"></script>
+{% endblock %}

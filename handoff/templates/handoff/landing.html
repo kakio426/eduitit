@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}배부 체크 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600 text-5xl shadow-clay mb-5">
+                {{ service.icon|default:"📦" }}
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
+            <p class="text-lg md:text-xl text-gray-500 font-bold">명단을 저장해두고, 배부할 때 수령 여부만 빠르게 체크하세요.</p>
+        </div>
+
+        <div class="clay-card p-7 md:p-10 mb-8" data-aos="fade-up" data-aos-delay="80">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="rounded-2xl bg-white/70 border border-blue-100 p-5">
+                    <p class="text-sm font-black text-blue-600 mb-2">1. 명단 저장</p>
+                    <p class="text-gray-600 font-bold">한 번 만든 교사 명단을 반복해서 사용할 수 있어요.</p>
+                </div>
+                <div class="rounded-2xl bg-white/70 border border-blue-100 p-5">
+                    <p class="text-sm font-black text-blue-600 mb-2">2. 세션 시작</p>
+                    <p class="text-gray-600 font-bold">오늘 배부 건을 만들면 미수령자 중심 화면이 바로 열립니다.</p>
+                </div>
+                <div class="rounded-2xl bg-white/70 border border-blue-100 p-5">
+                    <p class="text-sm font-black text-blue-600 mb-2">3. 증빙 정리</p>
+                    <p class="text-gray-600 font-bold">미수령 안내문 복사, CSV 내보내기로 후속 조치까지 마무리합니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center" data-aos="fade-up" data-aos-delay="140">
+            <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black shadow-clay hover:shadow-clay-hover transition-all">
+                <i class="fa-solid fa-right-to-bracket"></i>
+                <span>로그인하고 시작하기</span>
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
