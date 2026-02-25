@@ -1,0 +1,5095 @@
+{
+  "project": "eduitit",
+  "generated_from": {
+    "settings": "config/settings.py",
+    "root_urls": "config/urls.py",
+    "db": "db.sqlite3",
+    "generator": "scripts/generate_llm_training_data.py"
+  },
+  "summary": {
+    "service_count": 36,
+    "app_count": 26,
+    "chat_record_count": 72
+  },
+  "service_catalog": {
+    "project": "eduitit",
+    "generated_from": {
+      "settings": "config/settings.py",
+      "root_urls": "config/urls.py",
+      "db": "db.sqlite3"
+    },
+    "service_count": 36,
+    "services": [
+      {
+        "product_id": 138,
+        "title": "우리반BTI",
+        "lead_text": "우리 반 아이들은 어떤 동물 친구들일까요? 재미있는 설문으로 알아보는 교육용 성향 검사 도구입니다.",
+        "description": "MBTI 기반의 12가지 질문을 통해 학생들의 학교생활 스타일을 16가지 귀여운 동물 캐릭터로 분류해 드립니다.\n학생들의 강점, 학급에서의 역할, 그리고 선생님을 위한 맞춤형 상담 가이드와 학급 경영 팁까지 제공하여 더욱 행복하고 활기찬 교실을 만들 수 있도록 도와드립니다.",
+        "service_type": "counsel",
+        "launch_route_name": "studentmbti:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 0,
+        "value_props": {
+          "solve_text": "학생 성향을 재미있게 파악해요",
+          "result_text": "캐릭터 유형 결과",
+          "time_text": "3분"
+        },
+        "mapped_app": "studentmbti",
+        "mapped_route_prefixes": [
+          "studentmbti/",
+          "m/"
+        ]
+      },
+      {
+        "product_id": 139,
+        "title": "교사 백과사전",
+        "lead_text": "AI와 함께하는 교육 매뉴얼의 혁신, NotebookLM 기반 교사 백과사전입니다.",
+        "description": "Eduitit의 모든 기능과 교육적 활용 팁을 한눈에 확인하세요. Google NotebookLM 기술을 활용하여 방대한 매뉴얼도 질문 하나로 즉시 해결할 수 있습니다.",
+        "service_type": "work",
+        "launch_route_name": "encyclopedia:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 0,
+        "value_props": {
+          "solve_text": "NotebookLM을 공유해요",
+          "result_text": "공유 노트북 링크",
+          "time_text": "1분"
+        },
+        "mapped_app": "encyclopedia",
+        "mapped_route_prefixes": [
+          "encyclopedia/"
+        ]
+      },
+      {
+        "product_id": 156,
+        "title": "Insight Library",
+        "lead_text": "선생님의 시선으로 AI 시대를 기록하다",
+        "description": "유튜브 영상, 개발 일지, 칼럼 등 선생님이 발견한 인사이트를 카드 형태로 기록하고 공유하는 공간입니다. 영상 링크 하나로 썸네일이 자동 생성되고, 나만의 노트와 태그를 붙여 지식을 체계적으로 관리할 수 있습니다.",
+        "service_type": "tool",
+        "launch_route_name": "insights:list",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 0,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "insights",
+        "mapped_route_prefixes": [
+          ""
+        ]
+      },
+      {
+        "product_id": 121,
+        "title": "반짝반짝 우리반 알림판",
+        "lead_text": "선생님, 저 지금 뭐해요? 우리 반 아이들이 할 일을 잊지 않도록 화면으로 챙겨주세요.",
+        "description": "\"선생님, 저 청소 당번인 거 깜빡했어요!\" 이런 말, 이제 그만 듣고 싶으시죠? 교실 TV에 '반짝반짝 우리반 알림판'을 띄워두세요. 자신의 이름과 해야 할 일이 화면에 계속 보이니, 아이들이 선생님 잔소리 없이도 스스로 할 일을 기억하고 실천합니다.",
+        "service_type": "classroom",
+        "launch_route_name": "dutyticker",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 1,
+        "value_props": {
+          "solve_text": "학급 소식을 빠르게 공유해요",
+          "result_text": "알림판 공지 카드",
+          "time_text": "2분"
+        },
+        "mapped_app": "products",
+        "mapped_route_prefixes": [
+          "products/"
+        ]
+      },
+      {
+        "product_id": 142,
+        "title": "선생님 사주",
+        "lead_text": "",
+        "description": "학교 현장에서 활용하는 사주 상담 도구",
+        "service_type": "counsel",
+        "launch_route_name": "fortune:saju",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 1,
+        "value_props": {
+          "solve_text": "교사 맞춤 사주를 확인해요",
+          "result_text": "사주 분석 리포트",
+          "time_text": "3분"
+        },
+        "mapped_app": "fortune",
+        "mapped_route_prefixes": [
+          "fortune/"
+        ]
+      },
+      {
+        "product_id": 122,
+        "title": "왁자지껄 교실 윷놀이",
+        "lead_text": "준비물도 뒷정리도 필요 없어요. 커다란 화면 속에서 다 함께 즐기는 우리 전통 놀이!",
+        "description": "창의적 체험활동 시간이나 비 오는 날 체육 시간, 무엇을 할지 고민이신가요? 준비물 없이 화면 하나로 즐기는 '왁자지껄 교실 윷놀이'로 우리 반의 단합력을 높여보세요. 아이들의 환호성으로 교실이 가득 찰 거예요.",
+        "service_type": "game",
+        "launch_route_name": "yut_game",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 2,
+        "value_props": {
+          "solve_text": "교실 분위기를 바로 띄워요",
+          "result_text": "실시간 윷놀이 화면",
+          "time_text": "1분"
+        },
+        "mapped_app": "products",
+        "mapped_route_prefixes": [
+          "products/"
+        ]
+      },
+      {
+        "product_id": 123,
+        "title": "토닥토닥 선생님 운세",
+        "lead_text": "지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.",
+        "description": "타고난 나의 기질과 학생들과의 케미, 그리고 2026년 운세까지! 명리학 전문가가 분석하는 선생님만을 위한 일대일 맞춤 운세 서비스를 만나보세요.",
+        "service_type": "counsel",
+        "launch_route_name": "fortune:saju",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 3,
+        "value_props": {
+          "solve_text": "오늘의 운세를 가볍게 확인해요",
+          "result_text": "운세 카드",
+          "time_text": "1분"
+        },
+        "mapped_app": "fortune",
+        "mapped_route_prefixes": [
+          "fortune/"
+        ]
+      },
+      {
+        "product_id": 124,
+        "title": "가뿐하게 서명 톡",
+        "lead_text": "바쁜 쉬는 시간, 결재판 들고 교무실 내려갈 필요 없어요. 내 자리에서 링크 하나로 서명 끝!",
+        "description": "\"연수 때마다 종이 명단 돌리고 사인받기 귀찮으셨죠?\" 이제 참여 링크 공유로 간편하게 서명을 수집하세요. 연수 상세 화면에서 서명 현황을 확인하고, 출력 화면에서 인쇄/PDF 저장으로 문서를 보관할 수 있습니다.",
+        "service_type": "work",
+        "launch_route_name": "signatures:list",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 4,
+        "value_props": {
+          "solve_text": "서명을 온라인으로 간편 수집해요",
+          "result_text": "출력용 서명 문서",
+          "time_text": "2분"
+        },
+        "mapped_app": "signatures",
+        "mapped_route_prefixes": [
+          "signatures/"
+        ]
+      },
+      {
+        "product_id": 126,
+        "title": "몽글몽글 미술 수업",
+        "lead_text": "유튜브 미술 영상을 분석해서 단계별 수업 안내를 자동 생성하는 스마트 도우미",
+        "description": "'이 부분에서 잠깐 멈추고 따라 그려보세요'라고 일일이 설명하기 힘드셨죠? 이제 유튜브 미술 영상 URL만 넣으면 AI가 영상을 분석하여 학생들이 따라하기 좋은 단계별 안내를 자동으로 만들어줍니다. 교실 TV에 띄워놓고 학생들과 함께 차근차근 작품을 완성해보세요.",
+        "service_type": "classroom",
+        "launch_route_name": "artclass:setup",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 6,
+        "value_props": {
+          "solve_text": "미술 수업 아이디어를 빠르게 준비해요",
+          "result_text": "수업 활동안",
+          "time_text": "3분"
+        },
+        "mapped_app": "artclass",
+        "mapped_route_prefixes": [
+          "artclass/"
+        ]
+      },
+      {
+        "product_id": 152,
+        "title": "동의서는 나에게 맡겨",
+        "lead_text": "학부모 동의서 수합을 모바일 3단계로 간단하게 처리합니다.",
+        "description": "문서 업로드, 링크 발송 시뮬레이션, 손서명 수합, 통합 PDF 다운로드까지 한 번에 제공합니다.",
+        "service_type": "classroom",
+        "launch_route_name": "consent:dashboard",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 6,
+        "value_props": {
+          "solve_text": "종이 동의서 회수 부담",
+          "result_text": "모바일 수합 + PDF 증빙",
+          "time_text": "약 3분"
+        },
+        "mapped_app": "consent",
+        "mapped_route_prefixes": [
+          "consent/"
+        ]
+      },
+      {
+        "product_id": 127,
+        "title": "글솜씨 뚝딱! 소식지",
+        "lead_text": "글 쓰는 게 막막할 때 키워드만 톡! 학부모님이 감동하는 멋진 소식지를 선사해요.",
+        "description": "복잡한 기사 작성을 버튼 클릭 몇 번으로 해결하세요. 수업 소식, 학교 행사 등을 멋진 기사 형태로 변환하여 학부모님과 공유할 수 있습니다.",
+        "service_type": "work",
+        "launch_route_name": "autoarticle:create",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 7,
+        "value_props": {
+          "solve_text": "학교 소식지를 AI로 작성해요",
+          "result_text": "기사/PPT 초안",
+          "time_text": "5분"
+        },
+        "mapped_app": "autoarticle",
+        "mapped_route_prefixes": [
+          "autoarticle/"
+        ]
+      },
+      {
+        "product_id": 128,
+        "title": "유튜브 탈알고리즘",
+        "lead_text": "내 피드에 갇힌 시야를 넓혀보세요. 추천 영상 너머, 전 세계 친구들이 진짜로 보고 있는 세상을 만나요.",
+        "description": "대형 언론사나 유명 유튜버가 아닌, 사람들의 진심 어린 사랑을 받고 있는 숨은 보석 같은 유튜브 채널을 매일매일 발견하세요. 알고리즘에 갇히지 않고 새로운 콘텐츠를 만나는 특별한 경험을 선사합니다.",
+        "service_type": "etc",
+        "launch_route_name": "",
+        "external_url": "https://motube-woad.vercel.app/",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 8,
+        "value_props": {
+          "solve_text": "교육 영상 탐색을 더 효율적으로 해요",
+          "result_text": "추천 영상 목록",
+          "time_text": "2분"
+        },
+        "mapped_app": null,
+        "mapped_route_prefixes": []
+      },
+      {
+        "product_id": 129,
+        "title": "학교 통합 지원 스쿨잇",
+        "lead_text": "복잡한 채용 업무와 업체 선정은 그만! AI가 학교에 딱 맞는 선생님은 물론, 신뢰할 수 있는 학교 행사 업체까지 한곳에서 연결해 드립니다.",
+        "description": "\"갑자기 대체 교사는 어디서 구하지?\", \"믿을만한 체험학습 업체는 어디일까?\" 매번 반복되는 채용난과 업체 선정 스트레스에서 벗어나세요. 스쿨잇은 학교의 행정 부담을 획기적으로 줄여주기 위해 탄생했습니다. AI를 통한 스마트한 채용 상담부터 검증된 행사 업체 매칭까지, 학교 운영에 필요한 모든 연결을 이 한 곳에서 쉽고 빠르게 해결할 수 있습니다.",
+        "service_type": "etc",
+        "launch_route_name": "",
+        "external_url": "https://schoolit.shop/",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 9,
+        "value_props": {
+          "solve_text": "학교 업무 도구를 한곳에서 관리해요",
+          "result_text": "통합 대시보드",
+          "time_text": "1분"
+        },
+        "mapped_app": null,
+        "mapped_route_prefixes": []
+      },
+      {
+        "product_id": 130,
+        "title": "인사이트",
+        "lead_text": "AI 시대를 이끄는 선생님들을 위한 보석 같은 영감들을 모았습니다.",
+        "description": "영감 보석함 - 교육의 미래를 고민하는 선생님들과 함께 나누고 싶은 깊이 있는 통찰력을 제공합니다.",
+        "service_type": "edutech",
+        "launch_route_name": "",
+        "external_url": "/insights/",
+        "is_active": false,
+        "is_featured": false,
+        "display_order": 10,
+        "value_props": {
+          "solve_text": "교육 트렌드를 빠르게 파악해요",
+          "result_text": "핵심 인사이트 요약",
+          "time_text": "2분"
+        },
+        "mapped_app": null,
+        "mapped_route_prefixes": []
+      },
+      {
+        "product_id": 140,
+        "title": "간편 수합",
+        "lead_text": "QR 코드 하나로 파일·링크·텍스트를 간편하게 수합하세요!",
+        "description": "여러 선생님으로부터 파일이나 정보를 수합해야 할 때, 메신저로 하나하나 받지 마세요.\n수합 요청을 만들고 QR/코드를 공유하면, 참여자들은 비로그인으로 파일·링크·텍스트를 제출합니다.\n한 화면에서 모든 제출물을 확인하고 다운로드하세요!",
+        "service_type": "work",
+        "launch_route_name": "collect:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 10,
+        "value_props": {
+          "solve_text": "문서와 의견 수합, 번거로운 일은 이제 저에게 맡겨주세요!",
+          "result_text": "정리된 제출 목록",
+          "time_text": "3분"
+        },
+        "mapped_app": "collect",
+        "mapped_route_prefixes": [
+          "collect/"
+        ]
+      },
+      {
+        "product_id": 131,
+        "title": "AI 도구 가이드",
+        "lead_text": "상황별로 딱 맞는 AI 도구를 추천해드려요.",
+        "description": "수업 준비부터 생활 지도까지! 복잡한 AI 툴들 사이에서 선생님께 꼭 필요한 것만 골라 사용법과 함께 안내합니다.",
+        "service_type": "edutech",
+        "launch_route_name": "tool_guide",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 11,
+        "value_props": {
+          "solve_text": "필요한 AI 도구를 바로 찾아요",
+          "result_text": "도구별 사용 가이드",
+          "time_text": "2분"
+        },
+        "mapped_app": "core",
+        "mapped_route_prefixes": [
+          ""
+        ]
+      },
+      {
+        "product_id": 132,
+        "title": "AI 프롬프트 레시피",
+        "lead_text": "복사해서 바로 쓰는 검증된 AI 주문서.",
+        "description": "AI 전문가의 노하우가 담긴 프롬프트를 내 것으로! 시행착오 없이 바로 수업에 적용 가능한 강력한 프롬프트들을 제공합니다.",
+        "service_type": "edutech",
+        "launch_route_name": "prompt_lab",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 12,
+        "value_props": {
+          "solve_text": "수업용 프롬프트를 바로 활용해요",
+          "result_text": "프롬프트 템플릿",
+          "time_text": "1분"
+        },
+        "mapped_app": "core",
+        "mapped_route_prefixes": [
+          ""
+        ]
+      },
+      {
+        "product_id": 135,
+        "title": "쌤BTI",
+        "lead_text": "나는 어떤 선생님일까? 🦁",
+        "description": "12가지 질문으로 알아보는 나의 교육 스타일! MBTI 기반 티처블 동물원에서 나와 닮은 동물을 찾아보세요.",
+        "service_type": "counsel",
+        "launch_route_name": "ssambti:main",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 13,
+        "value_props": {
+          "solve_text": "나의 교사 유형을 알아봐요",
+          "result_text": "MBTI 결과 카드",
+          "time_text": "5분"
+        },
+        "mapped_app": "ssambti",
+        "mapped_route_prefixes": [
+          "ssambti/"
+        ]
+      },
+      {
+        "product_id": 136,
+        "title": "두뇌 풀가동! 교실 체스",
+        "lead_text": "준비물 NO! 설치 NO! 브라우저만 있으면 세계 최강 AI와 체스 한판 어때요? ♟️",
+        "description": "선생님, 비 오는 날이나 창체 시간에 아이들과 체스 한판 어떠신가요? \"두뇌 풀가동! 교실 체스\"는 별도의 설치나 가입 없이 바로 즐길 수 있는 체스 게임입니다. 친구와 함께하는 로컬 대전은 물론, 세계 최강 AI Stockfish와 실력을 겨뤄볼 수 있습니다. 규칙을 몰라도 걱정 마세요! 상세한 가이드가 함께 제공됩니다.",
+        "service_type": "game",
+        "launch_route_name": "chess:index",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 14,
+        "value_props": {
+          "solve_text": "교실 전략 게임 수업을 시작해요",
+          "result_text": "체스 학습 화면",
+          "time_text": "1분"
+        },
+        "mapped_app": "chess",
+        "mapped_route_prefixes": [
+          "chess/"
+        ]
+      },
+      {
+        "product_id": 137,
+        "title": "HWP to PDF 변환기",
+        "lead_text": "한글 파일을 PDF로 간편하게 변환하세요 📄",
+        "description": "한글(Hancom Office)의 OLE Automation 기능을 활용하여 HWP/HWPX 파일을 PDF로 빠르고 간편하게 변환하는 경량 데스크톱 프로그램입니다. 정품 한글이 설치된 Windows 환경에서 작동하며, 별도의 서버 없이 로컬에서 바로 실행됩니다.\n\n[주의사항]\n- 본 프로그램의 상업적 목적의 재배포를 금지합니다.\n- 본 프로그램 사용 중 발생하는 모든 문제(데이터 손실, 손상 등)에 대한 책임은 사용자 본인에게 있습니다.\n- 본 프로그램은 한글과컴퓨터(주)와 무관하며, 정품 한글(Hancom Office) 설치가 필요합니다.",
+        "service_type": "work",
+        "launch_route_name": "",
+        "external_url": "https://drive.google.com/file/d/1mKZuOrkWQzDMSaghIYoWAhPK5rRDn02l/view?usp=sharing",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 14,
+        "value_props": {
+          "solve_text": "한글 문서를 PDF로 변환해요",
+          "result_text": "PDF 파일",
+          "time_text": "1분"
+        },
+        "mapped_app": null,
+        "mapped_route_prefixes": []
+      },
+      {
+        "product_id": 144,
+        "title": "두뇌 풀가동! 교실 장기",
+        "lead_text": "설치 없이 바로, 교실에서 장기 로컬 대전과 AI 대전을 시작하세요.",
+        "description": "두뇌 풀가동! 교실 장기는 체스 서비스 구조를 그대로 따라 로컬 대전과 AI 대전을 빠르게 시작할 수 있는 장기 서비스입니다. 수업 중 짧은 활동 시간에도 바로 접속해 게임을 진행하고, AI 난이도를 단계적으로 올리며 연습할 수 있습니다.",
+        "service_type": "game",
+        "launch_route_name": "janggi:index",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 15,
+        "value_props": {
+          "solve_text": "교실에서 장기를 쉽게 진행해요",
+          "result_text": "장기 게임 화면",
+          "time_text": "1분"
+        },
+        "mapped_app": "janggi",
+        "mapped_route_prefixes": [
+          "janggi/"
+        ]
+      },
+      {
+        "product_id": 145,
+        "title": "Fairy 전략 게임 5종",
+        "lead_text": "교실에서 바로 시작할 수 있는 전략 게임 5종 묶음",
+        "description": "동물 장기, 커넥트 포, 이솔레이션, 아택스, 브레이크스루를 한 번에 제공합니다.",
+        "service_type": "game",
+        "launch_route_name": "",
+        "external_url": "/fairy-games/",
+        "is_active": false,
+        "is_featured": false,
+        "display_order": 16,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": null,
+        "mapped_route_prefixes": []
+      },
+      {
+        "product_id": 146,
+        "title": "동물 장기",
+        "lead_text": "동물 장기 게임을 로컬/AI 모드로 바로 시작",
+        "description": "Dobutsu Shogi 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+        "service_type": "game",
+        "launch_route_name": "fairy_games:play_dobutsu",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 17,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "fairy_games",
+        "mapped_route_prefixes": [
+          "fairy-games/"
+        ]
+      },
+      {
+        "product_id": 147,
+        "title": "커넥트 포",
+        "lead_text": "커넥트 포 게임을 로컬/AI 모드로 바로 시작",
+        "description": "Connect Four 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+        "service_type": "game",
+        "launch_route_name": "fairy_games:play_cfour",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 18,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "fairy_games",
+        "mapped_route_prefixes": [
+          "fairy-games/"
+        ]
+      },
+      {
+        "product_id": 148,
+        "title": "이솔레이션",
+        "lead_text": "이솔레이션 게임을 로컬/AI 모드로 바로 시작",
+        "description": "Isolation 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+        "service_type": "game",
+        "launch_route_name": "fairy_games:play_isolation",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 19,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "fairy_games",
+        "mapped_route_prefixes": [
+          "fairy-games/"
+        ]
+      },
+      {
+        "product_id": 149,
+        "title": "아택스",
+        "lead_text": "아택스 게임을 로컬/AI 모드로 바로 시작",
+        "description": "Ataxx 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+        "service_type": "game",
+        "launch_route_name": "fairy_games:play_ataxx",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 20,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "fairy_games",
+        "mapped_route_prefixes": [
+          "fairy-games/"
+        ]
+      },
+      {
+        "product_id": 150,
+        "title": "브레이크스루",
+        "lead_text": "브레이크스루 게임을 로컬/AI 모드로 바로 시작",
+        "description": "Breakthrough 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+        "service_type": "game",
+        "launch_route_name": "fairy_games:play_breakthrough",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 21,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "fairy_games",
+        "mapped_route_prefixes": [
+          "fairy-games/"
+        ]
+      },
+      {
+        "product_id": 153,
+        "title": "한글문서 AI야 읽어줘",
+        "lead_text": "HWPX 내부 XML을 직접 파싱해 문서 기반 AI 대화를 시작하세요.",
+        "description": "교사가 업로드한 HWPX 파일을 서버 메모리에서 직접 파싱하여 Markdown으로 변환하고, 그 문서 내용을 기반으로 AI(Gemini/Claude)와 질의응답할 수 있는 서비스입니다.",
+        "service_type": "work",
+        "launch_route_name": "hwpxchat:main",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 24,
+        "value_props": {
+          "solve_text": "한글 문서 내용을 AI가 정확히 읽게 해주세요",
+          "result_text": "문서 근거 기반 답변",
+          "time_text": "1분"
+        },
+        "mapped_app": "hwpxchat",
+        "mapped_route_prefixes": [
+          "hwpx-chat/"
+        ]
+      },
+      {
+        "product_id": 143,
+        "title": "최종최최종은 이제그만",
+        "lead_text": "업로드 한 번으로 최신본과 배포본을 분리 관리하세요.",
+        "description": "최종최최종은 이제그만은 교실 문서를 버전 단위로 자동 정리해 최신본과 공식 배포본을 분리 관리합니다. 선생님은 파일명을 신경 쓰지 않고 드롭만 하면 되고, 필요한 시점에 배포본 지정 버튼 한 번으로 공식본을 확정할 수 있습니다.",
+        "service_type": "work",
+        "launch_route_name": "version_manager:document_list",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 26,
+        "value_props": {
+          "solve_text": "문서 최신본을 안전하게 관리해요",
+          "result_text": "버전 이력 문서",
+          "time_text": "2분"
+        },
+        "mapped_app": "version_manager",
+        "mapped_route_prefixes": [
+          "version-manager/"
+        ]
+      },
+      {
+        "product_id": 151,
+        "title": "행복의 씨앗",
+        "lead_text": "작은 실천을 씨앗으로, 교실의 성장을 꽃으로 연결하세요.",
+        "description": "행복의 씨앗은 초등 교실의 긍정 행동을 기록하고, 씨앗-꽃피움 흐름으로 동기를 설계하는 학급 운영 서비스입니다. 보호자 동의, 보상 확률 설정, 공개 꽃밭까지 한 번에 관리할 수 있습니다.",
+        "service_type": "classroom",
+        "launch_route_name": "happy_seed:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 27,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "happy_seed",
+        "mapped_route_prefixes": [
+          "happy-seed/"
+        ]
+      },
+      {
+        "product_id": 154,
+        "title": "수업 QR 생성기",
+        "lead_text": "모둠별 QR코드를 한 번에 만들고, 제목과 전환 간격을 정해 자동 순환으로 보여주세요.",
+        "description": "수업 자료 링크를 모둠별로 입력하면 여러 QR코드를 한 화면에서 만들 수 있습니다. 자동 전환 화면에서는 교사가 설정한 초 단위로 QR이 넘어가며, 모둠 제목이 함께 표시되어 학생들이 자신의 QR을 빠르게 인식할 수 있습니다.",
+        "service_type": "classroom",
+        "launch_route_name": "qrgen:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 28,
+        "value_props": {
+          "solve_text": "모둠마다 다른 링크를 헷갈리지 않게 배포하고 싶어요",
+          "result_text": "모둠 제목이 붙은 순환 QR 화면",
+          "time_text": "30초"
+        },
+        "mapped_app": "qrgen",
+        "mapped_route_prefixes": [
+          "qrgen/"
+        ]
+      },
+      {
+        "product_id": 155,
+        "title": "알림장 & 주간학습 멘트 생성기",
+        "lead_text": "대상과 주제를 고르면, 교실에서 바로 쓸 수 있는 멘트를 빠르게 만듭니다.",
+        "description": "교사가 대상(저학년/고학년/학부모), 주제, 전달사항만 입력하면 즉시 사용할 수 있는 알림장 멘트를 생성합니다. 유사 행사 캐시 재사용으로 반복 작업과 API 비용을 줄입니다.",
+        "service_type": "work",
+        "launch_route_name": "noticegen:main",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 28,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "noticegen",
+        "mapped_route_prefixes": [
+          "noticegen/"
+        ]
+      },
+      {
+        "product_id": 157,
+        "title": "씨앗 퀴즈",
+        "lead_text": "공식/공유 퀴즈 은행에서 세트를 고르거나 CSV 업로드·붙여넣기로 직접 만들어, 문항 수(1~200)를 자유롭게 배포하세요.",
+        "description": "씨앗 퀴즈는 교사가 공식/공유 퀴즈 은행에서 문제 세트를 선택하거나 직접 업로드해 즉시 배포할 수 있는 교실 참여형 퀴즈 서비스입니다. 저장한 세트는 기본으로 공유되어 다른 교사도 재사용할 수 있고, 만점 학생에게는 행복의 씨앗 보상이 자동으로 지급됩니다.",
+        "service_type": "classroom",
+        "launch_route_name": "seed_quiz:landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 30,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "seed_quiz",
+        "mapped_route_prefixes": [
+          "seed-quiz/"
+        ]
+      },
+      {
+        "product_id": 158,
+        "title": "별빛 추첨기",
+        "lead_text": "교사용 TV에서 명단을 붙여넣고 별 하나를 고르면, 오늘의 주인공을 감성적으로 뽑아줍니다.",
+        "description": "별빛 추첨기는 교사가 큰 화면에서 학급 명단을 입력하고 별을 클릭해 1명을 랜덤 추첨하는 서비스입니다. 중복 이름 정리, 최대 인원 제한, 비복원 추첨, 추첨 히스토리를 기본 제공해 수업 진행 흐름이 명확합니다.",
+        "service_type": "classroom",
+        "launch_route_name": "ppobgi:main",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 31,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "ppobgi",
+        "mapped_route_prefixes": [
+          "ppobgi/"
+        ]
+      },
+      {
+        "product_id": 141,
+        "title": "학교 예약 시스템",
+        "lead_text": "복잡한 특별실 예약, 이제 클릭 한 번으로!",
+        "description": "과학실, 컴퓨터실 등 특별실 예약을 실시간으로 확인하고 간편하게 신청하세요. 선생님들의 업무가 줄어듭니다.",
+        "service_type": "classroom",
+        "launch_route_name": "reservations:dashboard_landing",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 99,
+        "value_props": {
+          "solve_text": "특별실 예약 충돌을 없애요",
+          "result_text": "예약 현황표",
+          "time_text": "1분"
+        },
+        "mapped_app": "reservations",
+        "mapped_route_prefixes": [
+          "reservations/"
+        ]
+      },
+      {
+        "product_id": 159,
+        "title": "학급 캘린더",
+        "lead_text": "학급 일정을 한눈에 관리하세요!",
+        "description": "학급 운영 일정을 한곳에서 정리하고 공유하는 학급 전용 캘린더입니다. 필요 시 구글 캘린더 연동을 선택적으로 사용할 수 있습니다.",
+        "service_type": "classroom",
+        "launch_route_name": "classcalendar:main",
+        "external_url": "",
+        "is_active": true,
+        "is_featured": false,
+        "display_order": 99,
+        "value_props": {
+          "solve_text": "",
+          "result_text": "",
+          "time_text": ""
+        },
+        "mapped_app": "classcalendar",
+        "mapped_route_prefixes": [
+          "classcalendar/"
+        ]
+      }
+    ]
+  },
+  "code_structure": {
+    "project": "eduitit",
+    "app_count": 26,
+    "apps": [
+      {
+        "app_name": "artclass",
+        "module_name": "artclass",
+        "route_prefixes": [
+          "artclass/"
+        ],
+        "key_files": {
+          "models": "artclass/models.py",
+          "views": "artclass/views.py",
+          "urls": "artclass/urls.py",
+          "forms": null,
+          "tests": "artclass/tests.py"
+        },
+        "models": [
+          "ArtClass",
+          "ArtStep"
+        ],
+        "view_functions": [
+          "setup_view",
+          "classroom_view",
+          "parse_gemini_steps_api",
+          "library_view"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "setup"
+          },
+          {
+            "route": "setup/<int:pk>/",
+            "name": "setup_edit"
+          },
+          {
+            "route": "classroom/<int:pk>/",
+            "name": "classroom"
+          },
+          {
+            "route": "api/parse-gemini-steps/",
+            "name": "parse_gemini_steps_api"
+          },
+          {
+            "route": "library/",
+            "name": "library"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 0,
+          "migrations": 6,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "artclass/templates/artclass/classroom.html",
+            "artclass/templates/artclass/library.html",
+            "artclass/templates/artclass/setup.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "autoarticle",
+        "module_name": "autoarticle",
+        "route_prefixes": [
+          "autoarticle/"
+        ],
+        "key_files": {
+          "models": "autoarticle/models.py",
+          "views": "autoarticle/views.py",
+          "urls": "autoarticle/urls.py",
+          "forms": null,
+          "tests": "autoarticle/tests.py"
+        },
+        "models": [
+          "GeneratedArticle"
+        ],
+        "view_functions": [],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "create"
+          },
+          {
+            "route": "archive/",
+            "name": "archive"
+          },
+          {
+            "route": "result/<int:pk>/",
+            "name": "detail"
+          },
+          {
+            "route": "result/<int:pk>/cardnews/",
+            "name": "cardnews"
+          },
+          {
+            "route": "result/<int:pk>/word/",
+            "name": "word"
+          },
+          {
+            "route": "result/<int:pk>/pdf/",
+            "name": "pdf_download"
+          },
+          {
+            "route": "result/<int:pk>/ppt/",
+            "name": "ppt_download"
+          },
+          {
+            "route": "exports/layout/",
+            "name": "export_layout"
+          },
+          {
+            "route": "result/<int:pk>/delete/",
+            "name": "delete"
+          },
+          {
+            "route": "result/<int:pk>/edit/",
+            "name": "edit"
+          }
+        ],
+        "file_counts": {
+          "templates": 8,
+          "static": 0,
+          "migrations": 10,
+          "management_commands": 4
+        },
+        "sample_files": {
+          "templates": [
+            "autoarticle/templates/autoarticle/archive.html",
+            "autoarticle/templates/autoarticle/create.html",
+            "autoarticle/templates/autoarticle/detail.html",
+            "autoarticle/templates/autoarticle/edit.html",
+            "autoarticle/templates/autoarticle/wizard/base_wizard.html",
+            "autoarticle/templates/autoarticle/wizard/step1.html",
+            "autoarticle/templates/autoarticle/wizard/step2_generating.html",
+            "autoarticle/templates/autoarticle/wizard/step3_draft.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "chess",
+        "module_name": "chess",
+        "route_prefixes": [
+          "chess/"
+        ],
+        "key_files": {
+          "models": "chess/models.py",
+          "views": "chess/views.py",
+          "urls": "chess/urls.py",
+          "forms": null,
+          "tests": "chess/tests.py"
+        },
+        "models": [],
+        "view_functions": [
+          "_student_games_mode",
+          "index",
+          "rules",
+          "play"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "index"
+          },
+          {
+            "route": "rules/",
+            "name": "rules"
+          },
+          {
+            "route": "play/",
+            "name": "play"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 10,
+          "migrations": 2,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "chess/templates/chess/index.html",
+            "chess/templates/chess/play.html",
+            "chess/templates/chess/rules.html"
+          ],
+          "static": [
+            "chess/static/chess/css/chessboard-1.0.0.min.css",
+            "chess/static/chess/js/chess_logic.js",
+            "chess/static/chess/js/stockfish.js",
+            "chess/static/chess/js/사주결과_사주분석_2026-02-05.png",
+            "chess/static/chess/js/사주결과_사주분석리포트_2026-02-06 (1).png",
+            "chess/static/chess/js/사주결과_사주분석리포트_2026-02-06 (2).png",
+            "chess/static/chess/js/사주결과_사주분석리포트_2026-02-06 (3).png",
+            "chess/static/chess/js/사주결과_사주분석리포트_2026-02-06 (4).png"
+          ]
+        }
+      },
+      {
+        "app_name": "classcalendar",
+        "module_name": "classcalendar",
+        "route_prefixes": [
+          "classcalendar/"
+        ],
+        "key_files": {
+          "models": "classcalendar/models.py",
+          "views": "classcalendar/views.py",
+          "urls": "classcalendar/urls.py",
+          "forms": "classcalendar/forms.py",
+          "tests": "classcalendar/tests.py"
+        },
+        "models": [
+          "CalendarEvent",
+          "CalendarIntegrationSetting",
+          "EventPageBlock"
+        ],
+        "view_functions": [
+          "_serialize_event",
+          "_split_integration_key",
+          "_resolve_integration_source_meta",
+          "_get_integration_setting_for_user",
+          "_get_active_classroom_for_user",
+          "_get_teacher_visible_events",
+          "_get_owned_event",
+          "_extract_primary_note",
+          "_persist_primary_note",
+          "_sync_integrations_if_needed",
+          "_build_reservation_windows_for_user",
+          "_integration_event_readonly_response",
+          "_build_share_url",
+          "_build_shared_event_groups",
+          "main_view",
+          "share_enable",
+          "share_disable",
+          "share_rotate",
+          "shared_view",
+          "api_events",
+          "_parse_bool_value",
+          "api_integration_settings",
+          "api_create_event",
+          "api_update_event",
+          "api_delete_event"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "CalendarEventCreateForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "share/enable/",
+            "name": "share_enable"
+          },
+          {
+            "route": "share/disable/",
+            "name": "share_disable"
+          },
+          {
+            "route": "share/rotate/",
+            "name": "share_rotate"
+          },
+          {
+            "route": "shared/<uuid:share_uuid>/",
+            "name": "shared"
+          },
+          {
+            "route": "api/events/",
+            "name": "api_events"
+          },
+          {
+            "route": "api/integration-settings/",
+            "name": "api_integration_settings"
+          },
+          {
+            "route": "api/events/create/",
+            "name": "api_create_event"
+          },
+          {
+            "route": "api/events/<uuid:event_id>/update/",
+            "name": "api_update_event"
+          },
+          {
+            "route": "api/events/<uuid:event_id>/delete/",
+            "name": "api_delete_event"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 0,
+          "migrations": 18,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "classcalendar/templates/classcalendar/main.html",
+            "classcalendar/templates/classcalendar/shared.html",
+            "classcalendar/templates/classcalendar/shared_unavailable.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "collect",
+        "module_name": "collect",
+        "route_prefixes": [
+          "collect/"
+        ],
+        "key_files": {
+          "models": "collect/models.py",
+          "views": "collect/views.py",
+          "urls": "collect/urls.py",
+          "forms": "collect/forms.py",
+          "tests": null
+        },
+        "models": [
+          "CollectionRequest",
+          "Submission"
+        ],
+        "view_functions": [
+          "_next_or_end",
+          "_remote_file_chunks",
+          "_parse_extension_days",
+          "_get_submit_context",
+          "_render_submit_error",
+          "_extract_choice_submission_data",
+          "_normalized_choice_answers",
+          "_filter_submissions_for_choice",
+          "_choice_color",
+          "_build_choice_stats",
+          "get_collect_service",
+          "generate_qr",
+          "landing",
+          "dashboard",
+          "request_create",
+          "request_edit",
+          "request_detail",
+          "submissions_partial",
+          "choice_stats_partial",
+          "request_toggle",
+          "request_extend_deadline",
+          "request_extend_retention",
+          "request_delete",
+          "export_csv",
+          "short_link",
+          "join",
+          "submit",
+          "submit_process",
+          "submission_manage",
+          "submission_edit",
+          "submission_delete",
+          "submission_download",
+          "template_download"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "CollectionRequestForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          },
+          {
+            "route": "join/",
+            "name": "join"
+          },
+          {
+            "route": "dashboard/",
+            "name": "dashboard"
+          },
+          {
+            "route": "create/",
+            "name": "request_create"
+          },
+          {
+            "route": "<uuid:request_id>/edit/",
+            "name": "request_edit"
+          },
+          {
+            "route": "<uuid:request_id>/detail/",
+            "name": "request_detail"
+          },
+          {
+            "route": "<uuid:request_id>/submissions-partial/",
+            "name": "submissions_partial"
+          },
+          {
+            "route": "<uuid:request_id>/choice-stats-partial/",
+            "name": "choice_stats_partial"
+          },
+          {
+            "route": "<uuid:request_id>/toggle/",
+            "name": "request_toggle"
+          },
+          {
+            "route": "<uuid:request_id>/extend-deadline/",
+            "name": "request_extend_deadline"
+          },
+          {
+            "route": "<uuid:request_id>/extend-retention/",
+            "name": "request_extend_retention"
+          },
+          {
+            "route": "<uuid:request_id>/delete/",
+            "name": "request_delete"
+          },
+          {
+            "route": "<uuid:request_id>/export-csv/",
+            "name": "export_csv"
+          },
+          {
+            "route": "s/<str:code>/",
+            "name": "short_link"
+          },
+          {
+            "route": "<uuid:request_id>/submit/",
+            "name": "submit"
+          },
+          {
+            "route": "<uuid:request_id>/submit/process/",
+            "name": "submit_process"
+          },
+          {
+            "route": "<uuid:request_id>/template-download/",
+            "name": "template_download"
+          },
+          {
+            "route": "submission/<uuid:management_id>/",
+            "name": "submission_manage"
+          },
+          {
+            "route": "submission/<uuid:management_id>/edit/",
+            "name": "submission_edit"
+          },
+          {
+            "route": "submission/<uuid:management_id>/delete/",
+            "name": "submission_delete"
+          },
+          {
+            "route": "submission/<uuid:submission_id>/download/",
+            "name": "submission_download"
+          }
+        ],
+        "file_counts": {
+          "templates": 10,
+          "static": 1,
+          "migrations": 18,
+          "management_commands": 4
+        },
+        "sample_files": {
+          "templates": [
+            "collect/templates/collect/dashboard.html",
+            "collect/templates/collect/landing.html",
+            "collect/templates/collect/partials/choice_stats_panel.html",
+            "collect/templates/collect/partials/submissions_list.html",
+            "collect/templates/collect/request_closed.html",
+            "collect/templates/collect/request_detail.html",
+            "collect/templates/collect/request_edit.html",
+            "collect/templates/collect/submission_manage.html"
+          ],
+          "static": [
+            "collect/static/collect/js/download_all.js"
+          ]
+        }
+      },
+      {
+        "app_name": "consent",
+        "module_name": "consent",
+        "route_prefixes": [
+          "consent/"
+        ],
+        "key_files": {
+          "models": "consent/models.py",
+          "views": "consent/views.py",
+          "urls": "consent/urls.py",
+          "forms": "consent/forms.py",
+          "tests": "consent/tests.py"
+        },
+        "models": [
+          "SignatureDocument",
+          "SignatureRequest",
+          "SignaturePosition",
+          "SignatureRecipient",
+          "ConsentAuditLog"
+        ],
+        "view_functions": [
+          "_snapshot_file_metadata",
+          "_request_document_evidence",
+          "_parse_recipients",
+          "_parse_recipients_csv",
+          "_generate_qr_base64",
+          "_compose_parent_message",
+          "_build_file_response",
+          "_strip_cloudinary_signature",
+          "_iter_remote_file_urls",
+          "_build_remote_proxy_response",
+          "_is_file_accessible",
+          "_schema_guard_response",
+          "_policy_panel_context",
+          "_build_recipient_stats",
+          "_issue_access_token",
+          "_is_active_link_expired",
+          "_is_public_link_released",
+          "_link_not_ready_response",
+          "_expired_link_response",
+          "consent_dashboard",
+          "consent_delete_request",
+          "consent_create",
+          "consent_create_step1",
+          "consent_setup_positions",
+          "consent_recipients",
+          "consent_recipients_csv_template",
+          "consent_detail",
+          "consent_preview_positions",
+          "consent_send",
+          "consent_download_csv",
+          "consent_download_summary_pdf",
+          "consent_download_merged",
+          "consent_download_recipient_pdf",
+          "consent_document_source",
+          "consent_verify",
+          "consent_sign",
+          "consent_public_document",
+          "consent_public_document_inline",
+          "consent_regenerate_link",
+          "consent_update_recipient",
+          "consent_delete_recipient",
+          "consent_complete"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "ConsentDocumentForm",
+          "ConsentRequestForm",
+          "PositionPayloadForm",
+          "RecipientBulkForm",
+          "VerifyIdentityForm",
+          "ConsentSignForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "dashboard"
+          },
+          {
+            "route": "create/",
+            "name": "create"
+          },
+          {
+            "route": "create/step1/",
+            "name": "create_step1"
+          },
+          {
+            "route": "<uuid:request_id>/setup/",
+            "name": "setup_positions"
+          },
+          {
+            "route": "<uuid:request_id>/recipients/",
+            "name": "recipients"
+          },
+          {
+            "route": "recipients/template.csv",
+            "name": "recipients_csv_template"
+          },
+          {
+            "route": "<uuid:request_id>/",
+            "name": "detail"
+          },
+          {
+            "route": "<uuid:request_id>/preview/",
+            "name": "preview_positions"
+          },
+          {
+            "route": "<uuid:request_id>/document/source/",
+            "name": "document_source"
+          },
+          {
+            "route": "<uuid:request_id>/send/",
+            "name": "send"
+          },
+          {
+            "route": "<uuid:request_id>/delete/",
+            "name": "delete_request"
+          },
+          {
+            "route": "<uuid:request_id>/download/csv/",
+            "name": "download_csv"
+          },
+          {
+            "route": "<uuid:request_id>/download/summary/",
+            "name": "download_summary_pdf"
+          },
+          {
+            "route": "<uuid:request_id>/download/merged/",
+            "name": "download_merged"
+          },
+          {
+            "route": "recipient/<int:recipient_id>/download/",
+            "name": "download_recipient_pdf"
+          },
+          {
+            "route": "recipient/<int:recipient_id>/regenerate-link/",
+            "name": "regenerate_link"
+          },
+          {
+            "route": "recipient/<int:recipient_id>/update/",
+            "name": "update_recipient"
+          },
+          {
+            "route": "recipient/<int:recipient_id>/delete/",
+            "name": "delete_recipient"
+          },
+          {
+            "route": "public/<str:token>/verify/",
+            "name": "verify"
+          },
+          {
+            "route": "public/<str:token>/document/",
+            "name": "public_document"
+          },
+          {
+            "route": "public/<str:token>/document/inline/",
+            "name": "public_document_inline"
+          },
+          {
+            "route": "public/<str:token>/sign/",
+            "name": "sign"
+          },
+          {
+            "route": "public/<str:token>/complete/",
+            "name": "complete"
+          }
+        ],
+        "file_counts": {
+          "templates": 14,
+          "static": 2,
+          "migrations": 14,
+          "management_commands": 6
+        },
+        "sample_files": {
+          "templates": [
+            "consent/templates/consent/_policy_panel.html",
+            "consent/templates/consent/complete.html",
+            "consent/templates/consent/create.html",
+            "consent/templates/consent/create_step1.html",
+            "consent/templates/consent/create_step2_positions.html",
+            "consent/templates/consent/create_step3_recipients.html",
+            "consent/templates/consent/dashboard.html",
+            "consent/templates/consent/detail.html"
+          ],
+          "static": [
+            "consent/static/consent/vendor/pdfjs/pdf.min.mjs",
+            "consent/static/consent/vendor/pdfjs/pdf.worker.min.mjs"
+          ]
+        }
+      },
+      {
+        "app_name": "core",
+        "module_name": "core",
+        "route_prefixes": [
+          ""
+        ],
+        "key_files": {
+          "models": "core/models.py",
+          "views": "core/views.py",
+          "urls": "core/urls.py",
+          "forms": "core/forms.py",
+          "tests": "core/tests.py"
+        },
+        "models": [
+          "UserProfile",
+          "Post",
+          "Comment",
+          "SiteConfig",
+          "Feedback",
+          "ProductUsageLog",
+          "VisitorLog"
+        ],
+        "view_functions": [
+          "_get_post_list_target_id",
+          "_render_post_list_partial",
+          "get_purpose_sections",
+          "_resolve_product_launch_url",
+          "_attach_product_launch_meta",
+          "_get_usage_based_quick_actions",
+          "_build_home_student_games_qr_context",
+          "_build_today_context",
+          "_home_v2",
+          "home",
+          "dashboard",
+          "post_create",
+          "post_like",
+          "comment_create",
+          "post_delete",
+          "post_edit",
+          "post_detail_partial",
+          "comment_delete",
+          "comment_edit",
+          "comment_item_partial",
+          "prompt_lab",
+          "tool_guide",
+          "about",
+          "settings_view",
+          "select_role",
+          "sso_to_schoolit",
+          "policy_view",
+          "update_email",
+          "delete_account",
+          "admin_dashboard_view",
+          "feedback_view",
+          "service_guide_list",
+          "service_guide_detail",
+          "track_product_usage",
+          "set_active_classroom",
+          "health_check"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "APIKeyForm",
+          "UserProfileUpdateForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "home"
+          },
+          {
+            "route": "dashboard/",
+            "name": "dashboard"
+          },
+          {
+            "route": "post/create/",
+            "name": "post_create"
+          },
+          {
+            "route": "post/<int:pk>/like/",
+            "name": "post_like"
+          },
+          {
+            "route": "post/<int:pk>/comment/",
+            "name": "comment_create"
+          },
+          {
+            "route": "post/<int:pk>/delete/",
+            "name": "post_delete"
+          },
+          {
+            "route": "post/<int:pk>/edit/",
+            "name": "post_edit"
+          },
+          {
+            "route": "post/<int:pk>/detail/",
+            "name": "post_detail_partial"
+          },
+          {
+            "route": "comment/<int:pk>/delete/",
+            "name": "comment_delete"
+          },
+          {
+            "route": "comment/<int:pk>/edit/",
+            "name": "comment_edit"
+          },
+          {
+            "route": "comment/<int:pk>/item/",
+            "name": "comment_item"
+          },
+          {
+            "route": "prompts/",
+            "name": "prompt_lab"
+          },
+          {
+            "route": "tools/",
+            "name": "tool_guide"
+          },
+          {
+            "route": "manuals/",
+            "name": "service_guide_list"
+          },
+          {
+            "route": "manuals/<int:pk>/",
+            "name": "service_guide_detail"
+          },
+          {
+            "route": "about/",
+            "name": "about"
+          },
+          {
+            "route": "settings/",
+            "name": "settings"
+          },
+          {
+            "route": "select-role/",
+            "name": "select_role"
+          },
+          {
+            "route": "sso/schoolit/",
+            "name": "sso_schoolit"
+          },
+          {
+            "route": "policy/",
+            "name": "policy"
+          },
+          {
+            "route": "update-email/",
+            "name": "update_email"
+          },
+          {
+            "route": "delete-account/",
+            "name": "delete_account"
+          },
+          {
+            "route": "feedback/",
+            "name": "feedback"
+          },
+          {
+            "route": "admin-dashboard/",
+            "name": "admin_dashboard"
+          },
+          {
+            "route": "api/track-usage/",
+            "name": "track_product_usage"
+          },
+          {
+            "route": "api/set-classroom/",
+            "name": "set_active_classroom"
+          }
+        ],
+        "file_counts": {
+          "templates": 38,
+          "static": 1,
+          "migrations": 34,
+          "management_commands": 17
+        },
+        "sample_files": {
+          "templates": [
+            "core/templates/account/login.html",
+            "core/templates/account/messages/logged_in.txt",
+            "core/templates/account/signup.html",
+            "core/templates/base.html",
+            "core/templates/core/about.html",
+            "core/templates/core/admin_dashboard.html",
+            "core/templates/core/dashboard.html",
+            "core/templates/core/dashboard_sns.html"
+          ],
+          "static": [
+            "core/static/core/js/post_image_paste.js"
+          ]
+        }
+      },
+      {
+        "app_name": "encyclopedia",
+        "module_name": "encyclopedia",
+        "route_prefixes": [
+          "encyclopedia/"
+        ],
+        "key_files": {
+          "models": "encyclopedia/models.py",
+          "views": "encyclopedia/views.py",
+          "urls": "encyclopedia/urls.py",
+          "forms": "encyclopedia/forms.py",
+          "tests": null
+        },
+        "models": [
+          "NotebookEntry"
+        ],
+        "view_functions": [
+          "landing",
+          "entry_create",
+          "entry_edit",
+          "entry_delete"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "NotebookEntryForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          },
+          {
+            "route": "create/",
+            "name": "entry_create"
+          },
+          {
+            "route": "<int:pk>/edit/",
+            "name": "entry_edit"
+          },
+          {
+            "route": "<int:pk>/delete/",
+            "name": "entry_delete"
+          }
+        ],
+        "file_counts": {
+          "templates": 2,
+          "static": 0,
+          "migrations": 4,
+          "management_commands": 1
+        },
+        "sample_files": {
+          "templates": [
+            "encyclopedia/templates/encyclopedia/edit.html",
+            "encyclopedia/templates/encyclopedia/landing.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "fairy_games",
+        "module_name": "fairy_games",
+        "route_prefixes": [
+          "fairy-games/"
+        ],
+        "key_files": {
+          "models": null,
+          "views": "fairy_games/views.py",
+          "urls": "fairy_games/urls.py",
+          "forms": null,
+          "tests": "fairy_games/tests.py"
+        },
+        "models": [],
+        "view_functions": [
+          "_student_games_mode",
+          "index",
+          "rules",
+          "play"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "index"
+          },
+          {
+            "route": "dobutsu/play/",
+            "name": "play_dobutsu"
+          },
+          {
+            "route": "cfour/play/",
+            "name": "play_cfour"
+          },
+          {
+            "route": "isolation/play/",
+            "name": "play_isolation"
+          },
+          {
+            "route": "ataxx/play/",
+            "name": "play_ataxx"
+          },
+          {
+            "route": "breakthrough/play/",
+            "name": "play_breakthrough"
+          },
+          {
+            "route": "<slug:variant>/rules/",
+            "name": "rules"
+          },
+          {
+            "route": "<slug:variant>/play/",
+            "name": "play"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 2,
+          "migrations": 0,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "fairy_games/templates/fairy_games/index.html",
+            "fairy_games/templates/fairy_games/play.html",
+            "fairy_games/templates/fairy_games/rules.html"
+          ],
+          "static": [
+            "fairy_games/static/fairy_games/js/fairy_engine.js",
+            "fairy_games/static/fairy_games/js/fairy_games.js"
+          ]
+        }
+      },
+      {
+        "app_name": "fortune",
+        "module_name": "fortune",
+        "route_prefixes": [
+          "fortune/"
+        ],
+        "key_files": {
+          "models": "fortune/models.py",
+          "views": "fortune/views.py",
+          "urls": "fortune/urls.py",
+          "forms": "fortune/forms.py",
+          "tests": null
+        },
+        "models": [
+          "Stem",
+          "Branch",
+          "SixtyJiazi",
+          "SajuProfile",
+          "NatalChart",
+          "InterpretationRule",
+          "FortuneResult",
+          "ZooResult",
+          "UserSajuProfile",
+          "FavoriteDate",
+          "DailyFortuneLog",
+          "ChatSession",
+          "ChatMessage"
+        ],
+        "view_functions": [
+          "_should_use_async_ai_stream",
+          "_should_use_async_ai_api",
+          "get_user_gemini_key",
+          "fortune_rate_h",
+          "fortune_rate_d",
+          "generate_ai_response",
+          "get_chart_context",
+          "serialize_chart_context",
+          "chart_context_to_legacy_chart",
+          "normalize_natal_chart_payload",
+          "find_cached_fortune_result",
+          "_check_saju_ratelimit",
+          "_collect_ai_response",
+          "saju_view",
+          "save_fortune_api",
+          "saju_history",
+          "delete_history_api",
+          "profile_list_api",
+          "profile_create_api",
+          "profile_update_api",
+          "profile_delete_api",
+          "profile_set_default_api",
+          "favorite_dates_api",
+          "favorite_date_add_api",
+          "favorite_date_delete_api",
+          "statistics_api",
+          "saju_history_detail"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "SajuForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "saju"
+          },
+          {
+            "route": "saju/",
+            "name": "saju_alt"
+          },
+          {
+            "route": "api/",
+            "name": "saju_api"
+          },
+          {
+            "route": "api/streaming/",
+            "name": "saju_streaming_api"
+          },
+          {
+            "route": "api/daily/",
+            "name": "daily_fortune_api"
+          },
+          {
+            "route": "api/save/",
+            "name": "save_fortune_api"
+          },
+          {
+            "route": "history/",
+            "name": "history"
+          },
+          {
+            "route": "history/<int:pk>/",
+            "name": "history_detail"
+          },
+          {
+            "route": "history/<int:pk>/delete/",
+            "name": "delete_history_api"
+          },
+          {
+            "route": "api/profiles/",
+            "name": "profile_list_api"
+          },
+          {
+            "route": "api/profiles/create/",
+            "name": "profile_create_api"
+          },
+          {
+            "route": "api/profiles/<int:pk>/update/",
+            "name": "profile_update_api"
+          },
+          {
+            "route": "api/profiles/<int:pk>/delete/",
+            "name": "profile_delete_api"
+          },
+          {
+            "route": "api/profiles/<int:pk>/set-default/",
+            "name": "profile_set_default_api"
+          },
+          {
+            "route": "api/favorites/",
+            "name": "favorite_dates_api"
+          },
+          {
+            "route": "api/favorites/add/",
+            "name": "favorite_date_add_api"
+          },
+          {
+            "route": "api/favorites/<int:pk>/delete/",
+            "name": "favorite_date_delete_api"
+          },
+          {
+            "route": "api/statistics/",
+            "name": "statistics_api"
+          },
+          {
+            "route": "zoo/",
+            "name": "zoo_main"
+          },
+          {
+            "route": "zoo/analyze/",
+            "name": "zoo_analyze"
+          },
+          {
+            "route": "zoo/history/",
+            "name": "zoo_history"
+          },
+          {
+            "route": "zoo/result/<int:pk>/",
+            "name": "zoo_detail"
+          },
+          {
+            "route": "chat/",
+            "name": "chat_main"
+          },
+          {
+            "route": "chat/create/",
+            "name": "create_chat_session"
+          },
+          {
+            "route": "chat/send/",
+            "name": "send_chat_message"
+          },
+          {
+            "route": "chat/save/",
+            "name": "save_chat_to_history"
+          }
+        ],
+        "file_counts": {
+          "templates": 11,
+          "static": 0,
+          "migrations": 22,
+          "management_commands": 3
+        },
+        "sample_files": {
+          "templates": [
+            "fortune/templates/fortune/chat_main.html",
+            "fortune/templates/fortune/detail.html",
+            "fortune/templates/fortune/history.html",
+            "fortune/templates/fortune/partials/chat_message.html",
+            "fortune/templates/fortune/partials/chat_room.html",
+            "fortune/templates/fortune/partials/zoo_result.html",
+            "fortune/templates/fortune/saju_dashboard.html",
+            "fortune/templates/fortune/saju_form.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "happy_seed",
+        "module_name": "happy_seed",
+        "route_prefixes": [
+          "happy-seed/"
+        ],
+        "key_files": {
+          "models": "happy_seed/models.py",
+          "views": "happy_seed/views.py",
+          "urls": "happy_seed/urls.py",
+          "forms": "happy_seed/forms.py",
+          "tests": null
+        },
+        "models": [
+          "HSClassroom",
+          "HSClassroomConfig",
+          "HSStudent",
+          "HSGuardianConsent",
+          "HSPrize",
+          "HSTicketLedger",
+          "HSSeedLedger",
+          "HSBloomDraw",
+          "HSBehaviorCategory",
+          "HSBehaviorLog",
+          "HSActivity",
+          "HSActivityScore",
+          "HSStudentGroup",
+          "HSInterventionLog",
+          "HSClassEventLog"
+        ],
+        "view_functions": [
+          "_request_id",
+          "_api_ok",
+          "_api_err",
+          "get_teacher_classroom",
+          "_resolve_pdf_font_name",
+          "_build_happy_seed_notice_pdf",
+          "_parse_guardian_rows_from_text",
+          "_parse_guardian_rows_from_csv",
+          "_parse_consent_note_payload",
+          "_collect_linked_consent_request_ids",
+          "_resolve_linked_consent_requests",
+          "_extract_sign_token",
+          "_should_student_be_active",
+          "_build_consent_manage_context",
+          "landing",
+          "teacher_manual",
+          "dashboard",
+          "classroom_create",
+          "classroom_detail",
+          "classroom_settings",
+          "student_add",
+          "student_bulk_add",
+          "student_edit",
+          "consent_manage",
+          "consent_request_via_sign_talk",
+          "consent_resend",
+          "consent_regenerate_link",
+          "consent_sync_from_sign_talk",
+          "consent_manual_approve",
+          "consent_update",
+          "prize_manage",
+          "bloom_grant",
+          "bloom_run",
+          "bloom_draw",
+          "seed_grant",
+          "celebration",
+          "close_celebration",
+          "garden_public",
+          "activity_manage",
+          "analysis_dashboard",
+          "group_manage",
+          "set_teacher_override",
+          "group_mission_success",
+          "api_execute_draw",
+          "api_group_mission_success",
+          "api_consent_sync_sign_talk",
+          "student_grid_partial",
+          "garden_partial",
+          "student_tooltip_partial"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "HSClassroomForm",
+          "HSClassroomConfigForm",
+          "HSStudentForm",
+          "HSPrizeForm",
+          "StudentBulkAddForm",
+          "HSActivityForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          },
+          {
+            "route": "manual/teacher/",
+            "name": "teacher_manual"
+          },
+          {
+            "route": "dashboard/",
+            "name": "dashboard"
+          },
+          {
+            "route": "classroom/create/",
+            "name": "classroom_create"
+          },
+          {
+            "route": "<uuid:classroom_id>/",
+            "name": "classroom_detail"
+          },
+          {
+            "route": "<uuid:classroom_id>/settings/",
+            "name": "classroom_settings"
+          },
+          {
+            "route": "<uuid:classroom_id>/students/add/",
+            "name": "student_add"
+          },
+          {
+            "route": "<uuid:classroom_id>/students/bulk-add/",
+            "name": "student_bulk_add"
+          },
+          {
+            "route": "student/<uuid:student_id>/edit/",
+            "name": "student_edit"
+          },
+          {
+            "route": "student/<uuid:student_id>/override/",
+            "name": "set_teacher_override"
+          },
+          {
+            "route": "<uuid:classroom_id>/consent/",
+            "name": "consent_manage"
+          },
+          {
+            "route": "<uuid:classroom_id>/consent/request-sign-talk/",
+            "name": "consent_request_via_sign_talk"
+          },
+          {
+            "route": "<uuid:classroom_id>/consent/sync-sign-talk/",
+            "name": "consent_sync_from_sign_talk"
+          },
+          {
+            "route": "<uuid:classroom_id>/consent/manual-approve/",
+            "name": "consent_manual_approve"
+          },
+          {
+            "route": "student/<uuid:student_id>/consent/resend/",
+            "name": "consent_resend"
+          },
+          {
+            "route": "student/<uuid:student_id>/consent/regenerate-link/",
+            "name": "consent_regenerate_link"
+          },
+          {
+            "route": "student/<uuid:student_id>/consent/update/",
+            "name": "consent_update"
+          },
+          {
+            "route": "<uuid:classroom_id>/groups/",
+            "name": "group_manage"
+          },
+          {
+            "route": "<uuid:classroom_id>/prizes/",
+            "name": "prize_manage"
+          },
+          {
+            "route": "<uuid:classroom_id>/bloom/grant/",
+            "name": "bloom_grant"
+          },
+          {
+            "route": "<uuid:classroom_id>/bloom/run/",
+            "name": "bloom_run"
+          },
+          {
+            "route": "<uuid:classroom_id>/group/mission-success/",
+            "name": "group_mission_success"
+          },
+          {
+            "route": "draw/<uuid:student_id>/execute/",
+            "name": "bloom_draw"
+          },
+          {
+            "route": "<uuid:classroom_id>/activities/",
+            "name": "activity_manage"
+          },
+          {
+            "route": "<uuid:classroom_id>/analysis/",
+            "name": "analysis_dashboard"
+          },
+          {
+            "route": "draw/<uuid:draw_id>/celebrate/",
+            "name": "celebration"
+          },
+          {
+            "route": "draw/<uuid:draw_id>/close/",
+            "name": "close_celebration"
+          },
+          {
+            "route": "student/<uuid:student_id>/seed/grant/",
+            "name": "seed_grant"
+          },
+          {
+            "route": "garden/<slug:slug>/",
+            "name": "garden_public"
+          },
+          {
+            "route": "<uuid:classroom_id>/partials/student-grid/",
+            "name": "student_grid_partial"
+          },
+          {
+            "route": "<uuid:classroom_id>/partials/garden/",
+            "name": "garden_partial"
+          },
+          {
+            "route": "student/<uuid:student_id>/partials/tooltip/",
+            "name": "student_tooltip_partial"
+          },
+          {
+            "route": "api/v1/classes/<uuid:classroom_id>/live:execute-draw",
+            "name": "api_execute_draw"
+          },
+          {
+            "route": "api/v1/classes/<uuid:classroom_id>/live:group-mission-success",
+            "name": "api_group_mission_success"
+          },
+          {
+            "route": "api/v1/classes/<uuid:classroom_id>/consents:sync-sign-talk",
+            "name": "api_consent_sync_sign_talk"
+          }
+        ],
+        "file_counts": {
+          "templates": 23,
+          "static": 0,
+          "migrations": 10,
+          "management_commands": 4
+        },
+        "sample_files": {
+          "templates": [
+            "happy_seed/templates/happy_seed/activity_manage.html",
+            "happy_seed/templates/happy_seed/analysis_dashboard.html",
+            "happy_seed/templates/happy_seed/bloom_run.html",
+            "happy_seed/templates/happy_seed/celebration.html",
+            "happy_seed/templates/happy_seed/classroom_detail.html",
+            "happy_seed/templates/happy_seed/classroom_form.html",
+            "happy_seed/templates/happy_seed/classroom_settings.html",
+            "happy_seed/templates/happy_seed/consent_manage.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "hwpxchat",
+        "module_name": "hwpxchat",
+        "route_prefixes": [
+          "hwpx-chat/"
+        ],
+        "key_files": {
+          "models": null,
+          "views": "hwpxchat/views.py",
+          "urls": "hwpxchat/urls.py",
+          "forms": null,
+          "tests": null
+        },
+        "models": [],
+        "view_functions": [
+          "_get_service",
+          "main",
+          "chat_process",
+          "chat_reset",
+          "download_markdown",
+          "_render_result"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "process/",
+            "name": "chat_process"
+          },
+          {
+            "route": "reset/",
+            "name": "chat_reset"
+          },
+          {
+            "route": "download/",
+            "name": "download_markdown"
+          }
+        ],
+        "file_counts": {
+          "templates": 2,
+          "static": 0,
+          "migrations": 0,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "hwpxchat/templates/hwpxchat/main.html",
+            "hwpxchat/templates/hwpxchat/partials/chat_result.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "insights",
+        "module_name": "insights",
+        "route_prefixes": [
+          ""
+        ],
+        "key_files": {
+          "models": "insights/models.py",
+          "views": "insights/views.py",
+          "urls": "insights/urls.py",
+          "forms": "insights/forms.py",
+          "tests": "insights/tests.py"
+        },
+        "models": [
+          "Insight"
+        ],
+        "view_functions": [
+          "insight_list",
+          "insight_create",
+          "insight_paste_create",
+          "insight_update",
+          "insight_delete",
+          "insight_like_toggle"
+        ],
+        "view_classes": [
+          "InsightDetailView"
+        ],
+        "form_classes": [
+          "InsightForm",
+          "InsightPasteForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "insight/",
+            "name": "list_legacy"
+          },
+          {
+            "route": "insights/",
+            "name": "list"
+          },
+          {
+            "route": "insights/create/",
+            "name": "create"
+          },
+          {
+            "route": "insights/paste/",
+            "name": "paste_create"
+          },
+          {
+            "route": "insights/<int:pk>/",
+            "name": "detail"
+          },
+          {
+            "route": "insights/<int:pk>/edit/",
+            "name": "update"
+          },
+          {
+            "route": "insights/<int:pk>/delete/",
+            "name": "delete"
+          },
+          {
+            "route": "insights/<int:pk>/like/",
+            "name": "like_toggle"
+          }
+        ],
+        "file_counts": {
+          "templates": 5,
+          "static": 0,
+          "migrations": 8,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "insights/templates/insights/insight_detail.html",
+            "insights/templates/insights/insight_form.html",
+            "insights/templates/insights/insight_list.html",
+            "insights/templates/insights/insight_paste_form.html",
+            "insights/templates/insights/partials/insight_card_body.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "janggi",
+        "module_name": "janggi",
+        "route_prefixes": [
+          "janggi/"
+        ],
+        "key_files": {
+          "models": "janggi/models.py",
+          "views": "janggi/views.py",
+          "urls": "janggi/urls.py",
+          "forms": null,
+          "tests": "janggi/tests.py"
+        },
+        "models": [
+          "JanggiMatchLog"
+        ],
+        "view_functions": [
+          "_student_games_mode",
+          "index",
+          "rules",
+          "play"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "index"
+          },
+          {
+            "route": "rules/",
+            "name": "rules"
+          },
+          {
+            "route": "play/",
+            "name": "play"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 5,
+          "migrations": 4,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "janggi/templates/janggi/index.html",
+            "janggi/templates/janggi/play.html",
+            "janggi/templates/janggi/rules.html"
+          ],
+          "static": [
+            "janggi/static/janggi/js/engine/stockfish.js",
+            "janggi/static/janggi/js/engine/stockfish.wasm",
+            "janggi/static/janggi/js/engine/stockfish.worker.js",
+            "janggi/static/janggi/js/janggi_ai.js",
+            "janggi/static/janggi/js/janggi_board.js"
+          ]
+        }
+      },
+      {
+        "app_name": "noticegen",
+        "module_name": "noticegen",
+        "route_prefixes": [
+          "noticegen/"
+        ],
+        "key_files": {
+          "models": "noticegen/models.py",
+          "views": "noticegen/views.py",
+          "urls": "noticegen/urls.py",
+          "forms": null,
+          "tests": "noticegen/tests.py"
+        },
+        "models": [
+          "NoticeGenerationCache",
+          "NoticeGenerationAttempt"
+        ],
+        "view_functions": [
+          "_result_defaults",
+          "_get_service",
+          "_build_page_context",
+          "_ensure_session_key",
+          "_daily_limit",
+          "_usage_count_today",
+          "_remaining_count",
+          "_record_attempt",
+          "_normalize_text",
+          "_normalize_context_values",
+          "_build_cache_key_data",
+          "_serialize_context_values",
+          "_touch_cache",
+          "_find_exact_cache",
+          "_collect_similar_caches",
+          "_classify_error_code",
+          "_call_deepseek",
+          "_sanitize_output_text",
+          "_render_result",
+          "main",
+          "generate_notice"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "generate/",
+            "name": "generate"
+          }
+        ],
+        "file_counts": {
+          "templates": 2,
+          "static": 0,
+          "migrations": 4,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "noticegen/templates/noticegen/main.html",
+            "noticegen/templates/noticegen/partials/result_panel.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "portfolio",
+        "module_name": "portfolio",
+        "route_prefixes": [
+          "portfolio/"
+        ],
+        "key_files": {
+          "models": "portfolio/models.py",
+          "views": "portfolio/views.py",
+          "urls": "portfolio/urls.py",
+          "forms": "portfolio/forms.py",
+          "tests": "portfolio/tests.py"
+        },
+        "models": [
+          "Achievement",
+          "LectureProgram",
+          "LectureHistory",
+          "Inquiry"
+        ],
+        "view_functions": [],
+        "view_classes": [
+          "PortfolioListView",
+          "InquiryCreateView",
+          "InquirySuccessView"
+        ],
+        "form_classes": [
+          "InquiryForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "list"
+          },
+          {
+            "route": "inquiry/",
+            "name": "inquiry"
+          },
+          {
+            "route": "inquiry/success/",
+            "name": "inquiry_success"
+          }
+        ],
+        "file_counts": {
+          "templates": 3,
+          "static": 0,
+          "migrations": 6,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "portfolio/templates/portfolio/inquiry_form.html",
+            "portfolio/templates/portfolio/inquiry_success.html",
+            "portfolio/templates/portfolio/portfolio_list.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "ppobgi",
+        "module_name": "ppobgi",
+        "route_prefixes": [
+          "ppobgi/"
+        ],
+        "key_files": {
+          "models": "ppobgi/models.py",
+          "views": "ppobgi/views.py",
+          "urls": "ppobgi/urls.py",
+          "forms": "ppobgi/forms.py",
+          "tests": "ppobgi/tests.py"
+        },
+        "models": [],
+        "view_functions": [
+          "_is_phone_user_agent",
+          "_is_force_desktop",
+          "_should_block_for_large_screen_service",
+          "main",
+          "roster_names",
+          "classroom_students"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "api/roster-names/",
+            "name": "roster_names"
+          },
+          {
+            "route": "api/classroom/<uuid:pk>/students/",
+            "name": "classroom_students"
+          }
+        ],
+        "file_counts": {
+          "templates": 1,
+          "static": 2,
+          "migrations": 0,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "ppobgi/templates/ppobgi/main.html"
+          ],
+          "static": [
+            "ppobgi/static/ppobgi/css/ppobgi.css",
+            "ppobgi/static/ppobgi/js/ppobgi.js"
+          ]
+        }
+      },
+      {
+        "app_name": "products",
+        "module_name": "products",
+        "route_prefixes": [
+          "products/"
+        ],
+        "key_files": {
+          "models": "products/models.py",
+          "views": "products/views.py",
+          "urls": "products/urls.py",
+          "forms": null,
+          "tests": "products/tests.py"
+        },
+        "models": [
+          "Product",
+          "ProductFeature",
+          "ServiceManual",
+          "ManualSection",
+          "UserOwnedProduct",
+          "DTSettings",
+          "DTStudent",
+          "DTRole",
+          "DTRoleAssignment",
+          "DTSchedule"
+        ],
+        "view_functions": [
+          "_student_games_mode_enabled",
+          "_student_games_max_age_seconds",
+          "_create_student_games_token",
+          "_verify_student_games_token",
+          "_student_games_catalog",
+          "_build_student_games_launch_url",
+          "_build_qr_data_url",
+          "_is_phone_user_agent",
+          "_is_force_desktop",
+          "_should_block_for_large_screen_service",
+          "product_list",
+          "product_detail",
+          "product_preview",
+          "yut_game",
+          "dutyticker_view",
+          "dutyticker_student_games_launch",
+          "dutyticker_student_games_portal",
+          "dutyticker_student_games_exit"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "product_list"
+          },
+          {
+            "route": "<int:pk>/",
+            "name": "product_detail"
+          },
+          {
+            "route": "preview/<int:pk>/",
+            "name": "product_preview"
+          },
+          {
+            "route": "yut/",
+            "name": "yut_game"
+          },
+          {
+            "route": "dutyticker/",
+            "name": "dutyticker"
+          },
+          {
+            "route": "dutyticker/student-games/launch/",
+            "name": "dt_student_games_launch"
+          },
+          {
+            "route": "dutyticker/student-games/portal/",
+            "name": "dt_student_games_portal"
+          },
+          {
+            "route": "dutyticker/student-games/exit/",
+            "name": "dt_student_games_exit"
+          },
+          {
+            "route": "dutyticker/api/data/",
+            "name": "dt_api_data"
+          },
+          {
+            "route": "dutyticker/api/assignment/<int:assignment_id>/toggle/",
+            "name": "dt_api_toggle"
+          },
+          {
+            "route": "dutyticker/api/student/<int:student_id>/toggle_mission/",
+            "name": "dt_api_toggle_mission"
+          },
+          {
+            "route": "dutyticker/api/assign/",
+            "name": "dt_api_assign"
+          },
+          {
+            "route": "dutyticker/api/rotate/",
+            "name": "dt_api_rotate"
+          },
+          {
+            "route": "dutyticker/api/broadcast/update/",
+            "name": "dt_api_broadcast_update"
+          },
+          {
+            "route": "dutyticker/api/mission/update/",
+            "name": "dt_api_mission_update"
+          },
+          {
+            "route": "dutyticker/api/reset/",
+            "name": "dt_api_reset"
+          },
+          {
+            "route": "dutyticker/admin/",
+            "name": "dt_admin_dashboard"
+          },
+          {
+            "route": "dutyticker/admin/print/",
+            "name": "dt_admin_print_sheet"
+          },
+          {
+            "route": "dutyticker/admin/rotation-settings/",
+            "name": "dt_admin_update_rotation_settings"
+          },
+          {
+            "route": "dutyticker/admin/students/add/",
+            "name": "dt_admin_add_student"
+          },
+          {
+            "route": "dutyticker/admin/students/<int:pk>/delete/",
+            "name": "dt_admin_delete_student"
+          },
+          {
+            "route": "dutyticker/admin/roles/add/",
+            "name": "dt_admin_add_role"
+          },
+          {
+            "route": "dutyticker/admin/roles/<int:pk>/delete/",
+            "name": "dt_admin_delete_role"
+          }
+        ],
+        "file_counts": {
+          "templates": 14,
+          "static": 6,
+          "migrations": 104,
+          "management_commands": 44
+        },
+        "sample_files": {
+          "templates": [
+            "products/templates/products/detail.html",
+            "products/templates/products/dutyticker/admin_dashboard.html",
+            "products/templates/products/dutyticker/includes/modals.html",
+            "products/templates/products/dutyticker/includes/role_card.html",
+            "products/templates/products/dutyticker/includes/timeline.html",
+            "products/templates/products/dutyticker/includes/timer_card.html",
+            "products/templates/products/dutyticker/main.html",
+            "products/templates/products/dutyticker/print_sheet.html"
+          ],
+          "static": [
+            "products/static/products/dutyticker/js/dutyticker.js",
+            "products/static/products/yut/bonus.mp3",
+            "products/static/products/yut/goal.mp3",
+            "products/static/products/yut/roll.mp3",
+            "products/static/products/yut/tada.mp3",
+            "products/static/products/yut/victory.mp3"
+          ]
+        }
+      },
+      {
+        "app_name": "qrgen",
+        "module_name": "qrgen",
+        "route_prefixes": [
+          "qrgen/"
+        ],
+        "key_files": {
+          "models": "qrgen/models.py",
+          "views": "qrgen/views.py",
+          "urls": "qrgen/urls.py",
+          "forms": "qrgen/forms.py",
+          "tests": null
+        },
+        "models": [],
+        "view_functions": [
+          "landing"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "QrGeneratorForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          }
+        ],
+        "file_counts": {
+          "templates": 1,
+          "static": 0,
+          "migrations": 2,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "qrgen/templates/qrgen/landing.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "reservations",
+        "module_name": "reservations",
+        "route_prefixes": [
+          "reservations/"
+        ],
+        "key_files": {
+          "models": "reservations/models.py",
+          "views": "reservations/views.py",
+          "urls": "reservations/urls.py",
+          "forms": null,
+          "tests": "reservations/tests.py"
+        },
+        "models": [
+          "School",
+          "SchoolConfig",
+          "SpecialRoom",
+          "Reservation",
+          "RecurringSchedule",
+          "BlackoutDate"
+        ],
+        "view_functions": [
+          "dashboard_landing",
+          "delete_school",
+          "short_url_redirect",
+          "admin_dashboard",
+          "room_settings",
+          "recurring_settings",
+          "update_config",
+          "blackout_settings",
+          "reservation_index",
+          "create_reservation",
+          "delete_reservation",
+          "admin_delete_reservation"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "dashboard/",
+            "name": "dashboard_landing"
+          },
+          {
+            "route": "<str:school_slug>/dashboard/",
+            "name": "admin_dashboard"
+          },
+          {
+            "route": "<str:school_slug>/settings/rooms/",
+            "name": "room_settings"
+          },
+          {
+            "route": "<str:school_slug>/settings/recurring/",
+            "name": "recurring_settings"
+          },
+          {
+            "route": "<str:school_slug>/settings/blackout/",
+            "name": "blackout_settings"
+          },
+          {
+            "route": "go/<int:school_id>/",
+            "name": "short_url"
+          },
+          {
+            "route": "<str:school_slug>/",
+            "name": "reservation_index"
+          },
+          {
+            "route": "<str:school_slug>/create/",
+            "name": "create_reservation"
+          },
+          {
+            "route": "<str:school_slug>/delete/<int:reservation_id>/",
+            "name": "delete_reservation"
+          },
+          {
+            "route": "<str:school_slug>/admin-delete/<int:reservation_id>/",
+            "name": "admin_delete_reservation"
+          },
+          {
+            "route": "<str:school_slug>/settings/config/",
+            "name": "update_config"
+          },
+          {
+            "route": "<str:school_slug>/delete-school/",
+            "name": "delete_school"
+          }
+        ],
+        "file_counts": {
+          "templates": 8,
+          "static": 0,
+          "migrations": 12,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "reservations/templates/reservations/dashboard.html",
+            "reservations/templates/reservations/index.html",
+            "reservations/templates/reservations/landing.html",
+            "reservations/templates/reservations/partials/blackout_list.html",
+            "reservations/templates/reservations/partials/booking_modal.html",
+            "reservations/templates/reservations/partials/recurring_matrix.html",
+            "reservations/templates/reservations/partials/reservation_grid.html",
+            "reservations/templates/reservations/partials/room_list.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "seed_quiz",
+        "module_name": "seed_quiz",
+        "route_prefixes": [
+          "seed-quiz/"
+        ],
+        "key_files": {
+          "models": "seed_quiz/models.py",
+          "views": "seed_quiz/views.py",
+          "urls": "seed_quiz/urls.py",
+          "forms": null,
+          "tests": null
+        },
+        "models": [
+          "SQQuizBank",
+          "SQQuizBankItem",
+          "SQQuizSet",
+          "SQBatchJob",
+          "SQRagDailyUsage",
+          "SQQuizItem",
+          "SQAttempt",
+          "SQAttemptAnswer",
+          "SQGenerationLog"
+        ],
+        "view_functions": [
+          "_get_topic_template_rows",
+          "_build_template_guide_rows",
+          "_build_default_sample_rows",
+          "_build_topic_sample_rows",
+          "_get_positive_int_setting",
+          "_get_csv_upload_limits",
+          "_get_text_upload_limits",
+          "_humanize_bytes",
+          "_trim_errors",
+          "_log_csv_event",
+          "_parse_bank_filters",
+          "_build_bank_queryset",
+          "_parse_optional_grade",
+          "_build_my_bank_queryset",
+          "_clear_csv_error_report",
+          "_store_csv_error_report",
+          "landing",
+          "teacher_dashboard",
+          "download_csv_guide",
+          "download_csv_template",
+          "download_xlsx_template",
+          "download_csv_sample_pack",
+          "download_csv_error_report",
+          "htmx_bank_browse",
+          "htmx_my_bank_library",
+          "htmx_my_bank_random_select",
+          "htmx_bank_random_select",
+          "htmx_bank_select",
+          "htmx_csv_upload",
+          "htmx_text_upload",
+          "htmx_csv_confirm",
+          "htmx_csv_history",
+          "htmx_rag_generate",
+          "htmx_generate",
+          "htmx_publish",
+          "htmx_publish_rollback",
+          "htmx_progress",
+          "htmx_topic_summary",
+          "student_gate",
+          "student_start",
+          "student_play_shell",
+          "htmx_play_current",
+          "htmx_play_answer",
+          "htmx_play_result",
+          "_do_finish",
+          "_render_result"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/dashboard/",
+            "name": "teacher_dashboard"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/csv-template/",
+            "name": "download_csv_template"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/xlsx-template/",
+            "name": "download_xlsx_template"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/csv-guide/",
+            "name": "download_csv_guide"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/csv-sample-pack/",
+            "name": "download_csv_sample_pack"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/csv-error-report/<slug:token>/",
+            "name": "download_csv_error_report"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/bank/",
+            "name": "htmx_bank_browse"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/my-bank/",
+            "name": "htmx_my_bank_library"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/my-bank/random-select/",
+            "name": "htmx_my_bank_random_select"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/bank/random-select/",
+            "name": "htmx_bank_random_select"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/bank/select/<uuid:bank_id>/",
+            "name": "htmx_bank_select"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/csv/upload/",
+            "name": "htmx_csv_upload"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/text/upload/",
+            "name": "htmx_text_upload"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/csv/confirm/",
+            "name": "htmx_csv_confirm"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/csv/history/",
+            "name": "htmx_csv_history"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/rag/generate/",
+            "name": "htmx_rag_generate"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/generate/",
+            "name": "htmx_generate"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/",
+            "name": "htmx_publish"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/publish/rollback/",
+            "name": "htmx_publish_rollback"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/progress/",
+            "name": "htmx_progress"
+          },
+          {
+            "route": "class/<uuid:classroom_id>/htmx/topic-summary/",
+            "name": "htmx_topic_summary"
+          },
+          {
+            "route": "gate/<slug:class_slug>/",
+            "name": "student_gate"
+          },
+          {
+            "route": "gate/<slug:class_slug>/start/",
+            "name": "student_start"
+          },
+          {
+            "route": "play/",
+            "name": "student_play"
+          },
+          {
+            "route": "htmx/play/current/",
+            "name": "htmx_play_current"
+          },
+          {
+            "route": "htmx/play/answer/",
+            "name": "htmx_play_answer"
+          },
+          {
+            "route": "htmx/play/result/",
+            "name": "htmx_play_result"
+          }
+        ],
+        "file_counts": {
+          "templates": 16,
+          "static": 1,
+          "migrations": 18,
+          "management_commands": 10
+        },
+        "sample_files": {
+          "templates": [
+            "seed_quiz/templates/seed_quiz/csv_guide.html",
+            "seed_quiz/templates/seed_quiz/partials/bank_browse.html",
+            "seed_quiz/templates/seed_quiz/partials/csv_upload_history.html",
+            "seed_quiz/templates/seed_quiz/partials/csv_upload_preview.html",
+            "seed_quiz/templates/seed_quiz/partials/csv_upload_result.html",
+            "seed_quiz/templates/seed_quiz/partials/my_bank_library.html",
+            "seed_quiz/templates/seed_quiz/partials/play_item.html",
+            "seed_quiz/templates/seed_quiz/partials/play_result.html"
+          ],
+          "static": [
+            "seed_quiz/static/seed_quiz/css/student.css"
+          ]
+        }
+      },
+      {
+        "app_name": "signatures",
+        "module_name": "signatures",
+        "route_prefixes": [
+          "signatures/"
+        ],
+        "key_files": {
+          "models": "signatures/models.py",
+          "views": "signatures/views.py",
+          "urls": "signatures/urls.py",
+          "forms": "signatures/forms.py",
+          "tests": "signatures/tests.py"
+        },
+        "models": [
+          "TrainingSession",
+          "Signature",
+          "SignatureStyle",
+          "SavedSignature",
+          "ExpectedParticipant"
+        ],
+        "view_functions": [
+          "_build_qr_data_url",
+          "_to_aware_datetime",
+          "_sync_calendar_event_for_training",
+          "_delete_calendar_event_for_training",
+          "session_list",
+          "session_create",
+          "session_detail",
+          "session_edit",
+          "session_delete",
+          "sign",
+          "print_view",
+          "toggle_active",
+          "delete_signature",
+          "style_list",
+          "save_style_api",
+          "save_signature_image_api",
+          "get_my_signatures_api",
+          "delete_style_api",
+          "signature_maker",
+          "add_expected_participants",
+          "upload_participants_file",
+          "get_expected_participants",
+          "delete_expected_participant",
+          "match_signature",
+          "download_participant_template"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "TrainingSessionForm",
+          "SignatureForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "list"
+          },
+          {
+            "route": "create/",
+            "name": "create"
+          },
+          {
+            "route": "<uuid:uuid>/",
+            "name": "detail"
+          },
+          {
+            "route": "<uuid:uuid>/edit/",
+            "name": "edit"
+          },
+          {
+            "route": "<uuid:uuid>/delete/",
+            "name": "delete"
+          },
+          {
+            "route": "<uuid:uuid>/print/",
+            "name": "print"
+          },
+          {
+            "route": "<uuid:uuid>/toggle/",
+            "name": "toggle"
+          },
+          {
+            "route": "sign/<uuid:uuid>/",
+            "name": "sign"
+          },
+          {
+            "route": "signature/<int:pk>/delete/",
+            "name": "delete_signature"
+          },
+          {
+            "route": "styles/",
+            "name": "style_list"
+          },
+          {
+            "route": "styles/save/",
+            "name": "save_style_api"
+          },
+          {
+            "route": "api/save_image/",
+            "name": "save_image_api"
+          },
+          {
+            "route": "api/my_signatures/",
+            "name": "get_my_signatures_api"
+          },
+          {
+            "route": "styles/<int:pk>/delete/",
+            "name": "delete_style_api"
+          },
+          {
+            "route": "maker/",
+            "name": "maker"
+          },
+          {
+            "route": "<uuid:uuid>/participants/add/",
+            "name": "add_participants"
+          },
+          {
+            "route": "<uuid:uuid>/participants/upload/",
+            "name": "upload_participants_file"
+          },
+          {
+            "route": "<uuid:uuid>/participants/",
+            "name": "get_participants"
+          },
+          {
+            "route": "<uuid:uuid>/participants/<int:participant_id>/delete/",
+            "name": "delete_participant"
+          },
+          {
+            "route": "<uuid:uuid>/signatures/<int:signature_id>/match/",
+            "name": "match_signature"
+          },
+          {
+            "route": "template/csv/",
+            "name": "download_template_csv"
+          },
+          {
+            "route": "template/excel/",
+            "name": "download_template_excel"
+          }
+        ],
+        "file_counts": {
+          "templates": 11,
+          "static": 0,
+          "migrations": 22,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "signatures/templates/signatures/closed.html",
+            "signatures/templates/signatures/create.html",
+            "signatures/templates/signatures/delete_confirm.html",
+            "signatures/templates/signatures/detail.html",
+            "signatures/templates/signatures/edit.html",
+            "signatures/templates/signatures/list.html",
+            "signatures/templates/signatures/maker.html",
+            "signatures/templates/signatures/print_view.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "ssambti",
+        "module_name": "ssambti",
+        "route_prefixes": [
+          "ssambti/"
+        ],
+        "key_files": {
+          "models": "ssambti/models.py",
+          "views": "ssambti/views.py",
+          "urls": "ssambti/urls.py",
+          "forms": null,
+          "tests": null
+        },
+        "models": [
+          "SsambtiResult"
+        ],
+        "view_functions": [
+          "card_generator_view",
+          "main_view",
+          "analyze_view",
+          "history_view",
+          "detail_view",
+          "animal_detail_view"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "analyze/",
+            "name": "analyze"
+          },
+          {
+            "route": "history/",
+            "name": "history"
+          },
+          {
+            "route": "result/<int:pk>/",
+            "name": "detail"
+          },
+          {
+            "route": "preview/<str:mbti_type>/",
+            "name": "preview"
+          }
+        ],
+        "file_counts": {
+          "templates": 6,
+          "static": 20,
+          "migrations": 6,
+          "management_commands": 2
+        },
+        "sample_files": {
+          "templates": [
+            "ssambti/templates/ssambti/card_only.html",
+            "ssambti/templates/ssambti/detail.html",
+            "ssambti/templates/ssambti/history.html",
+            "ssambti/templates/ssambti/main.html",
+            "ssambti/templates/ssambti/partials/animal_preview.html",
+            "ssambti/templates/ssambti/partials/result.html"
+          ],
+          "static": [
+            "ssambti/static/ssambti/images/animals/black_cat.png",
+            "ssambti/static/ssambti/images/animals/cheetah.png",
+            "ssambti/static/ssambti/images/animals/dolphin.png",
+            "ssambti/static/ssambti/images/animals/elephant.png",
+            "ssambti/static/ssambti/images/animals/golden_retriever.png",
+            "ssambti/static/ssambti/images/animals/grok-image-e9b9d62c-c8a4-4db6-81d1-538ee6522a02 (2).png",
+            "ssambti/static/ssambti/images/animals/grok-image-e9b9d62c-c8a4-4db6-81d1-538ee6522a02 (3).png",
+            "ssambti/static/ssambti/images/animals/koala.png"
+          ]
+        }
+      },
+      {
+        "app_name": "studentmbti",
+        "module_name": "studentmbti",
+        "route_prefixes": [
+          "studentmbti/",
+          "m/"
+        ],
+        "key_files": {
+          "models": "studentmbti/models.py",
+          "views": "studentmbti/views.py",
+          "urls": "studentmbti/urls.py",
+          "forms": null,
+          "tests": "studentmbti/tests.py"
+        },
+        "models": [
+          "TestSession",
+          "StudentMBTIResult"
+        ],
+        "view_functions": [
+          "_normalize_mac_hash",
+          "_build_national_stats_by_mac",
+          "get_student_service",
+          "generate_session_qr",
+          "landing_page",
+          "dashboard",
+          "session_create",
+          "session_detail",
+          "session_results_partial",
+          "session_toggle_active",
+          "session_delete",
+          "join_session",
+          "result_detail_teacher",
+          "session_test",
+          "start_test",
+          "analyze",
+          "result",
+          "animal_preview",
+          "export_excel"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "landing"
+          },
+          {
+            "route": "dashboard/",
+            "name": "dashboard"
+          },
+          {
+            "route": "session/create/",
+            "name": "session_create"
+          },
+          {
+            "route": "session/<uuid:session_id>/detail/",
+            "name": "session_detail"
+          },
+          {
+            "route": "session/<uuid:session_id>/results-partial/",
+            "name": "session_results_partial"
+          },
+          {
+            "route": "session/<uuid:session_id>/toggle/",
+            "name": "session_toggle"
+          },
+          {
+            "route": "session/<uuid:session_id>/delete/",
+            "name": "session_delete"
+          },
+          {
+            "route": "session/<uuid:session_id>/export/",
+            "name": "export_excel"
+          },
+          {
+            "route": "result/<uuid:result_id>/teacher/",
+            "name": "result_detail_teacher"
+          },
+          {
+            "route": "join/",
+            "name": "join_session"
+          },
+          {
+            "route": "preview/<str:mbti_type>/",
+            "name": "preview"
+          },
+          {
+            "route": "session/<uuid:session_id>/",
+            "name": "session_test"
+          },
+          {
+            "route": "session/<uuid:session_id>/start/",
+            "name": "start_test"
+          },
+          {
+            "route": "session/<uuid:session_id>/analyze/",
+            "name": "analyze"
+          },
+          {
+            "route": "result/<uuid:result_id>/",
+            "name": "result"
+          }
+        ],
+        "file_counts": {
+          "templates": 10,
+          "static": 16,
+          "migrations": 16,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "studentmbti/templates/studentmbti/dashboard.html",
+            "studentmbti/templates/studentmbti/landing.html",
+            "studentmbti/templates/studentmbti/partials/animal_preview.html",
+            "studentmbti/templates/studentmbti/partials/fullscreen_results.html",
+            "studentmbti/templates/studentmbti/partials/results_list.html",
+            "studentmbti/templates/studentmbti/result.html",
+            "studentmbti/templates/studentmbti/result_detail.html",
+            "studentmbti/templates/studentmbti/session_closed.html"
+          ],
+          "static": [
+            "studentmbti/static/studentmbti/images/cat.png",
+            "studentmbti/static/studentmbti/images/cheetah.png",
+            "studentmbti/static/studentmbti/images/dog.png",
+            "studentmbti/static/studentmbti/images/dolphin.png",
+            "studentmbti/static/studentmbti/images/dragon.png",
+            "studentmbti/static/studentmbti/images/elephant.png",
+            "studentmbti/static/studentmbti/images/koala.png",
+            "studentmbti/static/studentmbti/images/lion.png"
+          ]
+        }
+      },
+      {
+        "app_name": "timetable",
+        "module_name": "timetable",
+        "route_prefixes": [
+          "timetable/"
+        ],
+        "key_files": {
+          "models": "timetable/models.py",
+          "views": "timetable/views.py",
+          "urls": "timetable/urls.py",
+          "forms": "timetable/forms.py",
+          "tests": "timetable/tests.py"
+        },
+        "models": [
+          "TimetableSyncLog"
+        ],
+        "view_functions": [
+          "_get_service",
+          "main",
+          "download_sync_logs_csv",
+          "download_template",
+          "_get_school_choices",
+          "_save_sync_payload",
+          "_apply_preview_sync",
+          "_can_use_overwrite_option",
+          "_attach_reservation_links",
+          "_record_sync_log",
+          "_get_recent_sync_logs",
+          "_get_sync_log_queryset",
+          "_get_sync_log_base_queryset",
+          "_get_sync_log_filters",
+          "_apply_sync_log_filters",
+          "_get_sync_log_school_options",
+          "_build_sync_log_filter_query"
+        ],
+        "view_classes": [],
+        "form_classes": [
+          "TimetableUploadForm"
+        ],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "main"
+          },
+          {
+            "route": "template/",
+            "name": "download_template"
+          },
+          {
+            "route": "sync-logs.csv",
+            "name": "download_sync_logs_csv"
+          }
+        ],
+        "file_counts": {
+          "templates": 1,
+          "static": 0,
+          "migrations": 4,
+          "management_commands": 0
+        },
+        "sample_files": {
+          "templates": [
+            "timetable/templates/timetable/main.html"
+          ],
+          "static": []
+        }
+      },
+      {
+        "app_name": "version_manager",
+        "module_name": "version_manager",
+        "route_prefixes": [
+          "version-manager/"
+        ],
+        "key_files": {
+          "models": "version_manager/models.py",
+          "views": "version_manager/views.py",
+          "urls": "version_manager/urls.py",
+          "forms": null,
+          "tests": null
+        },
+        "models": [
+          "DocumentGroup",
+          "Document",
+          "DocumentProtectedPhrase",
+          "DocumentShareLink",
+          "DocumentVersion"
+        ],
+        "view_functions": [
+          "document_list_view",
+          "document_create_view",
+          "document_detail_view",
+          "_update_version_analysis",
+          "upload_version_view",
+          "set_published_view",
+          "_download_response",
+          "download_latest_view",
+          "download_published_view",
+          "download_version_view",
+          "delete_version_view",
+          "add_protected_phrase_view",
+          "remove_protected_phrase_view",
+          "create_share_link_view",
+          "toggle_share_link_view",
+          "shared_upload_view"
+        ],
+        "view_classes": [],
+        "form_classes": [],
+        "urlpatterns": [
+          {
+            "route": "",
+            "name": "document_list"
+          },
+          {
+            "route": "new/",
+            "name": "document_create"
+          },
+          {
+            "route": "<int:document_id>/",
+            "name": "document_detail"
+          },
+          {
+            "route": "<int:document_id>/upload/",
+            "name": "upload_version"
+          },
+          {
+            "route": "<int:document_id>/delete/<int:version_id>/",
+            "name": "delete_version"
+          },
+          {
+            "route": "<int:document_id>/download/latest/",
+            "name": "download_latest"
+          },
+          {
+            "route": "<int:document_id>/download/published/",
+            "name": "download_published"
+          },
+          {
+            "route": "<int:document_id>/download/<int:version_id>/",
+            "name": "download_version"
+          },
+          {
+            "route": "<int:document_id>/publish/<int:version_id>/",
+            "name": "set_published"
+          },
+          {
+            "route": "<int:document_id>/protected-phrases/add/",
+            "name": "add_protected_phrase"
+          },
+          {
+            "route": "<int:document_id>/protected-phrases/<int:phrase_id>/remove/",
+            "name": "remove_protected_phrase"
+          },
+          {
+            "route": "<int:document_id>/share-links/create/",
+            "name": "create_share_link"
+          },
+          {
+            "route": "<int:document_id>/share-links/<int:link_id>/toggle/",
+            "name": "toggle_share_link"
+          },
+          {
+            "route": "share/<str:token>/",
+            "name": "shared_upload"
+          }
+        ],
+        "file_counts": {
+          "templates": 4,
+          "static": 0,
+          "migrations": 8,
+          "management_commands": 4
+        },
+        "sample_files": {
+          "templates": [
+            "version_manager/templates/version_manager/document_detail.html",
+            "version_manager/templates/version_manager/document_form.html",
+            "version_manager/templates/version_manager/document_list.html",
+            "version_manager/templates/version_manager/shared_upload.html"
+          ],
+          "static": []
+        }
+      }
+    ]
+  },
+  "chat_training_records": [
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "우리반BTI 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "우리반BTI는 Eduitit의 `counsel` 카테고리 서비스입니다.\n핵심 설명: 우리 반 아이들은 어떤 동물 친구들일까요? 재미있는 설문으로 알아보는 교육용 성향 검사 도구입니다.\n진입 라우트: `studentmbti:landing`\n코드 앱: `studentmbti`\nURL prefix: `/studentmbti/`, `/m/`\n주요 모델: `TestSession`, `StudentMBTIResult`\n주요 뷰 함수: `_normalize_mac_hash`, `_build_national_stats_by_mac`, `get_student_service`, `generate_session_qr`, `landing_page`, `dashboard`, `session_create`, `session_detail`"
+        }
+      ],
+      "metadata": {
+        "service_title": "우리반BTI",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "우리반BTI 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`studentmbti` 앱 구조 기준으로 설명합니다.\n- models: studentmbti/models.py\n- views: studentmbti/views.py\n- urls: studentmbti/urls.py\n- forms: None\n- templates 파일 수: 10\n- static 파일 수: 16\n- migration 파일 수: 16\n- 대표 URL 패턴: `` (name: `landing`), `dashboard/` (name: `dashboard`), `session/create/` (name: `session_create`), `session/<uuid:session_id>/detail/` (name: `session_detail`), `session/<uuid:session_id>/results-partial/` (name: `session_results_partial`), `session/<uuid:session_id>/toggle/` (name: `session_toggle`), `session/<uuid:session_id>/delete/` (name: `session_delete`), `session/<uuid:session_id>/export/` (name: `export_excel`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "우리반BTI",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "교사 백과사전 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "교사 백과사전는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: AI와 함께하는 교육 매뉴얼의 혁신, NotebookLM 기반 교사 백과사전입니다.\n진입 라우트: `encyclopedia:landing`\n코드 앱: `encyclopedia`\nURL prefix: `/encyclopedia/`\n주요 모델: `NotebookEntry`\n주요 뷰 함수: `landing`, `entry_create`, `entry_edit`, `entry_delete`"
+        }
+      ],
+      "metadata": {
+        "service_title": "교사 백과사전",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "교사 백과사전 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`encyclopedia` 앱 구조 기준으로 설명합니다.\n- models: encyclopedia/models.py\n- views: encyclopedia/views.py\n- urls: encyclopedia/urls.py\n- forms: encyclopedia/forms.py\n- templates 파일 수: 2\n- static 파일 수: 0\n- migration 파일 수: 4\n- 대표 URL 패턴: `` (name: `landing`), `create/` (name: `entry_create`), `<int:pk>/edit/` (name: `entry_edit`), `<int:pk>/delete/` (name: `entry_delete`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "교사 백과사전",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "Insight Library 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "Insight Library는 Eduitit의 `tool` 카테고리 서비스입니다.\n핵심 설명: 선생님의 시선으로 AI 시대를 기록하다\n진입 라우트: `insights:list`\n코드 앱: `insights`\nURL prefix: `/`\n주요 모델: `Insight`\n주요 뷰 함수: `insight_list`, `insight_create`, `insight_paste_create`, `insight_update`, `insight_delete`, `insight_like_toggle`"
+        }
+      ],
+      "metadata": {
+        "service_title": "Insight Library",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "Insight Library 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`insights` 앱 구조 기준으로 설명합니다.\n- models: insights/models.py\n- views: insights/views.py\n- urls: insights/urls.py\n- forms: insights/forms.py\n- templates 파일 수: 5\n- static 파일 수: 0\n- migration 파일 수: 8\n- 대표 URL 패턴: `insight/` (name: `list_legacy`), `insights/` (name: `list`), `insights/create/` (name: `create`), `insights/paste/` (name: `paste_create`), `insights/<int:pk>/` (name: `detail`), `insights/<int:pk>/edit/` (name: `update`), `insights/<int:pk>/delete/` (name: `delete`), `insights/<int:pk>/like/` (name: `like_toggle`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "Insight Library",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "반짝반짝 우리반 알림판 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "반짝반짝 우리반 알림판는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 선생님, 저 지금 뭐해요? 우리 반 아이들이 할 일을 잊지 않도록 화면으로 챙겨주세요.\n진입 라우트: `dutyticker`\n코드 앱: `products`\nURL prefix: `/products/`\n주요 모델: `Product`, `ProductFeature`, `ServiceManual`, `ManualSection`, `UserOwnedProduct`, `DTSettings`, `DTStudent`, `DTRole`\n주요 뷰 함수: `_student_games_mode_enabled`, `_student_games_max_age_seconds`, `_create_student_games_token`, `_verify_student_games_token`, `_student_games_catalog`, `_build_student_games_launch_url`, `_build_qr_data_url`, `_is_phone_user_agent`"
+        }
+      ],
+      "metadata": {
+        "service_title": "반짝반짝 우리반 알림판",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "반짝반짝 우리반 알림판 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`products` 앱 구조 기준으로 설명합니다.\n- models: products/models.py\n- views: products/views.py\n- urls: products/urls.py\n- forms: None\n- templates 파일 수: 14\n- static 파일 수: 6\n- migration 파일 수: 104\n- 대표 URL 패턴: `` (name: `product_list`), `<int:pk>/` (name: `product_detail`), `preview/<int:pk>/` (name: `product_preview`), `yut/` (name: `yut_game`), `dutyticker/` (name: `dutyticker`), `dutyticker/student-games/launch/` (name: `dt_student_games_launch`), `dutyticker/student-games/portal/` (name: `dt_student_games_portal`), `dutyticker/student-games/exit/` (name: `dt_student_games_exit`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "반짝반짝 우리반 알림판",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "선생님 사주 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "선생님 사주는 Eduitit의 `counsel` 카테고리 서비스입니다.\n핵심 설명: 학교 현장에서 활용하는 사주 상담 도구\n진입 라우트: `fortune:saju`\n코드 앱: `fortune`\nURL prefix: `/fortune/`\n주요 모델: `Stem`, `Branch`, `SixtyJiazi`, `SajuProfile`, `NatalChart`, `InterpretationRule`, `FortuneResult`, `ZooResult`\n주요 뷰 함수: `_should_use_async_ai_stream`, `_should_use_async_ai_api`, `get_user_gemini_key`, `fortune_rate_h`, `fortune_rate_d`, `generate_ai_response`, `get_chart_context`, `serialize_chart_context`"
+        }
+      ],
+      "metadata": {
+        "service_title": "선생님 사주",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "선생님 사주 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fortune` 앱 구조 기준으로 설명합니다.\n- models: fortune/models.py\n- views: fortune/views.py\n- urls: fortune/urls.py\n- forms: fortune/forms.py\n- templates 파일 수: 11\n- static 파일 수: 0\n- migration 파일 수: 22\n- 대표 URL 패턴: `` (name: `saju`), `saju/` (name: `saju_alt`), `api/` (name: `saju_api`), `api/streaming/` (name: `saju_streaming_api`), `api/daily/` (name: `daily_fortune_api`), `api/save/` (name: `save_fortune_api`), `history/` (name: `history`), `history/<int:pk>/` (name: `history_detail`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "선생님 사주",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "왁자지껄 교실 윷놀이 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "왁자지껄 교실 윷놀이는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 준비물도 뒷정리도 필요 없어요. 커다란 화면 속에서 다 함께 즐기는 우리 전통 놀이!\n진입 라우트: `yut_game`\n코드 앱: `products`\nURL prefix: `/products/`\n주요 모델: `Product`, `ProductFeature`, `ServiceManual`, `ManualSection`, `UserOwnedProduct`, `DTSettings`, `DTStudent`, `DTRole`\n주요 뷰 함수: `_student_games_mode_enabled`, `_student_games_max_age_seconds`, `_create_student_games_token`, `_verify_student_games_token`, `_student_games_catalog`, `_build_student_games_launch_url`, `_build_qr_data_url`, `_is_phone_user_agent`"
+        }
+      ],
+      "metadata": {
+        "service_title": "왁자지껄 교실 윷놀이",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "왁자지껄 교실 윷놀이 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`products` 앱 구조 기준으로 설명합니다.\n- models: products/models.py\n- views: products/views.py\n- urls: products/urls.py\n- forms: None\n- templates 파일 수: 14\n- static 파일 수: 6\n- migration 파일 수: 104\n- 대표 URL 패턴: `` (name: `product_list`), `<int:pk>/` (name: `product_detail`), `preview/<int:pk>/` (name: `product_preview`), `yut/` (name: `yut_game`), `dutyticker/` (name: `dutyticker`), `dutyticker/student-games/launch/` (name: `dt_student_games_launch`), `dutyticker/student-games/portal/` (name: `dt_student_games_portal`), `dutyticker/student-games/exit/` (name: `dt_student_games_exit`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "왁자지껄 교실 윷놀이",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "토닥토닥 선생님 운세 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "토닥토닥 선생님 운세는 Eduitit의 `counsel` 카테고리 서비스입니다.\n핵심 설명: 지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.\n진입 라우트: `fortune:saju`\n코드 앱: `fortune`\nURL prefix: `/fortune/`\n주요 모델: `Stem`, `Branch`, `SixtyJiazi`, `SajuProfile`, `NatalChart`, `InterpretationRule`, `FortuneResult`, `ZooResult`\n주요 뷰 함수: `_should_use_async_ai_stream`, `_should_use_async_ai_api`, `get_user_gemini_key`, `fortune_rate_h`, `fortune_rate_d`, `generate_ai_response`, `get_chart_context`, `serialize_chart_context`"
+        }
+      ],
+      "metadata": {
+        "service_title": "토닥토닥 선생님 운세",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "토닥토닥 선생님 운세 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fortune` 앱 구조 기준으로 설명합니다.\n- models: fortune/models.py\n- views: fortune/views.py\n- urls: fortune/urls.py\n- forms: fortune/forms.py\n- templates 파일 수: 11\n- static 파일 수: 0\n- migration 파일 수: 22\n- 대표 URL 패턴: `` (name: `saju`), `saju/` (name: `saju_alt`), `api/` (name: `saju_api`), `api/streaming/` (name: `saju_streaming_api`), `api/daily/` (name: `daily_fortune_api`), `api/save/` (name: `save_fortune_api`), `history/` (name: `history`), `history/<int:pk>/` (name: `history_detail`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "토닥토닥 선생님 운세",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "가뿐하게 서명 톡 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "가뿐하게 서명 톡는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: 바쁜 쉬는 시간, 결재판 들고 교무실 내려갈 필요 없어요. 내 자리에서 링크 하나로 서명 끝!\n진입 라우트: `signatures:list`\n코드 앱: `signatures`\nURL prefix: `/signatures/`\n주요 모델: `TrainingSession`, `Signature`, `SignatureStyle`, `SavedSignature`, `ExpectedParticipant`\n주요 뷰 함수: `_build_qr_data_url`, `_to_aware_datetime`, `_sync_calendar_event_for_training`, `_delete_calendar_event_for_training`, `session_list`, `session_create`, `session_detail`, `session_edit`"
+        }
+      ],
+      "metadata": {
+        "service_title": "가뿐하게 서명 톡",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "가뿐하게 서명 톡 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`signatures` 앱 구조 기준으로 설명합니다.\n- models: signatures/models.py\n- views: signatures/views.py\n- urls: signatures/urls.py\n- forms: signatures/forms.py\n- templates 파일 수: 11\n- static 파일 수: 0\n- migration 파일 수: 22\n- 대표 URL 패턴: `` (name: `list`), `create/` (name: `create`), `<uuid:uuid>/` (name: `detail`), `<uuid:uuid>/edit/` (name: `edit`), `<uuid:uuid>/delete/` (name: `delete`), `<uuid:uuid>/print/` (name: `print`), `<uuid:uuid>/toggle/` (name: `toggle`), `sign/<uuid:uuid>/` (name: `sign`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "가뿐하게 서명 톡",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "몽글몽글 미술 수업 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "몽글몽글 미술 수업는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 유튜브 미술 영상을 분석해서 단계별 수업 안내를 자동 생성하는 스마트 도우미\n진입 라우트: `artclass:setup`\n코드 앱: `artclass`\nURL prefix: `/artclass/`\n주요 모델: `ArtClass`, `ArtStep`\n주요 뷰 함수: `setup_view`, `classroom_view`, `parse_gemini_steps_api`, `library_view`"
+        }
+      ],
+      "metadata": {
+        "service_title": "몽글몽글 미술 수업",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "몽글몽글 미술 수업 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`artclass` 앱 구조 기준으로 설명합니다.\n- models: artclass/models.py\n- views: artclass/views.py\n- urls: artclass/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 0\n- migration 파일 수: 6\n- 대표 URL 패턴: `` (name: `setup`), `setup/<int:pk>/` (name: `setup_edit`), `classroom/<int:pk>/` (name: `classroom`), `api/parse-gemini-steps/` (name: `parse_gemini_steps_api`), `library/` (name: `library`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "몽글몽글 미술 수업",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "동의서는 나에게 맡겨 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "동의서는 나에게 맡겨는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 학부모 동의서 수합을 모바일 3단계로 간단하게 처리합니다.\n진입 라우트: `consent:dashboard`\n코드 앱: `consent`\nURL prefix: `/consent/`\n주요 모델: `SignatureDocument`, `SignatureRequest`, `SignaturePosition`, `SignatureRecipient`, `ConsentAuditLog`\n주요 뷰 함수: `_snapshot_file_metadata`, `_request_document_evidence`, `_parse_recipients`, `_parse_recipients_csv`, `_generate_qr_base64`, `_compose_parent_message`, `_build_file_response`, `_strip_cloudinary_signature`"
+        }
+      ],
+      "metadata": {
+        "service_title": "동의서는 나에게 맡겨",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "동의서는 나에게 맡겨 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`consent` 앱 구조 기준으로 설명합니다.\n- models: consent/models.py\n- views: consent/views.py\n- urls: consent/urls.py\n- forms: consent/forms.py\n- templates 파일 수: 14\n- static 파일 수: 2\n- migration 파일 수: 14\n- 대표 URL 패턴: `` (name: `dashboard`), `create/` (name: `create`), `create/step1/` (name: `create_step1`), `<uuid:request_id>/setup/` (name: `setup_positions`), `<uuid:request_id>/recipients/` (name: `recipients`), `recipients/template.csv` (name: `recipients_csv_template`), `<uuid:request_id>/` (name: `detail`), `<uuid:request_id>/preview/` (name: `preview_positions`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "동의서는 나에게 맡겨",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "글솜씨 뚝딱! 소식지 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "글솜씨 뚝딱! 소식지는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: 글 쓰는 게 막막할 때 키워드만 톡! 학부모님이 감동하는 멋진 소식지를 선사해요.\n진입 라우트: `autoarticle:create`\n코드 앱: `autoarticle`\nURL prefix: `/autoarticle/`\n주요 모델: `GeneratedArticle`"
+        }
+      ],
+      "metadata": {
+        "service_title": "글솜씨 뚝딱! 소식지",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "글솜씨 뚝딱! 소식지 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`autoarticle` 앱 구조 기준으로 설명합니다.\n- models: autoarticle/models.py\n- views: autoarticle/views.py\n- urls: autoarticle/urls.py\n- forms: None\n- templates 파일 수: 8\n- static 파일 수: 0\n- migration 파일 수: 10\n- 대표 URL 패턴: `` (name: `create`), `archive/` (name: `archive`), `result/<int:pk>/` (name: `detail`), `result/<int:pk>/cardnews/` (name: `cardnews`), `result/<int:pk>/word/` (name: `word`), `result/<int:pk>/pdf/` (name: `pdf_download`), `result/<int:pk>/ppt/` (name: `ppt_download`), `exports/layout/` (name: `export_layout`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "글솜씨 뚝딱! 소식지",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "유튜브 탈알고리즘 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "유튜브 탈알고리즘는 Eduitit의 `etc` 카테고리 서비스입니다.\n핵심 설명: 내 피드에 갇힌 시야를 넓혀보세요. 추천 영상 너머, 전 세계 친구들이 진짜로 보고 있는 세상을 만나요.\n진입 라우트: `-`"
+        }
+      ],
+      "metadata": {
+        "service_title": "유튜브 탈알고리즘",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "유튜브 탈알고리즘 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "이 서비스는 현재 코드 앱 매핑 정보가 없습니다. `launch_route_name` 또는 외부 URL 기준으로 확인이 필요합니다."
+        }
+      ],
+      "metadata": {
+        "service_title": "유튜브 탈알고리즘",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학교 통합 지원 스쿨잇 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "학교 통합 지원 스쿨잇는 Eduitit의 `etc` 카테고리 서비스입니다.\n핵심 설명: 복잡한 채용 업무와 업체 선정은 그만! AI가 학교에 딱 맞는 선생님은 물론, 신뢰할 수 있는 학교 행사 업체까지 한곳에서 연결해 드립니다.\n진입 라우트: `-`"
+        }
+      ],
+      "metadata": {
+        "service_title": "학교 통합 지원 스쿨잇",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학교 통합 지원 스쿨잇 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "이 서비스는 현재 코드 앱 매핑 정보가 없습니다. `launch_route_name` 또는 외부 URL 기준으로 확인이 필요합니다."
+        }
+      ],
+      "metadata": {
+        "service_title": "학교 통합 지원 스쿨잇",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "인사이트 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "인사이트는 Eduitit의 `edutech` 카테고리 서비스입니다.\n핵심 설명: AI 시대를 이끄는 선생님들을 위한 보석 같은 영감들을 모았습니다.\n진입 라우트: `-`"
+        }
+      ],
+      "metadata": {
+        "service_title": "인사이트",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "인사이트 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "이 서비스는 현재 코드 앱 매핑 정보가 없습니다. `launch_route_name` 또는 외부 URL 기준으로 확인이 필요합니다."
+        }
+      ],
+      "metadata": {
+        "service_title": "인사이트",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "간편 수합 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "간편 수합는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: QR 코드 하나로 파일·링크·텍스트를 간편하게 수합하세요!\n진입 라우트: `collect:landing`\n코드 앱: `collect`\nURL prefix: `/collect/`\n주요 모델: `CollectionRequest`, `Submission`\n주요 뷰 함수: `_next_or_end`, `_remote_file_chunks`, `_parse_extension_days`, `_get_submit_context`, `_render_submit_error`, `_extract_choice_submission_data`, `_normalized_choice_answers`, `_filter_submissions_for_choice`"
+        }
+      ],
+      "metadata": {
+        "service_title": "간편 수합",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "간편 수합 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`collect` 앱 구조 기준으로 설명합니다.\n- models: collect/models.py\n- views: collect/views.py\n- urls: collect/urls.py\n- forms: collect/forms.py\n- templates 파일 수: 10\n- static 파일 수: 1\n- migration 파일 수: 18\n- 대표 URL 패턴: `` (name: `landing`), `join/` (name: `join`), `dashboard/` (name: `dashboard`), `create/` (name: `request_create`), `<uuid:request_id>/edit/` (name: `request_edit`), `<uuid:request_id>/detail/` (name: `request_detail`), `<uuid:request_id>/submissions-partial/` (name: `submissions_partial`), `<uuid:request_id>/choice-stats-partial/` (name: `choice_stats_partial`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "간편 수합",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "AI 도구 가이드 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "AI 도구 가이드는 Eduitit의 `edutech` 카테고리 서비스입니다.\n핵심 설명: 상황별로 딱 맞는 AI 도구를 추천해드려요.\n진입 라우트: `tool_guide`\n코드 앱: `core`\nURL prefix: `/`\n주요 모델: `UserProfile`, `Post`, `Comment`, `SiteConfig`, `Feedback`, `ProductUsageLog`, `VisitorLog`\n주요 뷰 함수: `_get_post_list_target_id`, `_render_post_list_partial`, `get_purpose_sections`, `_resolve_product_launch_url`, `_attach_product_launch_meta`, `_get_usage_based_quick_actions`, `_build_home_student_games_qr_context`, `_build_today_context`"
+        }
+      ],
+      "metadata": {
+        "service_title": "AI 도구 가이드",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "AI 도구 가이드 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`core` 앱 구조 기준으로 설명합니다.\n- models: core/models.py\n- views: core/views.py\n- urls: core/urls.py\n- forms: core/forms.py\n- templates 파일 수: 38\n- static 파일 수: 1\n- migration 파일 수: 34\n- 대표 URL 패턴: `` (name: `home`), `dashboard/` (name: `dashboard`), `post/create/` (name: `post_create`), `post/<int:pk>/like/` (name: `post_like`), `post/<int:pk>/comment/` (name: `comment_create`), `post/<int:pk>/delete/` (name: `post_delete`), `post/<int:pk>/edit/` (name: `post_edit`), `post/<int:pk>/detail/` (name: `post_detail_partial`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "AI 도구 가이드",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "AI 프롬프트 레시피 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "AI 프롬프트 레시피는 Eduitit의 `edutech` 카테고리 서비스입니다.\n핵심 설명: 복사해서 바로 쓰는 검증된 AI 주문서.\n진입 라우트: `prompt_lab`\n코드 앱: `core`\nURL prefix: `/`\n주요 모델: `UserProfile`, `Post`, `Comment`, `SiteConfig`, `Feedback`, `ProductUsageLog`, `VisitorLog`\n주요 뷰 함수: `_get_post_list_target_id`, `_render_post_list_partial`, `get_purpose_sections`, `_resolve_product_launch_url`, `_attach_product_launch_meta`, `_get_usage_based_quick_actions`, `_build_home_student_games_qr_context`, `_build_today_context`"
+        }
+      ],
+      "metadata": {
+        "service_title": "AI 프롬프트 레시피",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "AI 프롬프트 레시피 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`core` 앱 구조 기준으로 설명합니다.\n- models: core/models.py\n- views: core/views.py\n- urls: core/urls.py\n- forms: core/forms.py\n- templates 파일 수: 38\n- static 파일 수: 1\n- migration 파일 수: 34\n- 대표 URL 패턴: `` (name: `home`), `dashboard/` (name: `dashboard`), `post/create/` (name: `post_create`), `post/<int:pk>/like/` (name: `post_like`), `post/<int:pk>/comment/` (name: `comment_create`), `post/<int:pk>/delete/` (name: `post_delete`), `post/<int:pk>/edit/` (name: `post_edit`), `post/<int:pk>/detail/` (name: `post_detail_partial`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "AI 프롬프트 레시피",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "쌤BTI 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "쌤BTI는 Eduitit의 `counsel` 카테고리 서비스입니다.\n핵심 설명: 나는 어떤 선생님일까? 🦁\n진입 라우트: `ssambti:main`\n코드 앱: `ssambti`\nURL prefix: `/ssambti/`\n주요 모델: `SsambtiResult`\n주요 뷰 함수: `card_generator_view`, `main_view`, `analyze_view`, `history_view`, `detail_view`, `animal_detail_view`"
+        }
+      ],
+      "metadata": {
+        "service_title": "쌤BTI",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "쌤BTI 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`ssambti` 앱 구조 기준으로 설명합니다.\n- models: ssambti/models.py\n- views: ssambti/views.py\n- urls: ssambti/urls.py\n- forms: None\n- templates 파일 수: 6\n- static 파일 수: 20\n- migration 파일 수: 6\n- 대표 URL 패턴: `` (name: `main`), `analyze/` (name: `analyze`), `history/` (name: `history`), `result/<int:pk>/` (name: `detail`), `preview/<str:mbti_type>/` (name: `preview`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "쌤BTI",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "두뇌 풀가동! 교실 체스 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "두뇌 풀가동! 교실 체스는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 준비물 NO! 설치 NO! 브라우저만 있으면 세계 최강 AI와 체스 한판 어때요? ♟️\n진입 라우트: `chess:index`\n코드 앱: `chess`\nURL prefix: `/chess/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "두뇌 풀가동! 교실 체스",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "두뇌 풀가동! 교실 체스 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`chess` 앱 구조 기준으로 설명합니다.\n- models: chess/models.py\n- views: chess/views.py\n- urls: chess/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 10\n- migration 파일 수: 2\n- 대표 URL 패턴: `` (name: `index`), `rules/` (name: `rules`), `play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "두뇌 풀가동! 교실 체스",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "HWP to PDF 변환기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "HWP to PDF 변환기는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: 한글 파일을 PDF로 간편하게 변환하세요 📄\n진입 라우트: `-`"
+        }
+      ],
+      "metadata": {
+        "service_title": "HWP to PDF 변환기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "HWP to PDF 변환기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "이 서비스는 현재 코드 앱 매핑 정보가 없습니다. `launch_route_name` 또는 외부 URL 기준으로 확인이 필요합니다."
+        }
+      ],
+      "metadata": {
+        "service_title": "HWP to PDF 변환기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "두뇌 풀가동! 교실 장기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "두뇌 풀가동! 교실 장기는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 설치 없이 바로, 교실에서 장기 로컬 대전과 AI 대전을 시작하세요.\n진입 라우트: `janggi:index`\n코드 앱: `janggi`\nURL prefix: `/janggi/`\n주요 모델: `JanggiMatchLog`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "두뇌 풀가동! 교실 장기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "두뇌 풀가동! 교실 장기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`janggi` 앱 구조 기준으로 설명합니다.\n- models: janggi/models.py\n- views: janggi/views.py\n- urls: janggi/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 5\n- migration 파일 수: 4\n- 대표 URL 패턴: `` (name: `index`), `rules/` (name: `rules`), `play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "두뇌 풀가동! 교실 장기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "Fairy 전략 게임 5종 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "Fairy 전략 게임 5종는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 교실에서 바로 시작할 수 있는 전략 게임 5종 묶음\n진입 라우트: `-`"
+        }
+      ],
+      "metadata": {
+        "service_title": "Fairy 전략 게임 5종",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "Fairy 전략 게임 5종 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "이 서비스는 현재 코드 앱 매핑 정보가 없습니다. `launch_route_name` 또는 외부 URL 기준으로 확인이 필요합니다."
+        }
+      ],
+      "metadata": {
+        "service_title": "Fairy 전략 게임 5종",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "동물 장기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "동물 장기는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 동물 장기 게임을 로컬/AI 모드로 바로 시작\n진입 라우트: `fairy_games:play_dobutsu`\n코드 앱: `fairy_games`\nURL prefix: `/fairy-games/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "동물 장기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "동물 장기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fairy_games` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: fairy_games/views.py\n- urls: fairy_games/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `index`), `dobutsu/play/` (name: `play_dobutsu`), `cfour/play/` (name: `play_cfour`), `isolation/play/` (name: `play_isolation`), `ataxx/play/` (name: `play_ataxx`), `breakthrough/play/` (name: `play_breakthrough`), `<slug:variant>/rules/` (name: `rules`), `<slug:variant>/play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "동물 장기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "커넥트 포 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "커넥트 포는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 커넥트 포 게임을 로컬/AI 모드로 바로 시작\n진입 라우트: `fairy_games:play_cfour`\n코드 앱: `fairy_games`\nURL prefix: `/fairy-games/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "커넥트 포",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "커넥트 포 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fairy_games` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: fairy_games/views.py\n- urls: fairy_games/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `index`), `dobutsu/play/` (name: `play_dobutsu`), `cfour/play/` (name: `play_cfour`), `isolation/play/` (name: `play_isolation`), `ataxx/play/` (name: `play_ataxx`), `breakthrough/play/` (name: `play_breakthrough`), `<slug:variant>/rules/` (name: `rules`), `<slug:variant>/play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "커넥트 포",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "이솔레이션 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "이솔레이션는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 이솔레이션 게임을 로컬/AI 모드로 바로 시작\n진입 라우트: `fairy_games:play_isolation`\n코드 앱: `fairy_games`\nURL prefix: `/fairy-games/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "이솔레이션",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "이솔레이션 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fairy_games` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: fairy_games/views.py\n- urls: fairy_games/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `index`), `dobutsu/play/` (name: `play_dobutsu`), `cfour/play/` (name: `play_cfour`), `isolation/play/` (name: `play_isolation`), `ataxx/play/` (name: `play_ataxx`), `breakthrough/play/` (name: `play_breakthrough`), `<slug:variant>/rules/` (name: `rules`), `<slug:variant>/play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "이솔레이션",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "아택스 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "아택스는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 아택스 게임을 로컬/AI 모드로 바로 시작\n진입 라우트: `fairy_games:play_ataxx`\n코드 앱: `fairy_games`\nURL prefix: `/fairy-games/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "아택스",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "아택스 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fairy_games` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: fairy_games/views.py\n- urls: fairy_games/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `index`), `dobutsu/play/` (name: `play_dobutsu`), `cfour/play/` (name: `play_cfour`), `isolation/play/` (name: `play_isolation`), `ataxx/play/` (name: `play_ataxx`), `breakthrough/play/` (name: `play_breakthrough`), `<slug:variant>/rules/` (name: `rules`), `<slug:variant>/play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "아택스",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "브레이크스루 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "브레이크스루는 Eduitit의 `game` 카테고리 서비스입니다.\n핵심 설명: 브레이크스루 게임을 로컬/AI 모드로 바로 시작\n진입 라우트: `fairy_games:play_breakthrough`\n코드 앱: `fairy_games`\nURL prefix: `/fairy-games/`\n주요 뷰 함수: `_student_games_mode`, `index`, `rules`, `play`"
+        }
+      ],
+      "metadata": {
+        "service_title": "브레이크스루",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "브레이크스루 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`fairy_games` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: fairy_games/views.py\n- urls: fairy_games/urls.py\n- forms: None\n- templates 파일 수: 3\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `index`), `dobutsu/play/` (name: `play_dobutsu`), `cfour/play/` (name: `play_cfour`), `isolation/play/` (name: `play_isolation`), `ataxx/play/` (name: `play_ataxx`), `breakthrough/play/` (name: `play_breakthrough`), `<slug:variant>/rules/` (name: `rules`), `<slug:variant>/play/` (name: `play`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "브레이크스루",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "한글문서 AI야 읽어줘 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "한글문서 AI야 읽어줘는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: HWPX 내부 XML을 직접 파싱해 문서 기반 AI 대화를 시작하세요.\n진입 라우트: `hwpxchat:main`\n코드 앱: `hwpxchat`\nURL prefix: `/hwpx-chat/`\n주요 뷰 함수: `_get_service`, `main`, `chat_process`, `chat_reset`, `download_markdown`, `_render_result`"
+        }
+      ],
+      "metadata": {
+        "service_title": "한글문서 AI야 읽어줘",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "한글문서 AI야 읽어줘 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`hwpxchat` 앱 구조 기준으로 설명합니다.\n- models: None\n- views: hwpxchat/views.py\n- urls: hwpxchat/urls.py\n- forms: None\n- templates 파일 수: 2\n- static 파일 수: 0\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `main`), `process/` (name: `chat_process`), `reset/` (name: `chat_reset`), `download/` (name: `download_markdown`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "한글문서 AI야 읽어줘",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "최종최최종은 이제그만 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "최종최최종은 이제그만는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: 업로드 한 번으로 최신본과 배포본을 분리 관리하세요.\n진입 라우트: `version_manager:document_list`\n코드 앱: `version_manager`\nURL prefix: `/version-manager/`\n주요 모델: `DocumentGroup`, `Document`, `DocumentProtectedPhrase`, `DocumentShareLink`, `DocumentVersion`\n주요 뷰 함수: `document_list_view`, `document_create_view`, `document_detail_view`, `_update_version_analysis`, `upload_version_view`, `set_published_view`, `_download_response`, `download_latest_view`"
+        }
+      ],
+      "metadata": {
+        "service_title": "최종최최종은 이제그만",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "최종최최종은 이제그만 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`version_manager` 앱 구조 기준으로 설명합니다.\n- models: version_manager/models.py\n- views: version_manager/views.py\n- urls: version_manager/urls.py\n- forms: None\n- templates 파일 수: 4\n- static 파일 수: 0\n- migration 파일 수: 8\n- 대표 URL 패턴: `` (name: `document_list`), `new/` (name: `document_create`), `<int:document_id>/` (name: `document_detail`), `<int:document_id>/upload/` (name: `upload_version`), `<int:document_id>/delete/<int:version_id>/` (name: `delete_version`), `<int:document_id>/download/latest/` (name: `download_latest`), `<int:document_id>/download/published/` (name: `download_published`), `<int:document_id>/download/<int:version_id>/` (name: `download_version`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "최종최최종은 이제그만",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "행복의 씨앗 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "행복의 씨앗는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 작은 실천을 씨앗으로, 교실의 성장을 꽃으로 연결하세요.\n진입 라우트: `happy_seed:landing`\n코드 앱: `happy_seed`\nURL prefix: `/happy-seed/`\n주요 모델: `HSClassroom`, `HSClassroomConfig`, `HSStudent`, `HSGuardianConsent`, `HSPrize`, `HSTicketLedger`, `HSSeedLedger`, `HSBloomDraw`\n주요 뷰 함수: `_request_id`, `_api_ok`, `_api_err`, `get_teacher_classroom`, `_resolve_pdf_font_name`, `_build_happy_seed_notice_pdf`, `_parse_guardian_rows_from_text`, `_parse_guardian_rows_from_csv`"
+        }
+      ],
+      "metadata": {
+        "service_title": "행복의 씨앗",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "행복의 씨앗 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`happy_seed` 앱 구조 기준으로 설명합니다.\n- models: happy_seed/models.py\n- views: happy_seed/views.py\n- urls: happy_seed/urls.py\n- forms: happy_seed/forms.py\n- templates 파일 수: 23\n- static 파일 수: 0\n- migration 파일 수: 10\n- 대표 URL 패턴: `` (name: `landing`), `manual/teacher/` (name: `teacher_manual`), `dashboard/` (name: `dashboard`), `classroom/create/` (name: `classroom_create`), `<uuid:classroom_id>/` (name: `classroom_detail`), `<uuid:classroom_id>/settings/` (name: `classroom_settings`), `<uuid:classroom_id>/students/add/` (name: `student_add`), `<uuid:classroom_id>/students/bulk-add/` (name: `student_bulk_add`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "행복의 씨앗",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "수업 QR 생성기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "수업 QR 생성기는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 모둠별 QR코드를 한 번에 만들고, 제목과 전환 간격을 정해 자동 순환으로 보여주세요.\n진입 라우트: `qrgen:landing`\n코드 앱: `qrgen`\nURL prefix: `/qrgen/`\n주요 뷰 함수: `landing`"
+        }
+      ],
+      "metadata": {
+        "service_title": "수업 QR 생성기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "수업 QR 생성기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`qrgen` 앱 구조 기준으로 설명합니다.\n- models: qrgen/models.py\n- views: qrgen/views.py\n- urls: qrgen/urls.py\n- forms: qrgen/forms.py\n- templates 파일 수: 1\n- static 파일 수: 0\n- migration 파일 수: 2\n- 대표 URL 패턴: `` (name: `landing`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "수업 QR 생성기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "알림장 & 주간학습 멘트 생성기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "알림장 & 주간학습 멘트 생성기는 Eduitit의 `work` 카테고리 서비스입니다.\n핵심 설명: 대상과 주제를 고르면, 교실에서 바로 쓸 수 있는 멘트를 빠르게 만듭니다.\n진입 라우트: `noticegen:main`\n코드 앱: `noticegen`\nURL prefix: `/noticegen/`\n주요 모델: `NoticeGenerationCache`, `NoticeGenerationAttempt`\n주요 뷰 함수: `_result_defaults`, `_get_service`, `_build_page_context`, `_ensure_session_key`, `_daily_limit`, `_usage_count_today`, `_remaining_count`, `_record_attempt`"
+        }
+      ],
+      "metadata": {
+        "service_title": "알림장 & 주간학습 멘트 생성기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "알림장 & 주간학습 멘트 생성기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`noticegen` 앱 구조 기준으로 설명합니다.\n- models: noticegen/models.py\n- views: noticegen/views.py\n- urls: noticegen/urls.py\n- forms: None\n- templates 파일 수: 2\n- static 파일 수: 0\n- migration 파일 수: 4\n- 대표 URL 패턴: `` (name: `main`), `generate/` (name: `generate`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "알림장 & 주간학습 멘트 생성기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "씨앗 퀴즈 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "씨앗 퀴즈는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 공식/공유 퀴즈 은행에서 세트를 고르거나 CSV 업로드·붙여넣기로 직접 만들어, 문항 수(1~200)를 자유롭게 배포하세요.\n진입 라우트: `seed_quiz:landing`\n코드 앱: `seed_quiz`\nURL prefix: `/seed-quiz/`\n주요 모델: `SQQuizBank`, `SQQuizBankItem`, `SQQuizSet`, `SQBatchJob`, `SQRagDailyUsage`, `SQQuizItem`, `SQAttempt`, `SQAttemptAnswer`\n주요 뷰 함수: `_get_topic_template_rows`, `_build_template_guide_rows`, `_build_default_sample_rows`, `_build_topic_sample_rows`, `_get_positive_int_setting`, `_get_csv_upload_limits`, `_get_text_upload_limits`, `_humanize_bytes`"
+        }
+      ],
+      "metadata": {
+        "service_title": "씨앗 퀴즈",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "씨앗 퀴즈 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`seed_quiz` 앱 구조 기준으로 설명합니다.\n- models: seed_quiz/models.py\n- views: seed_quiz/views.py\n- urls: seed_quiz/urls.py\n- forms: None\n- templates 파일 수: 16\n- static 파일 수: 1\n- migration 파일 수: 18\n- 대표 URL 패턴: `` (name: `landing`), `class/<uuid:classroom_id>/dashboard/` (name: `teacher_dashboard`), `class/<uuid:classroom_id>/csv-template/` (name: `download_csv_template`), `class/<uuid:classroom_id>/xlsx-template/` (name: `download_xlsx_template`), `class/<uuid:classroom_id>/csv-guide/` (name: `download_csv_guide`), `class/<uuid:classroom_id>/csv-sample-pack/` (name: `download_csv_sample_pack`), `class/<uuid:classroom_id>/csv-error-report/<slug:token>/` (name: `download_csv_error_report`), `class/<uuid:classroom_id>/htmx/bank/` (name: `htmx_bank_browse`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "씨앗 퀴즈",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "별빛 추첨기 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "별빛 추첨기는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 교사용 TV에서 명단을 붙여넣고 별 하나를 고르면, 오늘의 주인공을 감성적으로 뽑아줍니다.\n진입 라우트: `ppobgi:main`\n코드 앱: `ppobgi`\nURL prefix: `/ppobgi/`\n주요 뷰 함수: `_is_phone_user_agent`, `_is_force_desktop`, `_should_block_for_large_screen_service`, `main`, `roster_names`, `classroom_students`"
+        }
+      ],
+      "metadata": {
+        "service_title": "별빛 추첨기",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "별빛 추첨기 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`ppobgi` 앱 구조 기준으로 설명합니다.\n- models: ppobgi/models.py\n- views: ppobgi/views.py\n- urls: ppobgi/urls.py\n- forms: ppobgi/forms.py\n- templates 파일 수: 1\n- static 파일 수: 2\n- migration 파일 수: 0\n- 대표 URL 패턴: `` (name: `main`), `api/roster-names/` (name: `roster_names`), `api/classroom/<uuid:pk>/students/` (name: `classroom_students`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "별빛 추첨기",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학교 예약 시스템 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "학교 예약 시스템는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 복잡한 특별실 예약, 이제 클릭 한 번으로!\n진입 라우트: `reservations:dashboard_landing`\n코드 앱: `reservations`\nURL prefix: `/reservations/`\n주요 모델: `School`, `SchoolConfig`, `SpecialRoom`, `Reservation`, `RecurringSchedule`, `BlackoutDate`\n주요 뷰 함수: `dashboard_landing`, `delete_school`, `short_url_redirect`, `admin_dashboard`, `room_settings`, `recurring_settings`, `update_config`, `blackout_settings`"
+        }
+      ],
+      "metadata": {
+        "service_title": "학교 예약 시스템",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학교 예약 시스템 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`reservations` 앱 구조 기준으로 설명합니다.\n- models: reservations/models.py\n- views: reservations/views.py\n- urls: reservations/urls.py\n- forms: None\n- templates 파일 수: 8\n- static 파일 수: 0\n- migration 파일 수: 12\n- 대표 URL 패턴: `dashboard/` (name: `dashboard_landing`), `<str:school_slug>/dashboard/` (name: `admin_dashboard`), `<str:school_slug>/settings/rooms/` (name: `room_settings`), `<str:school_slug>/settings/recurring/` (name: `recurring_settings`), `<str:school_slug>/settings/blackout/` (name: `blackout_settings`), `go/<int:school_id>/` (name: `short_url`), `<str:school_slug>/` (name: `reservation_index`), `<str:school_slug>/create/` (name: `create_reservation`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "학교 예약 시스템",
+        "task": "code_structure"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학급 캘린더 서비스가 뭐야?"
+        },
+        {
+          "role": "assistant",
+          "content": "학급 캘린더는 Eduitit의 `classroom` 카테고리 서비스입니다.\n핵심 설명: 학급 일정을 한눈에 관리하세요!\n진입 라우트: `classcalendar:main`\n코드 앱: `classcalendar`\nURL prefix: `/classcalendar/`\n주요 모델: `CalendarEvent`, `CalendarIntegrationSetting`, `EventPageBlock`\n주요 뷰 함수: `_serialize_event`, `_split_integration_key`, `_resolve_integration_source_meta`, `_get_integration_setting_for_user`, `_get_active_classroom_for_user`, `_get_teacher_visible_events`, `_get_owned_event`, `_extract_primary_note`"
+        }
+      ],
+      "metadata": {
+        "service_title": "학급 캘린더",
+        "task": "service_overview"
+      }
+    },
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "너는 Eduitit 서비스 안내 도우미다. 서비스 설명, 코드 위치, URL 구조를 정확한 파일 기준으로 답변한다."
+        },
+        {
+          "role": "user",
+          "content": "학급 캘린더 코드 구조 알려줘"
+        },
+        {
+          "role": "assistant",
+          "content": "`classcalendar` 앱 구조 기준으로 설명합니다.\n- models: classcalendar/models.py\n- views: classcalendar/views.py\n- urls: classcalendar/urls.py\n- forms: classcalendar/forms.py\n- templates 파일 수: 3\n- static 파일 수: 0\n- migration 파일 수: 18\n- 대표 URL 패턴: `` (name: `main`), `share/enable/` (name: `share_enable`), `share/disable/` (name: `share_disable`), `share/rotate/` (name: `share_rotate`), `shared/<uuid:share_uuid>/` (name: `shared`), `api/events/` (name: `api_events`), `api/integration-settings/` (name: `api_integration_settings`), `api/events/create/` (name: `api_create_event`)"
+        }
+      ],
+      "metadata": {
+        "service_title": "학급 캘린더",
+        "task": "code_structure"
+      }
+    }
+  ]
+}

@@ -128,7 +128,14 @@ class DTSettings(models.Model):
         ("manual_random", "수동 랜덤"),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='dutyticker_settings')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dutyticker_settings')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        on_delete=models.CASCADE,
+        related_name='dutyticker_settings',
+        null=True,
+        blank=True,
+    )
     auto_rotation = models.BooleanField(default=False, help_text="Automatically rotate roles daily/weekly")
     rotation_frequency = models.CharField(
         max_length=20, 
@@ -145,6 +152,16 @@ class DTSettings(models.Model):
     last_broadcast_message = models.TextField(blank=True, help_text="Persisted broadcast message")
     mission_title = models.CharField(max_length=200, default="오늘도 행복한 우리 교실", help_text="Main display mission title")
     mission_desc = models.TextField(default="선생님 말씀에 집중해 주세요.", help_text="Main display mission description")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'classroom'], name='dtsettings_user_classroom_unique'),
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(classroom__isnull=True),
+                name='dtsettings_user_global_unique',
+            ),
+        ]
     
     def __str__(self):
         return f"{self.user.username}'s Settings"
@@ -152,6 +169,13 @@ class DTSettings(models.Model):
 class DTStudent(models.Model):
     """Student roster for each teacher"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dt_students')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        on_delete=models.CASCADE,
+        related_name='dutyticker_students',
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=100)
     number = models.IntegerField(default=0, help_text="Student number for ordering")
     is_active = models.BooleanField(default=True)
@@ -166,6 +190,13 @@ class DTStudent(models.Model):
 class DTRole(models.Model):
     """Duty roles defined by the teacher"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dt_roles')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        on_delete=models.CASCADE,
+        related_name='dutyticker_roles',
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     time_slot = models.CharField(max_length=50, default="쉬는시간", help_text="When to perform this role")
@@ -178,6 +209,13 @@ class DTRole(models.Model):
 class DTRoleAssignment(models.Model):
     """Assignment of a role to a student for a specific period"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dt_assignments')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        on_delete=models.CASCADE,
+        related_name='dutyticker_assignments',
+        null=True,
+        blank=True,
+    )
     role = models.ForeignKey(DTRole, on_delete=models.CASCADE)
     student = models.ForeignKey(DTStudent, on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField(auto_now_add=True) # Assignments are typically daily, but tracked
@@ -207,6 +245,13 @@ class DTSchedule(models.Model):
         (6, 'Saturday'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dt_schedules')
+    classroom = models.ForeignKey(
+        'happy_seed.HSClassroom',
+        on_delete=models.CASCADE,
+        related_name='dutyticker_schedules',
+        null=True,
+        blank=True,
+    )
     day = models.IntegerField(choices=DAYS_OF_WEEK)
     period = models.IntegerField(help_text="1 for 1st period, etc.")
     subject = models.CharField(max_length=100)

@@ -1,16 +1,21 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import datetime
 import random
-import uuid
-from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTSettings
+from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule
+from .dutyticker_scope import (
+    apply_classroom_scope,
+    classroom_scope_create_kwargs,
+    classroom_scope_filter,
+    get_active_classroom_for_request,
+    get_or_create_settings_for_scope,
+)
 
 
-def _build_today_fallback_schedule_from_classcalendar(user):
+def _build_today_fallback_schedule_from_classcalendar(user, classroom=None):
     """
     Build today's timetable payload from classcalendar events when DTSchedule is empty.
     Returned day follows JavaScript getDay() convention (0=Sun ... 6=Sat).
@@ -25,6 +30,7 @@ def _build_today_fallback_schedule_from_classcalendar(user):
 
     events = (
         CalendarEvent.objects.filter(
+            **({"classroom": classroom} if classroom is not None else {"classroom__isnull": True}),
             author=user,
             start_time__date__lte=today,
             end_time__date__gte=today,
@@ -101,12 +107,13 @@ def get_guest_default_data():
         }
     }
 
-def create_mockup_data(user):
+def create_mockup_data(user, classroom=None):
     """Generates initial sample data for new users to demonstrate DutyTicker."""
     student_names = ["김철수", "이영희", "박민수", "정지원", "최하늘", "강다니엘", "조유리", "한지민", "서태웅", "윤대협"]
+    scope_kwargs = classroom_scope_create_kwargs(classroom)
     students = []
     for i, name in enumerate(student_names, 1):
-        students.append(DTStudent.objects.create(user=user, name=name, number=i))
+        students.append(DTStudent.objects.create(user=user, name=name, number=i, **scope_kwargs))
     
     roles_data = [
         {"name": "칠판 지우기", "time_slot": "쉬는시간", "description": "수업 후 칠판을 깨끗하게 정리합니다."},
@@ -117,17 +124,18 @@ def create_mockup_data(user):
     ]
     roles = []
     for r in roles_data:
-        role = DTRole.objects.create(user=user, **r)
+        role = DTRole.objects.create(user=user, **scope_kwargs, **r)
         roles.append(role)
     
     for i in range(min(5, len(students))):
-        DTRoleAssignment.objects.create(user=user, role=roles[i], student=students[i])
+        DTRoleAssignment.objects.create(user=user, role=roles[i], student=students[i], **scope_kwargs)
         
     subjects = ["국어", "수학", "사회", "과학", "영어", "체육", "미술", "음악"]
     for day in range(1, 6):
         for period in range(1, 5):
             DTSchedule.objects.create(
                 user=user,
+                **scope_kwargs,
                 day=day,
                 period=period,
                 subject=subjects[(day + period) % len(subjects)],
@@ -234,10 +242,15 @@ def _rotate_guest_assignments(guest_data, behavior="sequential"):
     return rotated
 
 
-def _rotate_user_assignments(user, behavior="sequential"):
-    students = list(DTStudent.objects.filter(user=user, is_active=True).order_by("number", "id"))
+def _rotate_user_assignments(user, behavior="sequential", classroom=None):
+    students = list(
+        apply_classroom_scope(
+            DTStudent.objects.filter(user=user, is_active=True),
+            classroom,
+        ).order_by("number", "id")
+    )
     assignments = list(
-        DTRoleAssignment.objects.filter(user=user)
+        apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom)
         .select_related("student", "role")
         .order_by("role_id", "id")
     )
@@ -277,7 +290,7 @@ def _rotate_user_assignments(user, behavior="sequential"):
     return False
 
 
-def _apply_auto_rotation_if_due(user, settings):
+def _apply_auto_rotation_if_due(user, settings, classroom=None):
     mode = str(settings.rotation_mode or "")
     if not mode.startswith("auto_"):
         return
@@ -287,7 +300,7 @@ def _apply_auto_rotation_if_due(user, settings):
         return
 
     behavior = _behavior_from_rotation_mode(mode)
-    _rotate_user_assignments(user, behavior=behavior)
+    _rotate_user_assignments(user, behavior=behavior, classroom=classroom)
 
     settings.last_rotation_date = today
     settings.auto_rotation = True
@@ -301,23 +314,27 @@ def get_dutyticker_data(request):
         return JsonResponse(request.session['guest_dt_data'])
 
     user = request.user
-    settings, created = DTSettings.objects.get_or_create(user=user)
+    classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
     _sync_rotation_settings_flags(settings)
     
-    students_qs = DTStudent.objects.filter(user=user, is_active=True)
-    roles_qs = DTRole.objects.filter(user=user)
+    students_qs = apply_classroom_scope(DTStudent.objects.filter(user=user, is_active=True), classroom)
+    roles_qs = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
     
     if not students_qs.exists() and not roles_qs.exists():
-        create_mockup_data(user)
-        students_qs = DTStudent.objects.filter(user=user, is_active=True)
-        roles_qs = DTRole.objects.filter(user=user)
+        create_mockup_data(user, classroom=classroom)
+        students_qs = apply_classroom_scope(DTStudent.objects.filter(user=user, is_active=True), classroom)
+        roles_qs = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
 
-    _apply_auto_rotation_if_due(user, settings)
+    _apply_auto_rotation_if_due(user, settings, classroom=classroom)
 
     students = list(students_qs.values('id', 'name', 'number', 'is_mission_completed'))
     roles = list(roles_qs.values('id', 'name', 'description', 'time_slot', 'icon', 'color'))
     
-    assignments_qs = DTRoleAssignment.objects.filter(user=user).select_related('role', 'student')
+    assignments_qs = (
+        apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom)
+        .select_related('role', 'student')
+    )
     assignments = []
     for a in assignments_qs:
         assignments.append({
@@ -328,7 +345,7 @@ def get_dutyticker_data(request):
             'is_completed': a.is_completed
         })
         
-    schedules = DTSchedule.objects.filter(user=user).order_by('day', 'period')
+    schedules = apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).order_by('day', 'period')
     weekly_schedule = {}
     for s in schedules:
         day = str(s.day)
@@ -343,7 +360,7 @@ def get_dutyticker_data(request):
         })
 
     # Fallback: if today's DTSchedule is empty, surface today's classcalendar events.
-    fallback_day, fallback_rows = _build_today_fallback_schedule_from_classcalendar(user)
+    fallback_day, fallback_rows = _build_today_fallback_schedule_from_classcalendar(user, classroom=classroom)
     if fallback_day is not None:
         day_key = str(fallback_day)
         if day_key not in weekly_schedule or not weekly_schedule.get(day_key):
@@ -381,7 +398,12 @@ def update_assignment_status(request, assignment_id):
                         return JsonResponse({'success': True})
             return JsonResponse({'success': False, 'error': 'Guest data not found'}, status=400)
 
-        assignment = DTRoleAssignment.objects.get(id=assignment_id, user=request.user)
+        classroom = get_active_classroom_for_request(request)
+        assignment = DTRoleAssignment.objects.get(
+            id=assignment_id,
+            user=request.user,
+            **classroom_scope_filter(classroom),
+        )
         assignment.is_completed = status
         assignment.save()
         return JsonResponse({'success': True})
@@ -402,7 +424,12 @@ def toggle_student_mission_status(request, student_id):
                         return JsonResponse({'success': True, 'is_completed': s['is_mission_completed']})
             return JsonResponse({'success': False, 'error': 'Guest data not found'}, status=400)
 
-        student = DTStudent.objects.get(id=student_id, user=request.user)
+        classroom = get_active_classroom_for_request(request)
+        student = DTStudent.objects.get(
+            id=student_id,
+            user=request.user,
+            **classroom_scope_filter(classroom),
+        )
         student.is_mission_completed = not student.is_mission_completed
         student.save()
         return JsonResponse({'success': True, 'is_completed': student.is_mission_completed})
@@ -424,7 +451,8 @@ def update_broadcast_message(request):
                 return JsonResponse({'success': True})
             return JsonResponse({'success': False}, status=400)
 
-        settings, _ = DTSettings.objects.get_or_create(user=request.user)
+        classroom = get_active_classroom_for_request(request)
+        settings, _ = get_or_create_settings_for_scope(request.user, classroom)
         settings.last_broadcast_message = msg
         settings.save()
         return JsonResponse({'success': True})
@@ -448,7 +476,8 @@ def update_mission(request):
                 return JsonResponse({'success': True})
             return JsonResponse({'success': False}, status=400)
 
-        settings, _ = DTSettings.objects.get_or_create(user=request.user)
+        classroom = get_active_classroom_for_request(request)
+        settings, _ = get_or_create_settings_for_scope(request.user, classroom)
         if title is not None: settings.mission_title = title
         if desc is not None: settings.mission_desc = desc
         settings.save()
@@ -491,9 +520,27 @@ def assign_role(request):
                 return JsonResponse({'success': True})
             return JsonResponse({'success': False}, status=400)
 
-        role = DTRole.objects.get(id=role_id, user=request.user)
-        student = DTStudent.objects.get(id=student_id, user=request.user) if student_id else None
-        assignment, created = DTRoleAssignment.objects.get_or_create(user=request.user, role=role, defaults={'student': student})
+        classroom = get_active_classroom_for_request(request)
+        role = DTRole.objects.get(
+            id=role_id,
+            user=request.user,
+            **classroom_scope_filter(classroom),
+        )
+        student = (
+            DTStudent.objects.get(
+                id=student_id,
+                user=request.user,
+                **classroom_scope_filter(classroom),
+            )
+            if student_id
+            else None
+        )
+        assignment, created = DTRoleAssignment.objects.get_or_create(
+            user=request.user,
+            role=role,
+            **classroom_scope_create_kwargs(classroom),
+            defaults={'student': student},
+        )
         if not created:
             assignment.student = student
             assignment.is_completed = False
@@ -520,11 +567,12 @@ def rotation_trigger(request):
         return JsonResponse({'success': True, 'behavior': behavior, 'rotated': rotated})
 
     user = request.user
-    settings, _ = DTSettings.objects.get_or_create(user=user)
+    classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
     _sync_rotation_settings_flags(settings)
 
     behavior = requested_behavior or _behavior_from_rotation_mode(settings.rotation_mode)
-    rotated = _rotate_user_assignments(user, behavior=behavior)
+    rotated = _rotate_user_assignments(user, behavior=behavior, classroom=classroom)
 
     if str(settings.rotation_mode or "").startswith("auto_"):
         today = timezone.localdate()
@@ -547,12 +595,13 @@ def reset_data(request):
         return JsonResponse({'success': True, 'message': 'Guest data reset'})
 
     user = request.user
-    DTStudent.objects.filter(user=user).delete()
-    DTRole.objects.filter(user=user).delete()
-    DTSchedule.objects.filter(user=user).delete()
-    DTRoleAssignment.objects.filter(user=user).delete()
-    settings, _ = DTSettings.objects.get_or_create(user=user)
+    classroom = get_active_classroom_for_request(request)
+    apply_classroom_scope(DTStudent.objects.filter(user=user), classroom).delete()
+    apply_classroom_scope(DTRole.objects.filter(user=user), classroom).delete()
+    apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).delete()
+    apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom).delete()
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
     settings.last_broadcast_message = ""
     settings.save()
-    create_mockup_data(user)
+    create_mockup_data(user, classroom=classroom)
     return JsonResponse({'success': True, 'message': 'Data reset to mockup'})

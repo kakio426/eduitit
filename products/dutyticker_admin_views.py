@@ -2,25 +2,35 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from .models import DTStudent, DTRole, DTSettings, DTRoleAssignment
+from .dutyticker_scope import (
+    apply_classroom_scope,
+    classroom_scope_create_kwargs,
+    classroom_scope_filter,
+    get_active_classroom_for_request,
+    get_or_create_settings_for_scope,
+)
 
 @login_required
 def admin_dashboard(request):
     user = request.user
-    students = DTStudent.objects.filter(user=user)
-    roles = DTRole.objects.filter(user=user)
-    settings, _ = DTSettings.objects.get_or_create(user=user)
+    classroom = get_active_classroom_for_request(request)
+    students = apply_classroom_scope(DTStudent.objects.filter(user=user), classroom)
+    roles = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
     
     return render(request, 'products/dutyticker/admin_dashboard.html', {
         'students': students,
         'roles': roles,
-        'settings': settings
+        'settings': settings,
+        'active_classroom': classroom,
     })
 
 
 @login_required
 @require_http_methods(["POST"])
 def update_rotation_settings(request):
-    settings, _ = DTSettings.objects.get_or_create(user=request.user)
+    classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(request.user, classroom)
     selected_mode = (request.POST.get("rotation_mode") or "").strip()
     valid_modes = {choice[0] for choice in DTSettings.ROTATION_MODE_CHOICES}
 
@@ -38,16 +48,27 @@ def update_rotation_settings(request):
 @login_required
 @require_http_methods(["POST"])
 def add_student(request):
+    classroom = get_active_classroom_for_request(request)
     names = request.POST.get('names', '').split(',')
     # Bulk add support (comma separated)
-    current_count = DTStudent.objects.filter(user=request.user).count()
+    current_count = apply_classroom_scope(
+        DTStudent.objects.filter(user=request.user),
+        classroom,
+    ).count()
     
     new_students = []
     for name in names:
         name = name.strip()
         if name:
             current_count += 1
-            new_students.append(DTStudent(user=request.user, name=name, number=current_count))
+            new_students.append(
+                DTStudent(
+                    user=request.user,
+                    name=name,
+                    number=current_count,
+                    **classroom_scope_create_kwargs(classroom),
+                )
+            )
     
     if new_students:
         DTStudent.objects.bulk_create(new_students)
@@ -56,13 +77,20 @@ def add_student(request):
 
 @login_required
 def delete_student(request, pk):
-    student = get_object_or_404(DTStudent, pk=pk, user=request.user)
+    classroom = get_active_classroom_for_request(request)
+    student = get_object_or_404(
+        DTStudent,
+        pk=pk,
+        user=request.user,
+        **classroom_scope_filter(classroom),
+    )
     student.delete()
     return redirect('dt_admin_dashboard')
 
 @login_required
 @require_http_methods(["POST"])
 def add_role(request):
+    classroom = get_active_classroom_for_request(request)
     name = request.POST.get('name')
     time_slot = request.POST.get('time_slot')
     description = request.POST.get('description', '')
@@ -70,18 +98,29 @@ def add_role(request):
     if name and time_slot:
         role = DTRole.objects.create(
             user=request.user,
+            **classroom_scope_create_kwargs(classroom),
             name=name,
             time_slot=time_slot,
             description=description
         )
         # Auto-create assignment entry if needed
-        DTRoleAssignment.objects.create(user=request.user, role=role)
+        DTRoleAssignment.objects.create(
+            user=request.user,
+            role=role,
+            **classroom_scope_create_kwargs(classroom),
+        )
         
     return redirect('dt_admin_dashboard')
 
 @login_required
 def delete_role(request, pk):
-    role = get_object_or_404(DTRole, pk=pk, user=request.user)
+    classroom = get_active_classroom_for_request(request)
+    role = get_object_or_404(
+        DTRole,
+        pk=pk,
+        user=request.user,
+        **classroom_scope_filter(classroom),
+    )
     role.delete()
     return redirect('dt_admin_dashboard')
 
@@ -89,10 +128,11 @@ def delete_role(request, pk):
 @login_required
 def print_sheet(request):
     user = request.user
-    roles = list(DTRole.objects.filter(user=user).order_by('time_slot', 'id'))
+    classroom = get_active_classroom_for_request(request)
+    roles = list(apply_classroom_scope(DTRole.objects.filter(user=user), classroom).order_by('time_slot', 'id'))
     assignments_qs = (
         DTRoleAssignment.objects
-        .filter(user=user, role__in=roles)
+        .filter(user=user, role__in=roles, **classroom_scope_filter(classroom))
         .select_related('role', 'student')
         .order_by('role_id', '-date', '-id')
     )
