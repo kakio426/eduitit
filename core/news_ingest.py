@@ -86,6 +86,62 @@ TAG_KEYWORDS = {
     "예산·재정": ["예산", "삭감", "교부금", "재정", "지원사업", "공모", "국고"],
 }
 
+EDUCATION_CORE_KEYWORDS = [
+    "교육",
+    "학교",
+    "교사",
+    "교원",
+    "학생",
+    "학부모",
+    "교육부",
+    "교육청",
+    "수업",
+    "학급",
+    "교권",
+    "생활지도",
+    "교육과정",
+    "평가",
+    "입시",
+    "수능",
+    "대입",
+    "고교학점제",
+    "늘봄",
+    "돌봄",
+    "유치원",
+    "초등",
+    "중등",
+    "고등",
+    "대학",
+]
+
+AI_KEYWORDS = [
+    "ai",
+    "a.i.",
+    "인공지능",
+    "생성형",
+    "chatgpt",
+    "챗gpt",
+    "llm",
+    "에듀테크",
+    "디지털교과서",
+    "코딩",
+    "sw교육",
+]
+
+AI_EDU_CONTEXT_KEYWORDS = [
+    "교육",
+    "학교",
+    "교사",
+    "교원",
+    "학생",
+    "수업",
+    "학급",
+    "교육과정",
+    "교과서",
+    "입시",
+    "평가",
+]
+
 
 USER_AGENT = (
     "Mozilla/5.0 (compatible; EduititNewsBot/1.0; +https://eduitit.com)"
@@ -431,6 +487,26 @@ def classify_tags(title: str, description: str, source_type: str = "", publisher
             secondary_tag = secondary_name
 
     return primary_tag, secondary_tag
+
+
+def is_education_or_ai_news(
+    title: str,
+    description: str,
+    source_type: str = "",
+) -> bool:
+    """
+    Returns True when a news item is education-related, including AI-in-education topics.
+    """
+    if source_type in {"gov", "institute"}:
+        return True
+
+    bag = f"{title} {description}".lower()
+    if any(keyword in bag for keyword in EDUCATION_CORE_KEYWORDS):
+        return True
+
+    has_ai = any(keyword in bag for keyword in AI_KEYWORDS)
+    has_edu_context = any(keyword in bag for keyword in AI_EDU_CONTEXT_KEYWORDS)
+    return has_ai and has_edu_context
 
 
 def freshness_bonus(hours_ago: float) -> float:

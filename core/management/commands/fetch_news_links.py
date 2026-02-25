@@ -17,6 +17,7 @@ from core.news_ingest import (
     extract_domain,
     extract_og_metadata,
     fetch_rss_entries,
+    is_education_or_ai_news,
 )
 
 
@@ -58,6 +59,11 @@ class Command(BaseCommand):
             default=72,
             help="이 시간보다 오래된 기사는 자동 수집에서 제외합니다. (기본값: 72)",
         )
+        parser.add_argument(
+            "--allow-general",
+            action="store_true",
+            help="교육/AI 주제 필터를 끄고 일반 뉴스도 함께 수집합니다.",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         source_qs = NewsSource.objects.filter(is_active=True).order_by("id")
@@ -87,6 +93,8 @@ class Command(BaseCommand):
         failed_total = 0
         og_fallback_total = 0
         stale_skipped_total = 0
+        topical_skipped_total = 0
+        allow_general = bool(options.get("allow_general"))
         max_age_hours = max(1, int(options["max_age_hours"]))
         now_dt = timezone.now()
 
@@ -156,6 +164,14 @@ class Command(BaseCommand):
                     source_type=source.source_type,
                     publisher=publisher,
                 )
+                if not allow_general and not is_education_or_ai_news(
+                    title=title,
+                    description=description,
+                    source_type=source.source_type,
+                ):
+                    skipped_total += 1
+                    topical_skipped_total += 1
+                    continue
 
                 approval_status = "approved" if options["auto_approve"] else "pending"
                 reviewed_at = timezone.now() if approval_status == "approved" else None
@@ -190,7 +206,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"완료: 생성 {created_total} / 중복·스킵 {skipped_total} / 구기사 제외 {stale_skipped_total} / 실패 {failed_total} / OG 폴백 {og_fallback_total}"
+                f"완료: 생성 {created_total} / 중복·스킵 {skipped_total} / 주제 필터 제외 {topical_skipped_total} / 구기사 제외 {stale_skipped_total} / 실패 {failed_total} / OG 폴백 {og_fallback_total}"
             )
         )
         if not options["auto_approve"]:
