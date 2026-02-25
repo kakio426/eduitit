@@ -9,6 +9,45 @@ import random
 import uuid
 from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTSettings
 
+
+def _build_today_fallback_schedule_from_classcalendar(user):
+    """
+    Build today's timetable payload from classcalendar events when DTSchedule is empty.
+    Returned day follows JavaScript getDay() convention (0=Sun ... 6=Sat).
+    """
+    try:
+        from classcalendar.models import CalendarEvent
+    except Exception:
+        return None, []
+
+    today = timezone.localdate()
+    js_day = (today.weekday() + 1) % 7
+
+    events = (
+        CalendarEvent.objects.filter(
+            author=user,
+            start_time__date__lte=today,
+            end_time__date__gte=today,
+        )
+        .order_by("start_time", "id")
+    )
+
+    fallback_rows = []
+    for index, event in enumerate(events, start=1):
+        start_time = timezone.localtime(event.start_time).strftime("%H:%M")
+        end_time = timezone.localtime(event.end_time).strftime("%H:%M")
+        fallback_rows.append(
+            {
+                "id": f"cc-{event.id}",
+                "name": event.title,
+                "startTime": start_time,
+                "endTime": end_time,
+                "period": index,
+            }
+        )
+
+    return js_day, fallback_rows
+
 def get_guest_default_data():
     """Returns the structure for guest session data."""
     student_names = ["김철수", "이영희", "박민수", "정지원", "최하늘", "강다니엘", "조유리", "한지민", "서태웅", "윤대협"]
@@ -303,6 +342,13 @@ def get_dutyticker_data(request):
             'period': s.period
         })
 
+    # Fallback: if today's DTSchedule is empty, surface today's classcalendar events.
+    fallback_day, fallback_rows = _build_today_fallback_schedule_from_classcalendar(user)
+    if fallback_day is not None:
+        day_key = str(fallback_day)
+        if day_key not in weekly_schedule or not weekly_schedule.get(day_key):
+            weekly_schedule[day_key] = fallback_rows
+        
     return JsonResponse({
         'students': students,
         'roles': roles,
