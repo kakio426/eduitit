@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}뉴스 검토 - Eduitit{% endblock %}
+
+{% block content %}
+<div class="pt-28 pb-16 px-4 max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">뉴스 승인 대기</h1>
+            <p class="text-sm text-slate-500 mt-1">자동 수집된 뉴스는 승인 후에만 피드에 노출됩니다.</p>
+        </div>
+        <a href="{% url 'home' %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">홈으로</a>
+    </div>
+
+    <div class="mb-4 text-sm text-slate-600">
+        대기 건수: <span class="font-bold text-slate-800">{{ pending_total }}</span>
+    </div>
+
+    <div class="space-y-4">
+        {% for post in pending_posts %}
+        <article class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="text-xs text-slate-500 mb-1">
+                        {% if post.publisher %}{{ post.publisher }}{% else %}출처 미확인{% endif %}
+                        {% if post.published_at %} · {{ post.published_at|date:"Y.m.d H:i" }}{% endif %}
+                        {% if post.primary_tag %} · {{ post.primary_tag }}{% endif %}
+                    </div>
+                    <h2 class="text-base font-bold text-slate-800 leading-snug">
+                        {{ post.og_title|default:post.content }}
+                    </h2>
+                    {% if post.og_description %}
+                    <p class="mt-1 text-sm text-slate-600 line-clamp-2">{{ post.og_description }}</p>
+                    {% endif %}
+                    {% if post.source_url %}
+                    <a href="{{ post.source_url }}" target="_blank" rel="noopener noreferrer"
+                        class="inline-block mt-2 text-sm text-indigo-600 font-semibold hover:text-indigo-700">
+                        원문 확인
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <form method="post" action="{% url 'news_review_action' post.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="px-3 py-2 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                            반려
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'news_review_action' post.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="px-3 py-2 text-sm font-semibold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">
+                            승인
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
+            승인 대기 중인 뉴스가 없습니다.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex items-center justify-center gap-3 text-sm">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">이전</a>
+        {% else %}
+        <span class="px-3 py-2 rounded-lg border border-slate-100 text-slate-300">이전</span>
+        {% endif %}
+        <span class="text-slate-500">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">다음</a>
+        {% else %}
+        <span class="px-3 py-2 rounded-lg border border-slate-100 text-slate-300">다음</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

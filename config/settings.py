@@ -450,6 +450,12 @@ SEED_QUIZ_ALLOW_RAG = os.environ.get('SEED_QUIZ_ALLOW_RAG', 'False').lower() in 
 SEED_QUIZ_CSV_MAX_FILE_BYTES = int(os.environ.get('SEED_QUIZ_CSV_MAX_FILE_BYTES', str(2 * 1024 * 1024)))
 SEED_QUIZ_CSV_MAX_ROWS = int(os.environ.get('SEED_QUIZ_CSV_MAX_ROWS', '1200'))
 SEED_QUIZ_CSV_MAX_SETS = int(os.environ.get('SEED_QUIZ_CSV_MAX_SETS', '400'))
+NEWS_INGEST_MAX_PENDING = int(os.environ.get('NEWS_INGEST_MAX_PENDING', '200'))
+NEWS_INGEST_ALLOWED_HOSTS = [
+    host.strip().lower()
+    for host in os.environ.get('NEWS_INGEST_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)

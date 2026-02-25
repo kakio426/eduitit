@@ -3,12 +3,24 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
+from django.core.paginator import Paginator
 from django.urls import NoReverseMatch
+from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
-from .models import UserProfile, Post, Comment, Feedback, SiteConfig, ProductUsageLog, ProductFavorite
+from .models import (
+    UserProfile,
+    Post,
+    Comment,
+    CommentReport,
+    Feedback,
+    SiteConfig,
+    ProductUsageLog,
+    ProductFavorite,
+    UserModeration,
+)
 from django.contrib import messages
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 from PIL import Image
 import logging
@@ -48,6 +60,68 @@ def _render_post_list_partial(request, page_obj):
             'post_list_target_id': _get_post_list_target_id(request),
         },
     )
+
+
+def _build_post_feed_queryset():
+    return (
+        Post.objects
+        .filter(approval_status='approved')
+        .select_related(
+            'author',
+            'author__userprofile',
+        )
+        .prefetch_related(
+            'likes',
+            'comments',
+            'comments__author',
+            'comments__author__userprofile',
+        )
+        .annotate(
+            likes_count_annotated=Count('likes', distinct=True),
+            comments_count_annotated=Count('comments', filter=Q(comments__is_hidden=False), distinct=True),
+        )
+        .order_by('-created_at')
+    )
+
+
+def _resolve_post_for_action(post_id, user):
+    post = get_object_or_404(Post, pk=post_id)
+    if post.approval_status != 'approved' and not user.is_staff and post.author_id != user.id:
+        return None
+    return post
+
+
+def _rate_limit_exceeded(bucket_name, user_id, limits):
+    """
+    limits: [(window_seconds, max_count), ...]
+    Returns True if any limit is exceeded.
+    """
+    now_ts = int(timezone.now().timestamp())
+    for window_seconds, max_count in limits:
+        slot = now_ts // window_seconds
+        cache_key = f"core:rate:{bucket_name}:{user_id}:{window_seconds}:{slot}"
+        current = cache.get(cache_key)
+        if current is None:
+            cache.set(cache_key, 1, timeout=window_seconds + 2)
+            current = 1
+        else:
+            try:
+                current = cache.incr(cache_key)
+            except Exception:
+                current = int(current) + 1
+                cache.set(cache_key, current, timeout=window_seconds + 2)
+        if current > max_count:
+            return True
+    return False
+
+
+def _has_active_comment_restriction(user):
+    return UserModeration.objects.filter(
+        user=user,
+        scope__in=['comment', 'all'],
+    ).filter(
+        Q(until__isnull=True) | Q(until__gt=timezone.now())
+    ).exists()
 
 # =============================================================================
 # V2 홈 목적별 섹션 매핑 (메인 4 + 보조 3)
@@ -548,18 +622,7 @@ def home(request):
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
 
     # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
-    posts = Post.objects.select_related(
-        'author',
-        'author__userprofile'
-    ).prefetch_related(
-        'likes',
-        'comments',
-        'comments__author',
-        'comments__author__userprofile'
-    ).annotate(
-        likes_count_annotated=Count('likes', distinct=True),
-        comments_count_annotated=Count('comments', distinct=True)
-    ).order_by('-created_at')
+    posts = _build_post_feed_queryset()
 
     # 페이징 처리 (PC 우측 및 모바일 하단 SNS 위젯용)
     from django.core.paginator import Paginator
@@ -653,18 +716,7 @@ def post_create(request):
 
     # HTMX 응답
     if request.headers.get('HX-Request'):
-        posts = Post.objects.select_related(
-            'author',
-            'author__userprofile'
-        ).prefetch_related(
-            'likes',
-            'comments',
-            'comments__author',
-            'comments__author__userprofile'
-        ).annotate(
-            likes_count_annotated=Count('likes', distinct=True),
-            comments_count_annotated=Count('comments', distinct=True)
-        ).order_by('-created_at')
+        posts = _build_post_feed_queryset()
         
         from django.core.paginator import Paginator
         paginator = Paginator(posts, 5) # 등록 후에는 무조건 1페이지로
@@ -676,7 +728,10 @@ def post_create(request):
 
 @login_required
 def post_like(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+    post = _resolve_post_for_action(pk, request.user)
+    if post is None:
+        return HttpResponse("Not found", status=404)
+
     if request.user in post.likes.all():
         post.likes.remove(request.user)
     else:
@@ -689,9 +744,28 @@ def post_like(request, pk):
 
 @login_required
 def comment_create(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+    post = _resolve_post_for_action(pk, request.user)
+    if post is None:
+        return HttpResponse("Not found", status=404)
+
     if request.method == 'POST':
         content = request.POST.get('content')
+        if _has_active_comment_restriction(request.user):
+            if request.headers.get('HX-Request'):
+                return HttpResponse("댓글 작성이 일시 제한되었습니다.", status=429)
+            messages.error(request, '댓글 작성이 일시 제한된 계정입니다.')
+            return redirect('home')
+
+        if _rate_limit_exceeded(
+            bucket_name='comment_create',
+            user_id=request.user.id,
+            limits=[(60, 1), (3600, 10), (86400, 30)],
+        ):
+            if request.headers.get('HX-Request'):
+                return HttpResponse("댓글 작성 속도가 너무 빠릅니다. 잠시 후 다시 시도해주세요.", status=429)
+            messages.error(request, '댓글 작성 속도가 너무 빠릅니다. 잠시 후 다시 시도해주세요.')
+            return redirect('home')
+
         if content:
             Comment.objects.create(
                 post=post,
@@ -706,7 +780,9 @@ def comment_create(request, pk):
 
 @login_required
 def post_delete(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+    post = _resolve_post_for_action(pk, request.user)
+    if post is None:
+        return HttpResponse("Not found", status=404)
     # Check if the user is the author or staff
     if post.author == request.user or request.user.is_staff:
         post.delete()
@@ -717,7 +793,9 @@ def post_delete(request, pk):
 
 @login_required
 def post_edit(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+    post = _resolve_post_for_action(pk, request.user)
+    if post is None:
+        return HttpResponse("Not found", status=404)
     
     # Only author can edit
     if post.author != request.user:
@@ -765,7 +843,9 @@ def post_edit(request, pk):
 @login_required
 def post_detail_partial(request, pk):
     """Helper view to return the read-only post item (e.g. for Cancel button)"""
-    post = get_object_or_404(Post, pk=pk)
+    post = _resolve_post_for_action(pk, request.user)
+    if post is None:
+        return HttpResponse("Not found", status=404)
     # Force expansion when returning from edit mode
     return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
 
@@ -803,6 +883,109 @@ def comment_item_partial(request, pk):
     """Helper view to return the read-only comment item"""
     comment = get_object_or_404(Comment, pk=pk)
     return render(request, 'core/partials/comment_item.html', {'comment': comment})
+
+
+@login_required
+@require_POST
+def comment_report(request, pk):
+    comment = get_object_or_404(
+        Comment.objects.select_related('post', 'author'),
+        pk=pk,
+    )
+    post = comment.post
+    if post.approval_status != 'approved' and not request.user.is_staff and post.author_id != request.user.id:
+        return HttpResponse("Not found", status=404)
+
+    if comment.author_id == request.user.id:
+        return HttpResponse("본인 댓글은 신고할 수 없습니다.", status=400)
+
+    if _rate_limit_exceeded(
+        bucket_name='comment_report',
+        user_id=request.user.id,
+        limits=[(60, 3), (86400, 30)],
+    ):
+        return HttpResponse("신고 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", status=429)
+
+    reason = request.POST.get('reason', 'other')
+    if reason not in {item[0] for item in CommentReport.REASON_CHOICES}:
+        reason = 'other'
+    detail = (request.POST.get('detail') or '').strip()[:300]
+
+    report, created = CommentReport.objects.get_or_create(
+        comment=comment,
+        reporter=request.user,
+        defaults={'reason': reason, 'detail': detail},
+    )
+    if not created and detail and report.detail != detail:
+        report.detail = detail
+        report.save(update_fields=['detail'])
+
+    report_count = CommentReport.objects.filter(comment=comment).count()
+    update_fields = ['report_count']
+    comment.report_count = report_count
+    if report_count >= 3 and not comment.is_hidden:
+        comment.is_hidden = True
+        comment.hidden_reason = 'reports'
+        update_fields.extend(['is_hidden', 'hidden_reason'])
+    comment.save(update_fields=update_fields)
+
+    if request.headers.get('HX-Request'):
+        if comment.is_hidden and not request.user.is_staff:
+            return HttpResponse("")
+        return render(request, 'core/partials/comment_item.html', {'comment': comment})
+
+    if created:
+        messages.success(request, '신고가 접수되었습니다.')
+    else:
+        messages.info(request, '이미 신고한 댓글입니다.')
+    return redirect('home')
+
+
+@login_required
+def news_review_queue(request):
+    if not request.user.is_staff:
+        messages.error(request, '관리 권한이 필요합니다.')
+        return redirect('home')
+
+    pending_posts_qs = (
+        Post.objects.filter(post_type='news_link', approval_status='pending')
+        .select_related('author')
+        .order_by('-created_at')
+    )
+    pending_total = pending_posts_qs.count()
+    paginator = Paginator(pending_posts_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'core/news_review_queue.html',
+        {
+            'pending_posts': page_obj,
+            'page_obj': page_obj,
+            'pending_total': pending_total,
+        },
+    )
+
+
+@login_required
+@require_POST
+def news_review_action(request, pk):
+    if not request.user.is_staff:
+        return HttpResponse("Forbidden", status=403)
+
+    post = get_object_or_404(Post, pk=pk, post_type='news_link')
+    action = request.POST.get('action')
+    if action == 'approve':
+        post.approval_status = 'approved'
+    elif action == 'reject':
+        post.approval_status = 'rejected'
+    else:
+        return HttpResponse("Invalid action", status=400)
+
+    post.reviewed_by = request.user
+    post.reviewed_at = timezone.now()
+    post.save(update_fields=['approval_status', 'reviewed_by', 'reviewed_at'])
+    return redirect('news_review_queue')
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')

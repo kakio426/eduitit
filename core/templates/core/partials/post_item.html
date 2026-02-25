@@ -45,8 +45,42 @@
 
     <!-- Content Body -->
     <div id="post-body-{{ post.id }}">
+        {% if post.post_type == 'news_link' and post.source_url %}
+        <!-- News Link Card -->
+        <a href="{{ post.source_url }}" target="_blank" rel="noopener noreferrer"
+            class="block rounded-2xl border border-slate-200 overflow-hidden mb-3 hover:border-indigo-200 hover:shadow-sm transition-all">
+            {% if post.og_image_url %}
+            <div class="bg-slate-100">
+                <img src="{{ post.og_image_url }}" alt="{{ post.og_title|default:post.content }}"
+                    class="w-full h-44 object-cover" loading="lazy">
+            </div>
+            {% endif %}
+            <div class="p-4">
+                <div class="flex items-center gap-2 text-[11px] text-slate-500 mb-1">
+                    {% if post.primary_tag %}
+                    <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold">{{ post.primary_tag }}</span>
+                    {% endif %}
+                    {% if post.publisher %}
+                    <span>{{ post.publisher }}</span>
+                    {% endif %}
+                    {% if post.published_at %}
+                    <span>· {{ post.published_at|date:"Y.m.d" }}</span>
+                    {% endif %}
+                </div>
+                <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-2">{{ post.og_title|default:post.content }}</h4>
+                {% if post.og_description %}
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ post.og_description }}</p>
+                {% endif %}
+                <div class="mt-2 text-xs text-indigo-600 font-semibold">원문 보기 <i class="ph ph-arrow-up-right"></i></div>
+            </div>
+        </a>
+        {% if post.content and post.content != post.og_title %}
+        <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words">{{ post.content }}</p>
+        {% endif %}
+        {% else %}
         <!-- Content -->
         <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words">{{ post.content }}</p>
+        {% endif %}
 
         <!-- Image -->
         {% if post.image %}
@@ -77,10 +111,12 @@
         </div>
 
         <!-- Comments List -->
-        {% if post.comments.exists %}
+        {% if post.comments_count_annotated|default:post.comments.count %}
         <div class="mt-2 space-y-3 bg-slate-50/50 rounded-xl p-3 border border-slate-50 mb-3">
             {% for comment in post.comments.all %}
+            {% if not comment.is_hidden or user.is_staff %}
             {% include 'core/partials/comment_item.html' %}
+            {% endif %}
             {% endfor %}
         </div>
         {% endif %}

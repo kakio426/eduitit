@@ -11,6 +11,9 @@
                 <span class="text-xs text-indigo-500 ml-0.5" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
                 {% endif %}
             </span>
+            {% if comment.is_hidden %}
+            <span class="text-[10px] text-red-500 font-semibold">숨김됨</span>
+            {% endif %}
             <span class="text-[10px] text-slate-400">
                 {{ comment.created_at|timesince }} 전
                 {% if comment.updated_at|date:"YmdHi" != comment.created_at|date:"YmdHi" %}
@@ -20,6 +23,13 @@
 
             <!-- Actions (Edit/Delete) -->
             <div class="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                {% if user.is_authenticated and user != comment.author %}
+                <button hx-post="{% url 'comment_report' comment.id %}" hx-target="closest [data-comment-root]"
+                    hx-swap="outerHTML" hx-vals='{"reason":"other"}' title="신고하기"
+                    class="text-slate-400 hover:text-amber-600 p-1 md:p-0.5">
+                    <i class="ph ph-flag"></i>
+                </button>
+                {% endif %}
                 {% if user == comment.author %}
                 <button hx-get="{% url 'comment_edit' comment.id %}" hx-target="closest [data-comment-root]"
                     hx-swap="outerHTML" class="text-slate-400 hover:text-indigo-500 p-1 md:p-0.5">

@@ -2,7 +2,19 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count
-from .models import UserProfile, Post, SiteConfig, Feedback, ProductUsageLog, ProductFavorite
+from django.utils import timezone
+from .models import (
+    UserProfile,
+    Post,
+    Comment,
+    CommentReport,
+    NewsSource,
+    SiteConfig,
+    Feedback,
+    ProductUsageLog,
+    ProductFavorite,
+    UserModeration,
+)
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -36,10 +48,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ['author', 'content_summary', 'created_at', 'like_count_display']
-    list_filter = ['created_at', 'author']
-    search_fields = ['content', 'author__username']
+    list_display = ['author', 'post_type', 'approval_status', 'publisher', 'content_summary', 'created_at', 'like_count_display']
+    list_filter = ['post_type', 'approval_status', 'created_at', 'author']
+    search_fields = ['content', 'og_title', 'source_url', 'author__username']
     readonly_fields = ['created_at']
+    actions = ['mark_news_approved', 'mark_news_rejected']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('author').annotate(
@@ -54,6 +67,75 @@ class PostAdmin(admin.ModelAdmin):
         return obj._like_count
     like_count_display.short_description = '좋아요 수'
     like_count_display.admin_order_field = '_like_count'
+
+    @admin.action(description='선택한 뉴스를 승인 처리')
+    def mark_news_approved(self, request, queryset):
+        updated = queryset.filter(post_type='news_link').update(
+            approval_status='approved',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now(),
+        )
+        self.message_user(request, f'{updated}개 뉴스를 승인 처리했습니다.')
+
+    @admin.action(description='선택한 뉴스를 반려 처리')
+    def mark_news_rejected(self, request, queryset):
+        updated = queryset.filter(post_type='news_link').update(
+            approval_status='rejected',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now(),
+        )
+        self.message_user(request, f'{updated}개 뉴스를 반려 처리했습니다.')
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'post', 'author', 'is_hidden', 'report_count', 'created_at']
+    list_filter = ['is_hidden', 'hidden_reason', 'created_at']
+    search_fields = ['content', 'author__username', 'post__content', 'post__og_title']
+    readonly_fields = ['created_at', 'updated_at', 'report_count']
+    actions = ['hide_comments', 'restore_comments']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('author', 'post')
+
+    @admin.action(description='선택한 댓글 숨김 처리')
+    def hide_comments(self, request, queryset):
+        updated = queryset.update(is_hidden=True, hidden_reason='admin')
+        self.message_user(request, f'{updated}개 댓글을 숨김 처리했습니다.')
+
+    @admin.action(description='선택한 댓글 복구 처리')
+    def restore_comments(self, request, queryset):
+        updated = queryset.update(is_hidden=False, hidden_reason='')
+        self.message_user(request, f'{updated}개 댓글을 복구했습니다.')
+
+
+@admin.register(CommentReport)
+class CommentReportAdmin(admin.ModelAdmin):
+    list_display = ['id', 'comment', 'reporter', 'reason', 'created_at']
+    list_filter = ['reason', 'created_at']
+    search_fields = ['comment__content', 'reporter__username']
+    readonly_fields = ['created_at']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('comment', 'reporter')
+
+
+@admin.register(NewsSource)
+class NewsSourceAdmin(admin.ModelAdmin):
+    list_display = ['name', 'source_type', 'is_active', 'url', 'updated_at']
+    list_filter = ['source_type', 'is_active']
+    search_fields = ['name', 'url']
+
+
+@admin.register(UserModeration)
+class UserModerationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'scope', 'until', 'created_by', 'created_at']
+    list_filter = ['scope', 'created_at']
+    search_fields = ['user__username', 'reason']
+    readonly_fields = ['created_at']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'created_by')
 
 
 @admin.register(SiteConfig)

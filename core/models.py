@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 import os
 
 class UserProfile(models.Model):
@@ -19,16 +20,80 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
 
+
+class NewsSource(models.Model):
+    SOURCE_TYPE_CHOICES = [
+        ('gov', '기관/정부'),
+        ('institute', '교육기관'),
+        ('media', '언론'),
+        ('aggregator', '집계'),
+    ]
+
+    name = models.CharField(max_length=120, verbose_name="소스 이름")
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='media', verbose_name="소스 유형")
+    url = models.URLField(max_length=1000, unique=True, verbose_name="RSS/API URL")
+    is_active = models.BooleanField(default=True, verbose_name="활성화")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "뉴스 수집 소스"
+        verbose_name_plural = "뉴스 수집 소스"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_source_type_display()})"
+
+
 class Post(models.Model):
+    POST_TYPE_CHOICES = [
+        ('general', '일반'),
+        ('news_link', '뉴스 링크'),
+    ]
+    APPROVAL_STATUS_CHOICES = [
+        ('approved', '게시중'),
+        ('pending', '검토 대기'),
+        ('rejected', '반려'),
+    ]
+    SOURCE_TYPE_CHOICES = [
+        ('user', '사용자'),
+        ('gov', '기관/정부'),
+        ('institute', '교육기관'),
+        ('media', '언론'),
+        ('aggregator', '집계'),
+    ]
+
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     content = models.TextField(max_length=500, verbose_name="내용")
     image = models.ImageField(upload_to='posts/%Y/%m/', null=True, blank=True, verbose_name="이미지")
+    post_type = models.CharField(max_length=20, choices=POST_TYPE_CHOICES, default='general', verbose_name="게시글 유형")
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='user', verbose_name="콘텐츠 출처 유형")
+    source_url = models.URLField(max_length=1000, blank=True, default='', verbose_name="원문 링크")
+    canonical_url = models.URLField(max_length=1000, blank=True, default='', verbose_name="정규화 링크")
+    og_title = models.CharField(max_length=300, blank=True, default='', verbose_name="OG 제목")
+    og_description = models.TextField(blank=True, default='', verbose_name="OG 설명")
+    og_image_url = models.URLField(max_length=1000, blank=True, default='', verbose_name="OG 이미지 링크")
+    publisher = models.CharField(max_length=120, blank=True, default='', verbose_name="매체/출처")
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name="기사 발행일")
+    primary_tag = models.CharField(max_length=40, blank=True, default='', verbose_name="기본 태그")
+    secondary_tag = models.CharField(max_length=40, blank=True, default='', verbose_name="보조 태그")
+    ranking_score = models.FloatField(default=0.0, verbose_name="랭킹 점수")
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='approved', verbose_name="게시 승인 상태")
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name="검토 일시")
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_posts')
+    news_source = models.ForeignKey('NewsSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['post_type', '-created_at']),
+            models.Index(fields=['post_type', '-ranking_score']),
+            models.Index(fields=['approval_status', '-created_at']),
+            models.Index(fields=['publisher', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.author.username} - {self.created_at}"
@@ -37,23 +102,108 @@ class Post(models.Model):
     def like_count(self):
         return self.likes.count()
 
+    @property
+    def is_news_link(self):
+        return self.post_type == 'news_link'
+
+    @property
+    def is_visible(self):
+        return self.approval_status == 'approved'
+
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     # Ensure profile exists whenever user is saved
     UserProfile.objects.get_or_create(user=instance)
 
 class Comment(models.Model):
+    HIDDEN_REASON_CHOICES = [
+        ('', '해당 없음'),
+        ('reports', '신고 누적'),
+        ('admin', '관리자 처리'),
+        ('policy', '운영 정책'),
+    ]
+
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(max_length=300, verbose_name="댓글 내용")
+    is_hidden = models.BooleanField(default=False, verbose_name="숨김 여부")
+    hidden_reason = models.CharField(max_length=20, choices=HIDDEN_REASON_CHOICES, blank=True, default='', verbose_name="숨김 사유")
+    report_count = models.PositiveIntegerField(default=0, verbose_name="신고 수")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['is_hidden', '-created_at']),
+        ]
 
     def __str__(self):
         return f"Comment by {self.author.username} on {self.post}"
+
+
+class CommentReport(models.Model):
+    REASON_CHOICES = [
+        ('privacy', '개인정보/실명 노출'),
+        ('abuse', '욕설/비하'),
+        ('hate', '혐오/차별'),
+        ('spam', '광고/도배'),
+        ('off_topic', '주제 이탈'),
+        ('other', '기타'),
+    ]
+
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='report_entries')
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_reports')
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES, default='other')
+    detail = models.CharField(max_length=300, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['comment', 'reporter'], name='core_commentreport_comment_reporter_unique'),
+        ]
+        indexes = [
+            models.Index(fields=['reason', '-created_at']),
+            models.Index(fields=['comment', '-created_at']),
+        ]
+        verbose_name = "댓글 신고"
+        verbose_name_plural = "댓글 신고"
+
+    def __str__(self):
+        return f"Report({self.reason}) by {self.reporter.username} on comment #{self.comment_id}"
+
+
+class UserModeration(models.Model):
+    SCOPE_CHOICES = [
+        ('comment', '댓글만 제한'),
+        ('all', '전체 제한'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moderations')
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='comment')
+    until = models.DateTimeField(null=True, blank=True, verbose_name="제한 만료일시")
+    reason = models.CharField(max_length=300, blank=True, default='')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='issued_moderations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'scope']),
+            models.Index(fields=['until']),
+        ]
+        verbose_name = "사용자 제재"
+        verbose_name_plural = "사용자 제재"
+
+    def __str__(self):
+        return f"{self.user.username} ({self.scope})"
+
+    @property
+    def is_active(self):
+        if self.until is None:
+            return True
+        return self.until > timezone.now()
 
 class SiteConfig(models.Model):
     """싱글톤 사이트 설정 모델 - Admin에서 배너 등 글로벌 설정 관리"""
