@@ -15,9 +15,7 @@ class DutyTickerManager {
         this.isSoundEnabled = localStorage.getItem('dt-broadcast-sound') !== 'false';
         this.selectedRoleId = null;
         this.pendingConflict = null;
-        this.currentRoleIdsForSlot = [];
-        this.currentRoleHighlightIndex = 0;
-        this.roleSpotlightTimer = null;
+        this.spotlightStudentId = null;
         this.callModeIndex = 0;
         this.callModeRoles = [];
         this.callModeAutoTimer = null;
@@ -275,6 +273,7 @@ class DutyTickerManager {
             this.isBroadcasting = !!this.broadcastMessage;
             this.missionTitle = data.settings.mission_title || "수학 익힘책 풀기";
             this.missionDesc = data.settings.mission_desc || "24~25페이지 풀고 채점하기";
+            this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
 
             const today = new Date().getDay();
             this.todaySchedule = data.schedule[today] || [];
@@ -332,7 +331,7 @@ class DutyTickerManager {
         }
         container.innerHTML = this.todaySchedule.map(s => `
             <div class="px-3 py-1 bg-white/5 rounded-xl border border-white/5 whitespace-nowrap text-xs font-bold text-slate-200">
-                <span class="text-indigo-400 mr-1">${this.escapeHtml(s.period)}</span> ${this.escapeHtml(s.name)}
+                <span class="text-indigo-400 mr-1">${this.escapeHtml(s.slot_type === 'period' ? (s.period || '') : (s.slot_label || ''))}</span> ${this.escapeHtml(s.name)}
             </div>
         `).join('');
     }
@@ -344,89 +343,7 @@ class DutyTickerManager {
         if (descEl) descEl.textContent = this.missionDesc;
     }
 
-    parseClockToMinutes(clockText) {
-        if (!clockText || typeof clockText !== 'string') return null;
-        const parts = clockText.split(':').map(Number);
-        if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
-        return (parts[0] * 60) + parts[1];
-    }
-
-    getCurrentDutyContext() {
-        const now = new Date();
-        const nowMinutes = (now.getHours() * 60) + now.getMinutes();
-        const schedule = (this.todaySchedule || [])
-            .map((slot) => ({
-                ...slot,
-                startMinutes: this.parseClockToMinutes(slot.startTime),
-                endMinutes: this.parseClockToMinutes(slot.endTime),
-            }))
-            .filter((slot) => Number.isFinite(slot.startMinutes) && Number.isFinite(slot.endMinutes))
-            .sort((a, b) => a.startMinutes - b.startMinutes);
-
-        if (schedule.length === 0) {
-            if (nowMinutes < 540) return { type: 'morning', label: '아침시간' };
-            if (nowMinutes >= 720 && nowMinutes < 810) return { type: 'lunch', label: '점심시간' };
-            if (nowMinutes >= 870) return { type: 'homeroom', label: '종례시간' };
-            return { type: 'break', label: '쉬는시간' };
-        }
-
-        for (const slot of schedule) {
-            if (nowMinutes >= slot.startMinutes && nowMinutes < slot.endMinutes) {
-                return {
-                    type: 'period',
-                    period: slot.period,
-                    label: `${slot.period}교시`,
-                };
-            }
-        }
-
-        if (nowMinutes < schedule[0].startMinutes) return { type: 'morning', label: '아침시간' };
-
-        const lastSlot = schedule[schedule.length - 1];
-        if (nowMinutes >= lastSlot.endMinutes) return { type: 'homeroom', label: '종례시간' };
-
-        for (let i = 0; i < schedule.length - 1; i += 1) {
-            const current = schedule[i];
-            const next = schedule[i + 1];
-            if (nowMinutes >= current.endMinutes && nowMinutes < next.startMinutes) {
-                if (nowMinutes >= 720 && nowMinutes < 810) {
-                    return { type: 'lunch', label: '점심시간' };
-                }
-                return { type: 'break', label: '쉬는시간' };
-            }
-        }
-
-        return { type: 'break', label: '쉬는시간' };
-    }
-
-    isRoleInCurrentContext(role, context) {
-        const raw = String(role?.timeSlot || '').trim();
-        if (!raw) return false;
-        const token = raw.replace(/\s+/g, '').toLowerCase();
-        if (context.type === 'period') {
-            const periodLabel = `${context.period}교시`;
-            return raw.includes(periodLabel) || token.includes('수업시간');
-        }
-        if (context.type === 'break') return token.includes('쉬는') || token.includes('휴식') || token.includes('교시후');
-        if (context.type === 'morning') return token.includes('아침') || token.includes('조회');
-        if (context.type === 'lunch') return token.includes('점심');
-        if (context.type === 'homeroom') return token.includes('종례') || token.includes('하교') || token.includes('청소');
-        return false;
-    }
-
-    refreshRoleSpotlightTimer() {
-        if (this.roleSpotlightTimer) {
-            clearInterval(this.roleSpotlightTimer);
-            this.roleSpotlightTimer = null;
-        }
-        if (this.currentRoleIdsForSlot.length <= 1) return;
-        this.roleSpotlightTimer = setInterval(() => {
-            this.currentRoleHighlightIndex = (this.currentRoleHighlightIndex + 1) % this.currentRoleIdsForSlot.length;
-            this.renderRoleList(true);
-        }, 4200);
-    }
-
-    renderRoleList(skipSpotlightRefresh = false) {
+    renderRoleList() {
         const container = document.getElementById('mainRoleList');
         if (!container) return;
 
@@ -439,8 +356,6 @@ class DutyTickerManager {
                     </a>
                 </div>
             `;
-            this.currentRoleIdsForSlot = [];
-            if (!skipSpotlightRefresh) this.refreshRoleSpotlightTimer();
             return;
         }
 
@@ -452,17 +367,20 @@ class DutyTickerManager {
             '식물': 'fa-solid fa-leaf'
         };
 
-        const context = this.getCurrentDutyContext();
-        const currentRoles = this.roles.filter((role) => this.isRoleInCurrentContext(role, context));
-        this.currentRoleIdsForSlot = currentRoles.map((role) => Number(role.id));
-        if (this.currentRoleHighlightIndex >= this.currentRoleIdsForSlot.length) {
-            this.currentRoleHighlightIndex = 0;
-        }
-        const spotlightRoleId = this.currentRoleIdsForSlot.length
-            ? this.currentRoleIdsForSlot[this.currentRoleHighlightIndex % this.currentRoleIdsForSlot.length]
-            : null;
+        const spotlightStudentId = Number(this.spotlightStudentId);
+        const spotlightRoleIds = this.roles
+            .filter((role) => Number(role.assigneeId) === spotlightStudentId)
+            .map((role) => Number(role.id));
 
-        container.innerHTML = this.roles.map(role => {
+        const orderedRoles = [...this.roles].sort((a, b) => {
+            const aSpot = spotlightRoleIds.includes(Number(a.id)) ? 0 : 1;
+            const bSpot = spotlightRoleIds.includes(Number(b.id)) ? 0 : 1;
+            if (aSpot !== bSpot) return aSpot - bSpot;
+            if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
+            return Number(a.id) - Number(b.id);
+        });
+
+        container.innerHTML = orderedRoles.map(role => {
             const iconClass = roleIcons[role.name] || 'fa-solid fa-circle-user';
             const isCompleted = role.status === 'completed';
             const roleId = Number.isFinite(Number(role.id)) ? Number(role.id) : 0;
@@ -470,11 +388,10 @@ class DutyTickerManager {
             const safeRoleName = this.escapeHtml(role.name);
             const safeAssignee = this.escapeHtml(role.assignee || '미배정');
             const numericRoleId = Number(role.id);
-            const isCurrentSlotRole = this.currentRoleIdsForSlot.includes(numericRoleId);
-            const isSpotlightRole = isCurrentSlotRole && numericRoleId === spotlightRoleId;
-            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : (isCurrentSlotRole ? 'dt-role-current-muted' : '');
-            const nowBadge = isCurrentSlotRole
-                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black ${isSpotlightRole ? 'bg-indigo-500/30 text-indigo-100 border border-indigo-300/40' : 'bg-sky-500/20 text-sky-200 border border-sky-300/20'}">지금 ${this.escapeHtml(context.label)}</span>`
+            const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
+            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
+            const spotlightBadge = isSpotlightRole
+                ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-indigo-500/30 text-indigo-100 border border-indigo-300/40">집중</span>'
                 : '';
             return `
                 <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
@@ -488,15 +405,13 @@ class DutyTickerManager {
                             ${isCompleted ? '<span class="text-emerald-400 text-[10px] font-black uppercase"><i class="fa-solid fa-check-circle"></i> DONE</span>' : ''}
                         </div>
                         <div class="flex justify-between items-center text-xl font-black text-slate-100">
-                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}${nowBadge}</p>
+                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}${spotlightBadge}</p>
                               <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
-
-        if (!skipSpotlightRefresh) this.refreshRoleSpotlightTimer();
     }
 
     renderStudentGrid() {
@@ -521,13 +436,22 @@ class DutyTickerManager {
             const studentId = Number.isFinite(Number(student.id)) ? Number(student.id) : 0;
             const safeStudentNumber = this.escapeHtml(student.number);
             const safeStudentName = this.escapeHtml(student.name);
+            const isSpotlight = Number(this.spotlightStudentId) === Number(student.id);
             return `
-                <div class="relative p-2 rounded-2xl border border-slate-700 bg-slate-800/50 flex flex-col items-center gap-1 cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''}"
+                <div class="relative p-2 rounded-2xl border border-slate-700 bg-slate-800/50 flex flex-col items-center gap-1 cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''} ${isSpotlight ? 'ring-2 ring-indigo-400 bg-indigo-500/10' : ''}"
                     onclick="window.dtApp.handleStudentStatusToggle(${studentId})">
+                    <button
+                        type="button"
+                        onclick="event.stopPropagation(); window.dtApp.toggleSpotlightStudent(${studentId})"
+                        class="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition ${isSpotlight ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-indigo-500 hover:text-white'}"
+                        title="${isSpotlight ? '반짝임 해제' : '반짝이기'}"
+                    >
+                        <i class="fa-solid fa-sparkles"></i>
+                    </button>
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
                         ${safeStudentNumber}
                     </div>
-                    <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'}">${safeStudentName}</span>
+                    <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
@@ -583,6 +507,36 @@ class DutyTickerManager {
             console.error(e);
             student.status = original;
             this.renderStudentGrid();
+        }
+    }
+
+    async toggleSpotlightStudent(studentId) {
+        const nextStudentId = Number(this.spotlightStudentId) === Number(studentId) ? null : Number(studentId);
+        const prevStudentId = this.spotlightStudentId;
+
+        this.spotlightStudentId = nextStudentId;
+        this.renderStudentGrid();
+        this.renderRoleList();
+
+        const callModal = document.getElementById('callModeModal');
+        if (callModal && !callModal.classList.contains('hidden')) {
+            this.renderCallMode();
+        }
+
+        try {
+            const response = await this.secureFetch(this.getApiUrl('spotlightUrl', '/products/dutyticker/api/spotlight/update/'), {
+                method: 'POST',
+                body: JSON.stringify({ student_id: nextStudentId }),
+            });
+            const payload = await this.parseJsonResponse(response, '반짝임 학생 저장에 실패했습니다.');
+            this.spotlightStudentId = Number(payload.spotlight_student_id) || null;
+            this.renderStudentGrid();
+            this.renderRoleList();
+        } catch (error) {
+            console.error(error);
+            this.spotlightStudentId = prevStudentId;
+            this.renderStudentGrid();
+            this.renderRoleList();
         }
     }
 
@@ -903,14 +857,10 @@ class DutyTickerManager {
 
     openCallMode() {
         this.syncCallModeRoles();
-        const spotlightRoleId = this.currentRoleIdsForSlot.length
-            ? this.currentRoleIdsForSlot[this.currentRoleHighlightIndex % this.currentRoleIdsForSlot.length]
-            : null;
+        const spotlightStudentId = Number(this.spotlightStudentId);
+        const spotlightIndex = this.callModeRoles.findIndex((role) => Number(role.assigneeId) === spotlightStudentId);
 
-        if (spotlightRoleId) {
-            const spotlightIndex = this.callModeRoles.findIndex((role) => Number(role.id) === Number(spotlightRoleId));
-            if (spotlightIndex >= 0) this.callModeIndex = spotlightIndex;
-        }
+        if (spotlightIndex >= 0) this.callModeIndex = spotlightIndex;
 
         this.callModeAutoPlaying = this.callModeRoles.length > 1;
         this.openModal('callModeModal');

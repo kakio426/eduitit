@@ -152,6 +152,13 @@ class DTSettings(models.Model):
     last_broadcast_message = models.TextField(blank=True, help_text="Persisted broadcast message")
     mission_title = models.CharField(max_length=200, default="오늘도 행복한 우리 교실", help_text="Main display mission title")
     mission_desc = models.TextField(default="선생님 말씀에 집중해 주세요.", help_text="Main display mission description")
+    spotlight_student = models.ForeignKey(
+        "DTStudent",
+        on_delete=models.SET_NULL,
+        related_name="dutyticker_spotlight_settings",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         constraints = [
@@ -165,6 +172,50 @@ class DTSettings(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Settings"
+
+
+class DTTimeSlot(models.Model):
+    """Slot definitions for one classroom day timeline (periods + breaks + lunch)."""
+
+    SLOT_KIND_CHOICES = [
+        ("period", "교시"),
+        ("break", "쉬는시간"),
+        ("lunch", "점심시간"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="dutyticker_time_slots")
+    classroom = models.ForeignKey(
+        "happy_seed.HSClassroom",
+        on_delete=models.CASCADE,
+        related_name="dutyticker_time_slots",
+        null=True,
+        blank=True,
+    )
+    slot_code = models.CharField(max_length=20)
+    slot_kind = models.CharField(max_length=20, choices=SLOT_KIND_CHOICES, default="period")
+    slot_order = models.PositiveSmallIntegerField(default=1)
+    slot_label = models.CharField(max_length=50, default="1교시")
+    period_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["slot_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "classroom", "slot_code"],
+                name="dttimeslot_user_classroom_code_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "slot_code"],
+                condition=models.Q(classroom__isnull=True),
+                name="dttimeslot_user_global_code_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} {self.slot_label}"
+
 
 class DTStudent(models.Model):
     """Student roster for each teacher"""

@@ -23,12 +23,14 @@ urlpatterns = [
     path('dutyticker/api/rotate/', dutyticker_api.rotation_trigger, name='dt_api_rotate'),
     path('dutyticker/api/broadcast/update/', dutyticker_api.update_broadcast_message, name='dt_api_broadcast_update'),
     path('dutyticker/api/mission/update/', dutyticker_api.update_mission, name='dt_api_mission_update'),
+    path('dutyticker/api/spotlight/update/', dutyticker_api.update_spotlight_student, name='dt_api_spotlight_update'),
     path('dutyticker/api/reset/', dutyticker_api.reset_data, name='dt_api_reset'),
 
     # DutyTicker Admin (Dashboard)
     path('dutyticker/admin/', dutyticker_admin_views.admin_dashboard, name='dt_admin_dashboard'),
     path('dutyticker/admin/print/', dutyticker_admin_views.print_sheet, name='dt_admin_print_sheet'),
     path('dutyticker/admin/rotation-settings/', dutyticker_admin_views.update_rotation_settings, name='dt_admin_update_rotation_settings'),
+    path('dutyticker/admin/schedule-settings/', dutyticker_admin_views.update_schedule_settings, name='dt_admin_update_schedule_settings'),
     path('dutyticker/admin/students/add/', dutyticker_admin_views.add_student, name='dt_admin_add_student'),
     path('dutyticker/admin/students/<int:pk>/delete/', dutyticker_admin_views.delete_student, name='dt_admin_delete_student'),
     path('dutyticker/admin/roles/add/', dutyticker_admin_views.add_role, name='dt_admin_add_role'),

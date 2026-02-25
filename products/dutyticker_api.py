@@ -3,9 +3,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
-import datetime
 import random
-from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule
+from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTTimeSlot
 from .dutyticker_scope import (
     apply_classroom_scope,
     classroom_scope_create_kwargs,
@@ -13,6 +12,7 @@ from .dutyticker_scope import (
     get_active_classroom_for_request,
     get_or_create_settings_for_scope,
 )
+from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
 
 
 def _build_today_fallback_schedule_from_classcalendar(user, classroom=None):
@@ -49,10 +49,81 @@ def _build_today_fallback_schedule_from_classcalendar(user, classroom=None):
                 "startTime": start_time,
                 "endTime": end_time,
                 "period": index,
+                "slot_code": f"cc-{index}",
+                "slot_type": "period",
+                "slot_label": f"{index}교시",
             }
         )
 
     return js_day, fallback_rows
+
+
+def _ensure_time_slots_for_scope(user, classroom):
+    existing_by_code = {
+        slot.slot_code: slot
+        for slot in apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom)
+    }
+
+    for spec in SLOT_LAYOUT:
+        if spec["code"] in existing_by_code:
+            continue
+        DTTimeSlot.objects.create(
+            user=user,
+            **classroom_scope_create_kwargs(classroom),
+            slot_code=spec["code"],
+            slot_kind=spec["kind"],
+            slot_order=spec["order"],
+            slot_label=spec["label"],
+            period_number=spec["period"],
+            start_time=spec["start"],
+            end_time=spec["end"],
+        )
+
+    return list(apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom).order_by("slot_order", "id"))
+
+
+def _build_weekly_schedule_payload(user, classroom):
+    time_slots = _ensure_time_slots_for_scope(user, classroom)
+    slot_by_code = {slot.slot_code: slot for slot in time_slots}
+
+    schedules = apply_classroom_scope(
+        DTSchedule.objects.filter(user=user, day__in=[day for day, _ in WEEKDAY_LABELS], period__in=PERIOD_NUMBERS),
+        classroom,
+    ).order_by("day", "period")
+
+    subject_by_day_period = {(row.day, row.period): row for row in schedules}
+    weekly_schedule = {}
+
+    for day, _ in WEEKDAY_LABELS:
+        day_rows = []
+        for spec in SLOT_LAYOUT:
+            slot = slot_by_code.get(spec["code"])
+            start_time = slot.start_time if slot else spec["start"]
+            end_time = slot.end_time if slot else spec["end"]
+            is_period = spec["kind"] == "period"
+            period_number = spec["period"]
+            schedule_row = subject_by_day_period.get((day, period_number)) if is_period else None
+
+            if is_period:
+                title = schedule_row.subject if schedule_row else f"{period_number}교시"
+            else:
+                title = spec["label"]
+
+            day_rows.append(
+                {
+                    "id": f"{day}-{spec['code']}",
+                    "name": title,
+                    "startTime": start_time.strftime("%H:%M"),
+                    "endTime": end_time.strftime("%H:%M"),
+                    "period": period_number,
+                    "slot_code": spec["code"],
+                    "slot_type": spec["kind"],
+                    "slot_label": spec["label"],
+                }
+            )
+        weekly_schedule[str(day)] = day_rows
+
+    return weekly_schedule
 
 def get_guest_default_data():
     """Returns the structure for guest session data."""
@@ -81,16 +152,25 @@ def get_guest_default_data():
         
     subjects = ["국어", "수학", "사회", "과학", "영어", "체육", "미술", "음악"]
     weekly_schedule = {}
-    for day in range(1, 6):
-        weekly_schedule[str(day)] = []
-        for period in range(1, 5):
-            weekly_schedule[str(day)].append({
-                'id': day * 10 + period,
-                'name': subjects[(day + period) % len(subjects)],
-                'startTime': f"{9 + period - 1:02d}:00",
-                'endTime': f"{9 + period - 1:02d}:40",
-                'period': period
-            })
+    for day, _ in WEEKDAY_LABELS:
+        rows = []
+        for spec in SLOT_LAYOUT:
+            is_period = spec["kind"] == "period"
+            period = spec["period"]
+            name = subjects[(day + period) % len(subjects)] if is_period else spec["label"]
+            rows.append(
+                {
+                    "id": f"{day}-{spec['code']}",
+                    "name": name,
+                    "startTime": spec["start"].strftime("%H:%M"),
+                    "endTime": spec["end"].strftime("%H:%M"),
+                    "period": period,
+                    "slot_code": spec["code"],
+                    "slot_type": spec["kind"],
+                    "slot_label": spec["label"],
+                }
+            )
+        weekly_schedule[str(day)] = rows
             
     return {
         'students': students,
@@ -103,12 +183,16 @@ def get_guest_default_data():
             'rotation_mode': 'manual_sequential',
             'last_broadcast': "환영합니다! 게스트 모드로 체험 중입니다.",
             'mission_title': "오늘도 행복한 우리 교실",
-            'mission_desc': "선생님 말씀에 집중해 주세요."
+            'mission_desc': "선생님 말씀에 집중해 주세요.",
+            'spotlight_student_id': None,
         }
     }
 
 def create_mockup_data(user, classroom=None):
     """Generates initial sample data for new users to demonstrate DutyTicker."""
+    time_slots = _ensure_time_slots_for_scope(user, classroom)
+    period_slots = {slot.period_number: slot for slot in time_slots if slot.slot_kind == "period" and slot.period_number}
+
     student_names = ["김철수", "이영희", "박민수", "정지원", "최하늘", "강다니엘", "조유리", "한지민", "서태웅", "윤대협"]
     scope_kwargs = classroom_scope_create_kwargs(classroom)
     students = []
@@ -131,16 +215,18 @@ def create_mockup_data(user, classroom=None):
         DTRoleAssignment.objects.create(user=user, role=roles[i], student=students[i], **scope_kwargs)
         
     subjects = ["국어", "수학", "사회", "과학", "영어", "체육", "미술", "음악"]
-    for day in range(1, 6):
-        for period in range(1, 5):
+    for day, _ in WEEKDAY_LABELS:
+        for period in PERIOD_NUMBERS:
+            slot = period_slots.get(period)
+            default_spec = SLOT_BY_CODE.get(f"p{period}")
             DTSchedule.objects.create(
                 user=user,
                 **scope_kwargs,
                 day=day,
                 period=period,
                 subject=subjects[(day + period) % len(subjects)],
-                start_time=datetime.time(9 + period - 1, 0),
-                end_time=datetime.time(9 + period - 1, 40)
+                start_time=slot.start_time if slot else default_spec["start"],
+                end_time=slot.end_time if slot else default_spec["end"],
             )
     return True
 
@@ -345,26 +431,25 @@ def get_dutyticker_data(request):
             'is_completed': a.is_completed
         })
         
-    schedules = apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).order_by('day', 'period')
-    weekly_schedule = {}
-    for s in schedules:
-        day = str(s.day)
-        if day not in weekly_schedule:
-            weekly_schedule[day] = []
-        weekly_schedule[day].append({
-            'id': s.id,
-            'name': s.subject,
-            'startTime': s.start_time.strftime("%H:%M"),
-            'endTime': s.end_time.strftime("%H:%M"),
-            'period': s.period
-        })
+    weekly_schedule = _build_weekly_schedule_payload(user, classroom)
 
     # Fallback: if today's DTSchedule is empty, surface today's classcalendar events.
     fallback_day, fallback_rows = _build_today_fallback_schedule_from_classcalendar(user, classroom=classroom)
     if fallback_day is not None:
         day_key = str(fallback_day)
-        if day_key not in weekly_schedule or not weekly_schedule.get(day_key):
+        has_today_period_schedule = apply_classroom_scope(
+            DTSchedule.objects.filter(user=user, day=fallback_day, period__in=PERIOD_NUMBERS),
+            classroom,
+        ).exists()
+        if not has_today_period_schedule:
             weekly_schedule[day_key] = fallback_rows
+
+    spotlight_student_id = settings.spotlight_student_id
+    visible_student_ids = {row["id"] for row in students}
+    if spotlight_student_id and spotlight_student_id not in visible_student_ids:
+        spotlight_student_id = None
+        settings.spotlight_student = None
+        settings.save(update_fields=["spotlight_student"])
         
     return JsonResponse({
         'students': students,
@@ -377,7 +462,8 @@ def get_dutyticker_data(request):
             'rotation_mode': settings.rotation_mode,
             'last_broadcast': settings.last_broadcast_message,
             'mission_title': settings.mission_title,
-            'mission_desc': settings.mission_desc
+            'mission_desc': settings.mission_desc,
+            'spotlight_student_id': spotlight_student_id,
         }
     })
 
@@ -484,6 +570,45 @@ def update_mission(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def update_spotlight_student(request):
+    try:
+        data = _safe_json_body(request)
+        requested_student_id = data.get("student_id")
+
+        if not request.user.is_authenticated:
+            guest_data = request.session.get("guest_dt_data")
+            if guest_data:
+                settings_data = guest_data.setdefault("settings", {})
+                settings_data["spotlight_student_id"] = requested_student_id if requested_student_id else None
+                request.session.modified = True
+                return JsonResponse({"success": True, "spotlight_student_id": settings_data["spotlight_student_id"]})
+            return JsonResponse({"success": False}, status=400)
+
+        classroom = get_active_classroom_for_request(request)
+        settings, _ = get_or_create_settings_for_scope(request.user, classroom)
+
+        if not requested_student_id:
+            settings.spotlight_student = None
+            settings.save(update_fields=["spotlight_student"])
+            return JsonResponse({"success": True, "spotlight_student_id": None})
+
+        student = DTStudent.objects.filter(
+            id=requested_student_id,
+            user=request.user,
+            **classroom_scope_filter(classroom),
+        ).first()
+        if not student:
+            return JsonResponse({"success": False, "error": "student not found"}, status=404)
+
+        settings.spotlight_student = student
+        settings.save(update_fields=["spotlight_student"])
+        return JsonResponse({"success": True, "spotlight_student_id": student.id})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
 
 @require_http_methods(["POST"])
 @csrf_exempt

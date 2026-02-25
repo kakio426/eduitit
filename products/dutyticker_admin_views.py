@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.views.decorators.http import require_http_methods
-from .models import DTStudent, DTRole, DTSettings, DTRoleAssignment
+import datetime
+
+from .models import DTStudent, DTRole, DTSettings, DTRoleAssignment, DTSchedule, DTTimeSlot
 from .dutyticker_scope import (
     apply_classroom_scope,
     classroom_scope_create_kwargs,
@@ -9,6 +12,66 @@ from .dutyticker_scope import (
     get_active_classroom_for_request,
     get_or_create_settings_for_scope,
 )
+from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
+
+
+def _ensure_time_slots_for_scope(user, classroom):
+    existing_by_code = {
+        slot.slot_code: slot
+        for slot in apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom)
+    }
+
+    for spec in SLOT_LAYOUT:
+        if spec["code"] in existing_by_code:
+            continue
+        DTTimeSlot.objects.create(
+            user=user,
+            **classroom_scope_create_kwargs(classroom),
+            slot_code=spec["code"],
+            slot_kind=spec["kind"],
+            slot_order=spec["order"],
+            slot_label=spec["label"],
+            period_number=spec["period"],
+            start_time=spec["start"],
+            end_time=spec["end"],
+        )
+
+    return list(apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom).order_by("slot_order", "id"))
+
+
+def _build_weekday_subject_rows(user, classroom):
+    schedules = apply_classroom_scope(
+        DTSchedule.objects.filter(user=user, day__in=[day for day, _ in WEEKDAY_LABELS], period__in=PERIOD_NUMBERS),
+        classroom,
+    )
+    subject_map = {(row.day, row.period): row.subject for row in schedules}
+
+    rows = []
+    for day, label in WEEKDAY_LABELS:
+        rows.append(
+            {
+                "day": day,
+                "label": label,
+                "periods": [
+                    {
+                        "period": period,
+                        "subject": subject_map.get((day, period), ""),
+                    }
+                    for period in PERIOD_NUMBERS
+                ],
+            }
+        )
+    return rows
+
+
+def _parse_time_value(raw_value):
+    raw_text = str(raw_value or "").strip()
+    if not raw_text:
+        return None
+    try:
+        return datetime.datetime.strptime(raw_text, "%H:%M").time()
+    except ValueError:
+        return None
 
 @login_required
 def admin_dashboard(request):
@@ -17,12 +80,17 @@ def admin_dashboard(request):
     students = apply_classroom_scope(DTStudent.objects.filter(user=user), classroom)
     roles = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
     settings, _ = get_or_create_settings_for_scope(user, classroom)
+    time_slots = _ensure_time_slots_for_scope(user, classroom)
+    weekday_rows = _build_weekday_subject_rows(user, classroom)
     
     return render(request, 'products/dutyticker/admin_dashboard.html', {
         'students': students,
         'roles': roles,
         'settings': settings,
         'active_classroom': classroom,
+        'time_slots': time_slots,
+        'weekday_rows': weekday_rows,
+        'period_numbers': PERIOD_NUMBERS,
     })
 
 
@@ -44,6 +112,82 @@ def update_rotation_settings(request):
         settings.save(update_fields=["rotation_mode", "auto_rotation", "rotation_frequency", "last_rotation_date"])
 
     return redirect('dt_admin_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_schedule_settings(request):
+    classroom = get_active_classroom_for_request(request)
+    time_slots = _ensure_time_slots_for_scope(request.user, classroom)
+    slot_map = {slot.slot_code: slot for slot in time_slots}
+
+    updated_slots = []
+    invalid_slots = []
+    for spec in SLOT_LAYOUT:
+        slot = slot_map.get(spec["code"])
+        if not slot:
+            continue
+
+        start_time = _parse_time_value(request.POST.get(f"slot_{spec['code']}_start"))
+        end_time = _parse_time_value(request.POST.get(f"slot_{spec['code']}_end"))
+        if not start_time or not end_time or start_time >= end_time:
+            invalid_slots.append(spec["label"])
+            continue
+
+        if slot.start_time != start_time or slot.end_time != end_time:
+            slot.start_time = start_time
+            slot.end_time = end_time
+            updated_slots.append(slot)
+
+    if updated_slots:
+        DTTimeSlot.objects.bulk_update(updated_slots, ["start_time", "end_time"])
+
+    slot_map = {
+        slot.slot_code: slot
+        for slot in apply_classroom_scope(DTTimeSlot.objects.filter(user=request.user), classroom)
+    }
+    deleted_qs = apply_classroom_scope(DTSchedule.objects.filter(user=request.user), classroom)
+    saved_subject_count = 0
+    deleted_subject_count = 0
+
+    for day, _ in WEEKDAY_LABELS:
+        for period in PERIOD_NUMBERS:
+            subject_key = f"subject_{day}_{period}"
+            subject_value = (request.POST.get(subject_key) or "").strip()
+            slot_code = f"p{period}"
+            slot = slot_map.get(slot_code)
+            default_spec = SLOT_BY_CODE.get(slot_code)
+
+            if not subject_value:
+                deleted_count, _ = deleted_qs.filter(day=day, period=period).delete()
+                deleted_subject_count += deleted_count
+                continue
+
+            start_time = slot.start_time if slot else default_spec["start"]
+            end_time = slot.end_time if slot else default_spec["end"]
+            DTSchedule.objects.update_or_create(
+                user=request.user,
+                day=day,
+                period=period,
+                **classroom_scope_create_kwargs(classroom),
+                defaults={
+                    "subject": subject_value,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                },
+            )
+            saved_subject_count += 1
+
+    if invalid_slots:
+        invalid_text = ", ".join(invalid_slots)
+        messages.error(request, f"시간 설정 오류: {invalid_text}의 시작 시간은 종료 시간보다 빨라야 합니다.")
+
+    messages.success(
+        request,
+        f"시간표 저장 완료: 과목 {saved_subject_count}개 저장, 비운 칸 {deleted_subject_count}개 반영, 시간 슬롯 {len(updated_slots)}개 수정",
+    )
+
+    return redirect("dt_admin_dashboard")
 
 @login_required
 @require_http_methods(["POST"])
