@@ -2,7 +2,7 @@
 {# 사용: {% include 'core/includes/purpose_sections.html' with sections=sections %} #}
 <div x-data="{ openSection: null }" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 {% for section in sections %}
-    <div class="bg-white/70 backdrop-blur-sm rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm">
+    <div class="bg-white/70 backdrop-blur-sm rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm {% if forloop.last and not sections|length|divisibleby:2 %}md:col-span-2{% endif %}">
         <!-- 섹션 헤더 -->
         <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg {% if section.color == 'blue' %}bg-gradient-to-br from-blue-500 to-blue-600{% elif section.color == 'emerald' %}bg-gradient-to-br from-emerald-500 to-emerald-600{% elif section.color == 'violet' %}bg-gradient-to-br from-violet-500 to-violet-600{% elif section.color == 'cyan' %}bg-gradient-to-br from-cyan-500 to-cyan-600{% endif %} shadow-sm">
