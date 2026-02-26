@@ -13,7 +13,49 @@ from .models import (
 )
 
 
-class ParentContactForm(forms.ModelForm):
+INPUT_CLASS = (
+    "w-full shadow-clay-inner px-4 py-3 rounded-xl bg-[#E0E5EC] "
+    "outline-none focus:ring-2 focus:ring-purple-300 text-gray-700"
+)
+TEXTAREA_CLASS = (
+    "w-full shadow-clay-inner px-4 py-3 rounded-xl bg-[#E0E5EC] "
+    "outline-none focus:ring-2 focus:ring-purple-300 text-gray-700"
+)
+SELECT_CLASS = (
+    "w-full shadow-clay-inner px-4 py-3 rounded-xl bg-[#E0E5EC] "
+    "outline-none focus:ring-2 focus:ring-purple-300 text-gray-700"
+)
+CHECKBOX_CLASS = "h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-400"
+FILE_CLASS = (
+    "w-full text-sm text-slate-700 "
+    "file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 "
+    "file:px-3 file:py-2 file:text-sm file:font-bold file:text-slate-700 hover:file:bg-slate-200"
+)
+
+
+class ClayFormMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_clay_classes()
+
+    def _apply_clay_classes(self):
+        for field in self.fields.values():
+            widget = field.widget
+            if isinstance(widget, forms.Textarea):
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {TEXTAREA_CLASS}".strip()
+            elif isinstance(widget, (forms.Select, forms.DateTimeInput, forms.DateInput)):
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {SELECT_CLASS}".strip()
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {CHECKBOX_CLASS}".strip()
+            elif isinstance(widget, forms.ClearableFileInput):
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {FILE_CLASS}".strip()
+            elif isinstance(widget, forms.CheckboxSelectMultiple):
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {CHECKBOX_CLASS}".strip()
+            else:
+                widget.attrs["class"] = f"{widget.attrs.get('class', '')} {INPUT_CLASS}".strip()
+
+
+class ParentContactForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ParentContact
         fields = [
@@ -25,35 +67,55 @@ class ParentContactForm(forms.ModelForm):
             "contact_email",
             "contact_phone",
         ]
+        labels = {
+            "student_name": "학생 이름",
+            "student_grade": "학년",
+            "student_classroom": "반",
+            "parent_name": "학부모 이름",
+            "relationship": "관계",
+            "contact_email": "연락 이메일",
+            "contact_phone": "연락처",
+        }
         widgets = {
             "student_name": forms.TextInput(attrs={"placeholder": "학생 이름"}),
-            "student_grade": forms.NumberInput(attrs={"min": 1, "max": 6}),
+            "student_grade": forms.NumberInput(attrs={"min": 1, "max": 6, "placeholder": "학년"}),
             "student_classroom": forms.TextInput(attrs={"placeholder": "예: 3-2"}),
             "parent_name": forms.TextInput(attrs={"placeholder": "학부모 이름"}),
             "relationship": forms.TextInput(attrs={"placeholder": "예: 어머니"}),
-            "contact_email": forms.EmailInput(attrs={"placeholder": "연락용 이메일"}),
+            "contact_email": forms.EmailInput(attrs={"placeholder": "가입/기록 이메일"}),
             "contact_phone": forms.TextInput(attrs={"placeholder": "연락처"}),
         }
 
 
-class ParentNoticeForm(forms.ModelForm):
+class ParentNoticeForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ParentNotice
-        fields = ["classroom_label", "title", "content", "is_pinned"]
+        fields = ["classroom_label", "title", "content", "attachment", "is_pinned"]
+        labels = {
+            "classroom_label": "학급 표기",
+            "title": "제목",
+            "content": "내용",
+            "attachment": "첨부파일",
+            "is_pinned": "상단 고정",
+        }
         widgets = {
             "classroom_label": forms.TextInput(attrs={"placeholder": "예: 3-2 바다반"}),
             "title": forms.TextInput(attrs={"placeholder": "알림장 제목"}),
-            "content": forms.Textarea(attrs={"rows": 4, "placeholder": "학부모 공지 내용을 입력하세요."}),
+            "content": forms.Textarea(attrs={"rows": 5, "placeholder": "학부모에게 보낼 내용을 입력하세요."}),
+            "attachment": forms.ClearableFileInput(),
         }
 
 
-class ParentThreadCreateForm(forms.ModelForm):
+class ParentThreadCreateForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ParentThread
-        fields = ["parent_contact", "subject", "category", "severity"]
+        fields = ["parent_contact", "subject"]
+        labels = {
+            "parent_contact": "받는 학부모",
+            "subject": "쪽지 제목",
+        }
         widgets = {
-            "subject": forms.TextInput(attrs={"placeholder": "문의 주제"}),
-            "category": forms.TextInput(attrs={"placeholder": "예: 생활/출결/상담"}),
+            "subject": forms.TextInput(attrs={"placeholder": "예: 내일 체험학습 준비 안내"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -67,6 +129,8 @@ class ParentThreadCreateForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super().save(commit=False)
         obj.teacher = self.teacher
+        obj.category = "소통"
+        obj.severity = ParentThread.Severity.NORMAL
         policy = getattr(self.teacher, "parent_comm_policy", None)
         if policy:
             obj.parent_message_limit = policy.max_parent_messages_per_thread
@@ -75,12 +139,15 @@ class ParentThreadCreateForm(forms.ModelForm):
         return obj
 
 
-class ParentThreadMessageForm(forms.ModelForm):
+class ParentThreadMessageForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ParentThreadMessage
         fields = ["body"]
+        labels = {
+            "body": "답장 내용",
+        }
         widgets = {
-            "body": forms.Textarea(attrs={"rows": 3, "placeholder": "답변 내용을 입력하세요."}),
+            "body": forms.Textarea(attrs={"rows": 3, "placeholder": "짧고 분명하게 답장을 남겨 주세요."}),
         }
 
     def save(self, *, thread, sender_role, commit=True):
@@ -92,13 +159,18 @@ class ParentThreadMessageForm(forms.ModelForm):
         return obj
 
 
-class ConsultationRequestForm(forms.ModelForm):
+class ConsultationRequestForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ConsultationRequest
         fields = ["parent_contact", "reason", "escalation_reason"]
+        labels = {
+            "parent_contact": "상담 대상 학부모",
+            "reason": "상담이 필요한 이유",
+            "escalation_reason": "교사 메모 (선택)",
+        }
         widgets = {
-            "reason": forms.Textarea(attrs={"rows": 3, "placeholder": "상담이 필요한 배경을 입력하세요."}),
-            "escalation_reason": forms.TextInput(attrs={"placeholder": "예: 반복 문의 한도 초과"}),
+            "reason": forms.Textarea(attrs={"rows": 3, "placeholder": "상담이 필요한 배경을 적어 주세요."}),
+            "escalation_reason": forms.TextInput(attrs={"placeholder": "예: 출결 관련 반복 문의"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -118,19 +190,22 @@ class ConsultationRequestForm(forms.ModelForm):
         return obj
 
 
-class ConsultationProposalForm(forms.ModelForm):
+class ConsultationProposalForm(ClayFormMixin, forms.ModelForm):
     allowed_methods = forms.MultipleChoiceField(
         choices=ConsultationMethod.choices,
         widget=forms.CheckboxSelectMultiple,
         required=True,
-        label="제안 가능한 상담 방식",
+        label="제안할 상담 방법",
     )
 
     class Meta:
         model = ConsultationProposal
         fields = ["note", "allowed_methods"]
+        labels = {
+            "note": "안내 메모",
+        }
         widgets = {
-            "note": forms.Textarea(attrs={"rows": 3, "placeholder": "학부모에게 전달할 안내"}),
+            "note": forms.Textarea(attrs={"rows": 3, "placeholder": "학부모에게 보낼 안내 문구"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -143,7 +218,7 @@ class ConsultationProposalForm(forms.ModelForm):
     def clean_allowed_methods(self):
         methods = self.cleaned_data.get("allowed_methods") or []
         if not methods:
-            raise forms.ValidationError("상담 방식은 최소 1개 이상 선택해 주세요.")
+            raise forms.ValidationError("상담 방법은 최소 1개 이상 선택해 주세요.")
         return methods
 
     def save(self, commit=True):
@@ -159,10 +234,17 @@ class ConsultationProposalForm(forms.ModelForm):
         return obj
 
 
-class ConsultationSlotForm(forms.ModelForm):
+class ConsultationSlotForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ConsultationSlot
         fields = ["method", "starts_at", "ends_at", "location_note", "channel_hint"]
+        labels = {
+            "method": "상담 방법",
+            "starts_at": "시작 시간",
+            "ends_at": "끝나는 시간",
+            "location_note": "장소 안내 (방문상담)",
+            "channel_hint": "연락 안내 (전화/채팅)",
+        }
         widgets = {
             "starts_at": forms.DateTimeInput(
                 format="%Y-%m-%dT%H:%M",
@@ -172,8 +254,8 @@ class ConsultationSlotForm(forms.ModelForm):
                 format="%Y-%m-%dT%H:%M",
                 attrs={"type": "datetime-local"},
             ),
-            "location_note": forms.TextInput(attrs={"placeholder": "방문상담 장소 안내"}),
-            "channel_hint": forms.TextInput(attrs={"placeholder": "전화번호/채팅방 안내"}),
+            "location_note": forms.TextInput(attrs={"placeholder": "예: 본관 2층 상담실"}),
+            "channel_hint": forms.TextInput(attrs={"placeholder": "예: 학교 전화로 연락 예정"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -192,7 +274,7 @@ class ConsultationSlotForm(forms.ModelForm):
         starts_at = cleaned.get("starts_at")
         ends_at = cleaned.get("ends_at")
         if starts_at and ends_at and ends_at <= starts_at:
-            self.add_error("ends_at", "종료 시간은 시작 시간보다 늦어야 합니다.")
+            self.add_error("ends_at", "끝나는 시간은 시작 시간보다 늦어야 합니다.")
         return cleaned
 
     def save(self, commit=True):
@@ -208,15 +290,19 @@ class ConsultationSlotForm(forms.ModelForm):
         return obj
 
 
-class ParentUrgentAlertForm(forms.ModelForm):
+class ParentUrgentAlertForm(ClayFormMixin, forms.ModelForm):
     class Meta:
         model = ParentUrgentAlert
         fields = ["alert_type", "short_message"]
+        labels = {
+            "alert_type": "긴급 유형",
+            "short_message": "긴급 안내 문장 (20자)",
+        }
         widgets = {
             "short_message": forms.TextInput(
                 attrs={
                     "maxlength": "20",
-                    "placeholder": "20자 이내로 입력",
+                    "placeholder": "예: 병원 들렀다가 3교시 등교",
                 }
             )
         }
@@ -228,3 +314,4 @@ class ParentUrgentAlertForm(forms.ModelForm):
         if len(value) > 20:
             raise forms.ValidationError("긴급 안내는 20자 이내만 가능합니다.")
         return value
+

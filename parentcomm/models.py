@@ -82,6 +82,7 @@ class ParentNotice(models.Model):
     classroom_label = models.CharField(max_length=60, blank=True, default="")
     title = models.CharField(max_length=200)
     content = models.TextField()
+    attachment = models.FileField(upload_to="parentcomm/notices/", null=True, blank=True)
     is_pinned = models.BooleanField(default=False)
     published_at = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -204,7 +205,7 @@ class ParentThread(models.Model):
         related_name="threads",
     )
     subject = models.CharField(max_length=200)
-    category = models.CharField(max_length=50, default="general")
+    category = models.CharField(max_length=50, default="기타")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     severity = models.CharField(max_length=20, choices=Severity.choices, default=Severity.NORMAL)
     parent_message_limit = models.PositiveSmallIntegerField(default=3)
@@ -222,8 +223,8 @@ class ParentThread(models.Model):
             models.Index(fields=["parent_contact", "status"]),
             models.Index(fields=["teacher", "severity"]),
         ]
-        verbose_name = "학부모 문의 스레드"
-        verbose_name_plural = "학부모 문의 스레드"
+        verbose_name = "학부모 쪽지 대화"
+        verbose_name_plural = "학부모 쪽지 대화"
 
     def __str__(self):
         return self.subject
@@ -276,8 +277,8 @@ class ParentThreadMessage(models.Model):
 
     class Meta:
         ordering = ["created_at", "id"]
-        verbose_name = "학부모 문의 메시지"
-        verbose_name_plural = "학부모 문의 메시지"
+        verbose_name = "학부모 쪽지 메시지"
+        verbose_name_plural = "학부모 쪽지 메시지"
 
     def __str__(self):
         return f"{self.thread_id}:{self.sender_role}"

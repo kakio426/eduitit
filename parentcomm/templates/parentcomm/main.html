@@ -2,203 +2,355 @@
 {% load parentcomm_extras %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen">
-    <div class="max-w-7xl mx-auto space-y-8">
+<section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-7xl mx-auto space-y-6" x-data="{ tab: '{{ active_tab|default:'today' }}' }">
         <header class="clay-card p-6 md:p-8">
-            <h1 class="text-3xl font-bold text-gray-700">{{ service.title|default:"학부모 소통 허브" }}</h1>
-            <p class="text-gray-600 mt-2">
-                실시간 채팅 과몰입을 줄이고, 쪽지형 소통과 상담 조율 중심으로 학부모 커뮤니케이션을 관리합니다.
-            </p>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-white shadow-clay-inner flex items-center justify-center text-3xl">📨</div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-700">{{ service.title|default:"학부모 소통 허브" }}</h1>
+                        <p class="text-gray-600 mt-2">오늘 처리할 일부터 확인하고, 쪽지/상담/알림장을 단계별로 관리하세요.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+                        <p class="text-xs text-red-600 font-semibold">미확인 긴급</p>
+                        <p class="text-xl font-bold text-red-700">{{ urgent_unchecked|length }}</p>
+                    </div>
+                    <div class="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                        <p class="text-xs text-amber-700 font-semibold">답장 필요</p>
+                        <p class="text-xl font-bold text-amber-700">{{ reply_waiting_messages|length }}</p>
+                    </div>
+                    <div class="px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200">
+                        <p class="text-xs text-indigo-700 font-semibold">상담 조율</p>
+                        <p class="text-xl font-bold text-indigo-700">{{ consult_waiting_items|length }}</p>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <section class="clay-card p-6">
-                <h2 class="text-2xl font-bold text-gray-700 mb-4">학부모 연락처 등록</h2>
-                <form method="post" class="space-y-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_contact">
-                    {{ contact_form.as_p }}
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
-                </form>
+        <nav class="clay-card p-3">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <button type="button" @click="tab='today'" :class="tab==='today' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">오늘 할 일</button>
+                <button type="button" @click="tab='messages'" :class="tab==='messages' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">학부모 쪽지</button>
+                <button type="button" @click="tab='consult'" :class="tab==='consult' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">상담 조율</button>
+                <button type="button" @click="tab='notices'" :class="tab==='notices' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">알림장</button>
+                <button type="button" @click="tab='contacts'" :class="tab==='contacts' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">학부모 연락처</button>
+            </div>
+        </nav>
 
-                <hr class="my-6 border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-700 mb-3">등록된 연락처</h3>
+        <div x-show="tab==='today'" x-cloak class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <section class="clay-card p-5">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">긴급 안내</h2>
                 <ul class="space-y-3">
-                    {% for contact in contacts %}
-                    <li class="p-3 rounded-xl bg-white border border-gray-200">
-                        <p class="font-semibold text-gray-800">{{ contact.student_name }} / {{ contact.parent_name }}</p>
-                        <p class="text-sm text-gray-600">{{ contact.contact_email }} {{ contact.contact_phone }}</p>
-                        <p class="text-sm mt-2 text-red-700">
-                            긴급안내 링크:
-                            <a href="{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}" class="underline">
-                                {% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}
-                            </a>
-                        </p>
+                    {% for alert in urgent_unchecked|slice:":6" %}
+                    <li class="p-3 rounded-xl border border-red-300 bg-red-50">
+                        <div class="flex items-center justify-between">
+                            <p class="font-semibold text-gray-800">{{ alert.parent_contact.student_name }} / {{ alert.get_alert_type_display }}</p>
+                            <p class="text-xs text-gray-500">{{ alert.created_at|date:"H:i" }}</p>
+                        </div>
+                        <p class="text-sm text-gray-700 mt-1">{{ alert.short_message }}</p>
+                        <form method="post" action="{% url 'parentcomm:acknowledge_urgent_alert' alert_id=alert.id %}" class="mt-2">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1 rounded-lg bg-red-600 text-white text-sm">확인 처리</button>
+                        </form>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">아직 등록된 학부모 연락처가 없습니다.</li>
+                    <li class="text-gray-500">미확인 긴급 안내가 없습니다.</li>
                     {% endfor %}
                 </ul>
             </section>
 
-            <section class="clay-card p-6">
-                <h2 class="text-2xl font-bold text-gray-700 mb-4">긴급 안내함 (20자 제한)</h2>
-                <p class="text-sm text-gray-600 mb-4">
-                    지각/결석/조퇴 같은 긴급 알림은 학부모 링크에서 짧은 문장으로만 접수됩니다.
-                </p>
+            <section class="clay-card p-5">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">답장 필요한 쪽지</h2>
                 <ul class="space-y-3">
-                    {% for alert in urgent_alerts %}
-                    <li class="p-3 rounded-xl border {% if alert.is_acknowledged %}border-gray-200 bg-gray-50{% else %}border-red-300 bg-red-50{% endif %}">
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="font-semibold text-gray-800">
-                                {{ alert.parent_contact.student_name }} / {{ alert.get_alert_type_display }}
-                            </p>
-                            <p class="text-xs text-gray-500">{{ alert.created_at|date:"Y-m-d H:i" }}</p>
-                        </div>
-                        <p class="text-base mt-1 text-gray-700">{{ alert.short_message }}</p>
-                        {% if not alert.is_acknowledged %}
-                        <form method="post" action="{% url 'parentcomm:acknowledge_urgent_alert' alert_id=alert.id %}" class="mt-2">
-                            {% csrf_token %}
-                            <button type="submit" class="px-3 py-1 rounded-lg text-sm bg-red-600 text-white">확인 처리</button>
-                        </form>
-                        {% endif %}
+                    {% for item in reply_waiting_messages|slice:":6" %}
+                    <li class="p-3 rounded-xl bg-[#E0E5EC] shadow-clay-inner">
+                        <p class="font-semibold text-gray-800">{{ item.subject }}</p>
+                        <p class="text-sm text-gray-600 mt-1">{{ item.parent_contact.student_name }} 학부모</p>
+                        <button type="button" @click="tab='messages'" class="mt-2 px-3 py-1 rounded-lg bg-slate-700 text-white text-sm">쪽지함으로 이동</button>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">아직 접수된 긴급 안내가 없습니다.</li>
+                    <li class="text-gray-500">지금 답장할 쪽지가 없습니다.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section class="clay-card p-5">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">상담 조율 대기</h2>
+                <ul class="space-y-3">
+                    {% for item in consult_waiting_items|slice:":6" %}
+                    <li class="p-3 rounded-xl bg-[#E0E5EC] shadow-clay-inner">
+                        <p class="font-semibold text-gray-800">{{ item.parent_contact.student_name }} 학부모 상담</p>
+                        <p class="text-sm text-gray-600 mt-1">{{ item.get_status_display }}</p>
+                        <button type="button" @click="tab='consult'" class="mt-2 px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm">상담 조율로 이동</button>
+                    </li>
+                    {% empty %}
+                    <li class="text-gray-500">조율 중인 상담이 없습니다.</li>
                     {% endfor %}
                 </ul>
             </section>
         </div>
 
-        <section class="clay-card p-6 space-y-6">
-            <h2 class="text-2xl font-bold text-gray-700">상담 요청과 조율</h2>
-            <p class="text-sm text-gray-600">
-                교사가 상담 방식을 선택(채팅/전화/방문)하여 학부모에게 제안하고, 시간 슬롯을 제시해 조율합니다.
-            </p>
-
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-3">상담 요청 생성</h3>
-                    <form method="post" class="space-y-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_consultation_request">
-                        {{ consultation_request_form.as_p }}
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold">상담 요청 등록</button>
-                    </form>
-                </div>
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-3">문의 스레드 생성</h3>
-                    <form method="post" class="space-y-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_thread">
-                        {{ thread_form.as_p }}
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-slate-700 text-white font-semibold">문의 스레드 만들기</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-                {% for req in consultation_requests %}
-                <article class="p-4 rounded-xl border border-gray-200 bg-white">
-                    <div class="flex items-center justify-between gap-3">
-                        <h4 class="font-bold text-gray-800">
-                            {{ req.parent_contact.student_name }} 상담 요청
-                        </h4>
-                        <span class="text-sm text-indigo-700 font-semibold">{{ req.get_status_display }}</span>
+        <div x-show="tab==='messages'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="clay-card p-6 space-y-3">
+                <h2 class="text-2xl font-bold text-gray-700">새 쪽지 시작</h2>
+                <form method="post" class="space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_thread">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ thread_form.parent_contact.label }}</label>
+                        {{ thread_form.parent_contact }}
+                        {% if thread_form.parent_contact.errors %}<p class="text-red-600 text-sm mt-1">{{ thread_form.parent_contact.errors|join:", " }}</p>{% endif %}
                     </div>
-                    <p class="mt-1 text-gray-700">{{ req.reason }}</p>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ thread_form.subject.label }}</label>
+                        {{ thread_form.subject }}
+                        {% if thread_form.subject.errors %}<p class="text-red-600 text-sm mt-1">{{ thread_form.subject.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-slate-700 text-white font-semibold">쪽지 시작</button>
+                </form>
+            </section>
 
-                    <div class="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div class="border border-gray-200 rounded-lg p-3">
-                            <p class="font-semibold text-gray-700 mb-2">상담 방식 제안</p>
-                            <form method="post" class="space-y-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="create_proposal">
-                                <input type="hidden" name="consultation_request_id" value="{{ req.id }}">
-                                {% with proposal_form=request_proposal_forms|get_item:req.id %}
-                                {{ proposal_form.as_p }}
-                                {% endwith %}
-                                <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">방식 제안 저장</button>
-                            </form>
+            <section class="space-y-4">
+                {% for thread in threads %}
+                <article class="clay-card p-5">
+                    <div class="flex items-center justify-between">
+                        <p class="font-bold text-gray-800">{{ thread.subject }}</p>
+                        <span class="text-xs px-2 py-1 rounded-lg {% if thread.status == 'waiting_teacher' %}bg-amber-100 text-amber-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {{ thread.get_status_display }}
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">{{ thread.parent_contact.student_name }} 학부모</p>
+                    <div class="mt-3 space-y-2">
+                        {% for message in thread.messages.all|slice:"-3:" %}
+                        <div class="p-2 rounded-lg bg-[#E0E5EC] shadow-clay-inner">
+                            <p class="text-xs text-gray-500">{{ message.get_sender_role_display }} · {{ message.created_at|date:"m-d H:i" }}</p>
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap mt-1">{{ message.body }}</p>
                         </div>
-                        <div class="space-y-3">
-                            {% for proposal in req.proposals.all %}
-                            <div class="border border-gray-200 rounded-lg p-3">
-                                <p class="font-semibold text-gray-700">
-                                    제안 #{{ proposal.id }} - {{ proposal.allowed_method_labels|join:", " }}
-                                </p>
-                                <p class="text-sm text-gray-600 mt-1">{{ proposal.note }}</p>
-                                <form method="post" class="mt-3 space-y-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="add_slot">
-                                    <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
-                                    {% with slot_form=proposal_slot_forms|get_item:proposal.id %}
-                                    {{ slot_form.as_p }}
-                                    {% endwith %}
-                                    <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">조율 시간 추가</button>
-                                </form>
-                                <ul class="mt-2 text-sm text-gray-600 list-disc list-inside">
-                                    {% for slot in proposal.slots.all %}
-                                    <li>{{ slot.get_method_display }} / {{ slot.starts_at|date:"Y-m-d H:i" }} ~ {{ slot.ends_at|date:"H:i" }}</li>
-                                    {% empty %}
-                                    <li>아직 등록된 조율 시간이 없습니다.</li>
-                                    {% endfor %}
-                                </ul>
+                        {% empty %}
+                        <p class="text-sm text-gray-500">아직 작성된 내용이 없습니다.</p>
+                        {% endfor %}
+                    </div>
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reply_thread">
+                        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+                        {% with message_form=thread_message_forms|get_item:thread.id %}
+                        {{ message_form.body }}
+                        {% if message_form.body.errors %}<p class="text-red-600 text-sm mt-1">{{ message_form.body.errors|join:", " }}</p>{% endif %}
+                        {% endwith %}
+                        <button type="submit" class="mt-2 px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold">답장 남기기</button>
+                    </form>
+                </article>
+                {% empty %}
+                <div class="clay-card p-6 text-gray-500">현재 쪽지가 없습니다.</div>
+                {% endfor %}
+            </section>
+        </div>
+
+        <div x-show="tab==='consult'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="clay-card p-6 space-y-3">
+                <h2 class="text-2xl font-bold text-gray-700">상담 필요 등록</h2>
+                <form method="post" class="space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_consultation_request">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.parent_contact.label }}</label>
+                        {{ consultation_request_form.parent_contact }}
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.reason.label }}</label>
+                        {{ consultation_request_form.reason }}
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.escalation_reason.label }}</label>
+                        {{ consultation_request_form.escalation_reason }}
+                    </div>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold">상담 필요 등록</button>
+                </form>
+            </section>
+
+            <section class="space-y-4">
+                {% for req in consultation_requests %}
+                <article class="clay-card p-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800">{{ req.parent_contact.student_name }} 학부모 상담</h3>
+                        <span class="text-xs px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700">{{ req.get_status_display }}</span>
+                    </div>
+                    <p class="text-sm text-gray-700 mt-2">{{ req.reason }}</p>
+
+                    <div class="mt-4 p-3 rounded-xl bg-[#E0E5EC] shadow-clay-inner">
+                        <p class="font-semibold text-gray-700 mb-2">1단계: 상담 방법 제안</p>
+                        <form method="post" class="space-y-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_proposal">
+                            <input type="hidden" name="consultation_request_id" value="{{ req.id }}">
+                            {% with proposal_form=request_proposal_forms|get_item:req.id %}
+                            <div class="space-y-1">
+                                {% for checkbox in proposal_form.allowed_methods %}
+                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                    {{ checkbox.tag }} <span>{{ checkbox.choice_label }}</span>
+                                </label>
+                                {% endfor %}
                             </div>
-                            {% empty %}
-                            <p class="text-sm text-gray-500">아직 등록된 상담 제안이 없습니다.</p>
-                            {% endfor %}
+                            {% if proposal_form.allowed_methods.errors %}<p class="text-red-600 text-sm">{{ proposal_form.allowed_methods.errors|join:", " }}</p>{% endif %}
+                            {{ proposal_form.note }}
+                            {% if proposal_form.note.errors %}<p class="text-red-600 text-sm">{{ proposal_form.note.errors|join:", " }}</p>{% endif %}
+                            {% endwith %}
+                            <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">상담 방법 저장</button>
+                        </form>
+                    </div>
+
+                    <div class="mt-3 space-y-2">
+                        {% for proposal in req.proposals.all %}
+                        <div class="p-3 rounded-xl bg-white border border-gray-200">
+                            <p class="font-semibold text-gray-700">제안된 방법: {{ proposal.allowed_method_labels|join:", " }}</p>
+                            {% if proposal.note %}<p class="text-sm text-gray-600 mt-1">{{ proposal.note }}</p>{% endif %}
+                            <form method="post" class="mt-2 space-y-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_slot">
+                                <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
+                                {% with slot_form=proposal_slot_forms|get_item:proposal.id %}
+                                <p class="text-sm font-semibold text-gray-700">2단계: 가능한 시간 제안</p>
+                                {{ slot_form.method }}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {{ slot_form.starts_at }}
+                                    {{ slot_form.ends_at }}
+                                </div>
+                                {{ slot_form.location_note }}
+                                {{ slot_form.channel_hint }}
+                                {% if slot_form.non_field_errors %}<p class="text-red-600 text-sm">{{ slot_form.non_field_errors|join:", " }}</p>{% endif %}
+                                {% endwith %}
+                                <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">시간 추가</button>
+                            </form>
+                            <ul class="mt-2 text-sm text-gray-600 list-disc list-inside">
+                                {% for slot in proposal.slots.all %}
+                                <li>{{ slot.get_method_display }} / {{ slot.starts_at|date:"Y-m-d H:i" }} ~ {{ slot.ends_at|date:"H:i" }}</li>
+                                {% empty %}
+                                <li>등록된 시간이 없습니다.</li>
+                                {% endfor %}
+                            </ul>
                         </div>
+                        {% empty %}
+                        <p class="text-sm text-gray-500">아직 상담 방법 제안이 없습니다.</p>
+                        {% endfor %}
                     </div>
                 </article>
                 {% empty %}
-                <p class="text-gray-500">상담 요청이 아직 없습니다.</p>
+                <div class="clay-card p-6 text-gray-500">상담 조율 항목이 없습니다.</div>
                 {% endfor %}
-            </div>
-        </section>
+            </section>
+        </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <section class="clay-card p-6">
-                <h2 class="text-2xl font-bold text-gray-700 mb-4">알림장 작성</h2>
-                <form method="post" class="space-y-3">
+        <div x-show="tab==='notices'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="clay-card p-6 space-y-3">
+                <h2 class="text-2xl font-bold text-gray-700">알림장 보내기</h2>
+                <form method="post" enctype="multipart/form-data" class="space-y-3">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="create_notice">
-                    {{ notice_form.as_p }}
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 text-white font-semibold">알림장 등록</button>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ notice_form.classroom_label.label }}</label>
+                        {{ notice_form.classroom_label }}
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ notice_form.title.label }}</label>
+                        {{ notice_form.title }}
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ notice_form.content.label }}</label>
+                        {{ notice_form.content }}
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">{{ notice_form.attachment.label }}</label>
+                        {{ notice_form.attachment }}
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        {{ notice_form.is_pinned }} {{ notice_form.is_pinned.label }}
+                    </label>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold">알림장 등록</button>
                 </form>
-                <ul class="mt-4 space-y-2">
-                    {% for notice in notices %}
-                    <li class="p-2 rounded-lg bg-white border border-gray-200">
-                        <p class="font-semibold text-gray-800">{{ notice.title }}</p>
-                        <p class="text-sm text-gray-600">{{ notice.published_at|date:"Y-m-d H:i" }}</p>
-                    </li>
-                    {% empty %}
-                    <li class="text-gray-500">등록된 알림장이 없습니다.</li>
-                    {% endfor %}
-                </ul>
             </section>
 
-            <section class="clay-card p-6">
-                <h2 class="text-2xl font-bold text-gray-700 mb-4">문의 스레드</h2>
-                <div class="space-y-4">
-                    {% for thread in threads %}
-                    <article class="p-3 rounded-xl border border-gray-200 bg-white">
-                        <p class="font-semibold text-gray-800">{{ thread.subject }} ({{ thread.parent_contact.student_name }})</p>
-                        <p class="text-sm text-gray-600">상태: {{ thread.get_status_display }} / 학부모 {{ thread.parent_message_count }}회</p>
-                        <form method="post" class="mt-2">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="reply_thread">
-                            <input type="hidden" name="thread_id" value="{{ thread.id }}">
-                            {{ thread_message_form.as_p }}
-                            <button type="submit" class="px-3 py-1 rounded-lg bg-slate-700 text-white text-sm">교사 답변 전송</button>
-                        </form>
-                    </article>
-                    {% empty %}
-                    <p class="text-gray-500">문의 스레드가 없습니다.</p>
-                    {% endfor %}
-                </div>
+            <section class="space-y-3">
+                {% for notice in notices %}
+                <article class="clay-card p-5">
+                    <p class="font-semibold text-gray-800">{{ notice.title }}</p>
+                    <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ notice.content|truncatechars:130 }}</p>
+                    <p class="text-xs text-gray-500 mt-2">{{ notice.published_at|date:"Y-m-d H:i" }}</p>
+                    {% if notice.attachment %}
+                    <a href="{{ notice.attachment.url }}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm" download>첨부파일 받기</a>
+                    {% endif %}
+                </article>
+                {% empty %}
+                <div class="clay-card p-6 text-gray-500">등록된 알림장이 없습니다.</div>
+                {% endfor %}
+            </section>
+        </div>
+
+        <div x-show="tab==='contacts'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="clay-card p-6 space-y-3">
+                <h2 class="text-2xl font-bold text-gray-700">학부모 연락처 등록</h2>
+                <form method="post" class="space-y-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_contact">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.student_name.label }}</label>
+                            {{ contact_form.student_name }}
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.parent_name.label }}</label>
+                            {{ contact_form.parent_name }}
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.student_grade.label }}</label>
+                            {{ contact_form.student_grade }}
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.student_classroom.label }}</label>
+                            {{ contact_form.student_classroom }}
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.relationship.label }}</label>
+                            {{ contact_form.relationship }}
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.contact_phone.label }}</label>
+                            {{ contact_form.contact_phone }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm text-gray-600 mb-1">{{ contact_form.contact_email.label }}</label>
+                            {{ contact_form.contact_email }}
+                        </div>
+                    </div>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
+                </form>
+            </section>
+
+            <section class="space-y-3">
+                {% for contact in contacts %}
+                <article class="clay-card p-5" x-data="{ copied: false }">
+                    <p class="font-semibold text-gray-800">{{ contact.student_name }} / {{ contact.parent_name }}</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ contact.contact_email }} {{ contact.contact_phone }}</p>
+                    <div class="mt-2 flex flex-wrap gap-2 items-center">
+                        <a href="{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold">긴급안내 페이지</a>
+                        <button type="button"
+                                class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm"
+                                data-link="{{ request.scheme }}://{{ request.get_host }}{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}"
+                                @click="navigator.clipboard.writeText($el.dataset.link); copied=true; setTimeout(()=>copied=false, 1500)">
+                            링크 복사
+                        </button>
+                        <span x-show="copied" x-cloak class="text-xs text-emerald-700 font-semibold">복사됨</span>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="clay-card p-6 text-gray-500">등록된 학부모 연락처가 없습니다.</div>
+                {% endfor %}
             </section>
         </div>
     </div>
 </section>
 {% endblock %}
+

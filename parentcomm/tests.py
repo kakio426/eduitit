@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -12,6 +13,7 @@ from .models import (
     ConsultationRequest,
     ConsultationSlot,
     ParentContact,
+    ParentNotice,
     ParentThread,
     ParentThreadMessage,
     ParentUrgentAlert,
@@ -174,3 +176,19 @@ class ParentCommViewTests(TestCase):
         alert.refresh_from_db()
         self.assertTrue(alert.is_acknowledged)
         self.assertIsNotNone(alert.acknowledged_at)
+
+    def test_teacher_can_create_notice_with_attachment(self):
+        attachment = SimpleUploadedFile("notice.txt", b"school notice", content_type="text/plain")
+        response = self.client.post(
+            reverse("parentcomm:main"),
+            {
+                "action": "create_notice",
+                "classroom_label": "3-2 바다반",
+                "title": "내일 준비물 안내",
+                "content": "체육복을 챙겨주세요.",
+                "attachment": attachment,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        notice = ParentNotice.objects.get(title="내일 준비물 안내")
+        self.assertTrue(bool(notice.attachment))

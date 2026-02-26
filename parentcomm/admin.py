@@ -43,10 +43,14 @@ class ParentCommunicationPolicyAdmin(admin.ModelAdmin):
 
 @admin.register(ParentNotice)
 class ParentNoticeAdmin(admin.ModelAdmin):
-    list_display = ("title", "teacher", "classroom_label", "is_pinned", "published_at")
+    list_display = ("title", "teacher", "classroom_label", "has_attachment", "is_pinned", "published_at")
     search_fields = ("title", "teacher__username", "classroom_label")
     list_filter = ("is_pinned",)
     raw_id_fields = ("teacher",)
+
+    @admin.display(description="첨부")
+    def has_attachment(self, obj):
+        return bool(obj.attachment)
 
 
 @admin.register(ParentNoticeReceipt)
@@ -126,4 +130,3 @@ class ParentUrgentAlertAdmin(admin.ModelAdmin):
     search_fields = ("parent_contact__student_name", "parent_contact__parent_name", "short_message")
     list_filter = ("alert_type", "is_acknowledged")
     raw_id_fields = ("teacher", "parent_contact")
-
