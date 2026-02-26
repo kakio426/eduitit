@@ -73,10 +73,20 @@
                     <div x-show="step===2" class="space-y-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-600 mb-1">
+                                <i class="fa-solid fa-share-nodes text-emerald-500 mr-1"></i>{{ form.shared_roster_group.label }}
+                            </label>
+                            {{ form.shared_roster_group }}
+                            <p class="text-xs text-gray-500 mt-1">
+                                배부 체크 명단을 선택하면 활성 멤버가 수합 대상자에 자동 포함됩니다.
+                                <a href="{% url 'handoff:dashboard' %}" class="text-emerald-700 font-semibold hover:underline">배부 체크 명단 관리</a>
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">
                                 <i class="fa-solid fa-users text-emerald-500 mr-1"></i>{{ form.expected_submitters.label }}
                             </label>
                             {{ form.expected_submitters }}
-                            <p class="text-xs text-gray-500 mt-1">한 줄에 한 명씩 입력하면 미제출자를 자동으로 확인할 수 있습니다. 비우면 자유 제출입니다.</p>
+                            <p class="text-xs text-gray-500 mt-1">공유 명단 외 추가 대상자가 있으면 한 줄에 한 명씩 입력하세요. 비우면 공유 명단만 사용합니다.</p>
                         </div>
                     </div>
 

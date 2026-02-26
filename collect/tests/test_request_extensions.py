@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from collect.models import CollectionRequest
+from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
 class RequestExtensionTests(TestCase):
@@ -189,3 +190,72 @@ class RequestExtensionTests(TestCase):
         response = self.client.get(reverse("collect:dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("collect:request_edit", args=[req.id]))
+
+    def test_expected_submitters_list_merges_shared_roster_and_manual_names(self):
+        group = HandoffRosterGroup.objects.create(owner=self.teacher, name="교무부")
+        HandoffRosterMember.objects.create(group=group, display_name="이서연", sort_order=1, is_active=True)
+        HandoffRosterMember.objects.create(group=group, display_name="김민수", sort_order=2, is_active=True)
+        HandoffRosterMember.objects.create(group=group, display_name="박지훈", sort_order=3, is_active=False)
+        HandoffRosterMember.objects.create(group=group, display_name="김민수", sort_order=4, is_active=True)
+
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="shared-roster-list",
+            status="active",
+            shared_roster_group=group,
+            expected_submitters="추가A\n김민수\n추가B",
+        )
+
+        self.assertEqual(req.expected_submitters_list, ["이서연", "김민수", "추가A", "추가B"])
+
+    def test_request_create_can_link_shared_handoff_roster(self):
+        self.client.force_login(self.teacher)
+        group = HandoffRosterGroup.objects.create(owner=self.teacher, name="2학년")
+        HandoffRosterMember.objects.create(group=group, display_name="김교사", sort_order=1, is_active=True)
+        HandoffRosterMember.objects.create(group=group, display_name="이교사", sort_order=2, is_active=True)
+
+        response = self.client.post(
+            reverse("collect:request_create"),
+            data={
+                "title": "공유 명단 연동 수합",
+                "description": "",
+                "shared_roster_group": str(group.id),
+                "expected_submitters": "",
+                "allow_file": "on",
+                "allow_link": "on",
+                "allow_text": "on",
+                "choice_mode": "single",
+                "choice_min_selections": "1",
+                "choice_max_selections": "",
+                "choice_options_text": "",
+                "deadline": "",
+                "max_submissions": "30",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        req = CollectionRequest.objects.get(creator=self.teacher, title="공유 명단 연동 수합")
+        self.assertEqual(req.shared_roster_group_id, group.id)
+        self.assertEqual(req.expected_submitters_list, ["김교사", "이교사"])
+
+    def test_request_create_rejects_other_users_handoff_roster(self):
+        self.client.force_login(self.teacher)
+        other_group = HandoffRosterGroup.objects.create(owner=self.other_teacher, name="다른교사 명단")
+        HandoffRosterMember.objects.create(group=other_group, display_name="외부교사", sort_order=1, is_active=True)
+
+        response = self.client.post(
+            reverse("collect:request_create"),
+            data={
+                "title": "잘못된 공유 명단",
+                "description": "",
+                "shared_roster_group": str(other_group.id),
+                "expected_submitters": "",
+                "allow_file": "on",
+                "deadline": "",
+                "max_submissions": "30",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CollectionRequest.objects.filter(creator=self.teacher, title="잘못된 공유 명단").exists())
+        self.assertIn("shared_roster_group", response.context["form"].errors)

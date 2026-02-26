@@ -411,7 +411,7 @@ def dashboard(request):
         num_submissions=Count('submissions')
     ).order_by('-created_at')
 
-    form = CollectionRequestForm()
+    form = CollectionRequestForm(owner=request.user)
 
     return render(request, 'collect/dashboard.html', {
         'service': service,
@@ -424,7 +424,7 @@ def dashboard(request):
 @require_POST
 def request_create(request):
     """새 수합 요청 생성"""
-    form = CollectionRequestForm(request.POST, request.FILES)
+    form = CollectionRequestForm(request.POST, request.FILES, owner=request.user)
     if form.is_valid():
         collection_req = form.save(commit=False)
         collection_req.creator = request.user
@@ -456,7 +456,7 @@ def request_edit(request, request_id):
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
 
     if request.method == "POST":
-        form = CollectionRequestForm(request.POST, request.FILES, instance=collection_req)
+        form = CollectionRequestForm(request.POST, request.FILES, instance=collection_req, owner=request.user)
         if form.is_valid():
             updated_req = form.save(commit=False)
 
@@ -470,7 +470,7 @@ def request_edit(request, request_id):
             messages.success(request, "수합 요청이 수정되었습니다.")
             return redirect("collect:request_detail", request_id=str(updated_req.id))
     else:
-        form = CollectionRequestForm(instance=collection_req)
+        form = CollectionRequestForm(instance=collection_req, owner=request.user)
 
     return render(request, "collect/request_edit.html", {
         "req": collection_req,

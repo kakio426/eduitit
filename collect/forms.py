@@ -1,10 +1,24 @@
 from django import forms
 from django.utils import timezone
 
+from handoff.models import HandoffRosterGroup
+
 from .models import CollectionRequest
 
 
 class CollectionRequestForm(forms.ModelForm):
+    shared_roster_group = forms.ModelChoiceField(
+        required=False,
+        queryset=HandoffRosterGroup.objects.none(),
+        empty_label="선택 안 함 (수동 입력만 사용)",
+        label="배부 체크 공유 명단",
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
+            }
+        ),
+    )
+
     choice_options_text = forms.CharField(
         required=False,
         label="선택형 보기 목록",
@@ -22,6 +36,7 @@ class CollectionRequestForm(forms.ModelForm):
         fields = [
             "title",
             "description",
+            "shared_roster_group",
             "expected_submitters",
             "allow_file",
             "allow_link",
@@ -98,6 +113,7 @@ class CollectionRequestForm(forms.ModelForm):
         labels = {
             "title": "수합 제목",
             "description": "안내사항",
+            "shared_roster_group": "배부 체크 공유 명단",
             "allow_file": "파일 업로드 허용",
             "allow_link": "링크 제출 허용",
             "allow_text": "텍스트 제출 허용",
@@ -113,7 +129,17 @@ class CollectionRequestForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        owner = kwargs.pop("owner", None)
         super().__init__(*args, **kwargs)
+
+        if owner is None and self.instance and self.instance.pk:
+            owner = self.instance.creator
+        if owner is not None:
+            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(owner=owner).order_by(
+                "-is_favorite",
+                "name",
+            )
+
         if self.instance and self.instance.pk and not self.is_bound:
             self.initial["choice_options_text"] = "\n".join(self.instance.normalized_choice_options)
             if self.instance.deadline:

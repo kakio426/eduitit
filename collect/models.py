@@ -34,6 +34,14 @@ class CollectionRequest(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_requests')
+    shared_roster_group = models.ForeignKey(
+        "handoff.HandoffRosterGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collect_requests",
+        help_text="배부 체크 명단과 연동할 대상 (선택)",
+    )
     access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="6자리 입장코드")
     title = models.CharField(max_length=200, help_text="수합 제목")
     description = models.TextField(blank=True, help_text="안내사항")
@@ -108,10 +116,44 @@ class CollectionRequest(models.Model):
 
     @property
     def expected_submitters_list(self):
-        """줄바꿈으로 구분된 제출자 목록을 리스트로 반환"""
+        """배부 체크 공유 명단 + 수동 입력 명단을 합쳐 제출자 목록으로 반환"""
+        merged = []
+        seen = set()
+
+        for name in self._shared_roster_names():
+            if name in seen:
+                continue
+            seen.add(name)
+            merged.append(name)
+
+        for name in self._manual_submitter_names():
+            if name in seen:
+                continue
+            seen.add(name)
+            merged.append(name)
+
+        return merged
+
+    def _manual_submitter_names(self):
         if not self.expected_submitters:
             return []
         return [name.strip() for name in self.expected_submitters.strip().splitlines() if name.strip()]
+
+    def _shared_roster_names(self):
+        group = self.shared_roster_group
+        if not group or group.owner_id != self.creator_id:
+            return []
+
+        names = []
+        seen = set()
+        rows = group.members.filter(is_active=True).order_by("sort_order", "id").values_list("display_name", flat=True)
+        for raw_name in rows:
+            name = str(raw_name or "").strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            names.append(name)
+        return names
 
     @property
     def allowed_submission_types(self):
