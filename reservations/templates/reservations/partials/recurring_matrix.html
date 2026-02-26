@@ -31,7 +31,7 @@
                             class="bg-gray-50/50 rounded-lg p-0 hover:bg-purple-50 transition-colors relative h-16 border border-transparent hover:border-purple-200">
                             <!-- Toggle Button -->
                             <form hx-post="{% url 'reservations:recurring_settings' school.slug %}"
-                                hx-target="#recurring-matrix-container" hx-swap="innerHTML"
+                                hx-target="#recurring-matrix-container" hx-swap="innerHTML show:none"
                                 class="w-full h-full flex items-center justify-center cursor-pointer">
                                 {% csrf_token %}
                                 <input type="hidden" name="room_id" value="{{ item.room.id }}">

@@ -178,12 +178,18 @@
                         <i class="fas fa-clock text-orange-500"></i> 교시(Period) 설정
                     </h2>
                     <p class="hidden md:block text-sm text-gray-500">
-                        * 예약판의 행(교시)을 이름별로 관리하세요. 콤마(,)로 구분하여 순서대로 입력하세요.
+                        * 교시명/시간을 한 줄씩 입력해 직관적으로 관리하세요.
                     </p>
                 </div>
 
-                <form hx-post="{% url 'reservations:update_config' school.slug %}" class="space-y-6">
+                <form hx-post="{% url 'reservations:update_config' school.slug %}" class="space-y-6"
+                    x-data="periodEditor('{{ school.config.period_labels|escapejs }}', '{{ school.config.period_times|escapejs }}')"
+                    x-init="init()"
+                    @submit="syncHiddenFields()">
                     {% csrf_token %}
+                    <input type="hidden" name="period_labels" x-ref="periodLabelsInput">
+                    <input type="hidden" name="period_times" x-ref="periodTimesInput">
+
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">학교 이름</label>
                         <input type="text" name="school_name" value="{{ school.name }}"
@@ -191,22 +197,56 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 구성 (순서대로 입력)</label>
-                        <textarea name="period_labels" rows="3" 
-                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
-                            placeholder="1교시,2교시,3교시,4교시,5교시,6교시">{{ school.config.period_labels }}</textarea>
-                        <p class="text-[10px] text-gray-500 mt-2 ml-2">
-                            * 교시 이름을 콤마(,)로 구분하여 입력하세요. 입력한 개수만큼 예약판의 행이 생깁니다.
-                        </p>
-                    </div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 구성/시간</label>
+                        <div class="bg-white/60 border border-white/70 rounded-2xl p-3 md:p-4 space-y-2">
+                            <div class="hidden md:grid grid-cols-[88px_minmax(0,1fr)_minmax(0,1fr)_72px] gap-2 px-1 text-[11px] font-bold text-gray-500">
+                                <span>순서</span>
+                                <span>교시 이름</span>
+                                <span>교시 시간(선택)</span>
+                                <span class="text-center">삭제</span>
+                            </div>
 
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-2 ml-1">교시 시간 (선택)</label>
-                        <textarea name="period_times" rows="2"
-                            class="w-full shadow-clay-inner p-4 rounded-2xl font-mono text-sm leading-relaxed bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
-                            placeholder="09:00-09:40,09:50-10:30,10:40-11:20">{{ school.config.period_times }}</textarea>
+                            <template x-for="(slot, idx) in periodSlots" :key="slot.id">
+                                <div class="grid grid-cols-1 md:grid-cols-[88px_minmax(0,1fr)_minmax(0,1fr)_72px] gap-2 items-center bg-[#E0E5EC]/80 rounded-xl p-2.5">
+                                    <div class="flex items-center justify-between md:justify-center px-1">
+                                        <span class="text-xs font-bold text-gray-500 md:hidden">순서</span>
+                                        <span class="inline-flex items-center justify-center rounded-lg bg-white px-2.5 py-1 text-sm font-extrabold text-gray-700"
+                                            x-text="`${idx + 1}교시`"></span>
+                                    </div>
+                                    <input type="text"
+                                        x-model="slot.label"
+                                        @input="syncHiddenFields()"
+                                        class="w-full shadow-clay-inner px-3 py-2.5 rounded-xl text-sm bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
+                                        placeholder="예: 1교시, 점심, 창체">
+                                    <input type="text"
+                                        x-model="slot.time"
+                                        @input="syncHiddenFields()"
+                                        class="w-full shadow-clay-inner px-3 py-2.5 rounded-xl text-sm font-mono bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300"
+                                        placeholder="예: 09:00-09:40">
+                                    <button type="button"
+                                        @click="removeSlot(idx)"
+                                        :disabled="periodSlots.length === 1"
+                                        class="h-10 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                                        삭제
+                                    </button>
+                                </div>
+                            </template>
+
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <button type="button"
+                                    @click="addSlot()"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
+                                    <i class="fas fa-plus text-[10px]"></i> 교시 추가
+                                </button>
+                                <button type="button"
+                                    @click="fillDefaultLabels()"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition">
+                                    기본 이름 채우기
+                                </button>
+                            </div>
+                        </div>
                         <p class="text-[10px] text-gray-500 mt-2 ml-2">
-                            * 비우면 표시하지 않습니다. 교시 순서에 맞춰 콤마(,)로 입력하세요.
+                            * 교시 이름은 필수, 시간은 선택입니다. 행을 추가/삭제하면 예약판 행이 그대로 반영됩니다.
                         </p>
                     </div>
 
@@ -352,5 +392,111 @@
         </div>
     </div>
 </section>
+
+<script>
+    function periodEditor(initialLabels, initialTimes) {
+        const parseCsv = function (value) {
+            return String(value || '')
+                .split(',')
+                .map(function (item) { return item.trim(); });
+        };
+
+        const labels = parseCsv(initialLabels).filter(function (item) { return item.length > 0; });
+        const times = parseCsv(initialTimes);
+        const slotCount = Math.max(labels.length, 1);
+        const slots = [];
+
+        for (let i = 0; i < slotCount; i += 1) {
+            slots.push({
+                id: i + 1,
+                label: labels[i] || `${i + 1}교시`,
+                time: times[i] || '',
+            });
+        }
+
+        return {
+            periodSlots: slots,
+            nextId: slotCount + 1,
+
+            init() {
+                this.syncHiddenFields();
+            },
+
+            addSlot() {
+                this.periodSlots.push({
+                    id: this.nextId,
+                    label: `${this.periodSlots.length + 1}교시`,
+                    time: '',
+                });
+                this.nextId += 1;
+                this.syncHiddenFields();
+            },
+
+            removeSlot(index) {
+                if (this.periodSlots.length <= 1) {
+                    return;
+                }
+                this.periodSlots.splice(index, 1);
+                this.syncHiddenFields();
+            },
+
+            fillDefaultLabels() {
+                this.periodSlots.forEach(function (slot, idx) {
+                    if (!String(slot.label || '').trim()) {
+                        slot.label = `${idx + 1}교시`;
+                    }
+                });
+                this.syncHiddenFields();
+            },
+
+            syncHiddenFields() {
+                let normalized = this.periodSlots
+                    .map(function (slot) {
+                        return {
+                            label: String(slot.label || '').trim(),
+                            time: String(slot.time || '').trim(),
+                        };
+                    })
+                    .filter(function (slot) { return slot.label.length > 0; });
+
+                if (!normalized.length) {
+                    normalized = [{ label: '1교시', time: '' }];
+                    if (this.periodSlots.length) {
+                        this.periodSlots[0].label = '1교시';
+                    } else {
+                        this.periodSlots.push({ id: this.nextId, label: '1교시', time: '' });
+                        this.nextId += 1;
+                    }
+                }
+
+                this.$refs.periodLabelsInput.value = normalized.map(function (slot) { return slot.label; }).join(',');
+                this.$refs.periodTimesInput.value = normalized.map(function (slot) { return slot.time; }).join(',');
+            },
+        };
+    }
+
+    (function () {
+        let recurringScrollY = null;
+
+        document.body.addEventListener('htmx:beforeRequest', function (evt) {
+            if (evt.target && evt.target.closest && evt.target.closest('#recurring-matrix-container')) {
+                recurringScrollY = window.scrollY || window.pageYOffset || 0;
+            }
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function (evt) {
+            const target = evt.detail && evt.detail.target;
+            if (!target || target.id !== 'recurring-matrix-container' || recurringScrollY === null) {
+                return;
+            }
+
+            const restoreY = recurringScrollY;
+            recurringScrollY = null;
+            window.requestAnimationFrame(function () {
+                window.scrollTo(0, restoreY);
+            });
+        });
+    })();
+</script>
 {% endblock %}
 
