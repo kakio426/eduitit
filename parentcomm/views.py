@@ -1,3 +1,6 @@
+import csv
+from io import StringIO
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +14,9 @@ from .forms import (
     ConsultationProposalForm,
     ConsultationRequestForm,
     ConsultationSlotForm,
+    ParentContactBulkTextForm,
     ParentContactForm,
+    ParentContactCsvImportForm,
     ParentNoticeForm,
     ParentThreadCreateForm,
     ParentThreadMessageForm,
@@ -36,6 +41,15 @@ TAB_MESSAGES = "messages"
 TAB_CONSULT = "consult"
 TAB_CONTACTS = "contacts"
 ALLOWED_TABS = {TAB_TODAY, TAB_NOTICES, TAB_MESSAGES, TAB_CONSULT, TAB_CONTACTS}
+CONTACT_HEADER_ALIASES = {
+    "student_name": {"studentname", "학생이름", "학생명", "학생"},
+    "parent_name": {"parentname", "학부모이름", "학부모명", "보호자이름", "보호자명", "학부모", "보호자"},
+    "contact_phone": {"contactphone", "phone", "연락처", "전화번호", "휴대폰"},
+    "contact_email": {"contactemail", "email", "이메일", "메일"},
+    "student_grade": {"studentgrade", "grade", "학년"},
+    "student_classroom": {"studentclassroom", "classroom", "반", "학급"},
+    "relationship": {"relationship", "관계"},
+}
 
 
 def _get_service():
@@ -54,6 +68,8 @@ def main(request):
         active_tab = TAB_TODAY
 
     contact_form = ParentContactForm()
+    contact_csv_form = ParentContactCsvImportForm()
+    contact_bulk_form = ParentContactBulkTextForm()
     notice_form = ParentNoticeForm()
     thread_form = ParentThreadCreateForm(teacher=teacher)
     consultation_request_form = ConsultationRequestForm(teacher=teacher)
@@ -76,6 +92,44 @@ def main(request):
                 messages.success(request, "학부모 연락처를 등록했습니다.")
                 return _redirect_to(TAB_CONTACTS)
             messages.error(request, "연락처를 저장하지 못했습니다. 입력값을 확인해 주세요.")
+        elif action == "add_contact_csv":
+            active_tab = TAB_CONTACTS
+            contact_csv_form = ParentContactCsvImportForm(request.POST, request.FILES)
+            if contact_csv_form.is_valid():
+                rows, parse_errors = _parse_contact_csv_rows(contact_csv_form.cleaned_data["csv_file"])
+                if parse_errors:
+                    for err in parse_errors[:3]:
+                        messages.error(request, err)
+                elif not rows:
+                    messages.warning(request, "CSV에서 등록 가능한 행을 찾지 못했습니다.")
+                else:
+                    created_count, updated_count = _upsert_parent_contacts(teacher, rows)
+                    messages.success(
+                        request,
+                        f"CSV 등록 완료: 신규 {created_count}명, 업데이트 {updated_count}명",
+                    )
+                    return _redirect_to(TAB_CONTACTS)
+            else:
+                messages.error(request, "CSV 파일을 다시 확인해 주세요.")
+        elif action == "add_contact_bulk_text":
+            active_tab = TAB_CONTACTS
+            contact_bulk_form = ParentContactBulkTextForm(request.POST)
+            if contact_bulk_form.is_valid():
+                rows, parse_errors = _parse_contact_bulk_text_rows(contact_bulk_form.cleaned_data["bulk_text"])
+                if parse_errors:
+                    for err in parse_errors[:3]:
+                        messages.error(request, err)
+                elif not rows:
+                    messages.warning(request, "입력한 내용에서 등록 가능한 항목을 찾지 못했습니다.")
+                else:
+                    created_count, updated_count = _upsert_parent_contacts(teacher, rows)
+                    messages.success(
+                        request,
+                        f"빠른 등록 완료: 신규 {created_count}명, 업데이트 {updated_count}명",
+                    )
+                    return _redirect_to(TAB_CONTACTS)
+            else:
+                messages.error(request, "빠른 등록 입력값을 확인해 주세요.")
         elif action == "create_notice":
             active_tab = TAB_NOTICES
             notice_form = ParentNoticeForm(request.POST, request.FILES)
@@ -206,6 +260,8 @@ def main(request):
         "urgent_unchecked": urgent_unchecked,
         "consultation_status_labels": consultation_status_labels,
         "contact_form": contact_form,
+        "contact_csv_form": contact_csv_form,
+        "contact_bulk_form": contact_bulk_form,
         "notice_form": notice_form,
         "thread_form": thread_form,
         "thread_message_forms": thread_message_forms,
@@ -214,6 +270,152 @@ def main(request):
         "proposal_slot_forms": proposal_slot_forms,
     }
     return render(request, "parentcomm/main.html", context)
+
+
+def _normalize_contact_header(value):
+    return (value or "").strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+
+
+def _decode_csv_text(raw_bytes):
+    for encoding in ("utf-8-sig", "cp949", "euc-kr"):
+        try:
+            return raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return raw_bytes.decode("utf-8", errors="ignore")
+
+
+def _safe_int_or_none(value):
+    text = (value or "").strip()
+    if not text:
+        return None
+    if not text.isdigit():
+        return None
+    number = int(text)
+    return number if number > 0 else None
+
+
+def _build_contact_row_from_values(values):
+    student_name = (values[0] if len(values) > 0 else "").strip()
+    parent_name = (values[1] if len(values) > 1 else "").strip()
+    if not student_name or not parent_name:
+        return None
+
+    return {
+        "student_name": student_name,
+        "parent_name": parent_name,
+        "contact_phone": (values[2] if len(values) > 2 else "").strip(),
+        "contact_email": (values[3] if len(values) > 3 else "").strip(),
+        "student_grade": _safe_int_or_none(values[4] if len(values) > 4 else ""),
+        "student_classroom": (values[5] if len(values) > 5 else "").strip(),
+        "relationship": (values[6] if len(values) > 6 else "").strip(),
+    }
+
+
+def _parse_contact_bulk_text_rows(raw_text):
+    rows = []
+    errors = []
+    for line_no, raw_line in enumerate((raw_text or "").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = [item.strip() for item in line.split(",")]
+        row = _build_contact_row_from_values(parts)
+        if row:
+            rows.append(row)
+        else:
+            errors.append(f"{line_no}번째 줄 형식이 올바르지 않습니다. (학생이름,학부모이름 필수)")
+    return rows, errors
+
+
+def _parse_contact_csv_rows(csv_file):
+    raw_bytes = csv_file.read()
+    csv_file.seek(0)
+    text = _decode_csv_text(raw_bytes)
+    stream = StringIO(text)
+    rows = []
+    errors = []
+
+    sample = text[:2048]
+    delimiter = ","
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+        delimiter = dialect.delimiter
+    except csv.Error:
+        delimiter = ","
+
+    reader = csv.reader(stream, delimiter=delimiter)
+    all_rows = [[col.strip() for col in row] for row in reader]
+    all_rows = [row for row in all_rows if any(cell for cell in row)]
+    if not all_rows:
+        return [], ["CSV 내용이 비어 있습니다."]
+
+    header = all_rows[0]
+    mapping = {}
+    for idx, col_name in enumerate(header):
+        key = _normalize_contact_header(col_name)
+        for field_name, aliases in CONTACT_HEADER_ALIASES.items():
+            if key in aliases:
+                mapping[field_name] = idx
+                break
+
+    has_header = "student_name" in mapping and "parent_name" in mapping
+    data_rows = all_rows[1:] if has_header else all_rows
+
+    def _value(row_values, field_name):
+        index = mapping.get(field_name)
+        if index is None or index >= len(row_values):
+            return ""
+        return row_values[index].strip()
+
+    for i, row_values in enumerate(data_rows, start=2 if has_header else 1):
+        if has_header:
+            extracted = {
+                "student_name": _value(row_values, "student_name"),
+                "parent_name": _value(row_values, "parent_name"),
+                "contact_phone": _value(row_values, "contact_phone"),
+                "contact_email": _value(row_values, "contact_email"),
+                "student_grade": _safe_int_or_none(_value(row_values, "student_grade")),
+                "student_classroom": _value(row_values, "student_classroom"),
+                "relationship": _value(row_values, "relationship"),
+            }
+            if not extracted["student_name"] or not extracted["parent_name"]:
+                errors.append(f"{i}번째 행에서 학생이름/학부모이름이 비어 있습니다.")
+                continue
+            rows.append(extracted)
+        else:
+            parsed = _build_contact_row_from_values(row_values)
+            if not parsed:
+                errors.append(f"{i}번째 행 형식이 맞지 않습니다. (학생이름,학부모이름 필수)")
+                continue
+            rows.append(parsed)
+
+    return rows, errors
+
+
+def _upsert_parent_contacts(teacher, rows):
+    created_count = 0
+    updated_count = 0
+    for row in rows:
+        defaults = {
+            "contact_phone": row.get("contact_phone", ""),
+            "contact_email": row.get("contact_email", ""),
+            "student_grade": row.get("student_grade"),
+            "student_classroom": row.get("student_classroom", ""),
+            "relationship": row.get("relationship", ""),
+            "is_active": True,
+        }
+        _, created = ParentContact.objects.update_or_create(
+            teacher=teacher,
+            student_name=row["student_name"],
+            parent_name=row["parent_name"],
+            defaults=defaults,
+        )
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+    return created_count, updated_count
 
 
 def urgent_entry(request, access_id):

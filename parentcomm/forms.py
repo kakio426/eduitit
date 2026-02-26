@@ -86,6 +86,32 @@ class ParentContactForm(ClayFormMixin, forms.ModelForm):
             "contact_phone": forms.TextInput(attrs={"placeholder": "연락처"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["contact_email"].required = False
+        self.fields["contact_email"].help_text = "선택 입력입니다. 학부모 가입 없이도 사용 가능합니다."
+
+
+class ParentContactCsvImportForm(ClayFormMixin, forms.Form):
+    csv_file = forms.FileField(
+        label="CSV 파일",
+        help_text="헤더 예시: student_name,parent_name,contact_phone,contact_email",
+        widget=forms.ClearableFileInput(attrs={"accept": ".csv,text/csv"}),
+    )
+
+
+class ParentContactBulkTextForm(ClayFormMixin, forms.Form):
+    bulk_text = forms.CharField(
+        label="여러 줄 빠른 등록",
+        help_text="한 줄에 한 명씩 입력: 학생이름,학부모이름,연락처,이메일(선택)",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 7,
+                "placeholder": "예)\n김민수,김학부모,010-1111-2222,parent1@example.com\n박지우,박학부모,010-3333-4444",
+            }
+        ),
+    )
+
 
 class ParentNoticeForm(ClayFormMixin, forms.ModelForm):
     class Meta:
@@ -314,4 +340,3 @@ class ParentUrgentAlertForm(ClayFormMixin, forms.ModelForm):
         if len(value) > 20:
             raise forms.ValidationError("긴급 안내는 20자 이내만 가능합니다.")
         return value
-
