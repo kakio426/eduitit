@@ -325,15 +325,30 @@ class DutyTickerManager {
     renderSchedule() {
         const container = document.getElementById('headerScheduleStrip');
         if (!container) return;
-        if (this.todaySchedule.length === 0) {
-            container.innerHTML = '<span class="text-slate-500 text-[10px] uppercase px-4 opacity-50">일정 없음</span>';
+
+        const periodSchedule = this.todaySchedule
+            .filter((slot) => slot && slot.slot_type === 'period')
+            .sort((a, b) => Number(a?.period || 0) - Number(b?.period || 0));
+
+        if (periodSchedule.length === 0) {
+            container.innerHTML = '<span class="text-slate-500 text-[11px] font-bold px-1 opacity-70">오늘 시간표 없음</span>';
             return;
         }
-        container.innerHTML = this.todaySchedule.map(s => `
-            <div class="px-3 py-1 bg-white/5 rounded-xl border border-white/5 whitespace-nowrap text-xs font-bold text-slate-200">
-                <span class="text-indigo-400 mr-1">${this.escapeHtml(s.slot_type === 'period' ? (s.period || '') : (s.slot_label || ''))}</span> ${this.escapeHtml(s.name)}
-            </div>
-        `).join('');
+
+        container.innerHTML = periodSchedule.map((slot) => {
+            const periodNumber = Number(slot.period);
+            const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
+                ? `${periodNumber}교시`
+                : String(slot.slot_label || '');
+            const rawSubject = String(slot.name || '').trim();
+            const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+
+            return `
+                <span class="text-[11px] xl:text-xs font-bold text-slate-100/90 whitespace-nowrap">
+                    <span class="text-indigo-300">${this.escapeHtml(periodLabel)}</span><span class="text-slate-500 mx-0.5">:</span><span class="text-slate-200">${this.escapeHtml(subjectName)}</span>
+                </span>
+            `;
+        }).join('');
     }
 
     renderMission() {
