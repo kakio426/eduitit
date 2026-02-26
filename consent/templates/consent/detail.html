@@ -9,6 +9,11 @@
       <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">{{ consent_request.title }}</h1>
       <p class="text-sm text-gray-500">안내문: {{ consent_request.document.title }}</p>
+      {% if consent_request.shared_roster_group %}
+      <p class="text-xs text-indigo-600 mt-1">
+        <i class="fa-solid fa-share-nodes mr-1"></i>연결된 공유 명단: {{ consent_request.shared_roster_group.name }}
+      </p>
+      {% endif %}
       {% if link_expires_at %}
       <p class="text-xs text-gray-500 mt-1">현재 링크 만료 시각: {{ link_expires_at|date:"Y-m-d H:i" }}</p>
       {% endif %}

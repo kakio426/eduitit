@@ -22,6 +22,7 @@ urlpatterns = [
     path("styles/<int:pk>/delete/", views.delete_style_api, name="delete_style_api"),
     path("maker/", views.signature_maker, name="maker"),
     path("<uuid:uuid>/participants/add/", views.add_expected_participants, name="add_participants"),
+    path("<uuid:uuid>/participants/sync-roster/", views.sync_expected_participants_from_roster, name="sync_roster"),
     path("<uuid:uuid>/participants/upload/", views.upload_participants_file, name="upload_participants_file"),
     path("<uuid:uuid>/participants/", views.get_expected_participants, name="get_participants"),
     path("<uuid:uuid>/participants/<int:participant_id>/delete/", views.delete_expected_participant, name="delete_participant"),

@@ -11,7 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
-from .models import TrainingSession, Signature
+from .models import TrainingSession, Signature, ExpectedParticipant
 from .forms import TrainingSessionForm, SignatureForm
 import csv
 import openpyxl
@@ -89,6 +89,35 @@ def _delete_calendar_event_for_training(session):
     ).delete()
 
 
+def _sync_expected_participants_from_shared_roster(session):
+    """Pull active members from linked handoff roster into expected participants."""
+    group = session.shared_roster_group
+    if not group:
+        return {"created": 0, "skipped": 0, "total": 0, "group_name": ""}
+    if group.owner_id != session.created_by_id:
+        return {"created": 0, "skipped": 0, "total": 0, "group_name": group.name}
+
+    created = 0
+    skipped = 0
+    members = group.members.filter(is_active=True).order_by("sort_order", "id")
+    for member in members:
+        name = (member.display_name or "").strip()
+        if not name:
+            skipped += 1
+            continue
+        affiliation = (member.note or "").strip()
+        _, was_created = ExpectedParticipant.objects.get_or_create(
+            training_session=session,
+            name=name,
+            affiliation=affiliation,
+        )
+        if was_created:
+            created += 1
+        else:
+            skipped += 1
+    return {"created": created, "skipped": skipped, "total": members.count(), "group_name": group.name}
+
+
 @login_required
 def session_list(request):
     """내가 만든 연수 목록"""
@@ -100,16 +129,23 @@ def session_list(request):
 def session_create(request):
     """연수 생성"""
     if request.method == 'POST':
-        form = TrainingSessionForm(request.POST)
+        form = TrainingSessionForm(request.POST, owner=request.user)
         if form.is_valid():
             session = form.save(commit=False)
             session.created_by = request.user
             session.save()
+            roster_result = _sync_expected_participants_from_shared_roster(session)
             _sync_calendar_event_for_training(session)
-            messages.success(request, '연수가 생성되었습니다.')
+            if roster_result["total"] > 0:
+                messages.success(
+                    request,
+                    f"연수가 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다.",
+                )
+            else:
+                messages.success(request, '연수가 생성되었습니다.')
             return redirect('signatures:detail', uuid=session.uuid)
     else:
-        form = TrainingSessionForm()
+        form = TrainingSessionForm(owner=request.user)
     return render(request, 'signatures/create.html', {'form': form})
 
 
@@ -182,15 +218,42 @@ def session_edit(request, uuid):
     """연수 수정"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
     if request.method == 'POST':
-        form = TrainingSessionForm(request.POST, instance=session)
+        form = TrainingSessionForm(request.POST, instance=session, owner=request.user)
         if form.is_valid():
             session = form.save()
+            roster_result = _sync_expected_participants_from_shared_roster(session)
             _sync_calendar_event_for_training(session)
-            messages.success(request, '연수 정보가 수정되었습니다.')
+            if roster_result["total"] > 0 and roster_result["created"] > 0:
+                messages.success(
+                    request,
+                    f"연수 정보가 수정되었습니다. 공유 명단에서 {roster_result['created']}명을 추가 반영했습니다.",
+                )
+            else:
+                messages.success(request, '연수 정보가 수정되었습니다.')
             return redirect('signatures:detail', uuid=session.uuid)
     else:
-        form = TrainingSessionForm(instance=session)
+        form = TrainingSessionForm(instance=session, owner=request.user)
     return render(request, 'signatures/edit.html', {'form': form, 'session': session})
+
+
+@login_required
+@require_POST
+def sync_expected_participants_from_roster(request, uuid):
+    """연결된 공유 명단을 예상 참석자 목록으로 다시 가져오기."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    if not session.shared_roster_group:
+        messages.error(request, "먼저 연수 수정에서 공유 명단을 선택해 주세요.")
+        return redirect("signatures:detail", uuid=session.uuid)
+
+    result = _sync_expected_participants_from_shared_roster(session)
+    if result["total"] == 0:
+        messages.warning(request, "공유 명단에 가져올 활성 멤버가 없습니다.")
+    else:
+        messages.success(
+            request,
+            f"공유 명단 '{result['group_name']}' 동기화 완료: {result['created']}명 추가, {result['skipped']}명 중복/제외",
+        )
+    return redirect("signatures:detail", uuid=session.uuid)
 
 
 @login_required

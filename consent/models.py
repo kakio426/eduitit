@@ -104,6 +104,14 @@ class SignatureRequest(models.Model):
         blank=True,
         null=True,
     )
+    shared_roster_group = models.ForeignKey(
+        "handoff.HandoffRosterGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="consent_requests",
+        help_text="배부 체크 공유 명단과 연동 (선택)",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(blank=True, null=True)
     preview_checked_at = models.DateTimeField(blank=True, null=True)

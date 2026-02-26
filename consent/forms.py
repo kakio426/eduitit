@@ -1,4 +1,5 @@
 from django import forms
+from handoff.models import HandoffRosterGroup
 
 from .models import SignatureDocument, SignatureRequest
 
@@ -75,6 +76,17 @@ class PositionPayloadForm(forms.Form):
 
 
 class RecipientBulkForm(forms.Form):
+    shared_roster_group = forms.ModelChoiceField(
+        required=False,
+        queryset=HandoffRosterGroup.objects.none(),
+        empty_label="선택 안 함",
+        label="공유 명단 가져오기",
+        widget=forms.Select(
+            attrs={
+                "class": CLAY_INPUT,
+            }
+        ),
+    )
     recipients_text = forms.CharField(
         required=False,
         widget=forms.Textarea(
@@ -95,13 +107,24 @@ class RecipientBulkForm(forms.Form):
         ),
     )
 
+    def __init__(self, *args, **kwargs):
+        owner = kwargs.pop("owner", None)
+        super().__init__(*args, **kwargs)
+        if owner is not None:
+            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(owner=owner).order_by(
+                "-is_favorite",
+                "name",
+            )
+        self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
+
     def clean(self):
         cleaned_data = super().clean()
         text = (cleaned_data.get("recipients_text") or "").strip()
         csv_file = cleaned_data.get("recipients_csv")
+        shared_roster_group = cleaned_data.get("shared_roster_group")
 
-        if not text and not csv_file:
-            raise forms.ValidationError("직접 입력 또는 CSV 업로드 중 하나를 선택해 주세요.")
+        if not text and not csv_file and not shared_roster_group:
+            raise forms.ValidationError("공유 명단 선택, 직접 입력, CSV 업로드 중 하나를 선택해 주세요.")
 
         if csv_file and not (csv_file.name or "").lower().endswith(".csv"):
             raise forms.ValidationError("CSV 파일(.csv)만 업로드할 수 있습니다.")

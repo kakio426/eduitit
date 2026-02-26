@@ -204,6 +204,26 @@ def _parse_recipients_csv(file_obj):
     return recipients, invalid_rows
 
 
+def _build_recipients_from_shared_roster(group):
+    if not group:
+        return []
+
+    recipients = []
+    members = group.members.filter(is_active=True).order_by("sort_order", "id")
+    for member in members:
+        student_name = (member.display_name or "").strip()
+        if not student_name:
+            continue
+        recipients.append(
+            {
+                "student_name": student_name,
+                "parent_name": f"{student_name} 보호자",
+                "phone_number": "",
+            }
+        )
+    return recipients
+
+
 def _generate_qr_base64(url: str) -> str:
     qr = qrcode.QRCode(version=1, box_size=4, border=2)
     qr.add_data(url)
@@ -620,43 +640,62 @@ def consent_recipients(request, request_id):
         consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     except (OperationalError, ProgrammingError) as exc:
         return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
-    form = RecipientBulkForm(request.POST or None, request.FILES or None)
+    form_kwargs = {"owner": request.user}
+    if request.method != "POST" and consent_request.shared_roster_group_id:
+        form_kwargs["initial"] = {"shared_roster_group": consent_request.shared_roster_group_id}
+    form = RecipientBulkForm(request.POST or None, request.FILES or None, **form_kwargs)
 
     if request.method == "POST" and form.is_valid():
-        text_recipients = _parse_recipients(form.cleaned_data.get("recipients_text", ""))
-        csv_recipients, invalid_rows = _parse_recipients_csv(form.cleaned_data.get("recipients_csv"))
-        all_recipients = text_recipients + csv_recipients
-
-        if not all_recipients:
-            form.add_error(None, "등록 가능한 수신자가 없습니다. 입력값 또는 CSV 파일을 확인해 주세요.")
+        selected_roster_group = form.cleaned_data.get("shared_roster_group")
+        if selected_roster_group and selected_roster_group.owner_id != request.user.id:
+            form.add_error("shared_roster_group", "내 명단만 선택할 수 있습니다.")
         else:
-            created = 0
-            try:
-                for rec in all_recipients:
-                    _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
-                    if was_created:
-                        created += 1
-            except (OperationalError, ProgrammingError) as exc:
-                return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
-            except Exception:
-                logger.exception(
-                    "[consent] recipient bulk create failed request_id=%s user_id=%s",
-                    consent_request.request_id,
-                    request.user.id,
-                )
-                form.add_error(None, "수신자 저장 중 오류가 발생했습니다. 입력값을 확인한 뒤 다시 시도해 주세요.")
-            else:
-                if invalid_rows and invalid_rows != [0]:
-                    messages.warning(
-                        request,
-                        f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
-                    )
-                elif invalid_rows == [0]:
-                    messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+            if consent_request.shared_roster_group_id != (selected_roster_group.id if selected_roster_group else None):
+                consent_request.shared_roster_group = selected_roster_group
+                consent_request.save(update_fields=["shared_roster_group"])
 
-                skipped = max(len(all_recipients) - created, 0)
-                messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
-                return redirect("consent:detail", request_id=consent_request.request_id)
+        if not form.errors:
+            text_recipients = _parse_recipients(form.cleaned_data.get("recipients_text", ""))
+            csv_recipients, invalid_rows = _parse_recipients_csv(form.cleaned_data.get("recipients_csv"))
+            roster_recipients = _build_recipients_from_shared_roster(selected_roster_group)
+            all_recipients = text_recipients + csv_recipients + roster_recipients
+
+            if not all_recipients:
+                form.add_error(None, "등록 가능한 수신자가 없습니다. 공유 명단, 입력값 또는 CSV 파일을 확인해 주세요.")
+            else:
+                created = 0
+                try:
+                    for rec in all_recipients:
+                        _, was_created = SignatureRecipient.objects.get_or_create(request=consent_request, **rec)
+                        if was_created:
+                            created += 1
+                except (OperationalError, ProgrammingError) as exc:
+                    return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
+                except Exception:
+                    logger.exception(
+                        "[consent] recipient bulk create failed request_id=%s user_id=%s",
+                        consent_request.request_id,
+                        request.user.id,
+                    )
+                    form.add_error(None, "수신자 저장 중 오류가 발생했습니다. 입력값을 확인한 뒤 다시 시도해 주세요.")
+                else:
+                    if invalid_rows and invalid_rows != [0]:
+                        messages.warning(
+                            request,
+                            f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
+                        )
+                    elif invalid_rows == [0]:
+                        messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+
+                    skipped = max(len(all_recipients) - created, 0)
+                    if selected_roster_group:
+                        messages.success(
+                            request,
+                            f"{created}명 등록 완료 (중복/제외 {skipped}명). 공유 명단 '{selected_roster_group.name}' 연동됨",
+                        )
+                    else:
+                        messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
+                    return redirect("consent:detail", request_id=consent_request.request_id)
 
     recipients = consent_request.recipients.all().order_by("student_name")
     return render(

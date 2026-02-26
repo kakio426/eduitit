@@ -1,13 +1,38 @@
 from django import forms
 from .models import TrainingSession, Signature
+from handoff.models import HandoffRosterGroup
 
 
 class TrainingSessionForm(forms.ModelForm):
     """연수 생성/수정 폼"""
 
+    shared_roster_group = forms.ModelChoiceField(
+        required=False,
+        queryset=HandoffRosterGroup.objects.none(),
+        empty_label="선택 안 함",
+        label="공유 명단",
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300",
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        owner = kwargs.pop("owner", None)
+        super().__init__(*args, **kwargs)
+        if owner is None and self.instance and self.instance.pk:
+            owner = self.instance.created_by
+        if owner is not None:
+            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(owner=owner).order_by(
+                "-is_favorite",
+                "name",
+            )
+        self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
+
     class Meta:
         model = TrainingSession
-        fields = ['title', 'print_title', 'instructor', 'datetime', 'location', 'description', 'expected_count', 'is_active']
+        fields = ['title', 'print_title', 'instructor', 'datetime', 'location', 'description', 'shared_roster_group', 'expected_count', 'is_active']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',

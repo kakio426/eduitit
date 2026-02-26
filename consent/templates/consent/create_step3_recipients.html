@@ -17,6 +17,13 @@
         <form method="post" enctype="multipart/form-data" class="space-y-4">
           {% csrf_token %}
           <div>
+            <label class="text-sm font-semibold text-gray-700">공유 명단 가져오기</label>
+            {{ form.shared_roster_group }}
+            <p class="text-xs text-gray-500 mt-1">배부 체크 명단을 선택하면 활성 멤버 이름을 수신자로 불러옵니다. 학부모명은 자동으로 '학생명 보호자'로 채워집니다.</p>
+            {{ form.shared_roster_group.errors }}
+          </div>
+
+          <div>
             <div class="flex items-center justify-between mb-2">
               <label class="text-sm font-semibold text-gray-700">CSV 업로드</label>
               <a href="{% url 'consent:recipients_csv_template' %}" class="text-xs font-semibold text-indigo-600 hover:underline">예시 CSV 다운로드</a>

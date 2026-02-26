@@ -62,6 +62,14 @@
                 {{ form.description }}
             </div>
 
+            <div>
+                <label class="block text-2xl font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-share-nodes mr-1"></i> 공유 명단 (선택)
+                </label>
+                {{ form.shared_roster_group }}
+                <p class="text-sm text-gray-500 mt-2">배부 체크 명단을 연결하면 생성 시 참석자 명단으로 자동 가져옵니다.</p>
+            </div>
+
             <div class="flex items-center gap-3">
                 {{ form.is_active }}
                 <label class="text-2xl font-bold text-gray-600">

@@ -40,6 +40,15 @@ class TrainingSession(models.Model):
         blank=True,
         help_text='입력 시 진행률을 실시간으로 확인할 수 있습니다'
     )
+    shared_roster_group = models.ForeignKey(
+        "handoff.HandoffRosterGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="signature_sessions",
+        verbose_name="공유 명단",
+        help_text="배부 체크 명단과 연결해 참석자 명단으로 재사용",
+    )
 
     class Meta:
         verbose_name = '연수'
