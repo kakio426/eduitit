@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
+    'parentcomm.apps.ParentcommConfig',
 
     # Auth & Allauth
     'django.contrib.sites',

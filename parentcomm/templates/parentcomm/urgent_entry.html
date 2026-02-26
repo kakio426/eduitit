@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <header class="clay-card p-6">
+            <h1 class="text-3xl font-bold text-gray-800">긴급 안내 보내기</h1>
+            <p class="text-gray-600 mt-2">
+                {{ contact.student_name }} 학생 관련 긴급 상황(지각/결석/조퇴)을 교사에게 빠르게 전달합니다.
+            </p>
+            <p class="text-sm text-red-700 mt-2">긴급 안내는 20자 이내의 짧은 문장만 전송됩니다.</p>
+        </header>
+
+        {% if sent %}
+        <div class="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-800 font-semibold">
+            긴급 안내를 전송했습니다.
+        </div>
+        {% endif %}
+
+        <section class="clay-card p-6">
+            <form method="post" class="space-y-4" x-data="{ textLen: 0 }">
+                {% csrf_token %}
+                <div>
+                    <label for="{{ form.alert_type.id_for_label }}" class="block mb-2 font-semibold text-gray-700">유형</label>
+                    {{ form.alert_type }}
+                </div>
+                <div>
+                    <label for="{{ form.short_message.id_for_label }}" class="block mb-2 font-semibold text-gray-700">안내 문장 (20자)</label>
+                    {{ form.short_message }}
+                    <p class="text-xs text-gray-500 mt-1">예: 병원 진료 후 3교시 등교</p>
+                    {% if form.short_message.errors %}
+                    <p class="text-sm text-red-600 mt-1">{{ form.short_message.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {% if form.non_field_errors %}
+                <p class="text-sm text-red-600">{{ form.non_field_errors|join:", " }}</p>
+                {% endif %}
+                <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold">긴급 안내 전송</button>
+            </form>
+        </section>
+
+        <section class="clay-card p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-3">최근 전송 내역</h2>
+            <ul class="space-y-2">
+                {% for alert in recent_alerts %}
+                <li class="p-3 rounded-lg border border-gray-200 bg-white">
+                    <p class="font-semibold text-gray-700">{{ alert.get_alert_type_display }} - {{ alert.short_message }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ alert.created_at|date:"Y-m-d H:i" }}</p>
+                </li>
+                {% empty %}
+                <li class="text-gray-500">최근 전송 내역이 없습니다.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+</section>
+{% endblock %}
+
