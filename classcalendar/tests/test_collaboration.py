@@ -149,11 +149,11 @@ class CalendarCollaborationTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_owner_can_add_collaborator_by_username(self):
+    def test_owner_can_add_collaborator_by_email(self):
         response = self.owner_client.post(
             reverse("classcalendar:collaborator_add"),
             {
-                "collaborator_query": self.extra_user.username,
+                "collaborator_query": self.extra_user.email,
                 "can_edit": "on",
             },
         )
@@ -163,6 +163,22 @@ class CalendarCollaborationTests(TestCase):
                 owner=self.owner,
                 collaborator=self.extra_user,
                 can_edit=True,
+            ).exists()
+        )
+
+    def test_owner_cannot_add_collaborator_by_username(self):
+        response = self.owner_client.post(
+            reverse("classcalendar:collaborator_add"),
+            {
+                "collaborator_query": self.extra_user.username,
+                "can_edit": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            CalendarCollaborator.objects.filter(
+                owner=self.owner,
+                collaborator=self.extra_user,
             ).exists()
         )
 

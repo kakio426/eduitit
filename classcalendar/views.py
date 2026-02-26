@@ -466,16 +466,16 @@ def main_view(request):
 def collaborator_add(request):
     lookup = (request.POST.get("collaborator_query") or "").strip()
     if not lookup:
-        messages.error(request, "협업자로 추가할 사용자 아이디 또는 이메일을 입력해 주세요.")
+        messages.error(request, "협업자로 추가할 사용자의 가입시 적었던 이메일을 입력해 주세요.")
         return redirect("classcalendar:main")
 
     collaborator = (
-        User.objects.filter(Q(username__iexact=lookup) | Q(email__iexact=lookup))
+        User.objects.filter(email__iexact=lookup)
         .only("id", "username", "email", "first_name", "last_name")
         .first()
     )
     if not collaborator:
-        messages.error(request, "해당 사용자 정보를 찾지 못했습니다.")
+        messages.error(request, "해당 이메일의 사용자를 찾지 못했습니다. 가입시 적었던 이메일인지 확인해 주세요.")
         return redirect("classcalendar:main")
     if collaborator.id == request.user.id:
         messages.error(request, "본인은 협업자로 추가할 수 없습니다.")
