@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .logging_filters import clear_current_request_id, set_current_request_id
-from .models import VisitorLog
+from .models import SiteConfig, VisitorLog
 
 logger = logging.getLogger(__name__)
 
@@ -186,12 +186,24 @@ class MaintenanceModeMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
+    @staticmethod
+    def _is_site_config_maintenance_enabled():
+        try:
+            return SiteConfig.load().maintenance_mode
+        except Exception:
+            # 마이그레이션 중/DB 일시 오류 등에서는 안전하게 False 처리
+            return False
+
     def __call__(self, request):
         from django.conf import settings
         from django.shortcuts import render
 
-        # 점검 모드 스위치가 켜져 있는지 확인
-        is_maintenance = getattr(settings, 'MAINTENANCE_MODE', False)
+        # 점검 스위치 우선순위:
+        # 1) 환경변수 MAINTENANCE_MODE (기존 방식 유지)
+        # 2) 관리자 SiteConfig.maintenance_mode (운영 편의)
+        is_maintenance = bool(getattr(settings, 'MAINTENANCE_MODE', False))
+        if not is_maintenance:
+            is_maintenance = self._is_site_config_maintenance_enabled()
         
         if is_maintenance:
             # 관리자(내 계정)는 점검 중에도 사이트를 볼 수 있어야 함

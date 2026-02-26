@@ -140,8 +140,11 @@ class UserModerationAdmin(admin.ModelAdmin):
 
 @admin.register(SiteConfig)
 class SiteConfigAdmin(admin.ModelAdmin):
-    list_display = ['__str__', 'banner_active', 'banner_text']
+    list_display = ['__str__', 'maintenance_mode', 'banner_active', 'banner_text']
     fieldsets = (
+        ('점검 설정', {
+            'fields': ('maintenance_mode',),
+        }),
         ('배너 설정', {
             'fields': ('banner_active', 'banner_text', 'banner_color', 'banner_link'),
         }),

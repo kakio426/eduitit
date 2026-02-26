@@ -207,6 +207,11 @@ class UserModeration(models.Model):
 
 class SiteConfig(models.Model):
     """싱글톤 사이트 설정 모델 - Admin에서 배너 등 글로벌 설정 관리"""
+    maintenance_mode = models.BooleanField(
+        default=False,
+        verbose_name="점검 모드",
+        help_text="켜면 관리자(superuser) 외 사용자에게 점검 페이지(503)를 표시합니다.",
+    )
     banner_text = models.CharField(max_length=200, blank=True, default='', verbose_name="배너 텍스트")
     banner_active = models.BooleanField(default=False, verbose_name="배너 활성화")
     banner_color = models.CharField(max_length=7, default='#7c3aed', verbose_name="배너 색상 (HEX)")
