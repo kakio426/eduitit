@@ -64,7 +64,6 @@ class ParentContactForm(ClayFormMixin, forms.ModelForm):
             "student_classroom",
             "parent_name",
             "relationship",
-            "contact_email",
             "contact_phone",
         ]
         labels = {
@@ -73,7 +72,6 @@ class ParentContactForm(ClayFormMixin, forms.ModelForm):
             "student_classroom": "반",
             "parent_name": "학부모 이름",
             "relationship": "관계",
-            "contact_email": "연락 이메일",
             "contact_phone": "연락처",
         }
         widgets = {
@@ -82,20 +80,14 @@ class ParentContactForm(ClayFormMixin, forms.ModelForm):
             "student_classroom": forms.TextInput(attrs={"placeholder": "예: 3-2"}),
             "parent_name": forms.TextInput(attrs={"placeholder": "학부모 이름"}),
             "relationship": forms.TextInput(attrs={"placeholder": "예: 어머니"}),
-            "contact_email": forms.EmailInput(attrs={"placeholder": "가입/기록 이메일"}),
             "contact_phone": forms.TextInput(attrs={"placeholder": "연락처"}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["contact_email"].required = False
-        self.fields["contact_email"].help_text = "선택 입력입니다. 학부모 가입 없이도 사용 가능합니다."
 
 
 class ParentContactCsvImportForm(ClayFormMixin, forms.Form):
     csv_file = forms.FileField(
         label="CSV 파일",
-        help_text="헤더 예시: student_name,parent_name,contact_phone,contact_email",
+        help_text="헤더 예시: student_name,parent_name,contact_phone",
         widget=forms.ClearableFileInput(attrs={"accept": ".csv,text/csv"}),
     )
 
@@ -103,11 +95,11 @@ class ParentContactCsvImportForm(ClayFormMixin, forms.Form):
 class ParentContactBulkTextForm(ClayFormMixin, forms.Form):
     bulk_text = forms.CharField(
         label="여러 줄 빠른 등록",
-        help_text="한 줄에 한 명씩 입력: 학생이름,학부모이름,연락처,이메일(선택)",
+        help_text="한 줄에 한 명씩 입력: 학생이름,학부모이름,연락처",
         widget=forms.Textarea(
             attrs={
                 "rows": 7,
-                "placeholder": "예)\n김민수,김학부모,010-1111-2222,parent1@example.com\n박지우,박학부모,010-3333-4444",
+                "placeholder": "예)\n김민수,김학부모,010-1111-2222\n박지우,박학부모,010-3333-4444",
             }
         ),
     )

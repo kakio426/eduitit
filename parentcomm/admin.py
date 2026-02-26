@@ -20,11 +20,11 @@ class ParentContactAdmin(admin.ModelAdmin):
         "student_name",
         "parent_name",
         "teacher",
-        "contact_email",
+        "contact_phone",
         "is_active",
         "updated_at",
     )
-    search_fields = ("student_name", "parent_name", "contact_email", "teacher__username")
+    search_fields = ("student_name", "parent_name", "contact_phone", "teacher__username")
     list_filter = ("is_active",)
     raw_id_fields = ("teacher",)
 

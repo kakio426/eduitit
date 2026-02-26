@@ -45,7 +45,6 @@ CONTACT_HEADER_ALIASES = {
     "student_name": {"studentname", "학생이름", "학생명", "학생"},
     "parent_name": {"parentname", "학부모이름", "학부모명", "보호자이름", "보호자명", "학부모", "보호자"},
     "contact_phone": {"contactphone", "phone", "연락처", "전화번호", "휴대폰"},
-    "contact_email": {"contactemail", "email", "이메일", "메일"},
     "student_grade": {"studentgrade", "grade", "학년"},
     "student_classroom": {"studentclassroom", "classroom", "반", "학급"},
     "relationship": {"relationship", "관계"},
@@ -305,10 +304,9 @@ def _build_contact_row_from_values(values):
         "student_name": student_name,
         "parent_name": parent_name,
         "contact_phone": (values[2] if len(values) > 2 else "").strip(),
-        "contact_email": (values[3] if len(values) > 3 else "").strip(),
-        "student_grade": _safe_int_or_none(values[4] if len(values) > 4 else ""),
-        "student_classroom": (values[5] if len(values) > 5 else "").strip(),
-        "relationship": (values[6] if len(values) > 6 else "").strip(),
+        "student_grade": _safe_int_or_none(values[3] if len(values) > 3 else ""),
+        "student_classroom": (values[4] if len(values) > 4 else "").strip(),
+        "relationship": (values[5] if len(values) > 5 else "").strip(),
     }
 
 
@@ -374,7 +372,6 @@ def _parse_contact_csv_rows(csv_file):
                 "student_name": _value(row_values, "student_name"),
                 "parent_name": _value(row_values, "parent_name"),
                 "contact_phone": _value(row_values, "contact_phone"),
-                "contact_email": _value(row_values, "contact_email"),
                 "student_grade": _safe_int_or_none(_value(row_values, "student_grade")),
                 "student_classroom": _value(row_values, "student_classroom"),
                 "relationship": _value(row_values, "relationship"),
@@ -399,7 +396,6 @@ def _upsert_parent_contacts(teacher, rows):
     for row in rows:
         defaults = {
             "contact_phone": row.get("contact_phone", ""),
-            "contact_email": row.get("contact_email", ""),
             "student_grade": row.get("student_grade"),
             "student_classroom": row.get("student_classroom", ""),
             "relationship": row.get("relationship", ""),

@@ -295,7 +295,6 @@
                     <h2 class="text-2xl font-bold text-gray-700">학부모 연락처 등록</h2>
                     <p class="text-sm text-gray-600 mt-2">
                         학부모는 가입하지 않아도 됩니다. 교사가 만든 전용 링크로 바로 이용할 수 있습니다.
-                        이메일은 선택 항목입니다.
                     </p>
                 </article>
 
@@ -331,34 +330,29 @@
                                 <label class="block text-sm text-gray-600 mb-1">{{ contact_form.contact_phone.label }}</label>
                                 {{ contact_form.contact_phone }}
                             </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-sm text-gray-600 mb-1">{{ contact_form.contact_email.label }}</label>
-                                {{ contact_form.contact_email }}
-                                <p class="text-xs text-gray-500 mt-1">선택 입력. 비워도 저장됩니다.</p>
-                            </div>
-                        </div>
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
-                    </form>
-                </article>
+                    </div>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
+                </form>
+            </article>
 
-                <article class="clay-card p-6 space-y-3">
-                    <h3 class="text-xl font-bold text-gray-700">2) CSV로 한 번에 등록</h3>
-                    <p class="text-xs text-gray-500">헤더 예시: <code>student_name,parent_name,contact_phone,contact_email</code></p>
-                    <form method="post" enctype="multipart/form-data" class="space-y-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="add_contact_csv">
+            <article class="clay-card p-6 space-y-3">
+                <h3 class="text-xl font-bold text-gray-700">2) CSV로 한 번에 등록</h3>
+                    <p class="text-xs text-gray-500">헤더 예시: <code>student_name,parent_name,contact_phone,student_grade,student_classroom,relationship</code></p>
+                <form method="post" enctype="multipart/form-data" class="space-y-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_contact_csv">
                         {{ contact_csv_form.csv_file }}
                         {% if contact_csv_form.csv_file.errors %}<p class="text-red-600 text-sm">{{ contact_csv_form.csv_file.errors|join:", " }}</p>{% endif %}
                         <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold">CSV 등록</button>
                     </form>
                 </article>
 
-                <article class="clay-card p-6 space-y-3">
-                    <h3 class="text-xl font-bold text-gray-700">3) 여러 줄 붙여넣기</h3>
-                    <p class="text-xs text-gray-500">한 줄: 학생이름,학부모이름,연락처,이메일(선택)</p>
-                    <form method="post" class="space-y-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="add_contact_bulk_text">
+            <article class="clay-card p-6 space-y-3">
+                <h3 class="text-xl font-bold text-gray-700">3) 여러 줄 붙여넣기</h3>
+                    <p class="text-xs text-gray-500">한 줄: 학생이름,학부모이름,연락처,학년(선택),반(선택),관계(선택)</p>
+                <form method="post" class="space-y-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_contact_bulk_text">
                         {{ contact_bulk_form.bulk_text }}
                         {% if contact_bulk_form.bulk_text.errors %}<p class="text-red-600 text-sm">{{ contact_bulk_form.bulk_text.errors|join:", " }}</p>{% endif %}
                         <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 text-white font-semibold">빠른 등록</button>
@@ -371,8 +365,7 @@
                 <article class="clay-card p-5" x-data="{ copied: false }">
                     <p class="font-semibold text-gray-800">{{ contact.student_name }} / {{ contact.parent_name }}</p>
                     <p class="text-sm text-gray-600 mt-1">
-                        연락처: {{ contact.contact_phone|default:"-" }} /
-                        이메일: {{ contact.contact_email|default:"(미입력)" }}
+                        연락처: {{ contact.contact_phone|default:"-" }}
                     </p>
                     <div class="mt-2 flex flex-wrap gap-2 items-center">
                         <a href="{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold">긴급안내 페이지</a>

@@ -34,7 +34,6 @@ class ParentCommModelTests(TestCase):
             teacher=self.teacher,
             student_name="민수",
             parent_name="김학부모",
-            contact_email="parent@example.com",
         )
 
     def test_urgent_alert_message_length_limit(self):
@@ -105,7 +104,6 @@ class ParentCommViewTests(TestCase):
             teacher=self.teacher,
             student_name="지우",
             parent_name="박학부모",
-            contact_email="parent2@example.com",
         )
         self.client.force_login(self.teacher)
 
@@ -113,7 +111,7 @@ class ParentCommViewTests(TestCase):
         response = self.client.get(reverse("parentcomm:main"))
         self.assertEqual(response.status_code, 200)
 
-    def test_teacher_can_add_contact_without_email(self):
+    def test_teacher_can_add_contact_without_email_field(self):
         response = self.client.post(
             reverse("parentcomm:main"),
             {
@@ -124,19 +122,17 @@ class ParentCommViewTests(TestCase):
                 "parent_name": "이학부모",
                 "relationship": "아버지",
                 "contact_phone": "010-5555-6666",
-                "contact_email": "",
             },
         )
         self.assertEqual(response.status_code, 302)
-        saved = ParentContact.objects.get(student_name="이하늘", parent_name="이학부모")
-        self.assertEqual(saved.contact_email, "")
+        self.assertTrue(ParentContact.objects.filter(student_name="이하늘", parent_name="이학부모").exists())
 
     def test_teacher_can_bulk_add_contacts_from_text(self):
         response = self.client.post(
             reverse("parentcomm:main"),
             {
                 "action": "add_contact_bulk_text",
-                "bulk_text": "김하나,김학부모,010-1111-1111,parent1@example.com\n박둘,박학부모,010-2222-2222",
+                "bulk_text": "김하나,김학부모,010-1111-1111,5,5-1,어머니\n박둘,박학부모,010-2222-2222",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -144,7 +140,10 @@ class ParentCommViewTests(TestCase):
         self.assertTrue(ParentContact.objects.filter(student_name="박둘", parent_name="박학부모").exists())
 
     def test_teacher_can_bulk_add_contacts_from_csv(self):
-        csv_text = "student_name,parent_name,contact_phone,contact_email\n오민수,오학부모,010-8888-9999,parent3@example.com\n"
+        csv_text = (
+            "student_name,parent_name,contact_phone,student_grade,student_classroom,relationship\n"
+            "오민수,오학부모,010-8888-9999,3,3-2,아버지\n"
+        )
         csv_file = SimpleUploadedFile("contacts.csv", csv_text.encode("utf-8"), content_type="text/csv")
         response = self.client.post(
             reverse("parentcomm:main"),
