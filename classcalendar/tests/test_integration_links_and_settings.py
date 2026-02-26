@@ -83,6 +83,21 @@ class IntegrationLinksAndSettingsTests(TestCase):
         self.assertTrue(source_map[SOURCE_RESERVATION]["source_url"])
         self.assertTrue(source_map[SOURCE_SIGNATURES_TRAINING]["source_url"])
 
+    def test_api_events_force_sync_removes_stale_integration_event(self):
+        stale_event = self._create_locked_event(
+            source=SOURCE_COLLECT_DEADLINE,
+            key=f"collect:{uuid.uuid4()}",
+            title="만료된 연동 일정",
+        )
+        session = self.client.session
+        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
+        session.save()
+
+        response = self.client.get(f"{reverse('classcalendar:api_events')}?force_sync=true")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get("status"), "success")
+        self.assertFalse(CalendarEvent.objects.filter(id=stale_event.id).exists())
+
     def test_api_integration_settings_disables_and_cleans_up_sources(self):
         self._create_locked_event(
             source=SOURCE_COLLECT_DEADLINE,

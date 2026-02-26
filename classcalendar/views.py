@@ -576,7 +576,8 @@ def shared_view(request, share_uuid):
 @login_required
 @require_GET
 def api_events(request):
-    _sync_integrations_if_needed(request)
+    force_sync = _parse_bool_value(request.GET.get("force_sync", "false"))
+    _sync_integrations_if_needed(request, force=force_sync)
     visible_owner_ids, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
     events_data = [
         _serialize_event(
