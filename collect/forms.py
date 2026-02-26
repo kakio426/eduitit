@@ -139,6 +139,8 @@ class CollectionRequestForm(forms.ModelForm):
                 "-is_favorite",
                 "name",
             )
+        # 배부 체크 공유 명단은 소유자 계정 식별자 없이 명단명만 노출한다.
+        self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
 
         if self.instance and self.instance.pk and not self.is_bound:
             self.initial["choice_options_text"] = "\n".join(self.instance.normalized_choice_options)
