@@ -141,14 +141,16 @@ class HomeViewTest(TestCase):
     def test_sns_notice_inbox_button_renders(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('공지함', content)
+        self.assertIn('공지', content)
         self.assertIn('?feed_scope=notice&target=post-list-container', content)
 
     def test_home_htmx_notice_feed_filters_to_notice_posts_only(self):
         author = _create_onboarded_user('noticefeedauthor')
         Post.objects.create(author=author, content='일반 글', post_type='general', approval_status='approved')
         Post.objects.create(author=author, content='공지 글', post_type='news_link', approval_status='approved')
+        Post.objects.create(author=author, content='운영 공지 글', post_type='notice', approval_status='approved')
         Post.objects.create(author=author, content='보류 공지', post_type='news_link', approval_status='pending')
+        Post.objects.create(author=author, content='보류 운영 공지', post_type='notice', approval_status='pending')
 
         response = self.client.get(
             reverse('home'),
@@ -161,8 +163,10 @@ class HomeViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('data-feed-scope="notice"', content)
         self.assertIn('공지 글', content)
+        self.assertIn('운영 공지 글', content)
         self.assertNotIn('일반 글', content)
         self.assertNotIn('보류 공지', content)
+        self.assertNotIn('보류 운영 공지', content)
 
     def test_home_htmx_notice_feed_pagination_keeps_scope(self):
         self._seed_notice_posts(count=6)
@@ -192,6 +196,36 @@ class HomeViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('hx-target="#mobile-post-list-container"', content)
         self.assertIn('?page=2&target=mobile-post-list-container', content)
+
+    def test_post_create_staff_notice_is_saved_as_notice(self):
+        staff_user = _create_onboarded_user('staffnoticewriter')
+        staff_user.is_staff = True
+        staff_user.save(update_fields=['is_staff'])
+        self.client.login(username='staffnoticewriter', password='pass1234')
+
+        response = self.client.post(
+            reverse('post_create'),
+            {'content': '운영 공지 테스트', 'submit_kind': 'notice'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_post = Post.objects.filter(author=staff_user).latest('created_at')
+        self.assertEqual(created_post.post_type, 'notice')
+        self.assertEqual(created_post.content, '운영 공지 테스트')
+
+    def test_post_create_non_staff_notice_falls_back_to_general(self):
+        normal_user = _create_onboarded_user('normalnoticewriter')
+        self.client.login(username='normalnoticewriter', password='pass1234')
+
+        response = self.client.post(
+            reverse('post_create'),
+            {'content': '일반 작성 테스트', 'submit_kind': 'notice'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_post = Post.objects.filter(author=normal_user).latest('created_at')
+        self.assertEqual(created_post.post_type, 'general')
+        self.assertEqual(created_post.content, '일반 작성 테스트')
 
     def test_sns_post_comment_buttons_use_local_htmx_targets(self):
         user = _create_onboarded_user('snsbtnuser')

@@ -48,6 +48,7 @@ class NewsSource(models.Model):
 class Post(models.Model):
     POST_TYPE_CHOICES = [
         ('general', '일반'),
+        ('notice', '공지'),
         ('news_link', '뉴스 링크'),
     ]
     APPROVAL_STATUS_CHOICES = [

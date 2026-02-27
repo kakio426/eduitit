@@ -41,6 +41,7 @@ POST_FEED_SCOPE_ALLOWED = {
 }
 POST_FEED_NOTICE_TYPES = (
     'news_link',
+    'notice',
 )
 
 
@@ -725,6 +726,8 @@ def post_create(request):
     if request.method == 'POST':
         content = request.POST.get('content')
         image = request.FILES.get('image')
+        submit_kind = (request.POST.get('submit_kind') or 'general').strip().lower()
+        post_type = 'notice' if request.user.is_staff and submit_kind == 'notice' else 'general'
 
         # 이미지 검증
         if image:
@@ -753,7 +756,8 @@ def post_create(request):
             Post.objects.create(
                 author=request.user,
                 content=content,
-                image=image
+                image=image,
+                post_type=post_type,
             )
 
     # HTMX 응답
