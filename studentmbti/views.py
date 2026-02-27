@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Count
+from django.urls import reverse
 from django.utils import timezone
 from collections import Counter
 import hashlib
@@ -11,10 +12,17 @@ import qrcode
 from io import BytesIO
 import base64
 import logging
+from urllib.parse import urlencode
 
 from .models import TestSession, StudentMBTIResult
 from .student_mbti_data import STUDENT_MBTI_RESULTS, STUDENT_QUESTIONS, STUDENT_MBTI_THEMES
 from products.models import Product
+from collect.integration import (
+    BTI_SOURCE_STUDENTMBTI,
+    build_collect_prefill_submit_url,
+    submit_bti_result_to_collect,
+    normalize_collect_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -326,11 +334,17 @@ def session_test(request, session_id):
         # 세션 타입에 따른 질문 로드
         from .student_mbti_data import STUDENT_QUESTIONS_LOW, STUDENT_QUESTIONS_HIGH
         questions = STUDENT_QUESTIONS_HIGH if session.test_type == 'high' else STUDENT_QUESTIONS_LOW
+        collect_code = normalize_collect_code(request.GET.get("collect_code"))
+        if collect_code:
+            request.session["studentmbti_collect_code"] = collect_code
+        else:
+            collect_code = normalize_collect_code(request.session.get("studentmbti_collect_code"))
 
         return render(request, 'studentmbti/test.html', {
             'session': session,
             'questions': questions,
             'result_id': result.id,
+            'collect_code': collect_code,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Student Test View Error: {str(e)}")
@@ -485,7 +499,31 @@ def analyze(request, session_id):
             )
             logger.info(f"[StudentMBTI] Analyze Success (Legacy): Result {result.id}, MBTI {mbti_type}")
         
-        return redirect('studentmbti:result', result_id=result.id)
+        collect_code = normalize_collect_code(
+            request.POST.get("collect_code") or request.session.get("studentmbti_collect_code")
+        )
+        collect_auto_result = {"ok": False, "reason": "", "created": False}
+        if collect_code:
+            request.session["studentmbti_collect_code"] = collect_code
+            collect_auto_result = submit_bti_result_to_collect(
+                collect_code=collect_code,
+                source=BTI_SOURCE_STUDENTMBTI,
+                choice_value=animal_name,
+                contributor_name=student_name,
+                contributor_affiliation=session.session_name,
+                integration_ref=f"studentmbti-result-{result.id}",
+            )
+
+        result_url = reverse("studentmbti:result", args=[result.id])
+        query = {}
+        if collect_code:
+            query["collect_code"] = collect_code
+            query["collect_auto"] = "1" if collect_auto_result.get("ok") else "0"
+            if collect_auto_result.get("reason"):
+                query["collect_reason"] = collect_auto_result.get("reason")
+        if query:
+            result_url = f"{result_url}?{urlencode(query)}"
+        return redirect(result_url)
     except Exception as e:
         logger.error(f"[StudentMBTI] Analyze Error: {str(e)}")
         return HttpResponse("분석 중 오류가 발생했습니다.", status=500)
@@ -497,12 +535,32 @@ def result(request, result_id):
         result = get_object_or_404(StudentMBTIResult, id=result_id)
         mbti_data = STUDENT_MBTI_RESULTS.get(result.mbti_type, {})
         theme = STUDENT_MBTI_THEMES.get(result.mbti_type, {})
-        
+        collect_code = normalize_collect_code(
+            request.GET.get("collect_code") or request.session.get("studentmbti_collect_code")
+        )
+        if collect_code:
+            request.session["studentmbti_collect_code"] = collect_code
+        collect_prefill_url = build_collect_prefill_submit_url(
+            request,
+            collect_code=collect_code,
+            choice_value=result.animal_name,
+            contributor_name=result.student_name,
+            contributor_affiliation=result.session.session_name,
+            source=BTI_SOURCE_STUDENTMBTI,
+        )
+        collect_auto_state = str(request.GET.get("collect_auto", "")).strip()
+        collect_auto_submitted = collect_auto_state == "1"
+        collect_auto_reason = str(request.GET.get("collect_reason", "")).strip()
+
         return render(request, 'studentmbti/result.html', {
             'result': result,
             'mbti_data': mbti_data,
             'theme': theme,
             'is_teacher_view': False,
+            'collect_prefill_url': collect_prefill_url,
+            'collect_auto_enabled': bool(collect_code),
+            'collect_auto_submitted': collect_auto_submitted,
+            'collect_auto_reason': collect_auto_reason,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Result View Error: {str(e)}")

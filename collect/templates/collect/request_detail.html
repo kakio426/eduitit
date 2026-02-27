@@ -214,6 +214,46 @@
                     </div>
                 </div>
 
+                {% if ssambti_launch_url or studentmbti_collect_query %}
+                <div class="clay-card p-4 bg-violet-50 border border-violet-200">
+                    <h3 class="text-lg md:text-xl font-bold text-violet-800 mb-2">
+                        <i class="fa-solid fa-link mr-1.5"></i>BTI 연동 링크
+                    </h3>
+                    <p class="text-sm md:text-base text-violet-700 mb-3">BTI 결과에서 이 수합으로 바로 넘어오게 설정할 수 있습니다.</p>
+
+                    {% if ssambti_launch_url %}
+                    <div class="mb-3">
+                        <p class="text-xs text-violet-600 font-semibold mb-1">쌤BTI 시작 링크</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly value="{{ ssambti_launch_url }}"
+                                   class="flex-1 px-3 py-2 rounded-lg border border-violet-200 bg-white text-xs md:text-sm text-violet-800">
+                            <button type="button"
+                                    onclick="copyText('{{ ssambti_launch_url|escapejs }}', '쌤BTI 연동 링크가 복사되었습니다.')"
+                                    class="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs md:text-sm font-bold hover:bg-violet-700 transition">
+                                복사
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if studentmbti_collect_query %}
+                    <div>
+                        <p class="text-xs text-violet-600 font-semibold mb-1">우리반BTI 세션 링크 뒤에 붙일 파라미터</p>
+                        <p class="text-[11px] text-violet-600 mb-2">예: 세션 링크가 `.../studentmbti/session/세션ID/` 라면 뒤에 `?{{ studentmbti_collect_query }}` 를 그대로 붙이세요.</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly value="?{{ studentmbti_collect_query }}"
+                                   class="flex-1 px-3 py-2 rounded-lg border border-violet-200 bg-white text-xs md:text-sm text-violet-800">
+                            <button type="button"
+                                    onclick="copyText('?{{ studentmbti_collect_query|escapejs }}', '우리반BTI 파라미터가 복사되었습니다.')"
+                                    class="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs md:text-sm font-bold hover:bg-violet-700 transition">
+                                복사
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
                 {% if expected_submitters %}
                 <details class="clay-card p-4" open>
                     <summary class="cursor-pointer list-none flex items-center justify-between">
@@ -289,6 +329,12 @@
             }
         };
     }
+
+    window.copyText = function(value, message) {
+        navigator.clipboard.writeText(value || '').then(() => {
+            alert(message || '복사되었습니다.');
+        });
+    };
 
     const filesDataElement = document.getElementById('collect-files-data');
     window.collectFiles = filesDataElement ? JSON.parse(filesDataElement.textContent) : [];

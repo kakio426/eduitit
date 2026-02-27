@@ -36,6 +36,7 @@ class CollectionRequestForm(forms.ModelForm):
         fields = [
             "title",
             "description",
+            "bti_integration_source",
             "shared_roster_group",
             "expected_submitters",
             "allow_file",
@@ -62,6 +63,11 @@ class CollectionRequestForm(forms.ModelForm):
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
                     "rows": 3,
                     "placeholder": "제출자에게 보일 안내사항을 입력하세요.",
+                }
+            ),
+            "bti_integration_source": forms.Select(
+                attrs={
+                    "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
                 }
             ),
             "expected_submitters": forms.Textarea(
@@ -113,6 +119,7 @@ class CollectionRequestForm(forms.ModelForm):
         labels = {
             "title": "수합 제목",
             "description": "안내사항",
+            "bti_integration_source": "BTI 연동",
             "shared_roster_group": "배부 체크 공유 명단",
             "allow_file": "파일 업로드 허용",
             "allow_link": "링크 제출 허용",

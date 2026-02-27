@@ -193,6 +193,12 @@
                 <form id="quizForm" hx-post="{% url 'ssambti:analyze' %}" hx-target="#results-wrapper"
                     hx-indicator="#zoo-loader" hx-swap="innerHTML" onsubmit="return validateQuiz()">
                     {% csrf_token %}
+                    {% if collect_code %}
+                    <input type="hidden" name="collect_code" value="{{ collect_code }}">
+                    {% endif %}
+                    {% if collect_affiliation %}
+                    <input type="hidden" name="collect_affiliation" value="{{ collect_affiliation }}">
+                    {% endif %}
 
                     <!-- Q1-Q12 steps will be injected here via JS for cleaner template -->
                     <div id="quizSteps">

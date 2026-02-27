@@ -331,3 +331,54 @@ class ChoiceSubmissionTests(TestCase):
         self.assertContains(response, "학생기타")
         self.assertNotContains(response, "학생1")
         self.assertContains(response, "기타 제출 보기")
+
+    def test_submit_page_applies_bti_prefill_choice_and_profile(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="BTI 연동 수합",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="single",
+            choice_options=["해달", "코알라"],
+            status="active",
+        )
+
+        response = self.client.get(
+            reverse("collect:submit", args=[req.id]),
+            data={
+                "source": "ssambti",
+                "choice": "해달",
+                "name": "홍길동",
+                "affiliation": "교사연수 1기",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "BTI 결과 연동됨")
+        self.assertContains(response, "BTI 결과 자동 입력: 해달")
+        self.assertContains(response, 'name="contributor_name"')
+        self.assertContains(response, 'value="홍길동"')
+        self.assertContains(response, 'value="교사연수 1기"')
+
+    def test_submit_page_ignores_invalid_choice_prefill(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="BTI 연동 수합",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="single",
+            choice_options=["해달", "코알라"],
+            status="active",
+        )
+
+        response = self.client.get(
+            reverse("collect:submit", args=[req.id]),
+            data={"source": "ssambti", "choice": "없는동물"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "BTI 결과 자동 입력:")

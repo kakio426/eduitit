@@ -315,6 +315,16 @@
 
         <!-- 공유 버튼 -->
         <div class="share-area" data-aos="fade-up" data-aos-delay="550">
+            {% if collect_auto_enabled and collect_auto_submitted and not is_teacher_view %}
+            <span class="share-btn" style="background:#DCFCE7;color:#15803D;cursor:default;">
+                <i class="fa-solid fa-circle-check"></i>선생님께 자동 전송 완료
+            </span>
+            {% endif %}
+            {% if collect_auto_enabled and not collect_auto_submitted and collect_prefill_url and not is_teacher_view %}
+            <a href="{{ collect_prefill_url }}" class="share-btn" style="background:#7C3AED;color:white;">
+                <i class="fa-solid fa-paper-plane"></i>선생님께 결과 전송
+            </a>
+            {% endif %}
             <button onclick="shareKakao()" class="share-btn share-kakao">
                 <i class="fa-solid fa-comment"></i>카카오톡 공유
             </button>
@@ -322,6 +332,11 @@
                 <i class="fa-solid fa-link"></i>링크 복사
             </button>
         </div>
+        {% if collect_auto_enabled and not collect_auto_submitted and not is_teacher_view %}
+        <p class="text-center text-xs text-violet-700 -mt-1 mb-2">
+            자동 전송이 완료되지 않아 수동 전송 버튼을 표시했습니다.
+        </p>
+        {% endif %}
 
         {% if is_teacher_view %}
         <div class="text-center pb-4">

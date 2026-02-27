@@ -132,6 +132,9 @@
             <form id="quiz-form" action="{% url 'studentmbti:analyze' session.id %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="mac_hash" id="mac-hash" value="">
+                {% if collect_code %}
+                <input type="hidden" name="collect_code" value="{{ collect_code }}">
+                {% endif %}
 
                 <!-- Step 0: 이름 입력 -->
                 <div class="quiz-step active" id="step-0">

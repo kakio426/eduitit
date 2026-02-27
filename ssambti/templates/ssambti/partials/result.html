@@ -140,6 +140,30 @@
 
     <!-- 3. 공유 액션 카드 -->
     <div class="clay-card p-8 bg-white/50 border border-white/60 text-center">
+        {% if collect_auto_enabled and collect_auto_submitted %}
+        <div class="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+            <p class="text-emerald-700 font-bold text-lg md:text-xl">
+                <i class="fa-solid fa-circle-check mr-1.5"></i>연수 수합으로 자동 전송 완료
+            </p>
+            <p class="text-xs text-emerald-600 mt-2">결과값 <strong>{{ animal_name }}</strong>이 자동 집계되었습니다.</p>
+        </div>
+        {% elif collect_prefill_url %}
+        <div class="mb-6 p-4 bg-violet-50 rounded-2xl border border-violet-200">
+            <p class="text-violet-700 font-bold text-lg md:text-xl mb-3">
+                <i class="fa-solid fa-bolt mr-1.5"></i>연수 수합으로 결과 보내기
+            </p>
+            <a href="{{ collect_prefill_url }}"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-violet-600 text-white font-bold hover:bg-violet-700 transition shadow-clay">
+                <i class="fa-solid fa-paper-plane"></i> 결과 전송
+            </a>
+            <p class="text-xs text-violet-600 mt-2">선택값 <strong>{{ animal_name }}</strong>이 자동 입력됩니다.</p>
+        </div>
+        {% if collect_auto_enabled %}
+        <p class="text-center text-xs text-violet-700 -mt-4 mb-4">
+            자동 전송이 완료되지 않아 수동 전송 버튼을 표시했습니다.
+        </p>
+        {% endif %}
+        {% endif %}
 
         {% if not user.is_authenticated %}
         <div class="mb-6 p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-pulse">

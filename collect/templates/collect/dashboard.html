@@ -58,6 +58,11 @@
                             <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.description.label }}</label>
                             {{ form.description }}
                         </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.bti_integration_source.label }}</label>
+                            {{ form.bti_integration_source }}
+                            <p class="text-xs text-gray-500 mt-1">연동을 켜면 결과 상세 화면에서 BTI 결과 전송용 링크를 바로 복사할 수 있습니다.</p>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.deadline.label }}</label>

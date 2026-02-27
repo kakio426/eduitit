@@ -1,5 +1,8 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from collect.models import CollectionRequest
+from collect.integration import BTI_SOURCE_STUDENTMBTI
+from collect.models import Submission
 from .models import TestSession, StudentMBTIResult
 from .student_mbti_data import STUDENT_QUESTIONS_LOW, STUDENT_QUESTIONS_HIGH
 from happy_seed.models import HSClassroom
@@ -111,3 +114,76 @@ class StudentMBTITest(TestCase):
         result = StudentMBTIResult.objects.filter(session=session).first()
         self.assertIsNotNone(result)
         self.assertEqual(result.mbti_type, 'ESTJ')
+
+    def test_session_test_preserves_collect_code_in_hidden_input(self):
+        self.client.logout()
+        session = TestSession.objects.create(session_name="Collect Link Session", teacher=self.user, test_type='low')
+
+        response = self.client.get(f'/studentmbti/session/{session.id}/?collect_code=123456')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="collect_code" value="123456"')
+
+    def test_result_page_shows_collect_submit_button_when_collect_code_valid(self):
+        session = TestSession.objects.create(session_name="3-2", teacher=self.user, test_type='low')
+        result = StudentMBTIResult.objects.create(
+            session=session,
+            student_name="테스트학생",
+            mbti_type="INFP",
+            animal_name="해달",
+            answers_json={},
+        )
+        collect_req = CollectionRequest.objects.create(
+            creator=self.user,
+            title="우리반BTI 수합",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="single",
+            choice_options=["해달", "코알라"],
+            status="active",
+        )
+
+        self.client.logout()
+        response = self.client.get(f'/studentmbti/result/{result.id}/?collect_code={collect_req.access_code}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "선생님께 결과 전송")
+        self.assertContains(response, str(collect_req.id))
+
+    def test_analyze_auto_submits_collect_when_collect_code_present(self):
+        self.client.logout()
+        session = TestSession.objects.create(session_name="Auto Submit Session", teacher=self.user, test_type='low')
+        expected_animal = '사자'
+        req = CollectionRequest.objects.create(
+            creator=self.user,
+            title="우리반 자동연동 수합",
+            allow_file=False,
+            allow_link=False,
+            allow_text=False,
+            allow_choice=True,
+            choice_mode="single",
+            choice_options=[expected_animal, "해달"],
+            status="active",
+        )
+
+        payload = {
+            "student_name": "자동제출학생",
+            "collect_code": req.access_code,
+        }
+        for i in range(1, 13):
+            payload[f"q{i}"] = 0
+
+        response = self.client.post(f'/studentmbti/session/{session.id}/analyze/', payload)
+        self.assertEqual(response.status_code, 302)
+
+        result = StudentMBTIResult.objects.filter(session=session).latest("created_at")
+        self.assertEqual(result.animal_name, expected_animal)
+        submission = Submission.objects.get(
+            collection_request=req,
+            integration_source=BTI_SOURCE_STUDENTMBTI,
+            integration_ref=f"studentmbti-result-{result.id}",
+        )
+        self.assertEqual(submission.submission_type, "choice")
+        self.assertEqual(submission.choice_answers, [expected_animal])

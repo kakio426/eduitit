@@ -38,6 +38,13 @@
         <div class="bg-red-100 text-red-700 p-4 rounded-xl mb-6 text-sm font-medium"><i class="fa-solid fa-circle-exclamation mr-1"></i> {{ error }}</div>
         {% endif %}
 
+        {% if prefill_from_bti %}
+        <div class="bg-violet-50 border border-violet-200 text-violet-700 rounded-xl mb-6 p-4 text-sm leading-relaxed">
+            <p class="font-bold mb-1"><i class="fa-solid fa-bolt mr-1"></i>BTI 결과 연동됨</p>
+            <p>결과값이 자동 입력되었습니다. 아래 정보 확인 후 제출하면 바로 집계됩니다.</p>
+        </div>
+        {% endif %}
+
         <div class="bg-red-50 border border-red-100 text-red-700 rounded-xl mb-6 p-4 text-sm leading-relaxed">
             <p class="font-bold mb-1"><i class="fa-solid fa-shield-exclamation mr-1"></i>보안 및 책임 안내</p>
             <p>- 주민등록번호, 연락처 등 민감한 개인정보가 포함된 자료는 제출하지 마세요.</p>
@@ -58,8 +65,11 @@
                                 <div class="flex gap-2">
                                     <select name="contributor_name_select" required @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                                         <option value="">-- 이름 선택 --</option>
+                                        {% if prefill_contributor_name and prefill_contributor_name not in req.expected_submitters_list %}
+                                        <option value="{{ prefill_contributor_name }}" selected>{{ prefill_contributor_name }} (연동값)</option>
+                                        {% endif %}
                                         {% for name in req.expected_submitters_list %}
-                                        <option value="{{ name }}" {% if submission.contributor_name == name %}selected{% endif %}>{{ name }}</option>
+                                        <option value="{{ name }}" {% if submission.contributor_name == name or prefill_contributor_name == name %}selected{% endif %}>{{ name }}</option>
                                         {% endfor %}
                                         <option value="__custom__">직접 입력...</option>
                                     </select>
@@ -73,12 +83,12 @@
                             </template>
                         </div>
                         {% else %}
-                        <input type="text" name="contributor_name" required value="{% if is_edit %}{{ submission.contributor_name }}{% elif form_data %}{{ form_data.contributor_name }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                        <input type="text" name="contributor_name" required value="{% if is_edit %}{{ submission.contributor_name }}{% elif form_data %}{{ form_data.contributor_name }}{% elif prefill_contributor_name %}{{ prefill_contributor_name }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
                         {% endif %}
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
-                        <input type="text" name="contributor_affiliation" value="{% if is_edit %}{{ submission.contributor_affiliation }}{% elif form_data %}{{ form_data.contributor_affiliation }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
+                        <input type="text" name="contributor_affiliation" value="{% if is_edit %}{{ submission.contributor_affiliation }}{% elif form_data %}{{ form_data.contributor_affiliation }}{% elif prefill_contributor_affiliation %}{{ prefill_contributor_affiliation }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
                     </div>
                 </div>
 
@@ -93,6 +103,15 @@
                         <input type="hidden" name="submission_type" value="{{ submission.submission_type }}">
                     </div>
                     {% else %}
+                    {% if prefill_force_choice %}
+                    <div class="mb-4">
+                        <span class="px-4 py-2 bg-violet-100 text-violet-700 rounded-xl font-bold text-sm border border-violet-200">
+                            <i class="fa-solid fa-list-check mr-1"></i>
+                            BTI 결과 자동 입력: {{ prefill_choice_value }}
+                        </span>
+                    </div>
+                    <input type="hidden" name="submission_type" value="choice">
+                    {% else %}
                     <div class="flex gap-2 mb-4">
                         {% if req.allow_file %}<button type="button" @click="tab='file'" :class="tab==='file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-file mr-1"></i>파일</button>{% endif %}
                         {% if req.allow_link %}<button type="button" @click="tab='link'" :class="tab==='link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-link mr-1"></i>링크</button>{% endif %}
@@ -100,6 +119,7 @@
                         {% if req.allow_choice %}<button type="button" @click="tab='choice'" :class="tab==='choice' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-list-check mr-1"></i>선택형</button>{% endif %}
                     </div>
                     <input type="hidden" name="submission_type" :value="tab">
+                    {% endif %}
                     {% endif %}
 
                     {% if is_edit and submission.submission_type == 'file' %}

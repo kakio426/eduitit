@@ -6,6 +6,11 @@ from django.db.models import Count
 from products.models import Product
 from .models import SsambtiResult
 from .mbti_data import MBTI_RESULTS, MBTI_TAGLINES
+from collect.integration import (
+    build_collect_prefill_submit_url,
+    submit_bti_result_to_collect,
+    BTI_SOURCE_SSAMBTI,
+)
 
 MBTI_ANIMAL_MAP = {
     'ISTJ': 'penguin.png',
@@ -103,7 +108,9 @@ def main_view(request):
         'is_premium': is_premium,
         'KAKAO_JS_KEY': settings.KAKAO_JS_KEY,
         'stats': stats,
-        'total_participants': total_count
+        'total_participants': total_count,
+        'collect_code': str(request.GET.get("collect_code", "")).strip(),
+        'collect_affiliation': str(request.GET.get("collect_affiliation", "")).strip(),
     }
     return render(request, 'ssambti/main.html', context)
 
@@ -226,6 +233,31 @@ def analyze_view(request):
     )
     saved_result_id = saved_result.pk
 
+    contributor_name = ""
+    if request.user.is_authenticated:
+        profile = getattr(request.user, "userprofile", None)
+        contributor_name = (
+            getattr(profile, "nickname", "")
+            or request.user.get_full_name()
+            or request.user.username
+        )
+    collect_prefill_url = build_collect_prefill_submit_url(
+        request,
+        collect_code=request.POST.get("collect_code", ""),
+        choice_value=animal_name,
+        contributor_name=contributor_name,
+        contributor_affiliation=request.POST.get("collect_affiliation", ""),
+        source=BTI_SOURCE_SSAMBTI,
+    )
+    collect_auto_result = submit_bti_result_to_collect(
+        collect_code=request.POST.get("collect_code", ""),
+        source=BTI_SOURCE_SSAMBTI,
+        choice_value=animal_name,
+        contributor_name=contributor_name,
+        contributor_affiliation=request.POST.get("collect_affiliation", ""),
+        integration_ref=f"ssambti-result-{saved_result_id}",
+    )
+
 
     # --- [New Feature] Teacher Statistics Aggregation ---
     from django.db.models import Count
@@ -287,7 +319,12 @@ def analyze_view(request):
         'summary': summary,
         'saved_result_id': saved_result_id,
         'stats': stats,
-        'total_participants': total_count
+        'total_participants': total_count,
+        'collect_prefill_url': collect_prefill_url,
+        'collect_auto_enabled': bool(str(request.POST.get("collect_code", "")).strip()),
+        'collect_auto_submitted': bool(collect_auto_result.get("ok")),
+        'collect_auto_created': bool(collect_auto_result.get("created")),
+        'collect_auto_reason': collect_auto_result.get("reason", ""),
     })
 
 @login_required
@@ -334,4 +371,3 @@ def animal_detail_view(request, mbti_type):
         'theme': theme,
         'summary': summary,
     })
-

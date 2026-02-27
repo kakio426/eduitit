@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
 from asgiref.sync import sync_to_async
+from urllib.parse import urlencode
 import json
 import csv
 import qrcode
@@ -18,6 +19,10 @@ import requests
 
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
+from .integration import (
+    BTI_SOURCE_SSAMBTI,
+    BTI_SOURCE_STUDENTMBTI,
+)
 from products.models import Product
 
 logger = logging.getLogger(__name__)
@@ -148,6 +153,29 @@ def _render_submit_error(
             choice_other_text=choice_other_text,
         ),
     )
+
+
+def _get_submit_prefill_context(request, collection_req):
+    source = str(request.GET.get("source", "")).strip().lower()
+    contributor_name = str(request.GET.get("name", "")).strip()
+    contributor_affiliation = str(request.GET.get("affiliation", "")).strip()
+    choice_value = str(request.GET.get("choice", "")).strip()
+
+    options = set(collection_req.normalized_choice_options)
+    prefill_force_choice = bool(
+        collection_req.allow_choice
+        and choice_value
+        and choice_value in options
+    )
+
+    return {
+        "prefill_source": source,
+        "prefill_contributor_name": contributor_name,
+        "prefill_contributor_affiliation": contributor_affiliation,
+        "prefill_choice_value": choice_value if prefill_force_choice else "",
+        "prefill_force_choice": prefill_force_choice,
+        "prefill_from_bti": source in {BTI_SOURCE_SSAMBTI, BTI_SOURCE_STUDENTMBTI},
+    }
 
 
 def _extract_choice_submission_data(collection_req, post_data):
@@ -487,6 +515,16 @@ def request_detail(request, request_id):
     # QR 코드 생성 (단축 링크 사용)
     short_url = request.build_absolute_uri(reverse('collect:short_link', args=[collection_req.access_code]))
     qr_code_base64 = generate_qr(short_url)
+    ssambti_launch_url = ""
+    studentmbti_collect_query = ""
+    if collection_req.bti_integration_source in {"ssambti", "both"}:
+        ssambti_launch_url = (
+            request.build_absolute_uri(reverse("ssambti:main"))
+            + "?"
+            + urlencode({"collect_code": collection_req.access_code})
+        )
+    if collection_req.bti_integration_source in {"studentmbti", "both"}:
+        studentmbti_collect_query = urlencode({"collect_code": collection_req.access_code})
 
     # 제출 유형별 통계
     type_stats = submissions.values('submission_type').annotate(count=Count('id'))
@@ -521,6 +559,8 @@ def request_detail(request, request_id):
         'expected_submitters': expected,
         'not_submitted': not_submitted,
         'files_data': files_data,
+        'ssambti_launch_url': ssambti_launch_url,
+        'studentmbti_collect_query': studentmbti_collect_query,
     })
 
 
@@ -718,7 +758,20 @@ def submit(request, request_id):
             'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
         })
 
-    return render(request, 'collect/submit.html', _get_submit_context(collection_req))
+    prefill = _get_submit_prefill_context(request, collection_req)
+    initial_submission_type = None
+    choice_values = None
+    if prefill["prefill_force_choice"]:
+        initial_submission_type = "choice"
+        choice_values = [prefill["prefill_choice_value"]]
+
+    context = _get_submit_context(
+        collection_req,
+        initial_submission_type=initial_submission_type,
+        choice_values=choice_values,
+    )
+    context.update(prefill)
+    return render(request, 'collect/submit.html', context)
 
 
 @require_POST

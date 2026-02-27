@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.storage import default_storage
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -31,6 +32,12 @@ class CollectionRequest(models.Model):
         ('single', '단일 선택'),
         ('multi', '복수 선택'),
     ]
+    BTI_INTEGRATION_SOURCE_CHOICES = [
+        ("none", "사용 안 함"),
+        ("ssambti", "쌤BTI"),
+        ("studentmbti", "우리반BTI"),
+        ("both", "쌤BTI + 우리반BTI"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_requests')
@@ -54,6 +61,12 @@ class CollectionRequest(models.Model):
         choices=CHOICE_MODE_CHOICES,
         default='single',
         help_text="선택형 제출 모드",
+    )
+    bti_integration_source = models.CharField(
+        max_length=20,
+        choices=BTI_INTEGRATION_SOURCE_CHOICES,
+        default="none",
+        help_text="BTI 결과 연동 대상",
     )
     choice_options = models.JSONField(default=list, blank=True, help_text="선택형 보기 목록")
     choice_min_selections = models.PositiveIntegerField(default=1, help_text="복수 선택 최소 개수")
@@ -211,6 +224,11 @@ class Submission(models.Model):
         ('text', '텍스트'),
         ('choice', '선택형'),
     ]
+    INTEGRATION_SOURCE_CHOICES = [
+        ("", "직접 제출"),
+        ("ssambti", "쌤BTI"),
+        ("studentmbti", "우리반BTI"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     collection_request = models.ForeignKey(CollectionRequest, on_delete=models.CASCADE, related_name='submissions')
@@ -233,6 +251,19 @@ class Submission(models.Model):
     # 선택형 제출
     choice_answers = models.JSONField(default=list, blank=True)
     choice_other_text = models.TextField(blank=True)
+    integration_source = models.CharField(
+        max_length=20,
+        choices=INTEGRATION_SOURCE_CHOICES,
+        default="",
+        blank=True,
+        help_text="외부/연동 경로 식별자",
+    )
+    integration_ref = models.CharField(
+        max_length=120,
+        default="",
+        blank=True,
+        help_text="연동 중복 방지를 위한 외부 참조 키",
+    )
     submitted_at = models.DateTimeField(auto_now_add=True)
     is_downloaded = models.BooleanField(default=False, help_text="다운로드 여부")
 
@@ -240,6 +271,13 @@ class Submission(models.Model):
         ordering = ['-submitted_at']
         verbose_name = '제출물'
         verbose_name_plural = '제출물 목록'
+        constraints = [
+            models.UniqueConstraint(
+                fields=["collection_request", "integration_source", "integration_ref"],
+                condition=~Q(integration_source="") & ~Q(integration_ref=""),
+                name="collect_submission_unique_integration_ref",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.contributor_name} - {self.get_submission_type_display()}"
