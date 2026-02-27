@@ -1,14 +1,20 @@
-## [Canonical Top Summary] 2026-02-17
+## [Canonical Top Summary] 2026-02-27
 - Declare UI change scope first: global/app/page
 - Do not force one style on all services; preserve existing stable UI
 - Prioritize behavior parity over visual polish
 - Recover Korean text integrity before continuing feature work
 - Validate with python manage.py check (+ node --check when JS changes)
 - New services MUST create `ServiceManual` (+ 3+ `ManualSection`) at the same time
+- Lock classroom core journey first: `teacher create -> publish -> student QR join`
+- Keep one clear path per goal: merge duplicated cards/buttons/sections
+- Classroom distribution screen MUST support immediate QR fullscreen
+- Assume scale early: if list can exceed 100, include search + pagination
+- Replace developer jargon with teacher-friendly copy and concrete examples
+- Run a 30-second classroom smoke test before merge
 
 ---
 
-## [Canonical Body v2] 2026-02-17
+## [Canonical Body v3] 2026-02-27
 이 섹션은 서비스 통합 작업 시 우선 적용하는 최신 기준이다. 아래 기준과 기존 본문이 충돌하면 이 섹션을 우선한다.
 
 ### 1) 변경 범위 선언
@@ -58,10 +64,18 @@
 - 위 항목이 누락된 서비스는 "구현 완료"로 간주하지 않으며 배포/머지 대상에서 제외한다.
 - 상단바 `이용방법`(`service_guide_list`)에서 즉시 노출되는지 확인한다.
 
+### 8) 교실형 서비스 단순성/현장성 계약 (MUST)
+- 교실형 서비스는 구현 전 핵심 여정을 먼저 고정한다: `교사 문제 준비 -> 배포 -> 학생 즉시 입장`.
+- 학생 진입 기본값은 링크 수기 입력이 아니라 `QR 스캔`이며, 배포 직후 바로 띄울 수 있어야 한다.
+- 동일 목적 기능은 화면에 하나의 진입점으로 통합한다. (예: 선택/보관/랜덤 기능 중복 배치 금지)
+- 목록 데이터가 100개 이상이 될 가능성이 있으면 초기 설계에 검색/페이지네이션 또는 동등한 탐색 장치를 포함한다.
+- 교사 대상 안내 문구는 개발자 용어(예: 헤더 줄, raw schema) 대신 작업 중심 문장으로 작성한다.
+- 배포 전 수업 시작 기준 30초 시나리오를 점검한다: `교사 배포 -> QR 전체화면 -> 학생 입장 확인`.
+
 ---
 ## [Legacy Reference Notice]
 - 아래 본문은 과거 운영/기록 내용(레거시)이며 일부 텍스트 깨짐이 포함될 수 있다.
-- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v2`를 우선 적용한다.
+- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v3`를 우선 적용한다.
 - 레거시 본문은 삭제하지 않고 보존한다.
 
 # 🛠️ Eduitit Service Integration Standard (SIS)
@@ -372,6 +386,11 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] **[Manual][MUST]** `ServiceManual(is_published=True)`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (누락 시 배포/머지 금지)
 - [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
 - [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
+- [ ] **[Flow][MUST]** 핵심 여정(교사 준비 -> 배포 -> 학생 입장)이 30초 안에 끊김 없이 동작하는가?
+- [ ] **[Entry][MUST]** 학생 진입이 QR 스캔 중심으로 설계되어 있으며, 배포 직후 QR 전체화면을 즉시 띄울 수 있는가?
+- [ ] **[IA][MUST]** 동일 목적 UI(선택/보관/랜덤/배포 상태 등)가 중복 카드로 분산되지 않았는가?
+- [ ] **[Scale]** 데이터가 100개 이상일 때를 가정해 검색/페이지네이션(또는 동등한 탐색 UX)을 제공하는가?
+- [ ] **[Copy][MUST]** 교사 안내 문구가 개발자 용어 없이 이해 가능한 단계형 문장/예시로 작성되었는가?
 - [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
 - [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 `bootstrap_runtime` 실행 체인에 등록했는가? (`INSTALLED_APPS`, `config/urls.py`, `core/management/commands/bootstrap_runtime.py`, `Procfile`, `nixpacks.toml`) — 누락 시 대시보드 미노출 또는 라우팅 실패
 - [ ] **[Infra]** `nixpacks.toml`의 `[phases.start]` 명령이 `Procfile`과 동기화되어 있는가? (불일치 시 배포 환경에 따라 다른 명령이 실행됨)

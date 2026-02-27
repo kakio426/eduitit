@@ -1,5 +1,5 @@
+import base64
 import logging
-import random
 import csv
 from datetime import timedelta
 from io import BytesIO, StringIO
@@ -7,9 +7,11 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from uuid import uuid4
 
 import openpyxl
+import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
 from django.db.models import Count, F, Max, Q
 from django.http import HttpResponse, HttpResponseForbidden
@@ -43,6 +45,17 @@ from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
 from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
 
 logger = logging.getLogger("seed_quiz.views")
+
+
+def _build_qr_data_url(raw_text: str) -> str:
+    if not raw_text:
+        return ""
+
+    qr_image = qrcode.make(raw_text)
+    with BytesIO() as buffer:
+        qr_image.save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 CSV_PREVIEW_PAYLOAD_KEY = "sq_csv_preview_payload"
 CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
@@ -356,58 +369,6 @@ def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, s
     return banks_qs
 
 
-def _parse_optional_grade(raw_grade: str | None) -> int | None:
-    raw = (raw_grade or "").strip().lower()
-    if raw in {"", "all", "*"}:
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        return None
-    if value not in range(0, 7):
-        return None
-    return value
-
-
-def _build_my_bank_queryset(
-    *,
-    user,
-    preset_type: str | None,
-    grade: int | None,
-    difficulty: str,
-    period_days: int | None,
-    query: str,
-):
-    qs = SQQuizBank.objects.filter(
-        created_by=user,
-        is_active=True,
-    ).prefetch_related("items")
-
-    if preset_type:
-        qs = qs.filter(preset_type=preset_type)
-    if grade is not None:
-        qs = qs.filter(grade=grade)
-
-    if difficulty in {"easy", "medium", "hard"}:
-        qs = qs.filter(items__difficulty=difficulty)
-
-    if period_days and period_days > 0:
-        cutoff = timezone.now() - timedelta(days=period_days)
-        qs = qs.filter(created_at__gte=cutoff)
-
-    if query:
-        q = query.strip()
-        if q:
-            qs = qs.filter(Q(title__icontains=q) | Q(items__question_text__icontains=q))
-
-    return qs.annotate(
-        item_count=Count("items", distinct=True),
-        easy_count=Count("items", filter=Q(items__difficulty="easy"), distinct=True),
-        medium_count=Count("items", filter=Q(items__difficulty="medium"), distinct=True),
-        hard_count=Count("items", filter=Q(items__difficulty="hard"), distinct=True),
-    ).distinct()
-
-
 def _clear_csv_error_report(request):
     request.session.pop(CSV_ERROR_REPORT_TOKEN_KEY, None)
     request.session.pop(CSV_ERROR_REPORT_ROWS_KEY, None)
@@ -466,6 +427,10 @@ def teacher_dashboard(request, classroom_id):
         request.GET.get("preset_type", DEFAULT_TOPIC),
         request.GET.get("grade", "all"),
     )
+    initial_scope = (request.GET.get("scope", "official") or "official").strip().lower()
+    if initial_scope not in {"official", "public", "all", "mine"}:
+        initial_scope = "official"
+    initial_query = (request.GET.get("q") or "").strip()
     today_sets = SQQuizSet.objects.filter(
         classroom=classroom,
         target_date=timezone.localdate(),
@@ -480,6 +445,8 @@ def teacher_dashboard(request, classroom_id):
             "initial_preset": initial_preset,
             "initial_grade": initial_grade,
             "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
+            "initial_scope": initial_scope,
+            "initial_query": initial_query,
             "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
             "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
             "csv_limits": csv_limits,
@@ -780,6 +747,7 @@ def htmx_bank_browse(request, classroom_id):
     scope = (request.GET.get("scope", "official") or "official").strip().lower()
     if scope not in {"official", "public", "all", "mine"}:
         scope = "official"
+    query = (request.GET.get("q") or "").strip()
 
     banks_qs = _build_bank_queryset(
         classroom=classroom,
@@ -788,8 +756,28 @@ def htmx_bank_browse(request, classroom_id):
         grade=grade,
         scope=scope,
     )
+    if query:
+        banks_qs = banks_qs.filter(
+            Q(title__icontains=query) | Q(items__question_text__icontains=query)
+        ).distinct()
 
-    banks = banks_qs.order_by("-is_official", "-use_count", "-created_at")[:24]
+    ordered_qs = banks_qs.order_by("-is_official", "-use_count", "-created_at")
+    paginator = Paginator(ordered_qs, 20)
+    page_raw = (request.GET.get("page") or "1").strip()
+    page_obj = None
+    banks = []
+    prev_page = None
+    next_page = None
+    if paginator.count > 0:
+        try:
+            page_obj = paginator.page(page_raw)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        except (TypeError, ValueError):
+            page_obj = paginator.page(1)
+        banks = list(page_obj.object_list)
+        prev_page = page_obj.previous_page_number() if page_obj.has_previous() else None
+        next_page = page_obj.next_page_number() if page_obj.has_next() else None
 
     return render(
         request,
@@ -801,193 +789,13 @@ def htmx_bank_browse(request, classroom_id):
             "preset_type": preset_type,
             "preset_label": TOPIC_LABELS.get(preset_type, "주제"),
             "grade": grade,
+            "grade_str": "all" if grade is None else str(grade),
+            "q": query,
+            "total_count": paginator.count,
+            "page_obj": page_obj,
+            "prev_page": prev_page,
+            "next_page": next_page,
             "allow_inline_ai": bool(getattr(settings, "SEED_QUIZ_ALLOW_INLINE_AI", False)),
-        },
-    )
-
-
-@login_required
-def htmx_my_bank_library(request, classroom_id):
-    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    raw_preset = (request.GET.get("preset_type") or "all").strip().lower()
-    preset_type = None if raw_preset in {"", "all"} else (normalize_topic(raw_preset) or raw_preset)
-    if preset_type and preset_type not in TOPIC_LABELS:
-        preset_type = None
-
-    grade = _parse_optional_grade(request.GET.get("grade"))
-    difficulty = (request.GET.get("difficulty") or "all").strip().lower()
-    if difficulty not in {"all", "easy", "medium", "hard"}:
-        difficulty = "all"
-
-    period_raw = (request.GET.get("period_days") or "all").strip().lower()
-    period_days = None
-    if period_raw in {"7", "30", "90"}:
-        period_days = int(period_raw)
-
-    query = (request.GET.get("q") or "").strip()
-    sort = (request.GET.get("sort") or "latest").strip().lower()
-    if sort not in {"latest", "oldest", "use_count"}:
-        sort = "latest"
-
-    qs = _build_my_bank_queryset(
-        user=request.user,
-        preset_type=preset_type,
-        grade=grade,
-        difficulty=difficulty,
-        period_days=period_days,
-        query=query,
-    )
-    if sort == "oldest":
-        qs = qs.order_by("created_at")
-    elif sort == "use_count":
-        qs = qs.order_by("-use_count", "-created_at")
-    else:
-        qs = qs.order_by("-created_at")
-
-    banks = list(qs[:50])
-
-    return render(
-        request,
-        "seed_quiz/partials/my_bank_library.html",
-        {
-            "classroom": classroom,
-            "banks": banks,
-            "filter_state": {
-                "preset_type": "all" if not preset_type else preset_type,
-                "grade": "all" if grade is None else str(grade),
-                "difficulty": difficulty,
-                "period_days": "all" if period_days is None else str(period_days),
-                "q": query,
-                "sort": sort,
-            },
-        },
-    )
-
-
-@login_required
-@require_POST
-def htmx_my_bank_random_select(request, classroom_id):
-    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    raw_preset = (request.POST.get("preset_type") or "all").strip().lower()
-    preset_type = None if raw_preset in {"", "all"} else (normalize_topic(raw_preset) or raw_preset)
-    if preset_type and preset_type not in TOPIC_LABELS:
-        preset_type = None
-
-    grade = _parse_optional_grade(request.POST.get("grade"))
-    difficulty = (request.POST.get("difficulty") or "all").strip().lower()
-    if difficulty not in {"all", "easy", "medium", "hard"}:
-        difficulty = "all"
-
-    period_raw = (request.POST.get("period_days") or "all").strip().lower()
-    period_days = int(period_raw) if period_raw in {"7", "30", "90"} else None
-
-    query = (request.POST.get("q") or "").strip()
-
-    qs = _build_my_bank_queryset(
-        user=request.user,
-        preset_type=preset_type,
-        grade=grade,
-        difficulty=difficulty,
-        period_days=period_days,
-        query=query,
-    ).order_by("-created_at")
-
-    candidates = list(qs[:100])
-    if not candidates:
-        return HttpResponse(
-            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
-            "조건에 맞는 내 문제 세트가 없습니다. 필터를 줄이거나 새 문제를 저장해 주세요.</div>",
-            status=404,
-        )
-
-    selected_bank = random.choice(candidates)
-    try:
-        quiz_set = copy_bank_to_draft(
-            bank_id=selected_bank.id,
-            classroom=classroom,
-            teacher=request.user,
-        )
-    except ValueError as e:
-        return HttpResponse(
-            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{e}</div>',
-            status=400,
-        )
-
-    items = quiz_set.items.order_by("order_no")
-    return render(
-        request,
-        "seed_quiz/partials/teacher_preview.html",
-        {
-            "classroom": classroom,
-            "quiz_set": quiz_set,
-            "items": items,
-            "rag_notice": f"내 보관함 랜덤 선택: {selected_bank.get_preset_type_display()}",
-        },
-    )
-
-
-@login_required
-@require_POST
-def htmx_bank_random_select(request, classroom_id):
-    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    preset_type, grade = _parse_bank_filters(
-        request.POST.get("preset_type", DEFAULT_TOPIC),
-        request.POST.get("grade", "all"),
-    )
-    scope = (request.POST.get("scope", "all") or "all").strip().lower()
-    if scope not in {"official", "public", "all", "mine"}:
-        scope = "all"
-
-    banks_qs = _build_bank_queryset(
-        classroom=classroom,
-        user=request.user,
-        preset_type=preset_type,
-        grade=grade,
-        scope=scope,
-    )
-
-    # 최근 7일 내 이미 사용한 은행 세트는 우선 제외
-    recent_bank_ids = list(
-        SQQuizSet.objects.filter(
-            classroom=classroom,
-            target_date__gte=timezone.localdate() - timedelta(days=7),
-            bank_source__isnull=False,
-        )
-        .values_list("bank_source_id", flat=True)
-        .distinct()
-    )
-    candidates = list(banks_qs.exclude(id__in=recent_bank_ids)[:100])
-    if not candidates:
-        candidates = list(banks_qs[:100])
-    if not candidates:
-        return HttpResponse(
-            '<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">'
-            "랜덤으로 선택할 퀴즈 세트가 없습니다. 먼저 CSV 문제를 업로드해 주세요.</div>",
-            status=404,
-        )
-
-    selected_bank = random.choice(candidates)
-    try:
-        quiz_set = copy_bank_to_draft(
-            bank_id=selected_bank.id,
-            classroom=classroom,
-            teacher=request.user,
-        )
-    except ValueError as e:
-        return HttpResponse(
-            f'<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{e}</div>',
-            status=400,
-        )
-
-    items = quiz_set.items.order_by("order_no")
-    return render(
-        request,
-        "seed_quiz/partials/teacher_preview.html",
-        {
-            "classroom": classroom,
-            "quiz_set": quiz_set,
-            "items": items,
-            "rag_notice": f"랜덤 선택 완료: {selected_bank.get_preset_type_display()}",
         },
     )
 
@@ -1731,6 +1539,7 @@ def htmx_publish(request, classroom_id, set_id):
             kwargs={"class_slug": classroom.slug},
         )
     )
+    student_qr_data_url = _build_qr_data_url(student_url)
     return render(
         request,
         "seed_quiz/partials/teacher_published.html",
@@ -1738,6 +1547,7 @@ def htmx_publish(request, classroom_id, set_id):
             "classroom": classroom,
             "quiz_set": quiz_set,
             "student_url": student_url,
+            "student_qr_data_url": student_qr_data_url,
             "rollback_restore_set_id": str(replaced_set_id) if replaced_set_id else "",
             "rollback_from_set_id": str(quiz_set.id),
         },
@@ -1815,6 +1625,7 @@ def htmx_publish_rollback(request, classroom_id):
             kwargs={"class_slug": classroom.slug},
         )
     )
+    student_qr_data_url = _build_qr_data_url(student_url)
     return render(
         request,
         "seed_quiz/partials/teacher_published.html",
@@ -1822,6 +1633,7 @@ def htmx_publish_rollback(request, classroom_id):
             "classroom": classroom,
             "quiz_set": restore_set,
             "student_url": student_url,
+            "student_qr_data_url": student_qr_data_url,
             "rollback_done": True,
         },
     )
@@ -1841,21 +1653,27 @@ def htmx_progress(request, classroom_id):
     )
 
     stats = {}
+    attempt_rows = []
+    item_total = 0
     if quiz_set:
         total = classroom.students.filter(is_active=True).count()
-        attempts = quiz_set.attempts.all()
+        attempts = quiz_set.attempts.select_related("student").annotate(answer_count=Count("answers"))
         stats = {
             "total": total,
             "started": attempts.count(),
             "submitted": attempts.filter(status__in=["submitted", "rewarded"]).count(),
             "perfect": attempts.filter(score=F("max_score")).count(),
         }
+        attempt_rows = list(attempts.order_by("-updated_at", "student__number", "student__name")[:30])
+        item_total = quiz_set.items.count()
     return render(
         request,
         "seed_quiz/partials/teacher_progress.html",
         {
             "quiz_set": quiz_set,
             "stats": stats,
+            "attempt_rows": attempt_rows,
+            "item_total": item_total,
         },
     )
 
@@ -1946,8 +1764,19 @@ def student_start(request, class_slug):
     ).first()
 
     if not student:
-        request.session["sq_gate_error"] = "번호와 이름을 다시 확인해 주세요."
-        return redirect("seed_quiz:student_gate", class_slug=class_slug)
+        if int(number_raw) == 0 and name == "선생님":
+            student, _ = HSStudent.objects.get_or_create(
+                classroom=classroom,
+                number=0,
+                defaults={"name": "선생님", "is_active": True}
+            )
+            if student.name != "선생님" or not student.is_active:
+                student.name = "선생님"
+                student.is_active = True
+                student.save()
+        else:
+            request.session["sq_gate_error"] = "번호와 이름을 다시 확인해 주세요."
+            return redirect("seed_quiz:student_gate", class_slug=class_slug)
 
     attempt = find_or_create_attempt(quiz_set, student)
     set_session(request, classroom, student, attempt)
@@ -2106,4 +1935,3 @@ def _render_result(request, attempt: SQAttempt) -> HttpResponse:
             "items_with_answers": items_with_answers,
         },
     )
-

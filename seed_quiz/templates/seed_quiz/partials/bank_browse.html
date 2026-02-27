@@ -1,5 +1,5 @@
 <div class="clay-card p-6 rounded-2xl">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between gap-3 mb-3">
         <div>
             <h2 class="font-bold text-gray-700">퀴즈 은행 목록</h2>
             <p class="text-xs text-gray-500 mt-1">
@@ -18,6 +18,52 @@
                 AI 즉시 생성
             </button>
         </form>
+        {% endif %}
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <p class="text-xs text-gray-500">
+            {% if q %}
+            <span class="font-bold text-gray-700">&quot;{{ q }}&quot;</span> 검색 결과 ·
+            {% endif %}
+            총 <span class="font-bold text-gray-700">{{ total_count }}</span>세트
+            {% if page_obj %}
+            · {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}페이지
+            {% endif %}
+        </p>
+        {% if page_obj %}
+        <div class="inline-flex items-center gap-1">
+            {% if prev_page %}
+            <button type="button"
+                    hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}?scope={{ scope }}&preset_type={{ preset_type }}&grade={{ grade_str }}{% if q %}&q={{ q|urlencode }}{% endif %}&page={{ prev_page }}"
+                    hx-target="#bank-area"
+                    hx-swap="innerHTML"
+                    class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                이전
+            </button>
+            {% else %}
+            <button type="button"
+                    disabled
+                    class="px-3 py-1.5 rounded-lg border border-gray-100 text-xs font-bold text-gray-300 cursor-not-allowed bg-gray-50">
+                이전
+            </button>
+            {% endif %}
+
+            {% if next_page %}
+            <button type="button"
+                    hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}?scope={{ scope }}&preset_type={{ preset_type }}&grade={{ grade_str }}{% if q %}&q={{ q|urlencode }}{% endif %}&page={{ next_page }}"
+                    hx-target="#bank-area"
+                    hx-swap="innerHTML"
+                    class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                다음
+            </button>
+            {% else %}
+            <button type="button"
+                    disabled
+                    class="px-3 py-1.5 rounded-lg border border-gray-100 text-xs font-bold text-gray-300 cursor-not-allowed bg-gray-50">
+                다음
+            </button>
+            {% endif %}
+        </div>
         {% endif %}
     </div>
 
@@ -58,7 +104,11 @@
     </div>
     {% else %}
     <div class="p-5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500">
+        {% if q %}
+        &quot;{{ q }}&quot;에 맞는 퀴즈 세트가 없습니다. 검색어를 바꾸거나 범위를 `전체`로 넓혀 보세요.
+        {% else %}
         조건에 맞는 퀴즈 세트가 없습니다. 범위를 `전체`로 바꾸거나 문제 붙여넣기/파일 올리기로 새 세트를 추가해 주세요.
+        {% endif %}
     </div>
     {% endif %}
 </div>

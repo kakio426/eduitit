@@ -111,15 +111,15 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "오늘의 퀴즈 선택")
+        self.assertContains(resp, "문제 가져오기")
         self.assertContains(resp, "3단계로 끝나요")
         self.assertContains(resp, 'id="csv-client-check"')
         self.assertContains(resp, "문제는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
-        self.assertContains(resp, "내 문제 보관함 찾기")
         self.assertContains(resp, "둘 다 넣을 필요가 없습니다")
         self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
         self.assertContains(resp, "방법 B. 파일 올리기")
+        self.assertNotContains(resp, "랜덤 1세트 선택")
 
     def test_landing_redirects_to_first_active_classroom_dashboard(self):
         url = reverse("seed_quiz:landing")
@@ -289,14 +289,64 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "공식 상식 기본 세트")
         self.assertContains(resp, "공식 맞춤법 심화 세트")
 
-    def test_bank_random_select_returns_preview(self):
+    def test_bank_browse_applies_search_query(self):
+        SQQuizBank.objects.create(
+            title="공식 문법 연습 세트",
+            preset_type="orthography",
+            grade=3,
+            source="manual",
+            is_official=True,
+            quality_status="approved",
+            created_by=self.teacher,
+        )
         url = reverse(
-            "seed_quiz:htmx_bank_random_select",
+            "seed_quiz:htmx_bank_browse",
             kwargs={"classroom_id": self.classroom.id},
         )
-        resp = self.client.post(url, {"preset_type": "orthography", "grade": "all", "scope": "official"})
+        resp = self.client.get(
+            url,
+            {"preset_type": "orthography", "grade": "3", "scope": "official", "q": "상식"},
+        )
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "2) 저장된 문제 확인")
+        self.assertContains(resp, "공식 상식 기본 세트")
+        self.assertNotContains(resp, "공식 문법 연습 세트")
+        self.assertContains(resp, "검색 결과")
+
+    def test_bank_browse_paginates_results(self):
+        for idx in range(1, 26):
+            SQQuizBank.objects.create(
+                title=f"공식 대량 세트 {idx:02d}",
+                preset_type="orthography",
+                grade=3,
+                source="manual",
+                is_official=True,
+                quality_status="approved",
+                created_by=self.teacher,
+            )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+
+        first_resp = self.client.get(
+            url,
+            {"preset_type": "orthography", "grade": "3", "scope": "official", "page": "1"},
+        )
+        self.assertEqual(first_resp.status_code, 200)
+        first_body = first_resp.content.decode("utf-8")
+        self.assertEqual(first_body.count("이 세트 적용"), 20)
+        self.assertIn("1/2페이지", first_body)
+        self.assertIn("page=2", first_body)
+
+        second_resp = self.client.get(
+            url,
+            {"preset_type": "orthography", "grade": "3", "scope": "official", "page": "2"},
+        )
+        self.assertEqual(second_resp.status_code, 200)
+        second_body = second_resp.content.decode("utf-8")
+        self.assertEqual(second_body.count("이 세트 적용"), 6)
+        self.assertIn("2/2페이지", second_body)
+        self.assertIn("page=1", second_body)
 
     def test_bank_browse_hides_future_official_set(self):
         SQQuizBank.objects.create(
@@ -411,50 +461,6 @@ class TeacherFlowTest(TestCase):
         self.client.post(url, {"preset_type": "orthography", "grade": "3"})
         drafts = SQQuizSet.objects.filter(classroom=self.classroom, status="draft")
         self.assertEqual(drafts.count(), 2)
-
-    def test_my_bank_library_returns_only_mine(self):
-        my_bank = SQQuizBank.objects.create(
-            title="내 보관함 세트",
-            preset_type="orthography",
-            grade=3,
-            source="csv",
-            created_by=self.teacher,
-        )
-        SQQuizBankItem.objects.create(
-            bank=my_bank,
-            order_no=1,
-            question_text="문제",
-            choices=["A", "B", "C", "D"],
-            correct_index=0,
-            explanation="",
-            difficulty="easy",
-        )
-
-        other_bank = SQQuizBank.objects.create(
-            title="다른 사람 세트",
-            preset_type="orthography",
-            grade=3,
-            source="csv",
-            created_by=self.other_teacher,
-        )
-        SQQuizBankItem.objects.create(
-            bank=other_bank,
-            order_no=1,
-            question_text="문제",
-            choices=["A", "B", "C", "D"],
-            correct_index=0,
-            explanation="",
-            difficulty="easy",
-        )
-
-        url = reverse(
-            "seed_quiz:htmx_my_bank_library",
-            kwargs={"classroom_id": self.classroom.id},
-        )
-        resp = self.client.get(url, {"preset_type": "all", "grade": "all", "difficulty": "all"})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "내 보관함 세트")
-        self.assertNotContains(resp, "다른 사람 세트")
 
     def test_csv_upload_creates_bank(self):
         csv_text = (
