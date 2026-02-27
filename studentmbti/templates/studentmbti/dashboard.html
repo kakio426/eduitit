@@ -49,6 +49,11 @@
                 {{ service.title|default:"학교생활 동물 찾기" }}
             </h1>
             <p class="text-xl text-gray-500">{{ service.lead_text|default:"학생 상담을 위한 캐릭터 검사 세션 관리" }}</p>
+            {% if collect_code %}
+            <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold">
+                <i class="fa-solid fa-link"></i>수합 연동 모드가 켜져 있습니다.
+            </div>
+            {% endif %}
         </div>
 
         <!-- 새 세션 생성 -->
@@ -59,6 +64,9 @@
             </h2>
             <form action="{% url 'studentmbti:session_create' %}" method="post" class="flex flex-col gap-4">
                 {% csrf_token %}
+                {% if collect_code %}
+                <input type="hidden" name="collect_code" value="{{ collect_code }}">
+                {% endif %}
                 <div class="flex gap-4">
                     <input type="text" name="session_name" placeholder="예: 3학년 1반 캐릭터 검사"
                         class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-500 focus:outline-none text-lg">
@@ -120,7 +128,7 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="{% url 'studentmbti:session_detail' session.id %}"
+                        <a href="{% url 'studentmbti:session_detail' session.id %}{% if collect_code %}?collect_code={{ collect_code|urlencode }}{% endif %}"
                             class="px-6 py-3 bg-white rounded-xl font-bold text-gray-700 shadow-md hover:shadow-lg transition flex items-center gap-2">
                             <i class="fa-solid fa-eye"></i>
                             상세보기

@@ -124,6 +124,34 @@ class StudentMBTITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="collect_code" value="123456"')
 
+    def test_dashboard_collect_mode_persists_to_session_detail_links(self):
+        session = TestSession.objects.create(session_name="연동 세션", teacher=self.user, test_type='low')
+
+        response = self.client.get('/studentmbti/dashboard/?collect_code=123456')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="collect_code" value="123456"')
+        self.assertContains(response, f'/studentmbti/session/{session.id}/detail/?collect_code=123456')
+
+    def test_session_create_redirects_with_collect_code_when_present(self):
+        response = self.client.post('/studentmbti/session/create/', {
+            'session_name': '연동 생성 세션',
+            'test_type': 'low',
+            'collect_code': '123456',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('collect_code=123456', response.url)
+
+    def test_join_session_preserves_collect_code_query(self):
+        self.client.logout()
+        session = TestSession.objects.create(session_name="Join Collect Session", teacher=self.user, test_type='low')
+
+        response = self.client.get(f'/studentmbti/join/?code={session.access_code}&collect_code=123456')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('collect_code=123456', response.url)
+
     def test_result_page_shows_collect_submit_button_when_collect_code_valid(self):
         session = TestSession.objects.create(session_name="3-2", teacher=self.user, test_type='low')
         result = StudentMBTIResult.objects.create(

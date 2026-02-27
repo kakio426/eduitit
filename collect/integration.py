@@ -13,6 +13,18 @@ def normalize_collect_code(raw_code):
     return str(raw_code or "").strip()
 
 
+def humanize_collect_auto_reason(reason):
+    reason_key = str(reason or "").strip().lower()
+    messages = {
+        "request_not_found": "연동된 수합 요청을 찾지 못했습니다. 수합 코드가 맞는지 확인해주세요.",
+        "invalid_source": "연동 출처가 올바르지 않습니다. 다시 시도해주세요.",
+        "choice_not_allowed": "연동 대상 수합에서 선택형 제출이 꺼져 있습니다.",
+        "missing_choice": "전송할 결과값이 비어 있어 자동 전송을 진행할 수 없었습니다.",
+        "choice_not_in_options": "수합 보기에 현재 결과값이 없어 자동 전송을 진행할 수 없었습니다.",
+    }
+    return messages.get(reason_key, "")
+
+
 def get_active_collect_request_by_code(raw_code):
     code = normalize_collect_code(raw_code)
     if not code:

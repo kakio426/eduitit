@@ -214,7 +214,7 @@
                     </div>
                 </div>
 
-                {% if ssambti_launch_url or studentmbti_collect_query %}
+                {% if ssambti_launch_url or studentmbti_launch_url %}
                 <div class="clay-card p-4 bg-violet-50 border border-violet-200">
                     <h3 class="text-lg md:text-xl font-bold text-violet-800 mb-2">
                         <i class="fa-solid fa-link mr-1.5"></i>BTI 연동 링크
@@ -236,15 +236,15 @@
                     </div>
                     {% endif %}
 
-                    {% if studentmbti_collect_query %}
+                    {% if studentmbti_launch_url %}
                     <div>
-                        <p class="text-xs text-violet-600 font-semibold mb-1">우리반BTI 세션 링크 뒤에 붙일 파라미터</p>
-                        <p class="text-[11px] text-violet-600 mb-2">예: 세션 링크가 `.../studentmbti/session/세션ID/` 라면 뒤에 `?{{ studentmbti_collect_query }}` 를 그대로 붙이세요.</p>
+                        <p class="text-xs text-violet-600 font-semibold mb-1">우리반BTI 연동 시작 링크</p>
+                        <p class="text-[11px] text-violet-600 mb-2">이 링크로 우리반BTI 대시보드에 들어가 세션을 만들거나 열면, QR/입장코드가 이 수합으로 자동 연동됩니다.</p>
                         <div class="flex items-center gap-2">
-                            <input type="text" readonly value="?{{ studentmbti_collect_query }}"
+                            <input type="text" readonly value="{{ studentmbti_launch_url }}"
                                    class="flex-1 px-3 py-2 rounded-lg border border-violet-200 bg-white text-xs md:text-sm text-violet-800">
                             <button type="button"
-                                    onclick="copyText('?{{ studentmbti_collect_query|escapejs }}', '우리반BTI 파라미터가 복사되었습니다.')"
+                                    onclick="copyText('{{ studentmbti_launch_url|escapejs }}', '우리반BTI 연동 링크가 복사되었습니다.')"
                                     class="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs md:text-sm font-bold hover:bg-violet-700 transition">
                                 복사
                             </button>

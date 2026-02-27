@@ -22,9 +22,11 @@ from collect.integration import (
     build_collect_prefill_submit_url,
     submit_bti_result_to_collect,
     normalize_collect_code,
+    humanize_collect_auto_reason,
 )
 
 logger = logging.getLogger(__name__)
+TEACHER_COLLECT_CODE_SESSION_KEY = "studentmbti_teacher_collect_code"
 
 def _normalize_mac_hash(raw_value):
     raw = (raw_value or '').strip().lower()
@@ -89,10 +91,17 @@ def get_student_service():
 
     return Product.objects.filter(launch_route_name='studentmbti:landing', is_active=True).first()
 
-def generate_session_qr(session_id, request):
+def generate_session_qr(session_id, request, collect_code=""):
     """세션 QR 코드 생성 (Base64 반환)"""
     # 절대 URL 생성 (짧은 URL 별칭 사용)
-    url = request.build_absolute_uri(f'/m/session/{session_id}/')
+    base_path = f'/m/session/{session_id}/'
+    query = {}
+    normalized = normalize_collect_code(collect_code)
+    if normalized:
+        query["collect_code"] = normalized
+    if query:
+        base_path = f"{base_path}?{urlencode(query)}"
+    url = request.build_absolute_uri(base_path)
     
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(url)
@@ -136,10 +145,16 @@ def dashboard(request):
     try:
         service = get_student_service()
         sessions = TestSession.objects.filter(teacher=request.user).order_by('-created_at')
-        
+        collect_code = normalize_collect_code(
+            request.GET.get("collect_code") or request.session.get(TEACHER_COLLECT_CODE_SESSION_KEY)
+        )
+        if collect_code:
+            request.session[TEACHER_COLLECT_CODE_SESSION_KEY] = collect_code
+
         return render(request, 'studentmbti/dashboard.html', {
             'service': service,
             'sessions': sessions,
+            'collect_code': collect_code,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Dashboard Error: {str(e)}")
@@ -178,8 +193,16 @@ def session_create(request):
             test_type=test_type,
             classroom=classroom,
         )
+        collect_code = normalize_collect_code(
+            request.POST.get("collect_code") or request.session.get(TEACHER_COLLECT_CODE_SESSION_KEY)
+        )
+        if collect_code:
+            request.session[TEACHER_COLLECT_CODE_SESSION_KEY] = collect_code
         logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}, Type: {test_type}")
-        return redirect('studentmbti:session_detail', session_id=session.id)
+        detail_url = reverse('studentmbti:session_detail', args=[session.id])
+        if collect_code:
+            detail_url = f"{detail_url}?{urlencode({'collect_code': collect_code})}"
+        return redirect(detail_url)
     except Exception as e:
         logger.error(f"[StudentMBTI] Session Create Error: {str(e)}")
         return HttpResponse("세션 생성 중 오류가 발생했습니다.", status=500)
@@ -193,8 +216,14 @@ def session_detail(request, session_id):
         session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
         results = session.results.all().order_by('-created_at')
         
+        collect_code = normalize_collect_code(
+            request.GET.get("collect_code") or request.session.get(TEACHER_COLLECT_CODE_SESSION_KEY)
+        )
+        if collect_code:
+            request.session[TEACHER_COLLECT_CODE_SESSION_KEY] = collect_code
+
         # QR 코드 생성
-        qr_code_base64 = generate_session_qr(session.id, request)
+        qr_code_base64 = generate_session_qr(session.id, request, collect_code=collect_code)
         
         # MBTI 통계 및 퍼센트 계산
         mbti_stats = results.values('mbti_type', 'animal_name').annotate(
@@ -214,6 +243,7 @@ def session_detail(request, session_id):
             'qr_code_base64': qr_code_base64,
             'mbti_stats': mbti_stats,
             'total_count': total_count,
+            'collect_code': collect_code,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Session Detail Error: {str(e)}")
@@ -241,10 +271,18 @@ def session_results_partial(request, session_id):
 def session_toggle_active(request, session_id):
     """세션 활성화/비활성화 토글"""
     session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
+    collect_code = normalize_collect_code(
+        request.GET.get("collect_code") or request.session.get(TEACHER_COLLECT_CODE_SESSION_KEY)
+    )
+    if collect_code:
+        request.session[TEACHER_COLLECT_CODE_SESSION_KEY] = collect_code
     session.is_active = not session.is_active
     session.save()
-    
-    return redirect('studentmbti:session_detail', session_id=session.id)
+
+    detail_url = reverse('studentmbti:session_detail', args=[session.id])
+    if collect_code:
+        detail_url = f"{detail_url}?{urlencode({'collect_code': collect_code})}"
+    return redirect(detail_url)
 
 
 @login_required
@@ -252,9 +290,17 @@ def session_toggle_active(request, session_id):
 def session_delete(request, session_id):
     """세션 삭제"""
     session = get_object_or_404(TestSession, id=session_id, teacher=request.user)
+    collect_code = normalize_collect_code(
+        request.POST.get("collect_code") or request.session.get(TEACHER_COLLECT_CODE_SESSION_KEY)
+    )
+    if collect_code:
+        request.session[TEACHER_COLLECT_CODE_SESSION_KEY] = collect_code
     session.delete()
     logger.info(f"[StudentMBTI] Action: SESSION_DELETE, Status: SUCCESS, SessionID: {session_id}, User: {request.user.username}")
-    return redirect('studentmbti:dashboard')
+    dashboard_url = reverse('studentmbti:dashboard')
+    if collect_code:
+        dashboard_url = f"{dashboard_url}?{urlencode({'collect_code': collect_code})}"
+    return redirect(dashboard_url)
 
 
 def join_session(request):
@@ -262,11 +308,15 @@ def join_session(request):
     code = request.GET.get('code', '').strip().upper()
     if not code:
         code = request.POST.get('code', '').strip().upper()
+    collect_code = normalize_collect_code(request.GET.get("collect_code") or request.POST.get("collect_code"))
     
     if code:
         try:
             session = TestSession.objects.get(access_code=code, is_active=True)
-            return redirect('studentmbti:session_test', session_id=session.id)
+            target = reverse('studentmbti:session_test', args=[session.id])
+            if collect_code:
+                target = f"{target}?{urlencode({'collect_code': collect_code})}"
+            return redirect(target)
         except TestSession.DoesNotExist:
             return HttpResponse("유효하지 않은 입장 코드입니다. 선생님께 확인해주세요.", status=404)
     
@@ -551,6 +601,7 @@ def result(request, result_id):
         collect_auto_state = str(request.GET.get("collect_auto", "")).strip()
         collect_auto_submitted = collect_auto_state == "1"
         collect_auto_reason = str(request.GET.get("collect_reason", "")).strip()
+        collect_auto_reason_message = humanize_collect_auto_reason(collect_auto_reason)
 
         return render(request, 'studentmbti/result.html', {
             'result': result,
@@ -561,6 +612,7 @@ def result(request, result_id):
             'collect_auto_enabled': bool(collect_code),
             'collect_auto_submitted': collect_auto_submitted,
             'collect_auto_reason': collect_auto_reason,
+            'collect_auto_reason_message': collect_auto_reason_message,
         })
     except Exception as e:
         logger.error(f"[StudentMBTI] Result View Error: {str(e)}")

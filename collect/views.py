@@ -516,7 +516,7 @@ def request_detail(request, request_id):
     short_url = request.build_absolute_uri(reverse('collect:short_link', args=[collection_req.access_code]))
     qr_code_base64 = generate_qr(short_url)
     ssambti_launch_url = ""
-    studentmbti_collect_query = ""
+    studentmbti_launch_url = ""
     if collection_req.bti_integration_source in {"ssambti", "both"}:
         ssambti_launch_url = (
             request.build_absolute_uri(reverse("ssambti:main"))
@@ -524,7 +524,11 @@ def request_detail(request, request_id):
             + urlencode({"collect_code": collection_req.access_code})
         )
     if collection_req.bti_integration_source in {"studentmbti", "both"}:
-        studentmbti_collect_query = urlencode({"collect_code": collection_req.access_code})
+        studentmbti_launch_url = (
+            request.build_absolute_uri(reverse("studentmbti:dashboard"))
+            + "?"
+            + urlencode({"collect_code": collection_req.access_code})
+        )
 
     # 제출 유형별 통계
     type_stats = submissions.values('submission_type').annotate(count=Count('id'))
@@ -560,7 +564,7 @@ def request_detail(request, request_id):
         'not_submitted': not_submitted,
         'files_data': files_data,
         'ssambti_launch_url': ssambti_launch_url,
-        'studentmbti_collect_query': studentmbti_collect_query,
+        'studentmbti_launch_url': studentmbti_launch_url,
     })
 
 

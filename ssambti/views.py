@@ -10,6 +10,7 @@ from collect.integration import (
     build_collect_prefill_submit_url,
     submit_bti_result_to_collect,
     BTI_SOURCE_SSAMBTI,
+    humanize_collect_auto_reason,
 )
 
 MBTI_ANIMAL_MAP = {
@@ -325,6 +326,7 @@ def analyze_view(request):
         'collect_auto_submitted': bool(collect_auto_result.get("ok")),
         'collect_auto_created': bool(collect_auto_result.get("created")),
         'collect_auto_reason': collect_auto_result.get("reason", ""),
+        'collect_auto_reason_message': humanize_collect_auto_reason(collect_auto_result.get("reason", "")),
     })
 
 @login_required

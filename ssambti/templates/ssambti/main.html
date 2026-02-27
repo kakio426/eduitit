@@ -188,6 +188,12 @@
                 </div>
             </div>
 
+            {% if collect_code %}
+            <div class="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold">
+                <i class="fa-solid fa-link mr-1.5"></i>수합 연동 모드가 켜져 있습니다. 검사 완료 후 결과가 자동 전송됩니다.
+            </div>
+            {% endif %}
+
             <!-- Quiz Container -->
             <div class="clay-card p-8 md:p-12 relative min-h-[300px] flex flex-col justify-center" data-aos="zoom-in">
                 <form id="quizForm" hx-post="{% url 'ssambti:analyze' %}" hx-target="#results-wrapper"

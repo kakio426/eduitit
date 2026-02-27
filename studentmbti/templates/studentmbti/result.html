@@ -336,6 +336,11 @@
         <p class="text-center text-xs text-violet-700 -mt-1 mb-2">
             자동 전송이 완료되지 않아 수동 전송 버튼을 표시했습니다.
         </p>
+        {% if collect_auto_reason_message %}
+        <p class="text-center text-xs text-violet-700 -mt-1 mb-2">
+            사유: {{ collect_auto_reason_message }}
+        </p>
+        {% endif %}
         {% endif %}
 
         {% if is_teacher_view %}

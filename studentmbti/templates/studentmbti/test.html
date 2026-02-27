@@ -127,6 +127,12 @@
             </div>
         </div>
 
+        {% if collect_code %}
+        <div class="mb-5 p-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold" data-aos="fade-up">
+            <i class="fa-solid fa-link mr-1.5"></i>선생님 수합 연동 모드입니다. 검사 완료 시 결과가 자동 전송됩니다.
+        </div>
+        {% endif %}
+
         <!-- 퀴즈 카드 -->
         <div class="clay-card p-6 md:p-14" data-aos="zoom-in">
             <form id="quiz-form" action="{% url 'studentmbti:analyze' session.id %}" method="post">
