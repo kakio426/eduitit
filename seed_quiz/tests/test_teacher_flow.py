@@ -602,6 +602,82 @@ class TeacherFlowTest(TestCase):
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertEqual(bank.items.count(), 3)
 
+    def test_text_upload_accepts_common_topic_alias(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "독해\t3\t대한민국 수도는?\t서울\t부산\t대구\t광주\t1\t서울입니다\t쉬움\n"
+            "독해\t3\t1+1은?\t2\t1\t3\t4\t1\t2입니다\t쉬움\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            upload_url,
+            {"pasted_text": pasted_text, "submit_mode": "save"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.preset_type, "main_sentence")
+        self.assertEqual(bank.grade, 3)
+
+    def test_text_upload_accepts_human_friendly_grade_label(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "맞춤법\t초3\t대한민국 수도는?\t서울\t부산\t대구\t광주\t1\t서울입니다\t쉬움\n"
+            "맞춤법\t초3\t1+1은?\t2\t1\t3\t4\t1\t2입니다\t쉬움\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            upload_url,
+            {"pasted_text": pasted_text, "submit_mode": "save"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.preset_type, "orthography")
+        self.assertEqual(bank.grade, 3)
+
+    def test_text_upload_accepts_topic_label_with_spacing(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "주제 제목 고르기\t3\t이 글의 제목은?\t봄나들이\t빗소리\t바닷가\t겨울눈\t1\t글 전체 내용과 맞습니다\t보통\n"
+            "주제 제목 고르기\t3\t가장 알맞은 제목은?\t우리 집 강아지\t바닷속 여행\t우주 탐험\t사막 횡단\t1\t중심 내용과 맞습니다\t보통\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            upload_url,
+            {"pasted_text": pasted_text, "submit_mode": "save"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.preset_type, "topic_title")
+        self.assertEqual(bank.grade, 3)
+
+    def test_text_upload_accepts_grade_with_parenthesis(self):
+        pasted_text = (
+            "주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도\n"
+            "맞춤법\t3학년(초등)\t대한민국 수도는?\t서울\t부산\t대구\t광주\t1\t서울입니다\t쉬움\n"
+            "맞춤법\t3학년(초등)\t1+1은?\t2\t1\t3\t4\t1\t2입니다\t쉬움\n"
+        )
+        upload_url = reverse(
+            "seed_quiz:htmx_text_upload",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.post(
+            upload_url,
+            {"pasted_text": pasted_text, "submit_mode": "save"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
+        self.assertEqual(bank.preset_type, "orthography")
+        self.assertEqual(bank.grade, 3)
+
     def test_text_upload_supports_stacked_lines_format(self):
         pasted_text = (
             "주제\n학년\n문제\n보기1\n보기2\n보기3\n보기4\n정답번호\n해설\n난이도\n"

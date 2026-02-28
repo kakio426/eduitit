@@ -733,6 +733,14 @@
         return;
     }
     const header = '주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도';
+    const topicOptionLabels = Array.from(
+        document.querySelectorAll('#bank-filter-form select[name="preset_type"] option')
+    )
+        .map((option) => String(option.textContent || '').trim())
+        .filter(Boolean);
+    const allowedTopicGuide = topicOptionLabels.length
+        ? topicOptionLabels.join(', ')
+        : '맞춤법, 띄어쓰기, 어휘 뜻';
     const promptTemplate = [
         '너는 eduitit 씨앗 퀴즈 업로드 전용 생성기다.',
         '',
@@ -757,19 +765,21 @@
         '- 해설은 1문장으로 짧고 명확하게 작성한다.',
         '',
         '[생성 규칙]',
-        '- 사용자가 준 주제 값을 모든 행의 주제 열에 그대로 넣는다.',
-        '- 사용자가 준 학년 값을 모든 행의 학년 열에 그대로 넣는다.',
+        '- 주제는 반드시 아래 허용 목록 중 하나만 사용한다: ' + allowedTopicGuide,
+        '- 사용자가 준 주제가 허용 목록 밖이면 가장 가까운 허용 주제로 바꿔서 넣는다.',
+        '- 학년은 1, 2, 3, 4, 5, 6 또는 학년무관(0)만 사용한다.',
+        '- 학년이 초3/3학년/grade3/g3 형태라면 3으로 정규화한다.',
         '- 요청한 문항 수를 정확히 맞춘다.',
         '',
         '[검증 규칙]',
         '- 출력 전 스스로 형식을 검증하고, 위반이 있으면 수정한 뒤 최종본만 출력한다.',
         '- 최종 출력에는 데이터 외 어떤 문장도 포함하지 않는다.',
         '',
-        '요청값 입력 형식:',
-        '주제: ...',
-        '학년: ...',
-        '문항 수: ...',
-        '난이도 분포: ...',
+        '요청값 입력 형식(예시):',
+        '주제: 맞춤법',
+        '학년: 3',
+        '문항 수: 20',
+        '난이도 분포: 쉬움 7, 보통 8, 어려움 5',
     ].join('\n');
 
     function flashButtonState(button, idleText, successText, failText, idleClass, successClass, failClass) {
@@ -824,6 +834,44 @@
             }
         });
     }
+})();
+
+(function () {
+    const resultArea = document.getElementById('csv-upload-result');
+    const textForm = document.getElementById('text-upload-form');
+    const csvForm = document.getElementById('csv-upload-form');
+    if (!resultArea || (!textForm && !csvForm)) {
+        return;
+    }
+
+    function isOwnedRequestElement(element, ownerForm) {
+        return !!(element && ownerForm && (element === ownerForm || ownerForm.contains(element)));
+    }
+
+    document.body.addEventListener('htmx:responseError', function (event) {
+        const detail = event.detail || {};
+        const requestElement = detail.elt || (detail.requestConfig ? detail.requestConfig.elt : null);
+        if (
+            !isOwnedRequestElement(requestElement, textForm) &&
+            !isOwnedRequestElement(requestElement, csvForm)
+        ) {
+            return;
+        }
+        const xhr = detail.xhr;
+        if (!xhr) {
+            return;
+        }
+        if (xhr.status === 400 && xhr.responseText) {
+            resultArea.innerHTML = xhr.responseText;
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+        resultArea.innerHTML = (
+            '<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">' +
+            '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' +
+            '</div>'
+        );
+    });
 })();
 </script>
 {% endblock %}

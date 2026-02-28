@@ -8,6 +8,7 @@ import logging
 import json
 import os
 import hashlib
+import re
 
 from django.db import transaction
 from django.db.models import F
@@ -179,13 +180,44 @@ def _canonicalize_row(raw_row: dict) -> dict:
 
 
 def _parse_grade_value(raw_grade: str) -> tuple[int | None, str | None]:
-    grade_text = (raw_grade or "3").strip()
-    if grade_text in ("학년무관", "0"):
+    grade_text = str(raw_grade or "3").strip()
+    compact = grade_text.replace(" ", "")
+    normalized = compact.lower()
+    if normalized in {"학년무관", "무관", "0", "all", "전체", "any"}:
         return 0, None
-    try:
-        grade_value = int(grade_text)
-    except ValueError:
+
+    # 교사/LLM 입력에서 자주 나오는 표현(예: 초3, 3학년, grade3, g3)을 허용한다.
+    for token in ("grade", "gr", "level", "lv", "초등", "초", "학년", "년"):
+        normalized = normalized.replace(token, "")
+    normalized = normalized.strip()
+
+    digits = re.findall(r"\d", normalized)
+    if len(digits) == 1 and not re.search(r"[7-9]", normalized):
+        grade_value = int(digits[0])
+    else:
+        korean_grade_map = {
+            "영": 0,
+            "공": 0,
+            "일": 1,
+            "한": 1,
+            "이": 2,
+            "두": 2,
+            "삼": 3,
+            "세": 3,
+            "사": 4,
+            "네": 4,
+            "오": 5,
+            "다섯": 5,
+            "육": 6,
+            "여섯": 6,
+        }
+        korean_only = re.sub(r"[^가-힣]", "", normalized)
+        grade_value = korean_grade_map.get(korean_only)
+
+    if grade_value is None:
         return None, "학년이 올바르지 않습니다 (1~6 또는 학년무관)."
+    if grade_value == 0:
+        return 0, None
     if grade_value not in range(1, 7):
         return None, "학년은 1~6 또는 학년무관이어야 합니다."
     return grade_value, None
