@@ -99,6 +99,40 @@ body {
     animation: seedPop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* 결과 화면 별점 보드 */
+.sq-star-board {
+    width: min(100%, 23rem);
+    margin: 0 auto;
+    padding-inline: 0.1rem;
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 0.2rem;
+    justify-items: center;
+}
+
+.sq-star {
+    line-height: 1;
+    font-size: clamp(1.25rem, 5vw, 1.8rem);
+}
+
+.sq-star--on {
+    color: #f5c84b;
+}
+
+.sq-star--off {
+    color: #111827;
+}
+
+/* 360px 전후 소형 모바일에서 별 간격을 한 단계 더 압축 */
+@media (max-width: 380px) {
+    .sq-star-board {
+        gap: 0.12rem;
+    }
+    .sq-star {
+        font-size: clamp(1.15rem, 4.8vw, 1.6rem);
+    }
+}
+
 /* 태블릿 이상 */
 @media (min-width: 640px) {
     .sq-question {
@@ -106,5 +140,9 @@ body {
     }
     .sq-choice-btn {
         font-size: 1.375rem;
+    }
+    .sq-star-board {
+        width: min(100%, 36rem);
+        grid-template-columns: repeat(20, minmax(0, 1fr));
     }
 }
