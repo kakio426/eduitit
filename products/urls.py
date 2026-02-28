@@ -24,7 +24,6 @@ urlpatterns = [
     path('dutyticker/api/broadcast/update/', dutyticker_api.update_broadcast_message, name='dt_api_broadcast_update'),
     path('dutyticker/api/mission/update/', dutyticker_api.update_mission, name='dt_api_mission_update'),
     path('dutyticker/api/spotlight/update/', dutyticker_api.update_spotlight_student, name='dt_api_spotlight_update'),
-    path('dutyticker/api/theme/update/', dutyticker_api.update_theme, name='dt_api_theme_update'),
     path('dutyticker/api/reset/', dutyticker_api.reset_data, name='dt_api_reset'),
 
     # DutyTicker Admin (Dashboard)
