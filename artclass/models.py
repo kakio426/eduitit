@@ -4,9 +4,23 @@ from django.contrib.auth.models import User
 
 class ArtClass(models.Model):
     """미술 수업 정보를 저장하는 모델"""
+    PLAYBACK_MODE_EMBED = "embed"
+    PLAYBACK_MODE_EXTERNAL_WINDOW = "external_window"
+    PLAYBACK_MODE_CHOICES = [
+        (PLAYBACK_MODE_EMBED, "내장 플레이어 (기본)"),
+        (PLAYBACK_MODE_EXTERNAL_WINDOW, "새 창 재생 (임베드 차단 대응)"),
+    ]
+
     title = models.CharField(max_length=200, blank=True, verbose_name="수업 제목")
     youtube_url = models.URLField(verbose_name="유튜브 URL")
     default_interval = models.PositiveIntegerField(default=10, verbose_name="기본 간격(초)")
+    playback_mode = models.CharField(
+        max_length=24,
+        choices=PLAYBACK_MODE_CHOICES,
+        default=PLAYBACK_MODE_EMBED,
+        verbose_name="영상 재생 모드",
+        help_text="임베드 불가 영상일 경우 새 창 재생 모드를 사용할 수 있습니다.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, 

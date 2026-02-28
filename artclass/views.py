@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django_ratelimit.decorators import ratelimit
+from django.views.decorators.http import require_POST
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count
 from .models import ArtClass, ArtStep
@@ -22,12 +23,16 @@ def setup_view(request, pk=None):
         video_url = request.POST.get('videoUrl', '')
         interval = int(request.POST.get('stepInterval', 10))
         title = request.POST.get('title', '')
+        selected_mode = (request.POST.get('playbackMode') or ArtClass.PLAYBACK_MODE_EMBED).strip()
+        valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
+        playback_mode = selected_mode if selected_mode in valid_modes else ArtClass.PLAYBACK_MODE_EMBED
         
         if art_class:
             # 기존 수업 수정
             art_class.title = title
             art_class.youtube_url = video_url
             art_class.default_interval = interval
+            art_class.playback_mode = playback_mode
             art_class.save()
             # 기존 단계 삭제 후 재생성 (단순화를 위해)
             art_class.steps.all().delete()
@@ -37,6 +42,7 @@ def setup_view(request, pk=None):
                 title=title,
                 youtube_url=video_url,
                 default_interval=interval,
+                playback_mode=playback_mode,
                 created_by=request.user if request.user.is_authenticated else None
             )
         
@@ -98,6 +104,7 @@ def classroom_view(request, pk):
     data = {
         'videoUrl': art_class.youtube_url,
         'stepInterval': art_class.default_interval,
+        'playbackMode': art_class.playback_mode,
         'steps': steps_data
     }
     
@@ -107,6 +114,27 @@ def classroom_view(request, pk):
         'data': data,
         'data_json': json.dumps(data, ensure_ascii=False)
     })
+
+
+@require_POST
+def update_playback_mode_api(request, pk):
+    """클래스별 유튜브 재생 모드를 저장한다."""
+    art_class = get_object_or_404(ArtClass, pk=pk)
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "INVALID_JSON", "message": "요청 형식이 올바르지 않습니다."}, status=400)
+
+    mode = (payload.get("mode") or "").strip()
+    valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
+    if mode not in valid_modes:
+        return JsonResponse({"error": "INVALID_MODE", "message": "지원하지 않는 재생 모드입니다."}, status=400)
+
+    if art_class.playback_mode != mode:
+        art_class.playback_mode = mode
+        art_class.save(update_fields=["playback_mode"])
+
+    return JsonResponse({"success": True, "mode": art_class.playback_mode})
 
 
 @ratelimit(key=ratelimit_key_for_master_only, rate='30/h', method='POST', block=True)

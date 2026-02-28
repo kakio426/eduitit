@@ -181,6 +181,21 @@
 
             <!-- 3. Final Settings & Start -->
             <div class="clay-card p-8 bg-white/80 text-center">
+                <div class="max-w-xl mx-auto mb-8 text-left">
+                    <label for="playbackMode" class="block text-gray-600 font-heavy mb-3">영상 재생 방식</label>
+                    <select name="playbackMode" id="playbackMode"
+                        class="w-full px-4 py-3 rounded-2xl bg-gray-50 border-2 border-transparent focus:border-purple-300 focus:bg-white focus:ring-2 focus:ring-purple-300 outline-none transition-all">
+                        <option value="embed" {% if art_class.playback_mode == "embed" or not art_class %}selected{% endif %}>내장 플레이어 (기본)</option>
+                        <option value="external_window" {% if art_class.playback_mode == "external_window" %}selected{% endif %}>새 창 재생 (임베드 금지 영상용)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2">
+                        유튜브 정책으로 내장 재생이 막히는 영상은 새 창 재생 모드를 선택하면 수업 진행이 끊기지 않습니다.
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        수업 화면 상단의 <b>화면 분할 시작</b> 버튼으로 유튜브와 안내 화면을 반반 배치할 수 있습니다.
+                    </p>
+                </div>
+
                 <div class="max-w-xs mx-auto mb-8">
                     <label class="block text-gray-600 font-heavy mb-4">자동 전환 간격 (초)</label>
                     <div class="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 shadow-inner">

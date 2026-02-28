@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
+from .models import ArtClass
 
 
 class ManualPipelineParserTest(TestCase):
@@ -120,3 +121,40 @@ class ManualPipelineApiTest(TestCase):
         url = reverse("artclass:parse_gemini_steps_api")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 405)
+
+    def test_update_playback_mode_api_success(self):
+        art_class = ArtClass.objects.create(
+            title="테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+        )
+        url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"mode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        art_class.refresh_from_db()
+        self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
+        self.assertTrue(response.json()["success"])
+
+    def test_update_playback_mode_api_invalid_mode(self):
+        art_class = ArtClass.objects.create(
+            title="테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+        )
+        url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"mode": "unsupported_mode"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "INVALID_MODE")
