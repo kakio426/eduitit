@@ -185,6 +185,7 @@ def get_guest_default_data():
             'mission_title': "오늘도 행복한 우리 교실",
             'mission_desc': "선생님 말씀에 집중해 주세요.",
             'spotlight_student_id': None,
+            'theme': 'deep_space',
         }
     }
 
@@ -464,6 +465,7 @@ def get_dutyticker_data(request):
             'mission_title': settings.mission_title,
             'mission_desc': settings.mission_desc,
             'spotlight_student_id': spotlight_student_id,
+            'theme': settings.theme,
         }
     })
 
@@ -567,10 +569,33 @@ def update_mission(request):
         if title is not None: settings.mission_title = title
         if desc is not None: settings.mission_desc = desc
         settings.save()
+        settings.save()
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+@require_http_methods(["POST"])
+@csrf_exempt
+def update_theme(request):
+    try:
+        data = json.loads(request.body)
+        theme = data.get('theme')
+        
+        if not request.user.is_authenticated:
+            guest_data = request.session.get('guest_dt_data')
+            if guest_data:
+                if theme is not None: guest_data['settings']['theme'] = theme
+                request.session.modified = True
+                return JsonResponse({'success': True})
+            return JsonResponse({'success': False}, status=400)
+
+        classroom = get_active_classroom_for_request(request)
+        settings, _ = get_or_create_settings_for_scope(request.user, classroom)
+        if theme is not None: settings.theme = theme
+        settings.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_http_methods(["POST"])
 @csrf_exempt

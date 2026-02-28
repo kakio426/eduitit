@@ -133,6 +133,12 @@ class DTSettings(models.Model):
         ("manual_sequential", "수동 순차"),
         ("manual_random", "수동 랜덤"),
     ]
+    THEME_CHOICES = [
+        ("deep_space", "딥 스페이스 (기본, 다크)"),
+        ("sunny", "햇살 가득 교실 (라이트)"),
+        ("pastel", "차분한 파스텔"),
+        ("vivid", "비비드 팝 (캐주얼)"),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dutyticker_settings')
     classroom = models.ForeignKey(
@@ -164,6 +170,12 @@ class DTSettings(models.Model):
         related_name="dutyticker_spotlight_settings",
         null=True,
         blank=True,
+    )
+    theme = models.CharField(
+        max_length=20,
+        choices=THEME_CHOICES,
+        default="deep_space",
+        help_text="디자인 테마",
     )
 
     class Meta:

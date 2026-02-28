@@ -108,32 +108,52 @@
             </div>
 
             <div class="mb-8 p-4 rounded-2xl bg-white/70 border border-purple-100 shadow-sm">
-                <form action="{% url 'dt_admin_update_rotation_settings' %}" method="POST" class="space-y-3">
+                <form action="{% url 'dt_admin_update_rotation_settings' %}" method="POST" class="space-y-4">
                     {% csrf_token %}
-                    <label class="block text-sm font-bold text-gray-600">역할 순환 방식</label>
-                    <div class="flex flex-col md:flex-row gap-3">
-                        <select id="rotationMode" name="rotation_mode"
-                            class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
-                            <option value="manual_sequential" {% if settings.rotation_mode == "manual_sequential" %}selected{% endif %}>수동 순차 순환</option>
-                            <option value="manual_random" {% if settings.rotation_mode == "manual_random" %}selected{% endif %}>수동 랜덤 순환</option>
-                            <option value="auto_sequential" {% if settings.rotation_mode == "auto_sequential" %}selected{% endif %}>자동 순차 순환 (하루 1칸)</option>
-                            <option value="auto_random" {% if settings.rotation_mode == "auto_random" %}selected{% endif %}>자동 랜덤 순환 (하루 1회)</option>
-                        </select>
-                        <div class="flex gap-2">
-                            <button type="submit"
-                                class="px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold transition whitespace-nowrap">
-                                모드 저장
-                            </button>
-                            <button type="button" onclick="rotateRolesNow()"
-                                class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition whitespace-nowrap flex items-center gap-2">
-                                <i class="fa-solid fa-rotate"></i>
-                                지금 1칸 순환
-                            </button>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">역할 순환 방식</label>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <select id="rotationMode" name="rotation_mode"
+                                class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                <option value="manual_sequential" {% if settings.rotation_mode == "manual_sequential" %}selected{% endif %}>수동 순차 순환</option>
+                                <option value="manual_random" {% if settings.rotation_mode == "manual_random" %}selected{% endif %}>수동 랜덤 순환</option>
+                                <option value="auto_sequential" {% if settings.rotation_mode == "auto_sequential" %}selected{% endif %}>자동 순차 순환 (하루 1칸)</option>
+                                <option value="auto_random" {% if settings.rotation_mode == "auto_random" %}selected{% endif %}>자동 랜덤 순환 (하루 1회)</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="rotateRolesNow()"
+                                    class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition whitespace-nowrap flex items-center gap-2">
+                                    <i class="fa-solid fa-rotate"></i>
+                                    지금 1칸 순환
+                                </button>
+                            </div>
                         </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            자동 모드는 데이터를 불러올 때 하루 1회 적용됩니다. 수동 모드에서는 버튼을 눌렀을 때만 순환됩니다.
+                        </p>
                     </div>
-                    <p class="text-xs text-gray-500">
-                        자동 모드는 데이터를 불러올 때 하루 1회 적용됩니다. 수동 모드에서는 버튼을 눌렀을 때만 순환됩니다.
-                    </p>
+
+                    <div class="border-t border-purple-100 pt-4">
+                        <label class="block text-sm font-bold text-gray-600 mb-2">디자인 테마</label>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <select name="theme"
+                                class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                <option value="deep_space" {% if settings.theme == "deep_space" %}selected{% endif %}>딥 스페이스 (기본 다크)</option>
+                                <option value="sunny" {% if settings.theme == "sunny" %}selected{% endif %}>햇살 가득 교실 (라이트)</option>
+                                <option value="pastel" {% if settings.theme == "pastel" %}selected{% endif %}>차분한 파스텔</option>
+                                <option value="vivid" {% if settings.theme == "vivid" %}selected{% endif %}>비비드 팝 (캐주얼)</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <button type="submit"
+                                    class="px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold transition whitespace-nowrap">
+                                    설정 저장
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            저장 후 메인화면을 새로고침하면 적용됩니다.
+                        </p>
+                    </div>
                 </form>
             </div>
 

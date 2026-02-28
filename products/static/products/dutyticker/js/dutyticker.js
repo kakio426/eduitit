@@ -274,6 +274,10 @@ class DutyTickerManager {
             this.missionTitle = data.settings.mission_title || "수학 익힘책 풀기";
             this.missionDesc = data.settings.mission_desc || "24~25페이지 풀고 채점하기";
             this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
+            this.theme = data.settings.theme || 'deep_space';
+
+            // Apply Theme to DOM
+            document.documentElement.setAttribute('data-theme', this.theme);
 
             const today = new Date().getDay();
             this.todaySchedule = data.schedule[today] || [];

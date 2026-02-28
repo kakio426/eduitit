@@ -110,7 +110,13 @@ def update_rotation_settings(request):
             settings.rotation_frequency = "daily"
         else:
             settings.last_rotation_date = None
-        settings.save(update_fields=["rotation_mode", "auto_rotation", "rotation_frequency", "last_rotation_date"])
+            
+    selected_theme = (request.POST.get("theme") or "").strip()
+    valid_themes = {choice[0] for choice in DTSettings.THEME_CHOICES}
+    if selected_theme in valid_themes:
+        settings.theme = selected_theme
+
+    settings.save(update_fields=["rotation_mode", "auto_rotation", "rotation_frequency", "last_rotation_date", "theme"])
 
     return redirect('dt_admin_dashboard')
 
