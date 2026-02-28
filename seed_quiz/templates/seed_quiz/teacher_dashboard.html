@@ -197,7 +197,7 @@
                 <button type="button"
                         id="copy-seed-quiz-prompt"
                         class="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
-                    GPT 요청문 복사
+                    GPT/GEMS 요청문 복사
                 </button>
                 <button type="button"
                         id="copy-seed-quiz-template"
@@ -209,7 +209,7 @@
         <div class="mb-3 p-3 rounded-xl bg-violet-50 border border-violet-200">
             <p class="text-xs font-bold text-violet-800">GPT/GEMS 사용법 (쉽게)</p>
             <ol class="mt-1 text-xs text-violet-700 space-y-0.5 list-decimal list-inside">
-                <li><strong>GPT 요청문 복사</strong>를 눌러 GPT/GEMS 채팅창에 붙여넣습니다. (새 채팅이 아니어도 됩니다)</li>
+                <li><strong>GPT/GEMS 요청문 복사</strong>를 눌러 GPT/GEMS 채팅창에 붙여넣습니다. (새 채팅이 아니어도 됩니다)</li>
                 <li>원하는 조건만 바꿔 보내세요. 예: <code>맞춤법, 3학년, 20문항</code></li>
                 <li>답변으로 받은 표 전체(첫 줄 포함)를 아래 입력칸에 그대로 붙여넣습니다.</li>
                 <li>바로 저장하려면 <strong>문제 만들기(바로 저장)</strong>, 먼저 점검하려면 <strong>형식만 확인</strong>을 누릅니다.</li>
@@ -249,7 +249,7 @@
             </div>
         </form>
         <p class="mt-2 text-xs text-gray-500">
-            <strong>GPT 요청문 복사</strong>: GPT/GEMS에 붙여 넣을 요청 문장을 복사합니다.
+            <strong>GPT/GEMS 요청문 복사</strong>: GPT/GEMS에 붙여 넣을 요청 문장을 복사합니다.
         </p>
         <p class="mt-1 text-xs text-gray-500">
             <strong>입력 형식 한 줄 복사</strong>: GPT 답변에 첫 줄(주제/학년/문제...)이 빠졌을 때만 사용하세요.
@@ -734,20 +734,42 @@
     }
     const header = '주제\t학년\t문제\t보기1\t보기2\t보기3\t보기4\t정답번호\t해설\t난이도';
     const promptTemplate = [
-        '당신은 초등 퀴즈 제작 도우미입니다.',
-        '아래 규칙을 지켜 탭(Tab)으로 구분된 표(TSV)만 출력하세요.',
-        '설명 문장, 번호 목록, 마크다운 코드블록은 출력하지 마세요.',
+        '너는 eduitit 씨앗 퀴즈 업로드 전용 생성기다.',
         '',
-        '첫 줄은 반드시 헤더를 그대로 사용하세요.',
+        '[목표]',
+        '- 사용자가 준 주제, 학년, 문항 수에 맞춰 객관식 4지선다 퀴즈를 만든다.',
+        '',
+        '[출력 절대 규칙]',
+        '- 오직 TSV 평문만 출력한다.',
+        '- 마크다운, 코드블록, 설명 문장, 번호/불릿, JSON, CSV를 출력하지 않는다.',
+        '- 첫 줄 헤더는 반드시 아래와 동일하게 출력한다.',
         header,
+        '- 2줄째부터는 문항 데이터만 출력한다.',
+        '- 구분자는 탭(Tab)만 사용한다.',
         '',
-        '규칙:',
-        '- 한 번에 한 주제, 한 학년만 사용',
-        '- 정답번호는 1~4',
-        '- 난이도는 쉬움/보통/어려움',
-        '- 요청한 문항 수를 정확히 맞춤',
+        '[데이터 규칙]',
+        '- 각 행은 정확히 10열이어야 한다: 주제, 학년, 문제, 보기1, 보기2, 보기3, 보기4, 정답번호, 해설, 난이도',
+        '- 한 번의 출력에서 모든 행의 주제는 동일해야 한다.',
+        '- 한 번의 출력에서 모든 행의 학년은 동일해야 한다.',
+        '- 보기1~보기4는 모두 비어 있지 않아야 하고 서로 달라야 한다.',
+        '- 정답번호는 1~4 숫자만 사용한다. (보기1=1, 보기2=2, 보기3=3, 보기4=4)',
+        '- 난이도는 쉬움/보통/어려움 중 하나만 사용한다.',
+        '- 해설은 1문장으로 짧고 명확하게 작성한다.',
         '',
-        '요청 예시: 맞춤법, 3학년, 20문항',
+        '[생성 규칙]',
+        '- 사용자가 준 주제 값을 모든 행의 주제 열에 그대로 넣는다.',
+        '- 사용자가 준 학년 값을 모든 행의 학년 열에 그대로 넣는다.',
+        '- 요청한 문항 수를 정확히 맞춘다.',
+        '',
+        '[검증 규칙]',
+        '- 출력 전 스스로 형식을 검증하고, 위반이 있으면 수정한 뒤 최종본만 출력한다.',
+        '- 최종 출력에는 데이터 외 어떤 문장도 포함하지 않는다.',
+        '',
+        '요청값 입력 형식:',
+        '주제: ...',
+        '학년: ...',
+        '문항 수: ...',
+        '난이도 분포: ...',
     ].join('\n');
 
     function flashButtonState(button, idleText, successText, failText, idleClass, successClass, failClass) {
@@ -786,7 +808,7 @@
     if (promptBtn) {
         const flash = flashButtonState(
             promptBtn,
-            'GPT 요청문 복사',
+            'GPT/GEMS 요청문 복사',
             '복사 완료',
             '복사 실패',
             ['bg-indigo-100', 'text-indigo-700'],
