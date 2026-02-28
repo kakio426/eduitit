@@ -139,6 +139,7 @@ class SQQuizSet(models.Model):
         ("draft", "초안"),
         ("published", "배포중"),
         ("closed", "종료"),
+        ("archived", "보관"),
         ("failed", "생성실패"),
     ]
     SOURCE_CHOICES = [

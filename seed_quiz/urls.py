@@ -10,6 +10,16 @@ urlpatterns = [
 
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path(
+        "class/<uuid:classroom_id>/student-dashboard/",
+        views.teacher_student_dashboard,
+        name="teacher_student_dashboard",
+    ),
+    path(
+        "class/<uuid:classroom_id>/analysis/",
+        views.teacher_result_analysis,
+        name="teacher_result_analysis",
+    ),
     path("class/<uuid:classroom_id>/csv-template/", views.download_csv_template, name="download_csv_template"),
     path("class/<uuid:classroom_id>/xlsx-template/", views.download_xlsx_template, name="download_xlsx_template"),
     path("class/<uuid:classroom_id>/csv-guide/", views.download_csv_guide, name="download_csv_guide"),
@@ -28,6 +38,7 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/rag/generate/", views.htmx_rag_generate, name="htmx_rag_generate"),
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),
+    path("class/<uuid:classroom_id>/htmx/set/archive/<uuid:set_id>/", views.htmx_set_archive, name="htmx_set_archive"),
     path("class/<uuid:classroom_id>/htmx/publish/rollback/", views.htmx_publish_rollback, name="htmx_publish_rollback"),
     path("class/<uuid:classroom_id>/htmx/progress/", views.htmx_progress, name="htmx_progress"),
     path("class/<uuid:classroom_id>/htmx/topic-summary/", views.htmx_topic_summary, name="htmx_topic_summary"),

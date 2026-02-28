@@ -36,15 +36,25 @@
         {% endfor %}
     </div>
 
-    <div class="flex gap-3">
+    <div class="flex flex-wrap gap-3">
         <button type="button"
                 hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
                 hx-include="#bank-filter-form"
                 hx-target="#bank-area"
                 hx-swap="innerHTML"
-                class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors">
+                class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors whitespace-nowrap">
             📚 다른 세트 고르기
         </button>
+
+        <form hx-post="{% url 'seed_quiz:htmx_set_archive' classroom_id=classroom.id set_id=quiz_set.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <button type="submit"
+                    class="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-bold hover:bg-amber-200 transition-colors whitespace-nowrap">
+                🗂 세트 보관(숨김)
+            </button>
+        </form>
 
         <!-- 배포 -->
         <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=quiz_set.id %}"
@@ -52,7 +62,7 @@
               hx-swap="innerHTML">
             {% csrf_token %}
             <button type="submit"
-                    class="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
+                    class="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all whitespace-nowrap">
                 🚀 3) 학생에게 배포하기
             </button>
         </form>

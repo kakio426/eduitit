@@ -8,7 +8,12 @@ from django.utils import timezone
 from core.models import UserProfile
 from happy_seed.models import HSClassroom, HSGuardianConsent, HSStudent
 from seed_quiz.models import SQAttempt, SQAttemptAnswer, SQQuizItem, SQQuizSet
-from seed_quiz.services.grading import QUIZ_REWARD_SEEDS, submit_and_reward
+from seed_quiz.services.grading import (
+    QUIZ_REWARD_SEEDS,
+    apply_retroactive_reward_for_attempt,
+    apply_retroactive_rewards_for_student,
+    submit_and_reward,
+)
 
 User = get_user_model()
 
@@ -120,3 +125,124 @@ class GradingPartialScoreTest(TestCase):
         self.assertEqual(result.status, "submitted")
         self.assertEqual(result.score, 1)
         self.assertEqual(result.reward_seed_amount, 0)
+
+
+class GradingRetroactiveRewardTest(TestCase):
+    def setUp(self):
+        self.attempt, self.items, self.student = _setup_data()
+        HSGuardianConsent.objects.create(student=self.student, status="pending")
+
+    def test_retroactive_reward_applies_after_consent_approved(self):
+        answers = {item.order_no: 0 for item in self.items}
+        initial = submit_and_reward(attempt_id=self.attempt.id, answers=answers)
+        self.assertEqual(initial.status, "submitted")
+        self.assertEqual(initial.reward_seed_amount, 0)
+        self.assertEqual(initial.consent_snapshot, "pending")
+
+        consent = self.student.consent
+        consent.status = "approved"
+        consent.save(update_fields=["status"])
+
+        updated, rewarded_now = apply_retroactive_reward_for_attempt(
+            attempt_id=self.attempt.id,
+            trigger="test",
+        )
+        self.assertTrue(rewarded_now)
+        self.assertEqual(updated.status, "rewarded")
+        self.assertEqual(updated.reward_seed_amount, QUIZ_REWARD_SEEDS)
+        self.assertIsNotNone(updated.reward_applied_at)
+
+    def test_retroactive_reward_is_idempotent(self):
+        answers = {item.order_no: 0 for item in self.items}
+        submit_and_reward(attempt_id=self.attempt.id, answers=answers)
+        consent = self.student.consent
+        consent.status = "approved"
+        consent.save(update_fields=["status"])
+
+        _, first = apply_retroactive_reward_for_attempt(
+            attempt_id=self.attempt.id,
+            trigger="test_first",
+        )
+        _, second = apply_retroactive_reward_for_attempt(
+            attempt_id=self.attempt.id,
+            trigger="test_second",
+        )
+        self.assertTrue(first)
+        self.assertFalse(second)
+
+        from happy_seed.models import HSSeedLedger
+
+        reward_request_id = uuid.uuid5(
+            uuid.NAMESPACE_URL, f"sq_reward:{self.attempt.id}"
+        )
+        ledger_count = HSSeedLedger.objects.filter(
+            student=self.student,
+            request_id=reward_request_id,
+        ).count()
+        self.assertEqual(ledger_count, 1)
+
+    def test_retroactive_reward_for_student_rewards_only_eligible_attempts(self):
+        answers = {item.order_no: 0 for item in self.items}
+        submit_and_reward(attempt_id=self.attempt.id, answers=answers)
+
+        quiz_set_2 = SQQuizSet.objects.create(
+            classroom=self.attempt.quiz_set.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="부분정답 세트",
+            status="closed",
+            created_by=self.attempt.quiz_set.created_by,
+        )
+        for idx in range(1, 4):
+            SQQuizItem.objects.create(
+                quiz_set=quiz_set_2,
+                order_no=idx,
+                question_text=f"추가 문제 {idx}",
+                choices=["A", "B", "C", "D"],
+                correct_index=0,
+            )
+        attempt_2 = SQAttempt.objects.create(quiz_set=quiz_set_2, student=self.student)
+        SQAttemptAnswer.objects.create(
+            attempt=attempt_2,
+            item=quiz_set_2.items.get(order_no=1),
+            selected_index=1,
+            is_correct=False,
+        )
+        SQAttemptAnswer.objects.create(
+            attempt=attempt_2,
+            item=quiz_set_2.items.get(order_no=2),
+            selected_index=0,
+            is_correct=True,
+        )
+        SQAttemptAnswer.objects.create(
+            attempt=attempt_2,
+            item=quiz_set_2.items.get(order_no=3),
+            selected_index=0,
+            is_correct=True,
+        )
+        attempt_2.score = 2
+        attempt_2.max_score = 3
+        attempt_2.status = "submitted"
+        attempt_2.submitted_at = timezone.now()
+        attempt_2.consent_snapshot = "pending"
+        attempt_2.save(
+            update_fields=[
+                "score",
+                "max_score",
+                "status",
+                "submitted_at",
+                "consent_snapshot",
+            ]
+        )
+
+        consent = self.student.consent
+        consent.status = "approved"
+        consent.save(update_fields=["status"])
+
+        rewarded_count = apply_retroactive_rewards_for_student(student_id=self.student.id, trigger="test_bulk")
+        self.assertEqual(rewarded_count, 1)
+        self.attempt.refresh_from_db()
+        attempt_2.refresh_from_db()
+        self.assertEqual(self.attempt.status, "rewarded")
+        self.assertEqual(attempt_2.status, "submitted")

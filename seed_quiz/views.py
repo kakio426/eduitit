@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
-from django.db.models import Count, F, Max, Q
+from django.db.models import Avg, Count, F, Max, Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -24,7 +24,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from happy_seed.models import HSClassroom, HSStudent
-from seed_quiz.models import SQAttempt, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
+from seed_quiz.models import SQAttempt, SQAttemptAnswer, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
 from seed_quiz.services.bank import (
     copy_bank_to_draft,
     generate_bank_from_context_ai,
@@ -326,25 +326,29 @@ def _log_csv_event(
     )
 
 
-def _parse_bank_filters(raw_preset: str, raw_grade: str):
-    preset_type = normalize_topic(raw_preset) or DEFAULT_TOPIC
+def _parse_bank_filters(raw_preset: str, raw_grade: str, *, include_all: bool = True):
+    raw_preset_value = (raw_preset or "").strip().lower()
+    if include_all and raw_preset_value in {"all", "*", ""}:
+        preset_type = None
+    else:
+        preset_type = normalize_topic(raw_preset_value) or DEFAULT_TOPIC
+
     raw_grade_value = (raw_grade or "").strip().lower()
-    if raw_grade_value in {"all", "*", ""}:
+    if include_all and raw_grade_value in {"all", "*", ""}:
         return preset_type, None
     try:
         grade = int(raw_grade_value)
     except (TypeError, ValueError):
-        grade = 3
+        grade = None if include_all else 3
     if grade not in range(0, 7):
-        grade = 3
+        grade = None if include_all else 3
     return preset_type, grade
 
 
-def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, scope: str):
-    banks_qs = SQQuizBank.objects.filter(
-        is_active=True,
-        preset_type=preset_type,
-    )
+def _build_bank_queryset(classroom, user, preset_type: str | None, grade: int | None, scope: str):
+    banks_qs = SQQuizBank.objects.filter(is_active=True)
+    if preset_type:
+        banks_qs = banks_qs.filter(preset_type=preset_type)
     if grade is not None:
         banks_qs = banks_qs.filter(grade=grade)
 
@@ -367,6 +371,28 @@ def _build_bank_queryset(classroom, user, preset_type: str, grade: int | None, s
             | Q(created_by=user)
         ).distinct()
     return banks_qs
+
+
+def _build_bank_display_title(bank: SQQuizBank) -> str:
+    title = (bank.title or "").strip()
+    if bank.source != "csv" or not title.startswith("CSV-"):
+        return title or "제목 없는 세트"
+
+    parts = title.split("-")
+    preset_key = parts[1].strip().lower() if len(parts) > 1 else (bank.preset_type or "")
+    grade_token = parts[2].strip().upper() if len(parts) > 2 else ""
+
+    topic_label = TOPIC_LABELS.get(preset_key) or bank.get_preset_type_display()
+    if grade_token.startswith("G") and grade_token[1:].isdigit():
+        grade_label = f"{int(grade_token[1:])}학년"
+    elif grade_token in {"ANY", "ALL", "G0"} or bank.grade == 0:
+        grade_label = "전체학년"
+    elif bank.grade in range(1, 7):
+        grade_label = f"{bank.grade}학년"
+    else:
+        grade_label = "전체학년"
+
+    return f"{topic_label} · {grade_label} CSV 세트"
 
 
 def _clear_csv_error_report(request):
@@ -424,17 +450,20 @@ def teacher_dashboard(request, classroom_id):
     csv_limits = _get_csv_upload_limits()
     text_limits = _get_text_upload_limits()
     initial_preset, initial_grade = _parse_bank_filters(
-        request.GET.get("preset_type", DEFAULT_TOPIC),
+        request.GET.get("preset_type", "all"),
         request.GET.get("grade", "all"),
+        include_all=True,
     )
-    initial_scope = (request.GET.get("scope", "official") or "official").strip().lower()
+    initial_scope = (request.GET.get("scope", "all") or "all").strip().lower()
     if initial_scope not in {"official", "public", "all", "mine"}:
-        initial_scope = "official"
+        initial_scope = "all"
     initial_query = (request.GET.get("q") or "").strip()
     today_sets = SQQuizSet.objects.filter(
         classroom=classroom,
         target_date=timezone.localdate(),
-    ).order_by("-created_at")
+    ).exclude(status="archived").order_by("-created_at")
+    generation_preset = initial_preset or DEFAULT_TOPIC
+    generation_grade = initial_grade if initial_grade is not None else 3
     return render(
         request,
         "seed_quiz/teacher_dashboard.html",
@@ -445,6 +474,8 @@ def teacher_dashboard(request, classroom_id):
             "initial_preset": initial_preset,
             "initial_grade": initial_grade,
             "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
+            "generation_preset": generation_preset,
+            "generation_grade": str(generation_grade),
             "initial_scope": initial_scope,
             "initial_query": initial_query,
             "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
@@ -460,6 +491,198 @@ def teacher_dashboard(request, classroom_id):
             "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
             "csv_guide_columns": CSV_GUIDE_COLUMNS,
             "topic_guide_rows": _get_topic_template_rows(),
+        },
+    )
+
+
+def _resolve_dashboard_set(classroom, set_id: str = ""):
+    published_qs = SQQuizSet.objects.filter(
+        classroom=classroom,
+        status="published",
+    ).order_by("-published_at", "-updated_at")
+    if set_id:
+        selected = published_qs.filter(id=set_id).first()
+        if selected:
+            return selected
+    return published_qs.first()
+
+
+@login_required
+def teacher_student_dashboard(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    set_id = (request.GET.get("set_id") or "").strip()
+    quiz_set = _resolve_dashboard_set(classroom, set_id=set_id)
+    published_sets = list(
+        SQQuizSet.objects.filter(classroom=classroom, status="published")
+        .order_by("-published_at", "-updated_at")
+        .only("id", "title", "preset_type", "target_date", "published_at")
+    )
+
+    student_url = ""
+    student_qr_data_url = ""
+    if quiz_set:
+        student_url = request.build_absolute_uri(
+            reverse("seed_quiz:student_gate", kwargs={"class_slug": classroom.slug})
+        )
+        student_qr_data_url = _build_qr_data_url(student_url)
+
+    return render(
+        request,
+        "seed_quiz/teacher_student_dashboard.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "published_sets": published_sets,
+            "student_url": student_url,
+            "student_qr_data_url": student_qr_data_url,
+        },
+    )
+
+
+@login_required
+def teacher_result_analysis(request, classroom_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    set_id = (request.GET.get("set_id") or "").strip()
+    available_sets = list(
+        SQQuizSet.objects.filter(classroom=classroom)
+        .exclude(status__in=["draft", "archived"])
+        .order_by("-target_date", "-published_at", "-created_at")
+        .only("id", "title", "preset_type", "target_date", "status", "published_at")
+    )
+
+    quiz_set = None
+    if set_id:
+        quiz_set = next((row for row in available_sets if str(row.id) == set_id), None)
+    if not quiz_set and available_sets:
+        quiz_set = available_sets[0]
+
+    stats = {}
+    item_rows = []
+    student_rows = []
+    if quiz_set:
+        active_student_count = classroom.students.filter(is_active=True).count()
+        attempts = (
+            SQAttempt.objects.filter(quiz_set=quiz_set)
+            .select_related("student")
+            .annotate(answer_count=Count("answers"))
+            .order_by("-updated_at", "student__number", "student__name")
+        )
+        submitted_attempts = attempts.filter(status__in=["submitted", "rewarded"])
+        max_score = quiz_set.items.count() or 0
+        aggregate_row = submitted_attempts.aggregate(avg_score=Avg("score"))
+        avg_score = float(aggregate_row.get("avg_score") or 0.0)
+        submitted_count = submitted_attempts.count()
+        perfect_count = submitted_attempts.filter(score=F("max_score")).count()
+        started_count = attempts.count()
+        average_rate = (avg_score / max_score * 100) if max_score else 0.0
+        submission_rate = (submitted_count / active_student_count * 100) if active_student_count else 0.0
+
+        item_stats_qs = SQQuizItem.objects.filter(quiz_set=quiz_set).annotate(
+            answered_count=Count("sqattemptanswer"),
+            correct_count=Count("sqattemptanswer", filter=Q(sqattemptanswer__is_correct=True)),
+            select_1=Count("sqattemptanswer", filter=Q(sqattemptanswer__selected_index=0)),
+            select_2=Count("sqattemptanswer", filter=Q(sqattemptanswer__selected_index=1)),
+            select_3=Count("sqattemptanswer", filter=Q(sqattemptanswer__selected_index=2)),
+            select_4=Count("sqattemptanswer", filter=Q(sqattemptanswer__selected_index=3)),
+        ).order_by("order_no")
+        item_answer_map = {
+            row["item_id"]: row["count"]
+            for row in SQAttemptAnswer.objects.filter(attempt__quiz_set=quiz_set)
+            .values("item_id")
+            .annotate(count=Count("id"))
+        }
+        for item in item_stats_qs:
+            answer_count = int(item_answer_map.get(item.id, 0))
+            correct_count = int(item.correct_count or 0)
+            option_counts = [
+                int(item.select_1 or 0),
+                int(item.select_2 or 0),
+                int(item.select_3 or 0),
+                int(item.select_4 or 0),
+            ]
+            wrong_options = []
+            for idx, count in enumerate(option_counts):
+                if idx == item.correct_index:
+                    continue
+                wrong_options.append((idx, count))
+            wrong_options.sort(key=lambda row: row[1], reverse=True)
+            top_wrong_index = wrong_options[0][0] if wrong_options and wrong_options[0][1] > 0 else None
+            top_wrong_count = wrong_options[0][1] if wrong_options and wrong_options[0][1] > 0 else 0
+            choice_rows = []
+            for idx, choice_text in enumerate(item.choices):
+                choice_rows.append(
+                    {
+                        "index": idx,
+                        "label": idx + 1,
+                        "text": choice_text,
+                        "count": option_counts[idx],
+                        "is_correct": idx == item.correct_index,
+                    }
+                )
+            item_rows.append(
+                {
+                    "order_no": item.order_no,
+                    "question_text": item.question_text,
+                    "correct_index": item.correct_index,
+                    "choice_rows": choice_rows,
+                    "answered_count": answer_count,
+                    "correct_count": correct_count,
+                    "accuracy": round((correct_count / answer_count * 100), 1) if answer_count else 0.0,
+                    "top_wrong_index": top_wrong_index,
+                    "top_wrong_count": top_wrong_count,
+                }
+            )
+
+        wrong_items_by_attempt: dict = {}
+        wrong_answer_rows = (
+            SQAttemptAnswer.objects.filter(attempt__in=attempts, is_correct=False)
+            .values("attempt_id", "item__order_no")
+            .order_by("item__order_no")
+        )
+        for row in wrong_answer_rows:
+            attempt_key = row["attempt_id"]
+            wrong_items_by_attempt.setdefault(attempt_key, []).append(int(row["item__order_no"]))
+
+        for attempt in attempts:
+            max_value = int(attempt.max_score or max_score or 0)
+            score_value = int(attempt.score or 0)
+            wrong_items = wrong_items_by_attempt.get(attempt.id, [])
+            student_rows.append(
+                {
+                    "student_number": attempt.student.number,
+                    "student_name": attempt.student.name,
+                    "status": attempt.status,
+                    "answer_count": int(attempt.answer_count or 0),
+                    "score": score_value,
+                    "max_score": max_value,
+                    "score_rate": round((score_value / max_value * 100), 1) if max_value else 0.0,
+                    "updated_at": attempt.updated_at,
+                    "submitted_at": attempt.submitted_at,
+                    "wrong_items": wrong_items,
+                }
+            )
+
+        stats = {
+            "total_students": active_student_count,
+            "started_count": started_count,
+            "submitted_count": submitted_count,
+            "perfect_count": perfect_count,
+            "max_score": max_score,
+            "avg_score": round(avg_score, 2),
+            "average_rate": round(average_rate, 1),
+            "submission_rate": round(submission_rate, 1),
+        }
+
+    return render(
+        request,
+        "seed_quiz/teacher_result_analysis.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "available_sets": available_sets,
+            "stats": stats,
+            "item_rows": item_rows,
+            "student_rows": student_rows,
         },
     )
 
@@ -741,12 +964,13 @@ def download_csv_error_report(request, classroom_id, token):
 def htmx_bank_browse(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     preset_type, grade = _parse_bank_filters(
-        request.GET.get("preset_type", DEFAULT_TOPIC),
-        request.GET.get("grade", "3"),
+        request.GET.get("preset_type", "all"),
+        request.GET.get("grade", "all"),
+        include_all=True,
     )
-    scope = (request.GET.get("scope", "official") or "official").strip().lower()
+    scope = (request.GET.get("scope", "all") or "all").strip().lower()
     if scope not in {"official", "public", "all", "mine"}:
-        scope = "official"
+        scope = "all"
     query = (request.GET.get("q") or "").strip()
 
     banks_qs = _build_bank_queryset(
@@ -776,6 +1000,9 @@ def htmx_bank_browse(request, classroom_id):
         except (TypeError, ValueError):
             page_obj = paginator.page(1)
         banks = list(page_obj.object_list)
+        for bank in banks:
+            bank.display_title = _build_bank_display_title(bank)
+            bank.display_grade_label = "전체학년" if bank.grade == 0 else f"{bank.grade}학년"
         prev_page = page_obj.previous_page_number() if page_obj.has_previous() else None
         next_page = page_obj.next_page_number() if page_obj.has_next() else None
 
@@ -786,8 +1013,8 @@ def htmx_bank_browse(request, classroom_id):
             "classroom": classroom,
             "banks": banks,
             "scope": scope,
-            "preset_type": preset_type,
-            "preset_label": TOPIC_LABELS.get(preset_type, "주제"),
+            "preset_type": preset_type or "all",
+            "preset_label": TOPIC_LABELS.get(preset_type, "전체주제"),
             "grade": grade,
             "grade_str": "all" if grade is None else str(grade),
             "q": query,
@@ -1366,6 +1593,7 @@ def htmx_rag_generate(request, classroom_id):
     preset_type, grade = _parse_bank_filters(
         request.POST.get("preset_type", DEFAULT_TOPIC),
         request.POST.get("grade", "3"),
+        include_all=False,
     )
     source_text = (request.POST.get("source_text") or "").strip()
     if not source_text:
@@ -1436,6 +1664,7 @@ def htmx_generate(request, classroom_id):
     preset_type, grade = _parse_bank_filters(
         request.POST.get("preset_type", DEFAULT_TOPIC),
         request.POST.get("grade", "3"),
+        include_all=False,
     )
 
     try:
@@ -1556,6 +1785,51 @@ def htmx_publish(request, classroom_id, set_id):
 
 @login_required
 @require_POST
+def htmx_set_archive(request, classroom_id, set_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    quiz_set = get_object_or_404(SQQuizSet, id=set_id, classroom=classroom)
+
+    if quiz_set.status == "published":
+        return HttpResponse(
+            '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+            "배포 중인 세트는 바로 보관할 수 없습니다. 다른 세트를 배포해 종료한 뒤 보관해 주세요.</div>",
+            status=409,
+        )
+
+    if quiz_set.status == "archived":
+        response = HttpResponse(
+            '<div class="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 text-sm">'
+            "이미 보관된 세트입니다.</div>"
+        )
+        response["HX-Trigger"] = "bankUpdated"
+        return response
+
+    previous_status = quiz_set.status
+    quiz_set.status = "archived"
+    quiz_set.save(update_fields=["status", "updated_at"])
+
+    SQGenerationLog.objects.create(
+        level="info",
+        code="QUIZ_SET_ARCHIVED",
+        message=f"퀴즈 세트 보관: {quiz_set.title}",
+        payload={
+            "classroom_id": str(classroom.id),
+            "teacher_id": int(request.user.id),
+            "set_id": str(quiz_set.id),
+            "from_status": previous_status,
+        },
+    )
+
+    response = HttpResponse(
+        '<div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">'
+        "세트를 보관했습니다. 목록/분석 화면에서 숨김 처리됩니다.</div>"
+    )
+    response["HX-Trigger"] = "bankUpdated"
+    return response
+
+
+@login_required
+@require_POST
 def htmx_publish_rollback(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
     restore_set_id = (request.POST.get("restore_set_id") or "").strip()
@@ -1567,7 +1841,12 @@ def htmx_publish_rollback(request, classroom_id):
             status=400,
         )
 
-    restore_set = get_object_or_404(SQQuizSet, id=restore_set_id, classroom=classroom)
+    restore_set = get_object_or_404(
+        SQQuizSet,
+        id=restore_set_id,
+        classroom=classroom,
+        status="closed",
+    )
 
     with transaction.atomic():
         current_set = (
@@ -1642,15 +1921,26 @@ def htmx_publish_rollback(request, classroom_id):
 @login_required
 def htmx_progress(request, classroom_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    quiz_set = (
-        SQQuizSet.objects.filter(
-            classroom=classroom,
-            target_date=timezone.localdate(),
-            status="published",
+    set_id = (request.GET.get("set_id") or "").strip()
+    if set_id:
+        quiz_set = (
+            SQQuizSet.objects.filter(classroom=classroom)
+            .exclude(status__in=["draft", "archived"])
+            .prefetch_related("attempts")
+            .filter(id=set_id)
+            .first()
         )
-        .prefetch_related("attempts")
-        .first()
-    )
+    else:
+        quiz_set = (
+            SQQuizSet.objects.filter(
+                classroom=classroom,
+                target_date=timezone.localdate(),
+                status="published",
+            )
+            .prefetch_related("attempts")
+            .order_by("-published_at", "-updated_at")
+            .first()
+        )
 
     stats = {}
     attempt_rows = []

@@ -12,8 +12,17 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
-from happy_seed.models import HSClassroom
-from seed_quiz.models import SQGenerationLog, SQRagDailyUsage, SQQuizBank, SQQuizBankItem, SQQuizSet
+from happy_seed.models import HSClassroom, HSStudent
+from seed_quiz.models import (
+    SQAttempt,
+    SQAttemptAnswer,
+    SQGenerationLog,
+    SQRagDailyUsage,
+    SQQuizBank,
+    SQQuizBankItem,
+    SQQuizItem,
+    SQQuizSet,
+)
 from seed_quiz.services.bank import parse_csv_upload
 
 User = get_user_model()
@@ -120,6 +129,177 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
         self.assertContains(resp, "방법 B. 파일 올리기")
         self.assertNotContains(resp, "랜덤 1세트 선택")
+
+    def test_dashboard_default_filters_are_all(self):
+        url = reverse(
+            "seed_quiz:teacher_dashboard",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        body = resp.content.decode("utf-8")
+        self.assertIn('<option value="all" selected>전체</option>', body)
+        self.assertIn('name="scope"', body)
+        self.assertIn('name="preset_type"', body)
+        self.assertIn('name="grade"', body)
+
+    def test_teacher_student_dashboard_returns_200(self):
+        published = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="학생 대시보드용 세트",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        SQQuizItem.objects.create(
+            quiz_set=published,
+            order_no=1,
+            question_text="테스트 문항",
+            choices=["A", "B", "C", "D"],
+            correct_index=0,
+            explanation="",
+            difficulty="easy",
+        )
+        url = reverse(
+            "seed_quiz:teacher_student_dashboard",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "학생 대시보드")
+        self.assertContains(resp, "학생 접속 주소")
+
+    def test_teacher_result_analysis_returns_200(self):
+        published = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="분석용 세트",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        SQQuizItem.objects.create(
+            quiz_set=published,
+            order_no=1,
+            question_text="분석 테스트 문항",
+            choices=["A", "B", "C", "D"],
+            correct_index=1,
+            explanation="",
+            difficulty="easy",
+        )
+        url = reverse(
+            "seed_quiz:teacher_result_analysis",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"set_id": str(published.id)})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "정답 결과 분석")
+        self.assertContains(resp, "문항별 정답률")
+
+    def test_teacher_result_analysis_includes_wrong_items_per_student(self):
+        published = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="오답 분석 세트",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        item1 = SQQuizItem.objects.create(
+            quiz_set=published,
+            order_no=1,
+            question_text="문항 1",
+            choices=["A", "B", "C", "D"],
+            correct_index=0,
+            explanation="",
+            difficulty="easy",
+        )
+        item2 = SQQuizItem.objects.create(
+            quiz_set=published,
+            order_no=2,
+            question_text="문항 2",
+            choices=["A", "B", "C", "D"],
+            correct_index=1,
+            explanation="",
+            difficulty="easy",
+        )
+        student = HSStudent.objects.create(
+            classroom=self.classroom,
+            name="오답학생",
+            number=7,
+            is_active=True,
+        )
+        attempt = SQAttempt.objects.create(
+            quiz_set=published,
+            student=student,
+            status="submitted",
+            score=1,
+            max_score=2,
+            submitted_at=timezone.now(),
+        )
+        SQAttemptAnswer.objects.create(
+            attempt=attempt,
+            item=item1,
+            selected_index=2,
+            is_correct=False,
+        )
+        SQAttemptAnswer.objects.create(
+            attempt=attempt,
+            item=item2,
+            selected_index=1,
+            is_correct=True,
+        )
+
+        url = reverse(
+            "seed_quiz:teacher_result_analysis",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"set_id": str(published.id)})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "오답 문항")
+        student_rows = resp.context["student_rows"]
+        row = next(item for item in student_rows if item["student_name"] == "오답학생")
+        self.assertEqual(row["wrong_items"], [1])
+
+    def test_teacher_result_analysis_excludes_archived_sets(self):
+        closed_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="분석 가능 세트",
+            status="closed",
+            created_by=self.teacher,
+        )
+        archived_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="보관 세트",
+            status="archived",
+            created_by=self.teacher,
+        )
+
+        url = reverse(
+            "seed_quiz:teacher_result_analysis",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        available_ids = [str(row.id) for row in resp.context["available_sets"]]
+        self.assertIn(str(closed_set.id), available_ids)
+        self.assertNotIn(str(archived_set.id), available_ids)
 
     def test_landing_redirects_to_first_active_classroom_dashboard(self):
         url = reverse("seed_quiz:landing")
@@ -288,6 +468,24 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "공식 상식 기본 세트")
         self.assertContains(resp, "공식 맞춤법 심화 세트")
+
+    def test_bank_browse_humanizes_csv_title_for_teacher_view(self):
+        SQQuizBank.objects.create(
+            title="CSV-orthography-ANY-49ee95869873",
+            preset_type="orthography",
+            grade=0,
+            source="csv",
+            is_active=True,
+            created_by=self.teacher,
+        )
+        url = reverse(
+            "seed_quiz:htmx_bank_browse",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url, {"preset_type": "all", "grade": "all", "scope": "all"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "맞춤법 · 전체학년 CSV 세트")
+        self.assertNotContains(resp, "CSV-orthography-ANY-49ee95869873")
 
     def test_bank_browse_applies_search_query(self):
         SQQuizBank.objects.create(
@@ -793,6 +991,7 @@ class TeacherFlowTest(TestCase):
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
         self.assertContains(confirm_resp, "공유 완료")
+        self.assertContains(confirm_resp, 'data-seed-quiz-success="true"')
         bank = SQQuizBank.objects.get(
             source="csv",
             created_by=self.teacher,
@@ -817,6 +1016,8 @@ class TeacherFlowTest(TestCase):
         resp = self.client.post(confirm_url, {"preview_token": "expired-token"})
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "세션이 만료", status_code=400)
+        self.assertContains(resp, 'data-seed-quiz-error="true"', status_code=400)
+        self.assertContains(resp, 'data-error-total="1"', status_code=400)
 
     @override_settings(SEED_QUIZ_RAG_DAILY_LIMIT=1, SEED_QUIZ_ALLOW_RAG=True)
     @patch("seed_quiz.views.generate_bank_from_context_ai")
@@ -1008,3 +1209,46 @@ class TeacherFlowTest(TestCase):
         new_set.refresh_from_db()
         self.assertEqual(old_set.status, "published")
         self.assertEqual(new_set.status, "closed")
+
+    def test_set_archive_changes_status_and_triggers_bank_refresh(self):
+        draft_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="보관 대상 draft",
+            status="draft",
+            created_by=self.teacher,
+        )
+        url = reverse(
+            "seed_quiz:htmx_set_archive",
+            kwargs={"classroom_id": self.classroom.id, "set_id": draft_set.id},
+        )
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 200)
+        draft_set.refresh_from_db()
+        self.assertEqual(draft_set.status, "archived")
+        self.assertContains(resp, "세트를 보관했습니다")
+        self.assertIn("bankUpdated", resp.headers.get("HX-Trigger", ""))
+
+    def test_set_archive_rejects_published_set(self):
+        published_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="보관 불가 published",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        url = reverse(
+            "seed_quiz:htmx_set_archive",
+            kwargs={"classroom_id": self.classroom.id, "set_id": published_set.id},
+        )
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 409)
+        self.assertContains(resp, "배포 중인 세트는 바로 보관할 수 없습니다", status_code=409)
+        published_set.refresh_from_db()
+        self.assertEqual(published_set.status, "published")

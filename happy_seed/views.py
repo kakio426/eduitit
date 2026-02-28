@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import re
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -49,6 +50,8 @@ from .services.engine import (
     log_class_event,
 )
 
+logger = logging.getLogger("happy_seed.views")
+
 
 def _request_id(request):
     return request.headers.get("X-Request-Id") or str(uuid.uuid4())
@@ -80,6 +83,29 @@ def get_teacher_classroom(request, classroom_id):
         teacher=request.user,
         is_active=True,
     )
+
+
+def _apply_seed_quiz_retro_rewards_for_student(student) -> int:
+    """
+    보호자 동의가 뒤늦게 승인된 학생의 씨앗퀴즈 만점 시도를 소급 보상 처리한다.
+
+    happy_seed -> seed_quiz 의 앱 순환 import를 피하기 위해 지연 import를 사용한다.
+    """
+    try:
+        from seed_quiz.services.grading import apply_retroactive_rewards_for_student
+
+        return int(
+            apply_retroactive_rewards_for_student(
+                student_id=student.id,
+                trigger="consent",
+            )
+        )
+    except Exception:
+        logger.exception(
+            "failed to apply seed_quiz retro rewards student=%s",
+            str(getattr(student, "id", "")),
+        )
+        return 0
 
 
 DEFAULT_HAPPY_SEED_LEGAL_NOTICE = (
@@ -869,6 +895,7 @@ def consent_sync_from_sign_talk(request, classroom_id):
     expired_updated = 0
     pending_updated = 0
     ambiguous_student_count = 0
+    retro_rewarded_count = 0
     now = timezone.now()
     consent_request_expired = consent_request.is_link_expired
 
@@ -929,6 +956,8 @@ def consent_sync_from_sign_talk(request, classroom_id):
             student.is_active = should_be_active
             student.save(update_fields=["is_active"])
         consent.save()
+        if prev_status != "approved" and consent.status == "approved":
+            retro_rewarded_count += _apply_seed_quiz_retro_rewards_for_student(student)
 
     classroom_names = {student.name for student in students}
     recipient_names = set(consent_request.recipients.values_list("student_name", flat=True))
@@ -940,6 +969,8 @@ def consent_sync_from_sign_talk(request, classroom_id):
         f"대기 반영 {pending_updated}명, 명단 미일치 {unmatched_signature_count}건, "
         f"중복매칭 불가 {ambiguous_student_count}건",
     )
+    if retro_rewarded_count > 0:
+        messages.info(request, f"씨앗 퀴즈 소급 보상 {retro_rewarded_count}건을 자동 적용했습니다.")
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
@@ -955,6 +986,7 @@ def consent_manual_approve(request, classroom_id):
         return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
     consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
+    was_approved = consent.status == "approved"
     consent.status = "approved"
     consent.completed_at = timezone.now()
     consent.save(update_fields=["status", "completed_at", "updated_at"])
@@ -968,7 +1000,12 @@ def consent_manual_approve(request, classroom_id):
         student=student,
         meta={"by": "teacher_manual_review", "signer_name": signer_name},
     )
+    retro_rewarded = 0
+    if not was_approved:
+        retro_rewarded = _apply_seed_quiz_retro_rewards_for_student(student)
     messages.success(request, f"수동 확인 승인 완료: {student.name} (서명자: {signer_name or '-'})")
+    if retro_rewarded > 0:
+        messages.info(request, f"씨앗 퀴즈 소급 보상 {retro_rewarded}건을 자동 적용했습니다.")
     return redirect("happy_seed:consent_manage", classroom_id=classroom.id)
 
 
@@ -980,6 +1017,7 @@ def consent_update(request, student_id):
     consent, _ = HSGuardianConsent.objects.get_or_create(student=student)
 
     new_status = request.POST.get("status", "")
+    prev_status = consent.status
     if new_status in dict(HSGuardianConsent.STATUS_CHOICES):
         consent.status = new_status
         if new_status == "approved":
@@ -997,6 +1035,8 @@ def consent_update(request, student_id):
             student.is_active = should_be_active
             student.save(update_fields=["is_active"])
         consent.save()
+        if new_status == "approved" and prev_status != "approved":
+            _apply_seed_quiz_retro_rewards_for_student(student)
 
     return render(
         request,
