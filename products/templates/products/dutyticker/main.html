@@ -144,6 +144,94 @@
     html[data-theme="vivid"] .bg-white\/20 { background-color: rgba(0, 0, 0, 0.1) !important; }
     html[data-theme="vivid"] .ring-indigo-400 { --tw-ring-color: #ec4899 !important; }
 
+    /* LIGHT THEME READABILITY GUARD */
+    html[data-theme="sunny"] {
+        --dt-readable-main: #1f2937;
+        --dt-readable-muted: #475569;
+        --dt-readable-accent: #9a3412;
+        --dt-readable-success: #166534;
+        --dt-readable-danger: #991b1b;
+    }
+
+    html[data-theme="pastel"] {
+        --dt-readable-main: #064e3b;
+        --dt-readable-muted: #047857;
+        --dt-readable-accent: #0f766e;
+        --dt-readable-success: #166534;
+        --dt-readable-danger: #9f1239;
+    }
+
+    html[data-theme="vivid"] {
+        --dt-readable-main: #78350f;
+        --dt-readable-muted: #92400e;
+        --dt-readable-accent: #7c2d12;
+        --dt-readable-success: #14532d;
+        --dt-readable-danger: #7f1d1d;
+    }
+
+    html[data-theme="sunny"] #mainAppContainer,
+    html[data-theme="pastel"] #mainAppContainer,
+    html[data-theme="vivid"] #mainAppContainer {
+        color: var(--dt-readable-main) !important;
+    }
+
+    html[data-theme="sunny"] #mainAppContainer [class*="text-white/"],
+    html[data-theme="pastel"] #mainAppContainer [class*="text-white/"],
+    html[data-theme="vivid"] #mainAppContainer [class*="text-white/"],
+    html[data-theme="sunny"] #mainAppContainer [class*="text-slate-"][class*="/"],
+    html[data-theme="pastel"] #mainAppContainer [class*="text-slate-"][class*="/"],
+    html[data-theme="vivid"] #mainAppContainer [class*="text-slate-"][class*="/"] {
+        color: var(--dt-readable-muted) !important;
+    }
+
+    html[data-theme="sunny"] #mainAppContainer .text-indigo-100\/70,
+    html[data-theme="pastel"] #mainAppContainer .text-indigo-100\/70,
+    html[data-theme="vivid"] #mainAppContainer .text-indigo-100\/70,
+    html[data-theme="sunny"] #mainAppContainer .text-amber-200,
+    html[data-theme="pastel"] #mainAppContainer .text-amber-200,
+    html[data-theme="vivid"] #mainAppContainer .text-amber-200,
+    html[data-theme="sunny"] #mainAppContainer .text-amber-300,
+    html[data-theme="pastel"] #mainAppContainer .text-amber-300,
+    html[data-theme="vivid"] #mainAppContainer .text-amber-300,
+    html[data-theme="sunny"] #mainAppContainer .text-amber-400\/80,
+    html[data-theme="pastel"] #mainAppContainer .text-amber-400\/80,
+    html[data-theme="vivid"] #mainAppContainer .text-amber-400\/80,
+    html[data-theme="sunny"] #mainAppContainer .text-yellow-300,
+    html[data-theme="pastel"] #mainAppContainer .text-yellow-300,
+    html[data-theme="vivid"] #mainAppContainer .text-yellow-300,
+    html[data-theme="sunny"] #mainAppContainer .text-yellow-400,
+    html[data-theme="pastel"] #mainAppContainer .text-yellow-400,
+    html[data-theme="vivid"] #mainAppContainer .text-yellow-400,
+    html[data-theme="sunny"] #mainAppContainer .text-pink-400,
+    html[data-theme="pastel"] #mainAppContainer .text-pink-400,
+    html[data-theme="vivid"] #mainAppContainer .text-pink-400,
+    html[data-theme="sunny"] #mainAppContainer .text-sky-300,
+    html[data-theme="pastel"] #mainAppContainer .text-sky-300,
+    html[data-theme="vivid"] #mainAppContainer .text-sky-300 {
+        color: var(--dt-readable-accent) !important;
+    }
+
+    html[data-theme="sunny"] #mainAppContainer .text-emerald-300,
+    html[data-theme="pastel"] #mainAppContainer .text-emerald-300,
+    html[data-theme="vivid"] #mainAppContainer .text-emerald-300,
+    html[data-theme="sunny"] #mainAppContainer .text-emerald-400,
+    html[data-theme="pastel"] #mainAppContainer .text-emerald-400,
+    html[data-theme="vivid"] #mainAppContainer .text-emerald-400 {
+        color: var(--dt-readable-success) !important;
+    }
+
+    html[data-theme="sunny"] #mainAppContainer .text-red-200,
+    html[data-theme="pastel"] #mainAppContainer .text-red-200,
+    html[data-theme="vivid"] #mainAppContainer .text-red-200,
+    html[data-theme="sunny"] #mainAppContainer .text-red-400,
+    html[data-theme="pastel"] #mainAppContainer .text-red-400,
+    html[data-theme="vivid"] #mainAppContainer .text-red-400,
+    html[data-theme="sunny"] #mainAppContainer .text-rose-300,
+    html[data-theme="pastel"] #mainAppContainer .text-rose-300,
+    html[data-theme="vivid"] #mainAppContainer .text-rose-300 {
+        color: var(--dt-readable-danger) !important;
+    }
+
     .glass-card {
         background: rgba(30, 41, 59, 0.4);
         backdrop-filter: blur(20px);
