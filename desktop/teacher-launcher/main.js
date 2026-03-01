@@ -325,6 +325,16 @@ function getTargetDisplay() {
   return fallback;
 }
 
+function getSplitArea(display) {
+  const workArea = display.workArea || display.bounds;
+  return {
+    x: workArea.x,
+    y: workArea.y,
+    width: workArea.width,
+    height: workArea.height,
+  };
+}
+
 function pickLeftRatio(totalWidth) {
   if (totalWidth <= 1366) return 0.5;
   if (totalWidth <= 1600) return 0.52;
@@ -344,7 +354,7 @@ function getEffectiveLeftRatio(totalWidth) {
 }
 
 function adjustSplitRatio(delta) {
-  const currentWidth = Math.max(1, getTargetDisplay().bounds.width - SPLIT_GAP);
+  const currentWidth = Math.max(1, getSplitArea(getTargetDisplay()).width - SPLIT_GAP);
   const baseRatio =
     typeof splitRatioOverride === "number" ? splitRatioOverride : pickLeftRatio(currentWidth);
   splitRatioOverride = clampSplitRatio(baseRatio + delta);
@@ -391,8 +401,8 @@ function createInfoWindow() {
 
 function computeSplitBounds() {
   const display = getTargetDisplay();
-  // Use full display bounds so split windows can cover taskbar area.
-  const area = display.bounds;
+  // Use workArea to avoid clipping under OS taskbar/docks.
+  const area = getSplitArea(display);
   const totalWidth = Math.max(1, area.width - SPLIT_GAP);
   const leftRatio = getEffectiveLeftRatio(totalWidth);
 
@@ -734,22 +744,29 @@ function createSplitWindows(payload) {
     videoWindow.webContents.executeJavaScript("window.scrollTo(0, 0)").catch(() => {});
   });
 
-  videoWindow.on("close", () => {
-    if (!videoWindow.__eduititInternalClose) {
+  const videoRef = videoWindow;
+  const dashboardRef = dashboardWindow;
+
+  videoRef.on("close", () => {
+    if (!videoRef.__eduititInternalClose) {
       handleUserWindowClose();
     }
   });
-  dashboardWindow.on("close", () => {
-    if (!dashboardWindow.__eduititInternalClose) {
+  dashboardRef.on("close", () => {
+    if (!dashboardRef.__eduititInternalClose) {
       handleUserWindowClose();
     }
   });
 
-  videoWindow.on("closed", () => {
-    videoWindow = null;
+  videoRef.on("closed", () => {
+    if (videoWindow === videoRef) {
+      videoWindow = null;
+    }
   });
-  dashboardWindow.on("closed", () => {
-    dashboardWindow = null;
+  dashboardRef.on("closed", () => {
+    if (dashboardWindow === dashboardRef) {
+      dashboardWindow = null;
+    }
   });
 
   startWatchdog();
