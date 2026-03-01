@@ -2,6 +2,8 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth.views import redirect_to_login
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
@@ -15,12 +17,22 @@ from .manual_pipeline import (
 )
 
 
+def _can_manage_art_class(user, art_class):
+    if not user.is_authenticated:
+        return False
+    return user.is_staff or art_class.created_by_id == user.id
+
+
 def setup_view(request, pk=None):
     """Setup Page - 수업 준비 및 수정 페이지"""
     art_class = None
     if pk:
         art_class = get_object_or_404(ArtClass, pk=pk)
-        
+        if not _can_manage_art_class(request.user, art_class):
+            if not request.user.is_authenticated:
+                return redirect_to_login(request.get_full_path())
+            raise PermissionDenied("이 수업을 수정할 권한이 없습니다.")
+         
     if request.method == 'POST':
         video_url = request.POST.get('videoUrl', '')
         interval = int(request.POST.get('stepInterval', 10))
@@ -36,8 +48,6 @@ def setup_view(request, pk=None):
             art_class.default_interval = interval
             art_class.playback_mode = playback_mode
             art_class.save()
-            # 기존 단계 삭제 후 재생성 (단순화를 위해)
-            art_class.steps.all().delete()
         else:
             # 새 수업 생성
             art_class = ArtClass.objects.create(
@@ -47,30 +57,56 @@ def setup_view(request, pk=None):
                 playback_mode=playback_mode,
                 created_by=request.user if request.user.is_authenticated else None
             )
-        
+
+        existing_step_image_names = {}
+        if art_class.pk:
+            existing_step_image_names = {
+                step.pk: step.image.name
+                for step in art_class.steps.all()
+                if step.image
+            }
+
         # Steps 처리
         step_count = int(request.POST.get('step_count', 0))
+        step_payloads = []
         for i in range(step_count):
             description = request.POST.get(f'step_text_{i}', '')
-            image = request.FILES.get(f'step_image_{i}')
-            
-            # 수정 시 이미지가 새로 업로드되지 않았다면 기존 이미지 주소를 히든으로 받아와서 유지하는 로직이 필요하지만,
-            # 여기서는 새로 업로드된 것만 처리하도록 되어 있음. (추후 보강 가능)
-            
+            uploaded_image = request.FILES.get(f'step_image_{i}')
+            image_value = uploaded_image
+
+            if not image_value:
+                existing_step_id_raw = (request.POST.get(f'step_existing_id_{i}') or '').strip()
+                if existing_step_id_raw.isdigit():
+                    existing_step_id = int(existing_step_id_raw)
+                    image_value = existing_step_image_names.get(existing_step_id)
+
+            step_payloads.append(
+                {
+                    'step_number': i + 1,
+                    'description': description,
+                    'image': image_value,
+                }
+            )
+
+        if art_class.pk:
+            # 기존 단계는 새 payload로 교체하되, 재업로드하지 않은 이미지는 유지한다.
+            art_class.steps.all().delete()
+
+        for payload in step_payloads:
             ArtStep.objects.create(
                 art_class=art_class,
-                step_number=i + 1,
-                description=description,
-                image=image
+                step_number=payload['step_number'],
+                description=payload['description'],
+                image=payload['image'],
             )
-        
+         
         return redirect('artclass:classroom', pk=art_class.pk)
     
     # 수정 모드라면 기존 단계를 JSON으로 전달하여 JS에서 렌더링하도록 함
     initial_steps_json = "[]"
     if art_class:
         initial_steps = [
-            {'text': step.description, 'imagePreview': step.image.url if step.image else None}
+            {'id': step.pk, 'text': step.description, 'imagePreview': step.image.url if step.image else None}
             for step in art_class.steps.all()
         ]
         initial_steps_json = json.dumps(initial_steps, ensure_ascii=False)
@@ -122,6 +158,11 @@ def classroom_view(request, pk):
 def update_playback_mode_api(request, pk):
     """클래스별 유튜브 재생 모드를 저장한다."""
     art_class = get_object_or_404(ArtClass, pk=pk)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "AUTH_REQUIRED", "message": "로그인이 필요합니다."}, status=401)
+    if not _can_manage_art_class(request.user, art_class):
+        return JsonResponse({"error": "FORBIDDEN", "message": "재생 모드를 변경할 권한이 없습니다."}, status=403)
+
     try:
         payload = json.loads(request.body or "{}")
     except json.JSONDecodeError:

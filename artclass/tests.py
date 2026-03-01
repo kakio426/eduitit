@@ -1,12 +1,13 @@
 import json
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
-from .models import ArtClass
+from .models import ArtClass, ArtStep
 
 User = get_user_model()
 
@@ -82,6 +83,26 @@ class ManualPipelineParserTest(TestCase):
 
 
 class ManualPipelineApiTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="api_owner",
+            password="pw123456",
+            email="api_owner@example.com",
+        )
+        self.other = User.objects.create_user(
+            username="api_other",
+            password="pw123456",
+            email="api_other@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.owner,
+            defaults={"nickname": "소유교사", "role": "school"},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.other,
+            defaults={"nickname": "외부교사", "role": "school"},
+        )
+
     def test_parse_gemini_steps_api_success(self):
         url = reverse("artclass:parse_gemini_steps_api")
         raw = json.dumps(
@@ -132,8 +153,10 @@ class ManualPipelineApiTest(TestCase):
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
             default_interval=10,
             playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+            created_by=self.owner,
         )
         url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.owner)
 
         response = self.client.post(
             url,
@@ -151,8 +174,10 @@ class ManualPipelineApiTest(TestCase):
             title="테스트 수업",
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
             default_interval=10,
+            created_by=self.owner,
         )
         url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.owner)
 
         response = self.client.post(
             url,
@@ -162,6 +187,46 @@ class ManualPipelineApiTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "INVALID_MODE")
+
+    def test_update_playback_mode_api_requires_authentication(self):
+        art_class = ArtClass.objects.create(
+            title="테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"mode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error"], "AUTH_REQUIRED")
+
+    def test_update_playback_mode_api_forbidden_for_non_owner(self):
+        art_class = ArtClass.objects.create(
+            title="테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:update_playback_mode_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.other)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"mode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"], "FORBIDDEN")
+        art_class.refresh_from_db()
+        self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EMBED)
 
 
 class ArtClassDeleteTest(TestCase):
@@ -223,3 +288,73 @@ class ArtClassDeleteTest(TestCase):
         response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
+
+class ArtClassSetupEditTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="setup_owner",
+            password="pw123456",
+            email="setup_owner@example.com",
+        )
+        self.other = User.objects.create_user(
+            username="setup_other",
+            password="pw123456",
+            email="setup_other@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.owner,
+            defaults={"nickname": "수정교사", "role": "school"},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.other,
+            defaults={"nickname": "외부교사", "role": "school"},
+        )
+        self.art_class = ArtClass.objects.create(
+            title="수정 테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        image_file = SimpleUploadedFile(
+            "step.gif",
+            (
+                b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff"
+                b"!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                b"\x00\x02\x02L\x01\x00;"
+            ),
+            content_type="image/gif",
+        )
+        self.existing_step = ArtStep.objects.create(
+            art_class=self.art_class,
+            step_number=1,
+            description="기존 단계",
+            image=image_file,
+        )
+
+    def test_setup_edit_forbidden_for_non_owner(self):
+        self.client.force_login(self.other)
+        response = self.client.get(reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
+        self.client.force_login(self.owner)
+        old_image_name = self.existing_step.image.name
+
+        response = self.client.post(
+            reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}),
+            data={
+                "title": "수정된 수업",
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "15",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "1",
+                "step_text_0": "수정된 단계 설명",
+                "step_existing_id_0": str(self.existing_step.pk),
+            },
+        )
+
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": self.art_class.pk}))
+        new_step = self.art_class.steps.get(step_number=1)
+        self.assertEqual(new_step.description, "수정된 단계 설명")
+        self.assertEqual(new_step.image.name, old_image_name)

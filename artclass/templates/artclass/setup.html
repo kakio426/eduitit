@@ -217,7 +217,11 @@
 </main>
 
 <script>
-    let steps = JSON.parse('{{ initial_steps_json|safe|default:"[]" }}');
+    let steps = JSON.parse('{{ initial_steps_json|safe|default:"[]" }}').map(step => ({
+        text: step.text || '',
+        imagePreview: step.imagePreview || null,
+        existingStepId: step.id || step.existingStepId || null,
+    }));
     const stepsListEl = document.getElementById('stepsList');
     const emptyStateEl = document.getElementById('emptyState');
     const stepCountInput = document.getElementById('stepCountInput');
@@ -347,6 +351,7 @@ JSON 스키마 예시:
                         
                         <!-- Middle: Content -->
                         <div class="flex-grow space-y-4">
+                            <input type="hidden" name="step_existing_id_${index}" value="${step.existingStepId || ''}">
                             <textarea name="step_text_${index}" 
                                 class="w-full p-4 rounded-xl bg-gray-50 border-2 border-transparent focus:border-purple-200 focus:bg-white outline-none focus:ring-2 focus:ring-purple-300 transition-all text-lg font-medium resize-none"
                                 rows="2" placeholder="이 단계에서 할 활동을 적어주세요 (예: 구름 무늬 그리기)"
@@ -415,7 +420,7 @@ JSON 스키마 예시:
     };
 
     document.getElementById('btnAddStep').addEventListener('click', () => {
-        steps.push({ text: '', imagePreview: null });
+        steps.push({ text: '', imagePreview: null, existingStepId: null });
         renderSteps();
     });
 
@@ -472,6 +477,7 @@ JSON 스키마 예시:
             steps = (data.steps || []).map(step => ({
                 text: step.text || '',
                 imagePreview: null,
+                existingStepId: null,
             }));
             renderSteps();
             renderGeminiWarnings(data.warnings || []);
