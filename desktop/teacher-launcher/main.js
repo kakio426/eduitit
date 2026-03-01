@@ -16,6 +16,7 @@ let blackoutWindow = null;
 let watchdogTimer = null;
 let lastLaunchPayload = null;
 let isRestoringSplit = false;
+let displayHandlersBound = false;
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
@@ -357,6 +358,24 @@ function stopWatchdog() {
   watchdogTimer = null;
 }
 
+function bindDisplayEventHandlers() {
+  if (displayHandlersBound) return;
+  if (!app.isReady()) return;
+
+  displayHandlersBound = true;
+  screen.on("display-metrics-changed", () => {
+    relayoutSplitWindows();
+  });
+
+  screen.on("display-added", () => {
+    relayoutSplitWindows();
+  });
+
+  screen.on("display-removed", () => {
+    relayoutSplitWindows();
+  });
+}
+
 function installYouTubeFocusMode(targetWindow) {
   if (!targetWindow || targetWindow.isDestroyed()) return;
 
@@ -521,14 +540,21 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", (_, argv) => {
-    const launchUrl = extractLaunchUrlFromArgv(argv);
-    if (launchUrl) {
-      handleLaunchUrl(launchUrl);
+    const run = () => {
+      const launchUrl = extractLaunchUrlFromArgv(argv);
+      if (launchUrl) {
+        handleLaunchUrl(launchUrl);
+        return;
+      }
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.focus();
+      else if (videoWindow && !videoWindow.isDestroyed()) videoWindow.focus();
+      else createInfoWindow();
+    };
+    if (app.isReady()) {
+      run();
       return;
     }
-    if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.focus();
-    else if (videoWindow && !videoWindow.isDestroyed()) videoWindow.focus();
-    else createInfoWindow();
+    app.whenReady().then(run);
   });
 
   if (process.defaultApp) {
@@ -538,6 +564,7 @@ if (!gotSingleInstanceLock) {
   }
 
   app.whenReady().then(() => {
+    bindDisplayEventHandlers();
     const launchUrl = extractLaunchUrlFromArgv(process.argv);
     if (launchUrl) {
       handleLaunchUrl(launchUrl);
@@ -567,18 +594,6 @@ app.on("activate", () => {
   if (!videoWindow && !dashboardWindow) {
     createInfoWindow();
   }
-});
-
-screen.on("display-metrics-changed", () => {
-  relayoutSplitWindows();
-});
-
-screen.on("display-added", () => {
-  relayoutSplitWindows();
-});
-
-screen.on("display-removed", () => {
-  relayoutSplitWindows();
 });
 
 app.on("before-quit", () => {
