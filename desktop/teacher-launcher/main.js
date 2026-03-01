@@ -27,6 +27,8 @@ let lastRecoveryAt = 0;
 let recoveryAttemptTimestamps = [];
 let watchdogCircuitOpen = false;
 let splitRatioOverride = null;
+let appTerminating = false;
+let splitDisplayId = null;
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
@@ -94,13 +96,20 @@ function showErrorBox(message) {
 }
 
 function closeSplitWindows() {
-  if (videoWindow && !videoWindow.isDestroyed()) videoWindow.close();
-  if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.close();
+  if (videoWindow && !videoWindow.isDestroyed()) {
+    videoWindow.__eduititInternalClose = true;
+    videoWindow.close();
+  }
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.__eduititInternalClose = true;
+    dashboardWindow.close();
+  }
   if (blackoutWindow && !blackoutWindow.isDestroyed()) blackoutWindow.close();
   BrowserWindow.getAllWindows()
     .filter((win) => win && win.__eduititSplitWindow === true && !win.isDestroyed())
     .forEach((win) => {
       try {
+        win.__eduititInternalClose = true;
         win.close();
       } catch (_) {
         // no-op
@@ -116,6 +125,27 @@ function closeBlackoutWindow() {
     blackoutWindow.close();
   }
   blackoutWindow = null;
+}
+
+function emergencyQuit() {
+  if (appTerminating) return;
+  appTerminating = true;
+  watchdogCircuitOpen = true;
+  stopWatchdog();
+  lastLaunchPayload = null;
+  splitCreateLock = false;
+  isRestoringSplit = false;
+  closeSplitWindows();
+  if (app.isReady()) {
+    app.quit();
+    return;
+  }
+  app.exit(0);
+}
+
+function handleUserWindowClose() {
+  if (appTerminating) return;
+  emergencyQuit();
 }
 
 function isSplitWindowAlive(win) {
@@ -153,11 +183,94 @@ function isAllowedNavigation(targetUrl, payload, role) {
   }
 }
 
+function findDisplayById(displayId) {
+  if (displayId === null || displayId === undefined) return null;
+  return screen.getAllDisplays().find((display) => display.id === displayId) || null;
+}
+
+function lockDisplayToCurrentPointer() {
+  const cursorPoint = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
+  splitDisplayId = display.id;
+  return display;
+}
+
+function cycleSplitDisplay() {
+  const displays = screen
+    .getAllDisplays()
+    .slice()
+    .sort((a, b) => (a.bounds.x - b.bounds.x) || (a.bounds.y - b.bounds.y));
+  if (displays.length <= 1) return;
+
+  const currentIndex = displays.findIndex((display) => display.id === splitDisplayId);
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % displays.length : 0;
+  splitDisplayId = displays[nextIndex].id;
+  relayoutSplitWindows();
+}
+
+function parseLauncherAction(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== `${PROTOCOL}:`) return null;
+
+    const host = String(parsed.hostname || "").toLowerCase();
+    if (host === "quit") {
+      return { type: "quit" };
+    }
+    if (host === "action") {
+      const name = String(parsed.searchParams.get("name") || "").toLowerCase();
+      if (name) return { type: "action", name };
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function executeLauncherAction(action) {
+  if (!action) return false;
+
+  if (action.type === "quit") {
+    emergencyQuit();
+    return true;
+  }
+  if (action.type !== "action") return false;
+
+  if (action.name === "ratio_up") {
+    adjustSplitRatio(SPLIT_RATIO_STEP);
+    return true;
+  }
+  if (action.name === "ratio_down") {
+    adjustSplitRatio(-SPLIT_RATIO_STEP);
+    return true;
+  }
+  if (action.name === "ratio_reset") {
+    resetSplitRatio();
+    return true;
+  }
+  if (action.name === "move_display") {
+    cycleSplitDisplay();
+    return true;
+  }
+  return false;
+}
+
 function installWindowGuards(win, payload, role) {
   if (!isSplitWindowAlive(win)) return;
 
-  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (String(url || "").startsWith(`${PROTOCOL}://`)) {
+      handleLaunchUrl(url);
+      return { action: "deny" };
+    }
+    return { action: "deny" };
+  });
   win.webContents.on("will-navigate", (event, targetUrl) => {
+    if (String(targetUrl || "").startsWith(`${PROTOCOL}://`)) {
+      event.preventDefault();
+      handleLaunchUrl(targetUrl);
+      return;
+    }
     if (isAllowedNavigation(targetUrl, payload, role)) return;
     event.preventDefault();
   });
@@ -168,6 +281,12 @@ function installWindowGuards(win, payload, role) {
   win.webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const key = String(input.key || "").toLowerCase();
+    const emergencyQuitHotkey = input.shift && input.alt && (input.control || input.meta) && key === "q";
+    if (emergencyQuitHotkey) {
+      event.preventDefault();
+      emergencyQuit();
+      return;
+    }
     if (key === "b" && !input.control && !input.meta && !input.alt) {
       event.preventDefault();
       toggleBlackout();
@@ -197,8 +316,13 @@ function installWindowGuards(win, payload, role) {
 }
 
 function getTargetDisplay() {
+  const lockedDisplay = findDisplayById(splitDisplayId);
+  if (lockedDisplay) return lockedDisplay;
+
   const cursorPoint = screen.getCursorScreenPoint();
-  return screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
+  const fallback = screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
+  splitDisplayId = fallback.id;
+  return fallback;
 }
 
 function pickLeftRatio(totalWidth) {
@@ -610,6 +734,17 @@ function createSplitWindows(payload) {
     videoWindow.webContents.executeJavaScript("window.scrollTo(0, 0)").catch(() => {});
   });
 
+  videoWindow.on("close", () => {
+    if (!videoWindow.__eduititInternalClose) {
+      handleUserWindowClose();
+    }
+  });
+  dashboardWindow.on("close", () => {
+    if (!dashboardWindow.__eduititInternalClose) {
+      handleUserWindowClose();
+    }
+  });
+
   videoWindow.on("closed", () => {
     videoWindow = null;
   });
@@ -624,6 +759,11 @@ function createSplitWindows(payload) {
 }
 
 function handleLaunchUrl(rawUrl) {
+  const launcherAction = parseLauncherAction(rawUrl);
+  if (launcherAction && executeLauncherAction(launcherAction)) {
+    return;
+  }
+
   const parsed = parseLaunchUrl(rawUrl);
   if (parsed.error) {
     showErrorBox(`런처 payload를 읽지 못했습니다: ${parsed.error}`);
@@ -632,6 +772,7 @@ function handleLaunchUrl(rawUrl) {
   watchdogCircuitOpen = false;
   recoveryAttemptTimestamps = [];
   lastRecoveryAt = 0;
+  lockDisplayToCurrentPointer();
   lastLaunchPayload = parsed;
   createSplitWindows(parsed);
 }
