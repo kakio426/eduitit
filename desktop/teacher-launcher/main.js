@@ -8,6 +8,11 @@ const DEFAULT_LEFT_RATIO = 0.54;
 const SPLIT_GAP = 0;
 const ALWAYS_ON_TOP_LEVEL = "screen-saver";
 const WATCHDOG_INTERVAL_MS = 1400;
+const WATCHDOG_RECOVER_COOLDOWN_MS = 4000;
+const WATCHDOG_MAX_RECOVERY_PER_MIN = 3;
+const SPLIT_RATIO_MIN = 0.45;
+const SPLIT_RATIO_MAX = 0.72;
+const SPLIT_RATIO_STEP = 0.03;
 
 let videoWindow = null;
 let dashboardWindow = null;
@@ -17,6 +22,11 @@ let watchdogTimer = null;
 let lastLaunchPayload = null;
 let isRestoringSplit = false;
 let displayHandlersBound = false;
+let splitCreateLock = false;
+let lastRecoveryAt = 0;
+let recoveryAttemptTimestamps = [];
+let watchdogCircuitOpen = false;
+let splitRatioOverride = null;
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
@@ -87,6 +97,15 @@ function closeSplitWindows() {
   if (videoWindow && !videoWindow.isDestroyed()) videoWindow.close();
   if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.close();
   if (blackoutWindow && !blackoutWindow.isDestroyed()) blackoutWindow.close();
+  BrowserWindow.getAllWindows()
+    .filter((win) => win && win.__eduititSplitWindow === true && !win.isDestroyed())
+    .forEach((win) => {
+      try {
+        win.close();
+      } catch (_) {
+        // no-op
+      }
+    });
   videoWindow = null;
   dashboardWindow = null;
   blackoutWindow = null;
@@ -154,6 +173,22 @@ function installWindowGuards(win, payload, role) {
       toggleBlackout();
       return;
     }
+    const ratioAdjustHotkey = input.alt && (input.control || input.meta);
+    if (ratioAdjustHotkey && key === "arrowright") {
+      event.preventDefault();
+      adjustSplitRatio(SPLIT_RATIO_STEP);
+      return;
+    }
+    if (ratioAdjustHotkey && key === "arrowleft") {
+      event.preventDefault();
+      adjustSplitRatio(-SPLIT_RATIO_STEP);
+      return;
+    }
+    if (ratioAdjustHotkey && key === "0") {
+      event.preventDefault();
+      resetSplitRatio();
+      return;
+    }
     if (key === "escape" && blackoutWindow && !blackoutWindow.isDestroyed()) {
       event.preventDefault();
       closeBlackoutWindow();
@@ -171,6 +206,30 @@ function pickLeftRatio(totalWidth) {
   if (totalWidth <= 1600) return 0.52;
   if (totalWidth <= 1920) return 0.53;
   return DEFAULT_LEFT_RATIO;
+}
+
+function clampSplitRatio(value) {
+  return Math.min(SPLIT_RATIO_MAX, Math.max(SPLIT_RATIO_MIN, value));
+}
+
+function getEffectiveLeftRatio(totalWidth) {
+  if (typeof splitRatioOverride === "number") {
+    return clampSplitRatio(splitRatioOverride);
+  }
+  return pickLeftRatio(totalWidth);
+}
+
+function adjustSplitRatio(delta) {
+  const currentWidth = Math.max(1, getTargetDisplay().bounds.width - SPLIT_GAP);
+  const baseRatio =
+    typeof splitRatioOverride === "number" ? splitRatioOverride : pickLeftRatio(currentWidth);
+  splitRatioOverride = clampSplitRatio(baseRatio + delta);
+  relayoutSplitWindows();
+}
+
+function resetSplitRatio() {
+  splitRatioOverride = null;
+  relayoutSplitWindows();
 }
 
 function createInfoWindow() {
@@ -211,7 +270,7 @@ function computeSplitBounds() {
   // Use full display bounds so split windows can cover taskbar area.
   const area = display.bounds;
   const totalWidth = Math.max(1, area.width - SPLIT_GAP);
-  const leftRatio = pickLeftRatio(totalWidth);
+  const leftRatio = getEffectiveLeftRatio(totalWidth);
 
   let leftWidth = Math.floor(totalWidth * leftRatio);
   leftWidth = Math.max(MIN_VIDEO_WIDTH, leftWidth);
@@ -322,13 +381,42 @@ function relayoutSplitWindows() {
   syncBlackoutBounds();
 }
 
+function resetRecoveryWindow(now) {
+  recoveryAttemptTimestamps = recoveryAttemptTimestamps.filter((ts) => now - ts < 60_000);
+}
+
+function canRecoverNow(now) {
+  resetRecoveryWindow(now);
+  if (now - lastRecoveryAt < WATCHDOG_RECOVER_COOLDOWN_MS) {
+    return false;
+  }
+  if (recoveryAttemptTimestamps.length >= WATCHDOG_MAX_RECOVERY_PER_MIN) {
+    return false;
+  }
+  return true;
+}
+
 function ensureSplitHealthy() {
   if (!lastLaunchPayload) return;
+  if (splitCreateLock) return;
+  if (watchdogCircuitOpen) return;
 
   const videoAlive = isSplitWindowAlive(videoWindow);
   const dashboardAlive = isSplitWindowAlive(dashboardWindow);
   if (!videoAlive || !dashboardAlive) {
+    const now = Date.now();
+    if (!canRecoverNow(now)) {
+      resetRecoveryWindow(now);
+      if (recoveryAttemptTimestamps.length >= WATCHDOG_MAX_RECOVERY_PER_MIN) {
+        watchdogCircuitOpen = true;
+        stopWatchdog();
+        showErrorBox("자동 복구를 잠시 중지했습니다. 런처를 다시 실행해 주세요.");
+      }
+      return;
+    }
     if (isRestoringSplit) return;
+    lastRecoveryAt = now;
+    recoveryAttemptTimestamps.push(now);
     isRestoringSplit = true;
     try {
       createSplitWindows(lastLaunchPayload);
@@ -356,6 +444,7 @@ function stopWatchdog() {
   if (!watchdogTimer) return;
   clearInterval(watchdogTimer);
   watchdogTimer = null;
+  isRestoringSplit = false;
 }
 
 function bindDisplayEventHandlers() {
@@ -470,6 +559,10 @@ function installYouTubeFocusMode(targetWindow) {
 }
 
 function createSplitWindows(payload) {
+  if (splitCreateLock) return;
+  splitCreateLock = true;
+
+  try {
   closeSplitWindows();
   if (infoWindow && !infoWindow.isDestroyed()) {
     infoWindow.close();
@@ -489,6 +582,7 @@ function createSplitWindows(payload) {
       nodeIntegration: false,
     },
   });
+  videoWindow.__eduititSplitWindow = true;
   applyTeachingWindowBehavior(videoWindow);
   installWindowGuards(videoWindow, payload, "video");
   videoWindow.loadURL(payload.youtubeUrl);
@@ -506,6 +600,7 @@ function createSplitWindows(payload) {
       nodeIntegration: false,
     },
   });
+  dashboardWindow.__eduititSplitWindow = true;
   applyTeachingWindowBehavior(dashboardWindow);
   installWindowGuards(dashboardWindow, payload, "dashboard");
   dashboardWindow.loadURL(payload.dashboardUrl);
@@ -523,6 +618,9 @@ function createSplitWindows(payload) {
   });
 
   startWatchdog();
+  } finally {
+    splitCreateLock = false;
+  }
 }
 
 function handleLaunchUrl(rawUrl) {
@@ -531,6 +629,9 @@ function handleLaunchUrl(rawUrl) {
     showErrorBox(`런처 payload를 읽지 못했습니다: ${parsed.error}`);
     return;
   }
+  watchdogCircuitOpen = false;
+  recoveryAttemptTimestamps = [];
+  lastRecoveryAt = 0;
   lastLaunchPayload = parsed;
   createSplitWindows(parsed);
 }
