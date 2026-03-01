@@ -279,11 +279,35 @@ def _compose_parent_message(consent_request: SignatureRequest, recipient: Signat
     )
 
 
-def _build_file_response(file_field, *, inline=True):
+def _sanitize_filename_base(raw: str, fallback: str = "document") -> str:
+    cleaned = re.sub(r'[\\/:*?"<>|]+', " ", (raw or "").strip())
+    cleaned = re.sub(r"\s+", "_", cleaned).strip("._ ")
+    lowered = cleaned.lower()
+    if not cleaned or lowered in {"untitled", "untitled_document", "document", "무제", "제목없음"}:
+        return fallback
+    return cleaned[:80]
+
+
+def _build_summary_download_filename(consent_request: SignatureRequest) -> str:
+    title_seed = (consent_request.title or "").strip()
+    if title_seed.lower() in {"untitled", "untitled_document"} or title_seed in {"무제", "제목없음"}:
+        title_seed = (consent_request.document.title or "").strip()
+    safe_base = _sanitize_filename_base(title_seed, fallback="동의서_수합_요약")
+    request_short = str(consent_request.request_id).split("-")[0]
+    return f"{safe_base}_수합요약_{request_short}.pdf"
+
+
+def _build_file_response(file_field, *, inline=True, filename_hint=""):
     if not file_field or not file_field.name:
         raise Http404("문서 파일을 찾을 수 없습니다.")
 
-    filename = (file_field.name or "").split("/")[-1] or "document.pdf"
+    original_filename = (file_field.name or "").split("/")[-1] or "document.pdf"
+    ext = os.path.splitext(original_filename)[1] or ".pdf"
+    if filename_hint:
+        base = _sanitize_filename_base(filename_hint, fallback="document")
+        filename = f"{base}{ext}" if not base.lower().endswith(ext.lower()) else base
+    else:
+        filename = original_filename
     guessed_content_type = mimetypes.guess_type(file_field.name)[0]
     content_type = guessed_content_type or "application/octet-stream"
 
@@ -931,8 +955,39 @@ def consent_download_csv(request, request_id):
         f'attachment; filename="consent_result_{consent_request.request_id}.csv"'
     )
     response.write("\ufeff")
+    evidence = _request_document_evidence(consent_request)
+    request_id_text = str(consent_request.request_id)
+    request_title = consent_request.title or ""
+    document_title = consent_request.document.title or ""
+    document_name = evidence.get("document_name") or ""
+    document_sha256 = evidence.get("document_sha256") or ""
+    document_size = evidence.get("document_size")
+    request_created_at = timezone.localtime(consent_request.created_at).strftime("%Y-%m-%d %H:%M:%S")
+    sent_at_text = (
+        timezone.localtime(consent_request.sent_at).strftime("%Y-%m-%d %H:%M:%S")
+        if consent_request.sent_at
+        else ""
+    )
+
     writer = csv.writer(response)
-    writer.writerow(["학생명", "학부모명", "상태", "동의결과", "처리시각", "비동의사유"])
+    writer.writerow(
+        [
+            "학생명",
+            "학부모명",
+            "상태",
+            "동의결과",
+            "처리시각",
+            "비동의사유",
+            "요청ID",
+            "동의서제목",
+            "안내문제목",
+            "안내문파일명",
+            "안내문SHA256",
+            "안내문파일크기(byte)",
+            "요청생성시각",
+            "발송시각",
+        ]
+    )
     for recipient in consent_request.recipients.order_by("student_name", "id"):
         writer.writerow(
             [
@@ -944,6 +999,14 @@ def consent_download_csv(request, request_id):
                 if recipient.signed_at
                 else "",
                 recipient.decline_reason or "",
+                request_id_text,
+                request_title,
+                document_title,
+                document_name,
+                document_sha256,
+                document_size if document_size is not None else "",
+                request_created_at,
+                sent_at_text,
             ]
         )
     return response
@@ -958,7 +1021,7 @@ def consent_download_summary_pdf(request, request_id):
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     try:
         summary_file = generate_summary_pdf(consent_request)
-        filename = (getattr(summary_file, "name", "") or f"summary_{consent_request.request_id}.pdf").split("/")[-1]
+        filename = _build_summary_download_filename(consent_request)
         if hasattr(summary_file, "seek"):
             summary_file.seek(0)
         pdf_bytes = summary_file.read() if hasattr(summary_file, "read") else b""
@@ -1012,7 +1075,7 @@ def consent_document_source(request, request_id):
     )
     file_field = consent_request.document.original_file
     try:
-        return _build_file_response(file_field, inline=True)
+        return _build_file_response(file_field, inline=True, filename_hint=consent_request.document.title)
     except Exception:
         logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
         raise Http404("문서 파일을 찾을 수 없습니다.")
@@ -1117,7 +1180,11 @@ def consent_public_document(request, token):
     file_field = recipient.request.document.original_file
     try:
         # 학부모 화면은 인라인 뷰어 대신 다운로드를 기본값으로 제공한다.
-        return _build_file_response(file_field, inline=False)
+        return _build_file_response(
+            file_field,
+            inline=False,
+            filename_hint=recipient.request.document.title,
+        )
     except Exception:
         logger.exception("[consent] public document open failed token=%s", token)
         return render(
@@ -1147,7 +1214,11 @@ def consent_public_document_inline(request, token):
 
     file_field = recipient.request.document.original_file
     try:
-        return _build_file_response(file_field, inline=True)
+        return _build_file_response(
+            file_field,
+            inline=True,
+            filename_hint=recipient.request.document.title,
+        )
     except Exception:
         logger.exception("[consent] public document inline open failed token=%s", token)
         return render(

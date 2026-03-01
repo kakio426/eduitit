@@ -1,4 +1,7 @@
+import csv
+import io
 from unittest.mock import patch
+from io import StringIO
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -106,7 +109,17 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
-        self.assertIn("학생명", response.content.decode("utf-8-sig"))
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8-sig"))))
+        self.assertGreaterEqual(len(rows), 2)
+        header = rows[0]
+        self.assertIn("학생명", header)
+        self.assertIn("요청ID", header)
+        self.assertIn("안내문SHA256", header)
+        first = dict(zip(header, rows[1]))
+        self.assertEqual(first["요청ID"], str(self.request_obj.request_id))
+        self.assertEqual(first["동의서제목"], self.request_obj.title)
+        self.assertEqual(first["안내문제목"], self.document.title)
+        self.assertTrue(first["안내문SHA256"])
 
     def test_summary_pdf_download(self):
         self.client.login(username="teacher", password="pw123456")
@@ -114,6 +127,56 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("application/pdf", response["Content-Type"])
+        disposition = response.get("Content-Disposition", "")
+        self.assertIn("attachment;", disposition)
+        self.assertNotIn("untitled", disposition.lower())
+
+    def test_summary_pdf_download_includes_source_document_pages_when_pdf_valid(self):
+        try:
+            from pypdf import PdfReader
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            self.skipTest("pypdf/reportlab unavailable")
+
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet)
+        c.drawString(72, 720, "source-document-page")
+        c.showPage()
+        c.save()
+        packet.seek(0)
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="valid-source-doc",
+            original_file=SimpleUploadedFile(
+                "valid_source.pdf",
+                packet.getvalue(),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="valid-summary-test",
+            consent_text_version="v1",
+        )
+        SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="학생A",
+            parent_name="보호자A",
+            phone_number="",
+        )
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_summary_pdf", kwargs={"request_id": request_obj.request_id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/pdf", response["Content-Type"])
+
+        reader = PdfReader(io.BytesIO(response.content))
+        self.assertGreaterEqual(len(reader.pages), 2)
 
     @patch("django.db.models.fields.files.FieldFile.save", side_effect=RuntimeError("storage down"))
     def test_summary_pdf_download_falls_back_when_storage_save_fails(self, mocked_save):

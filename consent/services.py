@@ -1,4 +1,4 @@
-﻿import base64
+import base64
 import hashlib
 import io
 import logging
@@ -19,11 +19,15 @@ def _split_data_url(data_url: str):
     return base64.b64decode(payload)
 
 
-def _image_to_pdf_bytes(path: str):
+def _basename(path: str) -> str:
+    return (path or "").replace("\\", "/").split("/")[-1]
+
+
+def _image_to_pdf_bytes(image_bytes: bytes):
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas
 
-    image = ImageReader(path)
+    image = ImageReader(io.BytesIO(image_bytes))
     width, height = image.getSize()
     packet = io.BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
@@ -34,12 +38,19 @@ def _image_to_pdf_bytes(path: str):
     return packet.read()
 
 
+def get_document_original_bytes(document: SignatureDocument) -> bytes:
+    file_field = document.original_file
+    if not file_field:
+        raise ValueError("Document file is missing")
+    with file_field.open("rb") as f:
+        return f.read()
+
+
 def get_document_pdf_bytes(document: SignatureDocument) -> bytes:
-    path = document.original_file.path
+    original_bytes = get_document_original_bytes(document)
     if document.file_type == SignatureDocument.FILE_TYPE_PDF:
-        with open(path, "rb") as f:
-            return f.read()
-    return _image_to_pdf_bytes(path)
+        return original_bytes
+    return _image_to_pdf_bytes(original_bytes)
 
 
 def guess_file_type(filename: str):
@@ -83,6 +94,70 @@ def _decision_label(recipient: SignatureRecipient) -> str:
     return "-"
 
 
+def _format_size(size: int | None) -> str:
+    if size is None:
+        return "-"
+    return f"{size:,} bytes"
+
+
+def _build_document_evidence(request: SignatureRequest, original_bytes: bytes) -> dict[str, str]:
+    file_name = (request.document_name_snapshot or "").strip()
+    if not file_name:
+        file_name = _basename(getattr(request.document.original_file, "name", ""))
+    file_size = request.document_size_snapshot
+    if file_size is None and original_bytes:
+        file_size = len(original_bytes)
+    sha256 = (request.document_sha256_snapshot or "").strip()
+    if not sha256 and original_bytes:
+        sha256 = hashlib.sha256(original_bytes).hexdigest()
+    return {
+        "document_title": request.document.title or "-",
+        "document_name": file_name or "-",
+        "document_size": _format_size(file_size),
+        "document_sha256": sha256 or "-",
+    }
+
+
+def _merge_pdf_bytes(source_pdf_bytes: bytes, summary_pdf_bytes: bytes, *, pdf_title: str = "") -> bytes:
+    try:
+        from pypdf import PdfReader, PdfWriter
+    except ModuleNotFoundError:
+        return summary_pdf_bytes
+
+    writer = PdfWriter()
+    added_pages = 0
+    source_failed = False
+
+    for label, payload in (("source", source_pdf_bytes), ("summary", summary_pdf_bytes)):
+        if not payload:
+            continue
+        try:
+            reader = PdfReader(io.BytesIO(payload))
+            for page in reader.pages:
+                writer.add_page(page)
+                added_pages += 1
+        except Exception:
+            if label == "source":
+                source_failed = True
+                logger.exception("[consent] source pdf merge skipped")
+                continue
+            raise
+
+    if added_pages == 0:
+        raise ValueError("merged pdf has no pages")
+    if source_failed:
+        return summary_pdf_bytes
+
+    metadata = {"/Producer": "Eduitit Consent"}
+    if (pdf_title or "").strip():
+        metadata["/Title"] = pdf_title.strip()
+    writer.add_metadata(metadata)
+
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
 def _generate_minimal_summary_pdf(request: SignatureRequest) -> ContentFile:
     def escape_pdf_text(text: str) -> str:
         safe = (text or "").encode("ascii", errors="ignore").decode("ascii")
@@ -90,7 +165,10 @@ def _generate_minimal_summary_pdf(request: SignatureRequest) -> ContentFile:
 
     lines = [
         "Consent Summary",
-        f"Title: {request.title or '-'}",
+        f"Request Title: {request.title or '-'}",
+        f"Document Title: {request.document.title or '-'}",
+        f"Document Name: {(request.document_name_snapshot or _basename(getattr(request.document.original_file, 'name', ''))) or '-'}",
+        f"Document SHA256: {(request.document_sha256_snapshot or '-')}",
         f"Request ID: {request.request_id}",
         f"Created At: {timezone.localtime(request.created_at).strftime('%Y-%m-%d %H:%M:%S')}",
     ]
@@ -139,48 +217,136 @@ def _generate_minimal_summary_pdf(request: SignatureRequest) -> ContentFile:
     return ContentFile(buffer.read(), name=filename)
 
 
-def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.utils import ImageReader
-        from reportlab.pdfgen import canvas
-    except ModuleNotFoundError:
-        return _generate_minimal_summary_pdf(request)
+def _build_summary_section_pdf(
+    request: SignatureRequest,
+    recipients: list[SignatureRecipient],
+    evidence: dict[str, str],
+) -> bytes:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.utils import ImageReader, simpleSplit
+    from reportlab.pdfgen import canvas
 
-    try:
-        packet = io.BytesIO()
-        c = canvas.Canvas(packet, pagesize=A4)
-        width, height = A4
-        font_name = _resolve_font_name()
-        title = request.title or "동의서 수합 결과"
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+    font_name = _resolve_font_name()
+    title = request.title or "동의서 수합 결과"
+    pdf_title = f"{title} - 동의서 수합 요약"
+    c.setTitle(pdf_title)
+    c.setAuthor("Eduitit")
+    c.setSubject("학부모 동의서 제출 결과")
+    now_text = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
+    created_text = timezone.localtime(request.created_at).strftime("%Y-%m-%d %H:%M:%S")
+    sent_text = timezone.localtime(request.sent_at).strftime("%Y-%m-%d %H:%M:%S") if request.sent_at else "-"
 
-        def draw_header():
-            y = height - 40
-            c.setFont(font_name, 16)
-            c.drawString(32, y, "동의서 수합 요약")
-            y -= 20
-            c.setFont(font_name, 10)
-            c.drawString(32, y, f"제목: {title}")
-            y -= 14
-            c.drawString(32, y, f"요청 ID: {request.request_id}")
-            y -= 14
-            c.drawString(32, y, f"생성 시각: {timezone.localtime(request.created_at).strftime('%Y-%m-%d %H:%M:%S')}")
-            return y - 20
+    total_count = len(recipients)
+    agree_count = sum(1 for r in recipients if r.decision == SignatureRecipient.DECISION_AGREE)
+    disagree_count = sum(1 for r in recipients if r.decision == SignatureRecipient.DECISION_DISAGREE)
+    responded_count = sum(
+        1 for r in recipients if r.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED)
+    )
+    pending_count = max(total_count - responded_count, 0)
 
-        y = draw_header()
-        recipients = request.recipients.order_by("student_name", "id")
+    def draw_wrapped(label: str, value: str, y: float, *, indent: float = 32, size: int = 9, line_gap: int = 12):
+        text = f"{label}: {value or '-'}"
+        lines = simpleSplit(text, font_name, size, width - (indent + 24))
+        c.setFont(font_name, size)
+        for line in lines:
+            c.drawString(indent, y, line)
+            y -= line_gap
+        return y
 
+    def draw_block_title(text: str, y: float):
+        c.setFont(font_name, 11)
+        c.drawString(32, y, text)
+        return y - 14
+
+    y = height - 42
+    c.setFont(font_name, 17)
+    c.drawString(32, y, "동의서 수합 요약")
+    y -= 22
+
+    for label, value in (
+        ("동의 요청 제목", title),
+        ("안내문 제목", evidence.get("document_title", "-")),
+        ("안내문 파일명", evidence.get("document_name", "-")),
+        ("안내문 SHA-256", evidence.get("document_sha256", "-")),
+        ("안내문 파일크기", evidence.get("document_size", "-")),
+        ("요청 ID", str(request.request_id)),
+        ("요청 생성 시각", created_text),
+        ("최초 발송 시각", sent_text),
+        ("요약 생성 시각", now_text),
+    ):
+        y = draw_wrapped(label, value, y)
+
+    y -= 4
+    c.roundRect(30, y - 40, width - 60, 36, 8, stroke=1, fill=0)
+    c.setFont(font_name, 9)
+    c.drawString(
+        40,
+        y - 23,
+        f"전체 {total_count}명  |  응답 완료 {responded_count}명  |  미응답 {pending_count}명  |  동의 {agree_count}명  |  비동의 {disagree_count}명",
+    )
+    y -= 56
+
+    y = draw_block_title("발송 안내문(학부모 메시지)", y)
+    message_text = (request.message or "").strip() or "-"
+    message_lines = []
+    for segment in message_text.splitlines() or ["-"]:
+        wrapped = simpleSplit(segment, font_name, 9, width - 76)
+        message_lines.extend(wrapped or [" "])
+    if len(message_lines) > 7:
+        message_lines = message_lines[:7]
+        if message_lines and message_lines[-1]:
+            message_lines[-1] = f"{message_lines[-1][:-1]}…"
+    c.setFont(font_name, 9)
+    for line in message_lines:
+        c.drawString(44, y, line)
+        y -= 11
+
+    y -= 2
+    y = draw_block_title("개인정보/보관 고지문", y)
+    legal_text = (request.legal_notice or "").strip() or "-"
+    legal_lines = []
+    for segment in legal_text.splitlines() or ["-"]:
+        wrapped = simpleSplit(segment, font_name, 9, width - 76)
+        legal_lines.extend(wrapped or [" "])
+    if len(legal_lines) > 6:
+        legal_lines = legal_lines[:6]
+        if legal_lines and legal_lines[-1]:
+            legal_lines[-1] = f"{legal_lines[-1][:-1]}…"
+    c.setFont(font_name, 9)
+    for line in legal_lines:
+        c.drawString(44, y, line)
+        y -= 11
+
+    c.showPage()
+
+    def draw_recipient_header():
+        top = height - 40
+        c.setFont(font_name, 14)
+        c.drawString(32, top, "수신자별 처리 결과")
+        c.setFont(font_name, 9)
+        c.drawString(32, top - 16, f"요청 ID: {request.request_id}")
+        return top - 30
+
+    y = draw_recipient_header()
+    if not recipients:
+        c.setFont(font_name, 10)
+        c.drawString(32, y, "수신자가 없습니다.")
+    else:
+        block_height = 136
         for idx, recipient in enumerate(recipients, start=1):
-            block_height = 124
-            if y < block_height:
+            if (y - block_height) < 28:
                 c.showPage()
-                y = draw_header()
+                y = draw_recipient_header()
 
             c.roundRect(28, y - block_height + 8, width - 56, block_height - 12, 8, stroke=1, fill=0)
             c.setFont(font_name, 10)
             c.drawString(40, y - 12, f"{idx}. 학생: {recipient.student_name} / 보호자: {recipient.parent_name}")
             c.drawString(40, y - 28, f"상태: {_status_label(recipient)}")
-            c.drawString(200, y - 28, f"결과: {_decision_label(recipient)}")
+            c.drawString(220, y - 28, f"결과: {_decision_label(recipient)}")
+
             signed_at_text = (
                 timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
                 if recipient.signed_at
@@ -188,37 +354,89 @@ def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
             )
             c.drawString(40, y - 44, f"처리시각: {signed_at_text}")
 
-            reason = recipient.decline_reason.strip() if recipient.decline_reason else ""
+            reason = (recipient.decline_reason or "").strip()
             if reason:
-                c.drawString(40, y - 60, f"비동의 사유: {reason[:80]}")
+                reason_lines = simpleSplit(f"비동의 사유: {reason}", font_name, 9, width - 84)
+                c.setFont(font_name, 9)
+                for line_idx, line in enumerate(reason_lines[:2]):
+                    c.drawString(40, y - 60 - (line_idx * 12), line)
 
-            c.drawString(40, y - 76, "서명")
-            c.rect(75, y - 95, 170, 34, stroke=1, fill=0)
-            if (recipient.signature_data or "").startswith("data:image"):
+            c.setFont(font_name, 10)
+            c.drawString(40, y - 92, "서명")
+            sig_box_x = 75
+            sig_box_y = y - 114
+            sig_box_w = 190
+            sig_box_h = 34
+            c.rect(sig_box_x, sig_box_y, sig_box_w, sig_box_h, stroke=1, fill=0)
+
+            signature_data = recipient.signature_data or ""
+            if signature_data.startswith("data:image"):
                 try:
-                    image = ImageReader(io.BytesIO(_split_data_url(recipient.signature_data)))
+                    image = ImageReader(io.BytesIO(_split_data_url(signature_data)))
+                    src_w, src_h = image.getSize()
+                    pad = 3.0
+                    avail_w = max(sig_box_w - (pad * 2), 1)
+                    avail_h = max(sig_box_h - (pad * 2), 1)
+                    scale = min(avail_w / src_w, avail_h / src_h)
+                    draw_w = src_w * scale
+                    draw_h = src_h * scale
+                    draw_x = sig_box_x + pad + ((avail_w - draw_w) / 2)
+                    draw_y = sig_box_y + pad + ((avail_h - draw_h) / 2)
                     c.drawImage(
                         image,
-                        78,
-                        y - 92,
-                        width=164,
-                        height=28,
+                        draw_x,
+                        draw_y,
+                        width=draw_w,
+                        height=draw_h,
                         preserveAspectRatio=True,
                         mask="auto",
                     )
                 except Exception:
                     c.setFont(font_name, 9)
-                    c.drawString(82, y - 82, "서명 이미지 로드 실패")
+                    c.drawString(sig_box_x + 8, sig_box_y + 13, "서명 이미지 로드 실패")
             else:
                 c.setFont(font_name, 9)
-                c.drawString(82, y - 82, "서명 없음")
+                c.drawString(sig_box_x + 8, sig_box_y + 13, "서명 없음")
 
             y -= block_height
 
-        c.save()
-        packet.seek(0)
+    c.save()
+    packet.seek(0)
+    return packet.read()
+
+
+def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
+    try:
+        # reportlab 불가 시 최소 PDF라도 내려갈 수 있도록 보조 경로 유지.
+        import reportlab  # noqa: F401
+    except ModuleNotFoundError:
+        return _generate_minimal_summary_pdf(request)
+
+    try:
+        recipients = list(request.recipients.order_by("student_name", "id"))
+        original_bytes = b""
+        source_pdf_bytes = b""
+        try:
+            original_bytes = get_document_original_bytes(request.document)
+            source_pdf_bytes = get_document_pdf_bytes(request.document)
+        except Exception:
+            logger.exception("[consent] source document load failed request_id=%s", request.request_id)
+
+        evidence = _build_document_evidence(request, original_bytes)
+        summary_section_bytes = _build_summary_section_pdf(request, recipients, evidence)
+        summary_title_seed = (request.title or "").strip()
+        if summary_title_seed.lower() in {"untitled", "untitled_document"} or summary_title_seed in {"무제", "제목없음"}:
+            summary_title_seed = (request.document.title or "").strip()
+        if not summary_title_seed:
+            summary_title_seed = "동의서 수합 요약"
+        merged_bytes = _merge_pdf_bytes(
+            source_pdf_bytes,
+            summary_section_bytes,
+            pdf_title=f"{summary_title_seed} - 동의서 수합 요약",
+        )
+
         filename = f"summary_{request.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-        return ContentFile(packet.read(), name=filename)
+        return ContentFile(merged_bytes, name=filename)
     except Exception:
         logger.exception("[consent] reportlab summary generation failed request_id=%s", request.request_id)
         return _generate_minimal_summary_pdf(request)
