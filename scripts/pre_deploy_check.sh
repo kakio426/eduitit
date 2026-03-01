@@ -16,10 +16,14 @@ fi
 echo "  OK - All migrations applied"
 
 echo "[3/4] Running sheetbook preflight..."
-if [ "${SHEETBOOK_PREFLIGHT_STRICT:-False}" = "True" ] || [ "${SHEETBOOK_ENABLED:-False}" = "True" ]; then
-    python manage.py check_sheetbook_preflight --strict --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+if python manage.py help check_sheetbook_preflight >/dev/null 2>&1; then
+    if [ "${SHEETBOOK_PREFLIGHT_STRICT:-False}" = "True" ] || [ "${SHEETBOOK_ENABLED:-False}" = "True" ]; then
+        python manage.py check_sheetbook_preflight --strict --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+    else
+        python manage.py check_sheetbook_preflight --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+    fi
 else
-    python manage.py check_sheetbook_preflight --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+    echo "  SKIP - check_sheetbook_preflight command not available"
 fi
 echo "  OK"
 

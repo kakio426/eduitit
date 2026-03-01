@@ -21,7 +21,15 @@ if (-not $recommendDays) { $recommendDays = "14" }
 $forceStrict = $env:SHEETBOOK_PREFLIGHT_STRICT -eq "True"
 
 Write-Host "[3/4] Running sheetbook preflight..."
-if ($forceStrict -or $env:SHEETBOOK_ENABLED -eq "True") {
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+python manage.py help check_sheetbook_preflight *> $null
+$sheetbookPreflightAvailable = $LASTEXITCODE -eq 0
+$ErrorActionPreference = $previousPreference
+
+if (-not $sheetbookPreflightAvailable) {
+    Write-Host "  SKIP - check_sheetbook_preflight command not available"
+} elseif ($forceStrict -or $env:SHEETBOOK_ENABLED -eq "True") {
     python manage.py check_sheetbook_preflight --strict --recommend-days $recommendDays
 } else {
     python manage.py check_sheetbook_preflight --recommend-days $recommendDays

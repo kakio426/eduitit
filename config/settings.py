@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import sys
+from importlib.util import find_spec
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
@@ -86,7 +87,6 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
-    'sheetbook.apps.SheetbookConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -444,6 +444,12 @@ HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
 SHEETBOOK_ENABLED = os.environ.get('SHEETBOOK_ENABLED', 'False').lower() in ('true', '1', 'yes')
+SHEETBOOK_APP_AVAILABLE = find_spec('sheetbook.apps') is not None
+if SHEETBOOK_APP_AVAILABLE:
+    INSTALLED_APPS.append('sheetbook.apps.SheetbookConfig')
+elif SHEETBOOK_ENABLED:
+    print('[SHEETBOOK] disabled: sheetbook package not available')
+    SHEETBOOK_ENABLED = False
 SHEETBOOK_BETA_USERNAMES = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USERNAMES', '').split(',') if item.strip()]
 SHEETBOOK_BETA_EMAILS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_EMAILS', '').split(',') if item.strip()]
 SHEETBOOK_BETA_USER_IDS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USER_IDS', '').split(',') if item.strip()]

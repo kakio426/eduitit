@@ -1,7 +1,7 @@
 from time import perf_counter
 
 from django.conf import settings
-from django.core.management import call_command
+from django.core.management import call_command, get_commands
 from django.core.management.base import BaseCommand
 from django.db import connection
 
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             ("ensure_noticegen", lambda: call_command("ensure_noticegen")),
             ("ensure_timetable", lambda: call_command("ensure_timetable")),
             ("ensure_classcalendar", lambda: call_command("ensure_classcalendar")),
-            ("ensure_sheetbook", lambda: call_command("ensure_sheetbook")),
+            ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
         ]
@@ -60,6 +60,10 @@ class Command(BaseCommand):
         call_command("createcachetable")
 
     def _check_sheetbook_rollout(self):
+        if not self._command_exists("check_sheetbook_rollout"):
+            self.stdout.write("[bootstrap] skip check_sheetbook_rollout: command not available")
+            return
+
         if getattr(settings, "SHEETBOOK_ROLLOUT_STRICT_STARTUP", False):
             call_command("check_sheetbook_rollout", "--strict")
         else:
@@ -73,4 +77,17 @@ class Command(BaseCommand):
                 recommend_days = 14
             if recommend_days < 1:
                 recommend_days = 14
-            call_command("recommend_sheetbook_thresholds", "--days", str(recommend_days))
+            if self._command_exists("recommend_sheetbook_thresholds"):
+                call_command("recommend_sheetbook_thresholds", "--days", str(recommend_days))
+            else:
+                self.stdout.write("[bootstrap] skip recommend_sheetbook_thresholds: command not available")
+
+    def _run_optional_command(self, command_name, *args):
+        if not self._command_exists(command_name):
+            self.stdout.write(f"[bootstrap] skip {command_name}: command not available")
+            return
+        call_command(command_name, *args)
+
+    @staticmethod
+    def _command_exists(command_name):
+        return command_name in get_commands()
