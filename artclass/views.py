@@ -1,4 +1,8 @@
+import base64
 import json
+import re
+import time
+from urllib.parse import parse_qs, urlencode, urlparse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
@@ -7,6 +11,7 @@ from django.contrib.auth.views import redirect_to_login
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
+from django.urls import reverse
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count
 from .models import ArtClass, ArtStep
@@ -21,6 +26,54 @@ def _can_manage_art_class(user, art_class):
     if not user.is_authenticated:
         return False
     return user.is_staff or art_class.created_by_id == user.id
+
+
+def _extract_youtube_video_id(url):
+    if not url:
+        return ""
+
+    try:
+        parsed = urlparse(url)
+        hostname = (parsed.hostname or "").lower().replace("www.", "")
+
+        if hostname == "youtu.be":
+            path_parts = [part for part in parsed.path.split("/") if part]
+            return path_parts[0] if path_parts else ""
+
+        if hostname.endswith("youtube.com"):
+            if parsed.path == "/watch":
+                return (parse_qs(parsed.query).get("v") or [""])[0]
+            path_parts = [part for part in parsed.path.split("/") if part]
+            if path_parts and path_parts[0] in {"embed", "shorts", "live"}:
+                return path_parts[1] if len(path_parts) > 1 else ""
+    except Exception:
+        pass
+
+    matched = re.search(r"(?:v=|youtu\.be/|shorts/|embed/|live/)([A-Za-z0-9_-]{6,})", str(url))
+    return matched.group(1) if matched else ""
+
+
+def _build_external_video_loop_url(video_url):
+    video_id = _extract_youtube_video_id(video_url)
+    if not video_id:
+        return video_url
+
+    return (
+        "https://www.youtube.com/watch?"
+        + urlencode(
+            {
+                "v": video_id,
+                "loop": "1",
+                "playlist": video_id,
+                "autoplay": "1",
+            }
+        )
+    )
+
+
+def _encode_launcher_payload(payload):
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def setup_view(request, pk=None):
@@ -100,7 +153,10 @@ def setup_view(request, pk=None):
                 image=payload['image'],
             )
          
-        return redirect('artclass:classroom', pk=art_class.pk)
+        classroom_url = reverse("artclass:classroom", kwargs={"pk": art_class.pk})
+        if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
+            classroom_url = f"{classroom_url}?{urlencode({'autostart_launcher': '1'})}"
+        return redirect(classroom_url)
     
     # 수정 모드라면 기존 단계를 JSON으로 전달하여 JS에서 렌더링하도록 함
     initial_steps_json = "[]"
@@ -121,6 +177,8 @@ def setup_view(request, pk=None):
 def classroom_view(request, pk):
     """Classroom Page - 수업 진행 페이지"""
     art_class = get_object_or_404(ArtClass, pk=pk)
+    display_mode = "dashboard" if request.GET.get("display") == "dashboard" else "classroom"
+    runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
     
     # 조회수 증가
     art_class.view_count += 1
@@ -150,7 +208,9 @@ def classroom_view(request, pk):
         'art_class': art_class,
         'steps': steps,
         'data': data,
-        'data_json': json.dumps(data, ensure_ascii=False)
+        'data_json': json.dumps(data, ensure_ascii=False),
+        'display_mode': display_mode,
+        'runtime_mode': runtime_mode,
     })
 
 
@@ -178,6 +238,53 @@ def update_playback_mode_api(request, pk):
         art_class.save(update_fields=["playback_mode"])
 
     return JsonResponse({"success": True, "mode": art_class.playback_mode})
+
+
+@require_POST
+def start_launcher_session_api(request, pk):
+    """교사용 런처에서 좌/우 분할 실행에 필요한 payload를 생성한다."""
+    art_class = get_object_or_404(ArtClass, pk=pk)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "AUTH_REQUIRED", "message": "로그인이 필요합니다."}, status=401)
+    if not _can_manage_art_class(request.user, art_class):
+        return JsonResponse({"error": "FORBIDDEN", "message": "런처를 실행할 권한이 없습니다."}, status=403)
+
+    classroom_url = request.build_absolute_uri(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+    dashboard_query = urlencode({"display": "dashboard", "runtime": "launcher"})
+    dashboard_url = f"{classroom_url}?{dashboard_query}"
+    youtube_url = _build_external_video_loop_url(art_class.youtube_url)
+
+    issued_at = int(time.time())
+    expires_at = issued_at + 120
+    payload = {
+        "version": 1,
+        "classId": art_class.pk,
+        "title": art_class.title or f"수업 #{art_class.pk}",
+        "youtubeUrl": youtube_url,
+        "dashboardUrl": dashboard_url,
+        "issuedAt": issued_at,
+        "expiresAt": expires_at,
+    }
+    encoded_payload = _encode_launcher_payload(payload)
+    launcher_url = f"eduitit-launcher://launch?{urlencode({'payload': encoded_payload})}"
+
+    if art_class.playback_mode != ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
+        art_class.playback_mode = ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW
+        art_class.save(update_fields=["playback_mode"])
+
+    return JsonResponse(
+        {
+            "success": True,
+            "launcherUrl": launcher_url,
+            "payload": payload,
+            "expiresInSec": max(0, expires_at - int(time.time())),
+            "mode": art_class.playback_mode,
+            "fallback": {
+                "youtubeUrl": youtube_url,
+                "dashboardUrl": dashboard_url,
+            },
+        }
+    )
 
 
 @ratelimit(key=ratelimit_key_for_master_only, rate='30/h', method='POST', block=True)

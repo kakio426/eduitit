@@ -228,6 +228,70 @@ class ManualPipelineApiTest(TestCase):
         art_class.refresh_from_db()
         self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EMBED)
 
+    def test_start_launcher_session_api_success(self):
+        art_class = ArtClass.objects.create(
+            title="런처 테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"source": "test"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertIn("eduitit-launcher://launch?payload=", payload["launcherUrl"])
+        self.assertIn("display=dashboard", payload["fallback"]["dashboardUrl"])
+        self.assertIn("runtime=launcher", payload["fallback"]["dashboardUrl"])
+        self.assertIn("playlist=2bBhnfh4StU", payload["fallback"]["youtubeUrl"])
+        art_class.refresh_from_db()
+        self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
+
+    def test_start_launcher_session_api_requires_authentication(self):
+        art_class = ArtClass.objects.create(
+            title="런처 인증 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"source": "test"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error"], "AUTH_REQUIRED")
+
+    def test_start_launcher_session_api_forbidden_for_non_owner(self):
+        art_class = ArtClass.objects.create(
+            title="런처 권한 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.other)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"source": "test"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"], "FORBIDDEN")
+
 
 class ArtClassDeleteTest(TestCase):
     def setUp(self):
@@ -358,3 +422,22 @@ class ArtClassSetupEditTest(TestCase):
         new_step = self.art_class.steps.get(step_number=1)
         self.assertEqual(new_step.description, "수정된 단계 설명")
         self.assertEqual(new_step.image.name, old_image_name)
+
+    def test_setup_edit_external_mode_redirects_with_launcher_autostart(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}),
+            data={
+                "title": "런처 자동 시작 수업",
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "15",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+                "step_count": "1",
+                "step_text_0": "외부 모드 단계 설명",
+                "step_existing_id_0": str(self.existing_step.pk),
+            },
+        )
+
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)

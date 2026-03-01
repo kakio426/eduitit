@@ -1,0 +1,45 @@
+{
+  "name": "eduitit-teacher-launcher",
+  "version": "0.1.0",
+  "description": "Teacher launcher for one-click split classroom mode",
+  "main": "main.js",
+  "author": "Eduitit",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^36.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.eduitit.teacherlauncher",
+    "productName": "Eduitit Teacher Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js"
+    ],
+    "protocols": [
+      {
+        "name": "Eduitit Launcher Protocol",
+        "schemes": [
+          "eduitit-launcher"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}

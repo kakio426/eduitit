@@ -67,19 +67,23 @@
 {% endblock %}
 
 {% block content %}
-<main class="h-[100dvh] pt-16 overflow-hidden">
+<main id="classroomMain" class="h-[100dvh] pt-16 overflow-hidden">
     <!-- Top Minimal Bar -->
     <header id="classroomHeader"
         class="h-16 flex items-center justify-between px-6 glass-dark text-white z-50 fixed top-0 w-full">
         <div class="flex items-center gap-4">
-            <a href="{% url 'artclass:setup_edit' art_class.pk %}"
+            <a id="btnBackToEdit" href="{% url 'artclass:setup_edit' art_class.pk %}"
                 class="flex items-center gap-2 hover:bg-white/10 px-4 py-2 rounded-xl transition-all">
                 <i class="fa-solid fa-arrow-left"></i> <span class="font-bold">편집으로 돌아가기</span>
             </a>
-            <div class="h-6 w-px bg-white/20"></div>
-            <h1 class="text-lg font-bold text-white/80 hidden md:block">🎨 {{ art_class.title|default:"미술 수업" }}</h1>
+            <div id="headerDivider" class="h-6 w-px bg-white/20"></div>
+            <h1 id="headerTitle" class="text-lg font-bold text-white/80 hidden md:block">🎨 {{ art_class.title|default:"미술 수업" }}</h1>
         </div>
         <div class="flex items-center gap-2">
+            <button id="btnLaunchRuntime"
+                class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold transition-all flex items-center gap-2">
+                <i class="fa-solid fa-rocket"></i> 런처로 수업 시작
+            </button>
             <span id="externalWindowStatusBadge"
                 class="hidden px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide bg-gray-700/70 text-gray-200 border border-white/10">
                 영상 창 닫힘
@@ -247,8 +251,12 @@
 
 <script>
     const stepsData = JSON.parse('{{ data_json|escapejs }}');
+    const DISPLAY_MODE = '{{ display_mode|default:"classroom" }}';
+    const RUNTIME_MODE = '{{ runtime_mode|default:"web" }}';
+    const IS_DASHBOARD_ONLY = DISPLAY_MODE === 'dashboard';
     const CLASSROOM_ID = Number('{{ art_class.pk }}');
     const PLAYBACK_MODE_UPDATE_URL = '{% url "artclass:update_playback_mode_api" art_class.pk %}';
+    const LAUNCHER_START_URL = '{% url "artclass:start_launcher_session_api" art_class.pk %}';
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
     const PLAYBACK_MODE_STORAGE_KEY = `artclass_playback_mode_${CLASSROOM_ID}`;
@@ -280,6 +288,8 @@
 
     const loopStatusEl = document.getElementById('loopStatus');
     const btnLoopEl = document.getElementById('btnLoop');
+    const classroomMainEl = document.getElementById('classroomMain');
+    const classroomHeaderEl = document.getElementById('classroomHeader');
     const classroomWorkspaceEl = document.getElementById('classroomWorkspace');
     const externalVideoOverlayEl = document.getElementById('externalVideoOverlay');
     const externalVideoMessageEl = document.getElementById('externalVideoMessage');
@@ -293,6 +303,12 @@
     const btnFocusExternalVideoHeaderEl = document.getElementById('btnFocusExternalVideoHeader');
     const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
     const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
+    const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
+    const btnBackToEditEl = document.getElementById('btnBackToEdit');
+    const headerDividerEl = document.getElementById('headerDivider');
+    const searchParams = new URLSearchParams(window.location.search);
+    const AUTO_START_LAUNCHER = searchParams.get('autostart_launcher') === '1';
+    const AUTO_START_SESSION_KEY = `artclass_launcher_autostart_${CLASSROOM_ID}`;
 
     function setExternalWindowStatus(status) {
         if (!externalWindowStatusBadgeEl) return;
@@ -318,6 +334,21 @@
         if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = true;
     }
 
+    function applyDashboardOnlyUi() {
+        if (!IS_DASHBOARD_ONLY) return;
+        if (btnLaunchRuntimeEl) btnLaunchRuntimeEl.classList.add('hidden');
+        if (btnStartSplitModeEl) btnStartSplitModeEl.classList.add('hidden');
+        if (externalModeHeaderActionsEl) {
+            externalModeHeaderActionsEl.classList.add('hidden');
+            externalModeHeaderActionsEl.classList.remove('flex');
+        }
+        if (externalWindowStatusBadgeEl) externalWindowStatusBadgeEl.classList.add('hidden');
+        if (btnBackToEditEl) btnBackToEditEl.classList.add('hidden');
+        if (headerDividerEl) headerDividerEl.classList.add('hidden');
+        if (classroomHeaderEl) classroomHeaderEl.classList.add('hidden');
+        if (classroomMainEl) classroomMainEl.classList.remove('pt-16');
+    }
+
     function applyPlaybackLayout(mode) {
         const isExternalWindowMode = mode === 'external_window';
         if (videoPanelEl) {
@@ -332,18 +363,26 @@
             classroomWorkspaceEl.classList.toggle('lg:flex-row', !isExternalWindowMode);
         }
         if (btnStartSplitModeEl) {
-            btnStartSplitModeEl.classList.toggle('hidden', isExternalWindowMode);
+            btnStartSplitModeEl.classList.toggle('hidden', isExternalWindowMode || IS_DASHBOARD_ONLY);
         }
         if (externalModeHeaderActionsEl) {
-            externalModeHeaderActionsEl.classList.toggle('hidden', !isExternalWindowMode);
-            externalModeHeaderActionsEl.classList.toggle('flex', isExternalWindowMode);
+            const showExternalHeaderActions = isExternalWindowMode && !IS_DASHBOARD_ONLY;
+            externalModeHeaderActionsEl.classList.toggle('hidden', !showExternalHeaderActions);
+            externalModeHeaderActionsEl.classList.toggle('flex', showExternalHeaderActions);
         }
         if (externalWindowStatusBadgeEl) {
-            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode);
+            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode || IS_DASHBOARD_ONLY);
         }
         if (!isExternalWindowMode) {
             setExternalOverlay(false);
         }
+    }
+
+    function setLaunchButtonBusy(isBusy) {
+        if (!btnLaunchRuntimeEl) return;
+        btnLaunchRuntimeEl.disabled = isBusy;
+        btnLaunchRuntimeEl.classList.toggle('opacity-60', isBusy);
+        btnLaunchRuntimeEl.classList.toggle('cursor-wait', isBusy);
     }
 
     function isValidPlaybackMode(mode) {
@@ -436,6 +475,40 @@
             }
         } catch (err) {
             console.error('Playback mode save failed:', err);
+        }
+    }
+
+    async function startTeacherLauncher() {
+        setLaunchButtonBusy(true);
+        try {
+            const response = await fetch(LAUNCHER_START_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ source: 'classroom_header' }),
+            });
+            if (!response.ok) {
+                throw new Error(`status=${response.status}`);
+            }
+            const data = await response.json();
+            if (!data || !data.launcherUrl) {
+                throw new Error('missing_launcher_url');
+            }
+
+            window.location.href = data.launcherUrl;
+            setTimeout(() => {
+                setExternalOverlay(
+                    true,
+                    '런처 실행을 시도했습니다. 실행되지 않으면 런처를 설치하거나 화면 분할 시작 버튼을 사용해 주세요.'
+                );
+            }, 1200);
+        } catch (err) {
+            console.error('Launcher start failed:', err);
+            setExternalOverlay(true, '런처 실행에 실패했습니다. 잠시 후 다시 시도하거나 화면 분할 시작을 사용해 주세요.');
+        } finally {
+            setLaunchButtonBusy(false);
         }
     }
 
@@ -630,6 +703,13 @@
     }
 
     function initVideoPlayback() {
+        if (IS_DASHBOARD_ONLY) {
+            applyPlaybackLayout('external_window');
+            setExternalOverlay(false);
+            setLoopControlEnabled(false);
+            startTimer();
+            return;
+        }
         if (playbackMode === 'external_window') {
             switchToExternalMode('이 수업은 새 창 재생 모드로 설정되어 있습니다.', false);
             return;
@@ -849,6 +929,21 @@
         return true;
     }
 
+    if (btnLaunchRuntimeEl) {
+        btnLaunchRuntimeEl.onclick = async () => {
+            await startTeacherLauncher();
+        };
+    }
+
+    async function maybeAutoStartLauncher() {
+        if (!AUTO_START_LAUNCHER) return;
+        if (IS_DASHBOARD_ONLY) return;
+        if (RUNTIME_MODE === 'launcher') return;
+        if (sessionStorage.getItem(AUTO_START_SESSION_KEY) === '1') return;
+        sessionStorage.setItem(AUTO_START_SESSION_KEY, '1');
+        await startTeacherLauncher();
+    }
+
     btnOpenExternalVideoEl.onclick = async () => {
         await openExternalVideoAndPersist();
     };
@@ -949,9 +1044,11 @@
     showHeader();
 
     // Init
+    applyDashboardOnlyUi();
     setExternalWindowStatus('closed');
     applyPlaybackLayout(playbackMode);
     updateDisplay();
     initVideoPlayback();
+    maybeAutoStartLauncher();
 </script>
 {% endblock %}

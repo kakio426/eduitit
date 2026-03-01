@@ -183,7 +183,7 @@
 
         // Populate content
         document.getElementById('modalTitle').textContent = title;
-        document.getElementById('playLink').href = `/artclass/classroom/${pk}/`;
+        document.getElementById('playLink').href = `/artclass/classroom/${pk}/?autostart_launcher=1`;
         document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
         if (canDelete && deleteUrl) {
             deleteForm.action = deleteUrl;
