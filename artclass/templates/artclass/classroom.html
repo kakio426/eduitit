@@ -80,6 +80,10 @@
             <h1 class="text-lg font-bold text-white/80 hidden md:block">🎨 {{ art_class.title|default:"미술 수업" }}</h1>
         </div>
         <div class="flex items-center gap-2">
+            <span id="externalWindowStatusBadge"
+                class="hidden px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide bg-gray-700/70 text-gray-200 border border-white/10">
+                영상 창 닫힘
+            </span>
             <button id="btnStartSplitMode"
                 class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fa-solid fa-table-columns"></i> 화면 분할 시작
@@ -107,16 +111,29 @@
                             <p id="externalVideoMessage" class="text-sm text-gray-700 mt-2 leading-relaxed">
                                 유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.
                             </p>
+                            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                <p class="text-[11px] font-black text-amber-700 uppercase tracking-widest">한 영상 반복 재생 팁</p>
+                                <p class="mt-1 text-xs text-amber-800 leading-relaxed">
+                                    새 창 유튜브 화면에서 <strong>마우스 오른쪽 클릭</strong> 후
+                                    <strong>동영상 연속 재생</strong>을 켜 주세요.
+                                    (반복 재생 URL도 함께 적용됩니다)
+                                </p>
+                            </div>
+                            <p class="mt-3 text-xs text-gray-600 leading-relaxed">
+                                브라우저 정책상 창을 자동으로 <strong>항상 위</strong>로 고정할 수는 없습니다.
+                                대신 아래 버튼으로 영상 창을 앞으로 가져오거나, 새 창 유튜브 메뉴의
+                                <strong>화면 속 화면(PiP)</strong>을 사용해 주세요.
+                            </p>
                         </div>
                     </div>
                     <div class="mt-5 flex flex-wrap gap-2">
                         <button id="btnOpenExternalVideo"
                             class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all">
-                            새 창으로 영상 열기
+                            새 창 열기(반복 재생)
                         </button>
-                        <button id="btnTryEmbedAgain"
-                            class="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold hover:bg-gray-200 transition-all">
-                            내장 재생 다시 시도
+                        <button id="btnFocusExternalVideo"
+                            class="px-4 py-2.5 rounded-xl bg-white/90 text-gray-700 border border-gray-300 text-sm font-semibold hover:bg-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                            영상 창 앞으로
                         </button>
                     </div>
                 </div>
@@ -237,6 +254,7 @@
     let player;
     let currentPlayerHost = 'https://www.youtube-nocookie.com';
     let youtubeApiRequested = false;
+    let externalVideoPopup = null;
     let isLooping = false; // Video section loop
     let loopStart = 0;
     let loopEnd = 0;
@@ -257,8 +275,31 @@
     const videoPanelEl = document.getElementById('videoPanel');
     const playerEl = document.getElementById('player');
     const btnOpenExternalVideoEl = document.getElementById('btnOpenExternalVideo');
-    const btnTryEmbedAgainEl = document.getElementById('btnTryEmbedAgain');
+    const btnFocusExternalVideoEl = document.getElementById('btnFocusExternalVideo');
     const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
+    const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
+
+    function setExternalWindowStatus(status) {
+        if (!externalWindowStatusBadgeEl) return;
+        externalWindowStatusBadgeEl.classList.remove(
+            'hidden',
+            'bg-emerald-500/20',
+            'text-emerald-200',
+            'border-emerald-300/30',
+            'bg-gray-700/70',
+            'text-gray-200',
+            'border-white/10'
+        );
+        if (status === 'connected') {
+            externalWindowStatusBadgeEl.textContent = '영상 창 연결됨';
+            externalWindowStatusBadgeEl.classList.add('bg-emerald-500/20', 'text-emerald-200', 'border-emerald-300/30');
+            if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = false;
+            return;
+        }
+        externalWindowStatusBadgeEl.textContent = '영상 창 닫힘';
+        externalWindowStatusBadgeEl.classList.add('bg-gray-700/70', 'text-gray-200', 'border-white/10');
+        if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = true;
+    }
 
     function isValidPlaybackMode(mode) {
         return mode === 'embed' || mode === 'external_window';
@@ -353,11 +394,48 @@
         }
     }
 
+    function buildExternalVideoUrl() {
+        if (!VIDEO_ID) return VIDEO_URL;
+        try {
+            const loopUrl = new URL('https://www.youtube.com/watch');
+            loopUrl.searchParams.set('v', VIDEO_ID);
+            loopUrl.searchParams.set('loop', '1');
+            loopUrl.searchParams.set('playlist', VIDEO_ID);
+            loopUrl.searchParams.set('autoplay', '1');
+            return loopUrl.toString();
+        } catch (_) {
+            return `https://www.youtube.com/watch?v=${encodeURIComponent(VIDEO_ID)}&loop=1&playlist=${encodeURIComponent(VIDEO_ID)}&autoplay=1`;
+        }
+    }
+
+    function focusExternalVideoWindow() {
+        if (!externalVideoPopup) return false;
+        try {
+            if (externalVideoPopup.closed) {
+                externalVideoPopup = null;
+                setExternalWindowStatus('closed');
+                return false;
+            }
+            externalVideoPopup.focus();
+            setExternalWindowStatus('connected');
+            return true;
+        } catch (_) {
+            externalVideoPopup = null;
+            setExternalWindowStatus('closed');
+            return false;
+        }
+    }
+
     function openExternalVideoWindow(options = {}) {
         const split = options.split === true;
+        const forceReopen = options.forceReopen === true;
         if (!VIDEO_URL) {
             setExternalOverlay(true, '영상 주소가 비어 있습니다. 편집 화면에서 유튜브 주소를 확인해 주세요.');
             return false;
+        }
+        if (!forceReopen && focusExternalVideoWindow()) {
+            setExternalOverlay(true, '열려 있는 영상 창을 앞으로 가져왔습니다. 항상 위가 필요하면 새 창에서 화면 속 화면(PiP)을 사용해 주세요.');
+            return true;
         }
         let width;
         let height;
@@ -380,14 +458,17 @@
         }
 
         const popup = window.open(
-            VIDEO_URL,
+            buildExternalVideoUrl(),
             `artclass_video_${CLASSROOM_ID}`,
             `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
         );
         if (!popup) {
             setExternalOverlay(true, '팝업이 차단되었습니다. 브라우저 주소창에서 팝업 허용 후 다시 열어 주세요.');
+            setExternalWindowStatus('closed');
             return false;
         }
+        externalVideoPopup = popup;
+        setExternalWindowStatus('connected');
         popup.focus();
         setExternalOverlay(true, '새 창에서 영상을 재생 중입니다. 영상 창이 가려졌다면 다시 열기 버튼을 눌러 주세요.');
         return true;
@@ -710,11 +791,25 @@
         await persistPlaybackMode('external_window');
     };
 
-    btnTryEmbedAgainEl.onclick = async () => {
-        await persistPlaybackMode('embed');
-        setExternalOverlay(false);
-        createYouTubePlayer('https://www.youtube-nocookie.com');
-    };
+    if (btnFocusExternalVideoEl) {
+        btnFocusExternalVideoEl.onclick = async () => {
+            if (focusExternalVideoWindow()) {
+                setExternalOverlay(true, '열려 있는 영상 창을 앞으로 가져왔습니다.');
+                return;
+            }
+            const opened = openExternalVideoWindow();
+            if (!opened) return;
+            await persistPlaybackMode('external_window');
+        };
+    }
+
+    setInterval(() => {
+        if (!externalVideoPopup) return;
+        if (externalVideoPopup.closed) {
+            externalVideoPopup = null;
+            setExternalWindowStatus('closed');
+        }
+    }, 1500);
 
     if (btnStartSplitModeEl) {
         btnStartSplitModeEl.onclick = () => {
@@ -778,6 +873,7 @@
     showHeader();
 
     // Init
+    setExternalWindowStatus('closed');
     updateDisplay();
     initVideoPlayback();
 </script>

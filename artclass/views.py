@@ -1,6 +1,8 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
 from core.utils import ratelimit_key_for_master_only
@@ -191,3 +193,20 @@ def library_view(request):
         'shared_classes': shared_classes,
         'query': query
     })
+
+
+@login_required
+@require_POST
+def delete_class_view(request, pk):
+    """라이브러리에서 미술 수업 삭제"""
+    art_class = get_object_or_404(ArtClass, pk=pk)
+
+    can_delete = request.user.is_staff or art_class.created_by_id == request.user.id
+    if not can_delete:
+        messages.error(request, "이 수업을 삭제할 권한이 없습니다.")
+        return redirect("artclass:library")
+
+    title = art_class.title or f"수업 #{art_class.pk}"
+    art_class.delete()
+    messages.success(request, f'"{title}" 수업을 삭제했습니다.')
+    return redirect("artclass:library")

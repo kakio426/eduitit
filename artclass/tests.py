@@ -1,10 +1,14 @@
 import json
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import UserProfile
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
 from .models import ArtClass
+
+User = get_user_model()
 
 
 class ManualPipelineParserTest(TestCase):
@@ -158,3 +162,64 @@ class ManualPipelineApiTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "INVALID_MODE")
+
+
+class ArtClassDeleteTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="art_owner",
+            password="pw123456",
+            email="art_owner@example.com",
+        )
+        self.other = User.objects.create_user(
+            username="art_other",
+            password="pw123456",
+            email="art_other@example.com",
+        )
+        self.staff = User.objects.create_user(
+            username="art_staff",
+            password="pw123456",
+            email="art_staff@example.com",
+            is_staff=True,
+        )
+        UserProfile.objects.update_or_create(
+            user=self.owner,
+            defaults={"nickname": "미술교사", "role": "school"},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.other,
+            defaults={"nickname": "다른교사", "role": "school"},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.staff,
+            defaults={"nickname": "관리교사", "role": "school"},
+        )
+        self.art_class = ArtClass.objects.create(
+            title="삭제 테스트 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+
+    def test_owner_can_delete_class(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
+        self.assertRedirects(response, reverse("artclass:library"))
+        self.assertFalse(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
+    def test_staff_can_delete_class(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
+        self.assertRedirects(response, reverse("artclass:library"))
+        self.assertFalse(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
+    def test_non_owner_cannot_delete_class(self):
+        self.client.force_login(self.other)
+        response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
+        self.assertRedirects(response, reverse("artclass:library"))
+        self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
+    def test_delete_requires_login(self):
+        response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())

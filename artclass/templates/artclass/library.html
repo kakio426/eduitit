@@ -66,7 +66,10 @@
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
                 data-title="{{ item.title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
-                data-creator="{{ item.created_by.username|default:'익명의 선생님' }}" onclick="openChoiceModalFromData(this)">
+                data-creator="{{ item.created_by.username|default:'익명의 선생님' }}"
+                data-delete-url="{% url 'artclass:delete' pk=item.pk %}"
+                data-can-delete="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
+                onclick="openChoiceModalFromData(this)">
 
                 <!-- YouTube Thumbnail -->
                 <div class="relative aspect-video overflow-hidden thumb-wrapper shrink-0">
@@ -147,6 +150,14 @@
                     class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
                 </a>
+                <form id="deleteForm" method="post" action="#" class="hidden">
+                    {% csrf_token %}
+                    <button type="submit"
+                        onclick="return confirm('이 수업을 삭제할까요? 삭제 후에는 복구할 수 없습니다.');"
+                        class="w-full flex items-center justify-center gap-3 py-5 bg-red-50 text-red-600 border-2 border-red-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-95 transition-all">
+                        <i class="fa-solid fa-trash"></i> 이 수업 삭제하기
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -159,18 +170,28 @@
         const youtubeUrl = el.getAttribute('data-url');
         const stepCount = el.getAttribute('data-steps');
         const creator = el.getAttribute('data-creator');
-        openChoiceModal(pk, title, youtubeUrl, stepCount, creator);
+        const canDelete = el.getAttribute('data-can-delete') === 'true';
+        const deleteUrl = el.getAttribute('data-delete-url');
+        openChoiceModal(pk, title, youtubeUrl, stepCount, creator, canDelete, deleteUrl);
     }
 
-    function openChoiceModal(pk, title, youtubeUrl, stepCount, creator) {
+    function openChoiceModal(pk, title, youtubeUrl, stepCount, creator, canDelete, deleteUrl) {
         const modal = document.getElementById('choiceModal');
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
+        const deleteForm = document.getElementById('deleteForm');
 
         // Populate content
         document.getElementById('modalTitle').textContent = title;
         document.getElementById('playLink').href = `/artclass/classroom/${pk}/`;
         document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
+        if (canDelete && deleteUrl) {
+            deleteForm.action = deleteUrl;
+            deleteForm.classList.remove('hidden');
+        } else {
+            deleteForm.action = '#';
+            deleteForm.classList.add('hidden');
+        }
 
         // Extract video ID for thumbnail
         const videoId = youtubeUrl.match(/(?:v=|youtu\.be\/|shorts\/)([^&?]+)/)?.[1] || '';

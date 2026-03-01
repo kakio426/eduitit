@@ -68,17 +68,16 @@
                 <div class="mt-8 border-t border-purple-100 pt-6">
                     <div class="rounded-2xl bg-indigo-50/70 border border-indigo-100 p-5 md:p-6 space-y-4">
                         <h3 class="text-lg font-heavy text-indigo-900 flex items-center gap-2">
-                            <i class="fa-solid fa-paste"></i> Gemini 수동 복사-붙여넣기 모드
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Gemini 빠른 복사-붙여넣기
                         </h3>
                         <p class="text-sm text-indigo-900/80 leading-relaxed">
-                            API 호출 없이 Gemini 화면에서 결과를 직접 복사해 붙여넣어도 됩니다. 아래 순서를 그대로 따라 하면
-                            파서가 자동으로 형식을 점검하고 단계로 변환합니다.
+                            교사가 헷갈리지 않도록 흐름을 최소 클릭으로 줄였습니다.
+                            아래 순서대로 하면 붙여넣는 즉시 단계가 자동 반영됩니다.
                         </p>
                         <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900/85">
                             <li>유튜브 주소를 먼저 입력합니다.</li>
-                            <li><b>프롬프트 복사</b> 버튼으로 Gemini용 지시문을 복사합니다.</li>
-                            <li>Gemini 답변(JSON 권장)을 아래 결과 칸에 붙여넣습니다.</li>
-                            <li><b>결과 붙여넣기 적용</b>을 누르면 단계 목록으로 자동 반영됩니다.</li>
+                            <li><b>제미나이 열기 + 프롬프트 자동 복사</b> 버튼을 누릅니다.</li>
+                            <li>Gemini 답변(JSON 권장)을 아래 결과 칸에 붙여넣으면 자동 반영됩니다.</li>
                         </ol>
                         <p class="text-xs text-indigo-800">
                             권장 출력 형식: JSON 객체 + <code>steps</code> 배열. 각 step은
@@ -107,33 +106,29 @@
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label for="geminiPromptBox" class="text-sm font-heavy text-gray-700">1) Gemini 프롬프트</label>
-                                <div class="flex items-center gap-2">
-                                    <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer"
-                                        class="px-3 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-xs font-heavy hover:bg-indigo-50 transition-all">
-                                        Gemini 열기
-                                    </a>
-                                    <button type="button" id="btnCopyGeminiPrompt"
-                                        class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-heavy hover:bg-indigo-700 transition-all">
-                                        프롬프트 복사
-                                    </button>
-                                </div>
+                                <label for="geminiPromptBox" class="text-sm font-heavy text-gray-700">1) 제미나이 열기 (프롬프트 자동 복사)</label>
+                                <button type="button" id="btnLaunchGeminiFlow"
+                                    class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-heavy hover:bg-indigo-700 transition-all">
+                                    제미나이 열기 + 프롬프트 자동 복사
+                                </button>
                             </div>
                             <textarea id="geminiPromptBox" readonly
                                 class="w-full h-56 p-3 rounded-xl bg-gray-900 text-gray-100 text-xs leading-relaxed shadow-inner border border-gray-800">{{ manual_prompt_template }}</textarea>
+                            <p class="text-[11px] text-gray-500">복사가 차단된 브라우저에서는 프롬프트를 직접 선택해 복사해 주세요.</p>
                         </div>
 
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label for="geminiResultInput" class="text-sm font-heavy text-gray-700">2) Gemini 결과 붙여넣기</label>
+                                <label for="geminiResultInput" class="text-sm font-heavy text-gray-700">2) Gemini 결과 붙여넣기 (자동 적용)</label>
                                 <button type="button" id="btnApplyGeminiResult"
-                                    class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-heavy hover:bg-emerald-700 transition-all">
-                                    결과 붙여넣기 적용
+                                    class="px-3 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 text-xs font-heavy hover:bg-emerald-50 transition-all">
+                                    수동 적용
                                 </button>
                             </div>
                             <textarea id="geminiResultInput"
                                 class="w-full h-56 p-3 rounded-xl bg-white border-2 border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
                                 placeholder='예: {"steps":[{"start":"00:35","summary":"..."}]}'></textarea>
+                            <p class="text-[11px] text-gray-500">붙여넣기(Ctrl+V)하면 즉시 검증 후 단계 목록에 반영됩니다.</p>
                             <p id="geminiManualStatus" class="text-sm font-bold text-indigo-700 hidden"></p>
                             <ul id="geminiWarningList" class="space-y-1 text-xs text-amber-700 hidden"></ul>
                         </div>
@@ -229,9 +224,11 @@
     const geminiResultInputEl = document.getElementById('geminiResultInput');
     const geminiManualStatusEl = document.getElementById('geminiManualStatus');
     const geminiWarningListEl = document.getElementById('geminiWarningList');
-    const btnCopyGeminiPromptEl = document.getElementById('btnCopyGeminiPrompt');
+    const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
     const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
     let geminiTargetTouched = false;
+    let geminiApplyInProgress = false;
+    let lastAppliedGeminiText = '';
 
     function buildGeminiPrompt(videoUrl) {
         const targetUrl = videoUrl || '(여기에 유튜브 URL 입력)';
@@ -418,64 +415,104 @@ JSON 스키마 예시:
         renderSteps();
     });
 
-    if (btnCopyGeminiPromptEl) {
-        btnCopyGeminiPromptEl.addEventListener('click', async () => {
-            updateGeminiPrompt();
-            try {
-                await navigator.clipboard.writeText(geminiPromptBoxEl.value);
-                setGeminiStatus('프롬프트를 클립보드에 복사했습니다.', 'success');
-            } catch (err) {
-                setGeminiStatus('복사에 실패했습니다. 프롬프트를 직접 선택해 복사해 주세요.', 'error');
+    async function copyGeminiPrompt() {
+        updateGeminiPrompt();
+        try {
+            await navigator.clipboard.writeText(geminiPromptBoxEl.value);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async function applyGeminiResult(options = {}) {
+        const source = options.source || 'manual';
+        const rawText = (geminiResultInputEl?.value || '').trim();
+        if (!rawText) {
+            if (!options.silentNoInput) {
+                setGeminiStatus('Gemini 결과를 붙여넣어 주세요.', 'error');
             }
+            return;
+        }
+        if (geminiApplyInProgress) return;
+        if (source !== 'manual' && rawText === lastAppliedGeminiText) return;
+
+        geminiApplyInProgress = true;
+        if (btnApplyGeminiResultEl) {
+            btnApplyGeminiResultEl.disabled = true;
+            btnApplyGeminiResultEl.textContent = '검증 중...';
+        }
+        setGeminiStatus(source === 'paste'
+            ? '붙여넣기를 감지했습니다. 형식을 점검하고 단계로 변환하고 있습니다...'
+            : '형식을 점검하고 단계로 변환하고 있습니다...', 'indigo');
+        renderGeminiWarnings([]);
+
+        try {
+            const response = await fetch('{% url "artclass:parse_gemini_steps_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    rawText,
+                    videoUrl: (geminiTargetVideoUrlEl?.value || videoUrlEl.value || '').trim(),
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || '결과를 해석하지 못했습니다.');
+            }
+
+            steps = (data.steps || []).map(step => ({
+                text: step.text || '',
+                imagePreview: null,
+            }));
+            renderSteps();
+            renderGeminiWarnings(data.warnings || []);
+
+            lastAppliedGeminiText = rawText;
+            const parsedCount = data?.meta?.step_count || steps.length;
+            setGeminiStatus(`검증 완료: ${parsedCount}개 단계를 반영했습니다.`, 'success');
+        } catch (err) {
+            setGeminiStatus(err.message || '결과 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+            geminiApplyInProgress = false;
+            if (btnApplyGeminiResultEl) {
+                btnApplyGeminiResultEl.disabled = false;
+                btnApplyGeminiResultEl.textContent = '수동 적용';
+            }
+        }
+    }
+
+    if (btnLaunchGeminiFlowEl) {
+        btnLaunchGeminiFlowEl.addEventListener('click', async () => {
+            const copied = await copyGeminiPrompt();
+            const popup = window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+            if (!popup) {
+                setGeminiStatus('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.', 'error');
+                return;
+            }
+            if (copied) {
+                setGeminiStatus('Gemini를 열고 프롬프트를 자동 복사했습니다. Gemini 입력창에 바로 붙여넣어 주세요.', 'success');
+                return;
+            }
+            setGeminiStatus('Gemini를 열었습니다. 프롬프트 자동 복사가 차단되어 아래 박스에서 직접 복사해 주세요.', 'error');
         });
     }
 
     if (btnApplyGeminiResultEl) {
-        btnApplyGeminiResultEl.addEventListener('click', async () => {
-            const rawText = (geminiResultInputEl?.value || '').trim();
-            if (!rawText) {
-                setGeminiStatus('Gemini 결과를 붙여넣어 주세요.', 'error');
-                return;
-            }
+        btnApplyGeminiResultEl.addEventListener('click', () => {
+            applyGeminiResult({ source: 'manual' });
+        });
+    }
 
-            btnApplyGeminiResultEl.disabled = true;
-            btnApplyGeminiResultEl.innerHTML = '검증 중...';
-            setGeminiStatus('형식을 점검하고 단계로 변환하고 있습니다...', 'indigo');
-            renderGeminiWarnings([]);
-
-            try {
-                const response = await fetch('{% url "artclass:parse_gemini_steps_api" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}',
-                    },
-                    body: JSON.stringify({
-                        rawText,
-                        videoUrl: (geminiTargetVideoUrlEl?.value || videoUrlEl.value || '').trim(),
-                    }),
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.message || data.error || '결과를 해석하지 못했습니다.');
-                }
-
-                steps = (data.steps || []).map(step => ({
-                    text: step.text || '',
-                    imagePreview: null,
-                }));
-                renderSteps();
-                renderGeminiWarnings(data.warnings || []);
-
-                const parsedCount = data?.meta?.step_count || steps.length;
-                setGeminiStatus(`검증 완료: ${parsedCount}개 단계를 반영했습니다.`, 'success');
-            } catch (err) {
-                setGeminiStatus(err.message || '결과 처리 중 오류가 발생했습니다.', 'error');
-            } finally {
-                btnApplyGeminiResultEl.disabled = false;
-                btnApplyGeminiResultEl.innerHTML = '결과 붙여넣기 적용';
-            }
+    if (geminiResultInputEl) {
+        geminiResultInputEl.addEventListener('paste', () => {
+            setTimeout(() => {
+                applyGeminiResult({ source: 'paste', silentNoInput: true });
+            }, 0);
         });
     }
 
