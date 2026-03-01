@@ -11,6 +11,7 @@
 - For JS confirmation UX (modal/step): keep a non-JS submit fallback so critical actions never become "no response"
 - In dirty workspace, commit only request-scoped files after `git diff --cached` review
 - Do not change global settings/flags unless explicitly requested
+- Teacher workflow UIs must define "next action visibility" and "processing feedback" before visual polish
 
 ---
 
@@ -106,6 +107,39 @@
 - 작업트리가 더러우면 선택 커밋만 허용:
   - `git add <요청 범위 파일들>` → `git diff --cached --name-only` → `git diff --cached`
 - 위 검토 없이 전체 커밋/푸시 금지. 커밋 보고 시 포함/제외 파일을 명시한다.
+
+### 10) Seed Quiz Teacher UX 선행 가드레일 (2026-03-01)
+- 이 규칙은 "교사가 퀴즈를 만드는 흐름"처럼 단계형 업무 UX에 우선 적용한다.
+
+- 왜 필요한가:
+  - 교사는 화면을 탐색하려는 것이 아니라 "문제 생성→배포"를 빠르게 완료하려고 들어온다.
+  - 버튼을 눌러도 처리 중인지/다음 단계가 무엇인지 보이지 않으면 즉시 혼란이 발생한다.
+  - 모바일에서 버튼 줄바꿈/불균형이 생기면 핵심 액션 인지가 급격히 떨어진다.
+  - 따라서 "기능 존재"보다 "다음 행동이 자동으로 보이는 흐름"이 우선이다.
+
+- 처음부터 반드시 설계에 포함할 항목:
+  1. 여정 계약(Journey Contract) 문서화
+    - 각 단계별로 `진입 조건 / 성공 결과 / 실패 표시 / 다음 CTA / 포커스 이동 대상`을 명시한다.
+  2. 액션 버튼 표준
+    - 모든 핵심 버튼에 `로딩 표시 + 중복 클릭 방지(hx-disabled-elt)`를 기본 적용한다.
+    - 모바일 우선 기준: `min-h-[44px]`, `w-full sm:w-auto`, `whitespace-nowrap`, 필요 시 `text-center`.
+  3. 상태 전환 자동화
+    - 저장 성공 시 다음 화면(미리보기)을 자동으로 열고, 핵심 CTA(배포 버튼)에 포커스를 이동한다.
+    - "다른 세트 고르기"처럼 분기 액션은 대상 영역으로 스크롤 + 첫 실행 버튼 포커스를 제공한다.
+    - 확인 모달의 취소는 빈 상태가 아니라 직전 안전 상태(기존 미리보기)로 복귀시킨다.
+  4. 오류 피드백 계약
+    - 오류는 요청 대상 영역에 인라인으로 표시하고, 필요 시 요약 알림(alert/toast)을 함께 제공한다.
+    - 서버 응답 코드(예: 400/409)별 사용자 메시지를 분리한다.
+  5. 새 탭/외부 이동의 명시성
+    - 새 탭 이동 버튼은 라벨에 반드시 `(새 탭)`을 표기한다.
+  6. 검증 게이트
+    - 핵심 여정 문자열/데이터 속성(`data-*`)은 테스트로 고정한다.
+    - 최소 실행: `python manage.py test seed_quiz.tests.test_teacher_flow`.
+    - 실기기 점검은 별도 프로토콜로 기록한다: `docs/handoff/QA_seed_quiz_teacher_journey_2026-03-01.md`.
+
+- 배포 전 차단 조건:
+  - 교사 핵심 여정(생성→저장→미리보기→배포) 중 어느 단계든 "다음 행동"이 화면에서 즉시 보이지 않으면 배포 금지.
+  - 핵심 버튼 클릭 시 처리 중 상태를 사용자가 인지할 수 없으면 배포 금지.
 
 ---
 
@@ -1073,4 +1107,4 @@ image_url = "https://res.cloudinary.com/.../upload/f_auto,q_auto/v123/image.jpg"
 
 ---
 
-**마지막 업데이트:** 2026-02-21
+**마지막 업데이트:** 2026-03-01

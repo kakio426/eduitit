@@ -292,6 +292,105 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "문서 업로드 처리 중 오류가 발생했습니다.")
 
+    def test_create_step1_prefills_from_sheetbook_seed(self):
+        self.client.login(username="teacher", password="pw123456")
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            "seed-token": {
+                "action": "consent",
+                "data": {
+                    "title": "교무수첩 동의서",
+                    "message": "교무수첩에서 가져온 안내문입니다.",
+                    "document_title": "체험학습 안내문",
+                },
+            }
+        }
+        session.save()
+
+        response = self.client.get(f"{reverse('consent:create_step1')}?sb_seed=seed-token")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교무수첩에서 가져온 내용으로")
+        self.assertContains(response, "교무수첩 동의서")
+        self.assertContains(response, "교무수첩에서 가져온 안내문입니다.")
+        self.assertContains(response, 'name="sheetbook_seed_token"')
+
+    def test_create_step1_seed_auto_adds_recipients(self):
+        self.client.login(username="teacher", password="pw123456")
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            "seed-token-2": {
+                "action": "consent",
+                "data": {
+                    "recipients_text": "김하늘,김하늘 보호자,\n박나래,박나래 보호자,",
+                },
+            }
+        }
+        session.save()
+
+        url = reverse("consent:create_step1")
+        file_obj = SimpleUploadedFile("seed.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        response = self.client.post(
+            url,
+            {
+                "sheetbook_seed_token": "seed-token-2",
+                "title": "교무수첩 연동 동의서",
+                "message": "안내",
+                "legal_notice": "",
+                "link_expire_days": 14,
+                "original_file": file_obj,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교무수첩에서 가져온 수신자 2명을 미리 넣어두었어요.")
+        created_request = SignatureRequest.objects.filter(
+            created_by=self.teacher,
+            title="교무수첩 연동 동의서",
+        ).latest("created_at")
+        self.assertEqual(created_request.recipients.count(), 2)
+
+    def test_create_step1_seed_can_skip_auto_add_recipients(self):
+        self.client.login(username="teacher", password="pw123456")
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            "seed-token-3": {
+                "action": "consent",
+                "data": {
+                    "title": "교무수첩 수신자 선택 테스트",
+                    "recipients_text": "한지민,한지민 보호자,\n윤서준,윤서준 보호자,",
+                },
+            }
+        }
+        session.save()
+
+        get_response = self.client.get(f"{reverse('consent:create_step1')}?sb_seed=seed-token-3")
+        self.assertEqual(get_response.status_code, 200)
+        self.assertContains(get_response, "미리보기")
+        self.assertContains(get_response, "다음 단계에서 수신자 후보 자동 넣기")
+
+        file_obj = SimpleUploadedFile("seed_skip.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        post_response = self.client.post(
+            reverse("consent:create_step1"),
+            {
+                "sheetbook_seed_token": "seed-token-3",
+                "apply_seed_recipients": "0",
+                "title": "교무수첩 수신자 선택 테스트",
+                "message": "안내",
+                "legal_notice": "",
+                "link_expire_days": 14,
+                "original_file": file_obj,
+            },
+            follow=True,
+        )
+        self.assertEqual(post_response.status_code, 200)
+        self.assertContains(post_response, "교무수첩 수신자 자동 넣기는 꺼두었어요.")
+
+        created_request = SignatureRequest.objects.filter(
+            created_by=self.teacher,
+            title="교무수첩 수신자 선택 테스트",
+        ).latest("created_at")
+        self.assertEqual(created_request.recipients.count(), 0)
+
     @patch("consent.models.SignatureDocument.save", side_effect=DataError("value too long for type character varying(100)"))
     def test_create_step1_handles_path_length_data_error_without_500(self, mocked_save):
         self.client.login(username="teacher", password="pw123456")

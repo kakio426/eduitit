@@ -1,5 +1,6 @@
 from time import perf_counter
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import connection
@@ -14,6 +15,8 @@ class Command(BaseCommand):
         steps = [
             ("migrate", lambda: call_command("migrate", "--noinput")),
             ("check_consent_schema", lambda: call_command("check_consent_schema")),
+            ("check_collect_schema", lambda: call_command("check_collect_schema")),
+            ("check_sheetbook_rollout", self._check_sheetbook_rollout),
             ("createcachetable_if_needed", self._create_cache_table_if_needed),
             ("ensure_ssambti", lambda: call_command("ensure_ssambti")),
             ("ensure_studentmbti", lambda: call_command("ensure_studentmbti")),
@@ -34,6 +37,7 @@ class Command(BaseCommand):
             ("ensure_noticegen", lambda: call_command("ensure_noticegen")),
             ("ensure_timetable", lambda: call_command("ensure_timetable")),
             ("ensure_classcalendar", lambda: call_command("ensure_classcalendar")),
+            ("ensure_sheetbook", lambda: call_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
         ]
@@ -54,3 +58,19 @@ class Command(BaseCommand):
             self.stdout.write(f"[bootstrap] skip createcachetable: '{cache_table}' exists")
             return
         call_command("createcachetable")
+
+    def _check_sheetbook_rollout(self):
+        if getattr(settings, "SHEETBOOK_ROLLOUT_STRICT_STARTUP", False):
+            call_command("check_sheetbook_rollout", "--strict")
+        else:
+            call_command("check_sheetbook_rollout")
+
+        if getattr(settings, "SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP", False):
+            raw_days = getattr(settings, "SHEETBOOK_ROLLOUT_RECOMMEND_DAYS", 14)
+            try:
+                recommend_days = int(raw_days)
+            except (TypeError, ValueError):
+                recommend_days = 14
+            if recommend_days < 1:
+                recommend_days = 14
+            call_command("recommend_sheetbook_thresholds", "--days", str(recommend_days))

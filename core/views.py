@@ -45,6 +45,29 @@ POST_FEED_NOTICE_TYPES = (
 )
 
 
+def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
+    if not request.user.is_authenticated:
+        return
+    if not getattr(settings, "SHEETBOOK_ENABLED", False):
+        return
+    try:
+        from sheetbook.models import SheetbookMetricEvent
+    except Exception:
+        return
+    try:
+        SheetbookMetricEvent.objects.create(
+            event_name=str(event_name or "").strip()[:80] or "workspace_event",
+            user=request.user,
+            metadata=metadata or {},
+        )
+    except Exception:
+        logger.exception(
+            "[SheetbookWorkspaceMetric] failed to save event=%s user_id=%s",
+            event_name,
+            getattr(request.user, "id", None),
+        )
+
+
 def _get_post_list_target_id(request):
     """Resolve the SNS list target id from HTMX request context."""
     raw_target = (
@@ -616,6 +639,136 @@ def _build_today_context(request):
     }
 
 
+def _build_sheetbook_workspace_context(request):
+    workspace = {
+        "enabled": False,
+        "entry_url": "",
+        "create_url": "",
+        "copy_url": "",
+        "create_action_url": "",
+        "copy_action_url": "",
+        "recent_sheetbooks": [],
+        "today_rows": [],
+        "today_date_text": timezone.localdate().strftime("%Y-%m-%d"),
+        "quick_actions": [],
+    }
+
+    if not request.user.is_authenticated or not getattr(settings, "SHEETBOOK_ENABLED", False):
+        return {"sheetbook_workspace": workspace}
+
+    try:
+        from sheetbook.models import Sheetbook, SheetCell, SheetColumn, SheetTab
+    except Exception:
+        logger.exception("[SheetbookWorkspace] sheetbook import failed")
+        return {"sheetbook_workspace": workspace}
+
+    try:
+        index_url = reverse("sheetbook:index")
+    except NoReverseMatch:
+        logger.exception("[SheetbookWorkspace] sheetbook:index route missing")
+        return {"sheetbook_workspace": workspace}
+
+    workspace["enabled"] = True
+    workspace["create_url"] = f"{index_url}?source=workspace_home_create"
+    workspace["copy_url"] = f"{index_url}?source=workspace_home_copy"
+    try:
+        workspace["create_action_url"] = reverse("sheetbook:quick_create")
+    except NoReverseMatch:
+        workspace["create_action_url"] = ""
+    try:
+        workspace["copy_action_url"] = reverse("sheetbook:quick_copy")
+    except NoReverseMatch:
+        workspace["copy_action_url"] = ""
+
+    recent_qs = (
+        Sheetbook.objects
+        .filter(owner=request.user)
+        .prefetch_related("tabs")
+        .order_by("-updated_at", "-id")[:5]
+    )
+    recent_items = []
+    for item in recent_qs:
+        detail_url = reverse("sheetbook:detail", kwargs={"pk": item.pk})
+        recent_items.append(
+            {
+                "id": item.id,
+                "title": item.title,
+                "updated_at": item.updated_at,
+                "tab_count": item.tabs.count(),
+                "href": f"{detail_url}?source=workspace_home_recent",
+            }
+        )
+    workspace["recent_sheetbooks"] = recent_items
+    workspace["entry_url"] = recent_items[0]["href"] if recent_items else f"{index_url}?source=workspace_home_entry"
+
+    quick_action_specs = [
+        ("간편 수합", "collect:dashboard", "fa-solid fa-inbox"),
+        ("동의서", "consent:dashboard", "fa-solid fa-file-signature"),
+        ("배부 체크", "handoff:dashboard", "fa-solid fa-list-check"),
+        ("안내문", "noticegen:main", "fa-solid fa-newspaper"),
+    ]
+    quick_actions = []
+    for title, route_name, icon in quick_action_specs:
+        try:
+            href = reverse(route_name)
+        except NoReverseMatch:
+            continue
+        quick_actions.append({"title": title, "href": href, "icon": icon})
+    workspace["quick_actions"] = quick_actions
+
+    today = timezone.localdate()
+    date_cells = list(
+        SheetCell.objects.filter(
+            row__tab__sheetbook__owner=request.user,
+            row__tab__tab_type=SheetTab.TYPE_GRID,
+            column__column_type=SheetColumn.TYPE_DATE,
+            value_date=today,
+        )
+        .select_related("row__tab__sheetbook")
+        .order_by("-row__tab__sheetbook__updated_at", "row__sort_order", "id")[:6]
+    )
+
+    row_ids = [cell.row_id for cell in date_cells]
+    title_map = {}
+    if row_ids:
+        text_cells = (
+            SheetCell.objects
+            .filter(row_id__in=row_ids, column__column_type=SheetColumn.TYPE_TEXT)
+            .select_related("column")
+            .order_by("row_id", "column__sort_order", "id")
+        )
+        for cell in text_cells:
+            cleaned = (cell.value_text or "").strip()
+            if cleaned and cell.row_id not in title_map:
+                title_map[cell.row_id] = cleaned
+
+    today_rows = []
+    for date_cell in date_cells:
+        row = date_cell.row
+        tab = row.tab
+        sheetbook = tab.sheetbook
+        title = title_map.get(row.id) or f"{tab.name} 일정"
+        today_rows.append(
+            {
+                "title": title,
+                "sheetbook_title": sheetbook.title,
+                "href": f"{reverse('sheetbook:detail', kwargs={'pk': sheetbook.id})}?tab={tab.id}&source=workspace_home_today",
+            }
+        )
+    workspace["today_rows"] = today_rows
+    _record_sheetbook_workspace_metric(
+        request,
+        "workspace_home_opened",
+        metadata={
+            "recent_sheetbook_count": len(recent_items),
+            "today_row_count": len(today_rows),
+            "quick_action_count": len(quick_actions),
+        },
+    )
+
+    return {"sheetbook_workspace": workspace}
+
+
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
@@ -642,6 +795,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'page_obj': page_obj,
             'feed_scope': feed_scope,
             **_build_today_context(request),
+            **_build_sheetbook_workspace_context(request),
             **_build_home_student_games_qr_context(request),
         })
 

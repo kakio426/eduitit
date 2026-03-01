@@ -47,6 +47,7 @@ CACHE_REUSE_THRESHOLD = 0.88
 CACHE_SIMILAR_HINT_THRESHOLD = 0.55
 SIMILAR_CANDIDATE_LIMIT = 60
 FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
 def _result_defaults():
@@ -61,6 +62,21 @@ def _result_defaults():
     }
 
 
+def _peek_sheetbook_seed(request, token, *, expected_action=""):
+    token = (token or "").strip()
+    if not token:
+        return None
+    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
+
+
 def _get_service():
     service = Product.objects.filter(launch_route_name="noticegen:main").first()
     if service:
@@ -68,13 +84,32 @@ def _get_service():
     return Product.objects.filter(title=SERVICE_TITLE).first()
 
 
-def _build_page_context():
+def _build_page_context(*, prefill=None):
+    prefill = prefill or {}
+    target = (prefill.get("target") or "").strip()
+    topic = (prefill.get("topic") or "").strip()
+    length_style = (prefill.get("length_style") or "").strip()
+    keywords = (prefill.get("keywords") or "").strip()
+    source_label = (prefill.get("source_label") or "").strip()
+
+    if target not in TARGET_LABELS:
+        target = TARGET_CHOICES[0][0]
+    if topic not in TOPIC_LABELS:
+        topic = TOPIC_CHOICES[0][0]
+    if length_style not in LENGTH_LABELS:
+        length_style = LENGTH_MEDIUM
+
     return {
         "service": _get_service(),
         "target_options": TARGET_CHOICES,
         "topic_options": TOPIC_CHOICES,
         "context_options": CONTEXT_CHOICES,
         "length_options": LENGTH_CHOICES,
+        "initial_target": target,
+        "initial_topic": topic,
+        "initial_length_style": length_style,
+        "initial_keywords": keywords,
+        "prefill_source_label": source_label,
     }
 
 
@@ -252,7 +287,28 @@ def _render_result(request, payload, *, status=200):
 
 
 def main(request):
-    context = _build_page_context()
+    prefill = {}
+    seed_token = (request.GET.get("sb_seed") or "").strip()
+    seed = _peek_sheetbook_seed(request, seed_token, expected_action="notice")
+    if isinstance(seed, dict):
+        seed_data = seed.get("data", {}) if isinstance(seed.get("data"), dict) else {}
+        prefill = {
+            "target": seed_data.get("target"),
+            "topic": seed_data.get("topic"),
+            "length_style": seed_data.get("length_style"),
+            "keywords": seed_data.get("keywords"),
+            "source_label": "교무수첩에서 가져온 내용을 넣어두었어요.",
+        }
+    else:
+        prefill = {
+            "target": request.GET.get("target"),
+            "topic": request.GET.get("topic"),
+            "length_style": request.GET.get("length_style"),
+            "keywords": request.GET.get("keywords"),
+            "source_label": "미리 입력된 내용을 확인해 주세요." if request.GET.get("keywords") else "",
+        }
+
+    context = _build_page_context(prefill=prefill)
     context.update(_result_defaults())
     return render(request, "noticegen/main.html", context)
 

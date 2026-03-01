@@ -198,3 +198,25 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertNotEqual(base["key_hash"], short["key_hash"])
+
+    def test_main_prefills_from_sheetbook_seed(self):
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            "seed-token": {
+                "action": "notice",
+                "data": {
+                    "target": "parent",
+                    "topic": "notice",
+                    "length_style": "medium",
+                    "keywords": "체험학습 준비물 안내",
+                },
+            }
+        }
+        session.save()
+
+        response = self.client.get(f"{reverse('noticegen:main')}?sb_seed=seed-token")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교무수첩에서 가져온 내용을 넣어두었어요.")
+        self.assertContains(response, "체험학습 준비물 안내")
+        self.assertEqual(response.context["initial_target"], "parent")
+        self.assertEqual(response.context["initial_topic"], "notice")

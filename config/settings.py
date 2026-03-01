@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
+    'sheetbook.apps.SheetbookConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -442,6 +443,25 @@ AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
+SHEETBOOK_ENABLED = os.environ.get('SHEETBOOK_ENABLED', 'False').lower() in ('true', '1', 'yes')
+SHEETBOOK_BETA_USERNAMES = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USERNAMES', '').split(',') if item.strip()]
+SHEETBOOK_BETA_EMAILS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_EMAILS', '').split(',') if item.strip()]
+SHEETBOOK_BETA_USER_IDS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USER_IDS', '').split(',') if item.strip()]
+SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES = int(os.environ.get('SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES', '50'))
+SHEETBOOK_PERIOD_FIRST_CLASS_HOUR = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_HOUR', '9'))
+SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE', '0'))
+SHEETBOOK_GRID_BULK_BATCH_SIZE = int(os.environ.get('SHEETBOOK_GRID_BULK_BATCH_SIZE', '400'))
+SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE = float(os.environ.get('SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE', '60'))
+SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE = float(
+    os.environ.get('SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE', '50')
+)
+SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE = int(os.environ.get('SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE', '5'))
+SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE = int(
+    os.environ.get('SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE', '5')
+)
+SHEETBOOK_ROLLOUT_STRICT_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_STRICT_STARTUP', 'False').lower() in ('true', '1', 'yes')
+SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP', 'False').lower() in ('true', '1', 'yes')
+SHEETBOOK_ROLLOUT_RECOMMEND_DAYS = int(os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_DAYS', '14'))
 ONBOARDING_EXEMPT_PATH_PREFIXES = []
 if TESTING:
     ONBOARDING_EXEMPT_PATH_PREFIXES.append('/autoarticle/')

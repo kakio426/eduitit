@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -433,6 +434,76 @@ def _build_shared_event_groups(events):
     return grouped
 
 
+def _resolve_sheetbook_calendar_entry_for_user(user):
+    result = {
+        "sheetbook_enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+        "sheetbook_exists": False,
+        "sheetbook_title": "",
+        "sheetbook_entry_url": "",
+        "sheetbook_index_url": "",
+    }
+    if not result["sheetbook_enabled"]:
+        return result
+
+    try:
+        from sheetbook.models import Sheetbook, SheetTab
+    except Exception:
+        logger.exception(
+            "[ClassCalendar] sheetbook import failed for bridge user_id=%s",
+            getattr(user, "id", None),
+        )
+        return result
+
+    try:
+        result["sheetbook_index_url"] = reverse("sheetbook:index")
+    except Exception:
+        return result
+
+    sheetbook = (
+        Sheetbook.objects.filter(owner=user)
+        .prefetch_related("tabs")
+        .order_by("-updated_at", "-id")
+        .first()
+    )
+    if not sheetbook:
+        return result
+
+    calendar_tab = (
+        sheetbook.tabs.filter(tab_type=SheetTab.TYPE_CALENDAR)
+        .order_by("sort_order", "id")
+        .first()
+    )
+    detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.id})
+    if calendar_tab:
+        detail_url = f"{detail_url}?tab={calendar_tab.id}"
+
+    result.update(
+        {
+            "sheetbook_exists": True,
+            "sheetbook_title": sheetbook.title,
+            "sheetbook_entry_url": detail_url,
+        }
+    )
+    return result
+
+
+@login_required
+def main_entry(request):
+    if not getattr(settings, "SHEETBOOK_ENABLED", False):
+        return main_view(request)
+
+    if request.GET.get("legacy") == "1":
+        return main_view(request)
+
+    bridge_context = _resolve_sheetbook_calendar_entry_for_user(request.user)
+    bridge_context.update(
+        {
+            "legacy_calendar_url": reverse("classcalendar:legacy_main"),
+        }
+    )
+    return render(request, "classcalendar/sheetbook_entry.html", bridge_context)
+
+
 @login_required
 def main_view(request):
     _sync_integrations_if_needed(request)
@@ -467,7 +538,7 @@ def collaborator_add(request):
     lookup = (request.POST.get("collaborator_query") or "").strip()
     if not lookup:
         messages.error(request, "협업자로 추가할 사용자의 가입시 적었던 이메일을 입력해 주세요.")
-        return redirect("classcalendar:main")
+        return redirect("classcalendar:legacy_main")
 
     collaborator = (
         User.objects.filter(email__iexact=lookup)
@@ -476,10 +547,10 @@ def collaborator_add(request):
     )
     if not collaborator:
         messages.error(request, "해당 이메일의 사용자를 찾지 못했습니다. 가입시 적었던 이메일인지 확인해 주세요.")
-        return redirect("classcalendar:main")
+        return redirect("classcalendar:legacy_main")
     if collaborator.id == request.user.id:
         messages.error(request, "본인은 협업자로 추가할 수 없습니다.")
-        return redirect("classcalendar:main")
+        return redirect("classcalendar:legacy_main")
 
     can_edit = _parse_bool_value(request.POST.get("can_edit", "true"))
     relation, created = CalendarCollaborator.objects.update_or_create(
@@ -492,7 +563,7 @@ def collaborator_add(request):
     else:
         mode_text = "편집 가능" if relation.can_edit else "읽기 전용"
         messages.info(request, f"{_display_user_name(collaborator)} 님 협업 권한을 {mode_text}으로 업데이트했습니다.")
-    return redirect("classcalendar:main")
+    return redirect("classcalendar:legacy_main")
 
 
 @login_required
@@ -505,12 +576,12 @@ def collaborator_remove(request, collaborator_id):
     )
     if not relation:
         messages.error(request, "협업자 정보를 찾지 못했습니다.")
-        return redirect("classcalendar:main")
+        return redirect("classcalendar:legacy_main")
 
     collaborator_name = _display_user_name(relation.collaborator)
     relation.delete()
     messages.info(request, f"{collaborator_name} 님의 협업 권한을 해제했습니다.")
-    return redirect("classcalendar:main")
+    return redirect("classcalendar:legacy_main")
 
 
 @login_required
@@ -521,7 +592,7 @@ def share_enable(request):
         setting.share_enabled = True
         setting.save(update_fields=["share_enabled", "updated_at"])
     messages.success(request, "공유 링크를 활성화했습니다.")
-    return redirect("classcalendar:main")
+    return redirect("classcalendar:legacy_main")
 
 
 @login_required
@@ -532,7 +603,7 @@ def share_disable(request):
         setting.share_enabled = False
         setting.save(update_fields=["share_enabled", "updated_at"])
     messages.info(request, "공유 링크를 비활성화했습니다.")
-    return redirect("classcalendar:main")
+    return redirect("classcalendar:legacy_main")
 
 
 @login_required
@@ -543,7 +614,7 @@ def share_rotate(request):
     setting.share_enabled = True
     setting.save(update_fields=["share_uuid", "share_enabled", "updated_at"])
     messages.success(request, "공유 링크를 재발급했습니다.")
-    return redirect("classcalendar:main")
+    return redirect("classcalendar:legacy_main")
 
 
 @require_GET

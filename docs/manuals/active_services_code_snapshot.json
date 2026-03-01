@@ -1,0 +1,1059 @@
+[
+  {
+    "id": 121,
+    "title": "반짝반짝 우리반 알림판",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "dutyticker",
+    "launch_url": "/products/dutyticker/",
+    "external_url": "",
+    "lead_text": "선생님, 저 지금 뭐해요? 우리 반 아이들이 할 일을 잊지 않도록 화면으로 챙겨주세요.",
+    "description": "\"선생님, 저 청소 당번인 거 깜빡했어요!\" 이런 말, 이제 그만 듣고 싶으시죠? 교실 TV에 '반짝반짝 우리반 알림판'을 띄워두세요. 자신의 이름과 해야 할 일이 화면에 계속 보이니, 아이들이 선생님 잔소리 없이도 스스로 할 일을 기억하고 실천합니다.",
+    "solve_text": "학급 소식을 빠르게 공유해요",
+    "result_text": "알림판 공지 카드",
+    "time_text": "2분",
+    "features": [
+      {
+        "title": "한눈에 보는 역할표",
+        "description": "현재 누가 어떤 역할을 맡고 있는지 큼직한 화면으로 보여주어 아이들이 잊지 않습니다.",
+        "icon": "fa-solid fa-tv"
+      },
+      {
+        "title": "스스로 챙기는 책임감",
+        "description": "자신의 이름이 화면에 떠 있으니 선생님의 지시 없이도 스스로 당번 활동을 시작합니다.",
+        "icon": "fa-solid fa-user-check"
+      },
+      {
+        "title": "활동 집중 타이머",
+        "description": "청소 시간이나 쉬는 시간 등 활동 시간을 화면에 함께 띄워 효율적인 시간 관리를 돕습니다.",
+        "icon": "fa-solid fa-stopwatch"
+      }
+    ]
+  },
+  {
+    "id": 122,
+    "title": "왁자지껄 교실 윷놀이",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "yut_game",
+    "launch_url": "/products/yut/",
+    "external_url": "",
+    "lead_text": "준비물도 뒷정리도 필요 없어요. 커다란 화면 속에서 다 함께 즐기는 우리 전통 놀이!",
+    "description": "창의적 체험활동 시간이나 비 오는 날 체육 시간, 무엇을 할지 고민이신가요? 준비물 없이 화면 하나로 즐기는 '왁자지껄 교실 윷놀이'로 우리 반의 단합력을 높여보세요. 아이들의 환호성으로 교실이 가득 찰 거예요.",
+    "solve_text": "교실 분위기를 바로 띄워요",
+    "result_text": "실시간 윷놀이 화면",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "팀 대항전 모드",
+        "description": "모둠별로 팀을 나누어 박진감 넘치는 대결을 펼칠 수 있습니다.",
+        "icon": "fa-solid fa-people-group"
+      },
+      {
+        "title": "리얼한 윷 던지기",
+        "description": "터치 한 번으로 윷을 던지는 쫄깃한 긴장감을 그대로 구현했습니다.",
+        "icon": "fa-solid fa-hand-back-fist"
+      },
+      {
+        "title": "자동 말 이동 시스템",
+        "description": "복잡한 윷판 규칙을 몰라도 AI가 알아서 말을 놓아줍니다.",
+        "icon": "fa-solid fa-robot"
+      }
+    ]
+  },
+  {
+    "id": 123,
+    "title": "토닥토닥 선생님 운세",
+    "service_type": "counsel",
+    "is_guest_allowed": false,
+    "launch_route_name": "fortune:saju",
+    "launch_url": "/fortune/",
+    "external_url": "",
+    "lead_text": "지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.",
+    "description": "타고난 나의 기질과 학생들과의 케미, 그리고 2026년 운세까지! 명리학 전문가가 분석하는 선생님만을 위한 일대일 맞춤 운세 서비스를 만나보세요.",
+    "solve_text": "오늘의 운세를 가볍게 확인해요",
+    "result_text": "운세 카드",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "교직 생활 기질 분석",
+        "description": "나의 타고난 성향을 자연에 비유하여 교사로서의 강점과 보완점을 콕 짚어드립니다.",
+        "icon": "fa-solid fa-chalkboard-user"
+      },
+      {
+        "title": "학생 지도 & 케미 분석",
+        "description": "아이들에게 비춰지는 나의 모습과 딱 맞는 학급 경영 및 상담 스타일을 제안합니다.",
+        "icon": "fa-solid fa-people-roof"
+      },
+      {
+        "title": "2026년 운세 & 힐링",
+        "description": "올해의 핵심 흐름부터 나를 지켜줄 행운 아이템과 힐링 팁을 꼼꼼히 챙겨드립니다.",
+        "icon": "fa-solid fa-calendar-check"
+      }
+    ]
+  },
+  {
+    "id": 124,
+    "title": "가뿐하게 서명 톡",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "signatures:list",
+    "launch_url": "/signatures/",
+    "external_url": "",
+    "lead_text": "바쁜 쉬는 시간, 결재판 들고 교무실 내려갈 필요 없어요. 내 자리에서 링크 하나로 서명 끝!",
+    "description": "\"연수 때마다 종이 명단 돌리고 사인받기 귀찮으셨죠?\" 이제 참여 링크 공유로 간편하게 서명을 수집하세요. 연수 상세 화면에서 서명 현황을 확인하고, 출력 화면에서 인쇄/PDF 저장으로 문서를 보관할 수 있습니다.",
+    "solve_text": "서명을 온라인으로 간편 수집해요",
+    "result_text": "출력용 서명 문서",
+    "time_text": "2분",
+    "features": [
+      {
+        "title": "링크 공유로 빠른 서명 수집",
+        "description": "연수 상세 화면의 참여 링크를 복사해 메신저/문자/게시글로 배포할 수 있습니다.",
+        "icon": "fa-solid fa-qrcode"
+      },
+      {
+        "title": "실시간 참석 확인",
+        "description": "누가 서명을 완료했는지 상세 화면에서 즉시 확인하고 미완료 대상을 관리할 수 있습니다.",
+        "icon": "fa-solid fa-users"
+      },
+      {
+        "title": "출석부 출력 및 PDF 저장",
+        "description": "출력 화면에서 인쇄하거나 브라우저의 PDF 저장 기능으로 결과 문서를 보관할 수 있습니다.",
+        "icon": "fa-solid fa-file-pdf"
+      }
+    ]
+  },
+  {
+    "id": 126,
+    "title": "몽글몽글 미술 수업",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "artclass:setup",
+    "launch_url": "/artclass/",
+    "external_url": "",
+    "lead_text": "유튜브 미술 영상을 분석해서 단계별 수업 안내를 자동 생성하는 스마트 도우미",
+    "description": "'이 부분에서 잠깐 멈추고 따라 그려보세요'라고 일일이 설명하기 힘드셨죠? 이제 유튜브 미술 영상 URL만 넣으면 AI가 영상을 분석하여 학생들이 따라하기 좋은 단계별 안내를 자동으로 만들어줍니다. 교실 TV에 띄워놓고 학생들과 함께 차근차근 작품을 완성해보세요.",
+    "solve_text": "미술 수업 아이디어를 빠르게 준비해요",
+    "result_text": "수업 활동안",
+    "time_text": "3분",
+    "features": [
+      {
+        "title": "AI 단계별 안내 생성",
+        "description": "유튜브 영상의 자막과 내용을 분석하여 학생 눈높이에 맞는 단계별 수업 가이드를 자동 생성합니다.",
+        "icon": "fa-solid fa-wand-magic-sparkles"
+      },
+      {
+        "title": "교실 수업 모드",
+        "description": "생성된 단계를 교실 TV에 띄워놓고 버튼 하나로 다음 단계로 넘어가며 수업을 진행할 수 있습니다.",
+        "icon": "fa-solid fa-tv"
+      },
+      {
+        "title": "타이머 연동",
+        "description": "각 단계별 작업 시간을 설정하여 학생들이 충분히 따라할 시간을 확보할 수 있습니다.",
+        "icon": "fa-solid fa-clock"
+      }
+    ]
+  },
+  {
+    "id": 127,
+    "title": "글솜씨 뚝딱! 소식지",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "autoarticle:create",
+    "launch_url": "/autoarticle/",
+    "external_url": "",
+    "lead_text": "글 쓰는 게 막막할 때 키워드만 톡! 학부모님이 감동하는 멋진 소식지를 선사해요.",
+    "description": "복잡한 기사 작성을 버튼 클릭 몇 번으로 해결하세요. 수업 소식, 학교 행사 등을 멋진 기사 형태로 변환하여 학부모님과 공유할 수 있습니다.",
+    "solve_text": "학교 소식지를 AI로 작성해요",
+    "result_text": "기사/PPT 초안",
+    "time_text": "5분",
+    "features": [
+      {
+        "title": "AI 자동 글쓰기",
+        "description": "주제만 입력하면 Gemini AI가 흐름에 맞는 전문적인 글을 생성합니다.",
+        "icon": "fa-solid fa-wand-magic-sparkles"
+      },
+      {
+        "title": "이미지 결합",
+        "description": "관련 이미지를 업로드하면 기사 본문에 적절히 배치하여 가독성을 높입니다.",
+        "icon": "fa-solid fa-image"
+      },
+      {
+        "title": "다양한 내보내기",
+        "description": "생성된 결과물을 HTML 또는 PPT 형식으로 변환하여 바로 활용하세요.",
+        "icon": "fa-solid fa-file-export"
+      }
+    ]
+  },
+  {
+    "id": 128,
+    "title": "유튜브 탈알고리즘",
+    "service_type": "etc",
+    "is_guest_allowed": false,
+    "launch_route_name": "",
+    "launch_url": "",
+    "external_url": "https://motube-woad.vercel.app/",
+    "lead_text": "내 피드에 갇힌 시야를 넓혀보세요. 추천 영상 너머, 전 세계 친구들이 진짜로 보고 있는 세상을 만나요.",
+    "description": "대형 언론사나 유명 유튜버가 아닌, 사람들의 진심 어린 사랑을 받고 있는 숨은 보석 같은 유튜브 채널을 매일매일 발견하세요. 알고리즘에 갇히지 않고 새로운 콘텐츠를 만나는 특별한 경험을 선사합니다.",
+    "solve_text": "교육 영상 탐색을 더 효율적으로 해요",
+    "result_text": "추천 영상 목록",
+    "time_text": "2분",
+    "features": [
+      {
+        "title": "숨은 보석 발굴",
+        "description": "대형 채널을 제외하고 진짜 사랑받는 중소형 크리에이터들의 채널을 매일 추천합니다.",
+        "icon": "fa-solid fa-gem"
+      },
+      {
+        "title": "진심 어린 큐레이션",
+        "description": "조회수가 아닌 진정성으로 선별된 채널들을 통해 새로운 영감을 얻으세요.",
+        "icon": "fa-solid fa-heart"
+      }
+    ]
+  },
+  {
+    "id": 129,
+    "title": "학교 통합 지원 스쿨잇",
+    "service_type": "etc",
+    "is_guest_allowed": false,
+    "launch_route_name": "",
+    "launch_url": "",
+    "external_url": "https://schoolit.shop/",
+    "lead_text": "복잡한 채용 업무와 업체 선정은 그만! AI가 학교에 딱 맞는 선생님은 물론, 신뢰할 수 있는 학교 행사 업체까지 한곳에서 연결해 드립니다.",
+    "description": "\"갑자기 대체 교사는 어디서 구하지?\", \"믿을만한 체험학습 업체는 어디일까?\" 매번 반복되는 채용난과 업체 선정 스트레스에서 벗어나세요. 스쿨잇은 학교의 행정 부담을 획기적으로 줄여주기 위해 탄생했습니다. AI를 통한 스마트한 채용 상담부터 검증된 행사 업체 매칭까지, 학교 운영에 필요한 모든 연결을 이 한 곳에서 쉽고 빠르게 해결할 수 있습니다.",
+    "solve_text": "학교 업무 도구를 한곳에서 관리해요",
+    "result_text": "통합 대시보드",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "3분 간편 공고",
+        "description": "과목, 시간 등 조건만 입력하면 스쿨잇이 복잡한 채용 공고를 뚝딱 완성합니다.",
+        "icon": "fa-solid fa-file-pen"
+      },
+      {
+        "title": "AI 행정 지원",
+        "description": "채용 과정이나 행정 절차에 대해 궁금한 점이 있다면 24시간 대기 중인 AI 비서에게 바로 물어보고 해결하세요.",
+        "icon": "fa-solid fa-robot"
+      },
+      {
+        "title": "행사 업체 일괄 검색",
+        "description": "체험학습, 진로체험활동, 스포츠데이 등 학교 행사 업체를 여기저기 연락할 필요 없이 스쿨잇에서 한 번에 찾아볼 수 있습니다.",
+        "icon": "fa-solid fa-magnifying-glass"
+      }
+    ]
+  },
+  {
+    "id": 131,
+    "title": "AI 도구 가이드",
+    "service_type": "edutech",
+    "is_guest_allowed": false,
+    "launch_route_name": "tool_guide",
+    "launch_url": "/tools/",
+    "external_url": "",
+    "lead_text": "상황별로 딱 맞는 AI 도구를 추천해드려요.",
+    "description": "수업 준비부터 생활 지도까지! 복잡한 AI 툴들 사이에서 선생님께 꼭 필요한 것만 골라 사용법과 함께 안내합니다.",
+    "solve_text": "필요한 AI 도구를 바로 찾아요",
+    "result_text": "도구별 사용 가이드",
+    "time_text": "2분",
+    "features": []
+  },
+  {
+    "id": 132,
+    "title": "AI 프롬프트 레시피",
+    "service_type": "edutech",
+    "is_guest_allowed": false,
+    "launch_route_name": "prompt_lab",
+    "launch_url": "/prompts/",
+    "external_url": "",
+    "lead_text": "복사해서 바로 쓰는 검증된 AI 주문서.",
+    "description": "AI 전문가의 노하우가 담긴 프롬프트를 내 것으로! 시행착오 없이 바로 수업에 적용 가능한 강력한 프롬프트들을 제공합니다.",
+    "solve_text": "수업용 프롬프트를 바로 활용해요",
+    "result_text": "프롬프트 템플릿",
+    "time_text": "1분",
+    "features": []
+  },
+  {
+    "id": 135,
+    "title": "쌤BTI",
+    "service_type": "counsel",
+    "is_guest_allowed": true,
+    "launch_route_name": "ssambti:main",
+    "launch_url": "/ssambti/",
+    "external_url": "",
+    "lead_text": "나는 어떤 선생님일까? 🦁",
+    "description": "12가지 질문으로 알아보는 나의 교육 스타일! MBTI 기반 티처블 동물원에서 나와 닮은 동물을 찾아보세요.",
+    "solve_text": "나의 교사 유형을 알아봐요",
+    "result_text": "MBTI 결과 카드",
+    "time_text": "5분",
+    "features": [
+      {
+        "title": "12가지 질문 MBTI",
+        "description": "MBTI 이론 기반의 12가지 질문으로 교사의 성향을 정확하게 분석합니다. 빠르고 재미있게 나의 교육 스타일을 발견하세요.",
+        "icon": "🎯"
+      },
+      {
+        "title": "16가지 동물 캐릭터",
+        "description": "교사 유형을 16가지 귀여운 동물 캐릭터로 표현합니다. 사자, 펭귄, 코알라 등 나와 닮은 동물을 만나보세요!",
+        "icon": "🦁"
+      },
+      {
+        "title": "상세한 성향 분석",
+        "description": "교실 운영 스타일, 학생 소통 방식, 업무 처리 패턴 등 교사로서의 강점과 특징을 자세히 알려드립니다.",
+        "icon": "📊"
+      }
+    ]
+  },
+  {
+    "id": 136,
+    "title": "두뇌 풀가동! 교실 체스",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "chess:index",
+    "launch_url": "/chess/",
+    "external_url": "",
+    "lead_text": "준비물 NO! 설치 NO! 브라우저만 있으면 세계 최강 AI와 체스 한판 어때요? ♟️",
+    "description": "선생님, 비 오는 날이나 창체 시간에 아이들과 체스 한판 어떠신가요? \"두뇌 풀가동! 교실 체스\"는 별도의 설치나 가입 없이 바로 즐길 수 있는 체스 게임입니다. 친구와 함께하는 로컬 대전은 물론, 세계 최강 AI Stockfish와 실력을 겨뤄볼 수 있습니다. 규칙을 몰라도 걱정 마세요! 상세한 가이드가 함께 제공됩니다.",
+    "solve_text": "교실 전략 게임 수업을 시작해요",
+    "result_text": "체스 학습 화면",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "무료 AI 대전 (Stockfish)",
+        "description": "세계 최강급 AI 엔진 Stockfish.js를 탑재했습니다. 4단계 난이도(초급~최강)로 자신의 실력에 맞춰 도전해보세요.",
+        "icon": "🤖"
+      },
+      {
+        "title": "1대1 로컬 대전",
+        "description": "친구와 나란히 앉아 하나의 화면으로 즐기는 클래식한 로컬 대전 모드를 지원합니다.",
+        "icon": "🤝"
+      },
+      {
+        "title": "왕초보 가이드",
+        "description": "기초적인 말의 이동부터 캐슬링, 앙파상 같은 특수 규칙까지! 초보자도 금방 배울 수 있는 상세한 가이드를 제공합니다.",
+        "icon": "📜"
+      }
+    ]
+  },
+  {
+    "id": 137,
+    "title": "HWP to PDF 변환기",
+    "service_type": "work",
+    "is_guest_allowed": true,
+    "launch_route_name": "",
+    "launch_url": "",
+    "external_url": "https://drive.google.com/file/d/1mKZuOrkWQzDMSaghIYoWAhPK5rRDn02l/view?usp=sharing",
+    "lead_text": "한글 파일을 PDF로 간편하게 변환하세요 📄",
+    "description": "한글(Hancom Office)의 OLE Automation 기능을 활용하여 HWP/HWPX 파일을 PDF로 빠르고 간편하게 변환하는 경량 데스크톱 프로그램입니다. 정품 한글이 설치된 Windows 환경에서 작동하며, 별도의 서버 없이 로컬에서 바로 실행됩니다.\n\n[주의사항]\n- 본 프로그램의 상업적 목적의 재배포를 금지합니다.\n- 본 프로그램 사용 중 발생하는 모든 문제(데이터 손실, 손상 등)에 대한 책임은 사용자 본인에게 있습니다.\n- 본 프로그램은 한글과컴퓨터(주)와 무관하며, 정품 한글(Hancom Office) 설치가 필요합니다.",
+    "solve_text": "한글 문서를 PDF로 변환해요",
+    "result_text": "PDF 파일",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "빠른 변환",
+        "description": "한글 OLE Automation을 활용한 고품질 PDF 변환",
+        "icon": "⚡"
+      },
+      {
+        "title": "로컬 실행",
+        "description": "서버 불필요, 단일 exe 파일로 바로 실행",
+        "icon": "🖥️"
+      },
+      {
+        "title": "HWP/HWPX 지원",
+        "description": "HWP 및 HWPX 형식 모두 변환 가능",
+        "icon": "📂"
+      }
+    ]
+  },
+  {
+    "id": 138,
+    "title": "우리반BTI",
+    "service_type": "counsel",
+    "is_guest_allowed": false,
+    "launch_route_name": "studentmbti:landing",
+    "launch_url": "/studentmbti/",
+    "external_url": "",
+    "lead_text": "우리 반 아이들은 어떤 동물 친구들일까요? 재미있는 설문으로 알아보는 교육용 성향 검사 도구입니다.",
+    "description": "MBTI 기반의 12가지 질문을 통해 학생들의 학교생활 스타일을 16가지 귀여운 동물 캐릭터로 분류해 드립니다.\n학생들의 강점, 학급에서의 역할, 그리고 선생님을 위한 맞춤형 상담 가이드와 학급 경영 팁까지 제공하여 더욱 행복하고 활기찬 교실을 만들 수 있도록 도와드립니다.",
+    "solve_text": "학생 성향을 재미있게 파악해요",
+    "result_text": "캐릭터 유형 결과",
+    "time_text": "3분",
+    "features": [
+      {
+        "title": "QR코드로 간편 참여",
+        "description": "학생들은 회원가입 없이 QR코드 스캔만으로 바로 참여할 수 있어요. 이름만 입력하면 끝!",
+        "icon": "📱"
+      },
+      {
+        "title": "16가지 동물 캐릭터",
+        "description": "거북이, 강아지, 판다, 돌고래 등 귀여운 동물 캐릭터로 성격 유형을 재미있게 알려줍니다.",
+        "icon": "🐾"
+      },
+      {
+        "title": "교사용 실시간 대시보드",
+        "description": "학생들의 참여 현황과 결과를 실시간으로 확인하고, 엑셀로 내보내기까지 한번에!",
+        "icon": "📊"
+      }
+    ]
+  },
+  {
+    "id": 139,
+    "title": "교사 백과사전",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "encyclopedia:landing",
+    "launch_url": "/encyclopedia/",
+    "external_url": "",
+    "lead_text": "AI와 함께하는 교육 매뉴얼의 혁신, NotebookLM 기반 교사 백과사전입니다.",
+    "description": "Eduitit의 모든 기능과 교육적 활용 팁을 한눈에 확인하세요. Google NotebookLM 기술을 활용하여 방대한 매뉴얼도 질문 하나로 즉시 해결할 수 있습니다.",
+    "solve_text": "NotebookLM을 공유해요",
+    "result_text": "공유 노트북 링크",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "지능형 검색",
+        "description": "매뉴얼의 방대한 내용 중 필요한 정보만 AI가 즉시 찾아줍니다.",
+        "icon": "fa-solid fa-magnifying-glass"
+      },
+      {
+        "title": "교육적 활용 가이드",
+        "description": "각 서비스별 학급 경영 및 수업 활용 팁을 제공합니다.",
+        "icon": "fa-solid fa-graduation-cap"
+      },
+      {
+        "title": "실시간 업데이트",
+        "description": "관리자가 업데이트하는 최신 기능 설명을 가장 빠르게 확인하세요.",
+        "icon": "fa-solid fa-bolt"
+      }
+    ]
+  },
+  {
+    "id": 140,
+    "title": "간편 수합",
+    "service_type": "work",
+    "is_guest_allowed": true,
+    "launch_route_name": "collect:landing",
+    "launch_url": "/collect/",
+    "external_url": "",
+    "lead_text": "QR 코드 하나로 파일·링크·텍스트를 간편하게 수합하세요!",
+    "description": "여러 선생님으로부터 파일이나 정보를 수합해야 할 때, 메신저로 하나하나 받지 마세요.\n수합 요청을 만들고 QR/코드를 공유하면, 참여자들은 비로그인으로 파일·링크·텍스트를 제출합니다.\n한 화면에서 모든 제출물을 확인하고 다운로드하세요!",
+    "solve_text": "문서와 의견 수합, 번거로운 일은 이제 저에게 맡겨주세요!",
+    "result_text": "정리된 제출 목록",
+    "time_text": "3분",
+    "features": [
+      {
+        "title": "QR 코드로 간편 제출",
+        "description": "참여자들은 회원가입 없이 QR코드 스캔이나 입장코드 입력만으로 바로 제출할 수 있어요.",
+        "icon": "📱"
+      },
+      {
+        "title": "파일·링크·텍스트 수합",
+        "description": "한글, 엑셀, PDF 등 파일은 물론 구글드라이브 링크와 텍스트까지 한 곳에서 수합합니다.",
+        "icon": "📁"
+      },
+      {
+        "title": "일괄 다운로드 & CSV",
+        "description": "제출된 파일을 ZIP으로 한번에 다운로드하고, 제출 목록을 CSV로 내보낼 수 있어요.",
+        "icon": "⬇️"
+      }
+    ]
+  },
+  {
+    "id": 141,
+    "title": "학교 예약 시스템",
+    "service_type": "classroom",
+    "is_guest_allowed": true,
+    "launch_route_name": "reservations:dashboard_landing",
+    "launch_url": "/reservations/dashboard/",
+    "external_url": "",
+    "lead_text": "복잡한 특별실 예약, 이제 클릭 한 번으로!",
+    "description": "과학실, 컴퓨터실 등 특별실 예약을 실시간으로 확인하고 간편하게 신청하세요. 선생님들의 업무가 줄어듭니다.",
+    "solve_text": "특별실 예약 충돌을 없애요",
+    "result_text": "예약 현황표",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "실시간 예약 현황",
+        "description": "다른 반의 예약 현황을 실시간으로 확인하고 중복 없이 신청하세요.",
+        "icon": "⚡"
+      },
+      {
+        "title": "모바일 최적화",
+        "description": "PC는 물론 모바일에서도 편리하게 시간표를 확인하고 예약할 수 있습니다.",
+        "icon": "📱"
+      },
+      {
+        "title": "관리자 편의성",
+        "description": "고정 수업 설정, 행사 기간 블랙아웃 등 관리자 기능으로 유연하게 운영하세요.",
+        "icon": "🛡️"
+      }
+    ]
+  },
+  {
+    "id": 142,
+    "title": "선생님 사주",
+    "service_type": "counsel",
+    "is_guest_allowed": false,
+    "launch_route_name": "fortune:saju",
+    "launch_url": "/fortune/",
+    "external_url": "",
+    "lead_text": "",
+    "description": "학교 현장에서 활용하는 사주 상담 도구",
+    "solve_text": "교사 맞춤 사주를 확인해요",
+    "result_text": "사주 분석 리포트",
+    "time_text": "3분",
+    "features": []
+  },
+  {
+    "id": 143,
+    "title": "최종최최종은 이제그만",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "version_manager:document_list",
+    "launch_url": "/version-manager/",
+    "external_url": "",
+    "lead_text": "업로드 한 번으로 최신본과 배포본을 분리 관리하세요.",
+    "description": "최종최최종은 이제그만은 교실 문서를 버전 단위로 자동 정리해 최신본과 공식 배포본을 분리 관리합니다. 선생님은 파일명을 신경 쓰지 않고 드롭만 하면 되고, 필요한 시점에 배포본 지정 버튼 한 번으로 공식본을 확정할 수 있습니다.",
+    "solve_text": "문서 최신본을 안전하게 관리해요",
+    "result_text": "버전 이력 문서",
+    "time_text": "2분",
+    "features": [
+      {
+        "title": "버전 자동 증가",
+        "description": "같은 문서 패키지 안에서 업로드할 때마다 v01, v02처럼 자동으로 버전이 올라갑니다.",
+        "icon": "🔢"
+      },
+      {
+        "title": "파일명·폴더 자동 정리",
+        "description": "날짜, 문서명, 버전이 포함된 규칙 파일명과 월별 폴더 구조를 자동으로 생성합니다.",
+        "icon": "📦"
+      },
+      {
+        "title": "최신본·배포본 분리",
+        "description": "최신본은 자동으로 갱신하고, 공식 배포본은 필요할 때만 수동 지정해 실수 배포를 막습니다.",
+        "icon": "✅"
+      }
+    ]
+  },
+  {
+    "id": 144,
+    "title": "두뇌 풀가동! 교실 장기",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "janggi:index",
+    "launch_url": "/janggi/",
+    "external_url": "",
+    "lead_text": "설치 없이 바로, 교실에서 장기 로컬 대전과 AI 대전을 시작하세요.",
+    "description": "두뇌 풀가동! 교실 장기는 체스 서비스 구조를 그대로 따라 로컬 대전과 AI 대전을 빠르게 시작할 수 있는 장기 서비스입니다. 수업 중 짧은 활동 시간에도 바로 접속해 게임을 진행하고, AI 난이도를 단계적으로 올리며 연습할 수 있습니다.",
+    "solve_text": "교실에서 장기를 쉽게 진행해요",
+    "result_text": "장기 게임 화면",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "한 화면 로컬 대전",
+        "description": "학생 둘이 같은 화면에서 번갈아 수를 두며 장기 기본기를 익힐 수 있습니다.",
+        "icon": "👥"
+      },
+      {
+        "title": "AI 대전 구조",
+        "description": "체스와 동일한 Worker+UCI 구조로 장기 AI 엔진을 연결할 수 있도록 설계했습니다.",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 가이드",
+        "description": "궁성, 차·마·상·포 핵심 이동 규칙을 수업용 문장으로 빠르게 확인할 수 있습니다.",
+        "icon": "📚"
+      }
+    ]
+  },
+  {
+    "id": 146,
+    "title": "동물 장기",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "fairy_games:play_dobutsu",
+    "launch_url": "/fairy-games/dobutsu/play/",
+    "external_url": "",
+    "lead_text": "동물 장기 게임을 로컬/AI 모드로 바로 시작",
+    "description": "Dobutsu Shogi 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "로컬 대결",
+        "description": "같은 화면에서 번갈아 두는 2인 모드",
+        "icon": "🎮"
+      },
+      {
+        "title": "AI 대결",
+        "description": "난이도별 단계 연습 모드",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 설명",
+        "description": "핵심 규칙을 한글로 빠르게 확인",
+        "icon": "📘"
+      }
+    ]
+  },
+  {
+    "id": 147,
+    "title": "커넥트 포",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "fairy_games:play_cfour",
+    "launch_url": "/fairy-games/cfour/play/",
+    "external_url": "",
+    "lead_text": "커넥트 포 게임을 로컬/AI 모드로 바로 시작",
+    "description": "Connect Four 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "로컬 대결",
+        "description": "같은 화면에서 번갈아 두는 2인 모드",
+        "icon": "🎮"
+      },
+      {
+        "title": "AI 대결",
+        "description": "난이도별 단계 연습 모드",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 설명",
+        "description": "핵심 규칙을 한글로 빠르게 확인",
+        "icon": "📘"
+      }
+    ]
+  },
+  {
+    "id": 148,
+    "title": "이솔레이션",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "fairy_games:play_isolation",
+    "launch_url": "/fairy-games/isolation/play/",
+    "external_url": "",
+    "lead_text": "이솔레이션 게임을 로컬/AI 모드로 바로 시작",
+    "description": "Isolation 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "로컬 대결",
+        "description": "같은 화면에서 번갈아 두는 2인 모드",
+        "icon": "🎮"
+      },
+      {
+        "title": "AI 대결",
+        "description": "난이도별 단계 연습 모드",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 설명",
+        "description": "핵심 규칙을 한글로 빠르게 확인",
+        "icon": "📘"
+      }
+    ]
+  },
+  {
+    "id": 149,
+    "title": "아택스",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "fairy_games:play_ataxx",
+    "launch_url": "/fairy-games/ataxx/play/",
+    "external_url": "",
+    "lead_text": "아택스 게임을 로컬/AI 모드로 바로 시작",
+    "description": "Ataxx 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "로컬 대결",
+        "description": "같은 화면에서 번갈아 두는 2인 모드",
+        "icon": "🎮"
+      },
+      {
+        "title": "AI 대결",
+        "description": "난이도별 단계 연습 모드",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 설명",
+        "description": "핵심 규칙을 한글로 빠르게 확인",
+        "icon": "📘"
+      }
+    ]
+  },
+  {
+    "id": 150,
+    "title": "브레이크스루",
+    "service_type": "game",
+    "is_guest_allowed": false,
+    "launch_route_name": "fairy_games:play_breakthrough",
+    "launch_url": "/fairy-games/breakthrough/play/",
+    "external_url": "",
+    "lead_text": "브레이크스루 게임을 로컬/AI 모드로 바로 시작",
+    "description": "Breakthrough 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "로컬 대결",
+        "description": "같은 화면에서 번갈아 두는 2인 모드",
+        "icon": "🎮"
+      },
+      {
+        "title": "AI 대결",
+        "description": "난이도별 단계 연습 모드",
+        "icon": "🤖"
+      },
+      {
+        "title": "규칙 설명",
+        "description": "핵심 규칙을 한글로 빠르게 확인",
+        "icon": "📘"
+      }
+    ]
+  },
+  {
+    "id": 151,
+    "title": "행복의 씨앗",
+    "service_type": "classroom",
+    "is_guest_allowed": true,
+    "launch_route_name": "happy_seed:landing",
+    "launch_url": "/happy-seed/",
+    "external_url": "",
+    "lead_text": "작은 실천을 씨앗으로, 교실의 성장을 꽃으로 연결하세요.",
+    "description": "행복의 씨앗은 초등 교실의 긍정 행동을 기록하고, 씨앗-꽃피움 흐름으로 동기를 설계하는 학급 운영 서비스입니다. 보호자 동의, 보상 확률 설정, 공개 꽃밭까지 한 번에 관리할 수 있습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "꽃피움 추첨 보상",
+        "description": "성실 참여와 우수 성취를 바탕으로 공평한 추첨 보상을 운영합니다.",
+        "icon": "🌸"
+      },
+      {
+        "title": "학급 꽃밭 대시보드",
+        "description": "교실 화면에서 아이들과 함께 성장 흐름을 시각적으로 확인할 수 있습니다.",
+        "icon": "🏡"
+      },
+      {
+        "title": "긍정 행동 기록",
+        "description": "학생의 작은 실천을 씨앗으로 쌓아, 참여 습관 형성을 돕습니다.",
+        "icon": "🌱"
+      }
+    ]
+  },
+  {
+    "id": 152,
+    "title": "동의서는 나에게 맡겨",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "consent:dashboard",
+    "launch_url": "/consent/",
+    "external_url": "",
+    "lead_text": "학부모 동의서 수합을 모바일 3단계로 간단하게 처리합니다.",
+    "description": "문서 업로드, 링크 발송 시뮬레이션, 손서명 수합, 통합 PDF 다운로드까지 한 번에 제공합니다.",
+    "solve_text": "종이 동의서 회수 부담",
+    "result_text": "모바일 수합 + PDF 증빙",
+    "time_text": "약 3분",
+    "features": [
+      {
+        "title": "학부모 동의 링크(확인→서명→완료)",
+        "description": "본인확인 → 동의/비동의 + 손서명 → 완료",
+        "icon": "fa-solid fa-mobile-screen-button"
+      },
+      {
+        "title": "교사용 테이블 대시보드",
+        "description": "수신자 상태와 발송 링크를 한 번에 관리",
+        "icon": "fa-solid fa-table-list"
+      },
+      {
+        "title": "통합 PDF 생성",
+        "description": "학생명(가나다) 순서로 수합본을 다운로드",
+        "icon": "fa-solid fa-file-pdf"
+      },
+      {
+        "title": "교사용 진행상태 대시보드",
+        "description": "수신자 상태와 링크, 다운로드를 한 화면에서 관리",
+        "icon": "fa-solid fa-table-list"
+      },
+      {
+        "title": "제출 결과 PDF 생성",
+        "description": "학생별 제출 결과를 묶어 PDF로 다운로드",
+        "icon": "fa-solid fa-file-pdf"
+      }
+    ]
+  },
+  {
+    "id": 153,
+    "title": "한글문서 AI야 읽어줘",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "hwpxchat:main",
+    "launch_url": "/hwpx-chat/",
+    "external_url": "",
+    "lead_text": "HWPX 내부 XML을 직접 파싱해 문서 기반 AI 대화를 시작하세요.",
+    "description": "교사가 업로드한 HWPX 파일을 서버 메모리에서 직접 파싱하여 Markdown으로 변환하고, 그 문서 내용을 기반으로 AI(Gemini/Claude)와 질의응답할 수 있는 서비스입니다.",
+    "solve_text": "한글 문서 내용을 AI가 정확히 읽게 해주세요",
+    "result_text": "문서 근거 기반 답변",
+    "time_text": "1분",
+    "features": [
+      {
+        "title": "문서 그대로 읽기",
+        "description": "HWPX 내부 XML을 직접 읽어 문서 내용을 놓치지 않습니다.",
+        "icon": "🧩"
+      },
+      {
+        "title": "표도 깔끔하게 이해",
+        "description": "표를 Markdown 형식으로 변환해 AI가 더 잘 이해하게 만듭니다.",
+        "icon": "📊"
+      },
+      {
+        "title": "질문하면 바로 답변",
+        "description": "문서 근거 중심으로 Gemini/Claude가 답변을 제공합니다.",
+        "icon": "🤖"
+      }
+    ]
+  },
+  {
+    "id": 154,
+    "title": "수업 QR 생성기",
+    "service_type": "classroom",
+    "is_guest_allowed": true,
+    "launch_route_name": "qrgen:landing",
+    "launch_url": "/qrgen/",
+    "external_url": "",
+    "lead_text": "모둠별 QR코드를 한 번에 만들고, 제목과 전환 간격을 정해 자동 순환으로 보여주세요.",
+    "description": "수업 자료 링크를 모둠별로 입력하면 여러 QR코드를 한 화면에서 만들 수 있습니다. 자동 전환 화면에서는 교사가 설정한 초 단위로 QR이 넘어가며, 모둠 제목이 함께 표시되어 학생들이 자신의 QR을 빠르게 인식할 수 있습니다.",
+    "solve_text": "모둠마다 다른 링크를 헷갈리지 않게 배포하고 싶어요",
+    "result_text": "모둠 제목이 붙은 순환 QR 화면",
+    "time_text": "30초",
+    "features": [
+      {
+        "title": "링크 즉시 QR 변환",
+        "description": "URL 입력 즉시 브라우저에서 QR코드를 생성해 바로 수업에 사용할 수 있습니다.",
+        "icon": "⚡"
+      },
+      {
+        "title": "TV 모드 전체화면",
+        "description": "교실 TV/프로젝터에 크게 띄워 학생들이 멀리서도 쉽게 스캔할 수 있습니다.",
+        "icon": "🖥️"
+      },
+      {
+        "title": "라벨 포함 PNG 저장",
+        "description": "수업명 라벨을 넣어 학습지/가정통신문에 붙이기 쉬운 이미지로 저장합니다.",
+        "icon": "💾"
+      },
+      {
+        "title": "모둠별 다중 QR 생성",
+        "description": "여러 모둠의 제목과 링크를 입력해 QR코드를 한 번에 생성합니다.",
+        "icon": "🧩"
+      },
+      {
+        "title": "초 단위 자동 순환",
+        "description": "교사가 설정한 전환 간격에 맞춰 다음 모둠 QR로 자동 이동합니다.",
+        "icon": "⏱️"
+      },
+      {
+        "title": "제목 표시 QR 화면",
+        "description": "현재 QR 상단에 모둠 제목을 크게 보여 학생들이 자신의 코드를 쉽게 찾습니다.",
+        "icon": "🖥️"
+      }
+    ]
+  },
+  {
+    "id": 155,
+    "title": "알림장 & 주간학습 멘트 생성기",
+    "service_type": "work",
+    "is_guest_allowed": true,
+    "launch_route_name": "noticegen:main",
+    "launch_url": "/noticegen/",
+    "external_url": "",
+    "lead_text": "대상과 주제를 고르면, 교실에서 바로 쓸 수 있는 멘트를 빠르게 만듭니다.",
+    "description": "교사가 대상(저학년/고학년/학부모), 주제, 전달사항만 입력하면 즉시 사용할 수 있는 알림장 멘트를 생성합니다. 유사 행사 캐시 재사용으로 반복 작업과 API 비용을 줄입니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "대상별 문구 분기",
+        "description": "저학년/고학년/학부모 버전 중 원하는 대상을 직접 선택해 생성합니다.",
+        "icon": "🎯"
+      },
+      {
+        "title": "즉시 생성",
+        "description": "주제와 전달사항만 입력하면 2~3줄 멘트를 바로 만들어 줍니다.",
+        "icon": "⚡"
+      },
+      {
+        "title": "유사 행사 캐시 재사용",
+        "description": "이전에 만든 유사 문구를 재활용해 반복 입력과 API 비용을 줄입니다.",
+        "icon": "♻️"
+      }
+    ]
+  },
+  {
+    "id": 156,
+    "title": "Insight Library",
+    "service_type": "tool",
+    "is_guest_allowed": false,
+    "launch_route_name": "insights:list",
+    "launch_url": "/insights/",
+    "external_url": "",
+    "lead_text": "선생님의 시선으로 AI 시대를 기록하다",
+    "description": "유튜브 영상, 개발 일지, 칼럼 등 선생님이 발견한 인사이트를 카드 형태로 기록하고 공유하는 공간입니다. 영상 링크 하나로 썸네일이 자동 생성되고, 나만의 노트와 태그를 붙여 지식을 체계적으로 관리할 수 있습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "유튜브 자동 썸네일",
+        "description": "YouTube URL을 입력하면 썸네일이 자동 생성됩니다.",
+        "icon": "▶️"
+      },
+      {
+        "title": "카테고리 & 태그 필터",
+        "description": "YouTube / DevLog / Column으로 분류하고, 태그 클릭으로 관련 인사이트를 즉시 탐색합니다.",
+        "icon": "🏷️"
+      },
+      {
+        "title": "Featured 고정 & 좋아요",
+        "description": "중요한 인사이트를 상단에 고정하고, 좋아요로 인기 콘텐츠를 구분합니다.",
+        "icon": "⭐"
+      }
+    ]
+  },
+  {
+    "id": 157,
+    "title": "씨앗 퀴즈",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "seed_quiz:landing",
+    "launch_url": "/seed-quiz/",
+    "external_url": "",
+    "lead_text": "공식/공유 퀴즈 은행에서 세트를 고르거나 CSV 업로드·붙여넣기로 직접 만들어, 문항 수(1~200)를 자유롭게 배포하세요.",
+    "description": "씨앗 퀴즈는 교사가 공식/공유 퀴즈 은행에서 문제 세트를 선택하거나 직접 업로드해 즉시 배포할 수 있는 교실 참여형 퀴즈 서비스입니다. 저장한 세트는 기본으로 공유되어 다른 교사도 재사용할 수 있고, 만점 학생에게는 행복의 씨앗 보상이 자동으로 지급됩니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "퀴즈 은행 원클릭 적용",
+        "description": "주제/학년 필터로 공식 또는 공유 퀴즈 세트를 골라 바로 우리 반에 배포할 수 있습니다.",
+        "icon": "📚"
+      },
+      {
+        "title": "CSV 업로드 지원",
+        "description": "CSV·붙여넣기 입력으로 1~200문항 세트를 만들고, 저장 즉시 공유 자산으로 쌓을 수 있습니다.",
+        "icon": "🗂️"
+      },
+      {
+        "title": "행복의 씨앗 연동",
+        "description": "만점을 받은 학생에게 씨앗 보상이 자동으로 지급되고 이력도 함께 남습니다.",
+        "icon": "🌱"
+      }
+    ]
+  },
+  {
+    "id": 158,
+    "title": "별빛 추첨기",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "ppobgi:main",
+    "launch_url": "/ppobgi/",
+    "external_url": "",
+    "lead_text": "교사용 TV에서 명단을 붙여넣고 별 하나를 고르면, 오늘의 주인공을 감성적으로 뽑아줍니다.",
+    "description": "별빛 추첨기는 교사가 큰 화면에서 학급 명단을 입력하고 별을 클릭해 1명을 랜덤 추첨하는 서비스입니다. 중복 이름 정리, 최대 인원 제한, 비복원 추첨, 추첨 히스토리를 기본 제공해 수업 진행 흐름이 명확합니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "명단 붙여넣기",
+        "description": "줄바꿈 기준으로 이름을 빠르게 입력하고 즉시 추첨 우주를 생성합니다.",
+        "icon": "🧾"
+      },
+      {
+        "title": "별 선택 추첨",
+        "description": "빛나는 별 중 하나를 직접 눌러 오늘의 주인공을 뽑을 수 있습니다.",
+        "icon": "🌌"
+      },
+      {
+        "title": "결과 발표 화면",
+        "description": "선택된 이름을 대형 타이포로 보여주고 다음 추첨까지 바로 이어갈 수 있습니다.",
+        "icon": "🏆"
+      }
+    ]
+  },
+  {
+    "id": 159,
+    "title": "학급 캘린더",
+    "service_type": "classroom",
+    "is_guest_allowed": false,
+    "launch_route_name": "classcalendar:main",
+    "launch_url": "/classcalendar/",
+    "external_url": "",
+    "lead_text": "학급 일정을 한눈에 관리하세요!",
+    "description": "학급 운영 일정을 한곳에서 정리하고 공유하는 학급 전용 캘린더입니다. 필요 시 구글 캘린더 연동을 선택적으로 사용할 수 있습니다.",
+    "solve_text": "",
+    "result_text": "",
+    "time_text": "",
+    "features": [
+      {
+        "title": "에듀잇 일정 통합",
+        "description": "예약, 수합, 상담 등 에듀잇의 모든 일정을 한눈에 모아봅니다.",
+        "icon": "🔗"
+      },
+      {
+        "title": "선택형 구글 캘린더 연동",
+        "description": "필요할 때만 구글 캘린더 일정을 불러와 함께 관리할 수 있습니다.",
+        "icon": "☁️"
+      },
+      {
+        "title": "블록형 일정 노트",
+        "description": "일정마다 텍스트, 체크리스트, 링크/파일 메모를 블록으로 정리할 수 있습니다.",
+        "icon": "📝"
+      }
+    ]
+  },
+  {
+    "id": 160,
+    "title": "배부 체크",
+    "service_type": "work",
+    "is_guest_allowed": false,
+    "launch_route_name": "handoff:landing",
+    "launch_url": "/handoff/",
+    "external_url": "",
+    "lead_text": "명단을 저장해두고, 배부할 때 누가 가져갔는지 빠르게 체크하세요.",
+    "description": "배부 세션을 만들면 미수령자 중심 화면에서 체크를 빠르게 진행할 수 있습니다. 체크 결과는 세션별로 저장되며 미수령자 안내문 복사와 CSV 내보내기도 지원합니다.",
+    "solve_text": "배부 누락 확인을 빠르게 끝내고 싶어요",
+    "result_text": "세션별 수령 현황표",
+    "time_text": "2분",
+    "features": [
+      {
+        "title": "미수령자 중심 체크",
+        "description": "체크하면 목록에서 빠져 배부자가 남은 인원만 집중해서 볼 수 있습니다.",
+        "icon": "✅"
+      },
+      {
+        "title": "명단 재사용",
+        "description": "명단을 저장해두고 배부 세션만 새로 만들어 반복 업무를 줄입니다.",
+        "icon": "📋"
+      },
+      {
+        "title": "결과 내보내기",
+        "description": "미수령자 안내문 복사와 CSV 내보내기로 후속 조치까지 한 번에 처리합니다.",
+        "icon": "📤"
+      }
+    ]
+  }
+]

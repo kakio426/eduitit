@@ -21,12 +21,17 @@
         <div class="text-center mb-8" data-aos="fade-up">
             <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📝" }}</div>
             <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">알림장 & 주간학습 멘트 생성기</h1>
-            <p class="text-lg md:text-xl text-gray-500">대상과 주제를 고르면, 학교에서 바로 쓸 수 있는 짧은 멘트를 빠르게 만듭니다.</p>
+            <p class="text-lg md:text-xl text-gray-500">대상, 주제, 전달 사항만 적으면 바로 보낼 수 있는 문장을 빠르게 만들어 드려요.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div class="lg:col-span-2">
                 <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                    {% if prefill_source_label %}
+                    <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                        {{ prefill_source_label }}
+                    </div>
+                    {% endif %}
                     <form
                         method="post"
                         action="{% url 'noticegen:generate' %}"
@@ -39,11 +44,11 @@
                         {% csrf_token %}
 
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">대상 선택</label>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">대상</label>
                             <div class="grid grid-cols-1 gap-2">
                                 {% for value, label in target_options %}
                                 <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:border-blue-300 transition">
-                                    <input type="radio" name="target" value="{{ value }}" {% if forloop.first %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <input type="radio" name="target" value="{{ value }}" {% if initial_target == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
                                     <span class="text-sm font-semibold text-gray-700">{{ label }}</span>
                                 </label>
                                 {% endfor %}
@@ -51,11 +56,11 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">주제 선택</label>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">주제</label>
                             <div class="grid grid-cols-2 gap-2">
                                 {% for value, label in topic_options %}
                                 <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
-                                    <input type="radio" name="topic" value="{{ value }}" {% if forloop.first %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <input type="radio" name="topic" value="{{ value }}" {% if initial_topic == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
                                     <span class="font-medium text-gray-700">{{ label }}</span>
                                 </label>
                                 {% endfor %}
@@ -63,11 +68,11 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">분량 선택</label>
+                            <label class="block text-sm font-bold text-gray-600 mb-2">분량</label>
                             <div class="grid grid-cols-3 gap-2">
                                 {% for value, label in length_options %}
                                 <label class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
-                                    <input type="radio" name="length_style" value="{{ value }}" {% if value == 'medium' %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
+                                    <input type="radio" name="length_style" value="{{ value }}" {% if initial_length_style == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
                                     <span class="font-medium text-gray-700">{{ label }}</span>
                                 </label>
                                 {% endfor %}
@@ -84,11 +89,12 @@
                                 required
                                 placeholder="예: 수학 3단원 평가, 실내화 지참"
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 focus:border-blue-500 focus:outline-none"
-                            ></textarea>
+                            >{{ initial_keywords }}</textarea>
+                            <p class="mt-2 text-xs text-gray-500">어려운 문장 대신 핵심만 짧게 적어도 충분해요.</p>
                         </div>
 
                         <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>멘트 생성하기
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>멘트 만들기
                         </button>
                     </form>
                 </div>
@@ -106,7 +112,7 @@
 <div id="noticegen-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
     <div class="clay-card px-6 py-5 flex items-center gap-3">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-500"></i>
-        <span class="text-gray-700 font-bold">멘트를 생성하고 있습니다...</span>
+        <span class="text-gray-700 font-bold">멘트를 만드는 중이에요...</span>
     </div>
 </div>
 {% endblock %}

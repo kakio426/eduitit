@@ -54,6 +54,8 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
     "관리자에게 `python manage.py migrate` 실행을 요청해 주세요."
 )
 
+SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
+
 
 def _snapshot_file_metadata(file_obj):
     """Return immutable evidence info for a file-like object."""
@@ -78,6 +80,39 @@ def _snapshot_file_metadata(file_obj):
     except Exception:
         pass
     return name, size, digest.hexdigest()
+
+
+def _peek_sheetbook_seed(request, token, *, expected_action=""):
+    token = (token or "").strip()
+    if not token:
+        return None
+    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
+
+
+def _pop_sheetbook_seed(request, token, *, expected_action=""):
+    token = (token or "").strip()
+    if not token:
+        return None
+    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    seeds.pop(token, None)
+    request.session[SHEETBOOK_ACTION_SEED_SESSION_KEY] = seeds
+    request.session.modified = True
+    return seed
 
 
 def _request_document_evidence(consent_request: SignatureRequest):
@@ -559,6 +594,24 @@ def consent_create_step1(request):
     if schema_block:
         return schema_block
 
+    sheetbook_seed_token = (
+        request.POST.get("sheetbook_seed_token")
+        or request.GET.get("sb_seed")
+        or ""
+    ).strip()
+    sheetbook_seed = _peek_sheetbook_seed(
+        request,
+        sheetbook_seed_token,
+        expected_action="consent",
+    )
+    seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
+    seed_recipients = _parse_recipients(seed_data.get("recipients_text", "")) if seed_data else []
+    prefill_recipients_count = len(seed_recipients)
+    prefill_recipients_preview = [
+        f"{recipient['student_name']} - {recipient['parent_name']}"
+        for recipient in seed_recipients[:5]
+    ]
+
     if request.method == "POST":
         document_form = ConsentDocumentForm(request.POST, request.FILES)
         request_form = ConsentRequestForm(request.POST)
@@ -597,13 +650,53 @@ def consent_create_step1(request):
                 logger.exception("[consent] step1 create failed user_id=%s", request.user.id)
                 document_form.add_error("original_file", "문서 업로드 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
             else:
+                consumed_seed = _pop_sheetbook_seed(
+                    request,
+                    sheetbook_seed_token,
+                    expected_action="consent",
+                )
+                consumed_seed_data = consumed_seed.get("data", {}) if isinstance(consumed_seed, dict) else {}
+                recipients_text = str(consumed_seed_data.get("recipients_text") or "").strip()
+                apply_seed_recipients = str(request.POST.get("apply_seed_recipients", "1")).strip().lower() in (
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                )
+                if recipients_text and apply_seed_recipients:
+                    recipients = _parse_recipients(recipients_text)
+                    created = 0
+                    for rec in recipients:
+                        _, was_created = SignatureRecipient.objects.get_or_create(
+                            request=consent_request,
+                            **rec,
+                        )
+                        if was_created:
+                            created += 1
+                    if created:
+                        messages.info(
+                            request,
+                            f"교무수첩에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
+                        )
+                elif recipients_text:
+                    messages.info(
+                        request,
+                        "교무수첩 수신자 자동 넣기는 꺼두었어요. 다음 단계에서 직접 추가해 주세요.",
+                    )
                 return redirect("consent:recipients", request_id=consent_request.request_id)
     else:
-        document_form = ConsentDocumentForm()
-        request_form = ConsentRequestForm(
+        document_form = ConsentDocumentForm(
             initial={
-                "legal_notice": DEFAULT_LEGAL_NOTICE,
+                "title": (seed_data.get("document_title") or "").strip(),
             }
+        )
+        initial_request = {
+            "title": (seed_data.get("title") or "").strip(),
+            "message": (seed_data.get("message") or "").strip(),
+            "legal_notice": DEFAULT_LEGAL_NOTICE,
+        }
+        request_form = ConsentRequestForm(
+            initial=initial_request,
         )
 
     return render(
@@ -612,6 +705,10 @@ def consent_create_step1(request):
         {
             "document_form": document_form,
             "request_form": request_form,
+            "sheetbook_seed_token": sheetbook_seed_token,
+            "sheetbook_prefill_active": bool(seed_data),
+            "prefill_recipients_count": prefill_recipients_count,
+            "prefill_recipients_preview": prefill_recipients_preview,
             **_policy_panel_context(),
         },
     )

@@ -2,11 +2,11 @@
 set -e
 echo "=== Pre-deploy Check ==="
 
-echo "[1/3] Django system check (--deploy)..."
+echo "[1/4] Django system check (--deploy)..."
 python manage.py check --deploy
 echo "  OK"
 
-echo "[2/3] Checking for unapplied migrations..."
+echo "[2/4] Checking for unapplied migrations..."
 UNAPPLIED=$(python manage.py showmigrations --list 2>/dev/null | grep "\[ \]" || true)
 if [ -n "$UNAPPLIED" ]; then
     echo "  WARNING: Unapplied migrations found:"
@@ -15,7 +15,15 @@ if [ -n "$UNAPPLIED" ]; then
 fi
 echo "  OK - All migrations applied"
 
-echo "[3/3] Checking requirements.txt syntax..."
+echo "[3/4] Running sheetbook preflight..."
+if [ "${SHEETBOOK_PREFLIGHT_STRICT:-False}" = "True" ] || [ "${SHEETBOOK_ENABLED:-False}" = "True" ]; then
+    python manage.py check_sheetbook_preflight --strict --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+else
+    python manage.py check_sheetbook_preflight --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
+fi
+echo "  OK"
+
+echo "[4/4] Checking requirements.txt syntax..."
 pip check 2>/dev/null || echo "  WARNING: pip check found issues (non-blocking)"
 
 echo ""

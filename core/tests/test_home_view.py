@@ -1,6 +1,7 @@
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
 from products.models import Product
 from core.models import UserProfile, Post, Comment, ProductFavorite
 
@@ -391,8 +392,8 @@ class HomeV2ViewTest(TestCase):
         self._login('searchlayout')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('mb-4 flex justify-end', content)
-        self.assertIn('class="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl', content)
+        self.assertIn('mb-4 flex justify-center lg:justify-end', content)
+        self.assertIn('class="flex w-full max-w-xl lg:w-auto lg:max-w-none lg:flex-shrink-0 items-center justify-center lg:justify-start gap-3 bg-white rounded-2xl lg:rounded-xl', content)
 
     def test_v2_search_products_json_in_context(self):
         """V2 홈에 search_products_json 컨텍스트 존재"""
@@ -606,6 +607,83 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('xl:flex-row xl:gap-6', content)
         self.assertIn('flex-1 min-w-0 p-4', content)
         self.assertIn('xl:w-[340px] 2xl:w-[380px]', content)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_workspace_blocks_render(self):
+        from sheetbook.models import Sheetbook
+
+        user = self._login('sheetbookhome')
+        Sheetbook.objects.create(owner=user, title='2026 2-3반 교무수첩')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('학급 운영 수첩(달력 포함)', content)
+        self.assertIn('내 교무수첩', content)
+        self.assertIn('빠른 실행', content)
+        self.assertIn('2026 2-3반 교무수첩', content)
+        self.assertIn('source=workspace_home_', content)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_workspace_uses_quick_cta_flows(self):
+        self._login('sheetbookcta')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn(f'action="{reverse("sheetbook:quick_create")}"', content)
+        self.assertIn(f'action="{reverse("sheetbook:quick_copy")}"', content)
+        self.assertIn('name="source" value="workspace_home_create"', content)
+        self.assertIn('name="source" value="workspace_home_copy"', content)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_today_rows_render(self):
+        from sheetbook.models import Sheetbook, SheetTab, SheetColumn, SheetRow, SheetCell
+
+        user = self._login('sheetbooktoday')
+        sheetbook = Sheetbook.objects.create(owner=user, title='오늘 테스트 수첩')
+        tab = SheetTab.objects.create(
+            sheetbook=sheetbook,
+            name='일정',
+            tab_type=SheetTab.TYPE_GRID,
+            sort_order=1,
+        )
+        col_date = SheetColumn.objects.create(
+            tab=tab,
+            key='date',
+            label='날짜',
+            column_type=SheetColumn.TYPE_DATE,
+            sort_order=1,
+        )
+        col_title = SheetColumn.objects.create(
+            tab=tab,
+            key='title',
+            label='제목',
+            column_type=SheetColumn.TYPE_TEXT,
+            sort_order=2,
+        )
+        row = SheetRow.objects.create(tab=tab, sort_order=1, created_by=user, updated_by=user)
+        SheetCell.objects.create(row=row, column=col_date, value_date=timezone.localdate())
+        SheetCell.objects.create(row=row, column=col_title, value_text='외부강사 수업')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('외부강사 수업', content)
+        self.assertIn('오늘 테스트 수첩', content)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_workspace_event_logged(self):
+        from sheetbook.models import SheetbookMetricEvent
+
+        user = self._login('sheetbookhomeevent')
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            SheetbookMetricEvent.objects.filter(
+                event_name='workspace_home_opened',
+                user=user,
+            ).exists()
+        )
 
 
 @override_settings(HOME_V2_ENABLED=True)
