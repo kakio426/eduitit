@@ -50,6 +50,24 @@
                     <i class="fa-solid fa-id-card mr-1"></i> 직위/학년반
                 </label>
                 {{ form.participant_affiliation }}
+                {% if affiliation_suggestions %}
+                <datalist id="affiliationSuggestions">
+                    {% for option in affiliation_suggestions %}
+                    <option value="{{ option }}"></option>
+                    {% endfor %}
+                </datalist>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for option in affiliation_suggestions|slice:":8" %}
+                    <button
+                        type="button"
+                        onclick="setAffiliation('{{ option|escapejs }}')"
+                        class="px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 text-sm font-semibold hover:bg-purple-100 transition"
+                    >
+                        {{ option }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <!-- Name Input -->
@@ -136,6 +154,13 @@
     // Clear signature
     function clearSignature() {
         signaturePad.clear();
+    }
+
+    function setAffiliation(value) {
+        const affiliationInput = document.querySelector('input[name="participant_affiliation"]');
+        if (!affiliationInput) return;
+        affiliationInput.value = value || '';
+        affiliationInput.focus();
     }
 
     // Form submission

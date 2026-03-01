@@ -81,6 +81,7 @@ class SignatureForm(forms.ModelForm):
                 'class': 'w-full px-4 py-4 text-xl rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
                 'placeholder': '직위 또는 학년반 (예: 교사, 1-1)',
                 'autocomplete': 'off',
+                'list': 'affiliationSuggestions',
             }),
             'participant_name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-4 text-xl rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',

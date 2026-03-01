@@ -1,6 +1,9 @@
 import base64
 import io
+import json
 import logging
+import re
+from collections import Counter, defaultdict
 from datetime import timedelta
 
 import qrcode
@@ -11,7 +14,12 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
-from .models import TrainingSession, Signature, ExpectedParticipant
+from .models import (
+    AffiliationCorrectionLog,
+    ExpectedParticipant,
+    Signature,
+    TrainingSession,
+)
 from .forms import TrainingSessionForm, SignatureForm
 import csv
 import openpyxl
@@ -20,6 +28,146 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 CALENDAR_INTEGRATION_SOURCE = "signatures_training"
+SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
+DEFAULT_AFFILIATION_SUGGESTIONS = [
+    "교사",
+    "교감",
+    "교장",
+    "담임",
+    "전담",
+    "보건교사",
+    "사서교사",
+    "영양교사",
+    "상담교사",
+    "행정실",
+]
+
+
+def _normalize_affiliation_text(value):
+    normalized = str(value or "").strip()
+    if not normalized:
+        return ""
+    normalized = normalized.replace("—", "-").replace("–", "-")
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = re.sub(r"\s*/\s*", "/", normalized)
+    normalized = re.sub(r"\s*-\s*", "-", normalized)
+    return normalized[:100]
+
+
+def _build_affiliation_suggestions(session, max_items=40):
+    counter = Counter()
+    for raw in session.expected_participants.values_list("affiliation", flat=True):
+        value = _normalize_affiliation_text(raw)
+        if value:
+            counter[value] += 1
+    for raw in session.expected_participants.values_list("corrected_affiliation", flat=True):
+        value = _normalize_affiliation_text(raw)
+        if value:
+            counter[value] += 1
+    for raw in session.signatures.values_list("participant_affiliation", flat=True):
+        value = _normalize_affiliation_text(raw)
+        if value:
+            counter[value] += 1
+    for raw in session.signatures.values_list("corrected_affiliation", flat=True):
+        value = _normalize_affiliation_text(raw)
+        if value:
+            counter[value] += 1
+
+    suggestions = []
+    seen = set()
+    for value, _ in counter.most_common(max_items):
+        if value not in seen:
+            suggestions.append(value)
+            seen.add(value)
+    for default in DEFAULT_AFFILIATION_SUGGESTIONS:
+        value = _normalize_affiliation_text(default)
+        if value and value not in seen:
+            suggestions.append(value)
+            seen.add(value)
+    for grade in range(1, 7):
+        for classroom in range(1, 7):
+            value = f"{grade}-{classroom}"
+            if value not in seen:
+                suggestions.append(value)
+                seen.add(value)
+            if len(suggestions) >= max_items:
+                return suggestions
+    return suggestions[:max_items]
+
+
+def _apply_signature_affiliation_correction(signature, corrected_affiliation, reason, user):
+    raw_source = str(signature.participant_affiliation or "").strip()
+    normalized_source = _normalize_affiliation_text(raw_source)
+    normalized_corrected = _normalize_affiliation_text(corrected_affiliation)
+    reason = str(reason or "").strip()[:200]
+
+    if not normalized_corrected:
+        signature.corrected_affiliation = ""
+        signature.affiliation_correction_reason = ""
+        signature.affiliation_corrected_by = None
+        signature.affiliation_corrected_at = None
+        return
+    if normalized_corrected == normalized_source and raw_source == normalized_corrected:
+        signature.corrected_affiliation = ""
+        signature.affiliation_correction_reason = ""
+        signature.affiliation_corrected_by = None
+        signature.affiliation_corrected_at = None
+        return
+
+    signature.corrected_affiliation = normalized_corrected
+    signature.affiliation_correction_reason = reason
+    signature.affiliation_corrected_by = user
+    signature.affiliation_corrected_at = timezone.now()
+
+
+def _apply_expected_participant_affiliation_correction(participant, corrected_affiliation, reason, user):
+    raw_source = str(participant.affiliation or "").strip()
+    normalized_source = _normalize_affiliation_text(raw_source)
+    normalized_corrected = _normalize_affiliation_text(corrected_affiliation)
+    reason = str(reason or "").strip()[:200]
+
+    if not normalized_corrected:
+        participant.corrected_affiliation = ""
+        participant.affiliation_correction_reason = ""
+        participant.affiliation_corrected_by = None
+        participant.affiliation_corrected_at = None
+        return
+    if normalized_corrected == normalized_source and raw_source == normalized_corrected:
+        participant.corrected_affiliation = ""
+        participant.affiliation_correction_reason = ""
+        participant.affiliation_corrected_by = None
+        participant.affiliation_corrected_at = None
+        return
+
+    participant.corrected_affiliation = normalized_corrected
+    participant.affiliation_correction_reason = reason
+    participant.affiliation_corrected_by = user
+    participant.affiliation_corrected_at = timezone.now()
+
+
+def _create_affiliation_correction_log(
+    *,
+    session,
+    target_type,
+    mode,
+    before_affiliation,
+    after_affiliation,
+    reason,
+    corrected_by=None,
+    signature=None,
+    expected_participant=None,
+):
+    AffiliationCorrectionLog.objects.create(
+        training_session=session,
+        target_type=target_type,
+        mode=mode,
+        signature=signature,
+        expected_participant=expected_participant,
+        before_affiliation=_normalize_affiliation_text(before_affiliation),
+        after_affiliation=_normalize_affiliation_text(after_affiliation),
+        reason=str(reason or "").strip()[:200],
+        corrected_by=corrected_by,
+    )
 
 
 def _build_qr_data_url(raw_text):
@@ -105,7 +253,7 @@ def _sync_expected_participants_from_shared_roster(session):
         if not name:
             skipped += 1
             continue
-        affiliation = (member.note or "").strip()
+        affiliation = _normalize_affiliation_text(member.note)
         _, was_created = ExpectedParticipant.objects.get_or_create(
             training_session=session,
             name=name,
@@ -118,6 +266,70 @@ def _sync_expected_participants_from_shared_roster(session):
     return {"created": created, "skipped": skipped, "total": members.count(), "group_name": group.name}
 
 
+def _peek_sheetbook_seed(request, token, *, expected_action=""):
+    token = (token or "").strip()
+    if not token:
+        return None
+    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
+
+
+def _pop_sheetbook_seed(request, token, *, expected_action=""):
+    token = (token or "").strip()
+    if not token:
+        return None
+    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    seeds.pop(token, None)
+    request.session[SHEETBOOK_ACTION_SEED_SESSION_KEY] = seeds
+    request.session.modified = True
+    return seed
+
+
+def _parse_sheetbook_signature_participants(text, max_count=300):
+    participants = []
+    seen = set()
+    for raw_line in str(text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.split(",")]
+        name = (parts[0] if parts else "").strip()[:100]
+        affiliation = _normalize_affiliation_text(parts[1] if len(parts) >= 2 else "")
+        if not name:
+            continue
+        dedupe_key = (name, affiliation)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        participants.append({"name": name, "affiliation": affiliation})
+        if len(participants) >= max_count:
+            break
+    return participants
+
+
+def _is_truthy_flag(value, *, default=True):
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return False
+    return normalized not in {"0", "false", "off", "no", "n"}
+
+
 @login_required
 def session_list(request):
     """내가 만든 연수 목록"""
@@ -128,6 +340,43 @@ def session_list(request):
 @login_required
 def session_create(request):
     """연수 생성"""
+    sheetbook_seed_token = (
+        request.POST.get("sheetbook_seed_token")
+        or request.GET.get("sb_seed")
+        or ""
+    ).strip()
+    sheetbook_seed = _peek_sheetbook_seed(
+        request,
+        sheetbook_seed_token,
+        expected_action="signature",
+    )
+    seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
+    seed_data = seed_data if isinstance(seed_data, dict) else {}
+    seed_participants = _parse_sheetbook_signature_participants(seed_data.get("participants_text", ""))
+
+    prefill_initial = {}
+    if seed_data:
+        prefill_initial = {
+            "title": str(seed_data.get("title") or "").strip()[:200],
+            "print_title": str(seed_data.get("print_title") or "").strip()[:200],
+            "instructor": str(seed_data.get("instructor") or "").strip()[:100],
+            "location": str(seed_data.get("location") or "").strip()[:200],
+            "description": str(seed_data.get("description") or "").strip()[:2000],
+            "datetime": str(seed_data.get("datetime") or "").strip()[:16],
+        }
+        expected_count = seed_data.get("expected_count")
+        if isinstance(expected_count, int) and expected_count > 0:
+            prefill_initial["expected_count"] = expected_count
+        elif str(expected_count).isdigit():
+            prefill_initial["expected_count"] = int(str(expected_count))
+        elif seed_participants:
+            prefill_initial["expected_count"] = len(seed_participants)
+
+    apply_sheetbook_participants = _is_truthy_flag(
+        request.POST.get("apply_sheetbook_participants"),
+        default=True,
+    )
+
     if request.method == 'POST':
         form = TrainingSessionForm(request.POST, owner=request.user)
         if form.is_valid():
@@ -135,25 +384,67 @@ def session_create(request):
             session.created_by = request.user
             session.save()
             roster_result = _sync_expected_participants_from_shared_roster(session)
-            _sync_calendar_event_for_training(session)
-            if roster_result["total"] > 0:
-                messages.success(
+            seed_created_count = 0
+            seed_skipped_count = 0
+            if seed_participants and apply_sheetbook_participants:
+                for participant in seed_participants:
+                    _, was_created = ExpectedParticipant.objects.get_or_create(
+                        training_session=session,
+                        name=participant["name"],
+                        affiliation=participant["affiliation"],
+                    )
+                    if was_created:
+                        seed_created_count += 1
+                    else:
+                        seed_skipped_count += 1
+            if sheetbook_seed:
+                _pop_sheetbook_seed(
                     request,
-                    f"연수가 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다.",
+                    sheetbook_seed_token,
+                    expected_action="signature",
+                )
+            _sync_calendar_event_for_training(session)
+            message_parts = []
+            if roster_result["total"] > 0:
+                message_parts.append(
+                    f"연수가 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다."
                 )
             else:
-                messages.success(request, '연수가 생성되었습니다.')
+                message_parts.append("연수가 생성되었습니다.")
+            if seed_created_count > 0:
+                message_parts.append(f"교무수첩에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
+            elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
+                message_parts.append("교무수첩 참석자 후보는 이미 모두 포함되어 있었어요.")
+            messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
-        form = TrainingSessionForm(owner=request.user)
-    return render(request, 'signatures/create.html', {'form': form})
+        form = TrainingSessionForm(owner=request.user, initial=prefill_initial)
+
+    participant_preview = []
+    for participant in seed_participants[:5]:
+        if participant["affiliation"]:
+            participant_preview.append(f"{participant['name']} ({participant['affiliation']})")
+        else:
+            participant_preview.append(participant["name"])
+
+    return render(
+        request,
+        'signatures/create.html',
+        {
+            'form': form,
+            'sheetbook_seed_token': sheetbook_seed_token if seed_data else "",
+            'sheetbook_prefill_active': bool(seed_data),
+            'sheetbook_prefill_source_label': "교무수첩에서 가져온 내용을 넣어두었어요.",
+            'sheetbook_prefill_participants_count': len(seed_participants),
+            'sheetbook_prefill_participants_preview': participant_preview,
+            'apply_sheetbook_participants': apply_sheetbook_participants,
+        },
+    )
 
 
 @login_required
 def session_detail(request, uuid):
     """연수 상세 (관리자용) - 미매칭 및 중복 감지 포함"""
-    from .models import ExpectedParticipant
-    from collections import defaultdict
     from django.http import HttpResponse
     import traceback
     
@@ -187,7 +478,7 @@ def session_detail(request, uuid):
         # 3. 중복 서명 감지 (항상 수행)
         sig_dict = defaultdict(list)
         for sig in signatures:
-            key = (sig.participant_name, sig.participant_affiliation or '')
+            key = (sig.participant_name, sig.display_affiliation or '')
             sig_dict[key].append(sig)
         
         duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
@@ -195,6 +486,11 @@ def session_detail(request, uuid):
             reverse("signatures:sign", kwargs={"uuid": session.uuid})
         )
         share_qr_data_url = _build_qr_data_url(share_link)
+        correction_logs = session.affiliation_correction_logs.select_related(
+            "corrected_by",
+            "signature",
+            "expected_participant",
+        )[:20]
 
         return render(request, 'signatures/detail.html', {
             'session': session,
@@ -206,6 +502,8 @@ def session_detail(request, uuid):
             'has_duplicates': len(duplicates) > 0,
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
+            'affiliation_suggestions': _build_affiliation_suggestions(session),
+            'affiliation_correction_logs': correction_logs,
         })
     except Exception as e:
         traceback.print_exc()
@@ -271,6 +569,7 @@ def session_delete(request, uuid):
 def sign(request, uuid):
     """서명 페이지 (공개 - 로그인 불필요)"""
     session = get_object_or_404(TrainingSession, uuid=uuid)
+    affiliation_suggestions = _build_affiliation_suggestions(session)
 
     if not session.is_active:
         return render(request, 'signatures/closed.html', {'session': session})
@@ -280,6 +579,7 @@ def sign(request, uuid):
         if form.is_valid():
             signature = form.save(commit=False)
             signature.training_session = session
+            signature.participant_affiliation = _normalize_affiliation_text(signature.participant_affiliation)
             signature.save()
             return render(request, 'signatures/sign_success.html', {'session': session})
     else:
@@ -288,6 +588,7 @@ def sign(request, uuid):
     return render(request, 'signatures/sign.html', {
         'session': session,
         'form': form,
+        'affiliation_suggestions': affiliation_suggestions,
     })
 
 
@@ -308,8 +609,10 @@ def print_view(request, uuid):
         for p in participants:
             item = {
                 'name': p.name,
-                'affiliation': p.affiliation,
-                'signature_data': p.matched_signature.signature_data if p.matched_signature else None
+                'affiliation': p.display_affiliation,
+                'original_affiliation': p.affiliation,
+                'is_affiliation_corrected': bool(p.corrected_affiliation),
+                'signature_data': p.matched_signature.signature_data if p.matched_signature else None,
             }
             print_items.append(item)
             if item['signature_data']:
@@ -322,8 +625,10 @@ def print_view(request, uuid):
         for sig in unmatched_sigs:
             print_items.append({
                 'name': sig.participant_name,
-                'affiliation': sig.participant_affiliation,
-                'signature_data': sig.signature_data
+                'affiliation': sig.display_affiliation,
+                'original_affiliation': sig.participant_affiliation,
+                'is_affiliation_corrected': bool(sig.corrected_affiliation),
+                'signature_data': sig.signature_data,
             })
             signed_count += 1
             
@@ -335,8 +640,10 @@ def print_view(request, uuid):
         for sig in signatures:
             print_items.append({
                 'name': sig.participant_name,
-                'affiliation': sig.participant_affiliation,
-                'signature_data': sig.signature_data
+                'affiliation': sig.display_affiliation,
+                'original_affiliation': sig.participant_affiliation,
+                'is_affiliation_corrected': bool(sig.corrected_affiliation),
+                'signature_data': sig.signature_data,
             })
         signed_count = len(print_items)
         total_expected = session.expected_count or signed_count
@@ -419,7 +726,6 @@ def style_list(request):
 @require_POST
 def save_style_api(request):
     """스타일 즐겨찾기 저장 API"""
-    import json
     try:
         data = json.loads(request.body)
         from .models import SignatureStyle, SavedSignature
@@ -449,7 +755,6 @@ def save_style_api(request):
 @require_POST
 def save_signature_image_api(request):
     """서명 이미지 저장 API (스타일 없이 이미지만)"""
-    import json
     try:
         data = json.loads(request.body)
         from .models import SavedSignature
@@ -501,7 +806,6 @@ def signature_maker(request):
 def add_expected_participants(request, uuid):
     """예상 참석자 명단 일괄 등록"""
     from .models import ExpectedParticipant
-    import json
     
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
     
@@ -524,7 +828,7 @@ def add_expected_participants(request, uuid):
             
             parts = [p.strip() for p in line.split(',')]
             name = parts[0] if parts else ''
-            affiliation = parts[1] if len(parts) > 1 else ''
+            affiliation = _normalize_affiliation_text(parts[1] if len(parts) > 1 else '')
             
             if not name:
                 skipped_count += 1
@@ -578,7 +882,7 @@ def upload_participants_file(request, uuid):
             for row in reader:
                 if row:
                     name = row[0].strip()
-                    affiliation = row[1].strip() if len(row) > 1 else ''
+                    affiliation = _normalize_affiliation_text(row[1] if len(row) > 1 else '')
                     if name: participants.append((name, affiliation))
                     
         elif file_name.endswith('.xlsx'):
@@ -589,7 +893,7 @@ def upload_participants_file(request, uuid):
             for row in sheet.iter_rows(min_row=1, values_only=True):
                 if row and row[0]:
                     name = str(row[0]).strip()
-                    affiliation = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+                    affiliation = _normalize_affiliation_text(row[1] if len(row) > 1 and row[1] else '')
                     if name: participants.append((name, affiliation))
         else:
             return JsonResponse({'success': False, 'error': '참석자 명단 파일(.csv, .xlsx)만 업로드 가능합니다.'})
@@ -630,10 +934,13 @@ def get_expected_participants(request, uuid):
         data.append({
             'id': p.id,
             'name': p.name,
-            'affiliation': p.affiliation,
+            'affiliation': p.display_affiliation,
+            'display_affiliation': p.display_affiliation,
+            'original_affiliation': p.affiliation,
+            'corrected_affiliation': p.corrected_affiliation,
             'has_signed': p.has_signed,
             'signature_id': p.matched_signature.id if p.matched_signature else None,
-            'match_note': p.match_note
+            'match_note': p.match_note,
         })
     
     return JsonResponse({'participants': data})
@@ -698,6 +1005,232 @@ def match_signature(request, uuid, signature_id):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+def correct_signature_affiliation(request, uuid, signature_id):
+    """개별 서명의 직위/학년반 정정."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    signature = get_object_or_404(Signature, id=signature_id, training_session=session)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    corrected_affiliation = payload.get('corrected_affiliation', '')
+    reason = payload.get('reason', '')
+    before_display_affiliation = signature.display_affiliation
+    before_state = (
+        signature.corrected_affiliation,
+        signature.affiliation_correction_reason,
+        signature.affiliation_corrected_by_id,
+        signature.affiliation_corrected_at,
+    )
+    _apply_signature_affiliation_correction(signature, corrected_affiliation, reason, request.user)
+    after_state = (
+        signature.corrected_affiliation,
+        signature.affiliation_correction_reason,
+        signature.affiliation_corrected_by_id,
+        signature.affiliation_corrected_at,
+    )
+    if before_state != after_state:
+        signature.save(
+            update_fields=[
+                'corrected_affiliation',
+                'affiliation_correction_reason',
+                'affiliation_corrected_by',
+                'affiliation_corrected_at',
+            ]
+        )
+        _create_affiliation_correction_log(
+            session=session,
+            target_type=AffiliationCorrectionLog.TARGET_SIGNATURE,
+            mode=AffiliationCorrectionLog.MODE_SINGLE,
+            before_affiliation=before_display_affiliation,
+            after_affiliation=signature.display_affiliation,
+            reason=reason,
+            corrected_by=request.user,
+            signature=signature,
+        )
+    return JsonResponse({
+        'success': True,
+        'display_affiliation': signature.display_affiliation,
+        'original_affiliation': signature.participant_affiliation,
+        'corrected_affiliation': signature.corrected_affiliation,
+    })
+
+
+@login_required
+@require_POST
+def correct_expected_participant_affiliation(request, uuid, participant_id):
+    """개별 예상 참석자의 직위/학년반 정정."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    participant = get_object_or_404(ExpectedParticipant, id=participant_id, training_session=session)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    corrected_affiliation = payload.get('corrected_affiliation', '')
+    reason = payload.get('reason', '')
+    before_display_affiliation = participant.display_affiliation
+    before_state = (
+        participant.corrected_affiliation,
+        participant.affiliation_correction_reason,
+        participant.affiliation_corrected_by_id,
+        participant.affiliation_corrected_at,
+    )
+    _apply_expected_participant_affiliation_correction(participant, corrected_affiliation, reason, request.user)
+    after_state = (
+        participant.corrected_affiliation,
+        participant.affiliation_correction_reason,
+        participant.affiliation_corrected_by_id,
+        participant.affiliation_corrected_at,
+    )
+    if before_state != after_state:
+        participant.save(
+            update_fields=[
+                'corrected_affiliation',
+                'affiliation_correction_reason',
+                'affiliation_corrected_by',
+                'affiliation_corrected_at',
+            ]
+        )
+        _create_affiliation_correction_log(
+            session=session,
+            target_type=AffiliationCorrectionLog.TARGET_PARTICIPANT,
+            mode=AffiliationCorrectionLog.MODE_SINGLE,
+            before_affiliation=before_display_affiliation,
+            after_affiliation=participant.display_affiliation,
+            reason=reason,
+            corrected_by=request.user,
+            expected_participant=participant,
+        )
+    return JsonResponse({
+        'success': True,
+        'display_affiliation': participant.display_affiliation,
+        'original_affiliation': participant.affiliation,
+        'corrected_affiliation': participant.corrected_affiliation,
+    })
+
+
+@login_required
+@require_POST
+def bulk_correct_affiliation(request, uuid):
+    """직위/학년반 일괄 정정."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    source_affiliation = _normalize_affiliation_text(payload.get('source_affiliation', ''))
+    corrected_affiliation = _normalize_affiliation_text(payload.get('corrected_affiliation', ''))
+    reason = str(payload.get('reason') or '').strip()[:200] or '일괄 정정'
+    target = str(payload.get('target') or 'all').strip()
+
+    if not source_affiliation:
+        return JsonResponse({'success': False, 'error': '원본 직위/학년반을 입력해 주세요.'}, status=400)
+    if not corrected_affiliation:
+        return JsonResponse({'success': False, 'error': '정정할 직위/학년반을 입력해 주세요.'}, status=400)
+    if target not in {'all', 'participants', 'signatures'}:
+        return JsonResponse({'success': False, 'error': '정정 대상을 확인해 주세요.'}, status=400)
+
+    updated_signatures = 0
+    updated_participants = 0
+
+    if target in {'all', 'signatures'}:
+        signatures = session.signatures.all()
+        for signature in signatures:
+            if _normalize_affiliation_text(signature.display_affiliation) != source_affiliation:
+                continue
+            before_display_affiliation = signature.display_affiliation
+            before_state = (
+                signature.corrected_affiliation,
+                signature.affiliation_correction_reason,
+                signature.affiliation_corrected_by_id,
+                signature.affiliation_corrected_at,
+            )
+            _apply_signature_affiliation_correction(signature, corrected_affiliation, reason, request.user)
+            after_state = (
+                signature.corrected_affiliation,
+                signature.affiliation_correction_reason,
+                signature.affiliation_corrected_by_id,
+                signature.affiliation_corrected_at,
+            )
+            if before_state == after_state:
+                continue
+            signature.save(
+                update_fields=[
+                    'corrected_affiliation',
+                    'affiliation_correction_reason',
+                    'affiliation_corrected_by',
+                    'affiliation_corrected_at',
+                ]
+            )
+            _create_affiliation_correction_log(
+                session=session,
+                target_type=AffiliationCorrectionLog.TARGET_SIGNATURE,
+                mode=AffiliationCorrectionLog.MODE_BULK,
+                before_affiliation=before_display_affiliation,
+                after_affiliation=signature.display_affiliation,
+                reason=reason,
+                corrected_by=request.user,
+                signature=signature,
+            )
+            updated_signatures += 1
+
+    if target in {'all', 'participants'}:
+        participants = session.expected_participants.all()
+        for participant in participants:
+            if _normalize_affiliation_text(participant.display_affiliation) != source_affiliation:
+                continue
+            before_display_affiliation = participant.display_affiliation
+            before_state = (
+                participant.corrected_affiliation,
+                participant.affiliation_correction_reason,
+                participant.affiliation_corrected_by_id,
+                participant.affiliation_corrected_at,
+            )
+            _apply_expected_participant_affiliation_correction(participant, corrected_affiliation, reason, request.user)
+            after_state = (
+                participant.corrected_affiliation,
+                participant.affiliation_correction_reason,
+                participant.affiliation_corrected_by_id,
+                participant.affiliation_corrected_at,
+            )
+            if before_state == after_state:
+                continue
+            participant.save(
+                update_fields=[
+                    'corrected_affiliation',
+                    'affiliation_correction_reason',
+                    'affiliation_corrected_by',
+                    'affiliation_corrected_at',
+                ]
+            )
+            _create_affiliation_correction_log(
+                session=session,
+                target_type=AffiliationCorrectionLog.TARGET_PARTICIPANT,
+                mode=AffiliationCorrectionLog.MODE_BULK,
+                before_affiliation=before_display_affiliation,
+                after_affiliation=participant.display_affiliation,
+                reason=reason,
+                corrected_by=request.user,
+                expected_participant=participant,
+            )
+            updated_participants += 1
+
+    return JsonResponse({
+        'success': True,
+        'updated_signatures': updated_signatures,
+        'updated_participants': updated_participants,
+        'updated_total': updated_signatures + updated_participants,
+    })
 
 
 def download_participant_template(request, format='csv'):

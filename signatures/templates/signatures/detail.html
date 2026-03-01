@@ -136,8 +136,8 @@
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
                                 <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name}}</span>
-                                {% if item.signature.participant_affiliation %}
-                                <span class="text-gray-500">({{ item.signature.participant_affiliation }})</span>
+                                {% if item.signature.display_affiliation %}
+                                <span class="text-gray-500">({{ item.signature.display_affiliation }})</span>
                                 {% endif %}
                                 <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
                             </div>
@@ -153,8 +153,8 @@
                             <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
                                 class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
                                 <span>{{ participant.name }}</span>
-                                {% if participant.affiliation %}
-                                <span class="font-normal">({{ participant.affiliation }})</span>
+                                {% if participant.display_affiliation %}
+                                <span class="font-normal">({{ participant.display_affiliation }})</span>
                                 {% endif %}
                                 <span>와 연결</span>
                             </button>
@@ -184,7 +184,7 @@
                 {% for dup_group in duplicates %}
                 <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
                     <p class="font-bold text-gray-700 mb-3">
-                        {{ dup_group.0.participant_name }} ({{ dup_group.0.participant_affiliation|default:"-" }}) - {{dup_group|length }}번 서명
+                        {{ dup_group.0.participant_name }} ({{ dup_group.0.display_affiliation|default:"-" }}) - {{dup_group|length }}번 서명
                     </p>
                     <div class="grid md:grid-cols-2 gap-3">
                         {% for sig in dup_group %}
@@ -320,6 +320,109 @@
             </div>
         </div>
 
+        <!-- Affiliation Bulk Correction -->
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base md:text-lg font-bold text-gray-700">
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-1"></i>직위/학년반 일괄 정정
+                </h2>
+                <span class="text-xs md:text-sm text-gray-500">원본 데이터는 보존되고 정정값만 별도 반영됩니다.</span>
+            </div>
+            <div class="grid md:grid-cols-4 gap-3">
+                <div>
+                    <label class="text-xs font-bold text-gray-500">원본 값</label>
+                    <input id="bulkSourceAffiliation" type="text" placeholder="예: 교사 /3-3"
+                        list="affiliationSuggestions"
+                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">정정 값</label>
+                    <input id="bulkCorrectedAffiliation" type="text" placeholder="예: 교사/3-3"
+                        list="affiliationSuggestions"
+                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">대상</label>
+                    <select id="bulkCorrectionTarget" class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                        <option value="all">전체(명단+서명)</option>
+                        <option value="participants">명단만</option>
+                        <option value="signatures">서명만</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">사유 (선택)</label>
+                    <input id="bulkCorrectionReason" type="text" placeholder="예: 표기 통일"
+                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button onclick="applyBulkAffiliationCorrection()"
+                    class="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition">
+                    일괄 정정 적용
+                </button>
+            </div>
+            {% if affiliation_suggestions %}
+            <datalist id="affiliationSuggestions">
+                {% for option in affiliation_suggestions %}
+                <option value="{{ option }}"></option>
+                {% endfor %}
+            </datalist>
+            {% endif %}
+        </div>
+
+        <!-- Affiliation Correction History -->
+        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base md:text-lg font-bold text-gray-700">
+                    <i class="fa-solid fa-clock-rotate-left text-purple-500 mr-1"></i>직위/학년반 정정 이력
+                </h2>
+                <span class="text-xs md:text-sm text-gray-500">최근 20건</span>
+            </div>
+            {% if affiliation_correction_logs %}
+            <div class="overflow-x-auto -mx-4 md:mx-0">
+                <table class="w-full text-sm text-left">
+                    <thead class="border-b border-gray-200 text-gray-500">
+                        <tr>
+                            <th class="py-2 px-2 md:px-4 text-xs">시각</th>
+                            <th class="py-2 px-2 md:px-4 text-xs">대상</th>
+                            <th class="py-2 px-2 md:px-4 text-xs">변경</th>
+                            <th class="py-2 px-2 md:px-4 text-xs">사유</th>
+                            <th class="py-2 px-2 md:px-4 text-xs">수정자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in affiliation_correction_logs %}
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2 px-2 md:px-4 text-xs text-gray-500">{{ log.created_at|date:"m.d H:i" }}</td>
+                            <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
+                                {{ log.get_target_type_display }}
+                                {% if log.mode == "bulk" %}
+                                <span class="ml-1 text-[11px] text-purple-500">(일괄)</span>
+                                {% elif log.mode == "script" %}
+                                <span class="ml-1 text-[11px] text-indigo-500">(스크립트)</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
+                                {{ log.before_affiliation|default:"-" }} → {{ log.after_affiliation|default:"-" }}
+                            </td>
+                            <td class="py-2 px-2 md:px-4 text-xs text-gray-600">{{ log.reason|default:"-" }}</td>
+                            <td class="py-2 px-2 md:px-4 text-xs text-gray-500">
+                                {% if log.corrected_by %}
+                                {{ log.corrected_by.username }}
+                                {% else %}
+                                system
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400">아직 정정 이력이 없습니다.</p>
+            {% endif %}
+        </div>
+
         <!-- Share Link -->
         <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
             <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
@@ -367,6 +470,7 @@
                     <thead class="border-b border-gray-200 text-gray-500">
                         <tr>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">#</th>
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm">직위/학년반</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">이름</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">서명</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">시간</th>
@@ -377,6 +481,21 @@
                         {% for sig in signatures %}
                         <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
                             <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{{ forloop.counter }}</td>
+                            <td class="py-2 px-2 md:px-4 text-xs md:text-sm text-gray-700">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold">{{ sig.display_affiliation|default:"-" }}</span>
+                                    <button
+                                        type="button"
+                                        onclick="editSignatureAffiliation('{{ sig.id }}', '{{ sig.display_affiliation|escapejs }}', '{{ sig.participant_affiliation|escapejs }}')"
+                                        class="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition"
+                                    >
+                                        정정
+                                    </button>
+                                </div>
+                                {% if sig.corrected_affiliation %}
+                                <p class="text-[11px] text-gray-400 mt-1">원본: {{ sig.participant_affiliation|default:"-" }}</p>
+                                {% endif %}
+                            </td>
                             <td
                                 class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">
                                 {{ sig.participant_name }}</td>
@@ -417,11 +536,60 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Affiliation Correction Modal -->
+<div id="affiliationCorrectionModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
+    <div class="relative w-full max-w-lg rounded-2xl bg-white p-5 md:p-6 shadow-2xl">
+        <button type="button" onclick="closeAffiliationCorrectionModal()"
+            class="absolute right-3 top-3 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 class="text-lg md:text-xl font-black text-gray-800 mb-1">직위/학년반 정정</h3>
+        <p id="correctionModalTargetLabel" class="text-xs text-gray-500 mb-3"></p>
+        <div class="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2 mb-3">
+            <p class="text-[11px] text-gray-500">원본</p>
+            <p id="correctionModalOriginalValue" class="text-sm font-semibold text-gray-700">-</p>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs font-bold text-gray-500">정정 값</label>
+                <input id="correctionModalValue" type="text" list="affiliationSuggestions"
+                    class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm"
+                    placeholder="비우면 정정 해제">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-gray-500">사유 (선택)</label>
+                <input id="correctionModalReason" type="text"
+                    class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm"
+                    placeholder="예: 표기 통일">
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end gap-2">
+            <button type="button" onclick="closeAffiliationCorrectionModal()"
+                class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold hover:bg-gray-200 transition">
+                취소
+            </button>
+            <button type="button" onclick="submitAffiliationCorrection()"
+                class="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition">
+                저장
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const sessionUuid = '{{ session.uuid }}';
+    const correctionModalEl = document.getElementById('affiliationCorrectionModal');
+    const correctionModalTargetLabelEl = document.getElementById('correctionModalTargetLabel');
+    const correctionModalOriginalValueEl = document.getElementById('correctionModalOriginalValue');
+    const correctionModalValueEl = document.getElementById('correctionModalValue');
+    const correctionModalReasonEl = document.getElementById('correctionModalReason');
+    const correctionModalState = {
+        targetType: '',
+        targetId: '',
+    };
 
     function toggleGuide() {
         const guide = document.getElementById('participantGuide');
@@ -455,6 +623,15 @@
         input.select();
         navigator.clipboard.writeText(input.value);
         alert('링크가 복사되었습니다!');
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function openQrModal() {
@@ -533,14 +710,28 @@
             }
             let html = '<div class="space-y-2">';
             data.participants.forEach(p => {
+                const hasCorrection = !!p.corrected_affiliation;
+                const safeName = escapeHtml(p.name || '');
+                const safeDisplayAffiliation = escapeHtml(p.display_affiliation || '');
+                const safeOriginalAffiliation = escapeHtml(p.original_affiliation || '-');
                 html += `
                 <div class="flex items-center justify-between p-2 rounded hover:bg-white/50 transition">
                     <div class="flex items-center gap-2">
                         ${p.has_signed ? '<span class="text-green-600">✅</span>' : '<span class="text-orange-400">⏳</span>'}
-                        <span class="font-bold text-gray-700">${p.name}</span>
-                        <span class="text-gray-400 text-sm">${p.affiliation || ''}</span>
+                        <span class="font-bold text-gray-700">${safeName}</span>
+                        <span class="text-gray-500 text-sm">${safeDisplayAffiliation}</span>
+                        ${hasCorrection ? `<span class="text-[11px] text-gray-400">(원본: ${safeOriginalAffiliation})</span>` : ''}
                     </div>
-                    <button onclick="deleteParticipant(${p.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-sm"></i></button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            onclick="editParticipantAffiliation(${p.id}, '${encodeURIComponent(p.display_affiliation || '')}', '${encodeURIComponent(p.original_affiliation || '')}')"
+                            class="text-purple-500 hover:text-purple-700"
+                            title="직위/학년반 정정"
+                        >
+                            <i class="fa-solid fa-pen text-sm"></i>
+                        </button>
+                        <button onclick="deleteParticipant(${p.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-sm"></i></button>
+                    </div>
                 </div>`;
             });
             list.innerHTML = html + '</div>';
@@ -553,6 +744,103 @@
             method: 'POST',
             headers: { 'X-CSRFToken': '{{ csrf_token }}' },
         }).then(res => res.json()).then(data => { if (data.success) loadParticipants(); });
+    }
+
+    function openAffiliationCorrectionModal({ targetType, targetId, currentValue, originalValue }) {
+        correctionModalState.targetType = targetType;
+        correctionModalState.targetId = String(targetId || '');
+        correctionModalTargetLabelEl.textContent = targetType === 'signature' ? '서명 항목 정정' : '명단 항목 정정';
+        correctionModalOriginalValueEl.textContent = (originalValue || '-').trim() || '-';
+        correctionModalValueEl.value = (currentValue || '').trim();
+        correctionModalReasonEl.value = '';
+        correctionModalEl.classList.remove('hidden');
+        correctionModalEl.classList.add('flex');
+        correctionModalValueEl.focus();
+    }
+
+    function closeAffiliationCorrectionModal() {
+        correctionModalEl.classList.add('hidden');
+        correctionModalEl.classList.remove('flex');
+        correctionModalState.targetType = '';
+        correctionModalState.targetId = '';
+        correctionModalValueEl.value = '';
+        correctionModalReasonEl.value = '';
+    }
+
+    function editSignatureAffiliation(signatureId, currentValue, originalValue) {
+        openAffiliationCorrectionModal({
+            targetType: 'signature',
+            targetId: signatureId,
+            currentValue: currentValue || '',
+            originalValue: originalValue || '',
+        });
+    }
+
+    function editParticipantAffiliation(participantId, encodedCurrentValue, encodedOriginalValue) {
+        openAffiliationCorrectionModal({
+            targetType: 'participant',
+            targetId: participantId,
+            currentValue: decodeURIComponent(encodedCurrentValue || ''),
+            originalValue: decodeURIComponent(encodedOriginalValue || ''),
+        });
+    }
+
+    function submitAffiliationCorrection() {
+        const targetType = correctionModalState.targetType;
+        const targetId = correctionModalState.targetId;
+        if (!targetType || !targetId) return;
+
+        const correctedAffiliation = correctionModalValueEl.value.trim();
+        const reason = correctionModalReasonEl.value.trim();
+        const endpoint = targetType === 'signature'
+            ? `/signatures/${sessionUuid}/signatures/${targetId}/correct-affiliation/`
+            : `/signatures/${sessionUuid}/participants/${targetId}/correct-affiliation/`;
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ corrected_affiliation: correctedAffiliation, reason }),
+        }).then(res => res.json()).then(data => {
+            if (!data.success) {
+                alert('오류: ' + (data.error || '정정에 실패했습니다.'));
+                return;
+            }
+            closeAffiliationCorrectionModal();
+            if (targetType === 'signature') {
+                location.reload();
+                return;
+            }
+            loadParticipants();
+            setTimeout(() => location.reload(), 150);
+        });
+    }
+
+    function applyBulkAffiliationCorrection() {
+        const sourceAffiliation = document.getElementById('bulkSourceAffiliation').value.trim();
+        const correctedAffiliation = document.getElementById('bulkCorrectedAffiliation').value.trim();
+        const target = document.getElementById('bulkCorrectionTarget').value;
+        const reason = document.getElementById('bulkCorrectionReason').value.trim();
+        if (!sourceAffiliation || !correctedAffiliation) {
+            alert('원본 값과 정정 값을 모두 입력해 주세요.');
+            return;
+        }
+        fetch(`/signatures/${sessionUuid}/affiliations/bulk-correct/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({
+                source_affiliation: sourceAffiliation,
+                corrected_affiliation: correctedAffiliation,
+                target,
+                reason,
+            }),
+        }).then(res => res.json()).then(data => {
+            if (!data.success) {
+                alert('오류: ' + (data.error || '일괄 정정에 실패했습니다.'));
+                return;
+            }
+            alert(`일괄 정정 완료: 총 ${data.updated_total}건 (서명 ${data.updated_signatures}건, 명단 ${data.updated_participants}건)`);
+            location.reload();
+        });
     }
 
     function matchSignature(sigId, partId) {
@@ -575,9 +863,16 @@
                 if (event.target === qrModal) closeQrModal();
             });
         }
+        if (correctionModalEl) {
+            correctionModalEl.addEventListener('click', (event) => {
+                if (event.target === correctionModalEl) closeAffiliationCorrectionModal();
+            });
+        }
     });
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeQrModal();
+        if (event.key !== 'Escape') return;
+        closeQrModal();
+        closeAffiliationCorrectionModal();
     });
 </script>
 {% endblock %}

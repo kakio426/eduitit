@@ -72,6 +72,17 @@ class Signature(models.Model):
         verbose_name='연수'
     )
     participant_affiliation = models.CharField('직위/학년반', max_length=100, blank=True)
+    corrected_affiliation = models.CharField('정정 직위/학년반', max_length=100, blank=True)
+    affiliation_correction_reason = models.CharField('정정 사유', max_length=200, blank=True)
+    affiliation_corrected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='corrected_signatures',
+        verbose_name='정정자',
+    )
+    affiliation_corrected_at = models.DateTimeField('정정 시각', null=True, blank=True)
     participant_name = models.CharField('참여자 이름', max_length=50)
 
     # Store signature as Base64 - efficient for small images
@@ -86,6 +97,10 @@ class Signature(models.Model):
 
     def __str__(self):
         return f"{self.participant_name} - {self.training_session.title}"
+
+    @property
+    def display_affiliation(self):
+        return (self.corrected_affiliation or self.participant_affiliation or '').strip()
 
 
 class SignatureStyle(models.Model):
@@ -135,6 +150,17 @@ class ExpectedParticipant(models.Model):
         blank=True,
         help_text='예: 1-1, 2-3, 교사'
     )
+    corrected_affiliation = models.CharField('정정 소속/학년반', max_length=100, blank=True)
+    affiliation_correction_reason = models.CharField('정정 사유', max_length=200, blank=True)
+    affiliation_corrected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='corrected_expected_participants',
+        verbose_name='정정자',
+    )
+    affiliation_corrected_at = models.DateTimeField('정정 시각', null=True, blank=True)
     
     # Matching metadata
     matched_signature = models.ForeignKey(
@@ -162,12 +188,85 @@ class ExpectedParticipant(models.Model):
         verbose_name_plural = '예상 참석자 목록'
     
     def __str__(self):
-        if self.affiliation:
-            return f"{self.name} ({self.affiliation})"
+        display_affiliation = self.display_affiliation
+        if display_affiliation:
+            return f"{self.name} ({display_affiliation})"
         return self.name
     
     @property
     def has_signed(self):
         """서명 완료 여부"""
         return self.matched_signature is not None
+
+    @property
+    def display_affiliation(self):
+        return (self.corrected_affiliation or self.affiliation or '').strip()
+
+
+class AffiliationCorrectionLog(models.Model):
+    """직위/학년반 정정 감사 로그."""
+
+    TARGET_SIGNATURE = "signature"
+    TARGET_PARTICIPANT = "participant"
+    TARGET_CHOICES = [
+        (TARGET_SIGNATURE, "서명"),
+        (TARGET_PARTICIPANT, "예상 참석자"),
+    ]
+
+    MODE_SINGLE = "single"
+    MODE_BULK = "bulk"
+    MODE_SCRIPT = "script"
+    MODE_CHOICES = [
+        (MODE_SINGLE, "개별 정정"),
+        (MODE_BULK, "일괄 정정"),
+        (MODE_SCRIPT, "정규화 스크립트"),
+    ]
+
+    training_session = models.ForeignKey(
+        TrainingSession,
+        on_delete=models.CASCADE,
+        related_name="affiliation_correction_logs",
+        verbose_name="연수",
+    )
+    target_type = models.CharField("대상 유형", max_length=20, choices=TARGET_CHOICES)
+    mode = models.CharField("수정 방식", max_length=20, choices=MODE_CHOICES, default=MODE_SINGLE)
+
+    signature = models.ForeignKey(
+        Signature,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="affiliation_correction_logs",
+        verbose_name="대상 서명",
+    )
+    expected_participant = models.ForeignKey(
+        ExpectedParticipant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="affiliation_correction_logs",
+        verbose_name="대상 예상 참석자",
+    )
+
+    before_affiliation = models.CharField("변경 전", max_length=100, blank=True)
+    after_affiliation = models.CharField("변경 후", max_length=100, blank=True)
+    reason = models.CharField("사유", max_length=200, blank=True)
+    corrected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="affiliation_correction_logs",
+        verbose_name="수정자",
+    )
+    created_at = models.DateTimeField("수정 시각", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "직위/학년반 정정 로그"
+        verbose_name_plural = "직위/학년반 정정 로그"
+
+    def __str__(self):
+        target_label = self.get_target_type_display()
+        return f"{target_label} {self.before_affiliation} -> {self.after_affiliation}"
 

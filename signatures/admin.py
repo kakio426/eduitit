@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count
-from .models import TrainingSession, Signature
+from .models import AffiliationCorrectionLog, Signature, TrainingSession
 
 
 class SignatureInline(admin.TabularInline):
@@ -31,10 +31,34 @@ class TrainingSessionAdmin(admin.ModelAdmin):
 
 @admin.register(Signature)
 class SignatureAdmin(admin.ModelAdmin):
-    list_display = ['participant_name', 'training_session', 'created_at']
+    list_display = ['participant_name', 'training_session', 'participant_affiliation', 'corrected_affiliation', 'created_at']
     list_filter = ['training_session', 'created_at']
     search_fields = ['participant_name']
     readonly_fields = ['created_at']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('training_session')
+
+
+@admin.register(AffiliationCorrectionLog)
+class AffiliationCorrectionLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'created_at',
+        'training_session',
+        'target_type',
+        'mode',
+        'before_affiliation',
+        'after_affiliation',
+        'corrected_by',
+    ]
+    list_filter = ['target_type', 'mode', 'created_at']
+    search_fields = ['before_affiliation', 'after_affiliation', 'reason', 'training_session__title']
+    readonly_fields = ['created_at']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'training_session',
+            'corrected_by',
+            'signature',
+            'expected_participant',
+        )
