@@ -37,6 +37,7 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/csv/history/", views.htmx_csv_history, name="htmx_csv_history"),
     path("class/<uuid:classroom_id>/htmx/rag/generate/", views.htmx_rag_generate, name="htmx_rag_generate"),
     path("class/<uuid:classroom_id>/htmx/generate/", views.htmx_generate, name="htmx_generate"),
+    path("class/<uuid:classroom_id>/htmx/set/preview/<uuid:set_id>/", views.htmx_set_preview, name="htmx_set_preview"),
     path("class/<uuid:classroom_id>/htmx/publish/<uuid:set_id>/", views.htmx_publish, name="htmx_publish"),
     path("class/<uuid:classroom_id>/htmx/set/archive/<uuid:set_id>/", views.htmx_set_archive, name="htmx_set_archive"),
     path("class/<uuid:classroom_id>/htmx/publish/rollback/", views.htmx_publish_rollback, name="htmx_publish_rollback"),

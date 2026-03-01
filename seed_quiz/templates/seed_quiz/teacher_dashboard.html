@@ -7,113 +7,65 @@
 <div class="max-w-4xl mx-auto">
 
     <!-- 헤더 -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
             <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; 교실로 돌아가기</a>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">📝 씨앗 퀴즈</h1>
             <p class="text-sm text-gray-500">{{ classroom.name }} &middot; {{ classroom.school_name }}</p>
         </div>
-    </div>
-
-    <!-- 3단계 안내 -->
-    <div class="clay-card p-6 rounded-2xl mb-6 border border-indigo-100 bg-indigo-50/40">
-        <h2 class="font-bold text-indigo-800 mb-3">3단계로 끝나요</h2>
-        <div class="grid md:grid-cols-3 gap-3 text-sm">
-            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
-                <p class="font-bold text-indigo-700">1) 문제 준비</p>
-                <p class="text-gray-600 mt-1">문제를 붙여넣거나 파일로 올립니다.</p>
+        <div class="w-full sm:w-auto">
+            <div class="hidden sm:flex flex-wrap items-center gap-2 justify-end">
+                <a href="{% url 'seed_quiz:teacher_student_dashboard' classroom_id=classroom.id %}"
+                   target="_blank"
+                   rel="noopener"
+                   class="px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors whitespace-nowrap">
+                    학생 대시보드 ↗
+                </a>
+                <a href="{% url 'seed_quiz:teacher_result_analysis' classroom_id=classroom.id %}"
+                   target="_blank"
+                   rel="noopener"
+                   class="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors whitespace-nowrap">
+                    정답 분석 ↗
+                </a>
             </div>
-            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
-                <p class="font-bold text-indigo-700">2) 미리보기 확인</p>
-                <p class="text-gray-600 mt-1">문제 수와 정답 번호를 확인하고 저장합니다.</p>
-            </div>
-            <div class="bg-white rounded-xl px-4 py-3 border border-indigo-100">
-                <p class="font-bold text-indigo-700">3) 학생에게 배포</p>
-                <p class="text-gray-600 mt-1">배포 버튼을 누르면 학생이 바로 풀 수 있습니다.</p>
-            </div>
+            <details class="sm:hidden relative">
+                <summary class="list-none cursor-pointer inline-flex items-center justify-between w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-bold">
+                    운영 화면 열기 (새 탭)
+                    <span class="text-xs text-gray-400">▼</span>
+                </summary>
+                <div class="absolute right-0 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg p-2 z-20">
+                    <a href="{% url 'seed_quiz:teacher_student_dashboard' classroom_id=classroom.id %}"
+                       target="_blank"
+                       rel="noopener"
+                       class="block px-3 py-2 rounded-lg text-xs font-bold text-indigo-700 hover:bg-indigo-50">
+                        학생 대시보드 (새 탭)
+                    </a>
+                    <a href="{% url 'seed_quiz:teacher_result_analysis' classroom_id=classroom.id %}"
+                       target="_blank"
+                       rel="noopener"
+                       class="block px-3 py-2 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-50">
+                        정답 분석 (새 탭)
+                    </a>
+                </div>
+            </details>
         </div>
-    </div>
-
-    <!-- 문제 가져오기 -->
-    <div class="clay-card p-6 rounded-2xl mb-6">
-        <h2 class="font-bold text-gray-700 mb-4">문제 가져오기</h2>
-        <p class="text-sm text-gray-500 mb-4">
-            공식/공유/내 세트에서 골라 미리보기 후 바로 배포하세요.
-        </p>
-        <form id="bank-filter-form"
-              hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
-              hx-target="#bank-area"
-              hx-swap="innerHTML"
-              hx-indicator="#bank-spinner"
-              class="flex flex-wrap gap-3 items-end">
-            {% csrf_token %}
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">범위</label>
-                <select name="scope" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    <option value="mine" {% if initial_scope == "mine" %}selected{% endif %}>내 세트</option>
-                    <option value="official" {% if initial_scope == "official" %}selected{% endif %}>공식</option>
-                    <option value="public" {% if initial_scope == "public" %}selected{% endif %}>공유</option>
-                    <option value="all" {% if initial_scope == "all" %}selected{% endif %}>전체</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">주제</label>
-                <select name="preset_type" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    {% for value, label in preset_choices %}
-                    <option value="{{ value }}" {% if value == initial_preset %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">학년</label>
-                <select name="grade" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    <option value="all" {% if initial_grade_str == "all" %}selected{% endif %}>전체</option>
-                    <option value="0" {% if initial_grade_str == "0" %}selected{% endif %}>학년무관</option>
-                    {% for g in "123456"|make_list %}
-                    <option value="{{ g }}" {% if g == initial_grade_str %}selected{% endif %}>{{ g }}학년</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="min-w-[220px] flex-1">
-                <label class="block text-xs font-bold text-gray-500 mb-1">검색</label>
-                <input type="text"
-                       name="q"
-                       value="{{ initial_query }}"
-                       placeholder="세트 제목/문항 내용 검색"
-                       class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-            </div>
-
-            <button type="submit" class="px-5 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all flex items-center gap-2">
-                <span id="bank-spinner" class="htmx-indicator">
-                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                </span>
-                은행 조회
-            </button>
-        </form>
     </div>
 
     <!-- 입력 방식 선택 -->
     <div class="clay-card p-5 rounded-2xl mb-4 border border-violet-200 bg-violet-50/60">
-        <p class="text-sm font-bold text-violet-800">문제 넣는 방법은 <span class="underline">하나만</span> 선택하면 됩니다.</p>
+        <p class="text-sm font-bold text-violet-800">A) 새 문제 만들기 · 방법은 <span class="underline">하나만</span> 선택하면 됩니다.</p>
         <p class="mt-1 text-xs text-violet-700">
             방법 A(붙여넣기) 또는 방법 B(파일 올리기) 중 하나만 진행하세요. 둘 다 넣을 필요가 없습니다.
         </p>
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div class="mt-3 flex flex-col sm:flex-row gap-2">
             <button type="button"
                     data-input-method="paste"
-                    class="px-4 py-2 rounded-lg text-sm font-bold transition-colors bg-violet-600 text-white">
+                    class="w-full sm:w-auto px-4 py-2 rounded-lg text-sm text-center font-bold transition-colors bg-violet-600 text-white whitespace-nowrap">
                 방법 A. 붙여넣기 (권장)
             </button>
             <button type="button"
                     data-input-method="file"
-                    class="px-4 py-2 rounded-lg text-sm font-bold transition-colors bg-white border border-violet-200 text-violet-700 hover:bg-violet-100">
+                    class="w-full sm:w-auto px-4 py-2 rounded-lg text-sm text-center font-bold transition-colors bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 whitespace-nowrap">
                 방법 B. 파일 올리기
             </button>
         </div>
@@ -123,17 +75,17 @@
     <div id="input-method-file" class="clay-card p-6 rounded-2xl mb-6 hidden">
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-gray-700">방법 B) 문제 파일 올리기</h2>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
                 <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
-                   class="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors">
+                   class="w-full sm:w-auto text-center px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors whitespace-nowrap">
                     제작 가이드 보기
                 </a>
                 <a href="{% url 'seed_quiz:download_xlsx_template' classroom_id=classroom.id %}"
-                   class="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors">
+                   class="w-full sm:w-auto text-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors whitespace-nowrap">
                     XLSX 템플릿
                 </a>
                 <a href="{% url 'seed_quiz:download_csv_template' classroom_id=classroom.id %}"
-                   class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors">
+                   class="w-full sm:w-auto text-center px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors whitespace-nowrap">
                     CSV 템플릿
                 </a>
             </div>
@@ -147,7 +99,7 @@
             </summary>
             <div class="mt-2">
                 <a href="{% url 'seed_quiz:download_csv_sample_pack' classroom_id=classroom.id %}"
-                   class="inline-flex px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
+                   class="inline-flex px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors whitespace-nowrap">
                     샘플 팩 다운로드
                 </a>
                 <p class="mt-1 text-xs text-gray-400">LLM으로 생성이 어려울 때 참고용으로만 사용합니다.</p>
@@ -191,29 +143,51 @@
 
     <!-- 텍스트 붙여넣기 업로드 -->
     <div id="input-method-paste" class="clay-card p-6 rounded-2xl mb-6">
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="font-bold text-gray-700">방법 A) 문제 붙여넣기 (가장 쉬운 방법)</h2>
-            <div class="flex items-center gap-2">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <h2 class="font-bold text-gray-700">방법 A) AI 답변 표 붙여넣기 (권장)</h2>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button type="button"
                         id="copy-seed-quiz-prompt"
-                        class="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors">
-                    GPT/GEMS 요청문 복사
+                        class="w-full sm:w-auto px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors whitespace-nowrap text-center">
+                    요청문 복사
                 </button>
                 <button type="button"
                         id="copy-seed-quiz-template"
-                        class="px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition-colors">
+                        class="w-full sm:w-auto px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition-colors whitespace-nowrap text-center">
                     입력 형식 한 줄 복사
                 </button>
             </div>
         </div>
-        <div class="mb-3 p-3 rounded-xl bg-violet-50 border border-violet-200">
-            <p class="text-xs font-bold text-violet-800">GPT/GEMS 사용법 (쉽게)</p>
-            <ol class="mt-1 text-xs text-violet-700 space-y-0.5 list-decimal list-inside">
-                <li><strong>GPT/GEMS 요청문 복사</strong>를 눌러 GPT/GEMS 채팅창에 붙여넣습니다. (새 채팅이 아니어도 됩니다)</li>
-                <li>원하는 조건만 바꿔 보내세요. 예: <code>맞춤법, 3학년, 20문항</code></li>
-                <li>답변으로 받은 표 전체(첫 줄 포함)를 아래 입력칸에 그대로 붙여넣습니다.</li>
-                <li>바로 저장하려면 <strong>문제 만들기(바로 저장)</strong>, 먼저 점검하려면 <strong>형식만 확인</strong>을 누릅니다.</li>
+        <div class="mb-3 p-4 rounded-xl bg-violet-50 border border-violet-200">
+            <p class="text-sm font-black text-violet-900">✨ AI로 순식간에 퀴즈 만들기 (GPT / GEMS 활용법)</p>
+            <ol class="mt-2 text-xs sm:text-sm text-violet-800 space-y-1.5 list-decimal pl-5">
+                <li>
+                    <strong>[요청문 복사]</strong>를 눌러 GPT/GEMS 지침(Instructions)에 붙여넣습니다.
+                </li>
+                <li>
+                    AI에게 원하는 조건을 주문합니다. 예: <code>초3 맞춤법 20문항</code>
+                </li>
+                <li>
+                    AI가 만든 표 전체를 아래 입력칸에 붙여넣습니다.
+                </li>
+                <li>
+                    <strong>[형식만 확인]</strong> 또는 <strong>[문제 만들기(바로 저장)]</strong>을 선택합니다.
+                </li>
+                <li>
+                    저장 후 <strong>[학생에게 배포하기]</strong>로 수업에 바로 사용합니다.
+                </li>
             </ol>
+            <details class="mt-3">
+                <summary class="cursor-pointer text-xs font-bold text-violet-700">자세한 6단계 안내 보기</summary>
+                <ol class="mt-2 text-xs text-violet-800 space-y-1.5 list-decimal pl-5">
+                    <li><strong>나만의 퀴즈 도우미 만들기</strong> ChatGPT의 GPTs 또는 Gemini의 Gems 만들기 화면을 엽니다.</li>
+                    <li><strong>AI에게 퀴즈 생성 규칙 알려주기</strong> 위쪽의 [요청문 복사] 버튼을 클릭한 뒤, 선생님이 만드신 AI 설정의 지침(Instructions) 칸에 복사한 내용을 그대로 붙여넣습니다.</li>
+                    <li><strong>원하는 퀴즈 조건 주문하기</strong> 완성된 AI와 대화하며 조건을 자유롭게 입력합니다. (예시: 초등학교 3학년 수준 맞춤법 퀴즈 20문제)</li>
+                    <li><strong>완성된 문제 가져오기</strong> AI가 조건에 맞춰 만들어 준 표 전체를 복사해 아래 [입력칸]에 붙여넣습니다.</li>
+                    <li><strong>퀴즈 점검 및 저장하기</strong> [형식만 확인]은 사전 점검, [문제 만들기(바로 저장)]은 즉시 저장입니다.</li>
+                    <li><strong>우리 반 학생들과 수업하기</strong> 저장 완료 후 [학생에게 배포하기] 버튼으로 수업에 활용합니다.</li>
+                </ol>
+            </details>
         </div>
         <form id="text-upload-form"
               hx-post="{% url 'seed_quiz:htmx_text_upload' classroom_id=classroom.id %}"
@@ -230,36 +204,24 @@
                           placeholder="GPT/GEMS 또는 엑셀에서 복사한 표 전체를 여기에 붙여넣으세요."
                           class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white resize-y"></textarea>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                 <button type="submit"
                         name="submit_mode"
                         value="save"
-                        class="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all">
+                        class="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg text-sm text-center font-bold hover:shadow-md transition-all whitespace-nowrap">
                     문제 만들기(바로 저장)
                 </button>
                 <button type="submit"
                         name="submit_mode"
                         value="preview"
-                        class="px-4 py-2 bg-white border border-violet-200 text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-50 transition-colors">
+                        class="w-full sm:w-auto px-4 py-2 bg-white border border-violet-200 text-violet-700 rounded-lg text-sm text-center font-bold hover:bg-violet-50 transition-colors whitespace-nowrap">
                     형식만 확인
                 </button>
-                <span id="text-upload-indicator" class="htmx-indicator text-xs text-violet-600 font-bold">
+                <span id="text-upload-indicator" class="htmx-indicator text-xs text-violet-600 font-bold sm:ml-1">
                     처리 중...
                 </span>
             </div>
         </form>
-        <p class="mt-2 text-xs text-gray-500">
-            <strong>GPT/GEMS 요청문 복사</strong>: GPT/GEMS에 붙여 넣을 요청 문장을 복사합니다.
-        </p>
-        <p class="mt-1 text-xs text-gray-500">
-            <strong>입력 형식 한 줄 복사</strong>: GPT 답변에 첫 줄(주제/학년/문제...)이 빠졌을 때만 사용하세요.
-        </p>
-        <p class="mt-1 text-xs text-gray-500">
-            <strong>문제 만들기(바로 저장)</strong>: 붙여넣은 내용을 즉시 세트로 저장합니다.
-        </p>
-        <p class="mt-1 text-xs text-gray-500">
-            <strong>형식만 확인</strong>: 저장 없이 오류(열 누락, 정답번호 범위, 주제/학년 혼합)만 먼저 확인합니다.
-        </p>
         <p class="mt-1 text-xs text-gray-400">
             이 칸은 사람이 한 줄씩 쓰는 용도가 아니라, GPT/GEMS가 만든 표 전체를 한 번에 붙여넣는 용도입니다. 최대 {{ text_limits.max_chars }}자.
         </p>
@@ -282,16 +244,15 @@
                     <label class="block text-xs font-bold text-gray-500 mb-1">주제</label>
                     <select name="preset_type" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
                         {% for value, label in preset_choices %}
-                        <option value="{{ value }}" {% if value == initial_preset %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}" {% if value == generation_preset %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">학년</label>
                     <select name="grade" class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                        <option value="all" {% if initial_grade_str == "all" %}selected{% endif %}>전체</option>
                         {% for g in "123456"|make_list %}
-                        <option value="{{ g }}" {% if g == initial_grade_str %}selected{% endif %}>{{ g }}학년</option>
+                        <option value="{{ g }}" {% if g == generation_grade %}selected{% endif %}>{{ g }}학년</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -311,13 +272,71 @@
     </div>
     {% endif %}
 
-    <!-- 은행 목록 -->
-    <div id="bank-area" class="mb-6"
-         hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
-         hx-trigger="load, bankUpdated from:body"
-         hx-include="#bank-filter-form"
-         hx-swap="innerHTML">
-        <p class="text-sm text-gray-400">퀴즈 은행을 불러오는 중...</p>
+    <!-- 문제 가져오기 + 은행 목록 -->
+    <div class="clay-card p-6 rounded-2xl mb-6">
+        <h2 class="font-bold text-gray-700 mb-2">B) 기존 문제 가져오기 · 퀴즈 은행 목록</h2>
+        <p class="text-sm text-gray-500 mb-1">저장된 세트를 찾고 바로 아래 목록에서 적용하세요.</p>
+        <p class="text-xs text-gray-400 mb-4">전체 보기에서도 내가 만든 최신 세트가 먼저 보이도록 정렬됩니다.</p>
+        <form id="bank-filter-form"
+              hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
+              hx-target="#bank-area"
+              hx-swap="innerHTML"
+              hx-indicator="#bank-spinner"
+              class="grid grid-cols-1 md:grid-cols-[auto_auto_1fr_auto] gap-3 items-end">
+            {% csrf_token %}
+            <input type="hidden" name="scope" value="all">
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">주제</label>
+                <select name="preset_type" class="w-full md:w-auto min-w-[140px] px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all" {% if not initial_preset %}selected{% endif %}>전체</option>
+                    {% for value, label in preset_choices %}
+                    <option value="{{ value }}" {% if value == initial_preset %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">학년</label>
+                <select name="grade" class="w-full md:w-auto min-w-[110px] px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="all" {% if initial_grade_str == "all" %}selected{% endif %}>전체</option>
+                    {% for g in "123456"|make_list %}
+                    <option value="{{ g }}" {% if g == initial_grade_str %}selected{% endif %}>{{ g }}학년</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="min-w-[220px]">
+                <label class="block text-xs font-bold text-gray-500 mb-1">검색</label>
+                <input type="text"
+                       name="q"
+                       value="{{ initial_query }}"
+                       placeholder="세트 제목/문항 내용 검색"
+                       class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+            </div>
+
+            <button type="submit" class="inline-flex items-center justify-center w-full md:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all whitespace-nowrap shrink-0 gap-2">
+                <span id="bank-spinner" class="htmx-indicator">
+                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </span>
+                은행 조회
+            </button>
+        </form>
+        <div id="bank-query-feedback"
+              class="mt-2 hidden rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700"
+              role="status"
+              aria-live="polite"></div>
+
+        <div id="bank-area" class="mt-4"
+             hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
+             hx-trigger="load, bankUpdated from:body"
+             hx-include="#bank-filter-form"
+             hx-swap="innerHTML">
+            <p class="text-sm text-gray-400">퀴즈 은행을 불러오는 중...</p>
+        </div>
     </div>
 
     <!-- 미리보기 영역 -->
@@ -424,10 +443,10 @@
         .forEach((opt) => {
             const key = (opt.value || '').trim().toLowerCase();
             const label = (opt.textContent || '').trim().toLowerCase();
-            if (key) {
+            if (key && key !== 'all') {
                 presetCanonicalMap.set(key, key);
             }
-            if (label) {
+            if (label && key !== 'all') {
                 presetCanonicalMap.set(label, key || label);
             }
         });
@@ -818,7 +837,7 @@
     if (promptBtn) {
         const flash = flashButtonState(
             promptBtn,
-            'GPT/GEMS 요청문 복사',
+            '요청문 복사',
             '복사 완료',
             '복사 실패',
             ['bg-indigo-100', 'text-indigo-700'],
@@ -837,7 +856,103 @@
 })();
 
 (function () {
+    const bankForm = document.getElementById('bank-filter-form');
+    const bankArea = document.getElementById('bank-area');
+    const feedback = document.getElementById('bank-query-feedback');
+    if (!bankForm || !bankArea || !feedback) {
+        return;
+    }
+
+    let shouldScrollToResult = false;
+    let shouldFocusFirstApply = false;
+    let feedbackTimer = null;
+
+    function isBankFormRequestElement(element) {
+        return !!(element && (element === bankForm || bankForm.contains(element)));
+    }
+
+    function resolveTargetElement(detail) {
+        if (!detail) {
+            return null;
+        }
+        const targetRaw = detail.target || (detail.requestConfig ? detail.requestConfig.target : null);
+        if (!targetRaw) {
+            return null;
+        }
+        if (typeof targetRaw === 'string') {
+            return document.querySelector(targetRaw);
+        }
+        return targetRaw && targetRaw.nodeType === 1 ? targetRaw : null;
+    }
+
+    function buildFeedbackMessage(totalCount, queryText) {
+        const count = Number.isFinite(totalCount) ? Math.max(0, Math.floor(totalCount)) : 0;
+        const query = String(queryText || '').trim();
+        if (query) {
+            return '"' + query + '" 검색 결과 ' + count + '세트 조회됨';
+        }
+        return '총 ' + count + '세트 조회됨';
+    }
+
+    function showFeedback(message) {
+        feedback.textContent = message;
+        feedback.classList.remove('hidden');
+        if (feedbackTimer) {
+            window.clearTimeout(feedbackTimer);
+        }
+        feedbackTimer = window.setTimeout(function () {
+            feedback.classList.add('hidden');
+            feedback.textContent = '';
+        }, 4000);
+    }
+
+    document.body.addEventListener('htmx:beforeRequest', function (event) {
+        const detail = event.detail || {};
+        const requestElement = detail.elt || (detail.requestConfig ? detail.requestConfig.elt : null);
+        const openBankRequest = !!(requestElement && requestElement.closest('[data-seed-quiz-open-bank]'));
+        const fromBankFilter = isBankFormRequestElement(requestElement);
+        if (!fromBankFilter && !openBankRequest) {
+            return;
+        }
+        shouldScrollToResult = true;
+        shouldFocusFirstApply = openBankRequest;
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (!event || event.target !== bankArea) {
+            return;
+        }
+        const summaryBox = bankArea.querySelector('[data-bank-result-count]');
+        if (summaryBox) {
+            const total = Number(summaryBox.dataset.bankResultCount || '0');
+            const query = summaryBox.dataset.bankQuery || '';
+            showFeedback(buildFeedbackMessage(total, query));
+        }
+        if (shouldScrollToResult) {
+            shouldScrollToResult = false;
+            bankArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (shouldFocusFirstApply) {
+            shouldFocusFirstApply = false;
+            const firstApplyButton = bankArea.querySelector('form[hx-post*="/htmx/bank/select/"] button[type="submit"]');
+            if (firstApplyButton) {
+                showFeedback('아래 목록에서 원하는 세트를 선택해 주세요.');
+                window.setTimeout(function () {
+                    try {
+                        firstApplyButton.focus({ preventScroll: true });
+                    } catch (_e) {
+                        firstApplyButton.focus();
+                    }
+                }, 140);
+            }
+        }
+    });
+})();
+
+(function () {
     const resultArea = document.getElementById('csv-upload-result');
+    const previewArea = document.getElementById('preview-area');
+    const bankArea = document.getElementById('bank-area');
     const textForm = document.getElementById('text-upload-form');
     const csvForm = document.getElementById('csv-upload-form');
     if (!resultArea || (!textForm && !csvForm)) {
@@ -848,12 +963,111 @@
         return !!(element && ownerForm && (element === ownerForm || ownerForm.contains(element)));
     }
 
+    function isResultAreaRequestElement(element) {
+        return !!(element && resultArea.contains(element));
+    }
+
+    function isPreviewAreaRequestElement(element) {
+        return !!(element && previewArea && (element === previewArea || previewArea.contains(element)));
+    }
+
+    function resolveTargetElement(detail) {
+        if (!detail) {
+            return null;
+        }
+        const targetRaw = detail.target || (detail.requestConfig ? detail.requestConfig.target : null);
+        if (!targetRaw) {
+            return null;
+        }
+        if (typeof targetRaw === 'string') {
+            return document.querySelector(targetRaw);
+        }
+        return targetRaw && targetRaw.nodeType === 1 ? targetRaw : null;
+    }
+
+    function showErrorAlertFromResultArea() {
+        const errorBox = resultArea.querySelector('[data-seed-quiz-error="true"]');
+        if (!errorBox) {
+            return;
+        }
+        const lines = Array.from(errorBox.querySelectorAll('li'))
+            .map(function (node) { return String(node.textContent || '').trim(); })
+            .filter(Boolean);
+        if (!lines.length) {
+            window.alert('문제 만들기에 실패했습니다. 화면의 오류 내용을 확인해 주세요.');
+            return;
+        }
+        const totalRaw = Number(errorBox.dataset.errorTotal || lines.length);
+        const totalCount = Number.isFinite(totalRaw) && totalRaw > 0 ? Math.floor(totalRaw) : lines.length;
+        const preview = lines.slice(0, 3).join('\n');
+        const restCount = Math.max(0, totalCount - 3);
+        const rest = restCount > 0 ? '\n외 ' + restCount + '건' : '';
+        window.alert('문제 만들기에 실패했습니다.\n아래 항목을 수정 후 다시 시도해 주세요.\n\n' + preview + rest);
+    }
+
+    function openLatestPreviewFromResultArea() {
+        const openButton = resultArea.querySelector('[data-open-latest-preview]');
+        if (!openButton) {
+            return;
+        }
+        window.setTimeout(function () {
+            openButton.click();
+        }, 80);
+    }
+
+    function scrollAndFocusPublishButton() {
+        if (!previewArea) {
+            return;
+        }
+        const publishButton = previewArea.querySelector('[data-seed-quiz-publish-button]');
+        if (!publishButton) {
+            return;
+        }
+        previewArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(function () {
+            try {
+                publishButton.focus({ preventScroll: true });
+            } catch (_e) {
+                publishButton.focus();
+            }
+        }, 220);
+    }
+
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (!event || event.target !== resultArea) {
+            return;
+        }
+        const successBox = resultArea.querySelector('[data-seed-quiz-success="true"]');
+        if (successBox) {
+            const title = successBox.dataset.successTitle || '문제 만들기가 완료되었습니다.';
+            const created = successBox.dataset.createdCount || '0';
+            const updated = successBox.dataset.updatedCount || '0';
+            window.alert(title + '\n신규 생성 ' + created + '개 / 기존 갱신 ' + updated + '개');
+            openLatestPreviewFromResultArea();
+            return;
+        }
+        showErrorAlertFromResultArea();
+    });
+
+    if (previewArea) {
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (!event || event.target !== previewArea) {
+                return;
+            }
+            scrollAndFocusPublishButton();
+        });
+    }
+
     document.body.addEventListener('htmx:responseError', function (event) {
         const detail = event.detail || {};
         const requestElement = detail.elt || (detail.requestConfig ? detail.requestConfig.elt : null);
+        const targetElement = resolveTargetElement(detail);
+        const previewRequest = isPreviewAreaRequestElement(requestElement) || !!(targetElement && previewArea && targetElement === previewArea);
         if (
             !isOwnedRequestElement(requestElement, textForm) &&
-            !isOwnedRequestElement(requestElement, csvForm)
+            !isOwnedRequestElement(requestElement, csvForm) &&
+            !isResultAreaRequestElement(requestElement) &&
+            !previewRequest
         ) {
             return;
         }
@@ -861,9 +1075,26 @@
         if (!xhr) {
             return;
         }
+        if (previewRequest) {
+            const previewTarget = targetElement || previewArea || bankArea;
+            if (previewTarget && xhr.responseText) {
+                previewTarget.innerHTML = xhr.responseText;
+                previewTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (previewTarget) {
+                previewTarget.innerHTML = (
+                    '<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">' +
+                    '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' +
+                    '</div>'
+                );
+            }
+            const statusText = xhr.status ? '\n오류 코드: ' + xhr.status : '';
+            window.alert('요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' + statusText);
+            return;
+        }
         if (xhr.status === 400 && xhr.responseText) {
             resultArea.innerHTML = xhr.responseText;
             resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showErrorAlertFromResultArea();
             return;
         }
         resultArea.innerHTML = (
@@ -871,6 +1102,7 @@
             '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' +
             '</div>'
         );
+        window.alert('요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     });
 })();
 </script>

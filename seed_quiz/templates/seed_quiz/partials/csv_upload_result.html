@@ -1,5 +1,7 @@
 {% if errors %}
 <div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm"
+     data-seed-quiz-error="true"
+     data-error-total="{{ errors|length }}"
      hx-on::after-settle="document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold mb-2">CSV 처리 중 문제가 있습니다.</p>
     <ul class="list-disc pl-5 space-y-1">
@@ -19,11 +21,32 @@
 </div>
 {% else %}
 <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm"
+     data-seed-quiz-success="true"
+     data-success-title="{{ success_title|default:'CSV 저장이 완료되었습니다.' }}"
+     data-created-count="{{ created_count|default:0 }}"
+     data-updated-count="{{ updated_count|default:0 }}"
      hx-on::after-settle="document.body.dispatchEvent(new Event('bankUpdated')); document.body.dispatchEvent(new Event('csvHistoryUpdated'));">
     <p class="font-bold">{{ success_title|default:"CSV 저장이 완료되었습니다." }}</p>
     <p class="mt-1">신규 생성: {{ created_count }}개 / 기존 갱신: {{ updated_count|default:0 }}개</p>
     {% if shared_count %}
     <p class="mt-1 text-emerald-700">공유 완료: {{ shared_count }}개</p>
+    {% endif %}
+    {% if latest_bank_id %}
+    <form class="mt-3"
+          hx-post="{% url 'seed_quiz:htmx_bank_select' classroom_id=classroom.id bank_id=latest_bank_id %}"
+          hx-target="#preview-area"
+          hx-swap="innerHTML"
+          hx-indicator="#open-latest-preview-indicator"
+          hx-disabled-elt="button">
+        {% csrf_token %}
+        <button type="submit"
+                data-open-latest-preview
+                data-seed-quiz-action="open-latest-preview"
+                class="inline-flex w-full sm:w-auto items-center justify-center px-3 py-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 transition-colors whitespace-nowrap">
+            <span id="open-latest-preview-indicator" class="htmx-indicator mr-1 text-xs">⏳</span>
+            방금 만든 세트 열기
+        </button>
+    </form>
     {% endif %}
 </div>
 {% endif %}

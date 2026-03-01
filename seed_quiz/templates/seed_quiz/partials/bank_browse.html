@@ -1,4 +1,6 @@
-<div class="clay-card p-6 rounded-2xl">
+<div class="rounded-xl border border-gray-100 bg-white p-4 sm:p-5"
+     data-bank-result-count="{{ total_count }}"
+     data-bank-query="{{ q|default:'' }}">
     <div class="flex items-center justify-between gap-3 mb-3">
         <div>
             <h2 class="font-bold text-gray-700">퀴즈 은행 목록</h2>
@@ -71,10 +73,10 @@
     <div class="space-y-3">
         {% for bank in banks %}
         <div class="p-4 bg-white border border-gray-200 rounded-xl">
-            <div class="flex items-start justify-between gap-3">
-                <div>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div class="min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                        <h3 class="font-bold text-gray-800">{{ bank.title }}</h3>
+                        <h3 class="font-bold text-gray-800 break-words">{{ bank.display_title|default:bank.title }}</h3>
                         {% if bank.is_official %}
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">공식</span>
                         {% endif %}
@@ -86,15 +88,19 @@
                         {% endif %}
                     </div>
                     <p class="text-xs text-gray-500">
-                        {% if bank.grade == 0 %}학년무관{% else %}{{ bank.grade }}학년{% endif %} · {{ bank.get_preset_type_display }} · {{ bank.get_source_display }} · 사용 {{ bank.use_count }}회
+                        {% if bank.display_grade_label %}{{ bank.display_grade_label }}{% elif bank.grade == 0 %}전체학년{% else %}{{ bank.grade }}학년{% endif %} · {{ bank.get_preset_type_display }} · {{ bank.get_source_display }} · 사용 {{ bank.use_count }}회
                     </p>
                 </div>
                 <form hx-post="{% url 'seed_quiz:htmx_bank_select' classroom_id=classroom.id bank_id=bank.id %}"
+                      class="w-full sm:w-auto"
                       hx-target="#preview-area"
-                      hx-swap="innerHTML">
+                      hx-swap="innerHTML"
+                      hx-indicator="#bank-select-indicator-{{ bank.id }}"
+                      hx-disabled-elt="button">
                     {% csrf_token %}
                     <button type="submit"
-                            class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all">
+                            class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all whitespace-nowrap shrink-0">
+                        <span id="bank-select-indicator-{{ bank.id }}" class="htmx-indicator mr-1 text-[10px]">⏳</span>
                         이 세트 적용
                     </button>
                 </form>
@@ -105,9 +111,9 @@
     {% else %}
     <div class="p-5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500">
         {% if q %}
-        &quot;{{ q }}&quot;에 맞는 퀴즈 세트가 없습니다. 검색어를 바꾸거나 범위를 `전체`로 넓혀 보세요.
+        &quot;{{ q }}&quot;에 맞는 퀴즈 세트가 없습니다. 검색어를 바꾸거나 주제/학년을 `전체`로 넓혀 보세요.
         {% else %}
-        조건에 맞는 퀴즈 세트가 없습니다. 범위를 `전체`로 바꾸거나 문제 붙여넣기/파일 올리기로 새 세트를 추가해 주세요.
+        조건에 맞는 퀴즈 세트가 없습니다. 주제/학년을 `전체`로 바꾸거나 문제 붙여넣기/파일 올리기로 새 세트를 추가해 주세요.
         {% endif %}
     </div>
     {% endif %}

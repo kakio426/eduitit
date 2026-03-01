@@ -13,12 +13,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
-from django.db.models import Avg, Count, F, Max, Q
+from django.db.models import Avg, Case, Count, F, IntegerField, Max, Q, When
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -393,6 +393,27 @@ def _build_bank_display_title(bank: SQQuizBank) -> str:
         grade_label = "전체학년"
 
     return f"{topic_label} · {grade_label} CSV 세트"
+
+
+def _resolve_latest_saved_bank_id(*, parsed_sets: list[dict], created_by) -> str:
+    set_titles = []
+    for row in parsed_sets or []:
+        title = str((row or {}).get("set_title") or "").strip()
+        if title:
+            set_titles.append(title)
+    if not set_titles:
+        return ""
+    latest_bank = (
+        SQQuizBank.objects.filter(
+            created_by=created_by,
+            source="csv",
+            title__in=set_titles,
+        )
+        .only("id")
+        .order_by("-created_at")
+        .first()
+    )
+    return str(latest_bank.id) if latest_bank else ""
 
 
 def _clear_csv_error_report(request):
@@ -985,7 +1006,19 @@ def htmx_bank_browse(request, classroom_id):
             Q(title__icontains=query) | Q(items__question_text__icontains=query)
         ).distinct()
 
-    ordered_qs = banks_qs.order_by("-is_official", "-use_count", "-created_at")
+    if scope == "all":
+        # 전체 조회에서도 교사 본인이 방금 만든 세트를 먼저 보여준다.
+        ordered_qs = banks_qs.annotate(
+            my_rank=Case(
+                When(created_by=request.user, then=1),
+                default=0,
+                output_field=IntegerField(),
+            )
+        ).order_by("-my_rank", "-created_at", "-is_official", "-use_count")
+    elif scope == "mine":
+        ordered_qs = banks_qs.order_by("-created_at")
+    else:
+        ordered_qs = banks_qs.order_by("-is_official", "-use_count", "-created_at")
     paginator = Paginator(ordered_qs, 20)
     page_raw = (request.GET.get("page") or "1").strip()
     page_obj = None
@@ -1417,6 +1450,10 @@ def htmx_text_upload(request, classroom_id):
             created_by=request.user,
             share_opt_in=True,
         )
+        latest_bank_id = _resolve_latest_saved_bank_id(
+            parsed_sets=parsed_sets,
+            created_by=request.user,
+        )
         _log_csv_event(
             classroom=classroom,
             teacher=request.user,
@@ -1442,6 +1479,7 @@ def htmx_text_upload(request, classroom_id):
                 "updated_count": updated_count,
                 "shared_count": shared_count,
                 "success_title": "문제 만들기가 완료되었습니다.",
+                "latest_bank_id": latest_bank_id,
                 "errors": [],
             },
             status=200,
@@ -1523,6 +1561,10 @@ def htmx_csv_confirm(request, classroom_id):
         created_by=request.user,
         share_opt_in=share_opt_in,
     )
+    latest_bank_id = _resolve_latest_saved_bank_id(
+        parsed_sets=parsed_sets,
+        created_by=request.user,
+    )
     _log_csv_event(
         classroom=classroom,
         teacher=request.user,
@@ -1550,6 +1592,7 @@ def htmx_csv_confirm(request, classroom_id):
             "created_count": created_count,
             "updated_count": updated_count,
             "shared_count": shared_count,
+            "latest_bank_id": latest_bank_id,
             "errors": [],
         },
         status=200,
@@ -1675,6 +1718,28 @@ def htmx_generate(request, classroom_id):
             f"퀴즈 생성 오류: {e}</div>"
         )
 
+    items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": items,
+        },
+    )
+
+
+@login_required
+@require_GET
+def htmx_set_preview(request, classroom_id, set_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    quiz_set = get_object_or_404(
+        SQQuizSet,
+        id=set_id,
+        classroom=classroom,
+        status="draft",
+    )
     items = quiz_set.items.order_by("order_no")
     return render(
         request,

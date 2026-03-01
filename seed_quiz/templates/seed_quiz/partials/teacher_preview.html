@@ -10,9 +10,60 @@
             <p class="text-xs text-gray-500 mt-1">
                 출처: {% if quiz_set.source == 'bank' %}퀴즈 은행{% elif quiz_set.source == 'csv' %}CSV{% elif quiz_set.source == 'fallback' %}기본 문제{% else %}AI{% endif %}
             </p>
-            <p class="text-xs text-gray-500 mt-1">문제가 맞으면 아래 버튼으로 학생에게 바로 배포하세요.</p>
+            <p class="text-xs text-gray-500 mt-1">문제가 맞으면 아래 버튼으로 바로 운영하세요.</p>
         </div>
     </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+        <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=quiz_set.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML"
+              hx-indicator="#preview-publish-indicator"
+              hx-disabled-elt="button"
+              class="w-full">
+            {% csrf_token %}
+            <button type="submit"
+                    data-seed-quiz-publish-button
+                    data-seed-quiz-action="publish"
+                    class="inline-flex items-center justify-center w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all whitespace-nowrap min-h-[44px]">
+                <span id="preview-publish-indicator" class="htmx-indicator mr-1 text-xs">⏳</span>
+                학생에게 배포하기
+            </button>
+        </form>
+
+        <button type="button"
+                hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
+                hx-include="#bank-filter-form"
+                hx-target="#bank-area"
+                hx-swap="innerHTML"
+                hx-indicator="#preview-bank-indicator"
+                hx-disabled-elt="this"
+                data-seed-quiz-action="open-bank"
+                data-seed-quiz-open-bank
+                class="inline-flex items-center justify-center w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors whitespace-nowrap min-h-[44px]">
+            <span id="preview-bank-indicator" class="htmx-indicator mr-1 text-xs">⏳</span>
+            다른 세트 고르기
+        </button>
+
+        <form hx-post="{% url 'seed_quiz:htmx_set_archive' classroom_id=classroom.id set_id=quiz_set.id %}"
+              hx-target="#preview-area"
+              hx-swap="innerHTML"
+              hx-indicator="#preview-archive-indicator"
+              hx-disabled-elt="button"
+              class="w-full">
+            {% csrf_token %}
+            <button type="submit"
+                    data-seed-quiz-action="archive"
+                    class="inline-flex items-center justify-center w-full px-4 py-2.5 bg-amber-100 text-amber-800 rounded-lg text-sm font-bold hover:bg-amber-200 transition-colors whitespace-nowrap min-h-[44px]">
+                <span id="preview-archive-indicator" class="htmx-indicator mr-1 text-xs">⏳</span>
+                세트 보관(숨김)
+            </button>
+        </form>
+    </div>
+    <p class="mb-6 text-xs text-gray-500">
+        <strong>학생에게 배포하기</strong>를 누르면 이 영역이 배포 완료 화면으로 바뀝니다.
+        <span class="block mt-1"><strong>다른 세트 고르기</strong>를 누르면 아래 퀴즈 은행 목록으로 이동해 바로 다음 선택 버튼에 포커스됩니다.</span>
+    </p>
 
     <div class="space-y-5 mb-6">
         {% for item in items %}
@@ -34,37 +85,5 @@
             {% endif %}
         </div>
         {% endfor %}
-    </div>
-
-    <div class="flex flex-wrap gap-3">
-        <button type="button"
-                hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
-                hx-include="#bank-filter-form"
-                hx-target="#bank-area"
-                hx-swap="innerHTML"
-                class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors whitespace-nowrap">
-            📚 다른 세트 고르기
-        </button>
-
-        <form hx-post="{% url 'seed_quiz:htmx_set_archive' classroom_id=classroom.id set_id=quiz_set.id %}"
-              hx-target="#preview-area"
-              hx-swap="innerHTML">
-            {% csrf_token %}
-            <button type="submit"
-                    class="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-bold hover:bg-amber-200 transition-colors whitespace-nowrap">
-                🗂 세트 보관(숨김)
-            </button>
-        </form>
-
-        <!-- 배포 -->
-        <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=quiz_set.id %}"
-              hx-target="#preview-area"
-              hx-swap="innerHTML">
-            {% csrf_token %}
-            <button type="submit"
-                    class="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-bold hover:shadow-md transition-all whitespace-nowrap">
-                🚀 3) 학생에게 배포하기
-            </button>
-        </form>
     </div>
 </div>

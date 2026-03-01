@@ -1,5 +1,8 @@
 {% if quiz_set %}
-<h2 class="font-bold text-gray-700 mb-4">진행 현황 <span class="text-xs text-gray-400 font-normal">(자동 갱신)</span></h2>
+<div class="flex items-center justify-between gap-2 mb-4">
+    <h2 class="font-bold text-gray-700">진행 현황</h2>
+    <span class="inline-flex px-2 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold">10초 자동 갱신</span>
+</div>
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
     <div class="text-center">
         <div class="text-3xl font-black text-gray-800">{{ stats.total }}</div>
@@ -36,12 +39,12 @@
     {% if attempt_rows %}
     <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
         {% for attempt in attempt_rows %}
-        <div class="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 bg-white">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white">
             <div class="min-w-0">
                 <p class="text-sm font-bold text-gray-700 truncate">{{ attempt.student.number }}번 {{ attempt.student.name }}</p>
                 <p class="text-xs text-gray-400">{{ attempt.answer_count }}/{{ item_total }}문항 답변</p>
             </div>
-            <div class="text-right">
+            <div class="text-left sm:text-right">
                 {% if attempt.status == 'submitted' or attempt.status == 'rewarded' %}
                 <span class="inline-flex px-2 py-1 rounded-md bg-green-100 text-green-700 text-xs font-bold">제출 완료</span>
                 {% else %}

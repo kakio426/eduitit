@@ -121,7 +121,7 @@ class TeacherFlowTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "문제 가져오기")
-        self.assertContains(resp, "3단계로 끝나요")
+        self.assertContains(resp, "AI로 순식간에 퀴즈 만들기")
         self.assertContains(resp, 'id="csv-client-check"')
         self.assertContains(resp, "문제는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
@@ -129,6 +129,17 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
         self.assertContains(resp, "방법 B. 파일 올리기")
         self.assertNotContains(resp, "랜덤 1세트 선택")
+
+    def test_dashboard_shows_new_tab_navigation_labels(self):
+        url = reverse(
+            "seed_quiz:teacher_dashboard",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "운영 화면 열기 (새 탭)")
+        self.assertContains(resp, "학생 대시보드 (새 탭)")
+        self.assertContains(resp, "정답 분석 (새 탭)")
 
     def test_dashboard_default_filters_are_all(self):
         url = reverse(
@@ -172,6 +183,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "학생 대시보드")
         self.assertContains(resp, "학생 접속 주소")
+        self.assertContains(resp, "정답 분석 열기 (새 탭)")
 
     def test_teacher_result_analysis_returns_200(self):
         published = SQQuizSet.objects.create(
@@ -202,6 +214,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "정답 결과 분석")
         self.assertContains(resp, "문항별 정답률")
+        self.assertContains(resp, "학생 대시보드 열기 (새 탭)")
 
     def test_teacher_result_analysis_includes_wrong_items_per_student(self):
         published = SQQuizSet.objects.create(
@@ -615,6 +628,28 @@ class TeacherFlowTest(TestCase):
         self.assertIsNotNone(draft)
         self.assertEqual(draft.source, "bank")
         self.assertEqual(draft.items.count(), 3)
+        self.assertContains(resp, "학생에게 배포하기")
+        self.assertContains(resp, "다른 세트 고르기")
+        self.assertContains(resp, "세트 보관(숨김)")
+        self.assertContains(resp, "data-seed-quiz-publish-button")
+
+    def test_set_preview_returns_existing_draft_preview(self):
+        select_url = reverse(
+            "seed_quiz:htmx_bank_select",
+            kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
+        )
+        self.client.post(select_url)
+        draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(draft)
+
+        preview_url = reverse(
+            "seed_quiz:htmx_set_preview",
+            kwargs={"classroom_id": self.classroom.id, "set_id": draft.id},
+        )
+        resp = self.client.get(preview_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "2) 저장된 문제 확인")
+        self.assertContains(resp, "다른 세트 고르기")
 
     def test_bank_select_allows_more_than_three_items(self):
         SQQuizBankItem.objects.create(
@@ -797,6 +832,8 @@ class TeacherFlowTest(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "문제 만들기가 완료되었습니다")
+        self.assertContains(resp, "방금 만든 세트 열기")
+        self.assertContains(resp, "data-open-latest-preview")
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertEqual(bank.items.count(), 3)
 
@@ -992,6 +1029,8 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(confirm_resp.status_code, 200)
         self.assertContains(confirm_resp, "공유 완료")
         self.assertContains(confirm_resp, 'data-seed-quiz-success="true"')
+        self.assertContains(confirm_resp, "방금 만든 세트 열기")
+        self.assertContains(confirm_resp, "data-open-latest-preview")
         bank = SQQuizBank.objects.get(
             source="csv",
             created_by=self.teacher,
@@ -1114,6 +1153,9 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         quiz_set.refresh_from_db()
         self.assertEqual(quiz_set.status, "published")
+        self.assertContains(resp, "학생 대시보드 열기 (새 탭)")
+        self.assertContains(resp, "정답 결과 분석 보기 (새 탭)")
+        self.assertContains(resp, "QR 전체화면")
 
     @patch("seed_quiz.services.generation._call_ai")
     def test_publish_requires_force_and_closes_existing_published(self, mock_ai):
@@ -1147,6 +1189,11 @@ class TeacherFlowTest(TestCase):
         first_resp = self.client.post(pub_url2)
         self.assertEqual(first_resp.status_code, 200)
         self.assertContains(first_resp, "이미 배포 중인 퀴즈가 있습니다.")
+        preview_url = reverse(
+            "seed_quiz:htmx_set_preview",
+            kwargs={"classroom_id": self.classroom.id, "set_id": qs2.id},
+        )
+        self.assertContains(first_resp, preview_url)
         qs1.refresh_from_db()
         qs2.refresh_from_db()
         self.assertEqual(qs1.status, "published")

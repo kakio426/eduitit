@@ -20,19 +20,26 @@
         </div>
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex flex-col sm:flex-row gap-2">
         <button type="button"
-                onclick="document.getElementById('preview-area').innerHTML='';"
-                class="px-4 py-2 rounded-lg bg-white text-gray-700 text-sm font-bold border border-gray-200 hover:bg-gray-50 transition-colors">
-            취소
+                hx-get="{% url 'seed_quiz:htmx_set_preview' classroom_id=classroom.id set_id=quiz_set.id %}"
+                hx-target="#preview-area"
+                hx-swap="innerHTML"
+                class="w-full sm:w-auto px-4 py-2 rounded-lg bg-white text-gray-700 text-sm text-center font-bold border border-gray-200 hover:bg-gray-50 transition-colors whitespace-nowrap">
+            취소하고 문제 확인으로 돌아가기
         </button>
         <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=quiz_set.id %}"
               hx-target="#preview-area"
-              hx-swap="innerHTML">
+              hx-swap="innerHTML"
+              hx-indicator="#preview-force-publish-indicator"
+              hx-disabled-elt="button"
+              class="w-full sm:w-auto">
             {% csrf_token %}
             <input type="hidden" name="force_replace" value="1">
             <button type="submit"
-                    class="px-5 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors">
+                    data-seed-quiz-action="force-publish"
+                    class="inline-flex items-center justify-center w-full sm:w-auto px-5 py-2 rounded-lg bg-amber-500 text-white text-sm text-center font-bold hover:bg-amber-600 transition-colors whitespace-nowrap">
+                <span id="preview-force-publish-indicator" class="htmx-indicator mr-1 text-xs">⏳</span>
                 확인 후 덮어쓰기 배포
             </button>
         </form>
