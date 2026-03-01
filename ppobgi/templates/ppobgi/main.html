@@ -119,46 +119,59 @@
                         <span class="ppb-chip">남은 <strong id="ppb-chip-left">0</strong>명</span>
                         <span class="ppb-chip">추첨 <strong id="ppb-chip-round">0</strong>회</span>
                     </div>
+                    <div class="ppb-progress-wrap" role="status" aria-live="polite">
+                        <p class="ppb-progress-label">진행률 <strong id="ppb-progress-text">0%</strong></p>
+                        <div class="ppb-progress-track">
+                            <span id="ppb-progress-bar" class="ppb-progress-bar"></span>
+                        </div>
+                    </div>
                     <h2 class="ppb-universe-title">빛나는 별 하나를 선택하세요</h2>
                     <div id="ppb-orb-grid" class="ppb-orb-grid"></div>
                     <div class="ppb-bottom-actions">
-                        <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">처음으로 돌아가기</button>
+                        <button id="ppb-reroll-btn" type="button" class="ppb-soft-btn">같은 명단으로 다시 뽑기</button>
+                        <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
                     </div>
                 </div>
                 <aside class="ppb-history-panel">
-                    <h3>추첨 기록</h3>
-                    <ol id="ppb-history-list-universe" class="ppb-history-list"></ol>
+                    <div class="ppb-live-card">
+                        <p class="ppb-live-label">방금 선택된 학생</p>
+                        <h3 id="ppb-live-name" class="ppb-live-name">대기 중</h3>
+                        <p id="ppb-live-meta" class="ppb-live-meta">별을 선택하면 여기에 결과가 나타납니다.</p>
+                    </div>
+                    <div class="ppb-side-actions">
+                        <button id="ppb-undo-btn" type="button" class="ppb-soft-btn">직전 추첨 되돌리기</button>
+                        <button id="ppb-edit-roster-btn" type="button" class="ppb-soft-btn">명단 수정</button>
+                    </div>
+                    <p class="ppb-shortcut-hint">단축키: <kbd>Space</kbd> 무작위 추첨, <kbd>Ctrl</kbd>+<kbd>Z</kbd> 직전 되돌리기</p>
+                    <div class="ppb-history-box">
+                        <h3>추첨 기록</h3>
+                        <ol id="ppb-history-list-universe" class="ppb-history-list"></ol>
+                    </div>
                 </aside>
             </div>
         </section>
-
-        <section id="ppb-reveal" class="ppb-screen is-hidden">
-            <div class="ppb-reveal-bg" aria-hidden="true"></div>
-            <div id="ppb-particles" class="ppb-particles" aria-hidden="true"></div>
-
-            <div class="ppb-reveal-shell">
-                <p class="ppb-reveal-label">이번에 선택된 학생</p>
-                <div class="ppb-selected-wrap">
-                    <div class="ppb-selected-glow" aria-hidden="true"></div>
-                    <h2 id="ppb-selected-name" class="ppb-selected-name"></h2>
-                </div>
-                <p class="ppb-reveal-meta">
-                    남은 인원 <strong id="ppb-reveal-left">0</strong>명 /
-                    누적 추첨 <strong id="ppb-reveal-round">0</strong>회
-                </p>
-
-                <div class="ppb-reveal-actions">
-                    <button id="ppb-next-draw-btn" type="button" class="ppb-primary-btn">다음 추첨</button>
-                    <button id="ppb-reset-btn" type="button" class="ppb-ghost-btn">새 명단으로 다시 시작</button>
-                </div>
-
-                <div class="ppb-history-inline">
-                    <h3>최근 추첨 기록</h3>
-                    <ol id="ppb-history-list-reveal" class="ppb-history-list"></ol>
-                </div>
-            </div>
-        </section>
+        <div id="ppb-particles" class="ppb-particles" aria-hidden="true"></div>
     </div>
+
+    <div id="ppb-editor-overlay" class="ppb-editor-overlay is-hidden" aria-hidden="true"></div>
+    <aside id="ppb-editor-drawer" class="ppb-editor-drawer is-hidden" aria-hidden="true" aria-label="별빛 추첨기 명단 수정">
+        <div class="ppb-editor-head">
+            <h3>명단 수정</h3>
+            <button id="ppb-editor-close-btn" type="button" class="ppb-ghost-btn">닫기</button>
+        </div>
+        <p class="ppb-editor-help">한 줄에 한 명 입력하고 저장하면 즉시 반영됩니다. (최대 40명)</p>
+        <textarea id="ppb-editor-input" class="ppb-textarea ppb-editor-textarea"></textarea>
+        <p id="ppb-editor-summary" class="ppb-editor-summary"></p>
+        <div id="ppb-editor-message" class="ppb-message" aria-live="polite"></div>
+        <div class="ppb-editor-tools">
+            <button id="ppb-editor-sample-btn" type="button" class="ppb-soft-btn">예시 명단</button>
+            <button id="ppb-editor-roster-btn" type="button" class="ppb-soft-btn">당번 명단</button>
+        </div>
+        <div class="ppb-editor-actions">
+            <button id="ppb-editor-cancel-btn" type="button" class="ppb-ghost-btn">취소</button>
+            <button id="ppb-editor-save-btn" type="button" class="ppb-primary-btn">명단 저장 후 다시 시작</button>
+        </div>
+    </aside>
 
     <div id="ppb-mode-ladder" class="ppb-mode-view is-hidden">
         <section id="pbl-setup" class="ppb-screen">
@@ -293,6 +306,7 @@
     // 세션 학급이 설정된 경우 자동으로 학생 명단 로드
     var textarea = document.getElementById('ppb-name-input');
     var ladderTextarea = document.getElementById('pbl-name-input');
+    var startBtn = document.getElementById('ppb-start-btn');
     var msgEl = document.getElementById('ppb-setup-message');
     if (!textarea) return;
     fetch(classroomUrl, {credentials: 'same-origin'})
@@ -310,6 +324,9 @@
             if (msgEl) {
                 msgEl.textContent = '현재 학급 [' + classroomName + '] 명단 ' + names.length + '명이 자동으로 불러와졌습니다.';
                 msgEl.className = 'ppb-message info';
+            }
+            if (startBtn && !startBtn.disabled) {
+                startBtn.click();
             }
         })
         .catch(function() {

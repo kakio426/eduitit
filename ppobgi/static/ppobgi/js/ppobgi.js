@@ -6,11 +6,12 @@
         return;
     }
 
+    const modeStarsView = document.getElementById("ppb-mode-stars");
+
     const els = {
         screens: {
             setup: document.getElementById("ppb-setup"),
             universe: document.getElementById("ppb-universe"),
-            reveal: document.getElementById("ppb-reveal"),
         },
         stars: document.getElementById("ppb-stars"),
         flash: document.getElementById("ppb-flash"),
@@ -28,28 +29,42 @@
         chipTotal: document.getElementById("ppb-chip-total"),
         chipLeft: document.getElementById("ppb-chip-left"),
         chipRound: document.getElementById("ppb-chip-round"),
-        selectedName: document.getElementById("ppb-selected-name"),
-        revealLeft: document.getElementById("ppb-reveal-left"),
-        revealRound: document.getElementById("ppb-reveal-round"),
-        nextDrawBtn: document.getElementById("ppb-next-draw-btn"),
-        resetBtn: document.getElementById("ppb-reset-btn"),
+        progressText: document.getElementById("ppb-progress-text"),
+        progressBar: document.getElementById("ppb-progress-bar"),
+        universeTitle: document.querySelector("#ppb-universe .ppb-universe-title"),
         resetFromUniverseBtn: document.getElementById("ppb-reset-from-universe-btn"),
+        rerollBtn: document.getElementById("ppb-reroll-btn"),
+        undoBtn: document.getElementById("ppb-undo-btn"),
+        editRosterBtn: document.getElementById("ppb-edit-roster-btn"),
         historyUniverse: document.getElementById("ppb-history-list-universe"),
-        historyReveal: document.getElementById("ppb-history-list-reveal"),
+        liveCard: document.querySelector(".ppb-live-card"),
+        liveName: document.getElementById("ppb-live-name"),
+        liveMeta: document.getElementById("ppb-live-meta"),
+        editorOverlay: document.getElementById("ppb-editor-overlay"),
+        editorDrawer: document.getElementById("ppb-editor-drawer"),
+        editorInput: document.getElementById("ppb-editor-input"),
+        editorSummary: document.getElementById("ppb-editor-summary"),
+        editorMessage: document.getElementById("ppb-editor-message"),
+        editorCloseBtn: document.getElementById("ppb-editor-close-btn"),
+        editorCancelBtn: document.getElementById("ppb-editor-cancel-btn"),
+        editorSaveBtn: document.getElementById("ppb-editor-save-btn"),
+        editorSampleBtn: document.getElementById("ppb-editor-sample-btn"),
+        editorRosterBtn: document.getElementById("ppb-editor-roster-btn"),
         reduceMotion: document.getElementById("ppb-reduce-motion"),
         fullscreenBtn: document.getElementById("ppb-fullscreen-btn"),
     };
 
-    const ORB_COLORS = [
-        { main: "rgba(253, 224, 71, 1)", glow: "rgba(253, 224, 71, 0.6)" },
-        { main: "rgba(147, 197, 253, 1)", glow: "rgba(147, 197, 253, 0.6)" },
-        { main: "rgba(249, 168, 212, 1)", glow: "rgba(249, 168, 212, 0.6)" },
-        { main: "rgba(216, 180, 254, 1)", glow: "rgba(216, 180, 254, 0.6)" },
-        { main: "rgba(255, 255, 255, 1)", glow: "rgba(255, 255, 255, 0.55)" },
+    const STAR_COLORS = [
+        { core: "rgba(253, 230, 138, 0.98)", glow: "rgba(251, 191, 36, 0.62)" },
+        { core: "rgba(191, 219, 254, 0.98)", glow: "rgba(96, 165, 250, 0.56)" },
+        { core: "rgba(244, 208, 255, 0.98)", glow: "rgba(216, 180, 254, 0.56)" },
+        { core: "rgba(186, 230, 253, 0.98)", glow: "rgba(34, 211, 238, 0.58)" },
+        { core: "rgba(255, 255, 255, 0.98)", glow: "rgba(255, 255, 255, 0.5)" },
     ];
 
     const MAX_NAMES = 40;
     const REDUCE_MOTION_KEY = "ppobgi_reduce_motion";
+    const STAR_ROSTER_KEY = "ppobgi_star_roster_v1";
 
     const state = {
         appState: "setup",
@@ -59,13 +74,13 @@
         selectedName: "",
         transitionLock: false,
         reduceMotion: false,
+        editorOpen: false,
     };
 
     function decodeDefaultNames(raw) {
         if (!raw) {
             return "";
         }
-        // data-* 속성에 들어온 escapejs 문자열(\u000A, \n)을 실제 줄바꿈으로 복원
         return raw
             .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
             .replace(/\\r\\n/g, "\n")
@@ -84,11 +99,11 @@
     }
 
     function normalizeName(name) {
-        return name.replace(/\s+/g, " ").trim();
+        return String(name || "").replace(/\s+/g, " ").trim();
     }
 
     function parseNameInput(rawText) {
-        const rows = rawText.split(/\r?\n/);
+        const rows = String(rawText || "").split(/\r?\n/);
         const valid = [];
         const dupSet = new Set();
         const seen = new Set();
@@ -112,6 +127,25 @@
             duplicateNames: Array.from(dupSet),
             cutCount,
         };
+    }
+
+    function applyMessage(el, text, kind) {
+        if (!el) {
+            return;
+        }
+        el.textContent = text || "";
+        el.classList.remove("warn", "info");
+        if (kind) {
+            el.classList.add(kind);
+        }
+    }
+
+    function setSetupMessage(text, kind) {
+        applyMessage(els.setupMessage, text, kind);
+    }
+
+    function setEditorMessage(text, kind) {
+        applyMessage(els.editorMessage, text, kind);
     }
 
     function updateSetupStats() {
@@ -149,15 +183,26 @@
         }
     }
 
-    function setSetupMessage(text, kind) {
-        if (!els.setupMessage) {
+    function updateEditorStats() {
+        if (!els.editorInput) {
             return;
         }
-        els.setupMessage.textContent = text;
-        els.setupMessage.classList.remove("warn", "info");
-        if (kind) {
-            els.setupMessage.classList.add(kind);
+        const parsed = parseNameInput(els.editorInput.value);
+        if (els.editorSummary) {
+            els.editorSummary.textContent = `유효 ${parsed.valid.length}명 / 중복 제외 ${parsed.duplicateNames.length}명 / 초과 제외 ${parsed.cutCount}명`;
         }
+        if (els.editorSaveBtn) {
+            els.editorSaveBtn.disabled = parsed.valid.length === 0;
+        }
+        if (parsed.valid.length === 0) {
+            setEditorMessage("최소 1명 이상의 이름을 입력해 주세요.", "warn");
+            return;
+        }
+        if (parsed.duplicateNames.length > 0 || parsed.cutCount > 0) {
+            setEditorMessage("중복/초과 항목은 저장 시 자동으로 정리됩니다.", "warn");
+            return;
+        }
+        setEditorMessage("저장하면 현재 추첨이 새 명단으로 즉시 다시 시작됩니다.", "info");
     }
 
     function shuffle(list) {
@@ -171,18 +216,18 @@
 
     function buildOrbs(names) {
         const shuffled = shuffle(names);
-        return shuffled.map((name, idx) => {
-            const color = ORB_COLORS[Math.floor(Math.random() * ORB_COLORS.length)];
+        return shuffled.map((name) => {
+            const color = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)];
             return {
-                id: idx,
                 name,
-                main: color.main,
+                core: color.core,
                 glow: color.glow,
-                size: Math.max(46, Math.min(82, 86 - shuffled.length * 0.5 + Math.random() * 8)),
-                delay: Math.random() * 2.5,
+                size: Math.max(54, Math.min(90, 96 - shuffled.length * 0.75 + Math.random() * 10)),
+                delay: Math.random() * 2.4,
                 floatKey: Math.random() > 0.5 ? "ppb-float" : "ppb-float-reverse",
-                offsetY: Math.random() * 18 - 9,
+                offsetY: Math.random() * 16 - 8,
                 offsetX: Math.random() * 14 - 7,
+                rotation: Math.random() * 18 - 9,
             };
         });
     }
@@ -191,57 +236,60 @@
         if (!els.orbGrid) {
             return;
         }
-
         const orbs = buildOrbs(state.remainingNames);
+        if (!orbs.length) {
+            const done = document.createElement("div");
+            done.className = "ppb-orb-empty";
+            done.textContent = "모든 별이 사라졌어요. 같은 명단으로 다시 뽑거나 명단을 수정해 주세요.";
+            els.orbGrid.replaceChildren(done);
+            return;
+        }
         const fragment = document.createDocumentFragment();
         orbs.forEach((orb) => {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.className = "ppb-orb";
-            btn.setAttribute("aria-label", "별 선택");
+            btn.setAttribute("aria-label", `${orb.name} 선택`);
             btn.style.setProperty("--orb-size", `${orb.size}px`);
-            btn.style.setProperty("--orb-main", orb.main);
+            btn.style.setProperty("--orb-core", orb.core);
             btn.style.setProperty("--orb-glow", orb.glow);
             btn.style.setProperty("--orb-delay", `${orb.delay}s`);
             btn.style.setProperty("--orb-float", orb.floatKey);
             btn.style.setProperty("--orb-offset-y", `${orb.offsetY}px`);
             btn.style.setProperty("--orb-offset-x", `${orb.offsetX}px`);
-            btn.addEventListener("click", () => handleOrbClick(orb.name));
+            btn.style.setProperty("--orb-rotation", `${orb.rotation}deg`);
+            btn.innerHTML = '<span class="ppb-orb-core" aria-hidden="true"></span>';
+            btn.addEventListener("click", () => handleOrbClick(orb.name, btn));
             fragment.appendChild(btn);
         });
         els.orbGrid.replaceChildren(fragment);
     }
 
     function renderHistory() {
-        const renderTarget = (target) => {
-            if (!target) {
-                return;
-            }
-            if (state.history.length === 0) {
-                const empty = document.createElement("li");
-                empty.innerHTML = '<span class="ppb-history-round">기록 없음</span><span class="ppb-history-name">-</span>';
-                target.replaceChildren(empty);
-                return;
-            }
-            const fragment = document.createDocumentFragment();
-            state.history.forEach((item) => {
-                const li = document.createElement("li");
-                li.innerHTML =
-                    `<span class="ppb-history-round">${item.round}회차</span>` +
-                    `<span class="ppb-history-name">${item.name}</span>`;
-                fragment.appendChild(li);
-            });
-            target.replaceChildren(fragment);
-        };
-
-        renderTarget(els.historyUniverse);
-        renderTarget(els.historyReveal);
+        if (!els.historyUniverse) {
+            return;
+        }
+        if (state.history.length === 0) {
+            const empty = document.createElement("li");
+            empty.innerHTML = '<span class="ppb-history-round">기록 없음</span><span class="ppb-history-name">-</span>';
+            els.historyUniverse.replaceChildren(empty);
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        state.history.forEach((item) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="ppb-history-round">${item.round}회차</span><span class="ppb-history-name">${item.name}</span>`;
+            fragment.appendChild(li);
+        });
+        els.historyUniverse.replaceChildren(fragment);
     }
 
     function updateCounterUI() {
         const total = state.totalNames.length;
         const left = state.remainingNames.length;
         const round = state.history.length;
+        const done = Math.max(0, total - left);
+        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
         if (els.chipTotal) {
             els.chipTotal.textContent = String(total);
@@ -252,15 +300,22 @@
         if (els.chipRound) {
             els.chipRound.textContent = String(round);
         }
-        if (els.revealLeft) {
-            els.revealLeft.textContent = String(left);
+        if (els.progressText) {
+            els.progressText.textContent = `${percent}%`;
         }
-        if (els.revealRound) {
-            els.revealRound.textContent = String(round);
+        if (els.progressBar) {
+            els.progressBar.style.width = `${percent}%`;
         }
-        if (els.nextDrawBtn) {
-            els.nextDrawBtn.disabled = left <= 0;
-            els.nextDrawBtn.textContent = left > 0 ? "다음 추첨" : "모든 인원 추첨 완료";
+        if (els.undoBtn) {
+            els.undoBtn.disabled = round === 0;
+        }
+        if (els.rerollBtn) {
+            els.rerollBtn.disabled = total === 0;
+        }
+        if (els.universeTitle) {
+            els.universeTitle.textContent = total > 0 && left === 0
+                ? "모든 별이 사라졌어요"
+                : "빛나는 별 하나를 선택하세요";
         }
     }
 
@@ -269,15 +324,18 @@
             return;
         }
         const fragment = document.createDocumentFragment();
-        for (let i = 0; i < 20; i += 1) {
+        for (let i = 0; i < 18; i += 1) {
             const particle = document.createElement("span");
             particle.className = "ppb-particle";
             particle.style.left = `${Math.random() * 100}%`;
-            particle.style.animationDuration = `${Math.random() * 5 + 5}s`;
-            particle.style.animationDelay = `${Math.random() * 2}s`;
+            particle.style.animationDuration = `${Math.random() * 2 + 2.4}s`;
+            particle.style.animationDelay = `${Math.random() * 0.3}s`;
             fragment.appendChild(particle);
         }
         els.particles.replaceChildren(fragment);
+        window.setTimeout(() => {
+            els.particles?.replaceChildren();
+        }, state.reduceMotion ? 220 : 900);
     }
 
     function createStars() {
@@ -285,20 +343,76 @@
             return;
         }
         const fragment = document.createDocumentFragment();
-        for (let i = 0; i < 140; i += 1) {
+        for (let i = 0; i < 150; i += 1) {
             const star = document.createElement("span");
             star.className = "ppb-star";
-            const size = Math.random() * 2 + 0.5;
+            const size = Math.random() * 2.4 + 0.5;
             star.style.left = `${Math.random() * 100}%`;
             star.style.top = `${Math.random() * 100}%`;
             star.style.width = `${size}px`;
             star.style.height = `${size}px`;
-            star.style.opacity = String(Math.random() * 0.5 + 0.1);
-            star.style.animationDuration = `${3 + Math.random() * 4}s`;
-            star.style.animationDelay = `${Math.random() * 5}s`;
+            star.style.opacity = String(Math.random() * 0.56 + 0.08);
+            star.style.animationDuration = `${3 + Math.random() * 4.5}s`;
+            star.style.animationDelay = `${Math.random() * 6}s`;
             fragment.appendChild(star);
         }
         els.stars.replaceChildren(fragment);
+    }
+
+    function setLiveCard(name, meta) {
+        if (els.liveName) {
+            els.liveName.textContent = name || "대기 중";
+        }
+        if (els.liveMeta) {
+            els.liveMeta.textContent = meta || "별을 선택하면 여기에 결과가 나타납니다.";
+        }
+        els.liveCard?.classList.toggle("is-selected", Boolean(name));
+    }
+
+    function persistRoster(names) {
+        try {
+            window.localStorage.setItem(STAR_ROSTER_KEY, JSON.stringify(names));
+        } catch (error) {
+            // noop
+        }
+    }
+
+    function loadStoredRoster() {
+        try {
+            const raw = window.localStorage.getItem(STAR_ROSTER_KEY);
+            if (!raw) {
+                return [];
+            }
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            const normalized = parseNameInput(parsed.join("\n"));
+            return normalized.valid;
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function applyRosterAndStart(names, message) {
+        state.totalNames = [...names];
+        state.remainingNames = [...names];
+        state.history = [];
+        state.selectedName = "";
+        state.transitionLock = false;
+        if (els.input) {
+            els.input.value = names.join("\n");
+        }
+        updateSetupStats();
+        updateCounterUI();
+        renderHistory();
+        renderOrbs();
+        setLiveCard("준비 완료", `${names.length}명 명단으로 추첨을 시작하세요.`);
+        if (message) {
+            setSetupMessage(message, "info");
+        }
+        persistRoster(names);
+        setScreen("universe");
     }
 
     function startDraw() {
@@ -311,82 +425,150 @@
             els.input.focus();
             return;
         }
-
-        state.totalNames = parsed.valid;
-        state.remainingNames = [...parsed.valid];
-        state.history = [];
-        state.selectedName = "";
-        state.transitionLock = false;
-
-        updateCounterUI();
-        renderHistory();
-        renderOrbs();
-        setScreen("universe");
+        applyRosterAndStart(parsed.valid);
     }
 
-    function handleOrbClick(name) {
-        if (state.transitionLock) {
+    function handleOrbClick(name, clickedBtn) {
+        if (state.transitionLock || state.appState !== "universe") {
             return;
         }
         state.transitionLock = true;
         state.selectedName = name;
 
-        state.remainingNames = state.remainingNames.filter((item) => item !== name);
+        const removeIndex = state.remainingNames.indexOf(name);
+        if (removeIndex !== -1) {
+            state.remainingNames.splice(removeIndex, 1);
+        }
         state.history.unshift({
             round: state.history.length + 1,
             name,
         });
 
+        updateCounterUI();
+        renderHistory();
+        renderParticles();
+        const left = state.remainingNames.length;
+        setLiveCard(
+            name,
+            left > 0
+                ? `남은 인원 ${left}명 · 스페이스바로 다음 추첨`
+                : "모든 학생 추첨 완료",
+        );
+
         if (els.flash) {
-            els.flash.style.opacity = "1";
+            els.flash.style.opacity = state.reduceMotion ? "0.4" : "0.8";
+        }
+        if (clickedBtn) {
+            clickedBtn.classList.add("is-picked");
+            clickedBtn.disabled = true;
+            window.setTimeout(() => {
+                clickedBtn.remove();
+            }, state.reduceMotion ? 90 : 420);
         }
 
-        const transitionDelay = state.reduceMotion ? 140 : 700;
         window.setTimeout(() => {
-            if (els.selectedName) {
-                els.selectedName.textContent = state.selectedName;
-            }
-            renderParticles();
-            updateCounterUI();
-            renderHistory();
-            setScreen("reveal");
             if (els.flash) {
                 els.flash.style.opacity = "0";
             }
             state.transitionLock = false;
-        }, transitionDelay);
+        }, state.reduceMotion ? 130 : 480);
     }
 
-    function goNextDraw() {
-        if (state.remainingNames.length <= 0) {
+    function rerollCurrentRoster() {
+        if (!state.totalNames.length) {
             return;
         }
-        setScreen("universe");
-        renderOrbs();
-        updateCounterUI();
-        renderHistory();
-    }
-
-    function resetAll() {
-        state.totalNames = [];
-        state.remainingNames = [];
+        state.remainingNames = [...state.totalNames];
         state.history = [];
         state.selectedName = "";
-        setScreen("setup");
+        state.transitionLock = false;
         updateCounterUI();
         renderHistory();
-        updateSetupStats();
+        renderOrbs();
+        setLiveCard("다시 시작", `${state.totalNames.length}명 명단으로 추첨을 다시 시작합니다.`);
     }
 
-    async function loadRosterNames() {
-        const rosterUrl = root.dataset.rosterUrl || "";
-        if (!rosterUrl || !els.input) {
+    function undoLastDraw() {
+        if (state.transitionLock || state.history.length === 0) {
             return;
         }
+        const recent = state.history.shift();
+        if (!recent) {
+            return;
+        }
+        state.remainingNames.push(recent.name);
+        state.selectedName = "";
+        updateCounterUI();
+        renderHistory();
+        renderOrbs();
+        setLiveCard("되돌리기", `${recent.name} 학생을 추첨 후보에 다시 추가했습니다.`);
+    }
 
-        if (els.loadRosterBtn) {
-            els.loadRosterBtn.disabled = true;
-            els.loadRosterBtn.textContent = "명단 불러오는 중...";
+    function goSetupScreen() {
+        if (els.input && state.totalNames.length) {
+            els.input.value = state.totalNames.join("\n");
+        }
+        updateSetupStats();
+        setScreen("setup");
+    }
+
+    function openEditor() {
+        if (!els.editorOverlay || !els.editorDrawer || !els.editorInput) {
+            return;
+        }
+        const namesForEditor = state.totalNames.length
+            ? state.totalNames
+            : parseNameInput(els.input?.value || "").valid;
+        els.editorInput.value = namesForEditor.join("\n");
+        updateEditorStats();
+        els.editorOverlay.classList.remove("is-hidden");
+        els.editorDrawer.classList.remove("is-hidden");
+        els.editorOverlay.setAttribute("aria-hidden", "false");
+        els.editorDrawer.setAttribute("aria-hidden", "false");
+        root.classList.add("ppb-editor-open");
+        state.editorOpen = true;
+        els.editorInput.focus();
+    }
+
+    function closeEditor() {
+        if (!els.editorOverlay || !els.editorDrawer) {
+            return;
+        }
+        els.editorOverlay.classList.add("is-hidden");
+        els.editorDrawer.classList.add("is-hidden");
+        els.editorOverlay.setAttribute("aria-hidden", "true");
+        els.editorDrawer.setAttribute("aria-hidden", "true");
+        root.classList.remove("ppb-editor-open");
+        state.editorOpen = false;
+        els.editRosterBtn?.focus();
+    }
+
+    function saveEditedRoster() {
+        if (!els.editorInput) {
+            return;
+        }
+        const parsed = parseNameInput(els.editorInput.value);
+        if (parsed.valid.length === 0) {
+            setEditorMessage("최소 1명 이상의 이름을 입력해 주세요.", "warn");
+            els.editorInput.focus();
+            return;
+        }
+        closeEditor();
+        applyRosterAndStart(parsed.valid);
+        setLiveCard("명단 업데이트 완료", `${parsed.valid.length}명 명단으로 새 추첨을 시작합니다.`);
+    }
+
+    async function loadRosterNames(target) {
+        const rosterUrl = root.dataset.rosterUrl || "";
+        const isEditor = target === "editor";
+        const targetInput = isEditor ? els.editorInput : els.input;
+        const targetBtn = isEditor ? els.editorRosterBtn : els.loadRosterBtn;
+        if (!rosterUrl || !targetInput) {
+            return;
+        }
+        if (targetBtn) {
+            targetBtn.disabled = true;
+            targetBtn.textContent = "명단 불러오는 중...";
         }
         try {
             const response = await window.fetch(rosterUrl, { credentials: "same-origin" });
@@ -396,18 +578,31 @@
             const data = await response.json();
             const names = Array.isArray(data.names) ? data.names : [];
             if (!names.length) {
-                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                if (isEditor) {
+                    setEditorMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                } else {
+                    setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                }
                 return;
             }
-            els.input.value = names.join("\n");
-            updateSetupStats();
-            setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+            targetInput.value = names.join("\n");
+            if (isEditor) {
+                updateEditorStats();
+                setEditorMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+            } else {
+                updateSetupStats();
+                setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+            }
         } catch (error) {
-            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            if (isEditor) {
+                setEditorMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            } else {
+                setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            }
         } finally {
-            if (els.loadRosterBtn) {
-                els.loadRosterBtn.disabled = false;
-                els.loadRosterBtn.textContent = "당번 명단 불러오기";
+            if (targetBtn) {
+                targetBtn.disabled = false;
+                targetBtn.textContent = isEditor ? "당번 명단" : "당번 명단 불러오기";
             }
         }
     }
@@ -445,6 +640,47 @@
         els.fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 종료" : "전체화면";
     }
 
+    function isStarsModeActive() {
+        return !modeStarsView?.classList.contains("is-hidden");
+    }
+
+    function drawByKeyboard() {
+        if (!isStarsModeActive() || state.appState !== "universe" || state.transitionLock) {
+            return;
+        }
+        const choices = Array.from(els.orbGrid?.querySelectorAll(".ppb-orb") || []).filter((btn) => !btn.disabled);
+        if (!choices.length) {
+            return;
+        }
+        const target = choices[Math.floor(Math.random() * choices.length)];
+        target.click();
+    }
+
+    function handleKeydown(event) {
+        if (state.editorOpen || !isStarsModeActive()) {
+            return;
+        }
+        const tagName = String(event.target?.tagName || "").toUpperCase();
+        const typing = tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || Boolean(event.target?.isContentEditable);
+        if (typing) {
+            return;
+        }
+        if (state.appState === "universe" && event.code === "Space") {
+            event.preventDefault();
+            drawByKeyboard();
+            return;
+        }
+        if (state.appState === "universe" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+            event.preventDefault();
+            undoLastDraw();
+            return;
+        }
+        if (event.key === "Escape" && state.editorOpen) {
+            event.preventDefault();
+            closeEditor();
+        }
+    }
+
     function bindEvents() {
         els.input?.addEventListener("input", updateSetupStats);
         els.startBtn?.addEventListener("click", startDraw);
@@ -453,6 +689,7 @@
                 els.input.value = "";
             }
             updateSetupStats();
+            setSetupMessage("입력이 비워졌습니다.", "info");
         });
         els.loadSampleBtn?.addEventListener("click", () => {
             if (els.input) {
@@ -461,20 +698,38 @@
             updateSetupStats();
             setSetupMessage("예시 명단을 불러왔습니다.", "info");
         });
-        els.loadRosterBtn?.addEventListener("click", loadRosterNames);
-        els.nextDrawBtn?.addEventListener("click", goNextDraw);
-        els.resetBtn?.addEventListener("click", resetAll);
-        els.resetFromUniverseBtn?.addEventListener("click", resetAll);
+        els.loadRosterBtn?.addEventListener("click", () => loadRosterNames("setup"));
+        els.resetFromUniverseBtn?.addEventListener("click", goSetupScreen);
+        els.rerollBtn?.addEventListener("click", rerollCurrentRoster);
+        els.undoBtn?.addEventListener("click", undoLastDraw);
+        els.editRosterBtn?.addEventListener("click", openEditor);
+
+        els.editorOverlay?.addEventListener("click", closeEditor);
+        els.editorCloseBtn?.addEventListener("click", closeEditor);
+        els.editorCancelBtn?.addEventListener("click", closeEditor);
+        els.editorInput?.addEventListener("input", updateEditorStats);
+        els.editorSaveBtn?.addEventListener("click", saveEditedRoster);
+        els.editorSampleBtn?.addEventListener("click", () => {
+            if (!els.editorInput) {
+                return;
+            }
+            els.editorInput.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            updateEditorStats();
+            setEditorMessage("예시 명단을 불러왔습니다.", "info");
+        });
+        els.editorRosterBtn?.addEventListener("click", () => loadRosterNames("editor"));
+
         els.reduceMotion?.addEventListener("change", (event) => {
             applyReduceMotion(Boolean(event.target.checked));
         });
         els.fullscreenBtn?.addEventListener("click", toggleFullscreen);
         document.addEventListener("fullscreenchange", syncFullscreenBtn);
+        document.addEventListener("keydown", handleKeydown);
     }
 
     function bootstrap() {
         if (els.input) {
-            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            els.input.value = "";
         }
         createStars();
         bindEvents();
@@ -487,12 +742,21 @@
         updateSetupStats();
         updateCounterUI();
         renderHistory();
+        renderOrbs();
+        setLiveCard("", "");
         syncFullscreenBtn();
+
+        const stored = loadStoredRoster();
+        if (stored.length > 0) {
+            applyRosterAndStart(stored, `저장된 명단 ${stored.length}명을 불러왔습니다.`);
+            setLiveCard("지난 명단 불러옴", "바로 별을 선택해 추첨을 시작할 수 있습니다.");
+        } else {
+            setSetupMessage("명단을 입력하거나 당번 명단을 불러오세요.", "info");
+        }
     }
 
     bootstrap();
 })();
-
 (function () {
     const root = document.getElementById("ppobgi-app");
     if (!root) {
@@ -1116,4 +1380,5 @@
 
     bootstrap();
 })();
+
 
