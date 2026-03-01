@@ -88,6 +88,16 @@
                 class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fa-solid fa-table-columns"></i> 화면 분할 시작
             </button>
+            <div id="externalModeHeaderActions" class="hidden items-center gap-2">
+                <button id="btnOpenExternalVideoHeader"
+                    class="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-bold transition-all">
+                    영상 새 창 열기
+                </button>
+                <button id="btnFocusExternalVideoHeader"
+                    class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                    영상 창 앞으로
+                </button>
+            </div>
             <button id="btnFullscreen" class="p-3 hover:bg-white/10 rounded-full transition-all">
                 <i class="fa-solid fa-expand text-xl"></i>
             </button>
@@ -95,7 +105,7 @@
     </header>
 
     <!-- Split Workspace -->
-    <div class="h-full min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
+    <div id="classroomWorkspace" class="h-full min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
 
         <!-- Left: YouTube Theater -->
         <div id="videoPanel" class="lg:w-3/5 xl:w-[65%] bg-black relative group flex items-center justify-center">
@@ -153,7 +163,7 @@
         </div>
 
         <!-- Right: Activity Status Panel -->
-        <div class="lg:w-2/5 xl:w-[35%] bg-[#E0E5EC] flex flex-col min-h-0 shadow-2xl relative z-10">
+        <div id="activityPanel" class="lg:w-2/5 xl:w-[35%] bg-[#E0E5EC] flex flex-col min-h-0 shadow-2xl relative z-10">
 
             <!-- Current Activity Feature -->
             <div class="flex-grow flex flex-col min-h-0 overflow-hidden">
@@ -270,12 +280,17 @@
 
     const loopStatusEl = document.getElementById('loopStatus');
     const btnLoopEl = document.getElementById('btnLoop');
+    const classroomWorkspaceEl = document.getElementById('classroomWorkspace');
     const externalVideoOverlayEl = document.getElementById('externalVideoOverlay');
     const externalVideoMessageEl = document.getElementById('externalVideoMessage');
     const videoPanelEl = document.getElementById('videoPanel');
+    const activityPanelEl = document.getElementById('activityPanel');
     const playerEl = document.getElementById('player');
     const btnOpenExternalVideoEl = document.getElementById('btnOpenExternalVideo');
     const btnFocusExternalVideoEl = document.getElementById('btnFocusExternalVideo');
+    const externalModeHeaderActionsEl = document.getElementById('externalModeHeaderActions');
+    const btnOpenExternalVideoHeaderEl = document.getElementById('btnOpenExternalVideoHeader');
+    const btnFocusExternalVideoHeaderEl = document.getElementById('btnFocusExternalVideoHeader');
     const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
     const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
 
@@ -294,11 +309,41 @@
             externalWindowStatusBadgeEl.textContent = '영상 창 연결됨';
             externalWindowStatusBadgeEl.classList.add('bg-emerald-500/20', 'text-emerald-200', 'border-emerald-300/30');
             if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = false;
+            if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = false;
             return;
         }
         externalWindowStatusBadgeEl.textContent = '영상 창 닫힘';
         externalWindowStatusBadgeEl.classList.add('bg-gray-700/70', 'text-gray-200', 'border-white/10');
         if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = true;
+        if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = true;
+    }
+
+    function applyPlaybackLayout(mode) {
+        const isExternalWindowMode = mode === 'external_window';
+        if (videoPanelEl) {
+            videoPanelEl.classList.toggle('hidden', isExternalWindowMode);
+        }
+        if (activityPanelEl) {
+            activityPanelEl.classList.toggle('w-full', isExternalWindowMode);
+            activityPanelEl.classList.toggle('lg:w-2/5', !isExternalWindowMode);
+            activityPanelEl.classList.toggle('xl:w-[35%]', !isExternalWindowMode);
+        }
+        if (classroomWorkspaceEl) {
+            classroomWorkspaceEl.classList.toggle('lg:flex-row', !isExternalWindowMode);
+        }
+        if (btnStartSplitModeEl) {
+            btnStartSplitModeEl.classList.toggle('hidden', isExternalWindowMode);
+        }
+        if (externalModeHeaderActionsEl) {
+            externalModeHeaderActionsEl.classList.toggle('hidden', !isExternalWindowMode);
+            externalModeHeaderActionsEl.classList.toggle('flex', isExternalWindowMode);
+        }
+        if (externalWindowStatusBadgeEl) {
+            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode);
+        }
+        if (!isExternalWindowMode) {
+            setExternalOverlay(false);
+        }
     }
 
     function isValidPlaybackMode(mode) {
@@ -450,11 +495,20 @@
             left = typeof window.screen.availLeft === 'number' ? window.screen.availLeft : 0;
             top = typeof window.screen.availTop === 'number' ? window.screen.availTop : 0;
         } else {
-            const rect = videoPanelEl.getBoundingClientRect();
-            width = Math.max(720, Math.round(rect.width));
-            height = Math.max(420, Math.round(rect.height));
-            left = Math.max(0, Math.round(window.screenX + rect.left));
-            top = Math.max(0, Math.round(window.screenY + rect.top));
+            const screenWidth = window.screen.availWidth || window.innerWidth;
+            const screenHeight = window.screen.availHeight || window.innerHeight;
+            if (!videoPanelEl || videoPanelEl.classList.contains('hidden')) {
+                width = Math.max(720, Math.floor(screenWidth * 0.6));
+                height = Math.max(420, Math.floor(screenHeight * 0.8));
+                left = Math.max(0, Math.round(window.screenX + (window.innerWidth - width) / 2));
+                top = Math.max(0, Math.round(window.screenY + (window.innerHeight - height) / 2));
+            } else {
+                const rect = videoPanelEl.getBoundingClientRect();
+                width = Math.max(720, Math.round(rect.width));
+                height = Math.max(420, Math.round(rect.height));
+                left = Math.max(0, Math.round(window.screenX + rect.left));
+                top = Math.max(0, Math.round(window.screenY + rect.top));
+            }
         }
 
         const popup = window.open(
@@ -499,6 +553,7 @@
 
     function switchToExternalMode(message, persist = true) {
         destroyPlayerSafely();
+        applyPlaybackLayout('external_window');
         setLoopControlEnabled(false);
         setExternalOverlay(true, message);
         if (persist) {
@@ -542,6 +597,7 @@
             return;
         }
         currentPlayerHost = host;
+        applyPlaybackLayout('embed');
         setExternalOverlay(false);
         setLoopControlEnabled(true);
         destroyPlayerSafely();
@@ -785,11 +841,23 @@
         }
     };
 
-    btnOpenExternalVideoEl.onclick = async () => {
-        const opened = openExternalVideoWindow();
-        if (!opened) return;
+    async function openExternalVideoAndPersist(options = {}) {
+        const opened = openExternalVideoWindow(options);
+        if (!opened) return false;
         await persistPlaybackMode('external_window');
+        applyPlaybackLayout('external_window');
+        return true;
+    }
+
+    btnOpenExternalVideoEl.onclick = async () => {
+        await openExternalVideoAndPersist();
     };
+
+    if (btnOpenExternalVideoHeaderEl) {
+        btnOpenExternalVideoHeaderEl.onclick = async () => {
+            await openExternalVideoAndPersist();
+        };
+    }
 
     if (btnFocusExternalVideoEl) {
         btnFocusExternalVideoEl.onclick = async () => {
@@ -797,9 +865,16 @@
                 setExternalOverlay(true, '열려 있는 영상 창을 앞으로 가져왔습니다.');
                 return;
             }
-            const opened = openExternalVideoWindow();
-            if (!opened) return;
-            await persistPlaybackMode('external_window');
+            await openExternalVideoAndPersist();
+         };
+    }
+
+    if (btnFocusExternalVideoHeaderEl) {
+        btnFocusExternalVideoHeaderEl.onclick = async () => {
+            if (focusExternalVideoWindow()) {
+                return;
+            }
+            await openExternalVideoAndPersist();
         };
     }
 
@@ -812,11 +887,12 @@
     }, 1500);
 
     if (btnStartSplitModeEl) {
-        btnStartSplitModeEl.onclick = () => {
+        btnStartSplitModeEl.onclick = async () => {
             const opened = openExternalVideoWindow({ split: true });
             if (!opened) return;
             tryMoveCurrentWindowToRightHalf();
-            switchToExternalMode('화면 분할 모드로 전환했습니다. 왼쪽 창은 유튜브, 오른쪽 창은 수업 안내로 사용하세요.');
+            switchToExternalMode('화면 분할 모드로 전환했습니다. 왼쪽 창은 유튜브, 오른쪽 창은 수업 안내로 사용하세요.', false);
+            await persistPlaybackMode('external_window');
         };
     }
 
@@ -874,6 +950,7 @@
 
     // Init
     setExternalWindowStatus('closed');
+    applyPlaybackLayout(playbackMode);
     updateDisplay();
     initVideoPlayback();
 </script>
