@@ -72,6 +72,8 @@ class CalendarIntegrationSetting(models.Model):
     signatures_training_enabled = models.BooleanField(default=True)
     share_enabled = models.BooleanField(default=False)
     share_uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    retention_notice_event_seeded_at = models.DateTimeField(null=True, blank=True)
+    retention_notice_banner_dismissed_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

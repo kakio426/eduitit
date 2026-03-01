@@ -56,3 +56,31 @@ class CollectCleanupRetentionTests(TestCase):
         call_command("cleanup_collect")
 
         self.assertTrue(CollectionRequest.objects.filter(id=req.id).exists())
+
+    def test_closed_request_within_90_days_is_not_archived(self):
+        req = CollectionRequest.objects.create(
+            creator=self.user,
+            title="closed-within-90-days",
+            status="closed",
+            closed_at=timezone.now() - timedelta(days=40),
+        )
+
+        call_command("cleanup_collect")
+
+        req.refresh_from_db()
+        self.assertEqual(req.status, "closed")
+
+    def test_request_within_1year_is_not_deleted(self):
+        req = CollectionRequest.objects.create(
+            creator=self.user,
+            title="within-1year",
+            status="active",
+        )
+        CollectionRequest.objects.filter(id=req.id).update(
+            created_at=timezone.now() - timedelta(days=120),
+            updated_at=timezone.now() - timedelta(days=120),
+        )
+
+        call_command("cleanup_collect")
+
+        self.assertTrue(CollectionRequest.objects.filter(id=req.id).exists())

@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -33,6 +33,7 @@ from .models import CalendarCollaborator, CalendarEvent, CalendarIntegrationSett
 SERVICE_ROUTE = "classcalendar:main"
 INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
 INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
+RETENTION_NOTICE_TITLE = "[안내] 자동 정리 정책 안내"
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -389,6 +390,59 @@ def _build_reservation_windows_for_user(user):
     return windows
 
 
+def _build_retention_notice_text():
+    return "\n".join(
+        [
+            "자동 정리 정책 안내",
+            "",
+            "1) 고용량 파일(90일): 수합 제출 파일/양식, 동의서 merged PDF",
+            "2) 나머지 데이터(1년): 예약/수합마감/서명연수/동의서 관련 일반 데이터",
+            "",
+            "중요: 기간이 지나면 복구가 어려울 수 있으니 필요한 자료는 미리 보관해 주세요.",
+            "필요하면 이 안내 일정은 직접 삭제해도 됩니다.",
+        ]
+    )
+
+
+def _ensure_retention_notice_event_for_user(user, setting):
+    if setting.retention_notice_event_seeded_at:
+        return
+
+    existing = CalendarEvent.objects.filter(
+        author=user,
+        title=RETENTION_NOTICE_TITLE,
+        source=CalendarEvent.SOURCE_LOCAL,
+        is_locked=False,
+    ).first()
+    if existing:
+        setting.retention_notice_event_seeded_at = timezone.now()
+        setting.save(update_fields=["retention_notice_event_seeded_at", "updated_at"])
+        return
+
+    today = timezone.localdate()
+    start_time = timezone.make_aware(
+        datetime.combine(today, time(hour=8, minute=0)),
+        timezone.get_current_timezone(),
+    )
+    end_time = start_time + timedelta(minutes=20)
+    event = CalendarEvent.objects.create(
+        title=RETENTION_NOTICE_TITLE,
+        author=user,
+        start_time=start_time,
+        end_time=end_time,
+        is_all_day=False,
+        visibility=CalendarEvent.VISIBILITY_TEACHER,
+        source=CalendarEvent.SOURCE_LOCAL,
+        color="amber",
+        classroom=None,
+        is_locked=False,
+    )
+    _persist_primary_note(event, _build_retention_notice_text())
+
+    setting.retention_notice_event_seeded_at = timezone.now()
+    setting.save(update_fields=["retention_notice_event_seeded_at", "updated_at"])
+
+
 def _integration_event_readonly_response():
     return JsonResponse(
         {
@@ -509,6 +563,7 @@ def main_view(request):
     _sync_integrations_if_needed(request)
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
+    _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     context = {
         "service": service,
@@ -528,6 +583,7 @@ def main_view(request):
         "calendar_owner_options_json": _build_calendar_owner_options(request.user, editable_owner_ids),
         "owner_collaborators": _build_owner_collaborator_rows(request.user),
         "incoming_calendars": incoming_calendars,
+        "show_retention_notice_banner": integration_setting.retention_notice_banner_dismissed_at is None,
     }
     return render(request, "classcalendar/main.html", context)
 
@@ -704,6 +760,16 @@ def api_integration_settings(request):
             "settings": serialize_integration_setting(refreshed),
         }
     )
+
+
+@login_required
+@require_POST
+def api_dismiss_retention_notice(request):
+    integration_setting = _get_integration_setting_for_user(request.user)
+    if not integration_setting.retention_notice_banner_dismissed_at:
+        integration_setting.retention_notice_banner_dismissed_at = timezone.now()
+        integration_setting.save(update_fields=["retention_notice_banner_dismissed_at", "updated_at"])
+    return JsonResponse({"status": "success"})
 
 
 @login_required

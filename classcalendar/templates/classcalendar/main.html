@@ -42,6 +42,33 @@
             </button>
         </div>
 
+        <div
+            x-show="retentionNoticeVisible"
+            x-cloak
+            class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm"
+        >
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0">
+                    <h2 class="text-sm sm:text-base font-extrabold text-amber-900">자동 정리 정책 안내</h2>
+                    <p class="mt-1 text-xs sm:text-sm font-medium text-amber-900/90">
+                        고용량 파일은 90일, 일반 데이터는 1년 기준으로 자동 정리됩니다.
+                    </p>
+                    <p class="mt-1 text-xs sm:text-sm font-medium text-amber-900/90">
+                        캘린더에 같은 안내 일정이 1회 등록되며, 해당 일정은 직접 삭제할 수 있습니다.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        @click="dismissRetentionNotice()"
+                        class="inline-flex items-center rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs sm:text-sm font-bold text-amber-800 hover:bg-amber-100 transition"
+                    >
+                        안내 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4">
                 <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight" x-text="currentMonthText"></h2>
@@ -778,6 +805,7 @@ function calendarApp() {
         isSavingIntegrationSettings: false,
         createContextDateText: '',
         lastForcedRefreshAt: 0,
+        retentionNoticeVisible: {{ show_retention_notice_banner|yesno:"true,false" }},
         calendarBaseUrl: '{% url "classcalendar:main" %}',
         integrationSettings: {
             collect_deadline_enabled: true,
@@ -973,6 +1001,19 @@ function calendarApp() {
                 window.showToast(err.message || '연동 설정 저장에 실패했습니다.', 'error');
             } finally {
                 this.isSavingIntegrationSettings = false;
+            }
+        },
+
+        async dismissRetentionNotice() {
+            try {
+                await this.requestJson('{% url "classcalendar:api_dismiss_retention_notice" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                });
+                this.retentionNoticeVisible = false;
+                window.showToast('안내를 닫았습니다. 필요하면 안내 일정에서 다시 확인할 수 있습니다.', 'success');
+            } catch (err) {
+                window.showToast(err.message || '안내 닫기에 실패했습니다.', 'error');
             }
         },
 
