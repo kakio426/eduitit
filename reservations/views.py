@@ -406,6 +406,7 @@ def create_reservation(request, school_slug):
         # 생성
         reservation = Reservation.objects.create(
             room=room,
+            created_by=request.user if request.user.is_authenticated else None,
             date=target_date,
             period=period,
             grade=grade,

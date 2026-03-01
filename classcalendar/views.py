@@ -108,7 +108,7 @@ def _resolve_integration_source_meta(event):
 
                 reservation = (
                     Reservation.objects.select_related("room__school")
-                    .filter(id=int(payload), room__school__owner=event.author)
+                    .filter(id=int(payload), created_by=event.author)
                     .first()
                 )
                 if reservation:

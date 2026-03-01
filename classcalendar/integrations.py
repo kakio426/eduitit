@@ -205,7 +205,7 @@ def _sync_reservation_events(author, seen_keys):
 
     reservations = (
         Reservation.objects.filter(
-            room__school__owner=author,
+            created_by=author,
             date__gte=start_date,
             date__lte=end_date,
         )

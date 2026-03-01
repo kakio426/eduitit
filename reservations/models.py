@@ -77,6 +77,7 @@ class SpecialRoom(models.Model):
 
 class Reservation(models.Model):
     room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_reservations')
     date = models.DateField()
     period = models.IntegerField() # 1~max_periods
     grade = models.IntegerField()
