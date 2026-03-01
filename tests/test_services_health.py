@@ -3,6 +3,10 @@ Service health tests for key public endpoints.
 Run with: python manage.py test tests.test_services_health
 """
 
+import json
+from unittest.mock import AsyncMock, patch
+
+from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 from artclass.models import ArtClass
 
@@ -73,6 +77,62 @@ class FortuneServicesTest(TestCase):
 
     def test_fortune_saju_alt_loads(self):
         response = self.client.get('/fortune/saju/')
+        self.assertIn(response.status_code, [200, 302])
+
+    def test_daily_fortune_api_requires_post(self):
+        response = self.client.get('/fortune/api/daily/')
+        self.assertEqual(response.status_code, 405)
+
+    def test_daily_fortune_api_invalid_json_returns_400(self):
+        response = self.client.post(
+            '/fortune/api/daily/',
+            data='not-json',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_daily_fortune_api_valid_json_authenticated_returns_200(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username='fortune_daily_api_user',
+            email='fortune_daily_api_user@example.com',
+            password='pw123456',
+        )
+        self.client.force_login(user)
+
+        payload = {
+            'target_date': '2026-03-10',
+            'natal_chart': {},
+            'name': '테스트 선생님',
+            'gender': 'female',
+            'mode': 'teacher',
+        }
+
+        with patch('fortune.views._check_saju_ratelimit', new=AsyncMock(return_value=False)):
+            with patch('fortune.views.calculator.get_pillars', return_value={}):
+                with patch('fortune.prompts.get_daily_fortune_prompt', return_value='mock prompt'):
+                    collect_mock = AsyncMock(return_value='mock daily fortune result')
+                    with patch('fortune.views._collect_ai_response_async', new=collect_mock):
+                        response = self.client.post(
+                            '/fortune/api/daily/',
+                            data=json.dumps(payload),
+                            content_type='application/json',
+                        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body.get('success'))
+        self.assertEqual(body.get('target_date'), payload['target_date'])
+        self.assertEqual(body.get('result'), 'mock daily fortune result')
+        collect_mock.assert_awaited()
+
+
+class ReservationsServicesTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_reservations_root_loads(self):
+        response = self.client.get('/reservations/')
         self.assertIn(response.status_code, [200, 302])
 
 

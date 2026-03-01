@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -113,3 +113,58 @@ class DutyTickerRotationModeTests(TestCase):
         self.assertContains(response, 'id="rotationMode"')
         self.assertContains(response, "지금 1칸 순환")
         self.assertNotContains(response, "지금 순환하기")
+
+
+class DutyTickerRotationCsrfTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rotation_csrf_teacher",
+            email="rotation_csrf_teacher@example.com",
+            password="pw123456",
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.nickname = "rotation-csrf-teacher"
+        profile.save(update_fields=["nickname"])
+
+        self.client = Client(enforce_csrf_checks=True)
+        self.client.login(username="rotation_csrf_teacher", password="pw123456")
+
+    def _csrf_token(self):
+        self.client.get(reverse("dt_admin_dashboard"))
+        return self.client.cookies["csrftoken"].value
+
+    def test_rotation_trigger_rejects_missing_csrf(self):
+        response = self.client.post(
+            reverse("dt_api_rotate"),
+            data='{"behavior":"random"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rotation_trigger_accepts_valid_csrf(self):
+        s1 = DTStudent.objects.create(user=self.user, name="학생1", number=1)
+        role1 = DTRole.objects.create(user=self.user, name="역할1", time_slot="아침")
+        DTRoleAssignment.objects.create(user=self.user, role=role1, student=s1)
+
+        token = self._csrf_token()
+        response = self.client.post(
+            reverse("dt_api_rotate"),
+            data='{"behavior":"sequential"}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+
+    def test_reset_data_rejects_missing_csrf(self):
+        response = self.client.post(reverse("dt_api_reset"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_reset_data_accepts_valid_csrf(self):
+        token = self._csrf_token()
+        response = self.client.post(
+            reverse("dt_api_reset"),
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))

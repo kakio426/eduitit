@@ -605,6 +605,9 @@ async def saju_api_view(request):
 async def daily_fortune_api(request):
     """특정 날짜의 일진(운세) 분석 API (async)"""
     try:
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
+
         # Manual ratelimit check
         if await _check_saju_ratelimit(request):
             return JsonResponse({
@@ -612,7 +615,11 @@ async def daily_fortune_api(request):
                 'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
             }, status=429)
 
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'INVALID_JSON', 'message': '유효한 JSON 본문이 필요합니다.'}, status=400)
+
         target_date_str = data.get('target_date')
         natal_data = normalize_natal_chart_payload(data.get('natal_chart'))
         name = data.get('name', '선생님')

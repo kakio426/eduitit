@@ -676,7 +676,6 @@ def assign_role(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def rotation_trigger(request):
     payload = _safe_json_body(request)
     requested_behavior = payload.get("behavior")
@@ -714,7 +713,6 @@ def rotation_trigger(request):
     })
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def reset_data(request):
     if not request.user.is_authenticated:
         request.session['guest_dt_data'] = get_guest_default_data()
