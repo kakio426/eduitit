@@ -3,12 +3,19 @@ const { app, BrowserWindow, dialog, screen } = require("electron");
 
 const PROTOCOL = "eduitit-launcher";
 const MIN_VIDEO_WIDTH = 640;
-const MIN_DASHBOARD_WIDTH = 420;
-const DEFAULT_LEFT_RATIO = 0.6;
+const MIN_DASHBOARD_WIDTH = 560;
+const DEFAULT_LEFT_RATIO = 0.54;
+const SPLIT_GAP = 0;
+const ALWAYS_ON_TOP_LEVEL = "screen-saver";
+const WATCHDOG_INTERVAL_MS = 1400;
 
 let videoWindow = null;
 let dashboardWindow = null;
 let infoWindow = null;
+let blackoutWindow = null;
+let watchdogTimer = null;
+let lastLaunchPayload = null;
+let isRestoringSplit = false;
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
@@ -78,8 +85,91 @@ function showErrorBox(message) {
 function closeSplitWindows() {
   if (videoWindow && !videoWindow.isDestroyed()) videoWindow.close();
   if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.close();
+  if (blackoutWindow && !blackoutWindow.isDestroyed()) blackoutWindow.close();
   videoWindow = null;
   dashboardWindow = null;
+  blackoutWindow = null;
+}
+
+function closeBlackoutWindow() {
+  if (blackoutWindow && !blackoutWindow.isDestroyed()) {
+    blackoutWindow.close();
+  }
+  blackoutWindow = null;
+}
+
+function isSplitWindowAlive(win) {
+  return Boolean(win && !win.isDestroyed());
+}
+
+function enforceWindowVisible(win) {
+  if (!isSplitWindowAlive(win)) return;
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.show();
+}
+
+function isAllowedVideoHost(hostname) {
+  const host = String(hostname || "").replace(/^www\./, "");
+  return (
+    host === "youtube.com" ||
+    host.endsWith(".youtube.com") ||
+    host === "youtu.be" ||
+    host.endsWith(".googlevideo.com") ||
+    host.endsWith(".ytimg.com") ||
+    host.endsWith(".ggpht.com")
+  );
+}
+
+function isAllowedNavigation(targetUrl, payload, role) {
+  try {
+    const parsed = new URL(targetUrl);
+    if (role === "video") {
+      return isAllowedVideoHost(parsed.hostname);
+    }
+    const dashboardOrigin = new URL(payload.dashboardUrl).origin;
+    return parsed.origin === dashboardOrigin;
+  } catch (_) {
+    return false;
+  }
+}
+
+function installWindowGuards(win, payload, role) {
+  if (!isSplitWindowAlive(win)) return;
+
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, targetUrl) => {
+    if (isAllowedNavigation(targetUrl, payload, role)) return;
+    event.preventDefault();
+  });
+  win.webContents.on("context-menu", (event) => {
+    event.preventDefault();
+  });
+
+  win.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    const key = String(input.key || "").toLowerCase();
+    if (key === "b" && !input.control && !input.meta && !input.alt) {
+      event.preventDefault();
+      toggleBlackout();
+      return;
+    }
+    if (key === "escape" && blackoutWindow && !blackoutWindow.isDestroyed()) {
+      event.preventDefault();
+      closeBlackoutWindow();
+    }
+  });
+}
+
+function getTargetDisplay() {
+  const cursorPoint = screen.getCursorScreenPoint();
+  return screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
+}
+
+function pickLeftRatio(totalWidth) {
+  if (totalWidth <= 1366) return 0.5;
+  if (totalWidth <= 1600) return 0.52;
+  if (totalWidth <= 1920) return 0.53;
+  return DEFAULT_LEFT_RATIO;
 }
 
 function createInfoWindow() {
@@ -116,26 +206,248 @@ function createInfoWindow() {
 }
 
 function computeSplitBounds() {
-  const display = screen.getPrimaryDisplay();
-  const area = display.workArea;
+  const display = getTargetDisplay();
+  // Use full display bounds so split windows can cover taskbar area.
+  const area = display.bounds;
+  const totalWidth = Math.max(1, area.width - SPLIT_GAP);
+  const leftRatio = pickLeftRatio(totalWidth);
 
-  let leftWidth = Math.floor(area.width * DEFAULT_LEFT_RATIO);
+  let leftWidth = Math.floor(totalWidth * leftRatio);
   leftWidth = Math.max(MIN_VIDEO_WIDTH, leftWidth);
-  leftWidth = Math.min(area.width - MIN_DASHBOARD_WIDTH, leftWidth);
+  leftWidth = Math.min(totalWidth - MIN_DASHBOARD_WIDTH, leftWidth);
 
-  let rightWidth = area.width - leftWidth;
+  let rightWidth = totalWidth - leftWidth;
   if (rightWidth < MIN_DASHBOARD_WIDTH) {
     rightWidth = MIN_DASHBOARD_WIDTH;
-    leftWidth = area.width - rightWidth;
+    leftWidth = totalWidth - rightWidth;
+  }
+  if (leftWidth < MIN_VIDEO_WIDTH) {
+    leftWidth = MIN_VIDEO_WIDTH;
+    rightWidth = totalWidth - leftWidth;
   }
 
   return {
     x: area.x,
     y: area.y,
+    width: area.width,
     height: area.height,
     leftWidth,
+    rightX: area.x + leftWidth + SPLIT_GAP,
     rightWidth,
   };
+}
+
+function getBlackoutBounds() {
+  const bounds = computeSplitBounds();
+  return {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+  };
+}
+
+function syncBlackoutBounds() {
+  if (!blackoutWindow || blackoutWindow.isDestroyed()) return;
+  blackoutWindow.setBounds(getBlackoutBounds());
+}
+
+function createBlackoutWindow() {
+  if (blackoutWindow && !blackoutWindow.isDestroyed()) {
+    syncBlackoutBounds();
+    blackoutWindow.showInactive();
+    return;
+  }
+
+  const bounds = getBlackoutBounds();
+  blackoutWindow = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    frame: false,
+    backgroundColor: "#000000",
+    autoHideMenuBar: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    focusable: false,
+    fullscreenable: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  blackoutWindow.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+  blackoutWindow.setIgnoreMouseEvents(true);
+  blackoutWindow.setMenuBarVisibility(false);
+  blackoutWindow.loadURL("data:text/html;charset=utf-8,<html><body style='margin:0;background:#000;'></body></html>");
+  blackoutWindow.on("closed", () => {
+    blackoutWindow = null;
+  });
+}
+
+function toggleBlackout() {
+  if (blackoutWindow && !blackoutWindow.isDestroyed()) {
+    closeBlackoutWindow();
+    return;
+  }
+  createBlackoutWindow();
+}
+
+function applyTeachingWindowBehavior(win) {
+  if (!win || win.isDestroyed()) return;
+  win.setMenuBarVisibility(false);
+  // Keep split windows above taskbar/other windows during class mode.
+  win.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+}
+
+function relayoutSplitWindows() {
+  if (!videoWindow || videoWindow.isDestroyed()) return;
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+
+  const bounds = computeSplitBounds();
+  videoWindow.setBounds({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.leftWidth,
+    height: bounds.height,
+  });
+  dashboardWindow.setBounds({
+    x: bounds.rightX,
+    y: bounds.y,
+    width: bounds.rightWidth,
+    height: bounds.height,
+  });
+  syncBlackoutBounds();
+}
+
+function ensureSplitHealthy() {
+  if (!lastLaunchPayload) return;
+
+  const videoAlive = isSplitWindowAlive(videoWindow);
+  const dashboardAlive = isSplitWindowAlive(dashboardWindow);
+  if (!videoAlive || !dashboardAlive) {
+    if (isRestoringSplit) return;
+    isRestoringSplit = true;
+    try {
+      createSplitWindows(lastLaunchPayload);
+    } finally {
+      isRestoringSplit = false;
+    }
+    return;
+  }
+
+  enforceWindowVisible(videoWindow);
+  enforceWindowVisible(dashboardWindow);
+  applyTeachingWindowBehavior(videoWindow);
+  applyTeachingWindowBehavior(dashboardWindow);
+  relayoutSplitWindows();
+}
+
+function startWatchdog() {
+  if (watchdogTimer) return;
+  watchdogTimer = setInterval(() => {
+    ensureSplitHealthy();
+  }, WATCHDOG_INTERVAL_MS);
+}
+
+function stopWatchdog() {
+  if (!watchdogTimer) return;
+  clearInterval(watchdogTimer);
+  watchdogTimer = null;
+}
+
+function installYouTubeFocusMode(targetWindow) {
+  if (!targetWindow || targetWindow.isDestroyed()) return;
+
+  const applyScript = () => {
+    const js = `
+      (() => {
+        const href = window.location.href || "";
+        if (!href.includes("youtube.com/watch")) return;
+
+        const styleId = "eduitit-youtube-focus-style";
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement("style");
+          style.id = styleId;
+          style.textContent = \`
+            #masthead-container,
+            #secondary,
+            #below,
+            ytd-comments,
+            ytd-watch-next-secondary-results-renderer,
+            ytd-merch-shelf-renderer,
+            #chat,
+            #panels,
+            #meta,
+            #top-row,
+            #related {
+              display: none !important;
+            }
+
+            html, body, ytd-app, ytd-page-manager, ytd-watch-flexy {
+              background: #000 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+            }
+
+            ytd-watch-flexy #columns,
+            ytd-watch-flexy #primary,
+            ytd-watch-flexy #primary-inner {
+              margin: 0 !important;
+              padding: 0 !important;
+              max-width: none !important;
+              width: 100vw !important;
+            }
+
+            ytd-watch-flexy #player,
+            ytd-watch-flexy #player-container,
+            .html5-video-player {
+              width: 100vw !important;
+              height: 100vh !important;
+              max-height: 100vh !important;
+            }
+          \`;
+          document.head.appendChild(style);
+        }
+
+        const sizeButton = document.querySelector(".ytp-size-button");
+        if (sizeButton && sizeButton.getAttribute("aria-pressed") !== "true") {
+          sizeButton.click();
+        }
+
+        if (!window.__eduititRepeatEnforcer) {
+          window.__eduititRepeatEnforcer = window.setInterval(() => {
+            const video = document.querySelector("video");
+            if (!video) return;
+
+            video.loop = true;
+            video.setAttribute("loop", "loop");
+
+            if (!video.dataset.eduititLoopBound) {
+              video.dataset.eduititLoopBound = "1";
+              video.addEventListener("ended", () => {
+                const replayButton = document.querySelector(".ytp-replay-button");
+                if (replayButton) {
+                  replayButton.click();
+                  return;
+                }
+                video.currentTime = 0;
+                video.play().catch(() => {});
+              });
+            }
+          }, 1200);
+        }
+
+        window.scrollTo(0, 0);
+      })();
+    `;
+    targetWindow.webContents.executeJavaScript(js).catch(() => {});
+  };
+
+  targetWindow.webContents.on("did-finish-load", applyScript);
+  targetWindow.webContents.on("did-navigate-in-page", applyScript);
 }
 
 function createSplitWindows(payload) {
@@ -158,11 +470,13 @@ function createSplitWindows(payload) {
       nodeIntegration: false,
     },
   });
-  videoWindow.setMenuBarVisibility(false);
+  applyTeachingWindowBehavior(videoWindow);
+  installWindowGuards(videoWindow, payload, "video");
   videoWindow.loadURL(payload.youtubeUrl);
+  installYouTubeFocusMode(videoWindow);
 
   dashboardWindow = new BrowserWindow({
-    x: bounds.x + bounds.leftWidth,
+    x: bounds.rightX,
     y: bounds.y,
     width: bounds.rightWidth,
     height: bounds.height,
@@ -173,8 +487,14 @@ function createSplitWindows(payload) {
       nodeIntegration: false,
     },
   });
-  dashboardWindow.setMenuBarVisibility(false);
+  applyTeachingWindowBehavior(dashboardWindow);
+  installWindowGuards(dashboardWindow, payload, "dashboard");
   dashboardWindow.loadURL(payload.dashboardUrl);
+
+  videoWindow.webContents.once("did-finish-load", () => {
+    // Keep the player section visible at top after launch.
+    videoWindow.webContents.executeJavaScript("window.scrollTo(0, 0)").catch(() => {});
+  });
 
   videoWindow.on("closed", () => {
     videoWindow = null;
@@ -182,6 +502,8 @@ function createSplitWindows(payload) {
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
   });
+
+  startWatchdog();
 }
 
 function handleLaunchUrl(rawUrl) {
@@ -190,6 +512,7 @@ function handleLaunchUrl(rawUrl) {
     showErrorBox(`런처 payload를 읽지 못했습니다: ${parsed.error}`);
     return;
   }
+  lastLaunchPayload = parsed;
   createSplitWindows(parsed);
 }
 
@@ -234,6 +557,7 @@ app.on("open-url", (event, rawUrl) => {
 });
 
 app.on("window-all-closed", () => {
+  stopWatchdog();
   if (process.platform !== "darwin") {
     app.quit();
   }
@@ -243,4 +567,20 @@ app.on("activate", () => {
   if (!videoWindow && !dashboardWindow) {
     createInfoWindow();
   }
+});
+
+screen.on("display-metrics-changed", () => {
+  relayoutSplitWindows();
+});
+
+screen.on("display-added", () => {
+  relayoutSplitWindows();
+});
+
+screen.on("display-removed", () => {
+  relayoutSplitWindows();
+});
+
+app.on("before-quit", () => {
+  stopWatchdog();
 });

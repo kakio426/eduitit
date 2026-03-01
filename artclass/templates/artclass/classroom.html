@@ -255,6 +255,12 @@
                     </button>
                 </div>
             </div>
+
+            <div id="tvTeacherGuide"
+                class="hidden absolute top-4 right-4 z-30 rounded-xl bg-gray-900/85 text-white px-4 py-3 shadow-2xl border border-white/15">
+                <p class="text-[11px] uppercase tracking-widest font-black text-emerald-200">TV Class Mode</p>
+                <p class="mt-1 text-xs font-semibold text-white/90">창 잠금 ON · 자동 복구 ON · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
+            </div>
         </div>
     </div>
 </main>
@@ -315,6 +321,7 @@
     const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
     const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
     const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
+    const tvTeacherGuideEl = document.getElementById('tvTeacherGuide');
     const btnBackToEditEl = document.getElementById('btnBackToEdit');
     const headerDividerEl = document.getElementById('headerDivider');
     const searchParams = new URLSearchParams(window.location.search);
@@ -358,6 +365,10 @@
         if (headerDividerEl) headerDividerEl.classList.add('hidden');
         if (classroomHeaderEl) classroomHeaderEl.classList.add('hidden');
         if (classroomMainEl) classroomMainEl.classList.remove('pt-16');
+        if (tvTeacherGuideEl) {
+            const showTeacherGuide = RUNTIME_MODE === 'launcher';
+            tvTeacherGuideEl.classList.toggle('hidden', !showTeacherGuide);
+        }
     }
 
     function applyPlaybackLayout(mode) {
