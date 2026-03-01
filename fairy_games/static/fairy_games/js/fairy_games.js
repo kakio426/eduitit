@@ -226,7 +226,7 @@
           if (aiActive() || s.gameOver) return;
           pushUndo(); this.apply(s, c); render(); aiTurn();
         });
-      });
+      }, 76);
       setStatus(s.gameOver ? (s.winner ? `${sideName(s.winner)} 승리` : '무승부') : `차례: ${sideName(s.turn)}`);
       setHistory(s.h);
     }
@@ -303,7 +303,7 @@
           if (this.occ(s, r, c)) return;
           pushUndo(); this.apply(s, { t: 'b', r, c }); render(); aiTurn();
         });
-      });
+      }, 72);
       setStatus(s.gameOver ? `${sideName(s.winner)} 승리` : `차례: ${sideName(s.turn)} / ${s.phase === 'move' ? '이동' : '칸 막기'}`);
       setHistory(s.h);
     }
@@ -389,7 +389,7 @@
           if (!m) return;
           pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
         });
-      });
+      }, 72);
       const [a, b] = this.count(s);
       setStatus(s.gameOver ? (s.winner ? `${sideName(s.winner)} 승리` : '무승부') : `차례: ${sideName(s.turn)} / 점수 ${a}:${b}`);
       setHistory(s.h);
@@ -453,7 +453,7 @@
           if (!m) return;
           pushUndo(); this.apply(s, m); s.sel = null; render(); aiTurn();
         });
-      });
+      }, 64);
       setStatus(s.gameOver ? `${sideName(s.winner)} 승리` : `차례: ${sideName(s.turn)}`);
       setHistory(s.h);
     }
