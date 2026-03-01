@@ -10,8 +10,14 @@
         <button hx-post="{% url 'reservations:blackout_settings' school.slug %}"
             hx-target="#blackout-list-container"
             hx-confirm="이 기간의 예약 제한을 해제하시겠습니까?"
+            hx-indicator="#blackout-delete-indicator-{{ blackout.id }}"
+            hx-disabled-elt="this"
+            hx-on::response-error="alert('블랙아웃 기간 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
             hx-vals='{"action": "delete", "item_id": "{{ blackout.id }}", "csrfmiddlewaretoken": "{{ csrf_token }}"}'
-            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform">
+            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform inline-flex items-center gap-1">
+            <span id="blackout-delete-indicator-{{ blackout.id }}" class="htmx-indicator text-xs">
+                <i class="fas fa-circle-notch fa-spin"></i>
+            </span>
             <i class="fas fa-times"></i>
         </button>
     </div>

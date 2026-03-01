@@ -47,8 +47,14 @@
                             <button x-show="myReservations.includes({{ s.reservation.id }})"
                                 hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
                                 hx-confirm="예약을 취소하시겠습니까?" hx-target="#reservation-grid-container"
+                                hx-indicator="#reservation-delete-indicator-desktop-{{ s.reservation.id }}"
+                                hx-disabled-elt="this"
+                                hx-on::response-error="alert('예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                                 class="absolute bottom-1 right-1 text-red-300 hover:text-red-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
+                                <span id="reservation-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
+                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                </span>
                                 <i class="fas fa-trash-alt text-xs"></i>
                             </button>
 
@@ -57,8 +63,14 @@
                             <button
                                 hx-post="{% url 'reservations:admin_delete_reservation' school.slug s.reservation.id %}"
                                 hx-confirm="[관리자 권한] 이 예약을 강제로 삭제하시겠습니까?" hx-target="#reservation-grid-container"
+                                hx-indicator="#reservation-admin-delete-indicator-desktop-{{ s.reservation.id }}"
+                                hx-disabled-elt="this"
+                                hx-on::response-error="alert('강제 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                                 class="absolute bottom-1 right-1 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                                 onclick="event.stopPropagation()">
+                                <span id="reservation-admin-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
+                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                </span>
                                 <i class="fas fa-ban text-xs"></i>
                             </button>
                             {% endif %}
@@ -125,8 +137,15 @@
                     <!-- User Delete -->
                     <button x-show="myReservations.includes({{ s.reservation.id }})"
                         hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
-                        hx-confirm="예약을 취소하시겠습니까?" class="absolute bottom-1 right-2 text-red-400 hover:text-red-600 p-1"
+                        hx-confirm="예약을 취소하시겠습니까?" hx-target="#reservation-grid-container"
+                        hx-indicator="#reservation-delete-indicator-mobile-{{ s.reservation.id }}"
+                        hx-disabled-elt="this"
+                        hx-on::response-error="alert('예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                        class="absolute bottom-1 right-2 text-red-400 hover:text-red-600 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
+                        <span id="reservation-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px]">
+                            <i class="fas fa-circle-notch fa-spin"></i>
+                        </span>
                         <i class="fas fa-trash-alt text-[10px]"></i>
                     </button>
 
@@ -134,8 +153,14 @@
                     {% if user.is_authenticated and user == school.owner %}
                     <button hx-post="{% url 'reservations:admin_delete_reservation' school.slug s.reservation.id %}"
                         hx-confirm="[관리자 권한] 이 예약을 강제로 삭제하시겠습니까?" hx-target="#reservation-grid-container"
+                        hx-indicator="#reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}"
+                        hx-disabled-elt="this"
+                        hx-on::response-error="alert('강제 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                         class="absolute bottom-1 right-8 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                         onclick="event.stopPropagation()">
+                        <span id="reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px] mr-0.5">
+                            <i class="fas fa-circle-notch fa-spin"></i>
+                        </span>
                         <i class="fas fa-ban text-xs"></i>
                     </button>
                     {% endif %}

@@ -8,8 +8,14 @@
         <button hx-post="{% url 'reservations:room_settings' school.slug %}"
             hx-confirm="정말 삭제하시겠습니까? 해당 특별실의 모든 예약도 함께 삭제됩니다." 
             hx-target="#room-list-container"
+            hx-indicator="#room-delete-indicator-{{ room.id }}"
+            hx-disabled-elt="this"
+            hx-on::response-error="alert('특별실 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
             hx-vals='{"action": "delete", "room_id": "{{ room.id }}", "csrfmiddlewaretoken": "{{ csrf_token }}"}'
-            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform">
+            class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform inline-flex items-center gap-1">
+            <span id="room-delete-indicator-{{ room.id }}" class="htmx-indicator text-xs">
+                <i class="fas fa-circle-notch fa-spin"></i>
+            </span>
             <i class="fas fa-trash-alt"></i>
         </button>
     </div>

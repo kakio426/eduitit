@@ -32,6 +32,9 @@
                             <!-- Toggle Button -->
                             <form hx-post="{% url 'reservations:recurring_settings' school.slug %}"
                                 hx-target="#recurring-matrix-container" hx-swap="innerHTML show:none"
+                                hx-indicator="find .js-recurring-loading"
+                                hx-disabled-elt="find button[type='submit']"
+                                hx-on::response-error="alert('고정 수업 설정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                                 class="w-full h-full flex items-center justify-center cursor-pointer">
                                 {% csrf_token %}
                                 <input type="hidden" name="room_id" value="{{ item.room.id }}">
@@ -40,6 +43,9 @@
 
                                 <button type="submit"
                                     class="w-full h-full rounded-lg flex flex-col items-center justify-center gap-1 group">
+                                    <span class="js-recurring-loading htmx-indicator text-[10px] text-purple-500">
+                                        <i class="fas fa-circle-notch fa-spin"></i>
+                                    </span>
                                     {% if schedule %}
                                     <!-- Active State -->
                                     <div

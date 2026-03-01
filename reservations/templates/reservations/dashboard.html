@@ -18,7 +18,7 @@
             <div class="flex flex-wrap justify-center md:justify-end gap-3">
                 <a href="{% url 'reservations:reservation_index' school.slug %}" target="_blank" rel="noopener noreferrer"
                     class="clay-btn-primary px-6 py-3 font-bold flex items-center gap-2">
-                    <i class="fas fa-external-link-alt"></i> 예약 현황판
+                    <i class="fas fa-external-link-alt"></i> 예약 현황판 (새 탭)
                 </a>
                 <a href="{% url 'reservations:dashboard_landing' %}"
                     class="clay-btn px-6 py-3 text-purple-600 font-bold hover:shadow-clay-hover flex items-center gap-2">
@@ -92,6 +92,8 @@
 
                 <!-- Add Room Form -->
                 <form hx-post="{% url 'reservations:room_settings' school.slug %}" hx-target="#room-list-container"
+                    hx-indicator="#room-add-indicator" hx-disabled-elt="find button[type='submit']"
+                    hx-on::response-error="alert('특별실 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                     class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
@@ -123,7 +125,10 @@
                         </div>
                         
                         <!-- Submit Button -->
-                        <button type="submit" class="flex-shrink-0 clay-btn-primary w-12 md:w-auto md:px-6 flex items-center justify-center rounded-xl">
+                        <button type="submit" class="flex-shrink-0 clay-btn-primary w-12 md:w-auto md:px-6 flex items-center justify-center gap-2 rounded-xl">
+                            <span id="room-add-indicator" class="htmx-indicator">
+                                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                            </span>
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -148,7 +153,10 @@
 
                 <!-- Add Blackout Form -->
                 <form hx-post="{% url 'reservations:blackout_settings' school.slug %}"
-                    hx-target="#blackout-list-container" class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
+                    hx-target="#blackout-list-container" hx-indicator="#blackout-add-indicator"
+                    hx-disabled-elt="find button[type='submit']"
+                    hx-on::response-error="alert('블랙아웃 기간 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                    class="mt-6 pt-6 border-t border-gray-200" @htmx:after-request="this.reset()">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
                     <div class="flex flex-col gap-3">
@@ -163,8 +171,11 @@
                             <input type="text" name="reason" placeholder="사유 (예: 중간고사기간)"
                                 class="flex-1 shadow-clay-inner p-3 rounded-xl text-sm bg-[#E0E5EC] outline-none focus:ring-2 focus:ring-purple-300" required>
                             <button type="submit"
-                                class="px-6 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors">
-                                추가
+                                class="px-6 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors inline-flex items-center gap-2">
+                                <span id="blackout-add-indicator" class="htmx-indicator">
+                                    <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                                </span>
+                                <span>추가</span>
                             </button>
                         </div>
                     </div>
@@ -182,7 +193,10 @@
                     </p>
                 </div>
 
-                <form hx-post="{% url 'reservations:update_config' school.slug %}" class="space-y-6"
+                <form hx-post="{% url 'reservations:update_config' school.slug %}"
+                    hx-indicator="#config-save-indicator" hx-disabled-elt="find button[type='submit']"
+                    hx-on::response-error="alert('설정 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                    class="space-y-6"
                     x-data="periodEditor('{{ school.config.period_labels|escapejs }}', '{{ school.config.period_times|escapejs }}')"
                     x-init="init()"
                     @submit="syncHiddenFields()">
@@ -255,8 +269,11 @@
                             <strong>🔒 보안 팁:</strong> 예약 주소는 다른 사람이 추측할 수 없도록 무작위 문자열로 생성됩니다. <br>
                             초대 문구 복사 버튼을 눌러 안전한 링크를 선생님들께 전달하세요.
                         </p>
-                        <button type="submit" class="w-full md:w-auto clay-btn-primary px-8 py-3 font-bold whitespace-nowrap">
-                            설정 전체 저장
+                        <button type="submit" class="w-full md:w-auto clay-btn-primary px-8 py-3 font-bold whitespace-nowrap inline-flex items-center justify-center gap-2">
+                            <span id="config-save-indicator" class="htmx-indicator">
+                                <i class="fas fa-circle-notch fa-spin"></i>
+                            </span>
+                            <span>설정 전체 저장</span>
                         </button>
                     </div>
 

@@ -1,0 +1,108 @@
+<div id="sheetbook-tab-list">
+  {% if tab_error %}
+    <div class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ tab_error }}
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    {% for tab in tabs %}
+      <div class="rounded-xl border border-gray-200 bg-white/80 px-4 py-3">
+        <form
+          method="post"
+          action="{% url 'sheetbook:rename_tab' pk=sheetbook.pk tab_pk=tab.pk %}"
+          class="mb-2"
+          hx-post="{% url 'sheetbook:rename_tab' pk=sheetbook.pk tab_pk=tab.pk %}"
+          hx-target="#sheetbook-tab-list"
+          hx-swap="outerHTML"
+          hx-indicator="find .js-rename-tab-loading"
+          hx-disabled-elt="find button[type='submit']"
+          hx-on::response-error="alert('탭 이름 변경 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+        >
+          {% csrf_token %}
+          <div class="flex gap-2">
+            <input
+              type="text"
+              name="name"
+              value="{{ tab.name }}"
+              maxlength="100"
+              class="flex-1 w-full px-3 py-2 rounded-lg border border-gray-200 bg-white"
+            >
+            <button type="submit" class="px-3 py-2 rounded-lg bg-slate-700 text-white text-xs font-semibold inline-flex items-center gap-1.5">
+              <span class="js-rename-tab-loading htmx-indicator">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+              </span>
+              <span>이름변경</span>
+            </button>
+          </div>
+        </form>
+
+        <p class="text-xs text-gray-500 mt-1">
+          {% if tab.tab_type == "calendar" %}달력{% else %}그리드{% endif %}
+        </p>
+
+        <div class="flex flex-wrap gap-2 mt-3">
+          <form
+            method="post"
+            action="{% url 'sheetbook:move_tab_up' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-post="{% url 'sheetbook:move_tab_up' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-target="#sheetbook-tab-list"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-tab-up-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('탭 이동 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+          >
+            {% csrf_token %}
+            <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold inline-flex items-center gap-1">
+              <span class="js-tab-up-loading htmx-indicator">
+                <i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i>
+              </span>
+              <span>위로</span>
+            </button>
+          </form>
+
+          <form
+            method="post"
+            action="{% url 'sheetbook:move_tab_down' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-post="{% url 'sheetbook:move_tab_down' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-target="#sheetbook-tab-list"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-tab-down-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('탭 이동 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+          >
+            {% csrf_token %}
+            <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold inline-flex items-center gap-1">
+              <span class="js-tab-down-loading htmx-indicator">
+                <i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i>
+              </span>
+              <span>아래로</span>
+            </button>
+          </form>
+
+          <form
+            method="post"
+            action="{% url 'sheetbook:delete_tab' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-post="{% url 'sheetbook:delete_tab' pk=sheetbook.pk tab_pk=tab.pk %}"
+            hx-target="#sheetbook-tab-list"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-tab-delete-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('탭 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+            onsubmit="return confirm('이 탭을 삭제할까요?');"
+          >
+            {% csrf_token %}
+            <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold inline-flex items-center gap-1">
+              <span class="js-tab-delete-loading htmx-indicator">
+                <i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i>
+              </span>
+              <span>삭제</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-gray-500">아직 탭이 없습니다.</p>
+    {% endfor %}
+  </div>
+</div>

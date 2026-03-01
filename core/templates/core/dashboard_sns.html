@@ -52,6 +52,8 @@
             <!-- Write Input -->
             <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="innerHTML"
                 hx-on::after-request="this.reset()" hx-encoding="multipart/form-data"
+                hx-indicator="find .js-dashboard-post-loading" hx-disabled-elt="find button[type='submit']"
+                hx-on::response-error="alert('게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
                 class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
                 {% csrf_token %}
                 <textarea name="content"
@@ -68,8 +70,11 @@
                         <i class="ph ph-image text-lg"></i>
                     </button>
                     <button type="submit"
-                        class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow-sm hover:translate-y-[-1px]">
-                        등록
+                        class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow-sm hover:translate-y-[-1px] inline-flex items-center gap-1.5">
+                        <span class="js-dashboard-post-loading htmx-indicator">
+                            <i class="ph ph-spinner-gap animate-spin"></i>
+                        </span>
+                        <span>등록</span>
                     </button>
                 </div>
             </form>

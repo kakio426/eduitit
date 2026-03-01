@@ -29,6 +29,7 @@
             {{ sub.original_filename|truncatechars:50 }} <span class="text-base text-gray-500">({{ sub.file_size|filesizeformat }})</span>
             {% elif sub.submission_type == 'link' %}
             <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">{{ sub.link_url|truncatechars:60 }}</a>
+            <span class="text-xs text-gray-400 ml-1">(새 탭)</span>
             {% if sub.link_description %}<p class="text-base text-gray-500 mt-1">{{ sub.link_description }}</p>{% endif %}
             {% elif sub.submission_type == 'choice' %}
             {{ sub.choice_summary|truncatechars:90 }}
@@ -39,7 +40,7 @@
         {% if sub.submission_type == 'file' and sub.file %}
         <div class="mt-2">
             <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-base font-bold">
-                <i class="fa-solid fa-download"></i>다운로드
+                <i class="fa-solid fa-download"></i>다운로드 (새 탭)
             </a>
         </div>
         {% endif %}
@@ -76,6 +77,7 @@
                     {{ sub.original_filename|truncatechars:50 }} <span class="text-base text-gray-500">({{ sub.file_size|filesizeformat }})</span>
                     {% elif sub.submission_type == 'link' %}
                     <a href="{{ sub.link_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">{{ sub.link_url|truncatechars:50 }}</a>
+                    <span class="text-xs text-gray-400 ml-1">(새 탭)</span>
                     {% if sub.link_description %}<div class="text-base text-gray-500 mt-1">{{ sub.link_description }}</div>{% endif %}
                     {% elif sub.submission_type == 'choice' %}
                     {{ sub.choice_summary|truncatechars:80 }}

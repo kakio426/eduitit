@@ -35,7 +35,7 @@
             </a>
             <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" rel="noopener noreferrer" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
                 <div class="text-2xl mb-1">🏡</div>
-                <div class="text-sm font-bold text-gray-700">꽃밭 대시보드</div>
+                <div class="text-sm font-bold text-gray-700">꽃밭 대시보드 (새 탭)</div>
             </a>
             <a href="{% url 'happy_seed:analysis_dashboard' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
                 <div class="text-2xl mb-1">📊</div>
@@ -56,7 +56,11 @@
                 </button>
             </div>
             <div x-show="showAdd" x-transition class="mt-4 p-4 bg-gray-50 rounded-xl">
-                <form hx-post="{% url 'happy_seed:student_add' classroom_id=classroom.id %}" hx-target="#student-grid" hx-swap="innerHTML" class="flex gap-3 items-end">
+                <form hx-post="{% url 'happy_seed:student_add' classroom_id=classroom.id %}" hx-target="#student-grid"
+                    hx-swap="innerHTML" hx-indicator="find .js-student-add-loading"
+                    hx-disabled-elt="find button[type='submit']"
+                    hx-on::response-error="alert('학생 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                    class="flex gap-3 items-end">
                     {% csrf_token %}
                     <div class="flex-1">
                         <label class="block text-xs font-bold text-gray-500 mb-1">번호</label>
@@ -66,7 +70,12 @@
                         <label class="block text-xs font-bold text-gray-500 mb-1">이름</label>
                         <input type="text" name="name" required class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="학생 이름">
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition-colors">추가</button>
+                    <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition-colors inline-flex items-center gap-2">
+                        <span class="js-student-add-loading htmx-indicator">
+                            <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                        </span>
+                        <span>추가</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -79,4 +88,3 @@
     </div>
 </section>
 {% endblock %}
-

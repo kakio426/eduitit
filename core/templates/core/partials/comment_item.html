@@ -26,7 +26,12 @@
                 {% if user.is_authenticated and user != comment.author %}
                 <button hx-post="{% url 'comment_report' comment.id %}" hx-target="closest [data-comment-root]"
                     hx-swap="outerHTML" hx-vals='{"reason":"other"}' title="신고하기"
-                    class="text-slate-400 hover:text-amber-600 p-1 md:p-0.5">
+                    hx-indicator="find .js-comment-report-loading" hx-disabled-elt="this"
+                    hx-on::response-error="alert('댓글 신고 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                    class="text-slate-400 hover:text-amber-600 p-1 md:p-0.5 inline-flex items-center gap-1">
+                    <span class="js-comment-report-loading htmx-indicator">
+                        <i class="ph ph-spinner-gap animate-spin text-xs"></i>
+                    </span>
                     <i class="ph ph-flag"></i>
                 </button>
                 {% endif %}

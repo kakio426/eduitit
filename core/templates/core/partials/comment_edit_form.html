@@ -1,4 +1,6 @@
 <form hx-post="{% url 'comment_edit' comment.id %}" hx-target="closest [data-comment-root]" hx-swap="outerHTML"
+    hx-indicator="find .js-comment-edit-loading" hx-disabled-elt="find button[type='submit']"
+    hx-on::response-error="alert('댓글 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
     class="flex gap-2 text-sm w-full">
     <div
         class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
@@ -13,7 +15,12 @@
                 hx-swap="outerHTML"
                 class="text-xs text-slate-500 hover:text-slate-700 font-medium px-2 py-1">취소</button>
             <button type="submit"
-                class="text-xs bg-indigo-600 text-white font-bold px-3 py-1 rounded-md hover:bg-indigo-700">수정</button>
+                class="text-xs bg-indigo-600 text-white font-bold px-3 py-1 rounded-md hover:bg-indigo-700 inline-flex items-center gap-1">
+                <span class="js-comment-edit-loading htmx-indicator">
+                    <i class="ph ph-spinner-gap animate-spin text-xs"></i>
+                </span>
+                <span>수정</span>
+            </button>
         </div>
     </div>
 </form>

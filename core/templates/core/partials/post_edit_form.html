@@ -1,5 +1,7 @@
 <form data-post-root hx-post="{% url 'post_edit' post.id %}" hx-target="closest [data-post-root]"
     hx-encoding="multipart/form-data" hx-swap="outerHTML"
+    hx-indicator="find .js-post-edit-loading" hx-disabled-elt="find button[type='submit']"
+    hx-on::response-error="alert('게시글 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
     class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
 
     <div class="mb-3">
@@ -42,8 +44,11 @@
             취소
         </button>
         <button type="submit"
-            class="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-bold shadow-sm">
-            수정 완료
+            class="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-bold shadow-sm inline-flex items-center gap-2">
+            <span class="js-post-edit-loading htmx-indicator">
+                <i class="ph ph-spinner-gap animate-spin"></i>
+            </span>
+            <span>수정 완료</span>
         </button>
     </div>
 </form>

@@ -22,11 +22,20 @@
 
     <div x-show="showActions" x-transition class="mt-2 space-y-1.5">
         <!-- Seed grant -->
-        <form hx-post="{% url 'happy_seed:seed_grant' student_id=student.id %}" hx-target="#student-grid" hx-swap="innerHTML" class="flex gap-1">
+        <form hx-post="{% url 'happy_seed:seed_grant' student_id=student.id %}" hx-target="#student-grid"
+            hx-swap="innerHTML" hx-indicator="find .js-seed-grant-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('씨앗 지급 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+            class="flex gap-1">
             {% csrf_token %}
             <input type="hidden" name="amount" value="1">
             <input type="hidden" name="detail" value="교사 부여">
-            <button type="submit" class="flex-1 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors" style="min-height: 44px;">🌰+1</button>
+            <button type="submit" class="flex-1 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors inline-flex items-center justify-center gap-1" style="min-height: 44px;">
+                <span class="js-seed-grant-loading htmx-indicator">
+                    <i class="fas fa-circle-notch fa-spin text-[10px]"></i>
+                </span>
+                <span>🌰+1</span>
+            </button>
         </form>
         <!-- Bloom grant -->
         <form method="post" action="{% url 'happy_seed:bloom_grant' classroom_id=classroom.id %}" class="flex gap-1">

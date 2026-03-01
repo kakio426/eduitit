@@ -41,6 +41,8 @@
         <form hx-post="{% url 'post_create' %}" hx-target="#post-list-container" hx-swap="outerHTML"
             hx-vals='js:{"feed_scope": (document.getElementById("post-list-container") ? document.getElementById("post-list-container").dataset.feedScope : "all"), "post_list_target_id": "post-list-container"}'
             hx-on::after-request="this.reset(); document.getElementById('image-preview-container').classList.add('hidden'); document.getElementById('post-image-input').value = '';"
+            hx-indicator="find .js-post-create-loading" hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
             hx-encoding="multipart/form-data"
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
             {% csrf_token %}
@@ -70,13 +72,19 @@
                 <div class="flex items-center gap-2">
                     {% if user.is_staff %}
                     <button type="submit" name="submit_kind" value="notice"
-                        class="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600 transition shadow-md hover:translate-y-[-1px]">
-                        공지 작성
+                        class="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600 transition shadow-md hover:translate-y-[-1px] inline-flex items-center gap-2">
+                        <span class="js-post-create-loading htmx-indicator">
+                            <i class="ph ph-spinner-gap animate-spin"></i>
+                        </span>
+                        <span>공지 작성</span>
                     </button>
                     {% endif %}
                     <button type="submit" name="submit_kind" value="general"
-                        class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md hover:translate-y-[-1px]">
-                        등록하기
+                        class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md hover:translate-y-[-1px] inline-flex items-center gap-2">
+                        <span class="js-post-create-loading htmx-indicator">
+                            <i class="ph ph-spinner-gap animate-spin"></i>
+                        </span>
+                        <span>등록하기</span>
                     </button>
                 </div>
             </div>
