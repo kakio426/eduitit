@@ -345,6 +345,7 @@
     const headerDividerEl = document.getElementById('headerDivider');
     const searchParams = new URLSearchParams(window.location.search);
     const AUTO_START_LAUNCHER = searchParams.get('autostart_launcher') === '1';
+    const AUTO_START_LAUNCHER_DISABLED = searchParams.get('autostart_launcher') === '0';
     const AUTO_START_SESSION_KEY = `artclass_launcher_autostart_${CLASSROOM_ID}`;
 
     function setExternalWindowStatus(status) {
@@ -989,7 +990,9 @@
     }
 
     async function maybeAutoStartLauncher() {
-        if (!AUTO_START_LAUNCHER) return;
+        const shouldAutoStartByMode = playbackMode === 'external_window';
+        if (!AUTO_START_LAUNCHER && !shouldAutoStartByMode) return;
+        if (AUTO_START_LAUNCHER_DISABLED) return;
         if (IS_DASHBOARD_ONLY) return;
         if (RUNTIME_MODE === 'launcher') return;
         if (sessionStorage.getItem(AUTO_START_SESSION_KEY) === '1') return;

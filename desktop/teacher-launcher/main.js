@@ -631,7 +631,7 @@ function installYouTubeFocusMode(targetWindow) {
               background: #000 !important;
               margin: 0 !important;
               padding: 0 !important;
-              overflow: hidden !important;
+              overflow: auto !important;
             }
 
             ytd-watch-flexy #columns,
@@ -645,10 +645,16 @@ function installYouTubeFocusMode(targetWindow) {
 
             ytd-watch-flexy #player,
             ytd-watch-flexy #player-container,
-            .html5-video-player {
-              width: 100vw !important;
-              height: 100vh !important;
-              max-height: 100vh !important;
+            .html5-video-player,
+            .html5-video-container,
+            video.video-stream.html5-main-video {
+              width: 100% !important;
+              height: 100% !important;
+              max-height: calc(100vh - 4px) !important;
+            }
+
+            video.video-stream.html5-main-video {
+              object-fit: contain !important;
             }
           \`;
           document.head.appendChild(style);
