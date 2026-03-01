@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import re
 import time
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -74,6 +75,13 @@ def _build_external_video_loop_url(video_url):
 def _encode_launcher_payload(payload):
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _get_launcher_download_url():
+    raw_url = (os.getenv("ARTCLASS_LAUNCHER_DOWNLOAD_URL") or "").strip()
+    if raw_url.startswith("http://") or raw_url.startswith("https://"):
+        return raw_url
+    return ""
 
 
 def setup_view(request, pk=None):
@@ -171,6 +179,7 @@ def setup_view(request, pk=None):
         'art_class': art_class,
         'initial_steps_json': initial_steps_json,
         'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
+        'launcher_download_url': _get_launcher_download_url(),
     })
 
 
@@ -211,6 +220,7 @@ def classroom_view(request, pk):
         'data_json': json.dumps(data, ensure_ascii=False),
         'display_mode': display_mode,
         'runtime_mode': runtime_mode,
+        'launcher_download_url': _get_launcher_download_url(),
     })
 
 
@@ -339,7 +349,8 @@ def library_view(request):
     
     return render(request, 'artclass/library.html', {
         'shared_classes': shared_classes,
-        'query': query
+        'query': query,
+        'launcher_download_url': _get_launcher_download_url(),
     })
 
 

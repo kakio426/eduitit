@@ -66,6 +66,7 @@
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
                 data-title="{{ item.title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
+                data-playback-mode="{{ item.playback_mode }}"
                 data-creator="{{ item.created_by.username|default:'익명의 선생님' }}"
                 data-delete-url="{% url 'artclass:delete' pk=item.pk %}"
                 data-can-delete="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
@@ -146,6 +147,16 @@
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-play"></i> 바로 수업 시작하기
                 </a>
+                {% if launcher_download_url %}
+                <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center justify-center gap-3 py-4 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 rounded-[2rem] text-base font-black shadow-sm hover:bg-emerald-100 hover:scale-[1.02] active:scale-95 transition-all">
+                    <i class="fa-solid fa-download"></i> 교사용 런처 설치파일 받기
+                </a>
+                {% else %}
+                <p class="px-4 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-2xl text-sm font-bold">
+                    런처 설치 링크가 설정되지 않았습니다. 운영팀에 설치 링크 설정을 요청해 주세요.
+                </p>
+                {% endif %}
                 <a id="editLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
@@ -169,13 +180,14 @@
         const title = el.getAttribute('data-title');
         const youtubeUrl = el.getAttribute('data-url');
         const stepCount = el.getAttribute('data-steps');
+        const playbackMode = el.getAttribute('data-playback-mode') || 'embed';
         const creator = el.getAttribute('data-creator');
         const canDelete = el.getAttribute('data-can-delete') === 'true';
         const deleteUrl = el.getAttribute('data-delete-url');
-        openChoiceModal(pk, title, youtubeUrl, stepCount, creator, canDelete, deleteUrl);
+        openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl);
     }
 
-    function openChoiceModal(pk, title, youtubeUrl, stepCount, creator, canDelete, deleteUrl) {
+    function openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl) {
         const modal = document.getElementById('choiceModal');
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
@@ -183,7 +195,10 @@
 
         // Populate content
         document.getElementById('modalTitle').textContent = title;
-        document.getElementById('playLink').href = `/artclass/classroom/${pk}/?autostart_launcher=1`;
+        const shouldAutoStartLauncher = playbackMode === 'external_window';
+        document.getElementById('playLink').href = shouldAutoStartLauncher
+            ? `/artclass/classroom/${pk}/?autostart_launcher=1`
+            : `/artclass/classroom/${pk}/`;
         document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
         if (canDelete && deleteUrl) {
             deleteForm.action = deleteUrl;

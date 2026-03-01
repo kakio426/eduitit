@@ -84,6 +84,16 @@
                 class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fa-solid fa-rocket"></i> 런처로 수업 시작
             </button>
+            {% if launcher_download_url %}
+            <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                class="px-3 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-sm font-bold transition-all flex items-center gap-2">
+                <i class="fa-solid fa-download"></i> 런처 설치
+            </a>
+            {% else %}
+            <span class="px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-bold">
+                런처 설치 링크 미설정
+            </span>
+            {% endif %}
             <span id="externalWindowStatusBadge"
                 class="hidden px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide bg-gray-700/70 text-gray-200 border border-white/10">
                 영상 창 닫힘
@@ -257,6 +267,7 @@
     const CLASSROOM_ID = Number('{{ art_class.pk }}');
     const PLAYBACK_MODE_UPDATE_URL = '{% url "artclass:update_playback_mode_api" art_class.pk %}';
     const LAUNCHER_START_URL = '{% url "artclass:start_launcher_session_api" art_class.pk %}';
+    const LAUNCHER_DOWNLOAD_URL = "{{ launcher_download_url|default:''|escapejs }}";
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
     const PLAYBACK_MODE_STORAGE_KEY = `artclass_playback_mode_${CLASSROOM_ID}`;
@@ -436,6 +447,15 @@
         externalVideoOverlayEl.classList.add('hidden');
     }
 
+    function notifyLauncherStatus(message) {
+        if (!message) return;
+        if (videoPanelEl && !videoPanelEl.classList.contains('hidden')) {
+            setExternalOverlay(true, message);
+            return;
+        }
+        window.alert(message);
+    }
+
     function setLoopControlEnabled(enabled) {
         if (enabled) {
             btnLoopEl.disabled = false;
@@ -499,14 +519,14 @@
 
             window.location.href = data.launcherUrl;
             setTimeout(() => {
-                setExternalOverlay(
-                    true,
-                    '런처 실행을 시도했습니다. 실행되지 않으면 런처를 설치하거나 화면 분할 시작 버튼을 사용해 주세요.'
-                );
+                notifyLauncherStatus('런처 실행을 시도했습니다. 실행되지 않으면 런처를 설치하거나 화면 분할 시작 버튼을 사용해 주세요.');
             }, 1200);
         } catch (err) {
             console.error('Launcher start failed:', err);
-            setExternalOverlay(true, '런처 실행에 실패했습니다. 잠시 후 다시 시도하거나 화면 분할 시작을 사용해 주세요.');
+            const fallbackMessage = LAUNCHER_DOWNLOAD_URL
+                ? '런처 실행에 실패했습니다. 설치되지 않았다면 상단의 \"런처 설치\" 버튼으로 먼저 설치해 주세요.'
+                : '런처 실행에 실패했습니다. 잠시 후 다시 시도하거나 화면 분할 시작을 사용해 주세요.';
+            notifyLauncherStatus(fallbackMessage);
         } finally {
             setLaunchButtonBusy(false);
         }

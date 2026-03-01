@@ -193,6 +193,24 @@
                     <p class="text-xs text-gray-500 mt-1">
                         수업 화면 상단의 <b>화면 분할 시작</b> 버튼으로 유튜브와 안내 화면을 반반 배치할 수 있습니다.
                     </p>
+                    <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p class="text-sm font-heavy text-emerald-900">
+                            정식 운영은 교사용 런처 설치가 필요합니다.
+                        </p>
+                        <p class="text-xs text-emerald-800 mt-1">
+                            외부 재생(임베드 차단 영상) 수업은 런처가 좌/우 분할 화면을 자동으로 만들어 줍니다.
+                        </p>
+                        {% if launcher_download_url %}
+                        <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-heavy hover:bg-emerald-700 transition-all">
+                            <i class="fa-solid fa-download"></i> 런처 설치파일 다운로드
+                        </a>
+                        {% else %}
+                        <p class="text-xs font-bold text-amber-700 mt-2">
+                            런처 다운로드 링크가 아직 설정되지 않았습니다. 운영팀에 설치 링크 설정을 요청해 주세요.
+                        </p>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="max-w-xs mx-auto mb-8">
