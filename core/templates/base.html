@@ -1028,7 +1028,7 @@
 
         <!-- Ctrl+K 검색 모달 (V2) -->
         {% if search_products_json %}
-        <div id="searchModal" class="fixed inset-0 z-[110] hidden" role="dialog" aria-modal="true" aria-label="서비스 검색">
+        <div id="searchModal" class="fixed inset-0 z-[110] hidden" role="dialog" aria-modal="true" aria-label="서비스 검색" data-sheetbook-search-url="{{ sheetbook_search_api_url|default:'' }}">
             <div id="searchModalBackdrop" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
             <div class="fixed inset-x-0 top-[10vh] sm:top-[15vh] z-10 flex justify-center px-4">
                 <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
@@ -1063,11 +1063,13 @@
             var input = document.getElementById('searchInput');
             var backdrop = document.getElementById('searchModalBackdrop');
             var results = document.getElementById('searchResults');
+            var sheetbookSearchUrl = modal ? (modal.dataset.sheetbookSearchUrl || '') : '';
             var activeIdx = -1;
             var filteredItems = [];
             var RECENT_KEY = 'eduitit_recent_searches';
             var MAX_RECENT = 5;
             var prevBodyOverflow = null;
+            var querySeq = 0;
 
             var typeColors = {
                 collect_sign: 'text-blue-500', classroom: 'text-blue-500', work: 'text-emerald-500', game: 'text-red-500',
@@ -1130,13 +1132,44 @@
             function selectItem(idx) {
                 if (idx < 0 || idx >= filteredItems.length) return;
                 var p = filteredItems[idx];
-                addRecent(p.id);
                 closeSearchModal();
+                if (p.kind === 'sheetbook' && p.url) {
+                    window.location.href = p.url;
+                    return;
+                }
+                addRecent(p.id);
                 if (window.openModal) window.openModal(p.id);
             }
 
-            function doSearch(q) {
-                q = q.trim().toLowerCase();
+            function buildSheetbookItems(payload) {
+                var items = [];
+                [
+                    ['tabs', '탭 결과'],
+                    ['cells', '셀 결과'],
+                    ['actions', '실행 기록']
+                ].forEach(function(pair) {
+                    var key = pair[0];
+                    var label = pair[1];
+                    var list = Array.isArray(payload && payload[key]) ? payload[key] : [];
+                    list.forEach(function(item) {
+                        items.push({
+                            kind: 'sheetbook',
+                            id: 'sheetbook:' + key + ':' + (item.url || item.title || ''),
+                            title: item.title || '교무수첩 결과',
+                            description: label + ' · ' + (item.meta || ''),
+                            icon: 'fa-solid fa-table-cells',
+                            service_type: 'work',
+                            url: item.url || ''
+                        });
+                    });
+                });
+                return items;
+            }
+
+            function doSearch(rawQuery) {
+                var q = rawQuery.trim().toLowerCase();
+                querySeq += 1;
+                var currentSeq = querySeq;
                 if (!q) {
                     var recentIds = getRecent();
                     if (recentIds.length) {
@@ -1153,6 +1186,24 @@
                         || (p.description && p.description.toLowerCase().indexOf(q) !== -1);
                 });
                 renderItems(filtered, null);
+
+                if (!sheetbookSearchUrl) {
+                    return;
+                }
+                var requestUrl = sheetbookSearchUrl + '?q=' + encodeURIComponent(rawQuery.trim()) + '&limit=6';
+                fetch(requestUrl, { method: 'GET' })
+                    .then(function(response) {
+                        if (!response.ok) return null;
+                        return response.json();
+                    })
+                    .then(function(payload) {
+                        if (!payload || currentSeq !== querySeq) return;
+                        if (input.value.trim().toLowerCase() !== q) return;
+                        var sheetbookItems = buildSheetbookItems(payload);
+                        var merged = filtered.concat(sheetbookItems);
+                        renderItems(merged, null);
+                    })
+                    .catch(function() {});
             }
 
             function isSearchModalOpen() {
@@ -1242,7 +1293,7 @@
                 if (idx >= 0 && idx < filteredItems.length) {
                     var p = filteredItems[idx];
                     var token = getCsrfToken();
-                    if (token) {
+                    if (token && p && p.kind !== 'sheetbook' && p.id) {
                         fetch('/api/track-usage/', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },

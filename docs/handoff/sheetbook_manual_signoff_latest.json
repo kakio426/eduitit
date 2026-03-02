@@ -1,0 +1,30 @@
+{
+  "updated_at": "2026-03-02 19:00:07",
+  "checks": {
+    "staging_allowlisted": {
+      "status": "HOLD",
+      "notes": "pending",
+      "updated_at": "2026-03-02 19:00:07"
+    },
+    "staging_non_allowlisted": {
+      "status": "HOLD",
+      "notes": "pending",
+      "updated_at": "2026-03-02 19:00:07"
+    },
+    "production_allowlisted": {
+      "status": "HOLD",
+      "notes": "pending",
+      "updated_at": "2026-03-02 19:00:07"
+    },
+    "production_non_allowlisted": {
+      "status": "HOLD",
+      "notes": "pending",
+      "updated_at": "2026-03-02 19:00:07"
+    },
+    "real_device_grid_1000": {
+      "status": "PASS",
+      "notes": "waived_by_policy(device-unavailable)",
+      "updated_at": "2026-03-02 19:00:07"
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "started_at": "2026-03-01 12:06:55",
+  "base_url": "http://127.0.0.1:8002",
+  "dataset": {
+    "sheetbook_id": 78,
+    "tab_id": 78,
+    "rows": 1000,
+    "cols": 10,
+    "paste_result": {
+      "updated": 10000,
+      "skipped": 0,
+      "invalid_rows": [],
+      "rows_added": 1000,
+      "batch_size": 400
+    },
+    "session_cookie_name": "sessionid",
+    "session_cookie_value": "pwmhmuebe4extwrimeai4swr7b6ishnz"
+  },
+  "desktop": {
+    "scenario": "desktop",
+    "device": "desktop-default",
+    "detail_path": "/sheetbook/78/?tab=78&grid_limit=1000",
+    "initial_render_ms": 2530.1365999912377,
+    "final_render_log": {
+      "rows_loaded": 1000,
+      "rows_total": 1000,
+      "cols": 10,
+      "limit": 1000,
+      "mode": "chunked",
+      "chunks": 9,
+      "chunk_size": 120,
+      "render_ms": 1291.2,
+      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1291.2",
+      "ts": 92452.6315891
+    },
+    "render_log_count": 1,
+    "seek_ms": {
+      "row_0": 112.21510000177659,
+      "row_500": 84.54799999890383,
+      "row_1000": 92.88250000099652
+    },
+    "edit_results": [
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 2986.5248999994947,
+        "row_index": 0
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 17.4088999920059,
+        "row_index": 499
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 136.7000000027474,
+        "row_index": 999
+      }
+    ],
+    "action_layer_visible": true,
+    "final_status": "저장 상태: 저장됨",
+    "console_error_count": 0,
+    "console_errors": [],
+    "console_tail": [
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1291.2"
+    ]
+  },
+  "tablet": {
+    "scenario": "tablet",
+    "device": "iPad Pro 11",
+    "detail_path": "/sheetbook/78/?tab=78&grid_limit=1000",
+    "initial_render_ms": 2310.997900000075,
+    "final_render_log": {
+      "rows_loaded": 1000,
+      "rows_total": 1000,
+      "cols": 10,
+      "limit": 1000,
+      "mode": "chunked",
+      "chunks": 9,
+      "chunk_size": 120,
+      "render_ms": 1174.3,
+      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1174.3",
+      "ts": 92545.08098
+    },
+    "render_log_count": 1,
+    "seek_ms": {
+      "row_0": 82.23960000032093,
+      "row_500": 96.51879999728408,
+      "row_1000": 94.46539999044035
+    },
+    "edit_results": [
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 44.49179999937769,
+        "row_index": 0
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 19.08079998975154,
+        "row_index": 499
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 201.85700000729412,
+        "row_index": 999
+      }
+    ],
+    "action_layer_visible": true,
+    "final_status": "저장 상태: 저장됨",
+    "console_error_count": 0,
+    "console_errors": [],
+    "console_tail": [
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1174.3"
+    ]
+  },
+  "evaluation": {
+    "pass": true,
+    "desktop_pass": true,
+    "tablet_pass": true,
+    "desktop_reasons": [],
+    "tablet_reasons": [],
+    "desktop_warnings": [],
+    "tablet_warnings": [],
+    "has_warnings": false,
+    "thresholds": {
+      "max_final_render_ms": 2000.0,
+      "warn_initial_render_ms": 3000.0
+    }
+  }
+}
