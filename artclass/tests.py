@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
+from .classification import apply_auto_metadata
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
 from .models import ArtClass, ArtStep
 
@@ -441,3 +442,94 @@ class ArtClassSetupEditTest(TestCase):
 
         expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
         self.assertRedirects(response, expected_url)
+
+
+class ArtClassAutoMetadataTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="meta_owner",
+            password="pw123456",
+            email="meta_owner@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.owner,
+            defaults={"nickname": "자동분류교사", "role": "school"},
+        )
+
+    def test_setup_generates_auto_metadata_without_manual_title(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "2",
+                "step_text_0": "3학년 학생이 수채 물감으로 봄 풍경을 채색한다.",
+                "step_text_1": "벚꽃 표현을 위해 붓 터치를 연습한다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
+        self.assertTrue(created.is_auto_classified)
+        self.assertEqual(created.auto_category, "회화")
+        self.assertEqual(created.auto_grade_band, "중학년")
+        self.assertIn("물감", created.auto_tags)
+        self.assertTrue(created.title)
+
+    def test_library_query_matches_step_text_and_auto_tags(self):
+        art_class = ArtClass.objects.create(
+            title="",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        ArtStep.objects.create(
+            art_class=art_class,
+            step_number=1,
+            description="재활용품으로 협동 콜라주 작품을 만든다.",
+        )
+        apply_auto_metadata(art_class)
+        art_class.refresh_from_db()
+
+        response = self.client.get(reverse("artclass:library"), data={"q": "재활용"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, art_class.display_title)
+
+    def test_library_filters_category_and_grade(self):
+        drawing = ArtClass.objects.create(
+            title="",
+            youtube_url="https://www.youtube.com/watch?v=abc123",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        ArtStep.objects.create(
+            art_class=drawing,
+            step_number=1,
+            description="1학년 학생이 색연필로 선 그리기 드로잉을 연습한다.",
+        )
+        apply_auto_metadata(drawing)
+
+        sculpture = ArtClass.objects.create(
+            title="",
+            youtube_url="https://www.youtube.com/watch?v=def456",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        ArtStep.objects.create(
+            art_class=sculpture,
+            step_number=1,
+            description="5학년 학생이 점토로 입체 조형 작품을 만든다.",
+        )
+        apply_auto_metadata(sculpture)
+
+        drawing.refresh_from_db()
+        sculpture.refresh_from_db()
+
+        response = self.client.get(
+            reverse("artclass:library"),
+            data={"category": "조형", "grade": "고학년"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, sculpture.display_title)
+        self.assertNotContains(response, drawing.display_title)

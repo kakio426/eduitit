@@ -10,11 +10,21 @@ class ArtStepInline(admin.TabularInline):
 
 @admin.register(ArtClass)
 class ArtClassAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'youtube_url', 'default_interval', 'created_at', 'created_by']
-    list_filter = ['created_at']
-    search_fields = ['title', 'youtube_url']
+    list_display = [
+        'id',
+        'title',
+        'auto_category',
+        'auto_grade_band',
+        'auto_confidence',
+        'youtube_url',
+        'default_interval',
+        'created_at',
+        'created_by',
+    ]
+    list_filter = ['created_at', 'auto_category', 'auto_grade_band', 'is_auto_classified']
+    search_fields = ['title', 'youtube_url', 'search_text']
     inlines = [ArtStepInline]
-    readonly_fields = ['created_at']
+    readonly_fields = ['created_at', 'auto_confidence']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('created_by')

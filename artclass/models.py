@@ -30,6 +30,12 @@ class ArtClass(models.Model):
     )
     is_shared = models.BooleanField(default=True, verbose_name="공유 여부")
     view_count = models.PositiveIntegerField(default=0, verbose_name="조회수")
+    auto_category = models.CharField(max_length=32, blank=True, default="", verbose_name="자동 카테고리")
+    auto_grade_band = models.CharField(max_length=16, blank=True, default="", verbose_name="자동 학년군")
+    auto_tags = models.JSONField(default=list, blank=True, verbose_name="자동 태그")
+    auto_confidence = models.FloatField(default=0.0, verbose_name="자동 분류 신뢰도")
+    search_text = models.TextField(blank=True, default="", verbose_name="검색 텍스트")
+    is_auto_classified = models.BooleanField(default=False, verbose_name="자동 분류 완료")
 
     class Meta:
         verbose_name = "미술 수업"
@@ -38,6 +44,10 @@ class ArtClass(models.Model):
 
     def __str__(self):
         return self.title or f"수업 #{self.pk}"
+
+    @property
+    def display_title(self):
+        return (self.title or "").strip() or f"수업 #{self.pk}"
 
 
 class ArtStep(models.Model):

@@ -38,14 +38,53 @@
                 <p class="text-xl text-gray-500 font-bold">선생님들의 노력이 담긴 최고의 수업들</p>
             </div>
 
-            <form method="GET" class="w-full md:w-96 relative">
-                <input type="text" name="q" value="{{ query }}"
-                    class="w-full pl-14 pr-6 py-4 rounded-[2rem] bg-white border-none shadow-clay outline-none text-lg focus:ring-4 focus:ring-purple-200 transition-all font-bold"
-                    placeholder="수업 제목으로 검색...">
-                <i
-                    class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 text-xl"></i>
+            <form method="GET" class="w-full md:w-[34rem] space-y-3">
+                <div class="relative">
+                    <input type="text" name="q" value="{{ query }}"
+                        class="w-full pl-14 pr-6 py-4 rounded-[2rem] bg-white border-none shadow-clay outline-none text-lg focus:ring-4 focus:ring-purple-200 transition-all font-bold"
+                        placeholder="제목, 단계 설명, 재료, 주제로 검색...">
+                    <i
+                        class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 text-xl"></i>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select name="category"
+                        class="px-4 py-2.5 rounded-xl bg-white border border-purple-100 text-sm font-bold text-gray-600 outline-none focus:ring-2 focus:ring-purple-200">
+                        <option value="">전체 카테고리</option>
+                        {% for option in category_options %}
+                        <option value="{{ option }}" {% if selected_category == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="grade"
+                        class="px-4 py-2.5 rounded-xl bg-white border border-purple-100 text-sm font-bold text-gray-600 outline-none focus:ring-2 focus:ring-purple-200">
+                        <option value="">전체 학년군</option>
+                        {% for option in grade_options %}
+                        <option value="{{ option }}" {% if selected_grade == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit"
+                        class="px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-black hover:bg-purple-700 transition-all">
+                        검색 적용
+                    </button>
+                </div>
             </form>
         </div>
+
+        {% if popular_tags %}
+        <div class="mb-10 flex flex-wrap gap-2 px-2">
+            {% for tag in popular_tags %}
+            <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if selected_category %}category={{ selected_category|urlencode }}&amp;{% endif %}{% if selected_grade %}grade={{ selected_grade|urlencode }}&amp;{% endif %}tag={{ tag|urlencode }}"
+                class="px-3 py-1.5 rounded-full text-xs font-black border {% if selected_tag == tag %}bg-purple-600 text-white border-purple-600{% else %}bg-white text-purple-700 border-purple-200 hover:border-purple-400{% endif %}">
+                #{{ tag }}
+            </a>
+            {% endfor %}
+            {% if selected_tag %}
+            <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if selected_category %}category={{ selected_category|urlencode }}&amp;{% endif %}{% if selected_grade %}grade={{ selected_grade|urlencode }}{% endif %}"
+                class="px-3 py-1.5 rounded-full text-xs font-black bg-gray-100 text-gray-600 border border-gray-200">
+                태그 필터 해제
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <!-- Library Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -65,7 +104,7 @@
             {% for item in shared_classes %}
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
-                data-title="{{ item.title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
+                data-title="{{ item.display_title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
                 data-playback-mode="{{ item.playback_mode }}"
                 data-creator="{{ item.created_by.username|default:'익명의 선생님' }}"
                 data-delete-url="{% url 'artclass:delete' pk=item.pk %}"
@@ -87,19 +126,36 @@
                 <!-- Info -->
                 <div class="p-6 flex-grow flex flex-col justify-between gap-6">
                     <div>
-                        <div class="flex items-center gap-2 mb-3">
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
                             <span
                                 class="text-[10px] font-black tracking-widest uppercase text-purple-600 bg-purple-100 px-2.5 py-1 rounded-lg">
                                 {{ item.steps_count }} STEPS
                             </span>
+                            {% if item.auto_category %}
+                            <span class="text-[10px] font-black tracking-widest uppercase text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-lg">
+                                {{ item.auto_category }}
+                            </span>
+                            {% endif %}
+                            {% if item.auto_grade_band %}
+                            <span class="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-lg">
+                                {{ item.auto_grade_band }}
+                            </span>
+                            {% endif %}
                             <span class="text-[10px] font-black tracking-widest uppercase text-gray-400">
                                 {{ item.created_at|date:"Y.m.d" }}
                             </span>
                         </div>
                         <h3
                             class="text-xl font-black text-gray-800 leading-snug break-keep group-hover:text-purple-600">
-                            {{ item.title }}
+                            {{ item.display_title }}
                         </h3>
+                        {% if item.auto_tags %}
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                            {% for tag in item.auto_tags|slice:":4" %}
+                            <span class="text-[11px] px-2 py-1 rounded-md bg-gray-100 text-gray-500 font-bold">#{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
 
                     <div class="flex items-center gap-3 pt-4 border-t border-gray-100">

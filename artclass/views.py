@@ -14,8 +14,9 @@ from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from core.utils import ratelimit_key_for_master_only
-from django.db.models import Count
+from django.db.models import Count, Q
 from .models import ArtClass, ArtStep
+from .classification import apply_auto_metadata, collect_popular_tags
 from .manual_pipeline import (
     ManualPipelineError,
     build_manual_pipeline_prompt,
@@ -97,7 +98,11 @@ def setup_view(request, pk=None):
     if request.method == 'POST':
         video_url = request.POST.get('videoUrl', '')
         interval = int(request.POST.get('stepInterval', 10))
-        title = request.POST.get('title', '')
+        posted_title = request.POST.get('title')
+        if posted_title is None and art_class:
+            title = art_class.title
+        else:
+            title = (posted_title or '').strip()
         selected_mode = (request.POST.get('playbackMode') or ArtClass.PLAYBACK_MODE_EMBED).strip()
         valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
         playback_mode = selected_mode if selected_mode in valid_modes else ArtClass.PLAYBACK_MODE_EMBED
@@ -160,6 +165,8 @@ def setup_view(request, pk=None):
                 description=payload['description'],
                 image=payload['image'],
             )
+
+        apply_auto_metadata(art_class)
          
         classroom_url = reverse("artclass:classroom", kwargs={"pk": art_class.pk})
         if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
@@ -338,18 +345,57 @@ def parse_gemini_steps_api(request):
 
 def library_view(request):
     """Shared Library - 다른 선생님들이 공유한 수업 목록"""
-    query = request.GET.get('q', '')
-    
+    query = (request.GET.get('q') or '').strip()
+    selected_category = (request.GET.get('category') or '').strip()
+    selected_grade = (request.GET.get('grade') or '').strip()
+    selected_tag = (request.GET.get('tag') or '').strip()
+
     shared_classes = ArtClass.objects.select_related('created_by').annotate(
         steps_count=Count('steps')
     ).filter(is_shared=True)
-    
+
     if query:
-        shared_classes = shared_classes.filter(title__icontains=query)
-    
+        shared_classes = shared_classes.filter(
+            Q(title__icontains=query)
+            | Q(search_text__icontains=query)
+            | Q(steps__description__icontains=query)
+        )
+
+    if selected_category:
+        shared_classes = shared_classes.filter(auto_category=selected_category)
+
+    if selected_grade:
+        shared_classes = shared_classes.filter(auto_grade_band=selected_grade)
+
+    if selected_tag:
+        shared_classes = shared_classes.filter(search_text__icontains=selected_tag)
+
+    shared_classes = shared_classes.distinct()
+
+    shared_only = ArtClass.objects.filter(is_shared=True)
+    category_options = list(
+        shared_only.exclude(auto_category='')
+        .values_list('auto_category', flat=True)
+        .order_by('auto_category')
+        .distinct()
+    )
+    grade_options = list(
+        shared_only.exclude(auto_grade_band='')
+        .values_list('auto_grade_band', flat=True)
+        .order_by('auto_grade_band')
+        .distinct()
+    )
+    popular_tags = collect_popular_tags(shared_only)
+
     return render(request, 'artclass/library.html', {
         'shared_classes': shared_classes,
         'query': query,
+        'selected_category': selected_category,
+        'selected_grade': selected_grade,
+        'selected_tag': selected_tag,
+        'category_options': category_options,
+        'grade_options': grade_options,
+        'popular_tags': popular_tags,
         'launcher_download_url': _get_launcher_download_url(),
     })
 
