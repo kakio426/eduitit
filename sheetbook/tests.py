@@ -4380,7 +4380,11 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 "event_count": 2,
                 "quality": {"next_step": "collect_more_samples", "needs_attention": False},
             },
-            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+            consent_freeze_snapshot={
+                "status": "PASS",
+                "reasons": [],
+                "md_output": "docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md",
+            },
             sample_gap_summary={
                 "overall": {
                     "ready": False,
@@ -4402,6 +4406,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
         self.assertEqual(summary["archive"]["event_count"], 2)
         self.assertEqual(summary["consent_freeze"]["status"], "PASS")
+        self.assertEqual(
+            summary["consent_freeze"]["md_output"],
+            "docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md",
+        )
         self.assertFalse(summary["sample_gap"]["ready"])
         self.assertIn("pilot_home_opened_gap:2", summary["sample_gap"]["blockers"])
         self.assertEqual(summary["sample_gap"]["next_actions"][0]["type"], "collect_pilot_samples")
@@ -4428,7 +4436,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             readiness={"overall": {"status": "PASS", "manual_pending": []}, "pilot": {"counts": {}}},
             decision={"decision": "GO", "decision_context": {"manual_alias_statuses": {}}},
             archive_snapshot={"event_count": 10, "quality": {"next_step": "continue_monitoring"}},
-            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+            consent_freeze_snapshot={"status": "PASS", "reasons": [], "md_output": "freeze.md"},
             sample_gap_summary={"overall": {"ready": True, "blockers": []}},
         )
 
@@ -4468,7 +4476,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 ],
             },
             "archive": {"next_step": "collect_more_samples"},
-            "consent_freeze": {"status": "PASS"},
+            "consent_freeze": {"status": "PASS", "md_output": "docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md"},
             "commands": [
                 {"command": "python cmd1", "ok": True},
                 {"command": "python cmd2", "ok": False},
@@ -4492,6 +4500,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("수동 signoff 완료 후 PASS 반영", markdown)
         self.assertIn("## Sample Gap Next Actions", markdown)
         self.assertIn("파일럿 이벤트 추가 확보: workspace_home_opened 2건", markdown)
+        self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):

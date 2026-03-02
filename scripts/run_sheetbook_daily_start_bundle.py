@@ -88,6 +88,7 @@ def _build_bundle_summary(
         "consent_freeze": {
             "status": str(consent_freeze_snapshot.get("status") or "").upper(),
             "reasons": list(consent_freeze_snapshot.get("reasons") or []),
+            "md_output": str(consent_freeze_snapshot.get("md_output") or ""),
         },
         "sample_gap": {
             "ready": bool(sample_gap_overall.get("ready")),
@@ -218,6 +219,7 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - sample_gap_blockers: {blocker_text}
 - archive_next_step: `{(summary.get("archive") or {}).get("next_step", "")}`
 - consent_freeze_status: `{(summary.get("consent_freeze") or {}).get("status", "")}`
+- consent_freeze_report: `{(summary.get("consent_freeze") or {}).get("md_output", "")}`
 - json_output: `{json_output_path}`
 
 ## Commands

@@ -279,6 +279,11 @@ def main() -> int:
         args.output,
         default_rel_path="docs/handoff/sheetbook_consent_freeze_snapshot_latest.json",
     )
+    md_output_path = _resolve_path(
+        root,
+        args.md_output,
+        default_rel_path=f"docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_{today}.md",
+    )
 
     content = template_path.read_text(encoding="utf-8")
     report = _build_report(
@@ -286,15 +291,11 @@ def main() -> int:
         template_path=str(template_path),
         strict_extras=bool(args.strict_extras),
     )
+    report["md_output"] = str(md_output_path)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    md_output_path = _resolve_path(
-        root,
-        args.md_output,
-        default_rel_path=f"docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_{today}.md",
-    )
     md_output_path.parent.mkdir(parents=True, exist_ok=True)
     md_output_path.write_text(
         _build_markdown(report=report, json_output_path=output_path),

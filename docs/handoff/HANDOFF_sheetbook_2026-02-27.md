@@ -4762,3 +4762,29 @@ Status: Working handoff (2026-02-27 EOD)
   - JSON: `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
   - MD: `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-02.md`
 - daily bundle 실행 tail에서 consent freeze `md_output` 경로 포함 확인
+
+---
+
+### 0-127. consent freeze md_output 연동 (snapshot JSON -> daily bundle)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_consent_freeze_snapshot.py` 보강:
+  - snapshot JSON 본문에 `md_output` 필드 저장
+- `scripts/run_sheetbook_daily_start_bundle.py` 보강:
+  - summary의 `consent_freeze.md_output` 수집
+  - daily bundle markdown에 `consent_freeze_report` 경로 노출
+- 테스트 보강(`sheetbook/tests.py`):
+  - bundle summary에 consent freeze `md_output` 반영 검증
+  - bundle markdown에 freeze report 경로 렌더링 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_consent_freeze_snapshot.py scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 11 tests, OK
+- `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`에 `md_output` 저장 확인
+- `docs/handoff/sheetbook_daily_start_bundle_latest.json`의 `consent_freeze.md_output` 반영 확인
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`에서 `consent_freeze_report` 경로 출력 확인

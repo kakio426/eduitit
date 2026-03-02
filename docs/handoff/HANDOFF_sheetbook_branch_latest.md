@@ -41,6 +41,7 @@ Status: Working branch handoff (2026-03-02 23:09)
   - sample gap 파일럿 액션 통합(`collect_pilot_samples`)으로 중복 명령 제거
   - consent freeze snapshot markdown 리포트 자동 생성:
     - `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md`
+  - consent freeze snapshot JSON(`md_output`)을 daily bundle summary/markdown에 연동
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
