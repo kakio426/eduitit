@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (daily update)
+Status: Working branch handoff (2026-03-02 20:12)
 
 작성일: 2026-03-02
 대상 저장소: `eduitit`
@@ -11,65 +11,63 @@ Status: Working branch handoff (daily update)
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
 - latest backup commit: `9ebde0f` (`wip(sheetbook): checkpoint backup 2`)
-- main head reference: `90c8cd3`
+- main은 미머지 상태 유지
 
-작업 트리(작성 시점):
-- modified: `artclass/templates/artclass/setup.html`
-- modified: `sheetbook/management/commands/check_sheetbook_preflight.py`
-- modified: `sheetbook/tests.py`
-- untracked: `sheetbook/management/commands/check_sheetbook_consent_freeze.py`
+작업 트리(sheetbook 관련만):
+- modified:
+  - `docs/handoff/HANDOFF_sheetbook_2026-02-27.md`
+  - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
+  - `docs/handoff/sheetbook_manual_signoff_latest.json`
+  - `docs/handoff/sheetbook_release_decision_latest.json`
+  - `docs/handoff/sheetbook_release_readiness_latest.json`
+  - `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`
+  - `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
+  - `docs/runbooks/SHEETBOOK_CONSENT_REVIEW_FREEZE_CHECKLIST.md`
+  - `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`
+  - `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
+  - `scripts/run_sheetbook_pilot_log_snapshot.py`
+  - `sheetbook/management/commands/recommend_sheetbook_thresholds.py`
+  - `sheetbook/tests.py`
+- untracked:
+  - `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+  - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-02.md`
+  - `docs/runbooks/logs/sheetbook_pilot_event_log_2026-03-02.csv`
+  - `scripts/run_sheetbook_consent_freeze_snapshot.py`
+  - `scripts/run_sheetbook_release_signoff_log.py`
 
-## 2) 진행/결정 로그 (짧게 계속 누적)
+## 2) 오늘 반영 요약
 
-- 2026-03-02: `feature/sheetbook` 브랜치 생성 및 원격 추적 연결 완료
-- 2026-03-02: WIP 백업 커밋 2회(`49de938`, `9ebde0f`) + 원격 push 완료
-- 2026-03-02: `main` 미머지 상태 유지(운영 반영 없음)
+- `SB-014`:
+  - role 분해 임계치 추천(`--group-by-role`) + 파일럿 로그 역할별 스냅샷 반영
+- `SB-015`:
+  - release signoff 로그 자동 생성 스크립트 추가
+  - readiness/decision/signoff log 최신화(`HOLD`)
+- `SB-108`:
+  - consent freeze snapshot diff 자동화 스크립트 추가
+  - freeze checklist/release signoff runbook 반영
 
-## 3) 중간 백업 규칙 (항상 반복)
+## 3) 내일 시작 체크리스트 (순서 고정)
 
-1. 변경 저장
-   - `git add -A`
-   - `git commit -m "wip(sheetbook): <짧은 설명>"`
-2. 원격 백업
-   - `git push`
-3. 기록 갱신
-   - 본 문서의 `브랜치 스냅샷`/`진행 로그` 갱신
+1. 게이트 최신화
+   - `python scripts/run_sheetbook_release_readiness.py --days 14`
+   - `python scripts/run_sheetbook_signoff_decision.py`
+2. signoff 로그 갱신
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+3. 파일럿/품질 스냅샷 갱신
+   - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
+   - `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
+   - `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+   - `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+4. 수동 signoff 완료 시 반영
+   - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+5. 최종 재확인
+   - `python scripts/run_sheetbook_signoff_decision.py`
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-03`
 
-## 4) main 머지 전 필수 게이트
+## 4) 중간 백업 규칙
 
-아래가 모두 통과되어야 `main` 머지 가능:
-
-- `python manage.py check`
-- `python manage.py test`
-- `python manage.py test sheetbook.tests`
-- `python manage.py makemigrations --check --dry-run`
-- `python manage.py migrate --plan`
-
-실행 결과 기록:
-- gate run date:
-- result summary:
-- blocker:
-
-## 5) 최종 반영 절차 (마지막 1회만)
-
-1. `git switch main`
-2. `git pull origin main`
-3. `git merge --no-ff feature/sheetbook`
-4. `git push origin main`
-5. 배포 후 최소 스모크 점검
-
-## 6) 장애 시 즉시 복구 절차
-
-1. 기능 플래그 OFF(있으면 최우선)
-2. `main`에서 머지 커밋 revert:
-   - `git switch main`
-   - `git log --oneline --graph -n 20`
-   - `git revert -m 1 <merge_commit_sha>`
-   - `git push origin main`
-3. DB 이슈면 배포 전 스냅샷 기준 복구
-
-## 7) 작성 규칙
-
-- 이 문서는 `feature/sheetbook`의 "현재 작업 상태"만 기록
-- 릴리즈 최종 판정은 `docs/handoff/sheetbook_release_decision_latest.json` 기준 사용
-- 긴 설명 대신 "현재 상태 + 다음 행동 + 위험"만 짧게 업데이트
+1. `git add -A`
+2. `git commit -m "wip(sheetbook): <짧은 설명>"`
+3. `git push origin feature/sheetbook`
+4. 본 문서/`HANDOFF_sheetbook_2026-02-27.md` 갱신

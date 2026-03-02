@@ -17,6 +17,7 @@
 
 ```bash
 python manage.py recommend_sheetbook_thresholds --days 14
+python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role
 ```
 
 샘플 부족 문구가 사라질 때까지 파일럿 사용 데이터를 누적한다.
@@ -35,6 +36,7 @@ python scripts/run_sheetbook_pilot_log_snapshot.py --days 14
 - 기본 출력:
   - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_<YYYY-MM-DD>.md`
   - `docs/runbooks/logs/sheetbook_pilot_event_log_<YYYY-MM-DD>.csv`
+  - Markdown의 `## 3) 역할별 스냅샷 참고`에서 role별 관측/권장값 확인 가능
 
 ## 3) 파일럿 운영 체크 포인트
 
@@ -47,7 +49,7 @@ python scripts/run_sheetbook_pilot_log_snapshot.py --days 14
 ## 4) 재보정 실행 절차
 
 1. 추천값 산출:
-  - `python manage.py recommend_sheetbook_thresholds --days 14`
+  - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
 2. 권장값을 env에 반영:
   - `SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE`
   - `SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE`

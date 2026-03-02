@@ -4073,3 +4073,343 @@ Status: Working handoff (2026-02-27 EOD)
   1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
   2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 `next_step`가 `collect_more_samples`에서 해제되는지 재확인
   3. `SB-108` freeze baseline(v1) 대비 파일럿 diff 선별 반영
+
+---
+
+### 0-111. SB-014 진행 (임계치 재보정 role 분해 + 파일럿 스냅샷 역할별 출력)
+
+### A. 구현 요약
+- `recommend_sheetbook_thresholds` 보강:
+  - `--group-by-role` 옵션 추가
+  - `user__userprofile__role` 기준으로 퍼널 관측치/전환율/권장값을 role별로 출력
+  - 공통 계산 로직을 `_build_recommendation`으로 분리해 전체/role 계산 일관성 유지
+- `run_sheetbook_pilot_log_snapshot.py` 보강:
+  - 결과 JSON에 `role_breakdown` 포함
+  - Markdown 로그에 `## 3) 역할별 스냅샷 참고` 섹션 추가
+  - role 섹션 줄바꿈 조합 버그(`\\n` 리터럴 출력 가능성) 수정
+- 테스트 보강:
+  - `SheetbookThresholdRecommendationCommandTests.test_recommend_sheetbook_thresholds_outputs_role_breakdown`
+  - `SheetbookPilotLogSnapshotScriptTests.test_pilot_snapshot_includes_role_breakdown`
+  - `SheetbookPilotLogSnapshotScriptTests.test_pilot_markdown_role_section_uses_actual_newlines`
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookThresholdRecommendationCommandTests sheetbook.tests.SheetbookPilotLogSnapshotScriptTests`
+- `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
+- `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
+- `python -m py_compile scripts/run_sheetbook_pilot_log_snapshot.py sheetbook/management/commands/recommend_sheetbook_thresholds.py`
+
+결과:
+- 타깃 테스트 5 tests, OK
+- 추천 커맨드 실행 결과:
+  - 전체 관측치 0건, 기존 임계치 유지
+  - role 출력: `role 데이터 없음`
+- 파일럿 스냅샷 실행 결과:
+  - `role_breakdown={}` (표본 없음)
+  - 산출물 갱신:
+    - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-02.md`
+    - `docs/runbooks/logs/sheetbook_pilot_event_log_2026-03-02.csv`
+- `py_compile` OK
+
+### C. 문서 반영
+- `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`:
+  - SB-014 진행 메모에 `--group-by-role`/`role_breakdown` 반영
+- `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`:
+  - 재보정 명령 예시를 `--group-by-role` 기준으로 확장
+  - Markdown role 섹션 확인 포인트 추가
+- `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`:
+  - role 분해 추천 명령 예시 및 해석 가이드 추가
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 품질 판정(`next_step`) 재확인
+  3. `SB-108` freeze baseline(v1) 대비 파일럿 diff 선별 반영
+
+### E. master 기준 잔여율(변동 없음)
+- 기준 시각: **2026-03-02 19:45**
+- 백로그: 총 `32`개 중 `19`개 DONE
+- 완료율: `59.4%`
+- 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-112. SB-015 진행 (release signoff 로그 자동 생성 스크립트)
+
+### A. 구현 요약
+- 신규 스크립트 추가:
+  - `scripts/run_sheetbook_release_signoff_log.py`
+  - 입력:
+    - `docs/handoff/sheetbook_release_readiness_latest.json`
+    - `docs/handoff/sheetbook_manual_signoff_latest.json`
+    - `docs/handoff/sheetbook_release_decision_latest.json`
+  - 출력:
+    - 기본 `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_<YYYY-MM-DD>.md`
+  - 지원 옵션:
+    - `--date`, `--author`, `--owner`, `--next-action`, `--due-date`, `--output`
+- 자동 생성 로그 내용:
+  - 자동 게이트 요약(`overall.status`, blocking/manual pending/waived)
+  - `decision.next_actions` 명령 목록
+  - `manual_alias_statuses`
+  - 수동 점검 표(allowlisted/non_allowlisted/real-device) 자동 채움
+  - 최종 판정 섹션(decision/owner/next_action/due_date)
+- 테스트 추가:
+  - `SheetbookReleaseSignoffLogScriptTests`
+    - 게이트/수동표/next_actions 렌더링 검증
+    - 값 누락 시 기본 출력(`(없음)`, `-`) 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookSignoffDecisionScriptTests sheetbook.tests.SheetbookReleaseSignoffLogScriptTests`
+- `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-02 --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+- `python -m py_compile scripts/run_sheetbook_release_signoff_log.py`
+
+결과:
+- 타깃 테스트 5 tests, OK
+- 로그 파일 생성:
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
+- 현재 판정 반영:
+  - `decision=HOLD`
+  - `readiness_status=HOLD`
+  - `manual_pending=staging_real_account_signoff, production_real_account_signoff`
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`:
+  - 자동 생성 명령(`run_sheetbook_release_signoff_log.py`) 추가
+- `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`:
+  - 배포 전 체크 권장 명령에 signoff 로그 자동 생성 추가
+- `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`:
+  - SB-015 진행 메모에 signoff 로그 자동화 반영
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 품질 판정(`next_step`) 재확인
+  3. `SB-108` freeze baseline(v1) 대비 파일럿 diff 선별 반영
+
+### E. master 기준 잔여율(변동 없음)
+- 기준 시각: **2026-03-02 19:58**
+- 백로그: 총 `32`개 중 `19`개 DONE
+- 완료율: `59.4%`
+- 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-113. SB-015 게이트 최신화 (readiness/decision/signoff log 재생성)
+
+### A. 실행
+- `python scripts/run_sheetbook_release_readiness.py --days 14`
+- `python scripts/run_sheetbook_signoff_decision.py`
+- `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-02 --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+
+### B. 결과
+- readiness (`2026-03-02 19:53:37`):
+  - `overall.status=HOLD`
+  - `automated_gate_pass=true`
+  - `manual_pending=["staging_real_account_signoff","production_real_account_signoff"]`
+  - `waived_manual_checks=["real_device_grid_1000_smoke"]`
+- decision (`2026-03-02 19:53:47`):
+  - `decision=HOLD`
+  - `manual_alias_statuses`:
+    - `staging_real_account_signoff=HOLD`
+    - `production_real_account_signoff=HOLD`
+    - `real_device_grid_1000_smoke=PASS`
+- signoff 로그 산출:
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md` 갱신
+
+### C. 산출물 갱신
+- `docs/handoff/sheetbook_release_readiness_latest.json`
+- `docs/handoff/sheetbook_manual_signoff_latest.json`
+- `docs/handoff/sheetbook_release_decision_latest.json`
+- `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 품질 판정(`next_step`) 재확인
+  3. `SB-108` freeze baseline(v1) 대비 파일럿 diff 선별 반영
+
+### E. master 기준 잔여율(변동 없음)
+- 기준 시각: **2026-03-02 19:54**
+- 백로그: 총 `32`개 중 `19`개 DONE
+- 완료율: `59.4%`
+- 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-114. SB-108 진행 (consent freeze snapshot diff 자동화)
+
+### A. 구현 요약
+- 신규 스크립트 추가:
+  - `scripts/run_sheetbook_consent_freeze_snapshot.py`
+  - `consent_review.html`에서 freeze 핵심 토큰을 추출해 JSON 스냅샷 생성
+  - 추출 범위:
+    - `id`, `data-testid`, `data-recipients-jump`, hidden input `name`
+    - 버튼 순서 룰(`cleanup`, `issue navigation`)
+  - diff 결과:
+    - `missing`(필수 누락)
+    - `extra`(추가된 recipients-* 토큰)
+    - `order_checks`(순서 위반 여부)
+  - 판정:
+    - 기본: 필수 누락/순서 위반 시 `HOLD`
+    - `--strict-extras`: 추가 토큰도 `HOLD` 처리
+- 테스트 추가:
+  - `SheetbookConsentFreezeSnapshotScriptTests`
+    - 현재 템플릿 기준 PASS 검증
+    - 필수 토큰 누락 시 HOLD 검증
+    - strict extras 시 HOLD 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookConsentFreezeCommandTests sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests`
+- `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+- `python scripts/run_sheetbook_consent_freeze_snapshot.py --strict-extras`
+- `python -m py_compile scripts/run_sheetbook_consent_freeze_snapshot.py`
+
+결과:
+- 타깃 테스트 5 tests, OK
+- 기본 스냅샷 결과:
+  - `status=PASS`
+  - 출력: `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+- `--strict-extras` 결과:
+  - `status=HOLD` (`unexpected_extra_tokens`)
+  - 확인 후 기본 모드 재실행으로 최신 스냅샷 `PASS` 상태 복구
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_CONSENT_REVIEW_FREEZE_CHECKLIST.md`
+  - freeze 스냅샷 명령/산출물/strict 옵션 추가
+- `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
+  - signoff 단계에서 freeze snapshot diff 참고 명령 추가
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 품질 판정(`next_step`) 재확인
+  3. `SB-108` freeze baseline(v1) 기준으로 snapshot diff를 파일럿 피드백 선별 기준으로 사용
+
+### E. master 기준 잔여율(변동 없음)
+- 기준 시각: **2026-03-02 20:08**
+- 백로그: 총 `32`개 중 `19`개 DONE
+- 완료율: `59.4%`
+- 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-115. 게이트/로그 최신화 (SB-015 + SB-202 + SB-108 상태 동기화)
+
+### A. 실행
+- `python scripts/run_sheetbook_release_readiness.py --days 14`
+- `python scripts/run_sheetbook_signoff_decision.py`
+- `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-02 --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+- `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
+- `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+- `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+
+### B. 결과
+- readiness (`2026-03-02 20:10:09`):
+  - `overall.status=HOLD`
+  - `automated_gate_pass=true`
+  - `manual_pending=["staging_real_account_signoff","production_real_account_signoff"]`
+- decision (`2026-03-02 20:10:17`):
+  - `decision=HOLD`
+  - `manual_alias_statuses`:
+    - `staging_real_account_signoff=HOLD`
+    - `production_real_account_signoff=HOLD`
+    - `real_device_grid_1000_smoke=PASS`
+- pilot snapshot:
+  - `workspace_home_opened_count=0`
+  - `role_breakdown={}` (role 데이터 없음)
+- archive bulk snapshot:
+  - `event_count=0`
+  - `quality.sample_gap_count=5`
+  - `quality.next_step=collect_more_samples`
+- consent freeze snapshot:
+  - `status=PASS`
+  - `reasons=[]`
+
+### C. 산출물 갱신
+- `docs/handoff/sheetbook_release_readiness_latest.json`
+- `docs/handoff/sheetbook_manual_signoff_latest.json`
+- `docs/handoff/sheetbook_release_decision_latest.json`
+- `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
+- `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-02.md`
+- `docs/runbooks/logs/sheetbook_pilot_event_log_2026-03-02.csv`
+- `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
+- `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 품질 판정(`next_step`) 재확인
+  3. `SB-108` freeze snapshot diff(`missing/extra/order`) 기준으로 파일럿 변경 요청 선별 반영
+
+### E. master 기준 잔여율(변동 없음)
+- 기준 시각: **2026-03-02 20:10**
+- 백로그: 총 `32`개 중 `19`개 DONE
+- 완료율: `59.4%`
+- 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-116. 오늘 작업 요약 + 내일 시작 체크리스트 (운영용 고정)
+
+### A. 오늘 작업 요약 (2026-03-02)
+- `SB-014`:
+  - `recommend_sheetbook_thresholds --group-by-role` 반영
+  - `run_sheetbook_pilot_log_snapshot.py`에 `role_breakdown` + 역할별 Markdown 섹션 반영
+  - role 섹션 줄바꿈 버그(`\\n` 리터럴) 수정 + 회귀 테스트 추가
+- `SB-015`:
+  - `run_sheetbook_release_signoff_log.py` 추가(readiness/manual/decision -> Markdown 로그 자동 생성)
+  - release runbook/beta runbook/plan/handoff에 자동화 절차 반영
+  - readiness/decision/signoff 로그 최신화 재실행(`HOLD` 유지)
+- `SB-108`:
+  - `run_sheetbook_consent_freeze_snapshot.py` 추가(consent freeze diff JSON)
+  - `missing/extra/order_checks` 판정 + `--strict-extras` 옵션 반영
+  - freeze checklist/release signoff runbook에 snapshot 점검 절차 반영
+
+### B. 오늘 검증 요약
+- 타깃 통합 테스트:
+  - `SheetbookThresholdRecommendationCommandTests`
+  - `SheetbookPilotLogSnapshotScriptTests`
+  - `SheetbookSignoffDecisionScriptTests`
+  - `SheetbookReleaseSignoffLogScriptTests`
+  - `SheetbookConsentFreezeCommandTests`
+  - `SheetbookConsentFreezeSnapshotScriptTests`
+- 결과:
+  - 총 15 tests, `OK`
+  - 스크립트 `py_compile` 모두 `OK`
+  - 산출물 최신화 완료(게이트/로그/스냅샷)
+
+### C. 내일 시작 체크리스트 (순서 고정)
+1. 게이트 최신화
+  - `python scripts/run_sheetbook_release_readiness.py --days 14`
+  - `python scripts/run_sheetbook_signoff_decision.py`
+2. signoff 운영 로그 갱신
+  - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+3. 파일럿/품질 스냅샷 갱신
+  - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
+  - `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
+  - `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+  - `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+4. 수동 signoff 실제 반영(완료 시)
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+5. 반영 후 즉시 재확인
+  - `python scripts/run_sheetbook_signoff_decision.py`
+  - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-03`
+
+### D. 내일 우선순위
+1. `SB-015` 수동 signoff 2건 완료 처리
+2. `SB-202` 실사용 표본 확보(`event_count >= 5`) 및 `next_step` 재판정
+3. `SB-108` freeze snapshot diff 기준으로 파일럿 변경 요청 선별 반영

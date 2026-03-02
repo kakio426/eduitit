@@ -25,7 +25,9 @@
 파일럿 이벤트 기반 추천값 산출(선택):
 
 - `python manage.py recommend_sheetbook_thresholds --days 14`
+- `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
 - 출력된 `SHEETBOOK_WORKSPACE_*` 권장값을 env에 반영한 뒤 `check_sheetbook_rollout --strict`로 재검증
+- role별 편차가 크면 전체 권장값 반영 전에 파일럿 운영 대상(role/학교군) 기준으로 재해석
 - 파일럿 수집 체크리스트: `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`
 - 파일럿 운영 로그 템플릿: `docs/runbooks/SHEETBOOK_PILOT_EVENT_LOG_TEMPLATE.md`
 - 파일럿 운영 로그 자동 스냅샷: `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
@@ -65,6 +67,7 @@ python manage.py test sheetbook.tests
   - alias 예시: `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:ok --set production_real_account_signoff=PASS:ok --set real_device_grid_1000_smoke=PASS:ok`
   - 현재 정책: 실기기 항목은 기본 면제(auto PASS). 필요 시 `--no-waive-real-device-smoke`로 해제
   - 파일럿 샘플 부족 상태에서 베타 공개를 진행하려면 `--allow-pilot-hold-for-beta`를 명시해 조건부 GO 판정 사용
+- signoff 로그 문서 자동 생성(권장): `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops`
 
 Windows one-command(strict) 예시:
 

@@ -653,6 +653,10 @@ P2:
 - 임계치 재보정 커맨드 추가:
   - `recommend_sheetbook_thresholds --days 14`
   - 홈 유입 퍼널 이벤트를 기반으로 목표치/샘플 수 권장 env 값을 출력
+  - `--group-by-role` 옵션으로 role별(예: school/instructor) 관측치/권장값을 함께 출력
+- 파일럿 로그 스냅샷 보강:
+  - `scripts/run_sheetbook_pilot_log_snapshot.py` 결과 JSON에 `role_breakdown` 포함
+  - Markdown 로그에 `역할별 스냅샷 참고` 섹션 자동 생성
 - 지표 관련 테스트 추가(`SheetbookMetricTests`)
 - 다음 보완: 임계치 기준을 파일럿 데이터(학교/학년별)로 재보정
 - 의존성: `SB-004`, `SB-013`
@@ -692,6 +696,9 @@ P2:
   - decision 출력에 alias 집계 상태(`manual_alias_statuses`) 추가
     - `staging_real_account_signoff` / `production_real_account_signoff` / `real_device_grid_1000_smoke`
   - alias 집계 상태 회귀 테스트 추가(`test_compute_decision_includes_manual_alias_statuses`)
+  - signoff 로그 자동 생성 스크립트 추가:
+    - `python scripts/run_sheetbook_release_signoff_log.py --author <작성자>`
+    - readiness/manual/decision JSON을 운영 기록 Markdown으로 변환
 - 완료 조건:
 - P0 CI 통과
 - 내부 사용자 베타 오픈

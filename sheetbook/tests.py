@@ -28,6 +28,16 @@ from scripts.run_sheetbook_signoff_decision import (
 from scripts.run_sheetbook_archive_bulk_snapshot import (
     _collect_snapshot as _collect_archive_bulk_snapshot,
 )
+from scripts.run_sheetbook_consent_freeze_snapshot import (
+    _build_report as _build_consent_freeze_snapshot_report,
+)
+from scripts.run_sheetbook_release_signoff_log import (
+    _build_markdown as _build_release_signoff_log_markdown,
+)
+from scripts.run_sheetbook_pilot_log_snapshot import (
+    _build_markdown as _build_pilot_log_markdown,
+    _collect_snapshot as _collect_pilot_log_snapshot,
+)
 from sheetbook.models import (
     ActionInvocation,
     SavedView,
@@ -4230,6 +4240,98 @@ class SheetbookSignoffDecisionScriptTests(SimpleTestCase):
         self.assertEqual(alias_statuses.get("real_device_grid_1000_smoke"), "FAIL")
 
 
+class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
+    def test_build_release_signoff_markdown_includes_gate_summary_and_manual_rows(self):
+        readiness = {
+            "overall": {
+                "status": "HOLD",
+                "blocking_reasons": [],
+                "manual_pending": [
+                    "staging_real_account_signoff",
+                    "production_real_account_signoff",
+                ],
+                "waived_manual_checks": ["real_device_grid_1000_smoke"],
+            }
+        }
+        manual = {
+            "checks": {
+                "staging_allowlisted": {"status": "PASS", "notes": "staging-ok"},
+                "staging_non_allowlisted": {"status": "HOLD", "notes": "pending"},
+                "production_allowlisted": {"status": "HOLD", "notes": "pending"},
+                "production_non_allowlisted": {"status": "HOLD", "notes": "pending"},
+                "real_device_grid_1000": {
+                    "status": "PASS",
+                    "notes": "waived_by_policy(device-unavailable)",
+                },
+            }
+        }
+        decision = {
+            "decision": "HOLD",
+            "manual_checks": manual["checks"],
+            "decision_context": {
+                "manual_alias_statuses": {
+                    "staging_real_account_signoff": "HOLD",
+                    "production_real_account_signoff": "HOLD",
+                    "real_device_grid_1000_smoke": "PASS",
+                }
+            },
+            "next_actions": [
+                {
+                    "description": "스테이징 점검 후 PASS 반영",
+                    "command": "python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok",
+                }
+            ],
+        }
+
+        markdown = _build_release_signoff_log_markdown(
+            record_date=date(2026, 3, 2),
+            author="qa-owner",
+            readiness=readiness,
+            manual=manual,
+            decision=decision,
+            owner="ops-team",
+            next_action="staging/prod 실계정 점검",
+            due_date="2026-03-03",
+        )
+
+        self.assertIn("작성일: 2026-03-02", markdown)
+        self.assertIn("- `overall.status`: HOLD", markdown)
+        self.assertIn("- `manual_pending`: staging_real_account_signoff, production_real_account_signoff", markdown)
+        self.assertIn("- `waived_manual_checks`: real_device_grid_1000_smoke", markdown)
+        self.assertIn(
+            "| staging_real_account_signoff | staging | allowlisted | PASS | staging-ok |",
+            markdown,
+        )
+        self.assertIn(
+            "`python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok`",
+            markdown,
+        )
+        self.assertIn("- decision: `HOLD`", markdown)
+        self.assertIn("- owner: ops-team", markdown)
+        self.assertIn("- due_date: 2026-03-03", markdown)
+
+    def test_build_release_signoff_markdown_uses_defaults_for_missing_values(self):
+        markdown = _build_release_signoff_log_markdown(
+            record_date=date(2026, 3, 2),
+            author="",
+            readiness={},
+            manual={},
+            decision={},
+            owner="",
+            next_action="",
+            due_date="",
+        )
+
+        self.assertIn("- `blocking_reasons`: (없음)", markdown)
+        self.assertIn("- `manual_pending`: (없음)", markdown)
+        self.assertIn("- `waived_manual_checks`: (없음)", markdown)
+        self.assertIn("- `next_actions` (decision json 자동 추천 명령):", markdown)
+        self.assertIn("- decision: `HOLD`", markdown)
+        self.assertIn("- owner: -", markdown)
+        self.assertIn("- next_action: -", markdown)
+        self.assertIn("- due_date: -", markdown)
+
+
 class SheetbookPreflightCommandTests(SimpleTestCase):
     @patch("sheetbook.management.commands.check_sheetbook_preflight.call_command")
     def test_check_sheetbook_preflight_runs_full_flow_with_strict(self, mocked_call_command):
@@ -4323,6 +4425,77 @@ class SheetbookConsentFreezeCommandTests(SimpleTestCase):
             Path(tmp_path).unlink(missing_ok=True)
 
 
+class SheetbookConsentFreezeSnapshotScriptTests(SimpleTestCase):
+    def test_consent_freeze_snapshot_report_passes_for_current_template(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "sheetbook"
+            / "templates"
+            / "sheetbook"
+            / "consent_review.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        report = _build_consent_freeze_snapshot_report(
+            content=content,
+            template_path=str(template_path),
+            strict_extras=False,
+        )
+
+        self.assertEqual(report.get("status"), "PASS")
+        self.assertFalse((report.get("missing") or {}).get("ids"))
+        self.assertFalse((report.get("missing") or {}).get("testids"))
+        self.assertFalse((report.get("missing") or {}).get("jump_values"))
+        self.assertFalse((report.get("missing") or {}).get("hidden_names"))
+        self.assertTrue(all(bool(item.get("ok")) for item in report.get("order_checks") or []))
+
+    def test_consent_freeze_snapshot_report_detects_missing_required_token(self):
+        invalid_template = """
+        <form>
+          <textarea id="recipients-textarea" data-testid="recipients-textarea"></textarea>
+        </form>
+        """.strip()
+        report = _build_consent_freeze_snapshot_report(
+            content=invalid_template,
+            template_path="inline-invalid",
+            strict_extras=False,
+        )
+
+        self.assertEqual(report.get("status"), "HOLD")
+        self.assertIn("missing_required_tokens", report.get("reasons") or [])
+        self.assertIn("recipients-cleanup-btn", (report.get("missing") or {}).get("ids") or [])
+
+    def test_consent_freeze_snapshot_report_can_hold_on_extras_when_strict(self):
+        extra_template = """
+        <div>
+          <textarea id="recipients-textarea" data-testid="recipients-textarea"></textarea>
+          <button id="recipients-cleanup-btn" data-testid="recipients-cleanup-btn"></button>
+          <button id="recipients-cleanup-undo-btn" data-testid="recipients-cleanup-undo-btn"></button>
+          <button id="recipients-copy-issues-btn" data-testid="recipients-copy-issues-btn"></button>
+          <button id="recipients-prev-issue-btn" data-testid="recipients-prev-issue-btn"></button>
+          <button id="recipients-next-issue-btn" data-testid="recipients-next-issue-btn"></button>
+          <button data-testid="recipients-jump-top-btn" data-recipients-jump="top"></button>
+          <button data-testid="recipients-jump-bottom-btn" data-recipients-jump="bottom"></button>
+          <button id="recipients-submit-btn" data-testid="recipients-submit-btn"></button>
+          <button id="recipients-extra-btn" data-testid="recipients-extra-btn"></button>
+          <input type="hidden" name="recipients_cleanup_applied" />
+          <input type="hidden" name="recipients_cleanup_removed_count" />
+          <input type="hidden" name="recipients_cleanup_undo_used" />
+          <input type="hidden" name="recipients_issue_copy_used" />
+          <input type="hidden" name="recipients_issue_jump_count" />
+        </div>
+        """.strip()
+        report = _build_consent_freeze_snapshot_report(
+            content=extra_template,
+            template_path="inline-extra",
+            strict_extras=True,
+        )
+
+        self.assertEqual(report.get("status"), "HOLD")
+        self.assertIn("unexpected_extra_tokens", report.get("reasons") or [])
+        self.assertIn("recipients-extra-btn", (report.get("extra") or {}).get("ids") or [])
+
+
 class SheetbookThresholdRecommendationCommandTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -4342,10 +4515,10 @@ class SheetbookThresholdRecommendationCommandTests(TestCase):
             sort_order=1,
         )
 
-    def _create_event(self, event_name, minutes, metadata=None):
+    def _create_event(self, event_name, minutes, metadata=None, user=None):
         event = SheetbookMetricEvent.objects.create(
             event_name=event_name,
-            user=self.user,
+            user=user or self.user,
             sheetbook=self.sheetbook,
             tab=self.tab,
             metadata=metadata or {},
@@ -4407,6 +4580,244 @@ class SheetbookThresholdRecommendationCommandTests(TestCase):
         self.assertIn("샘플 부족(2 < 5)", value)
         self.assertIn("SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE=62.0", value)
         self.assertIn("SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE=41.0", value)
+
+    @override_settings(
+        SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE=60.0,
+        SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE=50.0,
+        SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE=2,
+        SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE=2,
+    )
+    def test_recommend_sheetbook_thresholds_outputs_role_breakdown(self):
+        instructor = User.objects.create_user(
+            username="sheetbook_threshold_instructor",
+            password="pw123456",
+            email="sheetbook_threshold_instructor@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=instructor,
+            defaults={"nickname": "sheetbook_threshold_instructor", "role": "instructor"},
+        )
+
+        for idx in range(4):
+            self._create_event("workspace_home_opened", idx, user=self.user)
+        for idx in range(2):
+            self._create_event(
+                "sheetbook_created",
+                20 + idx,
+                metadata={"entry_source": "workspace_home_create"},
+                user=self.user,
+            )
+        self._create_event(
+            "action_execute_requested",
+            40,
+            metadata={"entry_source": "workspace_home_create"},
+            user=self.user,
+        )
+
+        for idx in range(2):
+            self._create_event("workspace_home_opened", 100 + idx, user=instructor)
+        self._create_event(
+            "sheetbook_created",
+            130,
+            metadata={"entry_source": "workspace_home_create"},
+            user=instructor,
+        )
+
+        out = StringIO()
+        call_command("recommend_sheetbook_thresholds", "--days", "14", "--group-by-role", stdout=out)
+        value = out.getvalue()
+
+        self.assertIn("[sheetbook] role별 재보정 참고", value)
+        self.assertIn("role=school: home=4, create=2, action=1, rate=50.0%/50.0%", value)
+        self.assertIn("role=instructor: home=2, create=1, action=0, rate=50.0%/0.0%", value)
+
+
+class SheetbookPilotLogSnapshotScriptTests(TestCase):
+    def setUp(self):
+        self.school_user = User.objects.create_user(
+            username="sheetbook_pilot_school",
+            password="pw123456",
+            email="sheetbook_pilot_school@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.school_user,
+            defaults={"nickname": "sheetbook_pilot_school", "role": "school"},
+        )
+        self.instructor_user = User.objects.create_user(
+            username="sheetbook_pilot_instructor",
+            password="pw123456",
+            email="sheetbook_pilot_instructor@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.instructor_user,
+            defaults={"nickname": "sheetbook_pilot_instructor", "role": "instructor"},
+        )
+        self.sheetbook = Sheetbook.objects.create(owner=self.school_user, title="파일럿 로그 테스트 수첩")
+        self.tab = SheetTab.objects.create(
+            sheetbook=self.sheetbook,
+            name="일정",
+            tab_type=SheetTab.TYPE_GRID,
+            sort_order=1,
+        )
+
+    def _create_event(self, user, event_name, minutes, metadata=None):
+        event = SheetbookMetricEvent.objects.create(
+            event_name=event_name,
+            user=user,
+            sheetbook=self.sheetbook,
+            tab=self.tab,
+            metadata=metadata or {},
+        )
+        event.created_at = timezone.now() - timedelta(days=1) + timedelta(minutes=minutes)
+        event.save(update_fields=["created_at"])
+
+    @override_settings(
+        SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE=60.0,
+        SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE=50.0,
+        SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE=2,
+        SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE=2,
+    )
+    def test_pilot_snapshot_includes_role_breakdown(self):
+        for idx in range(4):
+            self._create_event(self.school_user, "workspace_home_opened", idx)
+        for idx in range(2):
+            self._create_event(
+                self.school_user,
+                "sheetbook_created",
+                20 + idx,
+                metadata={"entry_source": "workspace_home_create"},
+            )
+        self._create_event(
+            self.school_user,
+            "action_execute_requested",
+            40,
+            metadata={"entry_source": "workspace_home_create"},
+        )
+
+        for idx in range(2):
+            self._create_event(self.instructor_user, "workspace_home_opened", 100 + idx)
+        self._create_event(
+            self.instructor_user,
+            "sheetbook_created",
+            130,
+            metadata={"entry_source": "workspace_home_create"},
+        )
+
+        snapshot = _collect_pilot_log_snapshot(days=14)
+        role_breakdown = snapshot.get("role_breakdown") or {}
+
+        self.assertIn("school", role_breakdown)
+        self.assertIn("instructor", role_breakdown)
+        self.assertEqual(
+            role_breakdown["school"]["counts"]["workspace_home_opened_count"],
+            4,
+        )
+        self.assertEqual(
+            role_breakdown["school"]["counts"]["workspace_source_create_count"],
+            2,
+        )
+        self.assertEqual(
+            role_breakdown["school"]["counts"]["workspace_source_action_requested_count"],
+            1,
+        )
+        self.assertEqual(
+            role_breakdown["instructor"]["counts"]["workspace_home_opened_count"],
+            2,
+        )
+        self.assertEqual(
+            role_breakdown["instructor"]["counts"]["workspace_source_create_count"],
+            1,
+        )
+        self.assertEqual(
+            role_breakdown["instructor"]["counts"]["workspace_source_action_requested_count"],
+            0,
+        )
+        self.assertEqual(role_breakdown["school"]["rates"]["home_to_create"], 50.0)
+        self.assertEqual(role_breakdown["school"]["rates"]["create_to_action"], 50.0)
+        self.assertEqual(role_breakdown["instructor"]["rates"]["home_to_create"], 50.0)
+        self.assertEqual(role_breakdown["instructor"]["rates"]["create_to_action"], 0.0)
+
+    def test_pilot_markdown_role_section_uses_actual_newlines(self):
+        snapshot = {
+            "days": 14,
+            "counts": {
+                "workspace_home_opened_count": 6,
+                "workspace_source_create_count": 3,
+                "workspace_source_action_requested_count": 1,
+            },
+            "rates": {"home_to_create": 50.0, "create_to_action": 33.3},
+            "current": {
+                "to_create_target": 60.0,
+                "create_to_action_target": 50.0,
+                "to_create_min_sample": 5,
+                "create_to_action_min_sample": 5,
+            },
+            "recommended": {
+                "to_create_target": 42.0,
+                "create_to_action_target": 30.0,
+                "to_create_min_sample": 5,
+                "create_to_action_min_sample": 5,
+                "to_create_reason": "관측치 50.0% - 안정 마진 8.0%",
+                "create_to_action_reason": "샘플 부족(3 < 5)",
+            },
+            "role_breakdown": {
+                "school": {
+                    "counts": {
+                        "workspace_home_opened_count": 4,
+                        "workspace_source_create_count": 2,
+                        "workspace_source_action_requested_count": 1,
+                    },
+                    "rates": {"home_to_create": 50.0, "create_to_action": 50.0},
+                    "recommended": {
+                        "to_create_target": 40.0,
+                        "create_to_action_target": 35.0,
+                        "to_create_reason": "관측치 50.0% - 안정 마진 10.0%",
+                        "create_to_action_reason": "샘플 부족(2 < 5)",
+                    },
+                },
+                "instructor": {
+                    "counts": {
+                        "workspace_home_opened_count": 2,
+                        "workspace_source_create_count": 1,
+                        "workspace_source_action_requested_count": 0,
+                    },
+                    "rates": {"home_to_create": 50.0, "create_to_action": 0.0},
+                    "recommended": {
+                        "to_create_target": 45.0,
+                        "create_to_action_target": 35.0,
+                        "to_create_reason": "현재 설정 유지",
+                        "create_to_action_reason": "샘플 부족(1 < 5)",
+                    },
+                },
+            },
+        }
+        row = {
+            "date": "2026-03-02",
+            "school_or_group": "pilot-school",
+            "class_scope": "5학년",
+            "active_teachers": "3",
+            "workspace_home_opened": "6",
+            "home_source_sheetbook_created": "3",
+            "home_source_action_execute_requested": "1",
+            "home_to_create_rate_pct": "50.0",
+            "create_to_action_rate_pct": "33.3",
+            "blockers": "없음",
+            "next_action": "파일럿 계속",
+        }
+
+        markdown = _build_pilot_log_markdown(
+            run_datetime=timezone.now(),
+            record_date=date(2026, 3, 2),
+            row=row,
+            snapshot=snapshot,
+            reflected_env=False,
+            reflected_reason="기본값 유지",
+        )
+
+        self.assertIn("## 3) 역할별 스냅샷 참고", markdown)
+        self.assertIn("\n- role=instructor:", markdown)
+        self.assertIn("\n- role=school:", markdown)
+        self.assertNotIn("\\n- role=school", markdown)
 
 
 class SheetbookBenchmarkCommandTests(TestCase):

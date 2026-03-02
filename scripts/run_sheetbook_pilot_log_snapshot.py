@@ -7,6 +7,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from django.db.models import Count
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -91,32 +93,73 @@ def _read_workspace_funnel_counts(since) -> dict[str, int]:
     }
 
 
-def _collect_snapshot(days: int) -> dict[str, Any]:
-    from django.conf import settings
-    from django.utils import timezone
+def _normalize_role_label(value: Any) -> str:
+    role = str(value or "").strip().lower()
+    return role if role else "unknown"
 
-    current_to_create_target = _safe_percentage(
-        getattr(settings, "SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE", 60.0),
-        60.0,
-    )
-    current_create_to_action_target = _safe_percentage(
-        getattr(settings, "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE", 50.0),
-        50.0,
-    )
-    current_to_create_min_sample = _safe_positive_int(
-        getattr(settings, "SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE", 5),
-        5,
-    )
-    current_create_to_action_min_sample = _safe_positive_int(
-        getattr(settings, "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE", 5),
-        5,
-    )
 
-    since = timezone.now() - timedelta(days=days)
-    counts = _read_workspace_funnel_counts(since)
-    home_count = counts["workspace_home_opened_count"]
-    create_count = counts["workspace_source_create_count"]
-    action_count = counts["workspace_source_action_requested_count"]
+def _read_workspace_funnel_counts_by_role(since) -> dict[str, dict[str, int]]:
+    from sheetbook.models import SheetbookMetricEvent
+
+    event_qs = SheetbookMetricEvent.objects.filter(created_at__gte=since)
+    role_counts: dict[str, dict[str, int]] = {}
+
+    home_rows = (
+        event_qs.filter(event_name="workspace_home_opened")
+        .values("user__userprofile__role")
+        .annotate(count=Count("id"))
+    )
+    for row in home_rows:
+        role = _normalize_role_label(row.get("user__userprofile__role"))
+        role_counts.setdefault(
+            role,
+            {
+                "workspace_home_opened_count": 0,
+                "workspace_source_create_count": 0,
+                "workspace_source_action_requested_count": 0,
+            },
+        )
+        role_counts[role]["workspace_home_opened_count"] += int(row.get("count") or 0)
+
+    source_rows = event_qs.filter(
+        event_name__in=["sheetbook_created", "action_execute_requested"]
+    ).values("event_name", "metadata", "user__userprofile__role")
+
+    for row in source_rows:
+        metadata = row.get("metadata") or {}
+        if not isinstance(metadata, dict):
+            continue
+        source = str(metadata.get("entry_source") or "").strip().lower()
+        if not source.startswith("workspace_home"):
+            continue
+        role = _normalize_role_label(row.get("user__userprofile__role"))
+        role_counts.setdefault(
+            role,
+            {
+                "workspace_home_opened_count": 0,
+                "workspace_source_create_count": 0,
+                "workspace_source_action_requested_count": 0,
+            },
+        )
+        if row["event_name"] == "sheetbook_created":
+            role_counts[role]["workspace_source_create_count"] += 1
+        elif row["event_name"] == "action_execute_requested":
+            role_counts[role]["workspace_source_action_requested_count"] += 1
+
+    return role_counts
+
+
+def _build_recommendation(
+    counts: dict[str, int],
+    *,
+    current_to_create_target: float,
+    current_create_to_action_target: float,
+    current_to_create_min_sample: int,
+    current_create_to_action_min_sample: int,
+):
+    home_count = int(counts.get("workspace_home_opened_count") or 0)
+    create_count = int(counts.get("workspace_source_create_count") or 0)
+    action_count = int(counts.get("workspace_source_action_requested_count") or 0)
 
     home_to_create_rate = round((create_count / home_count) * 100, 1) if home_count else 0.0
     create_to_action_rate = round((action_count / create_count) * 100, 1) if create_count else 0.0
@@ -151,17 +194,14 @@ def _collect_snapshot(days: int) -> dict[str, Any]:
     )
 
     return {
-        "days": days,
-        "counts": counts,
+        "counts": {
+            "workspace_home_opened_count": home_count,
+            "workspace_source_create_count": create_count,
+            "workspace_source_action_requested_count": action_count,
+        },
         "rates": {
             "home_to_create": home_to_create_rate,
             "create_to_action": create_to_action_rate,
-        },
-        "current": {
-            "to_create_target": current_to_create_target,
-            "create_to_action_target": current_create_to_action_target,
-            "to_create_min_sample": current_to_create_min_sample,
-            "create_to_action_min_sample": current_create_to_action_min_sample,
         },
         "recommended": {
             "to_create_target": to_create_target,
@@ -171,6 +211,68 @@ def _collect_snapshot(days: int) -> dict[str, Any]:
             "to_create_reason": to_create_reason,
             "create_to_action_reason": create_to_action_reason,
         },
+    }
+
+
+def _collect_snapshot(days: int) -> dict[str, Any]:
+    from django.conf import settings
+    from django.utils import timezone
+
+    current_to_create_target = _safe_percentage(
+        getattr(settings, "SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE", 60.0),
+        60.0,
+    )
+    current_create_to_action_target = _safe_percentage(
+        getattr(settings, "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE", 50.0),
+        50.0,
+    )
+    current_to_create_min_sample = _safe_positive_int(
+        getattr(settings, "SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE", 5),
+        5,
+    )
+    current_create_to_action_min_sample = _safe_positive_int(
+        getattr(settings, "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE", 5),
+        5,
+    )
+
+    since = timezone.now() - timedelta(days=days)
+    counts = _read_workspace_funnel_counts(since)
+    summary = _build_recommendation(
+        counts,
+        current_to_create_target=current_to_create_target,
+        current_create_to_action_target=current_create_to_action_target,
+        current_to_create_min_sample=current_to_create_min_sample,
+        current_create_to_action_min_sample=current_create_to_action_min_sample,
+    )
+
+    role_counts = _read_workspace_funnel_counts_by_role(since)
+    role_breakdown = {}
+    for role in sorted(role_counts.keys()):
+        role_summary = _build_recommendation(
+            role_counts[role],
+            current_to_create_target=current_to_create_target,
+            current_create_to_action_target=current_create_to_action_target,
+            current_to_create_min_sample=current_to_create_min_sample,
+            current_create_to_action_min_sample=current_create_to_action_min_sample,
+        )
+        role_breakdown[role] = {
+            "counts": role_summary["counts"],
+            "rates": role_summary["rates"],
+            "recommended": role_summary["recommended"],
+        }
+
+    return {
+        "days": days,
+        "counts": summary["counts"],
+        "rates": summary["rates"],
+        "current": {
+            "to_create_target": current_to_create_target,
+            "create_to_action_target": current_create_to_action_target,
+            "to_create_min_sample": current_to_create_min_sample,
+            "create_to_action_min_sample": current_create_to_action_min_sample,
+        },
+        "recommended": summary["recommended"],
+        "role_breakdown": role_breakdown,
     }
 
 
@@ -227,7 +329,31 @@ def _build_markdown(
     counts = snapshot["counts"]
     rates = snapshot["rates"]
     recommended = snapshot["recommended"]
+    role_breakdown = snapshot.get("role_breakdown") or {}
     days = snapshot["days"]
+
+    role_lines: list[str] = []
+    if role_breakdown:
+        for role in sorted(role_breakdown.keys()):
+            role_item = role_breakdown.get(role) or {}
+            role_counts = role_item.get("counts") or {}
+            role_rates = role_item.get("rates") or {}
+            role_recommended = role_item.get("recommended") or {}
+            role_lines.append(
+                f"- role={role}: home={role_counts.get('workspace_home_opened_count', 0)}, "
+                f"create={role_counts.get('workspace_source_create_count', 0)}, "
+                f"action={role_counts.get('workspace_source_action_requested_count', 0)}, "
+                f"rate={role_rates.get('home_to_create', 0.0)}%/{role_rates.get('create_to_action', 0.0)}%"
+            )
+            role_lines.append(
+                f"  - 추천: home->create={role_recommended.get('to_create_target', 0.0)}% "
+                f"({role_recommended.get('to_create_reason', '현재 설정 유지')}), "
+                f"create->action={role_recommended.get('create_to_action_target', 0.0)}% "
+                f"({role_recommended.get('create_to_action_reason', '현재 설정 유지')})"
+            )
+    else:
+        role_lines.append("- role 데이터 없음")
+    role_section = "\n".join(role_lines)
 
     return f"""# Sheetbook Pilot Event Log ({record_date.isoformat()})
 
@@ -251,7 +377,10 @@ def _build_markdown(
 - 주요 이슈: {"샘플 부족" if counts["workspace_home_opened_count"] < snapshot["current"]["to_create_min_sample"] else "집계 정상"}
 - 다음 주 액션: {row["next_action"]}
 
-## 3) 재보정 실행 기록
+## 3) 역할별 스냅샷 참고
+{role_section}
+
+## 4) 재보정 실행 기록
 
 ### Output Snapshot
 
@@ -373,6 +502,7 @@ def main() -> int:
         "counts": counts,
         "rates": rates,
         "recommended": snapshot["recommended"],
+        "role_breakdown": snapshot.get("role_breakdown") or {},
         "row": row,
     }
     print(json.dumps(result, ensure_ascii=False))

@@ -49,11 +49,18 @@
 
 ## 6. 회귀 테스트 명령
 ```bash
+python scripts/run_sheetbook_consent_freeze_snapshot.py
+python manage.py check_sheetbook_consent_freeze
 python manage.py test sheetbook.tests.SheetbookGridApiTests.test_consent_seed_review_shows_recipient_parse_summary
 python manage.py test sheetbook.tests.SheetbookGridApiTests.test_consent_seed_review_post_updates_seed_and_redirects_step1
 python manage.py test sheetbook.tests.SheetbookMetricTests.test_metrics_dashboard_summarizes_consent_cleanup_usage
 python manage.py check
 ```
+
+스냅샷 산출물:
+
+- `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+- `--strict-extras`를 사용하면 신규 `recipients-*` id/data-testid도 HOLD로 판정
 
 ## 7. Freeze 승인 기준
 - 위 테스트가 모두 통과한다.

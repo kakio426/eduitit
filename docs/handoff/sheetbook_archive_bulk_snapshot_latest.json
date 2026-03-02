@@ -17,13 +17,13 @@
   },
   "quality": {
     "has_enough_samples": false,
-    "sample_gap_count": 3,
+    "sample_gap_count": 5,
     "needs_attention": false,
     "attention_reasons": [],
     "thresholds": {
-      "min_events": 3,
-      "ignored_rate_threshold_pct": 12.5,
-      "unchanged_rate_threshold_pct": 45.0
+      "min_events": 5,
+      "ignored_rate_threshold_pct": 10.0,
+      "unchanged_rate_threshold_pct": 50.0
     },
     "next_step": "collect_more_samples"
   }

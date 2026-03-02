@@ -42,12 +42,19 @@ python scripts/run_sheetbook_release_readiness.py --days 14 --no-waive-real-devi
 - `smoke_sheetbook_consent_recipients_latest.json`
 - `smoke_sheetbook_consent_recipients_300_latest.json` (존재 시 함께 판정)
 - `smoke_sheetbook_allowlist_latest.json`
+- `sheetbook_consent_freeze_snapshot_latest.json` (선택: freeze diff 참고)
 
 `smoke_sheetbook_consent_recipients*`는 밀집 문제 줄 구간에서 아래를 함께 검증한다.
 
 - 미니맵 lane 분산(`minimap_lane_count>=2`)
 - 중복 marker 위치 없음(`minimap_duplicate_lane_top_count=0`)
 - 미니맵 점프 다중 샘플 정확도(`line_jump_by_minimap.checked_count>=3`, `ok=true`)
+
+freeze 기준선 diff를 함께 남기려면:
+
+```bash
+python scripts/run_sheetbook_consent_freeze_snapshot.py
+```
 
 ## 3) 수동 점검 상태 + 최종 의사결정
 
@@ -62,6 +69,7 @@ python scripts/run_sheetbook_signoff_decision.py
 - 입력(자동): `docs/handoff/sheetbook_release_readiness_latest.json`
 - 입력/갱신(수동 상태): `docs/handoff/sheetbook_manual_signoff_latest.json`
 - 출력(최종 판정): `docs/handoff/sheetbook_release_decision_latest.json`
+- 출력(운영 로그, 권장): `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_<YYYY-MM-DD>.md`
 - 출력의 `next_actions`:
   - 현재 상태에서 바로 실행 가능한 다음 명령을 자동 추천
   - 예: `staging_real_account_signoff`/`production_real_account_signoff` PASS 반영 명령
@@ -117,6 +125,12 @@ python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_sign
 - `production_real_account_signoff` (alias: `production_allowlisted` + `production_non_allowlisted`)
 - `real_device_grid_1000_smoke` (alias: `real_device_grid_1000`)
 
+판정 파일 기반 운영 로그를 자동 생성하려면:
+
+```bash
+python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops
+```
+
 ## 4) 수동 게이트 체크리스트
 
 아래 항목은 자동 스크립트가 대체하지 못하므로 운영자가 직접 체크한다.
@@ -155,3 +169,7 @@ python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_sign
 일일 로그 예시:
 
 - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_<YYYY-MM-DD>.md`
+
+자동 생성(권장):
+
+- `python scripts/run_sheetbook_release_signoff_log.py --author <작성자>`
