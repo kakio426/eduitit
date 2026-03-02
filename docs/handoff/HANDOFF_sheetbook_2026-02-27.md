@@ -4728,3 +4728,37 @@ Status: Working handoff (2026-02-27 EOD)
   2. `collect_archive_events`
   3. `refresh_gap_summary`
 - daily bundle JSON/MD에도 동일 액션 구조 반영 확인
+
+---
+
+### 0-126. consent freeze snapshot Markdown 추가 (SB-108 운영 로그화)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_consent_freeze_snapshot.py` 확장:
+  - `--md-output` 옵션 추가
+  - 기본 리포트 경로:
+    - `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md`
+  - `_build_markdown()` 추가:
+    - status / strict_extras / reasons / template_path
+    - missing/extra 토큰 목록
+    - order checks PASS/FAIL 목록
+  - CLI 출력 JSON에 `md_output` 포함
+- 테스트 보강(`sheetbook/tests.py`):
+  - `SheetbookConsentFreezeSnapshotScriptTests`에 markdown 렌더링 검증 추가
+- 문서 반영:
+  - `docs/runbooks/SHEETBOOK_CONSENT_REVIEW_FREEZE_CHECKLIST.md`
+  - `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
+  - freeze snapshot markdown 출력 경로 안내 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_consent_freeze_snapshot.py scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 11 tests, OK
+- consent freeze snapshot 출력:
+  - JSON: `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+  - MD: `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-02.md`
+- daily bundle 실행 tail에서 consent freeze `md_output` 경로 포함 확인

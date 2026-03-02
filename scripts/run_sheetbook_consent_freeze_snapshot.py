@@ -1,7 +1,7 @@
 import argparse
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -188,6 +188,59 @@ def _build_report(
     }
 
 
+def _build_markdown(*, report: dict[str, Any], json_output_path: Path) -> str:
+    status = str(report.get("status") or "HOLD").upper()
+    reasons = [str(item) for item in (report.get("reasons") or []) if str(item)]
+    reasons_text = ", ".join(reasons) if reasons else "(없음)"
+
+    missing = report.get("missing") or {}
+    extra = report.get("extra") or {}
+    missing_lines = [
+        f"- ids: {', '.join(missing.get('ids') or []) or '(없음)'}",
+        f"- testids: {', '.join(missing.get('testids') or []) or '(없음)'}",
+        f"- jump_values: {', '.join(missing.get('jump_values') or []) or '(없음)'}",
+        f"- hidden_names: {', '.join(missing.get('hidden_names') or []) or '(없음)'}",
+    ]
+    extra_lines = [
+        f"- ids: {', '.join(extra.get('ids') or []) or '(없음)'}",
+        f"- testids: {', '.join(extra.get('testids') or []) or '(없음)'}",
+        f"- jump_values: {', '.join(extra.get('jump_values') or []) or '(없음)'}",
+        f"- hidden_names: {', '.join(extra.get('hidden_names') or []) or '(없음)'}",
+    ]
+
+    order_lines: list[str] = []
+    for check in report.get("order_checks") or []:
+        if not isinstance(check, dict):
+            continue
+        name = str(check.get("name") or "order")
+        ok = bool(check.get("ok"))
+        error = str(check.get("error") or "")
+        if ok:
+            order_lines.append(f"- [PASS] {name}")
+        else:
+            order_lines.append(f"- [FAIL] {name}: {error}")
+    if not order_lines:
+        order_lines.append("- (none)")
+
+    return f"""# Sheetbook Consent Freeze Snapshot ({report.get('generated_at', '')})
+
+- status: `{status}`
+- strict_extras: `{bool(report.get("strict_extras"))}`
+- reasons: {reasons_text}
+- template_path: `{report.get("template_path", "")}`
+- json_output: `{json_output_path}`
+
+## Missing
+{chr(10).join(missing_lines)}
+
+## Extra
+{chr(10).join(extra_lines)}
+
+## Order Checks
+{chr(10).join(order_lines)}
+"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Snapshot consent_review freeze tokens and write diff report JSON."
@@ -207,9 +260,15 @@ def main() -> int:
         action="store_true",
         help="extra recipients-* tokens도 HOLD 판정으로 취급",
     )
+    parser.add_argument(
+        "--md-output",
+        default="",
+        help="markdown output path (default: docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md)",
+    )
     args = parser.parse_args()
 
     root = _repo_root()
+    today = date.today().isoformat()
     template_path = _resolve_path(
         root,
         args.template_path,
@@ -231,12 +290,24 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    md_output_path = _resolve_path(
+        root,
+        args.md_output,
+        default_rel_path=f"docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_{today}.md",
+    )
+    md_output_path.parent.mkdir(parents=True, exist_ok=True)
+    md_output_path.write_text(
+        _build_markdown(report=report, json_output_path=output_path),
+        encoding="utf-8",
+    )
+
     print(
         json.dumps(
             {
                 "status": report.get("status"),
                 "reasons": report.get("reasons"),
                 "output": str(output_path),
+                "md_output": str(md_output_path),
             },
             ensure_ascii=False,
         )

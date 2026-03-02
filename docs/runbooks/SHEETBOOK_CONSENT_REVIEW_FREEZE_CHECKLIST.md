@@ -60,6 +60,7 @@ python manage.py check
 스냅샷 산출물:
 
 - `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
+- `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md`
 - `--strict-extras`를 사용하면 신규 `recipients-*` id/data-testid도 HOLD로 판정
 
 ## 7. Freeze 승인 기준

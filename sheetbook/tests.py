@@ -29,6 +29,7 @@ from scripts.run_sheetbook_archive_bulk_snapshot import (
     _collect_snapshot as _collect_archive_bulk_snapshot,
 )
 from scripts.run_sheetbook_consent_freeze_snapshot import (
+    _build_markdown as _build_consent_freeze_snapshot_markdown,
     _build_report as _build_consent_freeze_snapshot_report,
 )
 from scripts.run_sheetbook_daily_start_bundle import (
@@ -4771,6 +4772,33 @@ class SheetbookConsentFreezeSnapshotScriptTests(SimpleTestCase):
         self.assertEqual(report.get("status"), "HOLD")
         self.assertIn("unexpected_extra_tokens", report.get("reasons") or [])
         self.assertIn("recipients-extra-btn", (report.get("extra") or {}).get("ids") or [])
+
+    def test_consent_freeze_snapshot_markdown_includes_status_and_checks(self):
+        report = {
+            "generated_at": "2026-03-03 09:00:00",
+            "status": "HOLD",
+            "strict_extras": True,
+            "reasons": ["missing_required_tokens"],
+            "template_path": "sheetbook/templates/sheetbook/consent_review.html",
+            "missing": {"ids": ["recipients-submit-btn"], "testids": [], "jump_values": [], "hidden_names": []},
+            "extra": {"ids": [], "testids": ["recipients-extra-btn"], "jump_values": [], "hidden_names": []},
+            "order_checks": [
+                {"name": "cleanup button order", "ok": True, "error": ""},
+                {"name": "issue navigation order", "ok": False, "error": "order mismatch"},
+            ],
+        }
+        markdown = _build_consent_freeze_snapshot_markdown(
+            report=report,
+            json_output_path=Path("docs/handoff/sheetbook_consent_freeze_snapshot_latest.json"),
+        )
+
+        self.assertIn("Sheetbook Consent Freeze Snapshot", markdown)
+        self.assertIn("`HOLD`", markdown)
+        self.assertIn("missing_required_tokens", markdown)
+        self.assertIn("recipients-submit-btn", markdown)
+        self.assertIn("recipients-extra-btn", markdown)
+        self.assertIn("[PASS] cleanup button order", markdown)
+        self.assertIn("[FAIL] issue navigation order", markdown)
 
 
 class SheetbookThresholdRecommendationCommandTests(TestCase):

@@ -43,6 +43,7 @@ python scripts/run_sheetbook_release_readiness.py --days 14 --no-waive-real-devi
 - `smoke_sheetbook_consent_recipients_300_latest.json` (존재 시 함께 판정)
 - `smoke_sheetbook_allowlist_latest.json`
 - `sheetbook_consent_freeze_snapshot_latest.json` (선택: freeze diff 참고)
+  - 리포트: `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md`
 
 `smoke_sheetbook_consent_recipients*`는 밀집 문제 줄 구간에서 아래를 함께 검증한다.
 
