@@ -207,6 +207,10 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 
     blockers = [str(item) for item in (summary.get("sample_gap") or {}).get("blockers", []) if str(item)]
     blocker_text = ", ".join(blockers) if blockers else "(없음)"
+    consent_freeze_reasons = [
+        str(item) for item in (summary.get("consent_freeze") or {}).get("reasons", []) if str(item)
+    ]
+    consent_freeze_reasons_text = ", ".join(consent_freeze_reasons) if consent_freeze_reasons else "(없음)"
 
     return f"""# Sheetbook Daily Start Bundle ({summary.get('generated_at', '')})
 
@@ -219,6 +223,7 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - sample_gap_blockers: {blocker_text}
 - archive_next_step: `{(summary.get("archive") or {}).get("next_step", "")}`
 - consent_freeze_status: `{(summary.get("consent_freeze") or {}).get("status", "")}`
+- consent_freeze_reasons: {consent_freeze_reasons_text}
 - consent_freeze_report: `{(summary.get("consent_freeze") or {}).get("md_output", "")}`
 - json_output: `{json_output_path}`
 

@@ -4788,3 +4788,26 @@ Status: Working handoff (2026-02-27 EOD)
 - `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`에 `md_output` 저장 확인
 - `docs/handoff/sheetbook_daily_start_bundle_latest.json`의 `consent_freeze.md_output` 반영 확인
 - `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`에서 `consent_freeze_report` 경로 출력 확인
+
+---
+
+### 0-128. daily bundle에 consent freeze reasons 노출
+
+### A. 구현 요약
+- `scripts/run_sheetbook_daily_start_bundle.py` markdown 렌더링 확장:
+  - `consent_freeze_reasons` 라인 추가
+  - 기존 `consent_freeze_report`와 함께 freeze 상태 해석 근거를 즉시 확인 가능
+- 테스트 보강(`sheetbook/tests.py`):
+  - daily bundle markdown 테스트에 `consent_freeze.reasons` 렌더링 검증 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_consent_freeze_snapshot.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 11 tests, OK
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`에
+  - `consent_freeze_reasons`
+  - `consent_freeze_report`
+  둘 다 출력 확인

@@ -4476,7 +4476,11 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 ],
             },
             "archive": {"next_step": "collect_more_samples"},
-            "consent_freeze": {"status": "PASS", "md_output": "docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md"},
+            "consent_freeze": {
+                "status": "PASS",
+                "reasons": ["unexpected_extra_tokens"],
+                "md_output": "docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md",
+            },
             "commands": [
                 {"command": "python cmd1", "ok": True},
                 {"command": "python cmd2", "ok": False},
@@ -4501,6 +4505,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("## Sample Gap Next Actions", markdown)
         self.assertIn("파일럿 이벤트 추가 확보: workspace_home_opened 2건", markdown)
         self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
+        self.assertIn("unexpected_extra_tokens", markdown)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):

@@ -42,6 +42,7 @@ Status: Working branch handoff (2026-03-02 23:13)
   - consent freeze snapshot markdown 리포트 자동 생성:
     - `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_<YYYY-MM-DD>.md`
   - consent freeze snapshot JSON(`md_output`)을 daily bundle summary/markdown에 연동
+  - daily bundle markdown에 `consent_freeze_reasons` 표시 추가
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
