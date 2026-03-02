@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-02 22:40)
+Status: Working branch handoff (2026-03-02 22:52)
 
 작성일: 2026-03-02
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-02 22:40)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `637ee30` (`wip(sheetbook): checkpoint backup 6 (sample gap next actions + handoff sync)`)
+- latest backup commit: `9563bf9` (`wip(sheetbook): checkpoint backup 7 (sample gap markdown report + runbook sync)`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -35,6 +35,8 @@ Status: Working branch handoff (2026-03-02 22:40)
   - `docs/handoff/sheetbook_sample_gap_summary_latest.json`으로 pilot/archive 갭 통합 확인
   - sample gap blocker별 `next_actions` 자동 생성(수집 명령 + 재집계 명령)
   - daily start markdown에 `Sample Gap Next Actions` 섹션 노출
+  - sample gap markdown 리포트 자동 생성:
+    - `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
