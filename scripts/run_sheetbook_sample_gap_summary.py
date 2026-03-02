@@ -1,6 +1,6 @@
 import argparse
 import json
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -144,6 +144,55 @@ def _build_sample_gap_summary(
     }
 
 
+def _build_sample_gap_markdown(*, summary: dict[str, Any], json_output_path: Path) -> str:
+    overall = summary.get("overall") or {}
+    pilot = summary.get("pilot") or {}
+    archive = summary.get("archive") or {}
+
+    blockers = [str(item) for item in (overall.get("blockers") or []) if str(item)]
+    blocker_text = ", ".join(blockers) if blockers else "(없음)"
+
+    action_lines: list[str] = []
+    for action in overall.get("next_actions") or []:
+        if not isinstance(action, dict):
+            continue
+        desc = str(action.get("description") or "").strip()
+        cmd = str(action.get("command") or "").strip()
+        if desc and cmd:
+            action_lines.append(f"- {desc}: `{cmd}`")
+        elif cmd:
+            action_lines.append(f"- `{cmd}`")
+        elif desc:
+            action_lines.append(f"- {desc}")
+    if not action_lines:
+        action_lines.append("- (none)")
+
+    pilot_counts = pilot.get("counts") or {}
+    pilot_gaps = pilot.get("gaps") or {}
+
+    return f"""# Sheetbook Sample Gap Summary ({summary.get('generated_at', '')})
+
+- overall_ready: `{overall.get("ready")}`
+- blockers: {blocker_text}
+- json_output: `{json_output_path}`
+
+## Pilot
+- workspace_home_opened: `{pilot_counts.get("workspace_home_opened", 0)}`
+- home_source_sheetbook_created: `{pilot_counts.get("home_source_sheetbook_created", 0)}`
+- home_source_action_execute_requested: `{pilot_counts.get("home_source_action_execute_requested", 0)}`
+- workspace_home_opened_gap: `{pilot_gaps.get("workspace_home_opened_gap", 0)}`
+- home_source_sheetbook_created_gap: `{pilot_gaps.get("home_source_sheetbook_created_gap", 0)}`
+
+## Archive
+- event_count: `{archive.get("event_count", 0)}`
+- event_gap: `{archive.get("event_gap", 0)}`
+- next_step: `{archive.get("next_step", "")}`
+
+## Next Actions
+{chr(10).join(action_lines)}
+"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Summarize current pilot/archive sample gaps from latest handoff JSON files."
@@ -163,9 +212,15 @@ def main() -> int:
         default="docs/handoff/sheetbook_sample_gap_summary_latest.json",
         help="summary output path",
     )
+    parser.add_argument(
+        "--md-output",
+        default="",
+        help="markdown output path (default: docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md)",
+    )
     args = parser.parse_args()
 
     root = _repo_root()
+    today = date.today().isoformat()
     readiness_path = Path(args.readiness)
     archive_path = Path(args.archive_snapshot)
     output_path = Path(args.output)
@@ -187,6 +242,17 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    md_output = Path(args.md_output) if args.md_output else Path(
+        f"docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_{today}.md"
+    )
+    if not md_output.is_absolute():
+        md_output = root / md_output
+    md_output.parent.mkdir(parents=True, exist_ok=True)
+    md_output.write_text(
+        _build_sample_gap_markdown(summary=summary, json_output_path=output_path),
+        encoding="utf-8",
+    )
+
     print(
         json.dumps(
             {
@@ -194,6 +260,7 @@ def main() -> int:
                 "blockers": (summary.get("overall") or {}).get("blockers"),
                 "next_actions": (summary.get("overall") or {}).get("next_actions"),
                 "output": str(output_path),
+                "md_output": str(md_output),
             },
             ensure_ascii=False,
         )

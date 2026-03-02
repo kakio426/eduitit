@@ -4628,3 +4628,42 @@ Status: Working handoff (2026-02-27 EOD)
   1. `python scripts/run_sheetbook_release_readiness.py --days 14`
   2. `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
   3. `python scripts/run_sheetbook_sample_gap_summary.py`
+
+---
+
+### 0-123. sample gap 리포트 Markdown 추가 (운영 로그 가시화)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_sample_gap_summary.py` 확장:
+  - `--md-output` 옵션 추가
+  - 기본 리포트 경로:
+    - `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`
+  - `_build_sample_gap_markdown()` 추가:
+    - overall ready/blockers
+    - pilot counts/gaps
+    - archive event_gap/next_step
+    - next actions 명령 목록
+  - CLI 출력 JSON에 `md_output` 포함
+- runbook 반영:
+  - `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`
+  - `docs/runbooks/SHEETBOOK_ARCHIVE_BULK_OPERATION.md`
+  - `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
+  - 위 3개 문서에 sample gap markdown 리포트 경로 안내 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 7 tests, OK
+- sample gap summary 실행 시:
+  - JSON: `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - MD: `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_2026-03-02.md`
+- daily bundle 재실행 후 summary tail에 sample gap `md_output` 반영 확인
+
+### C. 내일 재시작 체크(추가)
+1. `python scripts/run_sheetbook_sample_gap_summary.py`
+2. `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`에서 blockers/next actions 확인
+3. 표본 수집 후 `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03` 재실행

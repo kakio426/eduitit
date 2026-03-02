@@ -37,6 +37,7 @@ from scripts.run_sheetbook_daily_start_bundle import (
     _build_bundle_summary as _build_daily_start_bundle_summary,
 )
 from scripts.run_sheetbook_sample_gap_summary import (
+    _build_sample_gap_markdown as _build_sample_gap_markdown_payload,
     _build_sample_gap_summary as _build_sample_gap_summary_payload,
 )
 from scripts.run_sheetbook_release_signoff_log import (
@@ -4554,6 +4555,46 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertTrue(summary["overall"]["ready"])
         self.assertEqual(summary["overall"]["blockers"], [])
         self.assertEqual(summary["overall"]["next_actions"][0]["type"], "monitoring")
+
+    def test_build_sample_gap_markdown_includes_blockers_and_actions(self):
+        summary = {
+            "generated_at": "2026-03-03 09:00:00",
+            "pilot": {
+                "counts": {
+                    "workspace_home_opened": 2,
+                    "home_source_sheetbook_created": 1,
+                    "home_source_action_execute_requested": 0,
+                },
+                "gaps": {
+                    "workspace_home_opened_gap": 3,
+                    "home_source_sheetbook_created_gap": 4,
+                },
+            },
+            "archive": {
+                "event_count": 1,
+                "event_gap": 4,
+                "next_step": "collect_more_samples",
+            },
+            "overall": {
+                "ready": False,
+                "blockers": ["pilot_home_opened_gap:3", "archive_event_gap:4"],
+                "next_actions": [
+                    {
+                        "description": "표본 수집 후 gap summary 재생성",
+                        "command": "python scripts/run_sheetbook_sample_gap_summary.py",
+                    }
+                ],
+            },
+        }
+        markdown = _build_sample_gap_markdown_payload(
+            summary=summary,
+            json_output_path=Path("docs/handoff/sheetbook_sample_gap_summary_latest.json"),
+        )
+        self.assertIn("Sheetbook Sample Gap Summary", markdown)
+        self.assertIn("pilot_home_opened_gap:3", markdown)
+        self.assertIn("archive_event_gap:4", markdown)
+        self.assertIn("## Next Actions", markdown)
+        self.assertIn("표본 수집 후 gap summary 재생성", markdown)
 
 
 class SheetbookPreflightCommandTests(SimpleTestCase):

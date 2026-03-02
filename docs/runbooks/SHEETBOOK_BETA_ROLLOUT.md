@@ -73,6 +73,7 @@ python manage.py test sheetbook.tests
   - 리포트: `docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md`
 - 파일럿/아카이브 표본 부족량 요약(권장): `python scripts/run_sheetbook_sample_gap_summary.py`
   - 출력: `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - 리포트: `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`
 
 Windows one-command(strict) 예시:
 

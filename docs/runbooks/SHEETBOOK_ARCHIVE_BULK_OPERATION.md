@@ -82,3 +82,4 @@ python scripts/run_sheetbook_sample_gap_summary.py
 ```
 
 - 출력: `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+- 리포트: `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`
