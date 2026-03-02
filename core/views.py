@@ -20,8 +20,9 @@ from .models import (
     UserModeration,
 )
 from django.contrib import messages
-from django.db.models import Count, Max, Q
+from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from PIL import Image
 import logging
 
@@ -117,6 +118,12 @@ def _render_post_list_partial(request, page_obj, feed_scope):
 
 
 def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
+    now = timezone.now()
+    active_feature_window = (
+        Q(featured_from__isnull=False, featured_from__lte=now)
+        & (Q(featured_until__isnull=True) | Q(featured_until__gte=now))
+    )
+
     queryset = (
         Post.objects
         .filter(approval_status='approved')
@@ -133,13 +140,23 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
         .annotate(
             likes_count_annotated=Count('likes', distinct=True),
             comments_count_annotated=Count('comments', filter=Q(comments__is_hidden=False), distinct=True),
+            active_feature_order=Case(
+                When(active_feature_window, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+            active_feature_from=Case(
+                When(active_feature_window, then=F('featured_from')),
+                default=Value(None),
+                output_field=DateTimeField(),
+            ),
         )
     )
 
     if feed_scope == POST_FEED_SCOPE_NOTICE:
         queryset = queryset.filter(post_type__in=POST_FEED_NOTICE_TYPES)
 
-    return queryset.order_by('-created_at')
+    return queryset.order_by('-active_feature_order', '-active_feature_from', '-created_at')
 
 
 def _resolve_post_for_action(post_id, user):
@@ -1187,6 +1204,175 @@ def news_review_action(request, pk):
     post.reviewed_at = timezone.now()
     post.save(update_fields=['approval_status', 'reviewed_by', 'reviewed_at'])
     return redirect('news_review_queue')
+
+
+def _format_datetime_local_value(dt):
+    if not dt:
+        return ''
+    return timezone.localtime(dt).strftime('%Y-%m-%dT%H:%M')
+
+
+def _parse_feature_datetime(raw_value):
+    raw = (raw_value or '').strip()
+    if not raw:
+        return None
+
+    parsed = parse_datetime(raw)
+    if parsed is None:
+        return None
+    if timezone.is_naive(parsed):
+        return timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
+
+
+@login_required
+def insight_sns_queue(request):
+    if not request.user.is_staff:
+        messages.error(request, '관리 권한이 필요합니다.')
+        return redirect('home')
+
+    from datetime import timedelta
+    from insights.models import Insight
+
+    insights_qs = Insight.objects.order_by('-created_at')
+    insights_total = insights_qs.count()
+    paginator = Paginator(insights_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    insights_page = list(page_obj.object_list)
+
+    detail_urls = [
+        reverse('insights:detail', kwargs={'pk': insight.pk})
+        for insight in insights_page
+    ]
+    linked_posts_qs = (
+        Post.objects
+        .filter(
+            post_type='news_link',
+            publisher='Insight Library',
+            source_url__in=detail_urls,
+        )
+        .order_by('source_url', '-created_at')
+    )
+    latest_post_by_source = {}
+    for linked_post in linked_posts_qs:
+        latest_post_by_source.setdefault(linked_post.source_url, linked_post)
+
+    now = timezone.now()
+    default_start = now
+    default_end = now + timedelta(hours=24)
+    insight_rows = []
+    for insight in insights_page:
+        detail_url = reverse('insights:detail', kwargs={'pk': insight.pk})
+        linked_post = latest_post_by_source.get(detail_url)
+        start_dt = linked_post.featured_from if linked_post and linked_post.featured_from else default_start
+        end_dt = linked_post.featured_until if linked_post and linked_post.featured_until else default_end
+        is_active = False
+        if linked_post and linked_post.featured_from and linked_post.featured_from <= now:
+            if not linked_post.featured_until or linked_post.featured_until >= now:
+                is_active = True
+
+        insight_rows.append({
+            'insight': insight,
+            'detail_url': detail_url,
+            'linked_post': linked_post,
+            'is_active': is_active,
+            'start_value': _format_datetime_local_value(start_dt),
+            'end_value': _format_datetime_local_value(end_dt),
+        })
+
+    return render(
+        request,
+        'core/insight_sns_queue.html',
+        {
+            'insight_rows': insight_rows,
+            'insights_total': insights_total,
+            'page_obj': page_obj,
+        },
+    )
+
+
+@login_required
+@require_POST
+def insight_sns_action(request, pk):
+    if not request.user.is_staff:
+        return HttpResponse("Forbidden", status=403)
+
+    from datetime import timedelta
+    from insights.models import Insight
+
+    insight = get_object_or_404(Insight, pk=pk)
+    detail_url = reverse('insights:detail', kwargs={'pk': insight.pk})
+    post = (
+        Post.objects
+        .filter(
+            post_type='news_link',
+            publisher='Insight Library',
+            source_url=detail_url,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+
+    action = (request.POST.get('action') or '').strip().lower()
+    now = timezone.now()
+
+    if action == 'clear':
+        if not post:
+            messages.info(request, '이미 노출 해제된 상태입니다.')
+            return redirect('insight_sns_queue')
+
+        post.featured_from = None
+        post.featured_until = None
+        post.reviewed_by = request.user
+        post.reviewed_at = now
+        post.save(update_fields=['featured_from', 'featured_until', 'reviewed_by', 'reviewed_at'])
+        messages.success(request, '인사이트 상단 노출을 해제했습니다.')
+        return redirect('insight_sns_queue')
+
+    if action != 'feature':
+        return HttpResponse("Invalid action", status=400)
+
+    start_at = _parse_feature_datetime(request.POST.get('featured_from')) or now
+    end_at = _parse_feature_datetime(request.POST.get('featured_until')) or (start_at + timedelta(hours=24))
+    if end_at <= start_at:
+        messages.error(request, '노출 종료 시간은 시작 시간보다 늦어야 합니다.')
+        return redirect('insight_sns_queue')
+
+    summary = " ".join((insight.content or '').split())
+    if len(summary) > 220:
+        summary = f"{summary[:217]}..."
+    if not summary:
+        summary = insight.title
+
+    payload = {
+        'content': summary,
+        'post_type': 'news_link',
+        'source_type': 'institute',
+        'source_url': detail_url,
+        'canonical_url': detail_url,
+        'og_title': insight.title,
+        'og_description': summary,
+        'og_image_url': insight.thumbnail_url or '',
+        'publisher': 'Insight Library',
+        'published_at': now,
+        'primary_tag': '인사이트',
+        'secondary_tag': f'insight:{insight.pk}',
+        'approval_status': 'approved',
+        'featured_from': start_at,
+        'featured_until': end_at,
+    }
+
+    if post is None:
+        post = Post(author=request.user, **payload)
+    else:
+        for key, value in payload.items():
+            setattr(post, key, value)
+
+    post.reviewed_by = request.user
+    post.reviewed_at = now
+    post.save()
+    messages.success(request, '인사이트를 SNS 상단 노출 대상으로 등록했습니다.')
+    return redirect('insight_sns_queue')
 
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')

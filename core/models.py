@@ -82,6 +82,8 @@ class Post(models.Model):
     approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='approved', verbose_name="게시 승인 상태")
     reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name="검토 일시")
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_posts')
+    featured_from = models.DateTimeField(null=True, blank=True, verbose_name="상단 노출 시작")
+    featured_until = models.DateTimeField(null=True, blank=True, verbose_name="상단 노출 종료")
     news_source = models.ForeignKey('NewsSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -93,6 +95,7 @@ class Post(models.Model):
             models.Index(fields=['post_type', '-created_at']),
             models.Index(fields=['post_type', '-ranking_score']),
             models.Index(fields=['approval_status', '-created_at']),
+            models.Index(fields=['featured_from', 'featured_until']),
             models.Index(fields=['publisher', '-created_at']),
         ]
 
@@ -110,6 +113,18 @@ class Post(models.Model):
     @property
     def is_visible(self):
         return self.approval_status == 'approved'
+
+    @property
+    def is_featured_now(self):
+        if not self.featured_from:
+            return False
+
+        now = timezone.now()
+        if self.featured_from > now:
+            return False
+        if self.featured_until and self.featured_until < now:
+            return False
+        return True
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):

@@ -145,6 +145,18 @@ class HomeViewTest(TestCase):
         self.assertIn('공지', content)
         self.assertIn('?feed_scope=notice&target=post-list-container', content)
 
+    def test_staff_sns_operational_menu_includes_insight_queue_button(self):
+        staff_user = _create_onboarded_user('staffopsmenu')
+        staff_user.is_staff = True
+        staff_user.save(update_fields=['is_staff'])
+        self.client.login(username='staffopsmenu', password='pass1234')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn(reverse('news_review_queue'), content)
+        self.assertIn(reverse('insight_sns_queue'), content)
+        self.assertIn('인사이트 노출', content)
+
     def test_home_htmx_notice_feed_filters_to_notice_posts_only(self):
         author = _create_onboarded_user('noticefeedauthor')
         Post.objects.create(author=author, content='일반 글', post_type='general', approval_status='approved')
