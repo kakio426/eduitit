@@ -1,25 +1,27 @@
 {
-  "generated_at": "2026-03-02 18:56:54",
+  "generated_at": "2026-03-02 19:14:39",
   "days": 14,
   "preflight": {
     "beta_strict": {
       "pass": true,
-      "elapsed_ms": 199.3,
+      "elapsed_ms": 96.4,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
         "- check_sheetbook_rollout --strict",
+        "- check_sheetbook_consent_freeze",
         "- recommend_sheetbook_thresholds --days 14",
         "[sheetbook] preflight done"
       ]
     },
     "global_strict": {
       "pass": true,
-      "elapsed_ms": 111.1,
+      "elapsed_ms": 63.2,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
         "- check_sheetbook_rollout --strict",
+        "- check_sheetbook_consent_freeze",
         "- recommend_sheetbook_thresholds --days 14",
         "[sheetbook] preflight done"
       ]

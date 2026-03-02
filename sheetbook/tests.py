@@ -2,6 +2,8 @@ from datetime import date, timedelta
 import csv
 from io import BytesIO, StringIO
 import json
+from pathlib import Path
+import tempfile
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import call, patch
 
@@ -4245,6 +4247,7 @@ class SheetbookPreflightCommandTests(SimpleTestCase):
             [
                 call("check_collect_schema"),
                 call("check_sheetbook_rollout", "--strict"),
+                call("check_sheetbook_consent_freeze"),
                 call("recommend_sheetbook_thresholds", "--days", "21"),
             ]
         )
@@ -4261,13 +4264,63 @@ class SheetbookPreflightCommandTests(SimpleTestCase):
             [
                 call("check_collect_schema"),
                 call("check_sheetbook_rollout"),
+                call("check_sheetbook_consent_freeze"),
             ]
         )
-        self.assertEqual(mocked_call_command.call_count, 2)
+        self.assertEqual(mocked_call_command.call_count, 3)
+
+    @patch("sheetbook.management.commands.check_sheetbook_preflight.call_command")
+    def test_check_sheetbook_preflight_can_skip_consent_freeze(self, mocked_call_command):
+        call_command(
+            "check_sheetbook_preflight",
+            "--skip-consent-freeze",
+        )
+
+        mocked_call_command.assert_has_calls(
+            [
+                call("check_collect_schema"),
+                call("check_sheetbook_rollout"),
+                call("recommend_sheetbook_thresholds", "--days", "14"),
+            ]
+        )
+        self.assertEqual(mocked_call_command.call_count, 3)
 
     def test_check_sheetbook_preflight_rejects_invalid_days(self):
         with self.assertRaises(CommandError):
             call_command("check_sheetbook_preflight", "--recommend-days", "0")
+
+
+class SheetbookConsentFreezeCommandTests(SimpleTestCase):
+    def test_check_sheetbook_consent_freeze_passes_for_current_template(self):
+        out = StringIO()
+
+        call_command("check_sheetbook_consent_freeze", stdout=out)
+
+        value = out.getvalue()
+        self.assertIn("consent freeze 점검 통과", value)
+        self.assertIn("consent_review.html", value)
+
+    def test_check_sheetbook_consent_freeze_fails_when_required_token_missing(self):
+        invalid_template = """
+        <form>
+          <textarea id="recipients-textarea" data-testid="recipients-textarea"></textarea>
+        </form>
+        """.strip()
+        with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as tmp:
+            tmp.write(invalid_template)
+            tmp_path = tmp.name
+        try:
+            with self.assertRaises(CommandError) as cm:
+                call_command(
+                    "check_sheetbook_consent_freeze",
+                    "--template-path",
+                    tmp_path,
+                )
+            message = str(cm.exception)
+            self.assertIn("consent freeze 점검 실패", message)
+            self.assertIn('누락: id="recipients-cleanup-btn"', message)
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
 
 
 class SheetbookThresholdRecommendationCommandTests(TestCase):
