@@ -17,6 +17,21 @@ Status: Working branch handoff (2026-03-02 23:47)
 - modified: (없음)
 - untracked: (없음)
 
+## 1-1) 내일 시작 지점 (여기서 바로 시작)
+
+- 시작 브랜치: `feature/sheetbook`
+- 시작 커밋 기준점: `origin/feature/sheetbook` 최신 HEAD
+- 첫 실행(복붙):
+  1. `git checkout feature/sheetbook`
+  2. `git fetch origin`
+  3. `git rev-parse HEAD`
+  4. `git rev-parse origin/feature/sheetbook`
+  5. (해시 다를 때만) `git pull --ff-only origin feature/sheetbook`
+  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+- 확인 파일:
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+
 ## 2) 오늘 반영 요약
 
 - `SB-014`:

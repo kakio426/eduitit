@@ -4896,3 +4896,32 @@ Status: Working handoff (2026-02-27 EOD)
    - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
 4. 필요 시 ops index 단독 재생성:
    - `python scripts/run_sheetbook_ops_index_report.py --record-date <YYYY-MM-DD>`
+
+---
+
+### 0-131. 내일 시작 포인트 고정 (재개 순서 명문화)
+
+### A. 시작 위치
+- 브랜치: `feature/sheetbook`
+- 재개 기준 커밋: `origin/feature/sheetbook` 최신 HEAD
+- 주의: `git pull origin main`은 수행하지 않음(시트북 브랜치만 동기화)
+
+### B. 재개 첫 5분 명령(복붙)
+1. `git checkout feature/sheetbook`
+2. `git fetch origin`
+3. `git rev-parse HEAD`
+4. `git rev-parse origin/feature/sheetbook`
+5. 해시가 다를 때만: `git pull --ff-only origin feature/sheetbook`
+6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+### C. 내일 해야 할 일(우선순위)
+1. `SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md`와 `SHEETBOOK_OPS_INDEX_<YYYY-MM-DD>.md`에서
+   - `manual_pending`
+   - `sample_gap_blockers`
+   - `next_actions`
+   3개 항목 확인
+2. 실계정 점검 완료 시 manual signoff PASS 반영:
+   - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+3. 반영 후 bundle 재실행:
+   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+4. 상태가 여전히 HOLD면 ops index `next_actions` 상단 명령부터 순차 실행
