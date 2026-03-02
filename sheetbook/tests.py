@@ -26,6 +26,7 @@ from scripts.run_sheetbook_signoff_decision import (
     _default_manual_payload,
 )
 from scripts.run_sheetbook_archive_bulk_snapshot import (
+    _build_markdown as _build_archive_bulk_snapshot_markdown,
     _collect_snapshot as _collect_archive_bulk_snapshot,
 )
 from scripts.run_sheetbook_consent_freeze_snapshot import (
@@ -4379,6 +4380,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             archive_snapshot={
                 "event_count": 2,
                 "quality": {"next_step": "collect_more_samples", "needs_attention": False},
+                "md_output": "docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md",
             },
             consent_freeze_snapshot={
                 "status": "PASS",
@@ -4405,6 +4407,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["decision"], "HOLD")
         self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
         self.assertEqual(summary["archive"]["event_count"], 2)
+        self.assertEqual(
+            summary["archive"]["md_output"],
+            "docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md",
+        )
         self.assertEqual(summary["consent_freeze"]["status"], "PASS")
         self.assertEqual(
             summary["consent_freeze"]["md_output"],
@@ -4435,7 +4441,11 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             ],
             readiness={"overall": {"status": "PASS", "manual_pending": []}, "pilot": {"counts": {}}},
             decision={"decision": "GO", "decision_context": {"manual_alias_statuses": {}}},
-            archive_snapshot={"event_count": 10, "quality": {"next_step": "continue_monitoring"}},
+            archive_snapshot={
+                "event_count": 10,
+                "quality": {"next_step": "continue_monitoring"},
+                "md_output": "archive.md",
+            },
             consent_freeze_snapshot={"status": "PASS", "reasons": [], "md_output": "freeze.md"},
             sample_gap_summary={"overall": {"ready": True, "blockers": []}},
         )
@@ -4475,7 +4485,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                     }
                 ],
             },
-            "archive": {"next_step": "collect_more_samples"},
+            "archive": {
+                "next_step": "collect_more_samples",
+                "md_output": "docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md",
+            },
             "consent_freeze": {
                 "status": "PASS",
                 "reasons": ["unexpected_extra_tokens"],
@@ -4504,8 +4517,36 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("수동 signoff 완료 후 PASS 반영", markdown)
         self.assertIn("## Sample Gap Next Actions", markdown)
         self.assertIn("파일럿 이벤트 추가 확보: workspace_home_opened 2건", markdown)
+        self.assertIn("SHEETBOOK_ARCHIVE_BULK_2026-03-03.md", markdown)
         self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
         self.assertIn("unexpected_extra_tokens", markdown)
+
+
+class SheetbookArchiveBulkSnapshotScriptTests(SimpleTestCase):
+    def test_build_archive_bulk_snapshot_markdown_includes_quality_fields(self):
+        snapshot = {
+            "days": 14,
+            "event_count": 3,
+            "counts": {"archive_changed_total": 2, "unarchive_changed_total": 1},
+            "rates": {"changed_rate_pct": 50.0, "unchanged_rate_pct": 40.0, "ignored_rate_pct": 10.0},
+            "quality": {
+                "has_enough_samples": False,
+                "sample_gap_count": 2,
+                "needs_attention": False,
+                "attention_reasons": [],
+                "next_step": "collect_more_samples",
+            },
+            "md_output": "docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md",
+        }
+        markdown = _build_archive_bulk_snapshot_markdown(
+            snapshot=snapshot,
+            json_output_path=Path("docs/handoff/sheetbook_archive_bulk_snapshot_latest.json"),
+        )
+
+        self.assertIn("Sheetbook Archive Bulk Snapshot", markdown)
+        self.assertIn("sample_gap_count", markdown)
+        self.assertIn("collect_more_samples", markdown)
+        self.assertIn("SHEETBOOK_ARCHIVE_BULK_2026-03-03.md", markdown)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):

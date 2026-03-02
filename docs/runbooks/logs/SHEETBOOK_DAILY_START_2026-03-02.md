@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-02 23:14:51)
+# Sheetbook Daily Start Bundle (2026-03-02 23:31:22)
 
 - days: 14
 - overall: `HOLD`
@@ -8,6 +8,7 @@
 - sample_gap_ready: `False`
 - sample_gap_blockers: pilot_home_opened_gap:5, pilot_create_gap:5, archive_event_gap:5
 - archive_next_step: `collect_more_samples`
+- archive_report: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_ARCHIVE_BULK_2026-03-02.md`
 - consent_freeze_status: `PASS`
 - consent_freeze_reasons: (없음)
 - consent_freeze_report: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_CONSENT_FREEZE_2026-03-02.md`

@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-03-02 23:14:42",
+  "generated_at": "2026-03-02 23:30:59",
   "days": 14,
   "preflight": {
     "beta_strict": {
       "pass": true,
-      "elapsed_ms": 96.4,
+      "elapsed_ms": 160.8,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
@@ -16,7 +16,7 @@
     },
     "global_strict": {
       "pass": true,
-      "elapsed_ms": 66.1,
+      "elapsed_ms": 194.4,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",

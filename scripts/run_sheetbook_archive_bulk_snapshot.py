@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -157,6 +157,33 @@ def _collect_snapshot(
     }
 
 
+def _build_markdown(*, snapshot: dict[str, Any], json_output_path: Path) -> str:
+    quality = snapshot.get("quality") or {}
+    counts = snapshot.get("counts") or {}
+    rates = snapshot.get("rates") or {}
+    reasons = [str(item) for item in (quality.get("attention_reasons") or []) if str(item)]
+    reasons_text = ", ".join(reasons) if reasons else "(없음)"
+    md_output = str(snapshot.get("md_output") or "")
+
+    return f"""# Sheetbook Archive Bulk Snapshot
+
+- days: `{snapshot.get("days", 14)}`
+- event_count: `{snapshot.get("event_count", 0)}`
+- has_enough_samples: `{quality.get("has_enough_samples")}`
+- sample_gap_count: `{quality.get("sample_gap_count", 0)}`
+- needs_attention: `{quality.get("needs_attention")}`
+- attention_reasons: {reasons_text}
+- next_step: `{quality.get("next_step", "")}`
+- changed_rate_pct: `{rates.get("changed_rate_pct", 0)}`
+- unchanged_rate_pct: `{rates.get("unchanged_rate_pct", 0)}`
+- ignored_rate_pct: `{rates.get("ignored_rate_pct", 0)}`
+- archive_changed_total: `{counts.get("archive_changed_total", 0)}`
+- unarchive_changed_total: `{counts.get("unarchive_changed_total", 0)}`
+- json_output: `{json_output_path}`
+- md_output: `{md_output}`
+"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Collect sheetbook bulk archive/unarchive quality snapshot."
@@ -185,10 +212,16 @@ def main() -> int:
         default="docs/handoff/sheetbook_archive_bulk_snapshot_latest.json",
         help="출력 JSON 경로",
     )
+    parser.add_argument(
+        "--md-output",
+        default="",
+        help="markdown output path (default: docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_<YYYY-MM-DD>.md)",
+    )
     args = parser.parse_args()
 
     _setup_django()
     days = _to_nonnegative_int(args.days, default=14) or 14
+    today = date.today().isoformat()
     snapshot = _collect_snapshot(
         days=days,
         min_events=args.min_events,
@@ -198,12 +231,32 @@ def main() -> int:
     output_path = Path(args.output)
     if not output_path.is_absolute():
         output_path = _repo_root() / output_path
+    md_output_path = Path(args.md_output) if args.md_output else Path(
+        f"docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_{today}.md"
+    )
+    if not md_output_path.is_absolute():
+        md_output_path = _repo_root() / md_output_path
+    snapshot["md_output"] = str(md_output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(snapshot, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(json.dumps({**snapshot, "output": str(output_path)}, ensure_ascii=False))
+    md_output_path.parent.mkdir(parents=True, exist_ok=True)
+    md_output_path.write_text(
+        _build_markdown(snapshot=snapshot, json_output_path=output_path),
+        encoding="utf-8",
+    )
+    print(
+        json.dumps(
+            {
+                **snapshot,
+                "output": str(output_path),
+                "md_output": str(md_output_path),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

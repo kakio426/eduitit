@@ -84,6 +84,7 @@ def _build_bundle_summary(
             "event_count": int(archive_snapshot.get("event_count") or 0),
             "next_step": str(archive_quality.get("next_step") or ""),
             "needs_attention": bool(archive_quality.get("needs_attention")),
+            "md_output": str(archive_snapshot.get("md_output") or ""),
         },
         "consent_freeze": {
             "status": str(consent_freeze_snapshot.get("status") or "").upper(),
@@ -222,6 +223,7 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - sample_gap_ready: `{(summary.get("sample_gap") or {}).get("ready")}`
 - sample_gap_blockers: {blocker_text}
 - archive_next_step: `{(summary.get("archive") or {}).get("next_step", "")}`
+- archive_report: `{(summary.get("archive") or {}).get("md_output", "")}`
 - consent_freeze_status: `{(summary.get("consent_freeze") or {}).get("status", "")}`
 - consent_freeze_reasons: {consent_freeze_reasons_text}
 - consent_freeze_report: `{(summary.get("consent_freeze") or {}).get("md_output", "")}`

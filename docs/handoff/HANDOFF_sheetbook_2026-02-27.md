@@ -4811,3 +4811,37 @@ Status: Working handoff (2026-02-27 EOD)
   - `consent_freeze_reasons`
   - `consent_freeze_report`
   둘 다 출력 확인
+
+---
+
+### 0-129. archive bulk snapshot Markdown 추가 + daily bundle 연동
+
+### A. 구현 요약
+- `scripts/run_sheetbook_archive_bulk_snapshot.py` 확장:
+  - `--md-output` 옵션 추가
+  - 기본 경로:
+    - `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_<YYYY-MM-DD>.md`
+  - `_build_markdown()` 추가(품질/비율/다건 변경 수/next_step 요약)
+  - snapshot JSON에 `md_output` 필드 저장
+- `scripts/run_sheetbook_daily_start_bundle.py` 연동:
+  - `archive.md_output` 수집
+  - daily bundle markdown에 `archive_report` 라인 추가
+- 테스트 보강(`sheetbook/tests.py`):
+  - `SheetbookArchiveBulkSnapshotScriptTests` 신규 추가
+  - daily bundle summary/markdown에 archive report 경로 반영 검증 추가
+- runbook 반영:
+  - `docs/runbooks/SHEETBOOK_ARCHIVE_BULK_OPERATION.md`에 markdown 산출물 경로 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookArchiveBulkSnapshotScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests`
+- `python -m py_compile scripts/run_sheetbook_archive_bulk_snapshot.py scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_consent_freeze_snapshot.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 12 tests, OK
+- archive snapshot 출력:
+  - JSON: `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
+  - MD: `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-02.md`
+- daily bundle 출력:
+  - `archive_report` 경로가 `SHEETBOOK_DAILY_START_2026-03-02.md`에 표시됨

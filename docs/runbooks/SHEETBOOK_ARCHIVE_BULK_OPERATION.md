@@ -65,6 +65,7 @@ python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14 --min-events 5 -
 
 기본 출력:
 - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
+- `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_<YYYY-MM-DD>.md`
 
 확인 포인트:
 - `quality.has_enough_samples` (표본 5회 이상 여부)
