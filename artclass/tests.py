@@ -446,6 +446,40 @@ class ArtClassSetupEditTest(TestCase):
         expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
         self.assertRedirects(response, expected_url)
 
+    def test_setup_clone_creates_copy_for_non_owner(self):
+        self.client.force_login(self.other)
+        original_count = ArtClass.objects.count()
+        original_step_count = self.art_class.steps.count()
+
+        response = self.client.get(reverse("artclass:setup_clone", kwargs={"pk": self.art_class.pk}))
+
+        self.assertEqual(ArtClass.objects.count(), original_count + 1)
+        cloned = ArtClass.objects.exclude(pk=self.art_class.pk).latest("id")
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": cloned.pk}))
+        self.assertEqual(cloned.created_by, self.other)
+        self.assertEqual(cloned.youtube_url, self.art_class.youtube_url)
+        self.assertEqual(cloned.default_interval, self.art_class.default_interval)
+        self.assertEqual(cloned.steps.count(), original_step_count)
+        self.assertEqual(cloned.steps.get(step_number=1).description, self.existing_step.description)
+
+    def test_setup_clone_redirects_owner_to_existing_edit(self):
+        self.client.force_login(self.owner)
+        original_count = ArtClass.objects.count()
+
+        response = self.client.get(reverse("artclass:setup_clone", kwargs={"pk": self.art_class.pk}))
+
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+        self.assertEqual(ArtClass.objects.count(), original_count)
+
+    def test_setup_clone_forbidden_for_non_shared_class(self):
+        self.art_class.is_shared = False
+        self.art_class.save(update_fields=["is_shared"])
+        self.client.force_login(self.other)
+
+        response = self.client.get(reverse("artclass:setup_clone", kwargs={"pk": self.art_class.pk}))
+
+        self.assertEqual(response.status_code, 403)
+
 
 class ArtClassAutoMetadataTest(TestCase):
     def setUp(self):
@@ -556,6 +590,46 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, sculpture.display_title)
         self.assertNotContains(response, drawing.display_title)
+
+    def test_library_shows_creator_nickname(self):
+        art_class = ArtClass.objects.create(
+            title="닉네임 표시 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=True,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, art_class.display_title)
+        self.assertContains(response, "자동분류교사")
+
+    def test_library_hides_generated_username_when_nickname_missing(self):
+        generated_user = User.objects.create_user(
+            username="user694",
+            password="pw123456",
+            email="generated@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=generated_user,
+            defaults={"nickname": "", "role": "school"},
+        )
+        art_class = ArtClass.objects.create(
+            title="아이디 마스킹 테스트",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            created_by=generated_user,
+            is_shared=True,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, art_class.display_title)
+        self.assertContains(response, "익명의 선생님")
+        self.assertNotContains(response, "user694")
 
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):

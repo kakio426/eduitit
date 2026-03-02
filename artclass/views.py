@@ -31,6 +31,26 @@ def _can_manage_art_class(user, art_class):
     return user.is_staff or art_class.created_by_id == user.id
 
 
+def _resolve_creator_display_name(user):
+    if not user:
+        return "익명의 선생님"
+
+    nickname = ""
+    try:
+        profile = user.userprofile
+        nickname = (profile.nickname or "").strip()
+    except Exception:
+        nickname = ""
+
+    if nickname:
+        return nickname
+
+    username = (getattr(user, "username", "") or "").strip()
+    if username and not re.match(r"^user\d+$", username, flags=re.IGNORECASE):
+        return username
+    return "익명의 선생님"
+
+
 def _extract_youtube_video_id(url):
     if not url:
         return ""
@@ -380,7 +400,7 @@ def library_view(request):
     selected_grade = (request.GET.get('grade') or '').strip()
     selected_tag = (request.GET.get('tag') or '').strip()
 
-    shared_classes = ArtClass.objects.select_related('created_by').annotate(
+    shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
         steps_count=Count('steps')
     ).filter(is_shared=True)
 
@@ -400,7 +420,9 @@ def library_view(request):
     if selected_tag:
         shared_classes = shared_classes.filter(search_text__icontains=selected_tag)
 
-    shared_classes = shared_classes.distinct()
+    shared_classes = list(shared_classes.distinct())
+    for item in shared_classes:
+        item.creator_display_name = _resolve_creator_display_name(item.created_by)
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(
@@ -428,6 +450,39 @@ def library_view(request):
         'popular_tags': popular_tags,
         'launcher_download_url': _get_launcher_download_url(),
     })
+
+
+@login_required
+def clone_for_edit_view(request, pk):
+    """공유 수업을 내 수업으로 복사한 뒤 수정 화면으로 이동한다."""
+    source = get_object_or_404(ArtClass.objects.prefetch_related("steps"), pk=pk)
+
+    if _can_manage_art_class(request.user, source):
+        return redirect("artclass:setup_edit", pk=source.pk)
+
+    if not source.is_shared:
+        raise PermissionDenied("이 수업을 복사할 권한이 없습니다.")
+
+    cloned = ArtClass.objects.create(
+        title=source.title,
+        youtube_url=source.youtube_url,
+        default_interval=source.default_interval,
+        playback_mode=source.playback_mode,
+        created_by=request.user,
+        is_shared=source.is_shared,
+    )
+
+    for step in source.steps.all():
+        ArtStep.objects.create(
+            art_class=cloned,
+            step_number=step.step_number,
+            description=step.description,
+            image=step.image.name if step.image else None,
+        )
+
+    apply_auto_metadata(cloned)
+    messages.success(request, "수업을 내 수업으로 복사했습니다. 원하는 대로 수정해 주세요.")
+    return redirect("artclass:setup_edit", pk=cloned.pk)
 
 
 @login_required

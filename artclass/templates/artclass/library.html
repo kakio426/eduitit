@@ -106,7 +106,7 @@
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
                 data-title="{{ item.display_title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
                 data-playback-mode="{{ item.playback_mode }}"
-                data-creator="{{ item.created_by.username|default:'익명의 선생님' }}"
+                data-creator="{{ item.creator_display_name }}"
                 data-delete-url="{% url 'artclass:delete' pk=item.pk %}"
                 data-can-delete="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
                 onclick="openChoiceModalFromData(this)">
@@ -164,7 +164,7 @@
                             <i class="fa-solid fa-user-graduate"></i>
                         </div>
                         <span class="text-sm font-bold text-gray-500">
-                            {% if item.created_by %}{{ item.created_by.username }}{% else %}익명의 선생님{% endif %}
+                            {{ item.creator_display_name }}
                         </span>
                     </div>
                 </div>
@@ -255,7 +255,9 @@
         document.getElementById('playLink').href = shouldAutoStartLauncher
             ? `/artclass/classroom/${pk}/?autostart_launcher=1`
             : `/artclass/classroom/${pk}/`;
-        document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
+        document.getElementById('editLink').href = canDelete
+            ? `/artclass/setup/${pk}/`
+            : `/artclass/setup/from-library/${pk}/`;
         if (canDelete && deleteUrl) {
             deleteForm.action = deleteUrl;
             deleteForm.classList.remove('hidden');
