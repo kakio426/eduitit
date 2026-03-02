@@ -109,6 +109,7 @@ python scripts/run_sheetbook_daily_start_bundle.py --days 14
 ```
 
 - 결과 요약 파일: `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+- 결과 리포트: `docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md`
 
 `--set` 옵션으로 수동 점검 상태를 바로 반영 가능:
 

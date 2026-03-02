@@ -28,6 +28,50 @@ def _to_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
+def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_event_gap: int) -> list[dict[str, str]]:
+    actions: list[dict[str, str]] = []
+    if home_gap > 0:
+        actions.append(
+            {
+                "type": "collect_pilot_home_opened",
+                "description": f"홈 진입 이벤트(workspace_home_opened) {home_gap}건 추가 확보",
+                "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+            }
+        )
+    if create_gap > 0:
+        actions.append(
+            {
+                "type": "collect_pilot_created",
+                "description": f"홈에서 수첩 생성 이벤트(home_source_sheetbook_created) {create_gap}건 추가 확보",
+                "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+            }
+        )
+    if archive_event_gap > 0:
+        actions.append(
+            {
+                "type": "collect_archive_events",
+                "description": f"아카이브 이벤트 {archive_event_gap}건 추가 확보 후 품질 판정 재확인",
+                "command": "python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14",
+            }
+        )
+    if actions:
+        actions.append(
+            {
+                "type": "refresh_gap_summary",
+                "description": "표본 수집 후 gap summary 재생성",
+                "command": "python scripts/run_sheetbook_sample_gap_summary.py",
+            }
+        )
+        return actions
+    return [
+        {
+            "type": "monitoring",
+            "description": "표본 부족 없음, 주기적으로 gap summary 확인",
+            "command": "python scripts/run_sheetbook_sample_gap_summary.py",
+        }
+    ]
+
+
 def _build_sample_gap_summary(
     *,
     generated_at: str,
@@ -62,6 +106,11 @@ def _build_sample_gap_summary(
         blockers.append(f"pilot_create_gap:{create_gap}")
     if archive_event_gap > 0:
         blockers.append(f"archive_event_gap:{archive_event_gap}")
+    next_actions = _build_sample_gap_next_actions(
+        home_gap=home_gap,
+        create_gap=create_gap,
+        archive_event_gap=archive_event_gap,
+    )
 
     return {
         "generated_at": generated_at,
@@ -90,6 +139,7 @@ def _build_sample_gap_summary(
         "overall": {
             "ready": pilot_ready and archive_ready,
             "blockers": blockers,
+            "next_actions": next_actions,
         },
     }
 
@@ -142,6 +192,7 @@ def main() -> int:
             {
                 "overall_ready": (summary.get("overall") or {}).get("ready"),
                 "blockers": (summary.get("overall") or {}).get("blockers"),
+                "next_actions": (summary.get("overall") or {}).get("next_actions"),
                 "output": str(output_path),
             },
             ensure_ascii=False,

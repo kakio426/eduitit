@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-02 22:19:16",
+  "generated_at": "2026-03-02 22:30:12",
   "pilot": {
     "counts": {
       "workspace_home_opened": 0,
@@ -28,6 +28,28 @@
       "pilot_home_opened_gap:5",
       "pilot_create_gap:5",
       "archive_event_gap:5"
+    ],
+    "next_actions": [
+      {
+        "type": "collect_pilot_home_opened",
+        "description": "홈 진입 이벤트(workspace_home_opened) 5건 추가 확보",
+        "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
+      },
+      {
+        "type": "collect_pilot_created",
+        "description": "홈에서 수첩 생성 이벤트(home_source_sheetbook_created) 5건 추가 확보",
+        "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
+      },
+      {
+        "type": "collect_archive_events",
+        "description": "아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인",
+        "command": "python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14"
+      },
+      {
+        "type": "refresh_gap_summary",
+        "description": "표본 수집 후 gap summary 재생성",
+        "command": "python scripts/run_sheetbook_sample_gap_summary.py"
+      }
     ]
   }
 }

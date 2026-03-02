@@ -4529,3 +4529,102 @@ Status: Working handoff (2026-02-27 EOD)
 4. 재실행:
   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
   - `python scripts/run_sheetbook_sample_gap_summary.py`
+
+---
+
+### 0-121. daily bundle 리포트 보강 (Markdown + next actions)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_daily_start_bundle.py` 확장:
+  - summary JSON에 `next_actions` 자동 포함
+  - `--md-output` 옵션 추가(기본값 자동 생성):
+    - `docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md`
+  - 리포트에 포함:
+    - 전체 상태(`overall/decision/readiness_status`)
+    - sample gap blockers
+    - 실행 명령 PASS/FAIL 목록
+    - 즉시 실행 next actions 명령
+- bundle 실행 명령에 `run_sheetbook_sample_gap_summary.py` 포함 유지
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+
+결과:
+- 테스트 6 tests, OK
+- bundle 출력:
+  - JSON: `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - MD: `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`
+  - `next_actions`:
+    1. 수동 signoff PASS 반영 명령
+    2. 표본 부족 해소 후 bundle+gap summary 재실행 명령
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
+  - daily bundle 리포트 출력 경로 추가
+- `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
+  - daily bundle 리포트 출력 경로 추가
+
+### D. 현재 상태 요약(재확인)
+- `decision=HOLD`
+- `manual_pending`:
+  - `staging_real_account_signoff`
+  - `production_real_account_signoff`
+- sample gap blockers:
+  - `pilot_home_opened_gap:5`
+  - `pilot_create_gap:5`
+  - `archive_event_gap:5`
+
+---
+
+### 0-122. sample gap next actions 자동화 (SB-202 운영 동선 보강)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_sample_gap_summary.py` 확장:
+  - `overall.next_actions` 추가
+  - blocker별 즉시 실행 명령 자동 추천:
+    - `collect_pilot_home_opened`
+    - `collect_pilot_created`
+    - `collect_archive_events`
+    - `refresh_gap_summary`
+  - gap이 없을 때 `monitoring` 기본 액션 반환
+- `scripts/run_sheetbook_daily_start_bundle.py` 확장:
+  - `sample_gap.next_actions`를 bundle summary에 포함
+  - Markdown 리포트에 `## Sample Gap Next Actions` 섹션 추가
+- `sheetbook/tests.py` 보강:
+  - sample gap `next_actions` 생성/monitoring 분기 검증
+  - daily bundle markdown에 sample gap 액션 렌더링 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 6 tests, OK
+- sample gap summary 출력에 `overall.next_actions` 포함 확인
+- daily bundle JSON/MD에 sample gap next actions 포함 확인
+
+### C. 산출물
+- `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - `overall.next_actions` 4건(현재 blockers 기준) 출력
+- `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `sample_gap.next_actions` 포함
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`
+  - `Sample Gap Next Actions` 섹션 추가
+
+### D. 현재 상태(재확인)
+- `decision=HOLD`
+- `manual_pending`:
+  - `staging_real_account_signoff`
+  - `production_real_account_signoff`
+- sample gap blockers:
+  - `pilot_home_opened_gap:5`
+  - `pilot_create_gap:5`
+  - `archive_event_gap:5`
+- sample gap next actions:
+  1. `python scripts/run_sheetbook_release_readiness.py --days 14`
+  2. `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+  3. `python scripts/run_sheetbook_sample_gap_summary.py`

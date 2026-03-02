@@ -32,6 +32,8 @@ from scripts.run_sheetbook_consent_freeze_snapshot import (
     _build_report as _build_consent_freeze_snapshot_report,
 )
 from scripts.run_sheetbook_daily_start_bundle import (
+    _build_bundle_markdown as _build_daily_start_bundle_markdown,
+    _build_bundle_next_actions as _build_daily_start_bundle_next_actions,
     _build_bundle_summary as _build_daily_start_bundle_summary,
 )
 from scripts.run_sheetbook_sample_gap_summary import (
@@ -4377,7 +4379,19 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 "quality": {"next_step": "collect_more_samples", "needs_attention": False},
             },
             consent_freeze_snapshot={"status": "PASS", "reasons": []},
-            sample_gap_summary={"overall": {"ready": False, "blockers": ["pilot_home_opened_gap:2"]}},
+            sample_gap_summary={
+                "overall": {
+                    "ready": False,
+                    "blockers": ["pilot_home_opened_gap:2"],
+                    "next_actions": [
+                        {
+                            "type": "collect_pilot_home_opened",
+                            "description": "홈 진입 이벤트(workspace_home_opened) 2건 추가 확보",
+                            "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                        }
+                    ],
+                }
+            },
         )
 
         self.assertEqual(summary["overall"], "HOLD")
@@ -4388,6 +4402,11 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["consent_freeze"]["status"], "PASS")
         self.assertFalse(summary["sample_gap"]["ready"])
         self.assertIn("pilot_home_opened_gap:2", summary["sample_gap"]["blockers"])
+        self.assertEqual(summary["sample_gap"]["next_actions"][0]["type"], "collect_pilot_home_opened")
+        next_actions = summary.get("next_actions") or []
+        action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
+        self.assertIn("manual_signoff_pending", action_types)
+        self.assertIn("collect_samples", action_types)
 
     def test_build_daily_start_bundle_summary_forces_hold_on_command_failure(self):
         summary = _build_daily_start_bundle_summary(
@@ -4407,6 +4426,63 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertTrue(summary["has_command_failures"])
         self.assertEqual(summary["overall"], "HOLD")
         self.assertEqual(summary["decision"], "GO")
+        next_actions = summary.get("next_actions") or []
+        self.assertTrue(any(str(item.get("type")) == "rerun_failed_commands" for item in next_actions))
+
+    def test_build_daily_start_bundle_next_actions_defaults_to_monitoring(self):
+        actions = _build_daily_start_bundle_next_actions(
+            {
+                "has_command_failures": False,
+                "manual_pending": [],
+                "sample_gap": {"blockers": []},
+                "decision": "GO",
+            }
+        )
+        self.assertTrue(any(str(item.get("type")) == "monitoring" for item in actions))
+
+    def test_build_daily_start_bundle_markdown_includes_commands_and_actions(self):
+        summary = {
+            "generated_at": "2026-03-03 09:00:00",
+            "days": 14,
+            "overall": "HOLD",
+            "decision": "HOLD",
+            "readiness_status": "HOLD",
+            "manual_pending": ["staging_real_account_signoff"],
+            "sample_gap": {
+                "ready": False,
+                "blockers": ["pilot_home_opened_gap:2"],
+                "next_actions": [
+                    {
+                        "description": "홈 진입 이벤트(workspace_home_opened) 2건 추가 확보",
+                        "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                    }
+                ],
+            },
+            "archive": {"next_step": "collect_more_samples"},
+            "consent_freeze": {"status": "PASS"},
+            "commands": [
+                {"command": "python cmd1", "ok": True},
+                {"command": "python cmd2", "ok": False},
+            ],
+            "next_actions": [
+                {
+                    "description": "수동 signoff 완료 후 PASS 반영",
+                    "command": "python scripts/run_sheetbook_signoff_decision.py --set ...",
+                }
+            ],
+        }
+        markdown = _build_daily_start_bundle_markdown(
+            summary=summary,
+            json_output_path=Path("docs/handoff/sheetbook_daily_start_bundle_latest.json"),
+        )
+        self.assertIn("Sheetbook Daily Start Bundle", markdown)
+        self.assertIn("## Commands", markdown)
+        self.assertIn("`python cmd1`", markdown)
+        self.assertIn("`python cmd2`", markdown)
+        self.assertIn("## Next Actions", markdown)
+        self.assertIn("수동 signoff 완료 후 PASS 반영", markdown)
+        self.assertIn("## Sample Gap Next Actions", markdown)
+        self.assertIn("홈 진입 이벤트(workspace_home_opened) 2건 추가 확보", markdown)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
@@ -4441,6 +4517,12 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertEqual(summary["archive"]["event_gap"], 4)
         self.assertIn("pilot_home_opened_gap:3", summary["overall"]["blockers"])
         self.assertIn("archive_event_gap:4", summary["overall"]["blockers"])
+        next_actions = summary["overall"]["next_actions"]
+        next_action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
+        self.assertIn("collect_pilot_home_opened", next_action_types)
+        self.assertIn("collect_pilot_created", next_action_types)
+        self.assertIn("collect_archive_events", next_action_types)
+        self.assertIn("refresh_gap_summary", next_action_types)
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(
@@ -4471,6 +4553,7 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertTrue(summary["archive"]["ready"])
         self.assertTrue(summary["overall"]["ready"])
         self.assertEqual(summary["overall"]["blockers"], [])
+        self.assertEqual(summary["overall"]["next_actions"][0]["type"], "monitoring")
 
 
 class SheetbookPreflightCommandTests(SimpleTestCase):

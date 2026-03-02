@@ -92,11 +92,142 @@ def _build_bundle_summary(
         "sample_gap": {
             "ready": bool(sample_gap_overall.get("ready")),
             "blockers": list(sample_gap_overall.get("blockers") or []),
+            "next_actions": list(sample_gap_overall.get("next_actions") or []),
         },
         "has_command_failures": command_failed,
     }
     summary["overall"] = "HOLD" if command_failed else summary["decision"]
+    summary["next_actions"] = _build_bundle_next_actions(summary)
     return summary
+
+
+def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
+    actions: list[dict[str, str]] = []
+    if bool(summary.get("has_command_failures")):
+        actions.append(
+            {
+                "type": "rerun_failed_commands",
+                "description": "실패한 명령을 우선 재실행하고 로그 tail 확인",
+                "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14",
+            }
+        )
+        return actions
+
+    manual_pending = [str(item) for item in (summary.get("manual_pending") or []) if str(item)]
+    if manual_pending:
+        actions.append(
+            {
+                "type": "manual_signoff_pending",
+                "description": "수동 signoff 완료 후 PASS 반영",
+                "command": (
+                    "python scripts/run_sheetbook_signoff_decision.py "
+                    "--set staging_real_account_signoff=PASS:staging-ok "
+                    "--set production_real_account_signoff=PASS:prod-ok"
+                ),
+            }
+        )
+
+    sample_gap = summary.get("sample_gap") or {}
+    blockers = [str(item) for item in (sample_gap.get("blockers") or []) if str(item)]
+    if blockers:
+        actions.append(
+            {
+                "type": "collect_samples",
+                "description": "표본 부족량(blockers) 해소 후 bundle+gap summary 재실행",
+                "command": (
+                    "python scripts/run_sheetbook_daily_start_bundle.py --days 14 && "
+                    "python scripts/run_sheetbook_sample_gap_summary.py"
+                ),
+            }
+        )
+
+    if str(summary.get("decision") or "").upper() == "HOLD" and not manual_pending and not blockers:
+        actions.append(
+            {
+                "type": "review_hold_reasons",
+                "description": "자동/수동 게이트 상태 재검토 후 GO/HOLD 재판정",
+                "command": "python scripts/run_sheetbook_signoff_decision.py",
+            }
+        )
+
+    if not actions:
+        actions.append(
+            {
+                "type": "monitoring",
+                "description": "현재 상태 유지, 정기적으로 bundle 재실행",
+                "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14",
+            }
+        )
+    return actions
+
+
+def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -> str:
+    commands = summary.get("commands") or []
+    command_lines: list[str] = []
+    for item in commands:
+        if not isinstance(item, dict):
+            continue
+        command = str(item.get("command") or "").strip()
+        ok = bool(item.get("ok"))
+        command_lines.append(f"- [{'PASS' if ok else 'FAIL'}] `{command}`")
+    if not command_lines:
+        command_lines.append("- (no commands)")
+
+    action_lines: list[str] = []
+    for action in summary.get("next_actions") or []:
+        if not isinstance(action, dict):
+            continue
+        desc = str(action.get("description") or "").strip()
+        cmd = str(action.get("command") or "").strip()
+        if desc and cmd:
+            action_lines.append(f"- {desc}: `{cmd}`")
+        elif cmd:
+            action_lines.append(f"- `{cmd}`")
+        elif desc:
+            action_lines.append(f"- {desc}")
+    if not action_lines:
+        action_lines.append("- (none)")
+
+    sample_gap_action_lines: list[str] = []
+    for action in (summary.get("sample_gap") or {}).get("next_actions") or []:
+        if not isinstance(action, dict):
+            continue
+        desc = str(action.get("description") or "").strip()
+        cmd = str(action.get("command") or "").strip()
+        if desc and cmd:
+            sample_gap_action_lines.append(f"- {desc}: `{cmd}`")
+        elif cmd:
+            sample_gap_action_lines.append(f"- `{cmd}`")
+        elif desc:
+            sample_gap_action_lines.append(f"- {desc}")
+    if not sample_gap_action_lines:
+        sample_gap_action_lines.append("- (none)")
+
+    blockers = [str(item) for item in (summary.get("sample_gap") or {}).get("blockers", []) if str(item)]
+    blocker_text = ", ".join(blockers) if blockers else "(없음)"
+
+    return f"""# Sheetbook Daily Start Bundle ({summary.get('generated_at', '')})
+
+- days: {summary.get("days")}
+- overall: `{summary.get("overall")}`
+- decision: `{summary.get("decision")}`
+- readiness_status: `{summary.get("readiness_status")}`
+- manual_pending: {", ".join(summary.get("manual_pending") or []) or "(없음)"}
+- sample_gap_ready: `{(summary.get("sample_gap") or {}).get("ready")}`
+- sample_gap_blockers: {blocker_text}
+- archive_next_step: `{(summary.get("archive") or {}).get("next_step", "")}`
+- consent_freeze_status: `{(summary.get("consent_freeze") or {}).get("status", "")}`
+- json_output: `{json_output_path}`
+
+## Commands
+{chr(10).join(command_lines)}
+
+## Next Actions
+{chr(10).join(action_lines)}
+
+## Sample Gap Next Actions
+{chr(10).join(sample_gap_action_lines)}
+"""
 
 
 def main() -> int:
@@ -116,6 +247,11 @@ def main() -> int:
         "--output",
         default="docs/handoff/sheetbook_daily_start_bundle_latest.json",
         help="summary JSON output path",
+    )
+    parser.add_argument(
+        "--md-output",
+        default="",
+        help="markdown output path (default: docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md)",
     )
     args = parser.parse_args()
 
@@ -180,6 +316,17 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    md_output = Path(args.md_output) if args.md_output else Path(
+        f"docs/runbooks/logs/SHEETBOOK_DAILY_START_{today}.md"
+    )
+    if not md_output.is_absolute():
+        md_output = root / md_output
+    md_output.parent.mkdir(parents=True, exist_ok=True)
+    md_output.write_text(
+        _build_bundle_markdown(summary=summary, json_output_path=output_path),
+        encoding="utf-8",
+    )
+
     print(
         json.dumps(
             {
@@ -187,6 +334,7 @@ def main() -> int:
                 "decision": summary.get("decision"),
                 "has_command_failures": summary.get("has_command_failures"),
                 "output": str(output_path),
+                "md_output": str(md_output),
             },
             ensure_ascii=False,
         )

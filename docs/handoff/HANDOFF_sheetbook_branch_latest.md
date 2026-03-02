@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-02 22:07)
+Status: Working branch handoff (2026-03-02 22:35)
 
 작성일: 2026-03-02
 대상 저장소: `eduitit`
@@ -10,35 +10,27 @@ Status: Working branch handoff (2026-03-02 22:07)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `c5ccf42` (`wip(sheetbook): checkpoint backup 3 (role breakdown + freeze/signoff snapshots)`)
+- latest backup commit: `8a483b9` (`wip(sheetbook): checkpoint backup 5 (daily bundle + sample gap summary)`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
 - modified:
   - `docs/handoff/HANDOFF_sheetbook_2026-02-27.md`
-  - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
-  - `docs/handoff/sheetbook_manual_signoff_latest.json`
+  - `docs/handoff/HANDOFF_sheetbook_branch_latest.md`
+  - `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
-  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - `docs/handoff/sheetbook_manual_signoff_latest.json`
   - `docs/handoff/sheetbook_release_decision_latest.json`
   - `docs/handoff/sheetbook_release_readiness_latest.json`
-  - `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`
+  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`
   - `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
-  - `docs/runbooks/SHEETBOOK_CONSENT_REVIEW_FREEZE_CHECKLIST.md`
-  - `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`
   - `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
-  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
-  - `scripts/run_sheetbook_pilot_log_snapshot.py`
+  - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-02.md`
   - `scripts/run_sheetbook_daily_start_bundle.py`
   - `scripts/run_sheetbook_sample_gap_summary.py`
-  - `sheetbook/management/commands/recommend_sheetbook_thresholds.py`
   - `sheetbook/tests.py`
 - untracked:
-  - `docs/handoff/sheetbook_consent_freeze_snapshot_latest.json`
-  - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-02.md`
-  - `docs/runbooks/logs/sheetbook_pilot_event_log_2026-03-02.csv`
-  - `scripts/run_sheetbook_consent_freeze_snapshot.py`
-  - `scripts/run_sheetbook_release_signoff_log.py`
+  - `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-02.md`
 
 ## 2) 오늘 반영 요약
 
@@ -53,8 +45,11 @@ Status: Working branch handoff (2026-03-02 22:07)
 - `운영 자동화`:
   - daily start bundle 스크립트 추가
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json` 자동 생성
+  - `docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md` 리포트 자동 생성
   - sample gap summary 스크립트 추가
   - `docs/handoff/sheetbook_sample_gap_summary_latest.json`으로 pilot/archive 갭 통합 확인
+  - sample gap blocker별 `next_actions` 자동 생성(수집 명령 + 재집계 명령)
+  - daily start markdown에 `Sample Gap Next Actions` 섹션 노출
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
