@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-02 20:12)
+Status: Working branch handoff (2026-03-02 22:07)
 
 작성일: 2026-03-02
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-02 20:12)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `9ebde0f` (`wip(sheetbook): checkpoint backup 2`)
+- latest backup commit: `c5ccf42` (`wip(sheetbook): checkpoint backup 3 (role breakdown + freeze/signoff snapshots)`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -18,6 +18,7 @@ Status: Working branch handoff (2026-03-02 20:12)
   - `docs/handoff/HANDOFF_sheetbook_2026-02-27.md`
   - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
   - `docs/handoff/sheetbook_manual_signoff_latest.json`
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
   - `docs/handoff/sheetbook_release_decision_latest.json`
   - `docs/handoff/sheetbook_release_readiness_latest.json`
   - `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`
@@ -27,6 +28,7 @@ Status: Working branch handoff (2026-03-02 20:12)
   - `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
   - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
   - `scripts/run_sheetbook_pilot_log_snapshot.py`
+  - `scripts/run_sheetbook_daily_start_bundle.py`
   - `sheetbook/management/commands/recommend_sheetbook_thresholds.py`
   - `sheetbook/tests.py`
 - untracked:
@@ -46,6 +48,9 @@ Status: Working branch handoff (2026-03-02 20:12)
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영
+- `운영 자동화`:
+  - daily start bundle 스크립트 추가
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json` 자동 생성
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
@@ -64,6 +69,8 @@ Status: Working branch handoff (2026-03-02 20:12)
 5. 최종 재확인
    - `python scripts/run_sheetbook_signoff_decision.py`
    - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-03`
+6. 원클릭 번들(권장)
+   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
 
 ## 4) 중간 백업 규칙
 

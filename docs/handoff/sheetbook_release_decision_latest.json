@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-02 20:10:17",
+  "generated_at": "2026-03-02 22:06:52",
   "readiness_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_release_readiness_latest.json",
   "manual_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_manual_signoff_latest.json",
   "readiness_overall": {
@@ -39,7 +39,7 @@
     "real_device_grid_1000": {
       "status": "PASS",
       "notes": "waived_by_policy(device-unavailable)",
-      "updated_at": "2026-03-02 20:10:17"
+      "updated_at": "2026-03-02 22:06:52"
     }
   },
   "decision": "HOLD",

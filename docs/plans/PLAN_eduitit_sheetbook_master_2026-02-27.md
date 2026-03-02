@@ -699,6 +699,9 @@ P2:
   - signoff 로그 자동 생성 스크립트 추가:
     - `python scripts/run_sheetbook_release_signoff_log.py --author <작성자>`
     - readiness/manual/decision JSON을 운영 기록 Markdown으로 변환
+  - 일일 시작 번들 스크립트 추가:
+    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14`
+    - readiness/decision/signoff/pilot/archive/freeze 점검 명령을 일괄 실행하고 summary JSON 생성
 - 완료 조건:
 - P0 CI 통과
 - 내부 사용자 베타 오픈

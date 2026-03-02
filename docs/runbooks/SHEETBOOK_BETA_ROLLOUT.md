@@ -68,6 +68,8 @@ python manage.py test sheetbook.tests
   - 현재 정책: 실기기 항목은 기본 면제(auto PASS). 필요 시 `--no-waive-real-device-smoke`로 해제
   - 파일럿 샘플 부족 상태에서 베타 공개를 진행하려면 `--allow-pilot-hold-for-beta`를 명시해 조건부 GO 판정 사용
 - signoff 로그 문서 자동 생성(권장): `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops`
+- 일일 시작 번들 실행(권장): `python scripts/run_sheetbook_daily_start_bundle.py --days 14`
+  - 출력: `docs/handoff/sheetbook_daily_start_bundle_latest.json`
 
 Windows one-command(strict) 예시:
 

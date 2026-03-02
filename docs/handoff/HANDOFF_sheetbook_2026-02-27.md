@@ -4413,3 +4413,67 @@ Status: Working handoff (2026-02-27 EOD)
 1. `SB-015` 수동 signoff 2건 완료 처리
 2. `SB-202` 실사용 표본 확보(`event_count >= 5`) 및 `next_step` 재판정
 3. `SB-108` freeze snapshot diff 기준으로 파일럿 변경 요청 선별 반영
+
+---
+
+### 0-117. 내일 체크리스트 자동화 (daily start bundle 추가)
+
+### A. 구현 요약
+- 신규 스크립트 추가:
+  - `scripts/run_sheetbook_daily_start_bundle.py`
+  - 기존 내일 시작 체크리스트를 1회 실행으로 묶어 자동화:
+    1. `run_sheetbook_release_readiness.py`
+    2. `run_sheetbook_signoff_decision.py`
+    3. `run_sheetbook_release_signoff_log.py`
+    4. `recommend_sheetbook_thresholds --group-by-role`
+    5. `run_sheetbook_pilot_log_snapshot.py`
+    6. `run_sheetbook_archive_bulk_snapshot.py`
+    7. `run_sheetbook_consent_freeze_snapshot.py`
+- 출력:
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - 명령별 성공/실패, 핵심 지표(readiness/decision/manual pending/archive next_step/freeze status) 요약
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py`
+
+결과:
+- 테스트 2 tests, OK
+- bundle 실행 결과:
+  - `overall=HOLD`
+  - `decision=HOLD`
+  - `has_command_failures=false`
+  - 출력: `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+- 로그 tail 인코딩 이슈 수정 후 한글 출력 정상 확인
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
+  - 일일 시작 번들 실행 명령 추가
+- `docs/runbooks/SHEETBOOK_RELEASE_SIGNOFF.md`
+  - daily bundle 명령 + summary JSON 경로 추가
+
+### D. 내일 시작 명령(권장)
+1. 원클릭 실행:
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+2. 수동 signoff 완료 시:
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+3. 재실행:
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+---
+
+### 0-118. 회귀 재검증 (bundle 반영 후 관련 테스트 묶음)
+
+### A. 실행
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookThresholdRecommendationCommandTests sheetbook.tests.SheetbookPilotLogSnapshotScriptTests sheetbook.tests.SheetbookSignoffDecisionScriptTests sheetbook.tests.SheetbookReleaseSignoffLogScriptTests sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests`
+
+### B. 결과
+- 총 15 tests, `OK`
+- 시스템 체크 오류 없음
+- daily bundle 추가 이후 기존 SB-014/SB-015/SB-108 스크립트 테스트와의 충돌 없음
+
+### C. 다음 우선순위(변동 없음)
+1. `SB-015` 수동 signoff 2건 완료 처리
+2. `SB-202` 실사용 표본 확보(`event_count >= 5`) 및 `next_step` 재판정
+3. `SB-108` freeze snapshot diff 기준으로 파일럿 변경 요청 선별 반영

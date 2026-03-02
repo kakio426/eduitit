@@ -31,6 +31,9 @@ from scripts.run_sheetbook_archive_bulk_snapshot import (
 from scripts.run_sheetbook_consent_freeze_snapshot import (
     _build_report as _build_consent_freeze_snapshot_report,
 )
+from scripts.run_sheetbook_daily_start_bundle import (
+    _build_bundle_summary as _build_daily_start_bundle_summary,
+)
 from scripts.run_sheetbook_release_signoff_log import (
     _build_markdown as _build_release_signoff_log_markdown,
 )
@@ -4330,6 +4333,73 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
         self.assertIn("- owner: -", markdown)
         self.assertIn("- next_action: -", markdown)
         self.assertIn("- due_date: -", markdown)
+
+
+class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
+    def test_build_daily_start_bundle_summary_uses_decision_when_commands_ok(self):
+        summary = _build_daily_start_bundle_summary(
+            generated_at="2026-03-03 09:00:00",
+            days=14,
+            command_results=[
+                {"command": "cmd1", "ok": True, "returncode": 0, "tail": []},
+                {"command": "cmd2", "ok": True, "returncode": 0, "tail": []},
+            ],
+            readiness={
+                "overall": {
+                    "status": "HOLD",
+                    "manual_pending": [
+                        "staging_real_account_signoff",
+                        "production_real_account_signoff",
+                    ],
+                },
+                "pilot": {
+                    "counts": {
+                        "workspace_home_opened": 3,
+                        "home_source_sheetbook_created": 1,
+                        "home_source_action_execute_requested": 0,
+                    }
+                },
+            },
+            decision={
+                "decision": "HOLD",
+                "decision_context": {
+                    "manual_alias_statuses": {
+                        "staging_real_account_signoff": "HOLD",
+                        "production_real_account_signoff": "HOLD",
+                    }
+                },
+            },
+            archive_snapshot={
+                "event_count": 2,
+                "quality": {"next_step": "collect_more_samples", "needs_attention": False},
+            },
+            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+        )
+
+        self.assertEqual(summary["overall"], "HOLD")
+        self.assertFalse(summary["has_command_failures"])
+        self.assertEqual(summary["decision"], "HOLD")
+        self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
+        self.assertEqual(summary["archive"]["event_count"], 2)
+        self.assertEqual(summary["consent_freeze"]["status"], "PASS")
+
+    def test_build_daily_start_bundle_summary_forces_hold_on_command_failure(self):
+        summary = _build_daily_start_bundle_summary(
+            generated_at="2026-03-03 09:00:00",
+            days=14,
+            command_results=[
+                {"command": "cmd1", "ok": True, "returncode": 0, "tail": []},
+                {"command": "cmd2", "ok": False, "returncode": 1, "tail": ["boom"]},
+            ],
+            readiness={"overall": {"status": "PASS", "manual_pending": []}, "pilot": {"counts": {}}},
+            decision={"decision": "GO", "decision_context": {"manual_alias_statuses": {}}},
+            archive_snapshot={"event_count": 10, "quality": {"next_step": "continue_monitoring"}},
+            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+        )
+
+        self.assertTrue(summary["has_command_failures"])
+        self.assertEqual(summary["overall"], "HOLD")
+        self.assertEqual(summary["decision"], "GO")
 
 
 class SheetbookPreflightCommandTests(SimpleTestCase):
