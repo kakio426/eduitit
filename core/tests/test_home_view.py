@@ -592,6 +592,19 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
 
+    def test_v2_mobile_sns_panel_is_open_by_default(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('snsOpen: true', content)
+
+    def test_v2_mobile_sns_preview_cards_are_clickable(self):
+        author = _create_onboarded_user('v2snsopen')
+        Post.objects.create(author=author, content='미리보기 탭 동작 확인용 게시글')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertIn('@click="openPost(', content)
+        self.assertIn('data-post-id="', content)
+
     def test_v2_anonymous_layout_has_sidebar_gap_and_shrink_safe_main(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
