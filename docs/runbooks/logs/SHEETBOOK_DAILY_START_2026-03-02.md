@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-02 23:31:22)
+# Sheetbook Daily Start Bundle (2026-03-02 23:43:23)
 
 - days: 14
 - overall: `HOLD`
@@ -12,6 +12,7 @@
 - consent_freeze_status: `PASS`
 - consent_freeze_reasons: (없음)
 - consent_freeze_report: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_CONSENT_FREEZE_2026-03-02.md`
+- ops_index_report: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-02.md`
 - json_output: `C:\Users\kakio\eduitit\docs\handoff\sheetbook_daily_start_bundle_latest.json`
 
 ## Commands
@@ -23,6 +24,7 @@
 - [PASS] `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - [PASS] `python scripts/run_sheetbook_consent_freeze_snapshot.py`
 - [PASS] `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- [PASS] `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-02 --daily-start C:\Users\kakio\eduitit\docs\handoff\sheetbook_daily_start_bundle_latest.json --output C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-02.md`
 
 ## Next Actions
 - 수동 signoff 완료 후 PASS 반영: `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`

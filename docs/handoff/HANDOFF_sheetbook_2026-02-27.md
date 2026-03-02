@@ -4845,3 +4845,54 @@ Status: Working handoff (2026-02-27 EOD)
   - MD: `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-02.md`
 - daily bundle 출력:
   - `archive_report` 경로가 `SHEETBOOK_DAILY_START_2026-03-02.md`에 표시됨
+
+---
+
+### 0-130. ops index 리포트 추가 + daily bundle 최신 summary 연동
+
+### A. 구현 요약
+- 신규 스크립트 추가:
+  - `scripts/run_sheetbook_ops_index_report.py`
+  - 최신 handoff JSON(readiness/decision/daily_start/archive/sample_gap/consent freeze) 집계
+  - 출력:
+    - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_<YYYY-MM-DD>.md`
+  - 핵심 요약:
+    - overall/decision/readiness/manual_pending/sample_gap blockers/archive next_step/consent freeze
+  - `next_actions` 병합 시 command 기준 중복 제거(`daily_start -> sample_gap -> decision` 우선순위)
+- `scripts/run_sheetbook_daily_start_bundle.py` 연동:
+  - summary에 `ops_index_report` 필드 추가
+  - markdown에 `ops_index_report` 라인 추가
+  - 실행 순서 보정:
+    1. readiness/decision/pilot/archive/freeze/sample-gap 갱신
+    2. daily bundle summary(JSON/MD) 1차 저장
+    3. `run_sheetbook_ops_index_report.py --daily-start <bundle_latest.json>` 실행
+    4. ops index 명령 결과를 포함해 daily bundle summary(JSON/MD) 재저장
+  - 목적:
+    - ops index가 항상 최신 daily bundle 결과를 입력으로 읽도록 보장
+- 테스트 보강(`sheetbook/tests.py`):
+  - `SheetbookOpsIndexReportScriptTests` 신규 추가
+    - next_actions dedupe 검증
+    - markdown 리포트 핵심 섹션(Reports/Next Actions) 렌더링 검증
+  - 기존 daily bundle summary/markdown의 `ops_index_report` 반영 검증 유지
+
+### B. 테스트/검증
+- `python -m py_compile scripts/run_sheetbook_ops_index_report.py scripts/run_sheetbook_daily_start_bundle.py sheetbook/tests.py`
+- `python manage.py test sheetbook.tests.SheetbookArchiveBulkSnapshotScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests sheetbook.tests.SheetbookConsentFreezeSnapshotScriptTests sheetbook.tests.SheetbookOpsIndexReportScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 14 tests, OK
+- daily bundle latest:
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `ops_index_report` 필드 및 9번째 명령(ops index) 반영 확인
+- ops index markdown:
+  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-02.md`
+  - Reports/Next Actions 집계 확인
+
+### C. 내일 재시작 체크(추가)
+1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+2. `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_<YYYY-MM-DD>.md`에서 blockers/next actions 확인
+3. manual signoff 반영 후
+   - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+4. 필요 시 ops index 단독 재생성:
+   - `python scripts/run_sheetbook_ops_index_report.py --record-date <YYYY-MM-DD>`

@@ -38,6 +38,10 @@ from scripts.run_sheetbook_daily_start_bundle import (
     _build_bundle_next_actions as _build_daily_start_bundle_next_actions,
     _build_bundle_summary as _build_daily_start_bundle_summary,
 )
+from scripts.run_sheetbook_ops_index_report import (
+    _build_markdown as _build_ops_index_markdown,
+    _build_summary as _build_ops_index_summary,
+)
 from scripts.run_sheetbook_sample_gap_summary import (
     _build_sample_gap_markdown as _build_sample_gap_markdown_payload,
     _build_sample_gap_summary as _build_sample_gap_summary_payload,
@@ -4348,6 +4352,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         summary = _build_daily_start_bundle_summary(
             generated_at="2026-03-03 09:00:00",
             days=14,
+            ops_index_report="docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
             command_results=[
                 {"command": "cmd1", "ok": True, "returncode": 0, "tail": []},
                 {"command": "cmd2", "ok": True, "returncode": 0, "tail": []},
@@ -4408,6 +4413,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
         self.assertEqual(summary["archive"]["event_count"], 2)
         self.assertEqual(
+            summary["ops_index_report"],
+            "docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
+        )
+        self.assertEqual(
             summary["archive"]["md_output"],
             "docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md",
         )
@@ -4435,6 +4444,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         summary = _build_daily_start_bundle_summary(
             generated_at="2026-03-03 09:00:00",
             days=14,
+            ops_index_report="docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
             command_results=[
                 {"command": "cmd1", "ok": True, "returncode": 0, "tail": []},
                 {"command": "cmd2", "ok": False, "returncode": 1, "tail": ["boom"]},
@@ -4471,6 +4481,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         summary = {
             "generated_at": "2026-03-03 09:00:00",
             "days": 14,
+            "ops_index_report": "docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
             "overall": "HOLD",
             "decision": "HOLD",
             "readiness_status": "HOLD",
@@ -4517,9 +4528,106 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("수동 signoff 완료 후 PASS 반영", markdown)
         self.assertIn("## Sample Gap Next Actions", markdown)
         self.assertIn("파일럿 이벤트 추가 확보: workspace_home_opened 2건", markdown)
+        self.assertIn("SHEETBOOK_OPS_INDEX_2026-03-03.md", markdown)
         self.assertIn("SHEETBOOK_ARCHIVE_BULK_2026-03-03.md", markdown)
         self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
         self.assertIn("unexpected_extra_tokens", markdown)
+
+
+class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
+    def test_build_ops_index_summary_dedupes_next_actions_by_command(self):
+        summary = _build_ops_index_summary(
+            readiness={"overall": {"status": "HOLD", "manual_pending": ["staging_real_account_signoff"]}},
+            decision={
+                "decision": "HOLD",
+                "next_actions": [
+                    {
+                        "type": "review_hold_reasons",
+                        "description": "자동/수동 게이트 상태 재검토 후 GO/HOLD 재판정",
+                        "command": "python scripts/run_sheetbook_signoff_decision.py",
+                    },
+                    {
+                        "type": "collect_samples",
+                        "description": "표본 수집",
+                        "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                    },
+                ],
+            },
+            daily_start={
+                "overall": "HOLD",
+                "next_actions": [
+                    {
+                        "type": "collect_samples",
+                        "description": "표본 수집 후 bundle 재실행",
+                        "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                    }
+                ],
+            },
+            archive_snapshot={"quality": {"next_step": "collect_more_samples"}},
+            sample_gap_summary={
+                "overall": {
+                    "blockers": ["pilot_home_opened_gap:2"],
+                    "next_actions": [
+                        {
+                            "type": "refresh_gap_summary",
+                            "description": "gap summary 재생성",
+                            "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14",
+                        }
+                    ],
+                }
+            },
+            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+        )
+
+        commands = [str(item.get("command") or "") for item in summary["next_actions"]]
+        self.assertEqual(
+            commands,
+            [
+                "python scripts/run_sheetbook_release_readiness.py --days 14",
+                "python scripts/run_sheetbook_sample_gap_summary.py --days 14",
+                "python scripts/run_sheetbook_signoff_decision.py",
+            ],
+        )
+        self.assertEqual(summary["next_actions"][0]["source"], "daily_start")
+        self.assertEqual(summary["next_actions"][1]["source"], "sample_gap")
+        self.assertEqual(summary["next_actions"][2]["source"], "decision")
+        self.assertEqual(summary["archive_next_step"], "collect_more_samples")
+        self.assertEqual(summary["decision"], "HOLD")
+        self.assertEqual(summary["overall"], "HOLD")
+
+    def test_build_ops_index_markdown_includes_reports_and_actions(self):
+        markdown = _build_ops_index_markdown(
+            record_date="2026-03-03",
+            summary={
+                "overall": "HOLD",
+                "decision": "HOLD",
+                "readiness_status": "HOLD",
+                "manual_pending": ["staging_real_account_signoff"],
+                "sample_gap_blockers": ["pilot_home_opened_gap:2"],
+                "archive_next_step": "collect_more_samples",
+                "consent_freeze_status": "PASS",
+                "consent_freeze_reasons": [],
+                "next_actions": [
+                    {
+                        "source": "daily_start",
+                        "description": "표본 수집 후 bundle 재실행",
+                        "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                    }
+                ],
+            },
+            report_paths={
+                "daily_start": "docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-03.md",
+                "ops_index": "docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
+            },
+        )
+
+        self.assertIn("Sheetbook Ops Index (2026-03-03)", markdown)
+        self.assertIn("## Reports", markdown)
+        self.assertIn("SHEETBOOK_DAILY_START_2026-03-03.md", markdown)
+        self.assertIn("SHEETBOOK_OPS_INDEX_2026-03-03.md", markdown)
+        self.assertIn("## Next Actions", markdown)
+        self.assertIn("[daily_start] 표본 수집 후 bundle 재실행", markdown)
+        self.assertIn("run_sheetbook_release_readiness.py --days 14", markdown)
 
 
 class SheetbookArchiveBulkSnapshotScriptTests(SimpleTestCase):

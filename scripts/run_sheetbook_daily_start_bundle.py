@@ -48,6 +48,7 @@ def _build_bundle_summary(
     *,
     generated_at: str,
     days: int,
+    ops_index_report: str,
     command_results: list[dict[str, Any]],
     readiness: dict[str, Any],
     decision: dict[str, Any],
@@ -66,6 +67,7 @@ def _build_bundle_summary(
     summary = {
         "generated_at": generated_at,
         "days": int(days),
+        "ops_index_report": str(ops_index_report or ""),
         "commands": command_results,
         "readiness_status": str(readiness_overall.get("status") or "HOLD").upper(),
         "decision": str(decision.get("decision") or "HOLD").upper(),
@@ -227,6 +229,7 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - consent_freeze_status: `{(summary.get("consent_freeze") or {}).get("status", "")}`
 - consent_freeze_reasons: {consent_freeze_reasons_text}
 - consent_freeze_report: `{(summary.get("consent_freeze") or {}).get("md_output", "")}`
+- ops_index_report: `{summary.get("ops_index_report", "")}`
 - json_output: `{json_output_path}`
 
 ## Commands
@@ -309,22 +312,12 @@ def main() -> int:
         root / "docs/handoff/sheetbook_consent_freeze_snapshot_latest.json"
     )
     sample_gap_summary = _load_json(root / "docs/handoff/sheetbook_sample_gap_summary_latest.json")
-    summary = _build_bundle_summary(
-        generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        days=int(args.days),
-        command_results=command_results,
-        readiness=readiness,
-        decision=decision,
-        archive_snapshot=archive_snapshot,
-        consent_freeze_snapshot=consent_freeze_snapshot,
-        sample_gap_summary=sample_gap_summary,
-    )
+    ops_index_report = str(root / f"docs/runbooks/logs/SHEETBOOK_OPS_INDEX_{today}.md")
 
     output_path = Path(args.output)
     if not output_path.is_absolute():
         output_path = root / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     md_output = Path(args.md_output) if args.md_output else Path(
         f"docs/runbooks/logs/SHEETBOOK_DAILY_START_{today}.md"
@@ -332,6 +325,49 @@ def main() -> int:
     if not md_output.is_absolute():
         md_output = root / md_output
     md_output.parent.mkdir(parents=True, exist_ok=True)
+
+    summary = _build_bundle_summary(
+        generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        days=int(args.days),
+        ops_index_report=ops_index_report,
+        command_results=command_results,
+        readiness=readiness,
+        decision=decision,
+        archive_snapshot=archive_snapshot,
+        consent_freeze_snapshot=consent_freeze_snapshot,
+        sample_gap_summary=sample_gap_summary,
+    )
+    output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    md_output.write_text(
+        _build_bundle_markdown(summary=summary, json_output_path=output_path),
+        encoding="utf-8",
+    )
+
+    ops_index_command = [
+        "python",
+        "scripts/run_sheetbook_ops_index_report.py",
+        "--record-date",
+        today,
+        "--daily-start",
+        str(output_path),
+        "--output",
+        ops_index_report,
+    ]
+    command_results.append(_run_command(root, ops_index_command))
+
+    summary = _build_bundle_summary(
+        generated_at=summary.get("generated_at", ""),
+        days=int(args.days),
+        ops_index_report=ops_index_report,
+        command_results=command_results,
+        readiness=readiness,
+        decision=decision,
+        archive_snapshot=archive_snapshot,
+        consent_freeze_snapshot=consent_freeze_snapshot,
+        sample_gap_summary=sample_gap_summary,
+    )
+    output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     md_output.write_text(
         _build_bundle_markdown(summary=summary, json_output_path=output_path),
         encoding="utf-8",

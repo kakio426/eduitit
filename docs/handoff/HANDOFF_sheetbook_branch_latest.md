@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-02 23:35)
+Status: Working branch handoff (2026-03-02 23:45)
 
 작성일: 2026-03-02
 대상 저장소: `eduitit`
@@ -46,6 +46,10 @@ Status: Working branch handoff (2026-03-02 23:35)
   - archive bulk snapshot markdown 리포트 자동 생성:
     - `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_<YYYY-MM-DD>.md`
   - archive snapshot JSON(`md_output`)을 daily bundle summary/markdown(`archive_report`)에 연동
+  - ops index 리포트 자동 생성:
+    - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_<YYYY-MM-DD>.md`
+  - daily bundle이 최신 `sheetbook_daily_start_bundle_latest.json`을 입력으로 ops index를 후행 실행하도록 순서 보정
+  - daily bundle summary/markdown에 `ops_index_report` 경로 노출
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
@@ -68,6 +72,8 @@ Status: Working branch handoff (2026-03-02 23:35)
    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
 7. 표본 부족량 요약(권장)
    - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+8. 운영 인덱스 단독 갱신(필요 시)
+   - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-02`
 
 ## 4) 중간 백업 규칙
 
