@@ -103,12 +103,13 @@ def _build_bundle_summary(
 
 def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
+    days = int(summary.get("days") or 14)
     if bool(summary.get("has_command_failures")):
         actions.append(
             {
                 "type": "rerun_failed_commands",
                 "description": "실패한 명령을 우선 재실행하고 로그 tail 확인",
-                "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14",
+                "command": f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}",
             }
         )
         return actions
@@ -135,8 +136,8 @@ def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
                 "type": "collect_samples",
                 "description": "표본 부족량(blockers) 해소 후 bundle+gap summary 재실행",
                 "command": (
-                    "python scripts/run_sheetbook_daily_start_bundle.py --days 14 && "
-                    "python scripts/run_sheetbook_sample_gap_summary.py"
+                    f"python scripts/run_sheetbook_daily_start_bundle.py --days {days} && "
+                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
                 ),
             }
         )
@@ -155,7 +156,7 @@ def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
             {
                 "type": "monitoring",
                 "description": "현재 상태 유지, 정기적으로 bundle 재실행",
-                "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14",
+                "command": f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}",
             }
         )
     return actions
@@ -287,7 +288,7 @@ def main() -> int:
         ["python", "scripts/run_sheetbook_pilot_log_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_archive_bulk_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_consent_freeze_snapshot.py"],
-        ["python", "scripts/run_sheetbook_sample_gap_summary.py"],
+        ["python", "scripts/run_sheetbook_sample_gap_summary.py", "--days", str(args.days)],
     ]
 
     command_results = [_run_command(root, cmd) for cmd in command_plan]

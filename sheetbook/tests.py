@@ -4408,6 +4408,13 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
         self.assertIn("manual_signoff_pending", action_types)
         self.assertIn("collect_samples", action_types)
+        self.assertTrue(
+            any(
+                "--days 14" in str(item.get("command") or "")
+                for item in next_actions
+                if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
+            )
+        )
 
     def test_build_daily_start_bundle_summary_forces_hold_on_command_failure(self):
         summary = _build_daily_start_bundle_summary(
@@ -4489,6 +4496,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
     def test_build_sample_gap_summary_reports_gaps(self):
         summary = _build_sample_gap_summary_payload(
+            days=21,
             generated_at="2026-03-03 09:00:00",
             readiness={
                 "pilot": {
@@ -4524,9 +4532,13 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertIn("collect_pilot_created", next_action_types)
         self.assertIn("collect_archive_events", next_action_types)
         self.assertIn("refresh_gap_summary", next_action_types)
+        self.assertTrue(
+            any("--days 21" in str(item.get("command") or "") for item in next_actions if isinstance(item, dict))
+        )
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(
+            days=7,
             generated_at="2026-03-03 09:00:00",
             readiness={
                 "pilot": {
@@ -4555,6 +4567,7 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertTrue(summary["overall"]["ready"])
         self.assertEqual(summary["overall"]["blockers"], [])
         self.assertEqual(summary["overall"]["next_actions"][0]["type"], "monitoring")
+        self.assertIn("--days 7", summary["overall"]["next_actions"][0]["command"])
 
     def test_build_sample_gap_markdown_includes_blockers_and_actions(self):
         summary = {

@@ -4667,3 +4667,34 @@ Status: Working handoff (2026-02-27 EOD)
 1. `python scripts/run_sheetbook_sample_gap_summary.py`
 2. `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`에서 blockers/next actions 확인
 3. 표본 수집 후 `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03` 재실행
+
+---
+
+### 0-124. sample gap `days` 동기화 (bundle/summary 명령 일관성)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_sample_gap_summary.py` 확장:
+  - `--days` 옵션 추가(기본 14)
+  - summary JSON에 `days` 필드 추가
+  - `overall.next_actions`의 명령 문자열을 `--days` 값 기반으로 동적 생성
+    - `run_sheetbook_release_readiness.py --days <N>`
+    - `run_sheetbook_archive_bulk_snapshot.py --days <N>`
+    - `run_sheetbook_sample_gap_summary.py --days <N>`
+  - Markdown 리포트에 `days` 표시 추가
+- `scripts/run_sheetbook_daily_start_bundle.py` 보강:
+  - bundle 내부에서 `run_sheetbook_sample_gap_summary.py --days <bundle_days>` 실행
+  - bundle `next_actions` 명령도 `days` 동기화(`collect_samples`, `monitoring`, 재실행)
+- 테스트 보강(`sheetbook/tests.py`):
+  - sample gap next actions 명령에 `--days` 전달 검증
+  - bundle `collect_samples` 명령에 `--days` 포함 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 7 tests, OK
+- sample gap summary JSON/MD 모두 `days=14` 기준으로 동기화 출력 확인
+- daily bundle command tail 및 next actions에서 `run_sheetbook_sample_gap_summary.py --days 14` 확인

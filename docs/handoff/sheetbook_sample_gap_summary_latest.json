@@ -1,5 +1,6 @@
 {
-  "generated_at": "2026-03-02 22:48:27",
+  "generated_at": "2026-03-02 22:54:06",
+  "days": 14,
   "pilot": {
     "counts": {
       "workspace_home_opened": 0,
@@ -48,7 +49,7 @@
       {
         "type": "refresh_gap_summary",
         "description": "표본 수집 후 gap summary 재생성",
-        "command": "python scripts/run_sheetbook_sample_gap_summary.py"
+        "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14"
       }
     ]
   }

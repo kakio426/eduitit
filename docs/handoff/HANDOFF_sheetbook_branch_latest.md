@@ -37,6 +37,7 @@ Status: Working branch handoff (2026-03-02 22:52)
   - daily start markdown에 `Sample Gap Next Actions` 섹션 노출
   - sample gap markdown 리포트 자동 생성:
     - `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_<YYYY-MM-DD>.md`
+  - sample gap/bundle 명령 `--days` 동기화(고정 14 하드코딩 제거)
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
@@ -58,7 +59,7 @@ Status: Working branch handoff (2026-03-02 22:52)
 6. 원클릭 번들(권장)
    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
 7. 표본 부족량 요약(권장)
-   - `python scripts/run_sheetbook_sample_gap_summary.py`
+   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 
 ## 4) 중간 백업 규칙
 

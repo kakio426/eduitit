@@ -28,14 +28,21 @@ def _to_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
-def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_event_gap: int) -> list[dict[str, str]]:
+def _build_sample_gap_next_actions(
+    *,
+    days: int,
+    home_gap: int,
+    create_gap: int,
+    archive_event_gap: int,
+) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
+    days_value = max(1, int(days))
     if home_gap > 0:
         actions.append(
             {
                 "type": "collect_pilot_home_opened",
                 "description": f"홈 진입 이벤트(workspace_home_opened) {home_gap}건 추가 확보",
-                "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
             }
         )
     if create_gap > 0:
@@ -43,7 +50,7 @@ def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_ev
             {
                 "type": "collect_pilot_created",
                 "description": f"홈에서 수첩 생성 이벤트(home_source_sheetbook_created) {create_gap}건 추가 확보",
-                "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
+                "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
             }
         )
     if archive_event_gap > 0:
@@ -51,7 +58,7 @@ def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_ev
             {
                 "type": "collect_archive_events",
                 "description": f"아카이브 이벤트 {archive_event_gap}건 추가 확보 후 품질 판정 재확인",
-                "command": "python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14",
+                "command": f"python scripts/run_sheetbook_archive_bulk_snapshot.py --days {days_value}",
             }
         )
     if actions:
@@ -59,7 +66,7 @@ def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_ev
             {
                 "type": "refresh_gap_summary",
                 "description": "표본 수집 후 gap summary 재생성",
-                "command": "python scripts/run_sheetbook_sample_gap_summary.py",
+                "command": f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}",
             }
         )
         return actions
@@ -67,13 +74,14 @@ def _build_sample_gap_next_actions(*, home_gap: int, create_gap: int, archive_ev
         {
             "type": "monitoring",
             "description": "표본 부족 없음, 주기적으로 gap summary 확인",
-            "command": "python scripts/run_sheetbook_sample_gap_summary.py",
+            "command": f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}",
         }
     ]
 
 
 def _build_sample_gap_summary(
     *,
+    days: int,
     generated_at: str,
     readiness: dict[str, Any],
     archive_snapshot: dict[str, Any],
@@ -107,6 +115,7 @@ def _build_sample_gap_summary(
     if archive_event_gap > 0:
         blockers.append(f"archive_event_gap:{archive_event_gap}")
     next_actions = _build_sample_gap_next_actions(
+        days=days,
         home_gap=home_gap,
         create_gap=create_gap,
         archive_event_gap=archive_event_gap,
@@ -114,6 +123,7 @@ def _build_sample_gap_summary(
 
     return {
         "generated_at": generated_at,
+        "days": int(days),
         "pilot": {
             "counts": {
                 "workspace_home_opened": home_count,
@@ -172,6 +182,7 @@ def _build_sample_gap_markdown(*, summary: dict[str, Any], json_output_path: Pat
 
     return f"""# Sheetbook Sample Gap Summary ({summary.get('generated_at', '')})
 
+- days: `{summary.get("days", 14)}`
 - overall_ready: `{overall.get("ready")}`
 - blockers: {blocker_text}
 - json_output: `{json_output_path}`
@@ -212,6 +223,7 @@ def main() -> int:
         default="docs/handoff/sheetbook_sample_gap_summary_latest.json",
         help="summary output path",
     )
+    parser.add_argument("--days", type=int, default=14, help="집계 기간(일). 기본 14")
     parser.add_argument(
         "--md-output",
         default="",
@@ -234,6 +246,7 @@ def main() -> int:
     readiness = _load_json(readiness_path)
     archive_snapshot = _load_json(archive_path)
     summary = _build_sample_gap_summary(
+        days=int(args.days),
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         readiness=readiness,
         archive_snapshot=archive_snapshot,
