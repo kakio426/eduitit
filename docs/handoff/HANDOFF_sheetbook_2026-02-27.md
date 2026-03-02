@@ -4025,3 +4025,51 @@ Status: Working handoff (2026-02-27 EOD)
 - 백로그: 총 `32`개 중 `19`개 DONE
 - 완료율: `59.4%`
 - 잔여율: `40.6%` (약 `41%`)
+
+---
+
+### 0-110. SB-202 진행 (다건 품질 스냅샷 판정 고도화: 표본 부족량/다음조치/커스텀 임계치)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_archive_bulk_snapshot.py` 보강:
+  - 품질 판정 기준을 CLI로 조정 가능:
+    - `--min-events` (기본 5)
+    - `--ignored-rate-threshold` (기본 10.0)
+    - `--unchanged-rate-threshold` (기본 50.0)
+  - 출력 `quality`에 운영 후속 판단 필드 추가:
+    - `sample_gap_count` (목표 표본까지 남은 이벤트 수)
+    - `thresholds` (이번 판정 기준값)
+    - `next_step` (`collect_more_samples` / `investigate_bulk_flow` / `continue_monitoring`)
+  - 기존 reason 포맷 유지 + 임계치 기반 동적 reason 키 생성
+    - 예: `ignored_rate_over_40pct`, `unchanged_rate_over_40pct`
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookMetricTests.test_archive_bulk_snapshot_collects_counts_rates_and_attention sheetbook.tests.SheetbookMetricTests.test_archive_bulk_snapshot_reports_sample_gap_and_supports_custom_thresholds`
+- `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+- `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14 --min-events 3 --ignored-rate-threshold 12.5 --unchanged-rate-threshold 45`
+- `python -m py_compile scripts/run_sheetbook_archive_bulk_snapshot.py`
+
+결과:
+- 타깃 테스트 2 tests, OK
+- 스냅샷 기본 실행 결과:
+  - `event_count=0`
+  - `quality.sample_gap_count=5`
+  - `quality.next_step=collect_more_samples`
+- 커스텀 임계치 실행 결과:
+  - `quality.thresholds.min_events=3`
+  - `quality.sample_gap_count=3`
+  - `quality.next_step=collect_more_samples`
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_ARCHIVE_BULK_OPERATION.md` 업데이트:
+  - 커스텀 임계치 실행 예시 추가
+  - `sample_gap_count`/`thresholds`/`next_step` 확인 포인트 추가
+
+### D. 다음 우선순위 갱신
+- `SB-108`: IN_PROGRESS
+- `SB-015`: IN_PROGRESS
+- `SB-202`: IN_PROGRESS
+- 다음 순서:
+  1. `SB-015` 수동 signoff 2건 실점검 후 PASS 반영
+  2. `SB-202` 실사용 표본 `event_count >= 5` 확보 후 `next_step`가 `collect_more_samples`에서 해제되는지 재확인
+  3. `SB-108` freeze baseline(v1) 대비 파일럿 diff 선별 반영

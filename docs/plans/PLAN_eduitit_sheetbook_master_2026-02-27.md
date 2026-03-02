@@ -927,12 +927,21 @@ P2:
     - `scripts/run_sheetbook_archive_bulk_snapshot.py` 추가
     - 최근 N일 다건 처리 품질(변경/동일상태/제외 비율) JSON 산출
     - `sheetbook_archive_bulk_snapshot_latest.json` 출력 지원
+    - 품질 판정 필드 확장:
+      - `sample_gap_count`(목표 표본까지 남은 이벤트 수)
+      - `thresholds`(min_events/ignored/unchanged 임계치)
+      - `next_step`(collect_more_samples/investigate_bulk_flow/continue_monitoring)
+    - 커스텀 임계치 옵션 추가:
+      - `--min-events`
+      - `--ignored-rate-threshold`
+      - `--unchanged-rate-threshold`
   - 회귀 테스트 추가:
     - archived 필터 목록 노출
     - archive/unarchive 상태 토글
     - archive 상태에서 탭 생성 차단
     - quick copy `include_rows=1`일 때 행/셀 복제 검증
     - bulk archive/unarchive 처리 + 메타데이터 검증
+    - archive bulk snapshot 판정 확장(표본 부족량/커스텀 임계치) 검증
 
 ### [P2][SB-203] 히스토리/버전 복원 강화
 
