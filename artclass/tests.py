@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -476,6 +477,26 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(created.auto_grade_band, "중학년")
         self.assertIn("물감", created.auto_tags)
         self.assertTrue(created.title)
+
+    @patch("artclass.views._fetch_youtube_title")
+    def test_setup_uses_youtube_title_when_available(self, mock_fetch_title):
+        mock_fetch_title.return_value = "삼각 이름표 만들기"
+
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=UFQT5Wtamw0",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "2",
+                "step_text_0": "새학기 삼각 이름표 밑그림을 연필로 잡는다.",
+                "step_text_1": "색연필로 이름표를 채색하고 꾸민다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
+        self.assertEqual(created.title, "삼각 이름표 만들기")
 
     def test_library_query_matches_step_text_and_auto_tags(self):
         art_class = ArtClass.objects.create(

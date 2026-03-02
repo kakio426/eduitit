@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlencode, urlparse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
@@ -73,6 +74,32 @@ def _build_external_video_loop_url(video_url):
     )
 
 
+def _fetch_youtube_title(video_url):
+    video_id = _extract_youtube_video_id(video_url)
+    if not video_id:
+        return ""
+
+    canonical_url = f"https://www.youtube.com/watch?v={video_id}"
+    oembed_url = "https://www.youtube.com/oembed?" + urlencode(
+        {"url": canonical_url, "format": "json"}
+    )
+    request = Request(
+        oembed_url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; Eduitit ArtClass Bot/1.0)"},
+    )
+
+    try:
+        with urlopen(request, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        return ""
+
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        return ""
+    return title[:200]
+
+
 def _encode_launcher_payload(payload):
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
@@ -96,10 +123,13 @@ def setup_view(request, pk=None):
             raise PermissionDenied("이 수업을 수정할 권한이 없습니다.")
          
     if request.method == 'POST':
-        video_url = request.POST.get('videoUrl', '')
+        video_url = (request.POST.get('videoUrl', '') or '').strip()
         interval = int(request.POST.get('stepInterval', 10))
         posted_title = request.POST.get('title')
-        if posted_title is None and art_class:
+        youtube_title = _fetch_youtube_title(video_url)
+        if youtube_title:
+            title = youtube_title
+        elif posted_title is None and art_class:
             title = art_class.title
         else:
             title = (posted_title or '').strip()
