@@ -74,3 +74,11 @@ python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14 --min-events 5 -
 - `quality.needs_attention` + `attention_reasons`
 - `quality.thresholds` (이번 판정에 사용한 기준값)
 - `quality.next_step` (`collect_more_samples` / `investigate_bulk_flow` / `continue_monitoring`)
+
+파일럿/아카이브 표본 부족량을 한 번에 보려면:
+
+```bash
+python scripts/run_sheetbook_sample_gap_summary.py
+```
+
+- 출력: `docs/handoff/sheetbook_sample_gap_summary_latest.json`

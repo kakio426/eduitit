@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-03-02 22:19:16",
+  "pilot": {
+    "counts": {
+      "workspace_home_opened": 0,
+      "home_source_sheetbook_created": 0,
+      "home_source_action_execute_requested": 0
+    },
+    "minimum_samples": {
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5
+    },
+    "gaps": {
+      "workspace_home_opened_gap": 5,
+      "home_source_sheetbook_created_gap": 5
+    },
+    "ready": false
+  },
+  "archive": {
+    "event_count": 0,
+    "event_gap": 5,
+    "next_step": "collect_more_samples",
+    "ready": false
+  },
+  "overall": {
+    "ready": false,
+    "blockers": [
+      "pilot_home_opened_gap:5",
+      "pilot_create_gap:5",
+      "archive_event_gap:5"
+    ]
+  }
+}

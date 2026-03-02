@@ -34,6 +34,9 @@ from scripts.run_sheetbook_consent_freeze_snapshot import (
 from scripts.run_sheetbook_daily_start_bundle import (
     _build_bundle_summary as _build_daily_start_bundle_summary,
 )
+from scripts.run_sheetbook_sample_gap_summary import (
+    _build_sample_gap_summary as _build_sample_gap_summary_payload,
+)
 from scripts.run_sheetbook_release_signoff_log import (
     _build_markdown as _build_release_signoff_log_markdown,
 )
@@ -4374,6 +4377,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 "quality": {"next_step": "collect_more_samples", "needs_attention": False},
             },
             consent_freeze_snapshot={"status": "PASS", "reasons": []},
+            sample_gap_summary={"overall": {"ready": False, "blockers": ["pilot_home_opened_gap:2"]}},
         )
 
         self.assertEqual(summary["overall"], "HOLD")
@@ -4382,6 +4386,8 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
         self.assertEqual(summary["archive"]["event_count"], 2)
         self.assertEqual(summary["consent_freeze"]["status"], "PASS")
+        self.assertFalse(summary["sample_gap"]["ready"])
+        self.assertIn("pilot_home_opened_gap:2", summary["sample_gap"]["blockers"])
 
     def test_build_daily_start_bundle_summary_forces_hold_on_command_failure(self):
         summary = _build_daily_start_bundle_summary(
@@ -4395,11 +4401,76 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             decision={"decision": "GO", "decision_context": {"manual_alias_statuses": {}}},
             archive_snapshot={"event_count": 10, "quality": {"next_step": "continue_monitoring"}},
             consent_freeze_snapshot={"status": "PASS", "reasons": []},
+            sample_gap_summary={"overall": {"ready": True, "blockers": []}},
         )
 
         self.assertTrue(summary["has_command_failures"])
         self.assertEqual(summary["overall"], "HOLD")
         self.assertEqual(summary["decision"], "GO")
+
+
+class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
+    def test_build_sample_gap_summary_reports_gaps(self):
+        summary = _build_sample_gap_summary_payload(
+            generated_at="2026-03-03 09:00:00",
+            readiness={
+                "pilot": {
+                    "counts": {
+                        "workspace_home_opened": 2,
+                        "home_source_sheetbook_created": 1,
+                        "home_source_action_execute_requested": 0,
+                    },
+                    "minimum_samples": {
+                        "workspace_home_opened": 5,
+                        "home_source_sheetbook_created": 4,
+                    },
+                }
+            },
+            archive_snapshot={
+                "event_count": 1,
+                "quality": {
+                    "sample_gap_count": 4,
+                    "next_step": "collect_more_samples",
+                },
+            },
+        )
+
+        self.assertFalse(summary["overall"]["ready"])
+        self.assertEqual(summary["pilot"]["gaps"]["workspace_home_opened_gap"], 3)
+        self.assertEqual(summary["pilot"]["gaps"]["home_source_sheetbook_created_gap"], 3)
+        self.assertEqual(summary["archive"]["event_gap"], 4)
+        self.assertIn("pilot_home_opened_gap:3", summary["overall"]["blockers"])
+        self.assertIn("archive_event_gap:4", summary["overall"]["blockers"])
+
+    def test_build_sample_gap_summary_ready_when_gaps_zero(self):
+        summary = _build_sample_gap_summary_payload(
+            generated_at="2026-03-03 09:00:00",
+            readiness={
+                "pilot": {
+                    "counts": {
+                        "workspace_home_opened": 5,
+                        "home_source_sheetbook_created": 5,
+                        "home_source_action_execute_requested": 2,
+                    },
+                    "minimum_samples": {
+                        "workspace_home_opened": 5,
+                        "home_source_sheetbook_created": 5,
+                    },
+                }
+            },
+            archive_snapshot={
+                "event_count": 9,
+                "quality": {
+                    "sample_gap_count": 0,
+                    "next_step": "continue_monitoring",
+                },
+            },
+        )
+
+        self.assertTrue(summary["pilot"]["ready"])
+        self.assertTrue(summary["archive"]["ready"])
+        self.assertTrue(summary["overall"]["ready"])
+        self.assertEqual(summary["overall"]["blockers"], [])
 
 
 class SheetbookPreflightCommandTests(SimpleTestCase):

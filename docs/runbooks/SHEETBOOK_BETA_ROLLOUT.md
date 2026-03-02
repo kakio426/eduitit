@@ -70,6 +70,8 @@ python manage.py test sheetbook.tests
 - signoff 로그 문서 자동 생성(권장): `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops`
 - 일일 시작 번들 실행(권장): `python scripts/run_sheetbook_daily_start_bundle.py --days 14`
   - 출력: `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+- 파일럿/아카이브 표본 부족량 요약(권장): `python scripts/run_sheetbook_sample_gap_summary.py`
+  - 출력: `docs/handoff/sheetbook_sample_gap_summary_latest.json`
 
 Windows one-command(strict) 예시:
 

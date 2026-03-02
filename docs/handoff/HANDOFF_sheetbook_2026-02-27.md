@@ -4477,3 +4477,55 @@ Status: Working handoff (2026-02-27 EOD)
 1. `SB-015` 수동 signoff 2건 완료 처리
 2. `SB-202` 실사용 표본 확보(`event_count >= 5`) 및 `next_step` 재판정
 3. `SB-108` freeze snapshot diff 기준으로 파일럿 변경 요청 선별 반영
+
+---
+
+### 0-119. 표본 부족량 요약 자동화 (pilot + archive gap summary)
+
+### A. 구현 요약
+- 신규 스크립트 추가:
+  - `scripts/run_sheetbook_sample_gap_summary.py`
+  - 입력:
+    - `docs/handoff/sheetbook_release_readiness_latest.json`
+    - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
+  - 출력:
+    - `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - 요약 항목:
+    - pilot 샘플 갭(`workspace_home_opened_gap`, `home_source_sheetbook_created_gap`)
+    - archive 이벤트 갭(`event_gap`)
+    - `overall.blockers` 리스트
+- 테스트 추가:
+  - `SheetbookSampleGapSummaryScriptTests`
+    - 갭 존재 시 blocker 계산 검증
+    - 갭 0일 때 ready 판정 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python scripts/run_sheetbook_sample_gap_summary.py`
+- `python -m py_compile scripts/run_sheetbook_sample_gap_summary.py`
+
+결과:
+- 테스트 2 tests, OK
+- 현재 요약 결과:
+  - `overall.ready=false`
+  - blockers:
+    - `pilot_home_opened_gap:5`
+    - `pilot_create_gap:5`
+    - `archive_event_gap:5`
+
+### C. 문서 반영
+- `docs/runbooks/SHEETBOOK_PILOT_DATA_CHECKLIST.md`
+  - gap summary 명령/출력 경로 추가
+- `docs/runbooks/SHEETBOOK_ARCHIVE_BULK_OPERATION.md`
+  - pilot+archive 통합 gap summary 명령 추가
+- `docs/runbooks/SHEETBOOK_BETA_ROLLOUT.md`
+  - 배포 전 점검 권장 명령에 gap summary 추가
+
+### D. 내일 시작 명령(최종 권장)
+1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+2. `python scripts/run_sheetbook_sample_gap_summary.py`
+3. 수동 signoff 완료 시:
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+4. 재실행:
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+  - `python scripts/run_sheetbook_sample_gap_summary.py`

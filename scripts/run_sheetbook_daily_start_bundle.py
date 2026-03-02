@@ -53,6 +53,7 @@ def _build_bundle_summary(
     decision: dict[str, Any],
     archive_snapshot: dict[str, Any],
     consent_freeze_snapshot: dict[str, Any],
+    sample_gap_summary: dict[str, Any],
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
     decision_context = decision.get("decision_context") or {}
@@ -60,6 +61,7 @@ def _build_bundle_summary(
     pilot_counts = pilot.get("counts") or {}
     archive_quality = archive_snapshot.get("quality") or {}
     command_failed = any(not bool(item.get("ok")) for item in command_results)
+    sample_gap_overall = sample_gap_summary.get("overall") or {}
 
     summary = {
         "generated_at": generated_at,
@@ -86,6 +88,10 @@ def _build_bundle_summary(
         "consent_freeze": {
             "status": str(consent_freeze_snapshot.get("status") or "").upper(),
             "reasons": list(consent_freeze_snapshot.get("reasons") or []),
+        },
+        "sample_gap": {
+            "ready": bool(sample_gap_overall.get("ready")),
+            "blockers": list(sample_gap_overall.get("blockers") or []),
         },
         "has_command_failures": command_failed,
     }
@@ -145,6 +151,7 @@ def main() -> int:
         ["python", "scripts/run_sheetbook_pilot_log_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_archive_bulk_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_consent_freeze_snapshot.py"],
+        ["python", "scripts/run_sheetbook_sample_gap_summary.py"],
     ]
 
     command_results = [_run_command(root, cmd) for cmd in command_plan]
@@ -155,6 +162,7 @@ def main() -> int:
     consent_freeze_snapshot = _load_json(
         root / "docs/handoff/sheetbook_consent_freeze_snapshot_latest.json"
     )
+    sample_gap_summary = _load_json(root / "docs/handoff/sheetbook_sample_gap_summary_latest.json")
     summary = _build_bundle_summary(
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         days=int(args.days),
@@ -163,6 +171,7 @@ def main() -> int:
         decision=decision,
         archive_snapshot=archive_snapshot,
         consent_freeze_snapshot=consent_freeze_snapshot,
+        sample_gap_summary=sample_gap_summary,
     )
 
     output_path = Path(args.output)

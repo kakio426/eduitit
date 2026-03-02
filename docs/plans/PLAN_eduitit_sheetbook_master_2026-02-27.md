@@ -937,6 +937,9 @@ P2:
     - `scripts/run_sheetbook_archive_bulk_snapshot.py` 추가
     - 최근 N일 다건 처리 품질(변경/동일상태/제외 비율) JSON 산출
     - `sheetbook_archive_bulk_snapshot_latest.json` 출력 지원
+    - `scripts/run_sheetbook_sample_gap_summary.py` 추가
+      - pilot(`SB-014`) + archive(`SB-202`) 표본 부족량을 통합 요약
+      - `sheetbook_sample_gap_summary_latest.json` 출력 지원
     - 품질 판정 필드 확장:
       - `sample_gap_count`(목표 표본까지 남은 이벤트 수)
       - `thresholds`(min_events/ignored/unchanged 임계치)

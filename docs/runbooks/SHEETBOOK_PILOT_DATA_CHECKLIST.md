@@ -38,6 +38,14 @@ python scripts/run_sheetbook_pilot_log_snapshot.py --days 14
   - `docs/runbooks/logs/sheetbook_pilot_event_log_<YYYY-MM-DD>.csv`
   - Markdown의 `## 3) 역할별 스냅샷 참고`에서 role별 관측/권장값 확인 가능
 
+표본 부족량 요약(권장):
+
+```bash
+python scripts/run_sheetbook_sample_gap_summary.py
+```
+
+- 출력: `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+
 ## 3) 파일럿 운영 체크 포인트
 
 1. 홈에서 교무수첩 진입(목록 열기) 경로로 실제 사용 유도

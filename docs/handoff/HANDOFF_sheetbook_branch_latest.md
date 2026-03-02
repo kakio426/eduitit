@@ -19,6 +19,7 @@ Status: Working branch handoff (2026-03-02 22:07)
   - `docs/handoff/sheetbook_archive_bulk_snapshot_latest.json`
   - `docs/handoff/sheetbook_manual_signoff_latest.json`
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`
   - `docs/handoff/sheetbook_release_decision_latest.json`
   - `docs/handoff/sheetbook_release_readiness_latest.json`
   - `docs/plans/PLAN_eduitit_sheetbook_master_2026-02-27.md`
@@ -29,6 +30,7 @@ Status: Working branch handoff (2026-03-02 22:07)
   - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-02.md`
   - `scripts/run_sheetbook_pilot_log_snapshot.py`
   - `scripts/run_sheetbook_daily_start_bundle.py`
+  - `scripts/run_sheetbook_sample_gap_summary.py`
   - `sheetbook/management/commands/recommend_sheetbook_thresholds.py`
   - `sheetbook/tests.py`
 - untracked:
@@ -51,6 +53,8 @@ Status: Working branch handoff (2026-03-02 22:07)
 - `운영 자동화`:
   - daily start bundle 스크립트 추가
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json` 자동 생성
+  - sample gap summary 스크립트 추가
+  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`으로 pilot/archive 갭 통합 확인
 
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
@@ -71,6 +75,8 @@ Status: Working branch handoff (2026-03-02 22:07)
    - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-03`
 6. 원클릭 번들(권장)
    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+7. 표본 부족량 요약(권장)
+   - `python scripts/run_sheetbook_sample_gap_summary.py`
 
 ## 4) 중간 백업 규칙
 
