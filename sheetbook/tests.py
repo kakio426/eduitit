@@ -4386,8 +4386,8 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                     "blockers": ["pilot_home_opened_gap:2"],
                     "next_actions": [
                         {
-                            "type": "collect_pilot_home_opened",
-                            "description": "홈 진입 이벤트(workspace_home_opened) 2건 추가 확보",
+                            "type": "collect_pilot_samples",
+                            "description": "파일럿 이벤트 추가 확보: workspace_home_opened 2건",
                             "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
                         }
                     ],
@@ -4403,7 +4403,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["consent_freeze"]["status"], "PASS")
         self.assertFalse(summary["sample_gap"]["ready"])
         self.assertIn("pilot_home_opened_gap:2", summary["sample_gap"]["blockers"])
-        self.assertEqual(summary["sample_gap"]["next_actions"][0]["type"], "collect_pilot_home_opened")
+        self.assertEqual(summary["sample_gap"]["next_actions"][0]["type"], "collect_pilot_samples")
         next_actions = summary.get("next_actions") or []
         action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
         self.assertIn("manual_signoff_pending", action_types)
@@ -4461,7 +4461,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 "blockers": ["pilot_home_opened_gap:2"],
                 "next_actions": [
                     {
-                        "description": "홈 진입 이벤트(workspace_home_opened) 2건 추가 확보",
+                        "description": "파일럿 이벤트 추가 확보: workspace_home_opened 2건",
                         "command": "python scripts/run_sheetbook_release_readiness.py --days 14",
                     }
                 ],
@@ -4490,7 +4490,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("## Next Actions", markdown)
         self.assertIn("수동 signoff 완료 후 PASS 반영", markdown)
         self.assertIn("## Sample Gap Next Actions", markdown)
-        self.assertIn("홈 진입 이벤트(workspace_home_opened) 2건 추가 확보", markdown)
+        self.assertIn("파일럿 이벤트 추가 확보: workspace_home_opened 2건", markdown)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
@@ -4528,8 +4528,7 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertIn("archive_event_gap:4", summary["overall"]["blockers"])
         next_actions = summary["overall"]["next_actions"]
         next_action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
-        self.assertIn("collect_pilot_home_opened", next_action_types)
-        self.assertIn("collect_pilot_created", next_action_types)
+        self.assertIn("collect_pilot_samples", next_action_types)
         self.assertIn("collect_archive_events", next_action_types)
         self.assertIn("refresh_gap_summary", next_action_types)
         self.assertTrue(

@@ -37,19 +37,16 @@ def _build_sample_gap_next_actions(
 ) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     days_value = max(1, int(days))
-    if home_gap > 0:
+    if home_gap > 0 or create_gap > 0:
+        gap_tokens: list[str] = []
+        if home_gap > 0:
+            gap_tokens.append(f"workspace_home_opened {home_gap}건")
+        if create_gap > 0:
+            gap_tokens.append(f"home_source_sheetbook_created {create_gap}건")
         actions.append(
             {
-                "type": "collect_pilot_home_opened",
-                "description": f"홈 진입 이벤트(workspace_home_opened) {home_gap}건 추가 확보",
-                "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
-            }
-        )
-    if create_gap > 0:
-        actions.append(
-            {
-                "type": "collect_pilot_created",
-                "description": f"홈에서 수첩 생성 이벤트(home_source_sheetbook_created) {create_gap}건 추가 확보",
+                "type": "collect_pilot_samples",
+                "description": "파일럿 이벤트 추가 확보: " + ", ".join(gap_tokens),
                 "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
             }
         )

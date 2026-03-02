@@ -4698,3 +4698,33 @@ Status: Working handoff (2026-02-27 EOD)
 - 테스트 7 tests, OK
 - sample gap summary JSON/MD 모두 `days=14` 기준으로 동기화 출력 확인
 - daily bundle command tail 및 next actions에서 `run_sheetbook_sample_gap_summary.py --days 14` 확인
+
+---
+
+### 0-125. sample gap 액션 중복 제거 (`collect_pilot_samples` 통합)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_sample_gap_summary.py` 개선:
+  - 기존 파일럿 gap 액션 2개(`collect_pilot_home_opened`, `collect_pilot_created`)를
+    단일 액션 `collect_pilot_samples`로 통합
+  - 설명 문자열에 부족 항목/건수 동시 표시:
+    - `workspace_home_opened <N>건`
+    - `home_source_sheetbook_created <N>건`
+  - 동일 명령 중복 노출 제거로 운영자가 실행해야 할 명령 수를 단순화
+- `sheetbook/tests.py` 갱신:
+  - 통합 타입(`collect_pilot_samples`) 기준 회귀 검증으로 변경
+  - daily bundle markdown 렌더링 문자열도 통합 문구로 갱신
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookSampleGapSummaryScriptTests`
+- `python -m py_compile scripts/run_sheetbook_daily_start_bundle.py scripts/run_sheetbook_sample_gap_summary.py`
+- `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+
+결과:
+- 테스트 7 tests, OK
+- sample gap next actions 현재 출력:
+  1. `collect_pilot_samples`
+  2. `collect_archive_events`
+  3. `refresh_gap_summary`
+- daily bundle JSON/MD에도 동일 액션 구조 반영 확인

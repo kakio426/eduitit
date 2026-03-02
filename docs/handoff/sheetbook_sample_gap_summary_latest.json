@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-02 22:54:06",
+  "generated_at": "2026-03-02 22:58:11",
   "days": 14,
   "pilot": {
     "counts": {
@@ -32,13 +32,8 @@
     ],
     "next_actions": [
       {
-        "type": "collect_pilot_home_opened",
-        "description": "홈 진입 이벤트(workspace_home_opened) 5건 추가 확보",
-        "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
-      },
-      {
-        "type": "collect_pilot_created",
-        "description": "홈에서 수첩 생성 이벤트(home_source_sheetbook_created) 5건 추가 확보",
+        "type": "collect_pilot_samples",
+        "description": "파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건",
         "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
       },
       {

@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-02 22:54:06)
+# Sheetbook Daily Start Bundle (2026-03-02 22:58:11)
 
 - days: 14
 - overall: `HOLD`
@@ -26,7 +26,6 @@
 - 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 
 ## Sample Gap Next Actions
-- 홈 진입 이벤트(workspace_home_opened) 5건 추가 확보: `python scripts/run_sheetbook_release_readiness.py --days 14`
-- 홈에서 수첩 생성 이벤트(home_source_sheetbook_created) 5건 추가 확보: `python scripts/run_sheetbook_release_readiness.py --days 14`
+- 파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_release_readiness.py --days 14`
 - 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
