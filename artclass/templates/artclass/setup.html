@@ -89,20 +89,9 @@
                         </p>
                     </div>
 
-                    <div class="mt-5 p-4 rounded-xl bg-white border border-indigo-100 space-y-2">
-                        <label for="geminiTargetVideoUrl" class="text-sm font-heavy text-gray-700">
-                            프롬프트용 대상 영상 URL
-                        </label>
-                        <div class="flex flex-col md:flex-row gap-2">
-                            <input type="text" id="geminiTargetVideoUrl"
-                                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
-                                placeholder="Gemini 프롬프트에 넣을 영상 URL (비워두면 위 주소 자동 사용)">
-                            <button type="button" id="btnUseMainVideoUrl"
-                                class="px-4 py-2.5 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-heavy hover:bg-indigo-50 transition-all whitespace-nowrap">
-                                메인 주소 불러오기
-                            </button>
-                        </div>
+                    <div class="mt-5 p-4 rounded-xl bg-white border border-indigo-100">
                         <p class="text-xs text-indigo-800/90">
+                            프롬프트와 결과 검증은 위 <b>수업용 유튜브 영상 주소</b>를 그대로 사용합니다.
                             단계는 6~12개를 권장하며, 24개 초과 시 앞 24개만 자동 반영됩니다.
                         </p>
                     </div>
@@ -244,15 +233,12 @@
     const emptyStateEl = document.getElementById('emptyState');
     const stepCountInput = document.getElementById('stepCountInput');
     const videoUrlEl = document.getElementById('videoUrl');
-    const geminiTargetVideoUrlEl = document.getElementById('geminiTargetVideoUrl');
-    const btnUseMainVideoUrlEl = document.getElementById('btnUseMainVideoUrl');
     const geminiPromptBoxEl = document.getElementById('geminiPromptBox');
     const geminiResultInputEl = document.getElementById('geminiResultInput');
     const geminiManualStatusEl = document.getElementById('geminiManualStatus');
     const geminiWarningListEl = document.getElementById('geminiWarningList');
     const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
     const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
-    let geminiTargetTouched = false;
     let geminiApplyInProgress = false;
     let lastAppliedGeminiText = '';
 
@@ -288,20 +274,8 @@ JSON 스키마 예시:
 
     function updateGeminiPrompt() {
         if (!geminiPromptBoxEl) return;
-        const promptTargetUrl = (geminiTargetVideoUrlEl?.value || videoUrlEl.value || '').trim();
+        const promptTargetUrl = (videoUrlEl?.value || '').trim();
         geminiPromptBoxEl.value = buildGeminiPrompt(promptTargetUrl);
-    }
-
-    function syncGeminiTargetFromMain(force = false) {
-        if (!geminiTargetVideoUrlEl) {
-            updateGeminiPrompt();
-            return;
-        }
-        const mainUrl = (videoUrlEl?.value || '').trim();
-        if (force || !geminiTargetTouched || !geminiTargetVideoUrlEl.value.trim()) {
-            geminiTargetVideoUrlEl.value = mainUrl;
-        }
-        updateGeminiPrompt();
     }
 
     function setGeminiStatus(message, tone = 'indigo') {
@@ -333,20 +307,7 @@ JSON 스키마 예시:
     }
 
     if (videoUrlEl) {
-        videoUrlEl.addEventListener('input', () => syncGeminiTargetFromMain(false));
-    }
-    if (geminiTargetVideoUrlEl) {
-        geminiTargetVideoUrlEl.addEventListener('input', () => {
-            geminiTargetTouched = true;
-            updateGeminiPrompt();
-        });
-    }
-    if (btnUseMainVideoUrlEl) {
-        btnUseMainVideoUrlEl.addEventListener('click', () => {
-            geminiTargetTouched = false;
-            syncGeminiTargetFromMain(true);
-            setGeminiStatus('메인 주소를 프롬프트 대상 URL로 반영했습니다.', 'indigo');
-        });
+        videoUrlEl.addEventListener('input', updateGeminiPrompt);
     }
 
     function renderSteps() {
@@ -483,7 +444,7 @@ JSON 스키마 예시:
                 },
                 body: JSON.stringify({
                     rawText,
-                    videoUrl: (geminiTargetVideoUrlEl?.value || videoUrlEl.value || '').trim(),
+                    videoUrl: (videoUrlEl?.value || '').trim(),
                 }),
             });
 
@@ -545,9 +506,8 @@ JSON 스키마 예시:
     }
 
     // Init
-    syncGeminiTargetFromMain(true);
+    updateGeminiPrompt();
     renderGeminiWarnings([]);
     renderSteps();
 </script>
 {% endblock %}
-

@@ -1,7 +1,9 @@
 import json
+from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -554,3 +556,34 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, sculpture.display_title)
         self.assertNotContains(response, drawing.display_title)
+
+
+class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
+    @patch("artclass.management.commands.backfill_artclass_youtube_titles._fetch_youtube_title")
+    def test_command_updates_titles_from_youtube(self, mock_fetch_title):
+        target = ArtClass.objects.create(
+            title="동물 회화 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+        )
+        untouched = ArtClass.objects.create(
+            title="기존 제목 유지",
+            youtube_url="https://www.youtube.com/watch?v=unknown_id",
+            default_interval=10,
+        )
+
+        def fake_fetch(url):
+            if "UFQT5Wtamw0" in url:
+                return "삼각 이름표 만들기"
+            return ""
+
+        mock_fetch_title.side_effect = fake_fetch
+
+        stdout = StringIO()
+        call_command("backfill_artclass_youtube_titles", sleep_ms=0, stdout=stdout)
+
+        target.refresh_from_db()
+        untouched.refresh_from_db()
+
+        self.assertEqual(target.title, "삼각 이름표 만들기")
+        self.assertEqual(untouched.title, "기존 제목 유지")
