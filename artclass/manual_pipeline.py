@@ -93,18 +93,28 @@ def build_manual_pipeline_prompt(video_url: str = "") -> str:
     video_line = video_url.strip() if video_url else "(여기에 유튜브 URL 입력)"
     return (
         "당신은 초등 미술 수업 설계 도우미입니다.\n"
-        "아래 영상/자료를 보고 학생이 따라 하기 쉬운 단계별 수업안을 한국어로 정리해 주세요.\n\n"
+        "아래 영상/자료를 보고 학생이 따라 하기 쉬운 단계별 수업안을 JSON으로만 출력하세요.\n\n"
         f"대상 영상 URL: {video_line}\n\n"
-        "작성 규칙:\n"
-        "1) 총 6~12단계로 작성\n"
-        "2) 각 단계는 한 줄로 작성\n"
-        "3) 가능하면 시간은 [MM:SS] 형태로 앞에 붙이기\n"
-        "4) 학생이 실제로 할 행동 중심으로 짧고 쉬운 문장 사용\n"
-        "5) 불필요한 서론 없이 바로 단계부터 작성\n\n"
-        "출력 예시:\n"
-        "1. [00:35] 도화지 중앙에 큰 원을 그리고 연필로 윤곽을 잡는다.\n"
-        "2. 배경 색을 고르고 색연필로 넓은 면부터 칠한다.\n"
-        "3. 완성본을 보며 마무리 선을 정리한다.\n"
+        "출력 규칙:\n"
+        "1) 반드시 JSON만 출력 (코드블록/설명문/인사말 금지)\n"
+        "2) 최상위는 객체이며 steps 배열 필수\n"
+        "3) steps는 6~12개 권장, 절대 24개를 넘기지 않기\n"
+        "4) 가능한 경우 start/end를 MM:SS 형식으로 포함\n"
+        "5) summary는 학생 활동 중심의 짧은 문장\n"
+        "6) materials는 배열, teacher_tip은 문자열\n\n"
+        "JSON 스키마 예시:\n"
+        "{\n"
+        '  "video_title": "수업 제목",\n'
+        '  "steps": [\n'
+        "    {\n"
+        '      "start": "00:35",\n'
+        '      "end": "01:20",\n'
+        '      "summary": "도화지 중앙에 큰 원을 그리고 배경 색을 고른다.",\n'
+        '      "materials": ["도화지", "연필", "색연필"],\n'
+        '      "teacher_tip": "선 굵기를 달리하면 입체감이 살아난다."\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
     )
 
 
@@ -119,24 +129,24 @@ def _extract_json_payload(raw_text: str) -> Any | None:
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            raise ManualPipelineError("INVALID_JSON", "붙여넣은 내용 형식을 이해하지 못했습니다. 답변 전체를 다시 붙여넣어 주세요.")
+            raise ManualPipelineError("INVALID_JSON", "JSON 형식이 올바르지 않습니다. 중괄호/쉼표를 확인해 주세요.")
 
     if text.startswith("[") and text.endswith("]"):
         try:
             return {"steps": json.loads(text)}
         except json.JSONDecodeError:
-            raise ManualPipelineError("INVALID_JSON", "붙여넣은 내용 형식을 이해하지 못했습니다. 답변 전체를 다시 붙여넣어 주세요.")
+            raise ManualPipelineError("INVALID_JSON", "JSON 배열 형식이 올바르지 않습니다.")
 
     return None
 
 
 def _parse_steps_from_json(payload: Any, warnings: list[str]) -> list[ParsedStep]:
     if not isinstance(payload, dict):
-        raise ManualPipelineError("INVALID_SHAPE", "붙여넣은 내용에서 단계 목록을 찾지 못했습니다.")
+        raise ManualPipelineError("INVALID_SHAPE", "JSON 최상위는 객체 형태여야 합니다.")
 
     raw_steps = payload.get("steps")
     if not isinstance(raw_steps, list):
-        raise ManualPipelineError("MISSING_STEPS", "단계 목록을 찾지 못했습니다. 단계가 보이도록 다시 받아와 주세요.")
+        raise ManualPipelineError("MISSING_STEPS", "`steps` 배열이 필요합니다.")
 
     parsed_steps: list[ParsedStep] = []
     for idx, item in enumerate(raw_steps, start=1):
@@ -330,7 +340,7 @@ def _normalize_materials(value: Any) -> list[str]:
 
 def _validate_steps(steps: list[ParsedStep]) -> None:
     if not steps:
-        raise ManualPipelineError("NO_STEPS", "단계를 찾지 못했습니다. 답변 전체를 다시 붙여넣어 주세요.")
+        raise ManualPipelineError("NO_STEPS", "유효한 단계가 없습니다. JSON 또는 줄바꿈 형식을 확인해 주세요.")
 
     if len(steps) < MIN_STEPS:
         raise ManualPipelineError("TOO_FEW_STEPS", f"단계는 최소 {MIN_STEPS}개 필요합니다.")
