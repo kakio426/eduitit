@@ -6,7 +6,7 @@
             this.$nextTick(() => {
                 const mobileList = document.getElementById('mobile-post-list-container');
                 if (!mobileList) return;
-                const postCard = mobileList.querySelector('[data-post-id=\"' + postId + '\"]');
+                const postCard = mobileList.querySelector(`[data-post-id='${postId}']`);
                 if (!postCard) return;
                 postCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 postCard.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-2');
