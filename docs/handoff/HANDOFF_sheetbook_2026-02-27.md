@@ -5000,3 +5000,16 @@ Status: Working handoff (2026-02-27 EOD)
 - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
   - `manual_pending: (없음)`
   - `decision: GO`, `overall: GO`
+
+---
+
+### 0-134. 2026-03-03 후속 반영 (정합성 개선 커밋 + signoff next_action 갱신)
+
+### A. 커밋/원격
+- `9c2901d` `fix(sheetbook): align daily bundle manual pending with signoff state`
+- `origin/feature/sheetbook` push 완료
+
+### B. 운영 로그 정리
+- `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action "pilot 표본 보강 + 상태 재판정" --due-date 2026-03-04`
+- 결과:
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`의 `next_action`/`due_date`가 현재 운영 상태에 맞게 갱신됨

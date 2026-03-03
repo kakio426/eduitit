@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 12:12)
+Status: Working branch handoff (2026-03-03 12:16)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 12:12)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `0e661a4` (`docs(sheetbook): sync ops index with conditional GO decision`)
+- latest backup commit: `9c2901d` (`fix(sheetbook): align daily bundle manual pending with signoff state`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -40,6 +40,7 @@ Status: Working branch handoff (2026-03-03 12:12)
   - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
   - `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
   - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 ...`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --next-action "pilot 표본 보강 + 상태 재판정" --due-date 2026-03-04`
 - 상태 요약:
   - `manual_alias_statuses`: staging/prod/real-device 모두 `PASS`
   - `manual_pending` 표시는 effective 기준 `(없음)` + raw(readiness) 분리 노출
