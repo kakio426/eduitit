@@ -35,3 +35,9 @@ class HappySeedPermissionTests(TestCase):
         self.assertEqual(res.status_code, 404)
         self.student.refresh_from_db()
         self.assertTrue(self.student.is_active)
+
+    def test_other_teacher_cannot_access_student_manage(self):
+        self.client.login(username="teacherB", password="pw12345")
+        url = reverse("happy_seed:student_manage", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 404)

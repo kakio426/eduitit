@@ -397,14 +397,12 @@ def classroom_create(request):
 def classroom_detail(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
     config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
-    students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
     return render(
         request,
         "happy_seed/classroom_detail.html",
         {
             "classroom": classroom,
             "config": config,
-            "students": students,
         },
     )
 
@@ -445,6 +443,190 @@ def classroom_settings(request, classroom_id):
     )
 
 
+def _bulk_add_students_to_classroom(classroom, parsed_students):
+    used_numbers = set(classroom.students.values_list("number", flat=True))
+    auto_number = 1
+    created_count = 0
+    skipped_count = 0
+
+    for item in parsed_students:
+        requested_number = item.get("number")
+        if requested_number is None:
+            while auto_number in used_numbers:
+                auto_number += 1
+            assigned_number = auto_number
+        elif requested_number in used_numbers:
+            skipped_count += 1
+            continue
+        else:
+            assigned_number = requested_number
+
+        student, created = HSStudent.objects.get_or_create(
+            classroom=classroom,
+            number=assigned_number,
+            defaults={"name": item["name"]},
+        )
+        if created:
+            HSGuardianConsent.objects.create(student=student)
+            used_numbers.add(student.number)
+            created_count += 1
+        else:
+            skipped_count += 1
+
+    return created_count, skipped_count
+
+
+def _build_student_manage_context(classroom, student_form=None, bulk_form=None):
+    active_students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+    inactive_students = classroom.students.filter(is_active=False).select_related("consent").order_by("number", "name")
+    active_count = active_students.count()
+    inactive_count = inactive_students.count()
+    return {
+        "classroom": classroom,
+        "active_students": active_students,
+        "inactive_students": inactive_students,
+        "active_count": active_count,
+        "inactive_count": inactive_count,
+        "total_students": active_count + inactive_count,
+        "student_form": student_form or HSStudentForm(),
+        "bulk_form": bulk_form or StudentBulkAddForm(),
+    }
+
+
+@login_required
+def student_manage(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "add_single":
+            student_form = HSStudentForm(request.POST)
+            if student_form.is_valid():
+                number = student_form.cleaned_data["number"]
+                if classroom.students.filter(number=number).exists():
+                    student_form.add_error("number", "이미 사용 중인 번호입니다.")
+                else:
+                    student = student_form.save(commit=False)
+                    student.classroom = classroom
+                    student.save()
+                    HSGuardianConsent.objects.create(student=student)
+                    messages.success(request, "학생 1명을 추가했습니다.")
+                    return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+            context = _build_student_manage_context(classroom, student_form=student_form)
+            return render(request, "happy_seed/student_manage.html", context, status=400)
+
+        if action == "bulk_add":
+            bulk_form = StudentBulkAddForm(request.POST, request.FILES)
+            if bulk_form.is_valid():
+                created_count, skipped_count = _bulk_add_students_to_classroom(
+                    classroom,
+                    bulk_form.parse_students(),
+                )
+                if created_count:
+                    messages.success(request, f"{created_count}명의 학생을 추가했습니다.")
+                else:
+                    messages.warning(request, "추가된 학생이 없습니다.")
+                if skipped_count:
+                    messages.warning(request, f"{skipped_count}건은 번호 중복으로 건너뛰었습니다.")
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+            context = _build_student_manage_context(classroom, bulk_form=bulk_form)
+            return render(request, "happy_seed/student_manage.html", context, status=400)
+
+        if action == "edit_student":
+            student_id = request.POST.get("student_id")
+            student = get_object_or_404(HSStudent, id=student_id, classroom=classroom)
+            form = HSStudentForm(request.POST, instance=student)
+            if form.is_valid():
+                number = form.cleaned_data["number"]
+                if classroom.students.exclude(id=student.id).filter(number=number).exists():
+                    messages.error(request, f"{student.name} 학생 번호가 중복되어 저장하지 못했습니다.")
+                else:
+                    form.save()
+                    messages.success(request, "학생 정보를 수정했습니다.")
+            else:
+                messages.error(request, "학생 정보 수정에 실패했습니다. 입력값을 확인해 주세요.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if action == "deactivate_student":
+            student_id = request.POST.get("student_id")
+            student = get_object_or_404(HSStudent, id=student_id, classroom=classroom)
+            if not student.is_active:
+                messages.info(request, f"{student.name} 학생은 이미 비활성 상태입니다.")
+            else:
+                student.is_active = False
+                student.save(update_fields=["is_active", "updated_at"])
+                messages.success(request, f"{student.name} 학생을 비활성화했습니다.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if action == "restore_student":
+            student_id = request.POST.get("student_id")
+            student = get_object_or_404(HSStudent, id=student_id, classroom=classroom)
+            if student.is_active:
+                messages.info(request, f"{student.name} 학생은 이미 활성 상태입니다.")
+            else:
+                student.is_active = True
+                student.save(update_fields=["is_active", "updated_at"])
+                messages.success(request, f"{student.name} 학생을 복구했습니다.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if action == "hard_delete_student":
+            student_id = request.POST.get("student_id")
+            student = get_object_or_404(HSStudent, id=student_id, classroom=classroom)
+            student_name = student.name
+            student.delete()
+            messages.success(request, f"{student_name} 학생을 완전 삭제했습니다.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if action == "bulk_action":
+            student_ids = request.POST.getlist("student_ids")
+            bulk_action = (request.POST.get("bulk_action") or "").strip()
+            if not student_ids:
+                messages.warning(request, "선택된 학생이 없습니다.")
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+            students_qs = classroom.students.filter(id__in=student_ids)
+
+            if bulk_action == "deactivate":
+                updated = students_qs.filter(is_active=True).update(is_active=False)
+                messages.success(request, f"{updated}명의 학생을 비활성화했습니다.")
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+            if bulk_action == "restore":
+                updated = students_qs.filter(is_active=False).update(is_active=True)
+                messages.success(request, f"{updated}명의 학생을 복구했습니다.")
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+            if bulk_action == "hard_delete":
+                delete_count = students_qs.count()
+                students_qs.delete()
+                messages.success(request, f"{delete_count}명의 학생을 완전 삭제했습니다.")
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+            messages.error(request, "지원하지 않는 일괄 작업입니다.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if action == "wipe_all_students":
+            confirm_text = (request.POST.get("confirm_text") or "").strip()
+            if confirm_text != classroom.name:
+                messages.error(
+                    request,
+                    f"전체 삭제 확인 문구가 일치하지 않습니다. 정확히 '{classroom.name}'을 입력해 주세요.",
+                )
+                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+            total_count = classroom.students.count()
+            if total_count == 0:
+                messages.info(request, "삭제할 학생이 없습니다.")
+            else:
+                classroom.students.all().delete()
+                messages.success(request, f"학생 {total_count}명을 전체 완전 삭제했습니다.")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        messages.error(request, "처리할 작업을 확인하지 못했습니다.")
+        return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+    context = _build_student_manage_context(classroom)
+    return render(request, "happy_seed/student_manage.html", context)
+
+
 @login_required
 @require_POST
 def student_add(request, classroom_id):
@@ -481,35 +663,10 @@ def student_bulk_add(request, classroom_id):
     if request.method == "POST":
         form = StudentBulkAddForm(request.POST, request.FILES)
         if form.is_valid():
-            parsed = form.parse_students()
-            used_numbers = set(classroom.students.values_list("number", flat=True))
-            auto_number = 1
-            created_count = 0
-            skipped_count = 0
-            for item in parsed:
-                requested_number = item.get("number")
-                if requested_number is None:
-                    while auto_number in used_numbers:
-                        auto_number += 1
-                    assigned_number = auto_number
-                elif requested_number in used_numbers:
-                    skipped_count += 1
-                    continue
-                else:
-                    assigned_number = requested_number
-
-                student, created = HSStudent.objects.get_or_create(
-                    classroom=classroom,
-                    number=assigned_number,
-                    defaults={"name": item["name"]},
-                )
-                if created:
-                    HSGuardianConsent.objects.create(student=student)
-                    used_numbers.add(student.number)
-                    created_count += 1
-                else:
-                    skipped_count += 1
-
+            created_count, skipped_count = _bulk_add_students_to_classroom(
+                classroom,
+                form.parse_students(),
+            )
             if created_count:
                 messages.success(request, f"{created_count}명의 학생을 추가했습니다.")
             else:
