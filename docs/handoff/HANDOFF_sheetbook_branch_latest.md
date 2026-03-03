@@ -146,6 +146,28 @@ Status: Working branch handoff (2026-03-03 19:49)
   - daily bundle이 최신 `sheetbook_daily_start_bundle_latest.json`을 입력으로 ops index를 후행 실행하도록 순서 보정
   - daily bundle summary/markdown에 `ops_index_report` 경로 노출
 
+## 1-5) 2026-03-03 야간 스모크 안정화
+
+- 실행:
+  - `python scripts/run_sheetbook_allowlist_smoke.py`
+  - `python scripts/run_sheetbook_consent_smoke.py`
+  - `python scripts/run_sheetbook_grid_smoke.py --port 8015`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+- 코드 보강:
+  - `scripts/run_sheetbook_grid_smoke.py`
+    - 가상 그리드 클릭 불안정 대응(`_click_with_retry`) 추가
+    - 저장 상태에서 `충돌` 즉시 감지 + 셀 편집 1회 재시도(`_edit_cell_and_save`) 추가
+    - 콘솔 409 충돌 노이즈를 `ignored_console_errors`로 분리
+- 테스트 보강:
+  - `sheetbook/tests.py`
+    - `SheetbookGridSmokeScriptTests` 추가
+    - 검증 항목: 충돌 즉시 감지, 충돌 시 1회 재시도, 비충돌 실패 시 재시도 없음
+- 상태 요약:
+  - `smoke_sheetbook_grid_1000_latest.json`: `pass=true` (desktop/tablet 모두 PASS, desktop initial render warning 1건)
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=HOLD`
+  - sample gap blockers는 기존과 동일:
+    - `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
