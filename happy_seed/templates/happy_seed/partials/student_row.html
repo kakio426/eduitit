@@ -15,12 +15,35 @@
         <span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">🌰{{ student.seed_count }}</span>
         <span class="px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded">🌸{{ student.ticket_count }}</span>
     </div>
+    {% endif %}
 
     <button @click="showActions = !showActions" class="mt-2 text-xs text-gray-400 hover:text-gray-600">
         <span x-text="showActions ? '접기' : '관리'"></span>
     </button>
 
     <div x-show="showActions" x-transition class="mt-2 space-y-1.5">
+        <!-- Student edit -->
+        <form hx-post="{% url 'happy_seed:student_edit' student_id=student.id %}" hx-target="#student-grid"
+            hx-swap="innerHTML" hx-indicator="find .js-student-edit-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('학생 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+            class="flex gap-1">
+            {% csrf_token %}
+            <input type="number" name="number" min="0" value="{{ student.number }}"
+                class="w-12 px-1 py-1.5 rounded-lg border border-gray-200 text-xs text-center">
+            <input type="text" name="name" value="{{ student.name }}" required
+                class="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs">
+            <button type="submit"
+                class="px-2 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors inline-flex items-center justify-center gap-1"
+                style="min-height: 44px;">
+                <span class="js-student-edit-loading htmx-indicator">
+                    <i class="fas fa-circle-notch fa-spin text-[10px]"></i>
+                </span>
+                <span>수정</span>
+            </button>
+        </form>
+
+        {% if student.consent.status == 'approved' %}
         <!-- Seed grant -->
         <form hx-post="{% url 'happy_seed:seed_grant' student_id=student.id %}" hx-target="#student-grid"
             hx-swap="innerHTML" hx-indicator="find .js-seed-grant-loading"
@@ -45,6 +68,7 @@
             <input type="hidden" name="amount" value="1">
             <button type="submit" class="flex-1 py-1.5 bg-pink-100 text-pink-700 rounded-lg text-xs font-bold hover:bg-pink-200 transition-colors" style="min-height: 44px;">🌸+1</button>
         </form>
+        {% endif %}
+
     </div>
-    {% endif %}
 </div>

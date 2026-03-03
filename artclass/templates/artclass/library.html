@@ -108,6 +108,7 @@
                 data-playback-mode="{{ item.playback_mode }}"
                 data-creator="{{ item.created_by.username|default:'익명의 선생님' }}"
                 data-delete-url="{% url 'artclass:delete' pk=item.pk %}"
+                data-can-manage="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
                 data-can-delete="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
                 onclick="openChoiceModalFromData(this)">
 
@@ -238,12 +239,13 @@
         const stepCount = el.getAttribute('data-steps');
         const playbackMode = el.getAttribute('data-playback-mode') || 'embed';
         const creator = el.getAttribute('data-creator');
+        const canManage = el.getAttribute('data-can-manage') === 'true';
         const canDelete = el.getAttribute('data-can-delete') === 'true';
         const deleteUrl = el.getAttribute('data-delete-url');
-        openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl);
+        openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canManage, canDelete, deleteUrl);
     }
 
-    function openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl) {
+    function openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canManage, canDelete, deleteUrl) {
         const modal = document.getElementById('choiceModal');
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
@@ -255,7 +257,9 @@
         document.getElementById('playLink').href = shouldAutoStartLauncher
             ? `/artclass/classroom/${pk}/?autostart_launcher=1`
             : `/artclass/classroom/${pk}/`;
-        document.getElementById('editLink').href = `/artclass/setup/${pk}/`;
+        document.getElementById('editLink').href = canManage
+            ? `/artclass/setup/${pk}/`
+            : `/artclass/setup/${pk}/fork/`;
         if (canDelete && deleteUrl) {
             deleteForm.action = deleteUrl;
             deleteForm.classList.remove('hidden');

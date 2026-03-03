@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}JSON 퀴즈 일괄 등록{% endblock %}
+
+{% block content %}
+<style>
+    .json-import-wrap { max-width: 900px; margin: 0 auto; }
+    .json-import-wrap h2 { margin-bottom: 8px; }
+    .json-import-wrap .help-text {
+        color: #666; font-size: 13px; margin-bottom: 16px; line-height: 1.6;
+    }
+    .json-import-wrap .help-text code {
+        background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 12px;
+    }
+    .json-import-wrap textarea {
+        width: 100%; min-height: 420px; font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px; padding: 12px; border: 2px solid #ccc; border-radius: 6px;
+        resize: vertical; line-height: 1.5;
+    }
+    .json-import-wrap textarea:focus { border-color: #417690; outline: none; }
+    .json-import-wrap .btn-row { margin-top: 16px; display: flex; gap: 12px; align-items: center; }
+    .json-import-wrap .btn-row input[type="submit"] {
+        background: #417690; color: #fff; border: none; padding: 10px 28px;
+        border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: bold;
+    }
+    .json-import-wrap .btn-row input[type="submit"]:hover { background: #205067; }
+    .json-import-wrap .btn-row a { color: #417690; text-decoration: none; font-size: 14px; }
+
+    .result-box { margin-top: 20px; padding: 16px; border-radius: 6px; line-height: 1.7; }
+    .result-box.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .result-box.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    .result-box ul { margin: 8px 0 0 20px; }
+</style>
+
+<div class="json-import-wrap">
+    <h2>📋 JSON 퀴즈 일괄 등록</h2>
+
+    <div class="help-text">
+        아래 텍스트 영역에 <strong>JSON 배열</strong>을 붙여넣고 "등록하기"를 누르면, 퀴즈 세트와 문항이 자동으로 생성됩니다.<br>
+        같은 제목(<code>title</code>)의 세트가 이미 있으면 <strong>덮어쓰기(업데이트)</strong> 됩니다.<br><br>
+        <strong>JSON 형식 예시:</strong><br>
+        <code>[{"title": "...", "grade": 0, "preset_type": "sino_idiom", "items": [{"q": "문제", "c": ["보기1","보기2","보기3","보기4"], "a": 0, "e": "해설"}]}]</code>
+    </div>
+
+    {% if results %}
+    <div class="result-box {% if error %}error{% else %}success{% endif %}">
+        {% if error %}
+            <strong>⚠️ 오류 발생:</strong> {{ error }}
+        {% else %}
+            <strong>✅ 등록 완료!</strong> 총 <strong>{{ results|length }}</strong>개 세트가 처리되었습니다.
+            <ul>
+            {% for r in results %}
+                <li>{{ r }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <textarea name="json_data" placeholder='[&#10;  {&#10;    "title": "[사자성어] 1단계",&#10;    "grade": 0,&#10;    "preset_type": "sino_idiom",&#10;    "items": [&#10;      {"q": "多多益善 (다다익선)", "c": ["보기1","보기2","보기3","보기4"], "a": 1, "e": "해설..."}&#10;    ]&#10;  }&#10;]'>{{ json_data }}</textarea>
+        <div class="btn-row">
+            <input type="submit" name="action" value="등록하기">
+            <button type="submit" name="action" value="cleanup" style="background: #ba2121; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="return confirm('정말로 5문항 미만인 모든 세트를 삭제하시겠습니까?');">🗑️ 쓰레기 세트 정리 (5문항 미만 삭제)</button>
+            <a href="{% url 'admin:seed_quiz_sqquizbank_changelist' %}">← 퀴즈 뱅크 목록으로</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

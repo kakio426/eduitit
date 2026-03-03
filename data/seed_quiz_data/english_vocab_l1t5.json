@@ -1,0 +1,1137 @@
+[
+    {
+        "title": "[영어 기초] 1단계: 색깔과 숫자 (Colors & Numbers)",
+        "grade": 0,
+        "preset_type": "eng_vocab",
+        "items": [
+            {
+                "q": "다음 중 '빨간색'을 뜻하는 단어는?",
+                "c": [
+                    "Blue",
+                    "Red",
+                    "Green",
+                    "Yellow"
+                ],
+                "a": 1,
+                "e": "Red는 '빨간색'을 뜻합니다."
+            },
+            {
+                "q": "What is 'White' in Korean?",
+                "c": [
+                    "검은색",
+                    "파란색",
+                    "하얀색",
+                    "보라색"
+                ],
+                "a": 2,
+                "e": "White는 '하얀색'입니다."
+            },
+            {
+                "q": "숫자 '3'을 영어로 하면?",
+                "c": [
+                    "One",
+                    "Two",
+                    "Three",
+                    "Four"
+                ],
+                "a": 2,
+                "e": "3은 Three입니다."
+            },
+            {
+                "q": "How do you say 'Black' in Korean?",
+                "c": [
+                    "노란색",
+                    "검은색",
+                    "갈색",
+                    "분홍색"
+                ],
+                "a": 1,
+                "e": "Black은 '검은색'입니다."
+            },
+            {
+                "q": "다음 중 'Yellow'에 해당하는 색은?",
+                "c": [
+                    "초록색",
+                    "빨간색",
+                    "노란색",
+                    "파란색"
+                ],
+                "a": 2,
+                "e": "Yellow는 '노란색'입니다."
+            },
+            {
+                "q": "숫자 '7'을 영어로 쓰면?",
+                "c": [
+                    "Six",
+                    "Seven",
+                    "Eight",
+                    "Nine"
+                ],
+                "a": 1,
+                "e": "7은 Seven입니다."
+            },
+            {
+                "q": "What color is 'Green'?",
+                "c": [
+                    "주황색",
+                    "초록색",
+                    "보라색",
+                    "검은색"
+                ],
+                "a": 1,
+                "e": "Green은 '초록색'입니다."
+            },
+            {
+                "q": "숫자 '10'을 영어로 하면?",
+                "c": [
+                    "Five",
+                    "Six",
+                    "Nine",
+                    "Ten"
+                ],
+                "a": 3,
+                "e": "10은 Ten입니다."
+            },
+            {
+                "q": "다음 중 'Blue'를 뜻하는 단어는?",
+                "c": [
+                    "파란색",
+                    "빨간색",
+                    "하얀색",
+                    "회색"
+                ],
+                "a": 0,
+                "e": "Blue는 '파란색'입니다."
+            },
+            {
+                "q": "서양에서 행운의 숫자로 불리는 'Seven'은?",
+                "c": [
+                    "5",
+                    "6",
+                    "7",
+                    "8"
+                ],
+                "a": 2,
+                "e": "Seven은 숫자 '7'입니다."
+            },
+            {
+                "q": "사과의 색깔인 'Red'는?",
+                "c": [
+                    "빨강",
+                    "노랑",
+                    "파랑",
+                    "초록"
+                ],
+                "a": 0,
+                "e": "사과는 보통 빨간색(Red)입니다."
+            },
+            {
+                "q": "숫자 '1'을 영어로 하면?",
+                "c": [
+                    "Zero",
+                    "One",
+                    "Two",
+                    "Ten"
+                ],
+                "a": 1,
+                "e": "1은 One입니다."
+            },
+            {
+                "q": "바나나의 색깔인 'Yellow'는?",
+                "c": [
+                    "빨강",
+                    "파랑",
+                    "하얀색",
+                    "노란색"
+                ],
+                "a": 3,
+                "e": "바나나는 노란색(Yellow)입니다."
+            },
+            {
+                "q": "숫자 '5'를 영어로 쓰면?",
+                "c": [
+                    "Five",
+                    "First",
+                    "Four",
+                    "Fine"
+                ],
+                "a": 0,
+                "e": "5는 Five입니다."
+            },
+            {
+                "q": "How do you say 'Orange' in Korean?",
+                "c": [
+                    "보라색",
+                    "연두색",
+                    "주황색",
+                    "하얀색"
+                ],
+                "a": 2,
+                "e": "Orange는 '주황색'입니다."
+            },
+            {
+                "q": "숫자 '2'를 영어로 하면?",
+                "c": [
+                    "Too",
+                    "To",
+                    "Two",
+                    "Twin"
+                ],
+                "a": 2,
+                "e": "숫자 2는 Two라고 씁니다."
+            },
+            {
+                "q": "What is 'Purple' in Korean?",
+                "c": [
+                    "분홍색",
+                    "갈색",
+                    "회색",
+                    "보라색"
+                ],
+                "a": 3,
+                "e": "Purple은 '보라색'입니다."
+            },
+            {
+                "q": "숫자 '8'을 영어로 하면?",
+                "c": [
+                    "Seven",
+                    "Eight",
+                    "Night",
+                    "Nine"
+                ],
+                "a": 1,
+                "e": "8은 Eight입니다."
+            },
+            {
+                "q": "나무 잎사귀의 색인 'Green'은?",
+                "c": [
+                    "초록색",
+                    "검은색",
+                    "하얀색",
+                    "파란색"
+                ],
+                "a": 0,
+                "e": "나뭇잎은 주로 초록색(Green)입니다."
+            },
+            {
+                "q": "숫자 '4'를 영어로 하면?",
+                "c": [
+                    "For",
+                    "Four",
+                    "Five",
+                    "Fast"
+                ],
+                "a": 1,
+                "e": "4는 Four입니다."
+            }
+        ]
+    },
+    {
+        "title": "[영어 기초] 2단계: 가족과 인사 (Family & Greetings)",
+        "grade": 0,
+        "preset_type": "eng_vocab",
+        "items": [
+            {
+                "q": "'아빠'를 영어로 하면?",
+                "c": [
+                    "Mother",
+                    "Father",
+                    "Brother",
+                    "Sister"
+                ],
+                "a": 1,
+                "e": "Father는 '아빠/아버지'입니다."
+            },
+            {
+                "q": "How do you say 'Mother' in Korean?",
+                "c": [
+                    "아빠",
+                    "할아버지",
+                    "엄마",
+                    "선생님"
+                ],
+                "a": 2,
+                "e": "Mother는 '엄마/어머니'입니다."
+            },
+            {
+                "q": "아침 인사로 'Good (   )'라고 합니다.",
+                "c": [
+                    "Morning",
+                    "Afternoon",
+                    "Evening",
+                    "Night"
+                ],
+                "a": 0,
+                "e": "아침 인사는 Good morning입니다."
+            },
+            {
+                "q": "처음 만났을 때 'Nice to (   ) you.'",
+                "c": [
+                    "meet",
+                    "meat",
+                    "miss",
+                    "make"
+                ],
+                "a": 0,
+                "e": "Nice to meet you는 '만나서 반가워요'입니다."
+            },
+            {
+                "q": "'오빠'나 '남동생'을 뜻하는 단어는?",
+                "c": [
+                    "Sister",
+                    "Father",
+                    "Mother",
+                    "Brother"
+                ],
+                "a": 3,
+                "e": "Brother는 남자 형제를 뜻합니다."
+            },
+            {
+                "q": "잠자기 전 인사로 'Good (   )'라고 합니다.",
+                "c": [
+                    "Morning",
+                    "Evening",
+                    "Night",
+                    "Day"
+                ],
+                "a": 2,
+                "e": "잘 자라는 인사는 Good night입니다."
+            },
+            {
+                "q": "'언니'나 '여동생'을 뜻하는 단어는?",
+                "c": [
+                    "Brother",
+                    "Sister",
+                    "Baby",
+                    "Cousin"
+                ],
+                "a": 1,
+                "e": "Sister는 여자 형제를 뜻합니다."
+            },
+            {
+                "q": "이름을 물을 때 'What is your (   )?'",
+                "c": [
+                    "Name",
+                    "Home",
+                    "Age",
+                    "School"
+                ],
+                "a": 0,
+                "e": "What is your name?은 '이름이 뭐니?'입니다."
+            },
+            {
+                "q": "'할아버지'를 뜻하는 단어는?",
+                "c": [
+                    "Grandmother",
+                    "Grandfather",
+                    "Uncle",
+                    "Aunt"
+                ],
+                "a": 1,
+                "e": "Grandfather는 할아버지입니다."
+            },
+            {
+                "q": "'고마워'라고 할 때 영어로?",
+                "c": [
+                    "Sorry",
+                    "Please",
+                    "Thank you",
+                    "Help me"
+                ],
+                "a": 2,
+                "e": "감사 인사는 Thank you입니다."
+            },
+            {
+                "q": "'할머니'를 뜻하는 단어는?",
+                "c": [
+                    "Grandfather",
+                    "Grandmother",
+                    "Mother",
+                    "Father"
+                ],
+                "a": 1,
+                "e": "Grandmother는 할머니입니다."
+            },
+            {
+                "q": "상대방의 안부를 물을 때 'How (   ) you?'",
+                "c": [
+                    "is",
+                    "am",
+                    "are",
+                    "do"
+                ],
+                "a": 2,
+                "e": "How are you?는 '어떻게 지내니?'입니다."
+            },
+            {
+                "q": "'미안해'라고 할 때 영어로?",
+                "c": [
+                    "I am sorry",
+                    "I am happy",
+                    "I am hungry",
+                    "I am tired"
+                ],
+                "a": 0,
+                "e": "사과할 때는 I am sorry라고 합니다."
+            },
+            {
+                "q": "'선생님'을 뜻하는 단어는?",
+                "c": [
+                    "Student",
+                    "Doctor",
+                    "Teacher",
+                    "Nurse"
+                ],
+                "a": 2,
+                "e": "Teacher는 선생님입니다."
+            },
+            {
+                "q": "'안녕(헤어질 때)'이라고 인사할 때?",
+                "c": [
+                    "Hello",
+                    "Hi",
+                    "Goodbye",
+                    "Morning"
+                ],
+                "a": 2,
+                "e": "작별 인사는 Goodbye입니다."
+            },
+            {
+                "q": "How do you say 'Hello' in Korean?",
+                "c": [
+                    "응",
+                    "안녕",
+                    "잘 가",
+                    "미안"
+                ],
+                "a": 1,
+                "e": "Hello는 만날 때 하는 인사 '안녕'입니다."
+            },
+            {
+                "q": "'친구'를 영어로 하면?",
+                "c": [
+                    "Friend",
+                    "Frient",
+                    "Finger",
+                    "Fine"
+                ],
+                "a": 0,
+                "e": "Friend는 친구입니다."
+            },
+            {
+                "q": "'아기'를 영어로 하면?",
+                "c": [
+                    "Baby",
+                    "Boy",
+                    "Girl",
+                    "Child"
+                ],
+                "a": 0,
+                "e": "Baby는 아기입니다."
+            },
+            {
+                "q": "'사랑해'를 영어로?",
+                "c": [
+                    "I hate you",
+                    "I like you",
+                    "I love you",
+                    "I want you"
+                ],
+                "a": 2,
+                "e": "I love you는 '사랑해'입니다."
+            },
+            {
+                "q": "How do you say 'Student' in Korean?",
+                "c": [
+                    "선생님",
+                    "학생",
+                    "경찰",
+                    "의사"
+                ],
+                "a": 1,
+                "e": "Student는 학생입니다."
+            }
+        ]
+    },
+    {
+        "title": "[영어 기초] 3단계: 우리 집과 학교 (Home & School)",
+        "grade": 0,
+        "preset_type": "eng_vocab",
+        "items": [
+            {
+                "q": "'학교'를 영어로 하면?",
+                "c": [
+                    "House",
+                    "School",
+                    "Store",
+                    "Park"
+                ],
+                "a": 1,
+                "e": "School은 학교입니다."
+            },
+            {
+                "q": "'책'을 영어로 하면?",
+                "c": [
+                    "Back",
+                    "Book",
+                    "Box",
+                    "Bag"
+                ],
+                "a": 1,
+                "e": "Book은 책입니다."
+            },
+            {
+                "q": "공부할 때 쓰는 '책상'은?",
+                "c": [
+                    "Table",
+                    "Chair",
+                    "Desk",
+                    "Bed"
+                ],
+                "a": 2,
+                "e": "Desk는 책상입니다."
+            },
+            {
+                "q": "앉을 때 쓰는 '의자'는?",
+                "c": [
+                    "Desk",
+                    "Bed",
+                    "Chair",
+                    "Sofa"
+                ],
+                "a": 2,
+                "e": "Chair는 의자입니다."
+            },
+            {
+                "q": "'연필'을 영어로 하면?",
+                "c": [
+                    "Pencel",
+                    "Pencil",
+                    "Pen",
+                    "Pain"
+                ],
+                "a": 1,
+                "e": "Pencil은 연필입니다."
+            },
+            {
+                "q": "How do you say 'House' in Korean?",
+                "c": [
+                    "학교",
+                    "집",
+                    "공원",
+                    "시장"
+                ],
+                "a": 1,
+                "e": "House는 집입니다."
+            },
+            {
+                "q": "'가방'을 영어로 하면?",
+                "c": [
+                    "Back",
+                    "Bag",
+                    "Big",
+                    "Bug"
+                ],
+                "a": 1,
+                "e": "Bag은 가방입니다."
+            },
+            {
+                "q": "잠을 자는 '침대'는?",
+                "c": [
+                    "Bed",
+                    "Bad",
+                    "Box",
+                    "Bus"
+                ],
+                "a": 0,
+                "e": "Bed는 침대입니다."
+            },
+            {
+                "q": "글씨를 쓰는 '펜'은?",
+                "c": [
+                    "Pain",
+                    "Pan",
+                    "Pin",
+                    "Pen"
+                ],
+                "a": 3,
+                "e": "Pen은 펜입니다."
+            },
+            {
+                "q": "'창문'을 영어로 하면?",
+                "c": [
+                    "Door",
+                    "Wall",
+                    "Window",
+                    "Floor"
+                ],
+                "a": 2,
+                "e": "Window는 창문입니다."
+            },
+            {
+                "q": "'문'을 영어로 하면?",
+                "c": [
+                    "Wall",
+                    "Floor",
+                    "Door",
+                    "Roof"
+                ],
+                "a": 2,
+                "e": "Door는 문입니다."
+            },
+            {
+                "q": "'공책'을 영어로 하면?",
+                "c": [
+                    "Notebook",
+                    "Note",
+                    "Paper",
+                    "Letter"
+                ],
+                "a": 0,
+                "e": "Notebook은 공책입니다."
+            },
+            {
+                "q": "How do you say 'Pencil case' in Korean?",
+                "c": [
+                    "가방",
+                    "책",
+                    "필통",
+                    "공책"
+                ],
+                "a": 2,
+                "e": "Pencil case는 필통입니다."
+            },
+            {
+                "q": "'방'을 뜻하는 영어 단어는?",
+                "c": [
+                    "Room",
+                    "Road",
+                    "Roof",
+                    "Round"
+                ],
+                "a": 0,
+                "e": "Room은 방입니다."
+            },
+            {
+                "q": "음식을 요리하는 '부엌'은?",
+                "c": [
+                    "Bedroom",
+                    "Kitchen",
+                    "Bathroom",
+                    "Living room"
+                ],
+                "a": 1,
+                "e": "Kitchen은 부엌입니다."
+            },
+            {
+                "q": "'화장실'을 뜻하는 영어 단어는?",
+                "c": [
+                    "Living room",
+                    "Bedroom",
+                    "Bathroom",
+                    "Library"
+                ],
+                "a": 2,
+                "e": "Bathroom은 화장실입니다."
+            },
+            {
+                "q": "'버스'를 영어로 하면?",
+                "c": [
+                    "Car",
+                    "Bus",
+                    "Taxi",
+                    "Train"
+                ],
+                "a": 1,
+                "e": "Bus는 버스입니다."
+            },
+            {
+                "q": "'컴퓨터'를 영어로 하면?",
+                "c": [
+                    "TV",
+                    "Radio",
+                    "Phone",
+                    "Computer"
+                ],
+                "a": 3,
+                "e": "Computer는 컴퓨터입니다."
+            },
+            {
+                "q": "How do you say 'Uniform' in Korean?",
+                "c": [
+                    "운동복",
+                    "교복",
+                    "잠옷",
+                    "외투"
+                ],
+                "a": 1,
+                "e": "Uniform은 제복 또는 교복을 뜻합니다."
+            },
+            {
+                "q": "'지우개'를 영어로 하면?",
+                "c": [
+                    "Eraser",
+                    "Erasor",
+                    "Erase",
+                    "Error"
+                ],
+                "a": 0,
+                "e": "Eraser는 지우개입니다."
+            }
+        ]
+    },
+    {
+        "title": "[영어 기초] 4단계: 음식과 신체 (Food & Body)",
+        "grade": 0,
+        "preset_type": "eng_vocab",
+        "items": [
+            {
+                "q": "'사과'를 영어로 하면?",
+                "c": [
+                    "Banana",
+                    "Apple",
+                    "Orange",
+                    "Grape"
+                ],
+                "a": 1,
+                "e": "Apple은 사과입니다."
+            },
+            {
+                "q": "'물'을 영어로 하면?",
+                "c": [
+                    "Milk",
+                    "Juice",
+                    "Water",
+                    "Tea"
+                ],
+                "a": 2,
+                "e": "Water는 물입니다."
+            },
+            {
+                "q": "'우유'를 영어로 하면?",
+                "c": [
+                    "Meat",
+                    "Milk",
+                    "Meal",
+                    "Main"
+                ],
+                "a": 1,
+                "e": "Milk는 우유입니다."
+            },
+            {
+                "q": "'빵'을 영어로 하면?",
+                "c": [
+                    "Cake",
+                    "Cookie",
+                    "Bread",
+                    "Rice"
+                ],
+                "a": 2,
+                "e": "Bread는 빵입니다."
+            },
+            {
+                "q": "우리 몸의 '눈'은 영어로?",
+                "c": [
+                    "Ear",
+                    "Eye",
+                    "Nose",
+                    "Mouth"
+                ],
+                "a": 1,
+                "e": "Eye는 눈입니다."
+            },
+            {
+                "q": "소리를 듣는 '귀'는 영어로?",
+                "c": [
+                    "Nose",
+                    "Eye",
+                    "Lipe",
+                    "Ear"
+                ],
+                "a": 3,
+                "e": "Ear는 귀입니다."
+            },
+            {
+                "q": "냄새를 맡는 '코'는 영어로?",
+                "c": [
+                    "Nose",
+                    "Mouse",
+                    "Mouth",
+                    "Hand"
+                ],
+                "a": 0,
+                "e": "Nose는 코입니다."
+            },
+            {
+                "q": "말을 하는 '입'은 영어로?",
+                "c": [
+                    "Mouth",
+                    "Month",
+                    "Mouse",
+                    "Money"
+                ],
+                "a": 0,
+                "e": "Mouth는 입입니다."
+            },
+            {
+                "q": "'머리'를 영어로 하면?",
+                "c": [
+                    "Hair",
+                    "Head",
+                    "Hand",
+                    "Heart"
+                ],
+                "a": 1,
+                "e": "Head는 머리입니다."
+            },
+            {
+                "q": "'손'을 영어로 하면?",
+                "c": [
+                    "Foot",
+                    "Leg",
+                    "Hand",
+                    "Arm"
+                ],
+                "a": 2,
+                "e": "Hand는 손입니다."
+            },
+            {
+                "q": "'발'을 영어로 하면?",
+                "c": [
+                    "Hand",
+                    "Foot",
+                    "Arm",
+                    "Leg"
+                ],
+                "a": 1,
+                "e": "Foot은 발입니다."
+            },
+            {
+                "q": "'치킨'은 영어로 무엇일까요?",
+                "c": [
+                    "Chicken",
+                    "Cow",
+                    "Pig",
+                    "Fish"
+                ],
+                "a": 0,
+                "e": "Chicken은 닭 또는 닭고기(치킨)입니다."
+            },
+            {
+                "q": "'달걀'을 영어로 하면?",
+                "c": [
+                    "Egg",
+                    "Eat",
+                    "End",
+                    "Eye"
+                ],
+                "a": 0,
+                "e": "Egg는 달걀입니다."
+            },
+            {
+                "q": "What is 'Rice' in Korean?",
+                "c": [
+                    "국수",
+                    "빵",
+                    "밥",
+                    "우유"
+                ],
+                "a": 2,
+                "e": "Rice는 쌀 또는 밥입니다."
+            },
+            {
+                "q": "What is 'Juice' in Korean?",
+                "c": [
+                    "차",
+                    "커피",
+                    "물",
+                    "주스"
+                ],
+                "a": 3,
+                "e": "Juice는 주스입니다."
+            },
+            {
+                "q": "'피자'를 영어로 하면?",
+                "c": [
+                    "Pasta",
+                    "Pizza",
+                    "Hamburger",
+                    "Salad"
+                ],
+                "a": 1,
+                "e": "Pizza는 피자입니다."
+            },
+            {
+                "q": "'바나나'를 영어로 쓰면?",
+                "c": [
+                    "Bananna",
+                    "Banana",
+                    "Bannana",
+                    "Bananas"
+                ],
+                "a": 1,
+                "e": "Banana는 바나나입니다."
+            },
+            {
+                "q": "우리 몸의 '어깨'는?",
+                "c": [
+                    "Shoulder",
+                    "Should",
+                    "Show",
+                    "Shadow"
+                ],
+                "a": 0,
+                "e": "Shoulder는 어깨입니다."
+            },
+            {
+                "q": "우리 몸의 '다리'는?",
+                "c": [
+                    "Arm",
+                    "Hand",
+                    "Foot",
+                    "Leg"
+                ],
+                "a": 3,
+                "e": "Leg는 다리입니다."
+            },
+            {
+                "q": "음식을 먹는 '이(치아)'는?",
+                "c": [
+                    "Tooth",
+                    "Truth",
+                    "Tree",
+                    "Tall"
+                ],
+                "a": 0,
+                "e": "Tooth는 치아입니다. (복수형은 Teeth)"
+            }
+        ]
+    },
+    {
+        "title": "[영어 기초] 5단계: 동물과 자연 (Animals & Nature)",
+        "grade": 0,
+        "preset_type": "eng_vocab",
+        "items": [
+            {
+                "q": "'개'를 영어로 하면?",
+                "c": [
+                    "Cat",
+                    "Cow",
+                    "Dog",
+                    "Duck"
+                ],
+                "a": 2,
+                "e": "Dog는 개입니다."
+            },
+            {
+                "q": "'고양이'를 영어로 하면?",
+                "c": [
+                    "Cat",
+                    "Cut",
+                    "Cake",
+                    "Can"
+                ],
+                "a": 0,
+                "e": "Cat은 고양이입니다."
+            },
+            {
+                "q": "'새'를 영어로 하면?",
+                "c": [
+                    "Bear",
+                    "Bird",
+                    "Bug",
+                    "Bus"
+                ],
+                "a": 1,
+                "e": "Bird는 새입니다."
+            },
+            {
+                "q": "'물고기'를 영어로 하면?",
+                "c": [
+                    "Dish",
+                    "Fish",
+                    "Five",
+                    "Fast"
+                ],
+                "a": 1,
+                "e": "Fish는 물고기입니다."
+            },
+            {
+                "q": "How do you say 'Sun' in Korean?",
+                "c": [
+                    "달",
+                    "별",
+                    "해",
+                    "구름"
+                ],
+                "a": 2,
+                "e": "Sun은 태양(해)입니다."
+            },
+            {
+                "q": "밤에 뜨는 '달'은 영어로?",
+                "c": [
+                    "Star",
+                    "Sun",
+                    "Moon",
+                    "Sky"
+                ],
+                "a": 2,
+                "e": "Moon은 달입니다."
+            },
+            {
+                "q": "밤하늘의 '별'은 영어로?",
+                "c": [
+                    "Start",
+                    "Star",
+                    "Stand",
+                    "Stay"
+                ],
+                "a": 1,
+                "e": "Star는 별입니다."
+            },
+            {
+                "q": "'나무'를 영어로 하면?",
+                "c": [
+                    "Tree",
+                    "True",
+                    "Try",
+                    "Train"
+                ],
+                "a": 0,
+                "e": "Tree는 나무입니다."
+            },
+            {
+                "q": "'꽃'을 영어로 하면?",
+                "c": [
+                    "Flour",
+                    "Floor",
+                    "Flow",
+                    "Flower"
+                ],
+                "a": 3,
+                "e": "Flower는 꽃입니다."
+            },
+            {
+                "q": "'산'을 영어로 하면?",
+                "c": [
+                    "Sea",
+                    "River",
+                    "Mountain",
+                    "Park"
+                ],
+                "a": 2,
+                "e": "Mountain은 산입니다."
+            },
+            {
+                "q": "'바다'를 영어로 하면?",
+                "c": [
+                    "See",
+                    "Sky",
+                    "Sea",
+                    "Sand"
+                ],
+                "a": 2,
+                "e": "Sea는 바다입니다."
+            },
+            {
+                "q": "'사자'를 영어로 하면?",
+                "c": [
+                    "Lion",
+                    "Tiger",
+                    "Bear",
+                    "Wolf"
+                ],
+                "a": 0,
+                "e": "Lion은 사자입니다."
+            },
+            {
+                "q": "'호랑이'를 영어로 하면?",
+                "c": [
+                    "Tiger",
+                    "Lion",
+                    "Bear",
+                    "Elephant"
+                ],
+                "a": 0,
+                "e": "Tiger는 호랑이입니다."
+            },
+            {
+                "q": "'곰'을 영어로 하면?",
+                "c": [
+                    "Beer",
+                    "Bear",
+                    "Bird",
+                    "Bean"
+                ],
+                "a": 1,
+                "e": "Bear는 곰입니다."
+            },
+            {
+                "q": "'하늘'을 영어로 하면?",
+                "c": [
+                    "Blue",
+                    "Sky",
+                    "Cloud",
+                    "Air"
+                ],
+                "a": 1,
+                "e": "Sky는 하늘입니다."
+            },
+            {
+                "q": "'코끼리'를 영어로 하면?",
+                "c": [
+                    "Elephant",
+                    "Elf",
+                    "Element",
+                    "Energy"
+                ],
+                "a": 0,
+                "e": "Elephant는 코끼리입니다."
+            },
+            {
+                "q": "How do you say 'Rain' in Korean?",
+                "c": [
+                    "눈",
+                    "비",
+                    "바람",
+                    "안개"
+                ],
+                "a": 1,
+                "e": "Rain은 비입니다."
+            },
+            {
+                "q": "How do you say 'Snow' in Korean?",
+                "c": [
+                    "비",
+                    "구름",
+                    "눈",
+                    "천둥"
+                ],
+                "a": 2,
+                "e": "Snow는 눈입니다."
+            },
+            {
+                "q": "'원숭이'를 영어로 하면?",
+                "c": [
+                    "Money",
+                    "Many",
+                    "Monkey",
+                    "Mouse"
+                ],
+                "a": 2,
+                "e": "Monkey는 원숭이입니다."
+            },
+            {
+                "q": "'토끼'를 영어로 하면?",
+                "c": [
+                    "Robot",
+                    "Rabbit",
+                    "Race",
+                    "Road"
+                ],
+                "a": 1,
+                "e": "Rabbit은 토끼입니다."
+            }
+        ]
+    }
+]
