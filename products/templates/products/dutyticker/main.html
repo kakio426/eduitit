@@ -427,12 +427,39 @@
     }
 
     #mainStudentGrid.dt-student-grid-fit-25>div>span {
-        font-size: clamp(0.9rem, 0.86rem + 0.16vw, 1.02rem);
+        font-size: clamp(1.02rem, 0.96rem + 0.24vw, 1.18rem);
         line-height: 1.2;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low>div>div.w-9.h-9 {
+        width: 2.4rem;
+        height: 2.4rem;
+        font-size: 1rem;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid>div>div.w-9.h-9 {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: 0.92rem;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low>div>span {
+        font-size: clamp(1.42rem, 1.22rem + 0.56vw, 1.95rem);
+        line-height: 1.08;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid>div>span {
+        font-size: clamp(1.2rem, 1.08rem + 0.34vw, 1.48rem);
+        line-height: 1.14;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high>div>span {
+        font-size: clamp(1.04rem, 0.98rem + 0.22vw, 1.24rem);
+        line-height: 1.16;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25>div>button {
@@ -444,11 +471,11 @@
 
     #headerScheduleStrip {
         align-items: center;
-        gap: 0.45rem;
-        max-width: min(64vw, 760px);
+        gap: 0.58rem;
+        max-width: min(74vw, 980px);
         overflow-x: auto;
         overflow-y: hidden;
-        padding: 0.15rem 0.2rem;
+        padding: 0.2rem 0.24rem;
         white-space: nowrap;
         scrollbar-width: thin;
     }
@@ -456,14 +483,14 @@
     .dt-header-schedule-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.32rem;
-        padding: 0.28rem 0.62rem;
+        gap: 0.42rem;
+        padding: 0.36rem 0.78rem;
         border-radius: 9999px;
         background: rgba(15, 23, 42, 0.58);
         border: 1px solid rgba(148, 163, 184, 0.24);
-        font-size: clamp(0.78rem, 0.72rem + 0.18vw, 0.95rem);
+        font-size: clamp(0.98rem, 0.92rem + 0.22vw, 1.18rem);
         font-weight: 800;
-        line-height: 1.15;
+        line-height: 1.2;
         white-space: nowrap;
     }
 
@@ -482,9 +509,9 @@
 
     .dt-header-schedule-empty {
         color: rgba(148, 163, 184, 0.75);
-        font-size: 0.8rem;
+        font-size: 0.98rem;
         font-weight: 700;
-        padding-inline: 0.35rem;
+        padding-inline: 0.5rem;
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item,
@@ -528,46 +555,53 @@
         letter-spacing: 0;
     }
 
-    .dt-notice-card-empty {
-        min-height: 14rem;
-    }
-
-    .dt-notice-card-empty #randomPickerPanel {
-        margin-top: 0.2rem;
-    }
-
     #timerControls .dt-touch-action {
         touch-action: manipulation;
     }
 
     #bgmTrackRail {
-        max-width: 10.5rem;
+        position: absolute;
+        top: calc(100% + 0.45rem);
+        right: 0;
+        width: min(22rem, 72vw);
+        max-height: 17.5rem;
+        display: none;
+        flex-direction: column;
+        gap: 0.32rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.6rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.96);
+        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
+        z-index: 60;
+        scrollbar-width: thin;
+    }
+
+    #bgmTrackRail.is-open {
         display: flex;
-        align-items: center;
-        gap: 0.22rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        white-space: nowrap;
-        padding-bottom: 0.08rem;
     }
 
     .dt-bgm-chip {
-        display: inline-flex;
+        display: flex;
+        width: 100%;
         align-items: center;
-        gap: 0.25rem;
-        padding: 0.16rem 0.3rem;
-        border-radius: 0.45rem;
+        gap: 0.4rem;
+        padding: 0.34rem 0.46rem;
+        border-radius: 0.58rem;
         border: 1px solid rgba(148, 163, 184, 0.28);
         background: rgba(15, 23, 42, 0.52);
-        font-size: 0.6rem;
+        font-size: 0.74rem;
         font-weight: 800;
         color: #cbd5e1;
     }
 
     .dt-bgm-chip input[type="checkbox"] {
         accent-color: #6366f1;
-        width: 0.7rem;
-        height: 0.7rem;
+        width: 0.92rem;
+        height: 0.92rem;
+        margin: 0;
     }
 
     .dt-bgm-chip-btn {
@@ -577,7 +611,13 @@
         font: inherit;
         cursor: pointer;
         padding: 0;
-        line-height: 1.1;
+        line-height: 1.2;
+        flex: 1;
+        text-align: left;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .dt-bgm-chip.is-current {
@@ -759,7 +799,7 @@
                 <!-- Schedule Strip -->
                 <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
                 <div id="headerScheduleStrip"
-                    class="hidden md:flex items-center min-w-0 max-w-[280px] lg:max-w-[560px] xl:max-w-[760px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                    class="hidden md:flex items-center min-w-0 max-w-[420px] lg:max-w-[700px] xl:max-w-[980px] overflow-x-auto overflow-y-hidden custom-scrollbar">
                     <!-- JS Populated -->
                 </div>
                 <div class="h-4 w-px bg-slate-700"></div>
@@ -794,7 +834,7 @@
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
                 <div id="bgmControls"
-                    class="hidden lg:flex items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
+                    class="hidden lg:flex relative items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
                     <button id="bgmToggleBtn" type="button" onclick="window.dtApp.toggleBgm()"
                         class="h-7 px-2 rounded-md bg-slate-700/70 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-indigo-600 hover:text-white transition"
                         title="배경음악 켜기/끄기">
@@ -815,7 +855,12 @@
                         title="다음 곡">
                         ▶
                     </button>
-                    <div id="bgmTrackRail" class="flex custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
+                    <button id="bgmTrackPanelBtn" type="button" onclick="window.dtApp.toggleBgmTrackPanel()"
+                        class="h-7 px-2 rounded-md bg-slate-700/60 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
+                        title="배경음악 목록 열기/닫기">
+                        목록
+                    </button>
+                    <div id="bgmTrackRail" class="custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
                         <!-- JS Populated -->
                     </div>
                 </div>
@@ -988,8 +1033,8 @@
 
             <!-- 3. Today's Roles -->
             <div
-                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
-                <div class="flex justify-between items-center mb-6 px-2">
+                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
+                <div class="flex justify-between items-center mb-4 px-1">
                     <h3 class="text-2xl font-black text-white flex items-center gap-2">
                         <span
                             class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
@@ -1007,45 +1052,26 @@
                     </div>
                 </div>
 
-                <div id="mainRoleList" class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
+                <div id="mainRoleList" class="flex-1 flex flex-col gap-2.5 overflow-y-auto custom-scrollbar pr-2">
                     <div class="text-center text-sm font-semibold text-slate-500 py-8">
                         역할 데이터를 불러오는 중입니다.
                     </div>
                 </div>
             </div>
 
-            <!-- 4. Notices / Broadcast -->
-            <div id="noticeCard"
-                class="dt-notice-card dt-notice-card-empty bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[15rem] flex flex-col shadow-2xl">
-                <div class="flex justify-between items-start mb-3 px-2">
-                    <h3 class="text-lg font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
-                        <i class="fa-regular fa-bell text-yellow-400"></i>
-                        알림사항
+            <!-- 4. Random Picker -->
+            <div id="randomPickerPanel"
+                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[15rem] flex flex-col shadow-2xl">
+                <div class="flex items-center justify-between gap-2 mb-3 px-1">
+                    <h3 class="text-xl font-black text-white flex items-center gap-2">
+                        <i class="fa-solid fa-shuffle text-indigo-300"></i>
+                        랜덤 뽑기
                     </h3>
-                    <button id="broadcastToggleBtn"
-                        class="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
-                        onclick="window.dtApp.openBroadcastModal()">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
+                    <span id="randomDrawMeta"
+                        class="text-[12px] uppercase tracking-[0.16em] font-extrabold text-indigo-300">0 / 0</span>
                 </div>
 
-                <div id="noticeMessageWrap" class="px-2 hidden">
-                    <p class="text-slate-400 text-sm font-bold leading-relaxed whitespace-pre-line line-clamp-2"
-                        id="dashboardBroadcastText"></p>
-                </div>
-
-                <div id="noticeDivider" class="hidden h-px bg-slate-700/60 my-3"></div>
-
-                <div id="randomPickerPanel" class="flex-1 min-h-0 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex flex-col">
-                    <div class="flex items-center justify-between gap-2 mb-2">
-                        <h4 class="text-base font-black text-indigo-200 flex items-center gap-2">
-                            <i class="fa-solid fa-shuffle text-indigo-300"></i>
-                            랜덤 뽑기
-                        </h4>
-                        <span id="randomDrawMeta"
-                            class="text-[11px] uppercase tracking-[0.16em] font-extrabold text-indigo-300">0 / 0</span>
-                    </div>
-
+                <div class="flex-1 min-h-0 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex flex-col">
                     <div class="flex-1 flex items-center justify-center text-center px-1">
                         <p id="randomDrawName" class="font-black text-white break-keep is-empty">
                             학생이 없어요

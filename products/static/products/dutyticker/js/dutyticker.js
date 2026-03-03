@@ -36,6 +36,9 @@ class DutyTickerManager {
         this.bgmFadeRaf = null;
         this.bgmStorageKey = 'dt-bgm-state-v1';
         this.boundBgmUnlock = null;
+        this.bgmTrackPanelOpen = false;
+        this.boundBgmPanelOutsideClick = null;
+        this.boundBgmPanelEscape = null;
         this.missionFontSizeOrder = ['sm', 'md', 'lg'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
@@ -458,31 +461,31 @@ class DutyTickerManager {
             const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
             const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
             const spotlightBadge = isSpotlightRole
-                ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-indigo-500/30 text-indigo-100 border border-indigo-300/40">집중</span>'
+                ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-black bg-indigo-500/30 text-indigo-100 border border-indigo-300/40">집중</span>'
                 : '';
             const statusBadge = isCompleted
-                ? '<span class="text-emerald-400 text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
-                : '<span class="text-slate-500 text-[10px] font-black uppercase tracking-wider">진행중</span>';
+                ? '<span class="text-emerald-400 text-[11px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
+                : '<span class="text-slate-400 text-[11px] font-black uppercase tracking-wider">진행중</span>';
             const assigneeToneClass = isCompleted
                 ? 'text-slate-300 bg-slate-700/40 border-slate-600/50'
                 : 'text-indigo-100 bg-indigo-500/20 border-indigo-400/30';
             return `
-                <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
+                <div class="flex items-center p-3.5 lg:p-3 bg-slate-800/30 backdrop-blur-md rounded-[1.35rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
                     role="button"
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
                     onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.openStudentModal(${roleId}); }">
                     <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center gap-3 mb-2">
+                        <div class="flex justify-between items-center gap-2 mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
-                                <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${safeTimeSlot}</p>
+                                <p class="text-[11px] text-slate-400 font-extrabold tracking-[0.16em]">${safeTimeSlot}</p>
                                 ${spotlightBadge}
                             </div>
                             ${statusBadge}
                         </div>
-                        <div class="flex justify-between items-center gap-3 text-xl font-black text-slate-100">
-                            <p class="text-xl lg:text-2xl truncate ${isCompleted ? 'opacity-40 line-through' : ''}">${safeRoleName}</p>
-                            <div class="text-base lg:text-lg ${assigneeToneClass} px-3.5 py-1.5 rounded-xl border shrink-0">${safeAssignee}</div>
+                        <div class="flex justify-between items-center gap-2 text-xl font-black text-slate-100">
+                            <p class="text-[1.55rem] lg:text-[1.65rem] leading-tight truncate ${isCompleted ? 'opacity-40 line-through' : ''}">${safeRoleName}</p>
+                            <div class="text-lg lg:text-xl ${assigneeToneClass} px-3.5 py-1 rounded-xl border shrink-0 leading-tight">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -499,6 +502,12 @@ class DutyTickerManager {
         const shouldFitWithoutScroll = isDesktop && this.students.length > 0 && this.students.length <= 25;
 
         grid.classList.toggle('dt-student-grid-fit-25', shouldFitWithoutScroll);
+        grid.classList.remove('dt-student-density-low', 'dt-student-density-mid', 'dt-student-density-high');
+        if (shouldFitWithoutScroll) {
+            if (this.students.length <= 12) grid.classList.add('dt-student-density-low');
+            else if (this.students.length <= 18) grid.classList.add('dt-student-density-mid');
+            else grid.classList.add('dt-student-density-high');
+        }
         grid.classList.toggle('overflow-y-auto', !shouldFitWithoutScroll);
         grid.classList.toggle('pr-2', !shouldFitWithoutScroll);
         grid.classList.toggle('overflow-y-hidden', shouldFitWithoutScroll);
@@ -545,7 +554,7 @@ class DutyTickerManager {
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
                         ${safeStudentNumber}
                     </div>
-                    <span class="text-sm font-bold ${isDone ? 'text-emerald-400' : 'text-slate-300'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
+                    <span class="text-base font-bold ${isDone ? 'text-emerald-300' : 'text-slate-200'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
@@ -1424,9 +1433,35 @@ class DutyTickerManager {
             });
         }
 
+        if (!this.boundBgmPanelOutsideClick) {
+            this.boundBgmPanelOutsideClick = (event) => {
+                const controls = document.getElementById('bgmControls');
+                if (!controls || !(event.target instanceof Node)) return;
+                if (controls.contains(event.target)) return;
+                this.toggleBgmTrackPanel(false);
+            };
+            document.addEventListener('click', this.boundBgmPanelOutsideClick, true);
+        }
+
+        if (!this.boundBgmPanelEscape) {
+            this.boundBgmPanelEscape = (event) => {
+                if (event.key !== 'Escape') return;
+                this.toggleBgmTrackPanel(false);
+            };
+            document.addEventListener('keydown', this.boundBgmPanelEscape);
+        }
+
         this.renderBgmTrackRail();
         this.updateBgmUI();
         this.ensureBgmUnlockListener();
+    }
+
+    toggleBgmTrackPanel(forceOpen = null) {
+        const rail = document.getElementById('bgmTrackRail');
+        const shouldOpen = forceOpen === null ? !this.bgmTrackPanelOpen : !!forceOpen;
+        this.bgmTrackPanelOpen = shouldOpen;
+        if (!rail) return;
+        rail.classList.toggle('is-open', shouldOpen);
     }
 
     ensureBgmUnlockListener() {
@@ -1526,6 +1561,7 @@ class DutyTickerManager {
         const loopBtn = document.getElementById('bgmLoopModeBtn');
         const prevBtn = document.getElementById('bgmPrevBtn');
         const nextBtn = document.getElementById('bgmNextBtn');
+        const panelBtn = document.getElementById('bgmTrackPanelBtn');
 
         const playableCount = this.getPlayableBgmTrackKeys().length;
         const hasTracks = this.bgmTrackOrder.length > 0;
@@ -1562,6 +1598,15 @@ class DutyTickerManager {
             nextBtn.classList.toggle('opacity-60', playableCount <= 1);
             nextBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
         }
+
+        if (panelBtn) {
+            panelBtn.disabled = !hasTracks;
+            panelBtn.textContent = `목록 ${playableCount}/${this.bgmTrackOrder.length}`;
+            panelBtn.classList.toggle('opacity-60', !hasTracks);
+            panelBtn.classList.toggle('cursor-not-allowed', !hasTracks);
+        }
+
+        if (!hasTracks) this.toggleBgmTrackPanel(false);
 
         this.renderBgmTrackRail();
     }
