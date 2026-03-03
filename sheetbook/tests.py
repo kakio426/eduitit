@@ -1,8 +1,10 @@
+from argparse import Namespace
 from datetime import date, timedelta
 import csv
 from io import BytesIO, StringIO
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import call, patch
@@ -48,6 +50,9 @@ from scripts.run_sheetbook_sample_gap_summary import (
 )
 from scripts.run_sheetbook_release_signoff_log import (
     _build_markdown as _build_release_signoff_log_markdown,
+)
+from scripts.run_sheetbook_guarded_commit import (
+    run as _run_sheetbook_guarded_commit,
 )
 from scripts.run_sheetbook_pilot_log_snapshot import (
     _build_markdown as _build_pilot_log_markdown,
@@ -4413,6 +4418,98 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
             markdown,
         )
         self.assertIn("- `pilot_hold_for_beta`: True", markdown)
+
+
+class SheetbookGuardedCommitScriptTests(SimpleTestCase):
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    def test_run_blocks_on_branch_mismatch(self, mock_current_branch, mock_repo_root):
+        mock_repo_root.return_value = Path("C:/repo")
+        mock_current_branch.return_value = "hotfix/main-ops"
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="",
+                allow_empty=False,
+                guard_only=True,
+                push=False,
+                remote="origin",
+            )
+        )
+
+        self.assertEqual(code, 2)
+
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    def test_run_guard_only_passes(self, mock_run_guard, mock_staged_files, mock_current_branch, mock_repo_root):
+        mock_repo_root.return_value = Path("C:/repo")
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="",
+                allow_empty=False,
+                guard_only=True,
+                push=False,
+                remote="origin",
+            )
+        )
+
+        self.assertEqual(code, 0)
+        mock_run_guard.assert_called_once_with(Path("C:/repo"), "feature/sheetbook")
+
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_commit_and_push_when_guard_passes(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): add helper",
+                allow_empty=False,
+                guard_only=False,
+                push=True,
+                remote="origin",
+            )
+        )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            mock_run.call_args_list[0].args,
+            (root, ["git", "commit", "-m", "feat(sheetbook): add helper"]),
+        )
+        self.assertEqual(
+            mock_run.call_args_list[1].args,
+            (root, ["git", "push", "origin", "feature/sheetbook"]),
+        )
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):

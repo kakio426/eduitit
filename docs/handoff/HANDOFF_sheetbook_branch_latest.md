@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 13:17)
+Status: Working branch handoff (2026-03-03 13:21)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -79,6 +79,7 @@ Status: Working branch handoff (2026-03-03 13:17)
     - `python scripts/run_sheetbook_guarded_commit.py --guard-only`
     - `python scripts/run_sheetbook_guarded_commit.py -m "feat(sheetbook): ..."`
     - 문서: `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+    - 테스트: `SheetbookGuardedCommitScriptTests` 추가
   - 로컬 리허설용 metric seed 스크립트 추가:
     - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
 

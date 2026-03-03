@@ -5261,9 +5261,11 @@ Status: Working handoff (2026-02-27 EOD)
 ### B. 검증
 - `python scripts/run_sheetbook_guarded_commit.py --help`
 - `python scripts/run_sheetbook_guarded_commit.py --guard-only` (staged가 있을 때)
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
 
 결과:
 - 커밋 전 경로 가드가 누락되지 않도록 명령 단위 안전장치 확보.
+- guarded commit 스크립트 핵심 분기(브랜치 차단/guard-only/commit+push) 테스트 통과.
 
 ### C. 커밋/원격 반영
 - `13d42e6` `feat(sheetbook): add guarded commit helper workflow`
