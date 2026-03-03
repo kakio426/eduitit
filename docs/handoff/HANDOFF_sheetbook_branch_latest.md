@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 23:18)
+Status: Working branch handoff (2026-03-03 23:21)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 23:18)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `8e32ecc` (`fix(sheetbook): treat -1 rehearsal action count as valid auto mode`)
+- latest backup commit: `8968097` (`fix(sheetbook): preserve auto action mode in rehearsal collect step`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
