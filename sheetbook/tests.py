@@ -5906,14 +5906,32 @@ class SheetbookPilotCollectScriptTests(TestCase):
         self.assertFalse(used_fallback)
 
     def test_resolve_action_count_uses_auto_when_negative_or_invalid(self):
-        self.assertEqual(_resolve_action_count(action_count=-1, create_count=5), 3)
-        self.assertEqual(_resolve_action_count(action_count=-3, create_count=2), 2)
-        self.assertEqual(_resolve_action_count(action_count="x", create_count=4), 3)
-        self.assertEqual(_resolve_action_count(action_count=None, create_count=1), 1)
+        self.assertEqual(
+            _resolve_action_count(action_count=-1, create_count=5),
+            (3, "auto", False),
+        )
+        self.assertEqual(
+            _resolve_action_count(action_count=-3, create_count=2),
+            (2, "auto", True),
+        )
+        self.assertEqual(
+            _resolve_action_count(action_count="x", create_count=4),
+            (3, "auto", True),
+        )
+        self.assertEqual(
+            _resolve_action_count(action_count=None, create_count=1),
+            (1, "auto", False),
+        )
 
     def test_resolve_action_count_respects_explicit_nonnegative_value(self):
-        self.assertEqual(_resolve_action_count(action_count=0, create_count=5), 0)
-        self.assertEqual(_resolve_action_count(action_count=2, create_count=5), 2)
+        self.assertEqual(
+            _resolve_action_count(action_count=0, create_count=5),
+            (0, "explicit", False),
+        )
+        self.assertEqual(
+            _resolve_action_count(action_count=2, create_count=5),
+            (2, "explicit", False),
+        )
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
