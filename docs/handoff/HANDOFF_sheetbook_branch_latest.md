@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 12:38)
+Status: Working branch handoff (2026-03-03 12:50)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -83,6 +83,20 @@ Status: Working branch handoff (2026-03-03 12:38)
   - `archive_next_step`: `continue_monitoring`
 - 주의:
   - 위 결과는 seed metric 이벤트 기반의 로컬 리허설 결과이며, 실제 운영 트래픽 기반 판정과 분리해서 해석해야 함.
+
+## 1-4) 리허설 정리/복구 (clear-only)
+
+- 실행:
+  - `python scripts/run_sheetbook_seed_metric_samples.py --clear-only`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+- 정리 결과:
+  - 제거된 seed 이벤트: `18`
+  - 현재 기준 상태:
+    - `readiness_status`: `HOLD`
+    - `decision`: `GO` (조건부 베타)
+    - `sample_gap_blockers`: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+- 의미:
+  - 로컬 리허설 데이터는 제거되었고, 스냅샷은 다시 비리허설 상태로 복구됨.
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영

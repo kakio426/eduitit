@@ -124,6 +124,13 @@ def _seed_metric_events(
     return created
 
 
+def _clear_seed_events() -> int:
+    from sheetbook.models import SheetbookMetricEvent
+
+    removed, _ = SheetbookMetricEvent.objects.filter(metadata__seeded_by=SEED_TAG).delete()
+    return int(removed)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -157,17 +164,36 @@ def main() -> int:
         default=False,
         help="기존 seed 이벤트(SEED_TAG)를 먼저 삭제할지 여부. 기본 False",
     )
+    parser.add_argument(
+        "--clear-only",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="seed 이벤트를 삭제만 하고 신규 생성은 생략할지 여부. 기본 False",
+    )
     args = parser.parse_args()
 
     _setup_django()
 
-    from sheetbook.models import SheetbookMetricEvent
+    removed = 0
+    if bool(args.clear_seeded) or bool(args.clear_only):
+        removed = _clear_seed_events()
+
+    if bool(args.clear_only):
+        result = {
+            "mode": "clear_only",
+            "seed_tag": SEED_TAG,
+            "removed_seed_events": int(removed),
+            "created": {
+                "workspace_home_opened": 0,
+                "sheetbook_created": 0,
+                "action_execute_requested": 0,
+                "sheetbook_archive_bulk_updated": 0,
+            },
+        }
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
 
     user = _ensure_seed_user(username=str(args.username or "").strip(), email=str(args.email or "").strip())
-
-    removed = 0
-    if bool(args.clear_seeded):
-        removed, _ = SheetbookMetricEvent.objects.filter(metadata__seeded_by=SEED_TAG).delete()
 
     created = _seed_metric_events(
         user=user,
@@ -178,6 +204,7 @@ def main() -> int:
     )
 
     result = {
+        "mode": "seed",
         "seed_tag": SEED_TAG,
         "removed_seed_events": int(removed),
         "seed_user_id": int(user.id),

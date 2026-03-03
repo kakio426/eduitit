@@ -18,7 +18,7 @@
   - `docs/handoff/sheetbook_release_readiness_latest.json`
   - `docs/handoff/sheetbook_manual_signoff_latest.json`
   - `docs/handoff/sheetbook_release_decision_latest.json`
-- `overall.status`: PASS
+- `overall.status`: HOLD
 - `blocking_reasons`: (없음)
 - `manual_pending`: (없음)
 - `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff
@@ -44,5 +44,5 @@
 
 - decision: `GO`
 - owner: sheetbook-release
-- next_action: staging/prod 실계정 점검
+- next_action: pilot 표본 보강 + 상태 재판정
 - due_date: 2026-03-04

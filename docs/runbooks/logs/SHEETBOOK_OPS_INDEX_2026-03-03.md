@@ -2,10 +2,10 @@
 
 - overall: `GO`
 - decision: `GO`
-- readiness_status: `PASS`
+- readiness_status: `HOLD`
 - manual_pending: (없음)
-- sample_gap_blockers: (없음)
-- archive_next_step: `continue_monitoring`
+- sample_gap_blockers: pilot_home_opened_gap:5, pilot_create_gap:5, archive_event_gap:5
+- archive_next_step: `collect_more_samples`
 - consent_freeze_status: `PASS`
 - consent_freeze_reasons: (없음)
 
@@ -19,6 +19,8 @@
 - ops_index: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## Next Actions
-- [daily_start] 현재 상태 유지, 정기적으로 bundle 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14`
-- [sample_gap] 표본 부족 없음, 주기적으로 gap summary 확인: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- [daily_start] 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- [sample_gap] 파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_release_readiness.py --days 14`
+- [sample_gap] 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+- [sample_gap] 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 - [decision] 게이트 상태 최신화 후 판정 재생성: `python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py`

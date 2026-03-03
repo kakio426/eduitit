@@ -55,6 +55,7 @@ from scripts.run_sheetbook_pilot_log_snapshot import (
 )
 from scripts.run_sheetbook_seed_metric_samples import (
     SEED_TAG as SHEETBOOK_METRIC_SEED_TAG,
+    _clear_seed_events,
     _seed_metric_events,
 )
 from sheetbook.models import (
@@ -4844,6 +4845,31 @@ class SheetbookSeedMetricSamplesScriptTests(TestCase):
                 str((row or {}).get("seeded_by") or "") == SHEETBOOK_METRIC_SEED_TAG
                 for row in create_metadata
             )
+        )
+
+    def test_clear_seed_events_removes_only_seed_tagged_events(self):
+        SheetbookMetricEvent.objects.create(
+            event_name="workspace_home_opened",
+            user=self.user,
+            metadata={"seeded_by": SHEETBOOK_METRIC_SEED_TAG},
+        )
+        SheetbookMetricEvent.objects.create(
+            event_name="sheetbook_created",
+            user=self.user,
+            metadata={"seeded_by": SHEETBOOK_METRIC_SEED_TAG},
+        )
+        SheetbookMetricEvent.objects.create(
+            event_name="workspace_home_opened",
+            user=self.user,
+            metadata={"seeded_by": "another_seed_tag"},
+        )
+
+        removed = _clear_seed_events()
+        self.assertEqual(removed, 2)
+        self.assertEqual(SheetbookMetricEvent.objects.count(), 1)
+        self.assertEqual(
+            SheetbookMetricEvent.objects.first().metadata.get("seeded_by"),
+            "another_seed_tag",
         )
 
 

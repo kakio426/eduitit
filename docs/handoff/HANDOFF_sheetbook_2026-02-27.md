@@ -5125,3 +5125,26 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 주의
 - 본 섹션 결과는 로컬 seed metric 이벤트 기반 리허설 결과로,
   실제 운영 트래픽 기반의 release 판정과 동일시하지 않음.
+
+---
+
+### 0-139. 2026-03-03 리허설 정리 (clear-only) + 상태 복구
+
+### A. 실행 요약
+- 실행 명령:
+  - `python scripts/run_sheetbook_seed_metric_samples.py --clear-only`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+- clear 결과:
+  - `removed_seed_events=18`
+  - 신규 생성 이벤트 없음(`created` 전부 0)
+
+### B. 복구 후 상태
+- `docs/handoff/sheetbook_release_readiness_latest.json`
+  - `overall.status=HOLD` (pilot 표본 부족 복귀)
+- `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - `blockers`: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+- `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `decision=GO`, `readiness_status=HOLD`, `sample_gap_blockers` 재노출
+
+### C. 의미
+- 로컬 리허설 시드 데이터가 제거되어, 일상 운영 baseline 상태로 다시 복원됨.
