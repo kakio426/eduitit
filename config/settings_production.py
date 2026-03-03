@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'chess.apps.ChessConfig',
     'janggi.apps.JanggiConfig',
     'fairy_games.apps.FairyGamesConfig',
+    'reflex_game.apps.ReflexGameConfig',
     'ppobgi.apps.PpobgiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',

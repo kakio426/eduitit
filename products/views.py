@@ -104,6 +104,12 @@ def _student_games_catalog():
             "href": reverse("fairy_games:play", kwargs={"variant": "breakthrough"}),
         },
         {
+            "emoji": "⚡",
+            "title": "탭 순발력 챌린지",
+            "description": "신호 뒤 가장 빠르게 탭해 반응속도를 겨룹니다.",
+            "href": reverse("reflex_game:main"),
+        },
+        {
             "emoji": "🎲",
             "title": "교실 윷놀이",
             "description": "팀별로 윷을 던져 말판을 완주하는 협력 게임입니다.",
