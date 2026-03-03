@@ -372,6 +372,11 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--next-due-date",
+        default="",
+        help="next_steps bundle command due-date override (YYYY-MM-DD)",
+    )
+    parser.add_argument(
         "--clear-before",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -453,7 +458,10 @@ def main() -> int:
         "global_before": global_before,
         "global_after": global_after,
         "global_delta": _delta(global_after, global_before),
-        "next_steps": _build_next_steps(days=days),
+        "next_steps": _build_next_steps(
+            days=days,
+            due_date=str(args.next_due_date or "").strip() or None,
+        ),
     }
     print(json.dumps(result, ensure_ascii=False))
     return 0
