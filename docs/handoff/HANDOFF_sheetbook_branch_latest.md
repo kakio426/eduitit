@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 21:38)
+Status: Working branch handoff (2026-03-03 21:44)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 21:38)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `7ab3dcb` (`chore(sheetbook): allow next due-date override in collector output`)
+- latest backup commit: `c25af07` (`chore(sheetbook): validate collector due-date override input`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
