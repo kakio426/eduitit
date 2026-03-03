@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 23:38)
+Status: Working branch handoff (2026-03-03 23:45)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 23:38)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `5dd26ed` (`fix(sheetbook): carry due-date into gap summary refresh actions`)
+- latest backup commit: `06e5be1` (`docs(sheetbook): add tomorrow quick-resume template to handoff`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
