@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 12:34)
+Status: Working branch handoff (2026-03-03 12:38)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -70,6 +70,19 @@ Status: Working branch handoff (2026-03-03 12:34)
   - release signoff markdown도 `manual_pending` effective + `manual_pending_raw(readiness)` 분리 노출로 정합성 통일
   - 로컬 리허설용 metric seed 스크립트 추가:
     - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
+
+## 1-3) 로컬 리허설 상태 (seed 기반, 운영 판정용 아님)
+
+- 실행:
+  - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04`
+- 결과(로컬 리허설 데이터 기준):
+  - `readiness_status`: `PASS`
+  - `decision`: `GO`
+  - `sample_gap_blockers`: `(없음)`
+  - `archive_next_step`: `continue_monitoring`
+- 주의:
+  - 위 결과는 seed metric 이벤트 기반의 로컬 리허설 결과이며, 실제 운영 트래픽 기반 판정과 분리해서 해석해야 함.
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영

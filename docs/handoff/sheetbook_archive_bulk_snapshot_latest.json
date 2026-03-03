@@ -1,23 +1,23 @@
 {
   "days": 14,
-  "event_count": 0,
+  "event_count": 5,
   "counts": {
-    "selected_count_total": 0,
-    "matched_count_total": 0,
-    "changed_total": 0,
-    "unchanged_total": 0,
-    "ignored_total": 0,
-    "archive_changed_total": 0,
-    "unarchive_changed_total": 0
+    "selected_count_total": 50,
+    "matched_count_total": 50,
+    "changed_total": 40,
+    "unchanged_total": 5,
+    "ignored_total": 5,
+    "archive_changed_total": 24,
+    "unarchive_changed_total": 16
   },
   "rates": {
-    "changed_rate_pct": 0.0,
-    "unchanged_rate_pct": 0.0,
-    "ignored_rate_pct": 0.0
+    "changed_rate_pct": 80.0,
+    "unchanged_rate_pct": 10.0,
+    "ignored_rate_pct": 10.0
   },
   "quality": {
-    "has_enough_samples": false,
-    "sample_gap_count": 5,
+    "has_enough_samples": true,
+    "sample_gap_count": 0,
     "needs_attention": false,
     "attention_reasons": [],
     "thresholds": {
@@ -25,7 +25,7 @@
       "ignored_rate_threshold_pct": 10.0,
       "unchanged_rate_threshold_pct": 50.0
     },
-    "next_step": "collect_more_samples"
+    "next_step": "continue_monitoring"
   },
   "md_output": "C:\\Users\\kakio\\eduitit\\docs\\runbooks\\logs\\SHEETBOOK_ARCHIVE_BULK_2026-03-03.md"
 }

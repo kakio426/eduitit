@@ -5098,3 +5098,30 @@ Status: Working handoff (2026-02-27 EOD)
 결과:
 - 신규 테스트 통과
 - 스크립트 CLI help 정상 출력 확인
+
+### C. 커밋/원격 반영
+- `3f058e0` `feat(sheetbook): add local metric sample seed script`
+- `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-138. 2026-03-03 로컬 리허설 실행 (seed 데이터로 sample gap 해소 경로 검증)
+
+### A. 실행 요약
+- 실행 명령:
+  - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04`
+- seed 결과:
+  - `workspace_home_opened=5`, `sheetbook_created=5`, `action_execute_requested=3`, `sheetbook_archive_bulk_updated=5`
+
+### B. 검증 결과 (리허설 데이터 기준)
+- `docs/handoff/sheetbook_release_readiness_latest.json`
+  - `pilot.ready_for_recalibration=true`, `overall.status=PASS`
+- `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+  - `overall.ready=true`, `blockers=[]`
+- `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `readiness_status=PASS`, `decision=GO`, `sample_gap_blockers=(없음)`, `archive_next_step=continue_monitoring`
+
+### C. 주의
+- 본 섹션 결과는 로컬 seed metric 이벤트 기반 리허설 결과로,
+  실제 운영 트래픽 기반의 release 판정과 동일시하지 않음.
