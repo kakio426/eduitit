@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 13:08)
+Status: Working branch handoff (2026-03-03 13:14)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 13:08)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `ab100ae` (`docs(sheetbook): update handoff after bundle next-action fix`)
+- latest backup commit: `8f6c04a` (`chore(sheetbook): document manual branch-guard fallback on windows`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -75,6 +75,10 @@ Status: Working branch handoff (2026-03-03 13:08)
     - Windows `sh.exe` 환경 오류(Win32 error 5)로 자동 훅 커밋 차단 발생
     - 대응: `core.hooksPath` 해제 후 커밋 전 수동 가드 고정 실행
       - `python scripts/branch_path_guard.py --branch feature/sheetbook --staged`
+  - 수동 가드 실수 방지용 guarded commit 헬퍼 추가:
+    - `python scripts/run_sheetbook_guarded_commit.py --guard-only`
+    - `python scripts/run_sheetbook_guarded_commit.py -m "feat(sheetbook): ..."`
+    - 문서: `docs/runbooks/sheetbook_guarded_commit_workflow.md`
   - 로컬 리허설용 metric seed 스크립트 추가:
     - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
 

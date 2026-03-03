@@ -5240,3 +5240,27 @@ Status: Working handoff (2026-02-27 EOD)
 
 ### C. 비고
 - 자동 훅은 환경 이슈로 비활성화되었고, 수동 guard 절차로 대체.
+
+---
+
+### 0-143. 2026-03-03 수동 가드 강제용 guarded commit 스크립트 추가
+
+### A. 구현 요약
+- 신규 스크립트:
+  - `scripts/run_sheetbook_guarded_commit.py`
+  - 기능:
+    - staged 파일 존재 확인
+    - `branch_path_guard` 선실행(`--branch feature/sheetbook --staged`)
+    - guard 통과 시에만 `git commit` 진행
+    - 옵션으로 `--push`까지 연계 가능
+    - 기본적으로 `feature/sheetbook` 브랜치가 아니면 차단
+- 신규 runbook:
+  - `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - guard-only / commit / commit+push 사용법 정리
+
+### B. 검증
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+- `python scripts/run_sheetbook_guarded_commit.py --guard-only` (staged가 있을 때)
+
+결과:
+- 커밋 전 경로 가드가 누락되지 않도록 명령 단위 안전장치 확보.
