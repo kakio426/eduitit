@@ -42,6 +42,9 @@ from scripts.run_sheetbook_daily_start_bundle import (
     _build_bundle_next_actions as _build_daily_start_bundle_next_actions,
     _build_bundle_summary as _build_daily_start_bundle_summary,
 )
+from scripts.run_sheetbook_local_rehearsal_cycle import (
+    _build_command_plan as _build_local_rehearsal_command_plan,
+)
 from scripts.run_sheetbook_grid_smoke import (
     _edit_cell_and_save as _edit_grid_cell_and_save,
     _wait_until_saved as _wait_until_grid_saved,
@@ -5353,24 +5356,13 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             if isinstance(item, dict) and str(item.get("type")) == "collect_samples_local_rehearsal"
         )
         local_collect_command = str(local_collect.get("command") or "")
-        self.assertIn("run_sheetbook_collect_pilot_samples.py", local_collect_command)
-        self.assertIn("--home-collection-mode direct-event", local_collect_command)
+        self.assertIn("run_sheetbook_local_rehearsal_cycle.py", local_collect_command)
+        self.assertIn("--home-count 2", local_collect_command)
+        self.assertIn("--create-count 0", local_collect_command)
         self.assertIn("--action-count 0", local_collect_command)
-        self.assertIn(
-            "--output docs/handoff/smoke_sheetbook_collect_samples_bundle_latest.json",
-            local_collect_command,
-        )
-        self.assertIn("--clear-only", local_collect_command)
-        self.assertIn(
-            "--output docs/handoff/smoke_sheetbook_collect_samples_bundle_clear_latest.json",
-            local_collect_command,
-        )
+        self.assertIn("--archive-event-count 0", local_collect_command)
         self.assertIn("--allow-pilot-hold-for-beta", local_collect_command)
         self.assertIn("--due-date 2026-03-04", local_collect_command)
-        rerun_command = (
-            "run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04"
-        )
-        self.assertGreaterEqual(local_collect_command.count(rerun_command), 2)
         self.assertTrue(
             any(
                 "--due-date 2026-03-04" in str(item.get("command") or "")
@@ -5488,7 +5480,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             "--allow-pilot-hold-for-beta",
             str(collect_samples_local.get("command") or ""),
         )
+        self.assertIn("--home-count 1", str(collect_samples_local.get("command") or ""))
+        self.assertIn("--create-count 2", str(collect_samples_local.get("command") or ""))
         self.assertIn("--action-count 2", str(collect_samples_local.get("command") or ""))
+        self.assertIn("--archive-event-count 0", str(collect_samples_local.get("command") or ""))
         self.assertIn(
             "--due-date 2026-03-04",
             str(collect_samples_local.get("command") or ""),
@@ -5551,6 +5546,62 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
         self.assertIn("unexpected_extra_tokens", markdown)
         self.assertIn("- pilot_hold_for_beta: `True`", markdown)
+
+
+class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
+    def test_build_local_rehearsal_plan_includes_collect_verify_clear_restore(self):
+        plan = _build_local_rehearsal_command_plan(
+            days=14,
+            home_count=3,
+            create_count=2,
+            action_count=2,
+            archive_event_count=4,
+            allow_pilot_hold_for_beta=True,
+            due_date="2026-03-04",
+            collect_output="docs/handoff/collect.json",
+            clear_output="docs/handoff/clear.json",
+        )
+
+        self.assertEqual(len(plan), 6)
+        self.assertEqual(plan[0][0:2], ["python", "scripts/run_sheetbook_collect_pilot_samples.py"])
+        self.assertIn("--clear-before", plan[0])
+        self.assertIn("--strict-inputs", plan[0])
+        self.assertIn("--home-count", plan[0])
+        self.assertIn("--archive-event-count", plan[0])
+        self.assertIn("docs/handoff/collect.json", plan[0])
+
+        self.assertEqual(plan[1][0:2], ["python", "scripts/run_sheetbook_daily_start_bundle.py"])
+        self.assertIn("--allow-pilot-hold-for-beta", plan[1])
+        self.assertIn("--due-date", plan[1])
+        self.assertIn("2026-03-04", plan[1])
+        self.assertEqual(plan[1], plan[4])
+
+        self.assertEqual(plan[3][0:2], ["python", "scripts/run_sheetbook_collect_pilot_samples.py"])
+        self.assertIn("--clear-only", plan[3])
+        self.assertIn("docs/handoff/clear.json", plan[3])
+        self.assertEqual(
+            plan[2],
+            ["python", "scripts/run_sheetbook_sample_gap_summary.py", "--days", "14"],
+        )
+        self.assertEqual(plan[2], plan[5])
+
+    def test_build_local_rehearsal_plan_omits_optional_bundle_flags_when_not_set(self):
+        plan = _build_local_rehearsal_command_plan(
+            days=7,
+            home_count=0,
+            create_count=0,
+            action_count=0,
+            archive_event_count=0,
+            allow_pilot_hold_for_beta=False,
+            due_date="",
+            collect_output="collect.json",
+            clear_output="clear.json",
+        )
+
+        bundle_cmd = plan[1]
+        self.assertNotIn("--allow-pilot-hold-for-beta", bundle_cmd)
+        self.assertNotIn("--due-date", bundle_cmd)
+        self.assertEqual(bundle_cmd, ["python", "scripts/run_sheetbook_daily_start_bundle.py", "--days", "7"])
 
 
 class SheetbookOpsIndexReportScriptTests(SimpleTestCase):

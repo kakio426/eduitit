@@ -200,8 +200,6 @@ def _build_bundle_next_actions(
     sample_gap = summary.get("sample_gap") or {}
     blockers = [str(item) for item in (sample_gap.get("blockers") or []) if str(item)]
     if blockers:
-        local_collect_output = "docs/handoff/smoke_sheetbook_collect_samples_bundle_latest.json"
-        local_clear_output = "docs/handoff/smoke_sheetbook_collect_samples_bundle_clear_latest.json"
         actions.append(
             {
                 "type": "collect_samples",
@@ -216,24 +214,20 @@ def _build_bundle_next_actions(
         create_gap = _extract_gap_count("pilot_create_gap")
         archive_gap = _extract_gap_count("archive_event_gap")
         action_gap = min(max(0, int(create_gap)), 3)
+        local_rehearsal_command = (
+            "python scripts/run_sheetbook_local_rehearsal_cycle.py "
+            f"--days {days} --home-count {home_gap} --create-count {create_gap} "
+            f"--action-count {action_gap} --archive-event-count {archive_gap}"
+        )
+        if allow_pilot_hold_for_beta:
+            local_rehearsal_command += " --allow-pilot-hold-for-beta"
+        if due_date_value:
+            local_rehearsal_command += f" --due-date {due_date_value}"
         actions.append(
             {
                 "type": "collect_samples_local_rehearsal",
-                "description": "로컬 리허설 표본 수집/검증 후 clear 및 bundle+gap summary 상태 복구",
-                "command": (
-                    "python scripts/run_sheetbook_collect_pilot_samples.py "
-                    "--home-collection-mode direct-event "
-                    f"--clear-before --home-count {home_gap} --create-count {create_gap} "
-                    f"--action-count {action_gap} "
-                    f"--archive-event-count {archive_gap} "
-                    f"--output {local_collect_output} && "
-                    f"{rerun_bundle_command} && "
-                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days} && "
-                    "python scripts/run_sheetbook_collect_pilot_samples.py --clear-only "
-                    f"--output {local_clear_output} && "
-                    f"{rerun_bundle_command} && "
-                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
-                ),
+                "description": "로컬 리허설 사이클 실행(수집 -> 검증 -> clear -> 상태 복구)",
+                "command": local_rehearsal_command,
             }
         )
 
