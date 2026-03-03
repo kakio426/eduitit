@@ -6087,6 +6087,19 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
             if isinstance(item, dict)
             and str(item.get("type")) == "collect_pilot_samples_local_rehearsal"
         )
+        collect_operational = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "collect_pilot_samples"
+        )
+        self.assertIn("run_sheetbook_collect_pilot_samples.py", str(collect_operational.get("command") or ""))
+        self.assertIn("--home-count 3", str(collect_operational.get("command") or ""))
+        self.assertIn("--create-count 3", str(collect_operational.get("command") or ""))
+        self.assertIn(
+            "--output docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json",
+            str(collect_operational.get("command") or ""),
+        )
         self.assertIn("--action-count 3", str(collect_local.get("command") or ""))
         self.assertIn(
             "--output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json",

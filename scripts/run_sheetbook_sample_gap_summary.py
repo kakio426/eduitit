@@ -38,6 +38,7 @@ def _build_sample_gap_next_actions(
     actions: list[dict[str, str]] = []
     days_value = max(1, int(days))
     action_gap = min(max(0, int(create_gap)), 3)
+    pilot_accumulate_output = "docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json"
     pilot_output = "docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json"
     archive_output = "docs/handoff/smoke_sheetbook_collect_archive_events_latest.json"
     if home_gap > 0 or create_gap > 0:
@@ -49,8 +50,14 @@ def _build_sample_gap_next_actions(
         actions.append(
             {
                 "type": "collect_pilot_samples",
-                "description": "파일럿 이벤트 추가 확보: " + ", ".join(gap_tokens),
-                "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
+                "description": "파일럿 이벤트 추가 확보(누적): " + ", ".join(gap_tokens),
+                "command": (
+                    "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    "--home-collection-mode direct-event "
+                    f"--home-count {home_gap} --create-count {create_gap} "
+                    f"--action-count {action_gap} --archive-event-count 0 "
+                    f"--output {pilot_accumulate_output}"
+                ),
             }
         )
         actions.append(
