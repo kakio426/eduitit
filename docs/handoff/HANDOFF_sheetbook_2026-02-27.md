@@ -5070,3 +5070,31 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `ed67e6f` `feat(sheetbook): auto-adjust signoff next action for beta hold mode`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-137. 2026-03-03 로컬 리허설 도구 추가 (pilot/archive 샘플 주입 스크립트)
+
+### A. 구현 요약
+- 신규 스크립트:
+  - `scripts/run_sheetbook_seed_metric_samples.py`
+  - 목적: 로컬 환경에서 pilot/archive 스냅샷 리허설용 metric 이벤트를 빠르게 주입
+  - 생성 이벤트:
+    - `workspace_home_opened`
+    - `sheetbook_created` (`entry_source=workspace_home_seed`)
+    - `action_execute_requested`
+    - `sheetbook_archive_bulk_updated` (archive/unarchive 교차)
+  - 옵션:
+    - `--home-count`, `--create-count`, `--action-count`, `--archive-event-count`
+    - `--clear-seeded` (기존 seed 이벤트 정리 후 재주입)
+- 테스트 보강:
+  - `SheetbookSeedMetricSamplesScriptTests`
+  - 이벤트 건수/메타데이터(`seeded_by`, `entry_source`) 검증
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookSeedMetricSamplesScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookReleaseSignoffLogScriptTests`
+- `python scripts/run_sheetbook_seed_metric_samples.py --help`
+
+결과:
+- 신규 테스트 통과
+- 스크립트 CLI help 정상 출력 확인

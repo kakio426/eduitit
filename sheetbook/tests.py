@@ -53,6 +53,10 @@ from scripts.run_sheetbook_pilot_log_snapshot import (
     _build_markdown as _build_pilot_log_markdown,
     _collect_snapshot as _collect_pilot_log_snapshot,
 )
+from scripts.run_sheetbook_seed_metric_samples import (
+    SEED_TAG as SHEETBOOK_METRIC_SEED_TAG,
+    _seed_metric_events,
+)
 from sheetbook.models import (
     ActionInvocation,
     SavedView,
@@ -4779,6 +4783,68 @@ class SheetbookArchiveBulkSnapshotScriptTests(SimpleTestCase):
         self.assertIn("sample_gap_count", markdown)
         self.assertIn("collect_more_samples", markdown)
         self.assertIn("SHEETBOOK_ARCHIVE_BULK_2026-03-03.md", markdown)
+
+
+class SheetbookSeedMetricSamplesScriptTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sheetbook_seed_script_t1",
+            password="pw123456",
+            email="sheetbook_seed_script_t1@example.com",
+        )
+
+    def test_seed_metric_events_creates_expected_event_counts(self):
+        created = _seed_metric_events(
+            user=self.user,
+            home_count=2,
+            create_count=2,
+            action_count=1,
+            archive_event_count=3,
+        )
+        self.assertEqual(
+            created,
+            {
+                "workspace_home_opened": 2,
+                "sheetbook_created": 2,
+                "action_execute_requested": 1,
+                "sheetbook_archive_bulk_updated": 3,
+            },
+        )
+
+        self.assertEqual(
+            SheetbookMetricEvent.objects.filter(event_name="workspace_home_opened").count(),
+            2,
+        )
+        self.assertEqual(
+            SheetbookMetricEvent.objects.filter(event_name="sheetbook_created").count(),
+            2,
+        )
+        self.assertEqual(
+            SheetbookMetricEvent.objects.filter(event_name="action_execute_requested").count(),
+            1,
+        )
+        self.assertEqual(
+            SheetbookMetricEvent.objects.filter(event_name="sheetbook_archive_bulk_updated").count(),
+            3,
+        )
+
+        create_metadata = list(
+            SheetbookMetricEvent.objects.filter(event_name="sheetbook_created").values_list(
+                "metadata", flat=True
+            )
+        )
+        self.assertTrue(
+            all(
+                str((row or {}).get("entry_source") or "").startswith("workspace_home")
+                for row in create_metadata
+            )
+        )
+        self.assertTrue(
+            all(
+                str((row or {}).get("seeded_by") or "") == SHEETBOOK_METRIC_SEED_TAG
+                for row in create_metadata
+            )
+        )
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):

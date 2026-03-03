@@ -68,6 +68,8 @@ Status: Working branch handoff (2026-03-03 12:34)
   - `--allow-pilot-hold-for-beta` 사용 시 release signoff `next_action` 기본값을
     `pilot 표본 보강 + 상태 재판정`으로 자동 전환
   - release signoff markdown도 `manual_pending` effective + `manual_pending_raw(readiness)` 분리 노출로 정합성 통일
+  - 로컬 리허설용 metric seed 스크립트 추가:
+    - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영
