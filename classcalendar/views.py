@@ -385,6 +385,10 @@ def _build_reservation_windows_for_user(user):
                 "school_name": school.name,
                 "available_until": available_until,
                 "opening_rule": opening_rule,
+                "entry_url": reverse(
+                    "reservations:reservation_index",
+                    kwargs={"school_slug": school.slug},
+                ),
             }
         )
     return windows

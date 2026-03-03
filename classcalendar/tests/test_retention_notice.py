@@ -24,10 +24,11 @@ class RetentionNoticeTests(TestCase):
         profile.role = "school"
         profile.save(update_fields=["nickname", "role"])
 
-    def test_legacy_main_seeds_notice_event_and_renders_banner(self):
+    def test_legacy_main_seeds_notice_event_without_banner(self):
         response = self.client.get(reverse("classcalendar:legacy_main"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "자동 정리 정책 안내")
+        self.assertNotContains(response, "고용량 파일은 90일, 일반 데이터는 1년 기준으로 자동 정리됩니다.")
+        self.assertNotContains(response, "캘린더에 같은 안내 일정이 1회 등록되며")
 
         notice_event = CalendarEvent.objects.filter(author=self.user, title=NOTICE_TITLE).first()
         self.assertIsNotNone(notice_event)
