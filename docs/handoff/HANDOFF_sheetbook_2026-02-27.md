@@ -5424,3 +5424,7 @@ Status: Working handoff (2026-02-27 EOD)
 
 결과:
 - handoff 최신화 전에 변경 결과를 안전하게 미리 점검 가능.
+
+### C. 커밋/원격 반영
+- `566524a` `feat(sheetbook): add dry-run for handoff latest refresh`
+- `origin/feature/sheetbook` push 완료
