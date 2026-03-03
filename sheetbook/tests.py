@@ -6132,6 +6132,7 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertIn("collect_pilot_samples_local_rehearsal", next_action_types)
         self.assertIn("collect_archive_events", next_action_types)
         self.assertIn("collect_archive_events_local_rehearsal", next_action_types)
+        self.assertIn("collect_all_local_rehearsal_cycle", next_action_types)
         self.assertIn("refresh_gap_summary", next_action_types)
         self.assertTrue(
             any("--days 21" in str(item.get("command") or "") for item in next_actions if isinstance(item, dict))
@@ -6170,6 +6171,20 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
             "--output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json",
             str(collect_archive_local.get("command") or ""),
         )
+        collect_all_local = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "collect_all_local_rehearsal_cycle"
+        )
+        self.assertIn(
+            "run_sheetbook_local_rehearsal_cycle.py",
+            str(collect_all_local.get("command") or ""),
+        )
+        self.assertIn("--home-count 3", str(collect_all_local.get("command") or ""))
+        self.assertIn("--create-count 3", str(collect_all_local.get("command") or ""))
+        self.assertIn("--archive-event-count 4", str(collect_all_local.get("command") or ""))
+        self.assertIn("--allow-pilot-hold-for-beta", str(collect_all_local.get("command") or ""))
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(

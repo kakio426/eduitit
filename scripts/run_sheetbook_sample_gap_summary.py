@@ -38,6 +38,7 @@ def _build_sample_gap_next_actions(
     actions: list[dict[str, str]] = []
     days_value = max(1, int(days))
     action_gap = min(max(0, int(create_gap)), 3)
+    has_any_gap = home_gap > 0 or create_gap > 0 or archive_event_gap > 0
     pilot_accumulate_output = "docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json"
     pilot_output = "docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json"
     archive_output = "docs/handoff/smoke_sheetbook_collect_archive_events_latest.json"
@@ -93,6 +94,19 @@ def _build_sample_gap_next_actions(
                     "--home-collection-mode direct-event "
                     f"--home-count 0 --create-count 0 --archive-event-count {archive_event_gap} "
                     f"--output {archive_output}"
+                ),
+            }
+        )
+    if has_any_gap:
+        actions.append(
+            {
+                "type": "collect_all_local_rehearsal_cycle",
+                "description": "로컬 통합 리허설 사이클 1회 실행(수집 -> 검증 -> clear -> 복구)",
+                "command": (
+                    "python scripts/run_sheetbook_local_rehearsal_cycle.py "
+                    f"--days {days_value} --home-count {home_gap} --create-count {create_gap} "
+                    f"--action-count {action_gap} --archive-event-count {archive_event_gap} "
+                    "--allow-pilot-hold-for-beta"
                 ),
             }
         )
