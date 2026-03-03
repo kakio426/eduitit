@@ -14,7 +14,6 @@ from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
 from django.urls import reverse
-from django.db import transaction
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count, Q
 from .models import ArtClass, ArtStep
@@ -239,47 +238,6 @@ def setup_view(request, pk=None):
         'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
         'launcher_download_url': _get_launcher_download_url(),
     })
-
-
-@login_required
-def setup_fork_view(request, pk):
-    """공유 수업을 내 계정 기준으로 복제한 뒤 편집 화면으로 이동한다."""
-    source_class = get_object_or_404(
-        ArtClass.objects.prefetch_related("steps"),
-        pk=pk,
-    )
-    if not source_class.is_shared and not _can_manage_art_class(request.user, source_class):
-        raise PermissionDenied("이 수업을 복제할 권한이 없습니다.")
-
-    with transaction.atomic():
-        forked_class = ArtClass.objects.create(
-            title=source_class.title,
-            youtube_url=source_class.youtube_url,
-            default_interval=source_class.default_interval,
-            playback_mode=source_class.playback_mode,
-            created_by=request.user,
-            is_shared=source_class.is_shared,
-            auto_category=source_class.auto_category,
-            auto_grade_band=source_class.auto_grade_band,
-            auto_tags=list(source_class.auto_tags or []),
-            auto_confidence=source_class.auto_confidence,
-            search_text=source_class.search_text,
-            is_auto_classified=source_class.is_auto_classified,
-        )
-        ArtStep.objects.bulk_create(
-            [
-                ArtStep(
-                    art_class=forked_class,
-                    step_number=step.step_number,
-                    description=step.description,
-                    image=step.image.name if step.image else None,
-                )
-                for step in source_class.steps.all()
-            ]
-        )
-
-    messages.success(request, "수업을 내 계정으로 복제했습니다. 복제본을 수정해 사용하세요.")
-    return redirect("artclass:setup_edit", pk=forked_class.pk)
 
 
 def classroom_view(request, pk):

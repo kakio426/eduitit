@@ -359,8 +359,7 @@ class TeacherFlowTest(TestCase):
         body = resp.content.decode("utf-8")
         self.assertIn("문제 파일 만들기 가이드", body)
         self.assertIn("주제 입력 가이드 (매우 중요)", body)
-        self.assertIn("주제(한글)", body)
-        self.assertNotIn("주제 코드(영문)", body)
+        self.assertIn("주제 코드(영문)", body)
 
     def test_download_csv_template(self):
         url = reverse(

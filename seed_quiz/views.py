@@ -243,19 +243,14 @@ def _get_topic_template_rows() -> list[dict]:
 
 
 def _build_template_guide_rows() -> list[list[str]]:
-    guide_prefix_cells = [""] * 14  # A~N은 비우고 O열에 가이드 문구를 배치
-
-    def _guide_row(message: str) -> list[str]:
-        return guide_prefix_cells + [message]
-
     return [
-        _guide_row("#가이드: 한 파일은 1세트로 저장되며 문항은 1~200개까지 자유롭게 작성할 수 있습니다."),
-        _guide_row("#가이드: 한 파일 안에서는 주제와 학년을 섞지 마세요."),
-        _guide_row("#가이드: 주제는 한글 이름으로 입력합니다."),
-        _guide_row("#가이드: 학년은 0~6(0=학년무관), 정답번호는 1~4입니다."),
-        _guide_row("#가이드: 난이도는 쉬움/보통/어려움이며 비우면 보통으로 처리됩니다."),
-        _guide_row("#가이드: 상세 주제 예시는 XLSX의 '필독_작성가이드' 시트 또는 CSV 가이드를 참고하세요."),
-        _guide_row("#가이드: 아래 샘플 문항은 그대로 업로드해도 통과됩니다."),
+        ["#가이드: 한 파일은 1세트로 저장되며 문항은 1~200개까지 자유롭게 작성할 수 있습니다."] + [""] * 9,
+        ["#가이드: 한 파일 안에서는 주제와 학년을 섞지 마세요."] + [""] * 9,
+        ["#가이드: 주제는 한글 이름 또는 영문 코드로 입력합니다."] + [""] * 9,
+        ["#가이드: 학년은 0~6(0=학년무관), 정답번호는 1~4입니다."] + [""] * 9,
+        ["#가이드: 난이도는 쉬움/보통/어려움이며 비우면 보통으로 처리됩니다."] + [""] * 9,
+        ["#가이드: 상세 주제 예시는 XLSX의 '필독_작성가이드' 시트 또는 CSV 가이드를 참고하세요."] + [""] * 9,
+        ["#가이드: 아래 샘플 문항은 그대로 업로드해도 통과됩니다."] + [""] * 9,
     ]
 
 
@@ -950,7 +945,7 @@ def download_xlsx_template(request, classroom_id):
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     rules = [
-        ["주제", "한글 주제명", "맞춤법", "한 파일 안에서는 같은 값 유지", ""],
+        ["주제", "한글 또는 영문 코드", "맞춤법 / orthography", "한 파일 안에서는 같은 값 유지", ""],
         ["학년", "0~6", "0(학년무관), 3", "한 파일 안에서는 같은 값 유지", ""],
         ["정답번호", "1~4", "보기2가 정답이면 2", "필수 입력", ""],
         ["난이도", "쉬움/보통/어려움", "비우면 보통 처리", "선택 입력", ""],
@@ -964,7 +959,7 @@ def download_xlsx_template(request, classroom_id):
                 wrap_text=True,
             )
 
-    topic_headers = ["주제(한글)", "어떤 문제를 넣나요?", "문제 소재 예시", "작성 팁"]
+    topic_headers = ["주제(한글)", "주제 코드(영문)", "어떤 문제를 넣나요?", "문제 소재 예시", "작성 팁"]
     topic_header_row = rule_header_row + len(rules) + 3
     for col_idx, header in enumerate(topic_headers, start=1):
         cell = topic_ws.cell(row=topic_header_row, column=col_idx, value=header)
@@ -973,18 +968,20 @@ def download_xlsx_template(request, classroom_id):
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     topic_ws.column_dimensions["A"].width = 24
-    topic_ws.column_dimensions["B"].width = 40
-    topic_ws.column_dimensions["C"].width = 42
+    topic_ws.column_dimensions["B"].width = 24
+    topic_ws.column_dimensions["C"].width = 40
     topic_ws.column_dimensions["D"].width = 42
+    topic_ws.column_dimensions["E"].width = 42
 
     topic_data_start = topic_header_row + 1
     for offset, row in enumerate(_get_topic_template_rows()):
         current_row = topic_data_start + offset
         topic_ws.cell(row=current_row, column=1, value=row["label"])
-        topic_ws.cell(row=current_row, column=2, value=row["focus"])
-        topic_ws.cell(row=current_row, column=3, value=row["examples"])
-        topic_ws.cell(row=current_row, column=4, value=row["tip"])
-        for col_idx in range(1, 5):
+        topic_ws.cell(row=current_row, column=2, value=row["key"])
+        topic_ws.cell(row=current_row, column=3, value=row["focus"])
+        topic_ws.cell(row=current_row, column=4, value=row["examples"])
+        topic_ws.cell(row=current_row, column=5, value=row["tip"])
+        for col_idx in range(1, 6):
             topic_ws.cell(row=current_row, column=col_idx).alignment = Alignment(
                 vertical="top",
                 wrap_text=True,
@@ -1015,6 +1012,7 @@ def download_csv_sample_pack(request, classroom_id):
     with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zf:
         topic_rows = _get_topic_template_rows()
         topic_labels = ", ".join(row["label"] for row in topic_rows)
+        topic_pairs = ", ".join(f"{row['label']}({row['key']})" for row in topic_rows)
         readme_lines = [
             "씨앗 퀴즈 CSV 샘플 팩",
             "",
@@ -1023,6 +1021,7 @@ def download_csv_sample_pack(request, classroom_id):
             "- 한 파일에 문항을 1~200개까지 원하는 개수로 넣을 수 있습니다.",
             "- 한 파일의 모든 행은 같은 주제/같은 학년이어야 합니다.",
             f"- 사용 가능한 주제(한글): {topic_labels}",
+            f"- 사용 가능한 주제(코드): {topic_pairs}",
             "- 정답번호는 1~4 (보기1이 정답이면 1, 보기2이면 2).",
             "- 문항/보기/해설을 수정해 업로드하세요.",
         ]

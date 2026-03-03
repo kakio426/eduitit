@@ -15,7 +15,7 @@
 
     <div class="mb-5">
       <a
-        href="{{ index_back_url }}"
+        href="{% url 'sheetbook:index' %}{% if entry_source and entry_source != 'direct' %}?source={{ entry_source }}{% endif %}"
         class="text-sm text-gray-500 hover:text-purple-600"
       >
         목록으로
@@ -26,135 +26,6 @@
         탭 {{ tabs|length }}개
       </p>
     </div>
-
-    {% if sheetbook_archived_read_only %}
-      <section class="mb-5 rounded-2xl border border-slate-300 bg-slate-50 px-5 py-4">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p class="text-base font-bold text-slate-800">아카이브 읽기 전용 수첩</p>
-            <p class="mt-1 text-sm text-slate-600">
-              이 수첩은 수정이 잠겨 있어요. 이어쓰기(복제)로 새 수첩을 만든 뒤 계속 작업해 주세요.
-            </p>
-          </div>
-          <form method="post" action="{% url 'sheetbook:quick_copy' %}" class="inline-flex">
-            {% csrf_token %}
-            <input type="hidden" name="source" value="sheetbook_detail_archive_banner">
-            <input type="hidden" name="include_rows" value="1">
-            <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900">
-              <i class="fa-regular fa-copy"></i> 행 포함 이어쓰기
-            </button>
-          </form>
-        </div>
-      </section>
-    {% endif %}
-
-    {% if show_sample_onboarding %}
-      <section class="mb-5 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-4">
-        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p class="text-base font-bold text-indigo-900">샘플 수첩 60초 시작 가이드</p>
-            <ol class="mt-2 space-y-1 text-sm text-indigo-900">
-              <li>1. `학생명부`에서 2~3명을 드래그 선택한 뒤 `동의서`를 눌러보세요.</li>
-              <li>2. `일정`에서 날짜+제목 칸을 선택하고 `달력 등록`을 눌러보세요.</li>
-              <li>3. 필요한 줄을 선택해 `안내문` 또는 `서명 요청`까지 이어서 실행해 보세요.</li>
-            </ol>
-          </div>
-          <a
-            href="{{ onboarding_dismiss_url }}"
-            class="inline-flex rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:border-indigo-400"
-          >
-            가이드 닫기
-          </a>
-        </div>
-      </section>
-    {% endif %}
-
-    <section class="clay-card p-5 mb-5">
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 class="text-lg font-bold text-gray-800">통합 검색</h2>
-          <p class="text-xs text-gray-500 mt-1">탭 이름, 셀 값, 최근 실행 기록을 한 번에 찾아요. 단축키: Ctrl+K</p>
-        </div>
-        <form method="get" class="flex flex-wrap items-center gap-2">
-          {% if selected_tab %}
-            <input type="hidden" name="tab" value="{{ selected_tab.id }}">
-          {% endif %}
-          {% if entry_source and entry_source != "direct" %}
-            <input type="hidden" name="source" value="{{ entry_source }}">
-          {% endif %}
-          {% if active_saved_view_id %}
-            <input type="hidden" name="view" value="{{ active_saved_view_id }}">
-          {% endif %}
-          {% if grid_view_filter %}
-            <input type="hidden" name="view_filter" value="{{ grid_view_filter }}">
-          {% endif %}
-          {% if grid_view_sort_column_id %}
-            <input type="hidden" name="sort_col" value="{{ grid_view_sort_column_id }}">
-          {% endif %}
-          {% if grid_view_sort_direction == "desc" %}
-            <input type="hidden" name="sort_dir" value="desc">
-          {% endif %}
-          <input
-            id="sheetbook-search-input"
-            type="search"
-            name="q"
-            value="{{ search_query }}"
-            maxlength="80"
-            placeholder="예: 체험학습, 동의서, 2026-03-20"
-            class="w-72 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-          >
-          <button type="submit" class="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400">
-            검색
-          </button>
-        </form>
-      </div>
-
-      {% if search_query %}
-        <div class="mt-4 grid gap-3 lg:grid-cols-3">
-          <div class="rounded-xl border border-gray-200 bg-white p-3">
-            <p class="text-xs font-semibold text-gray-500">탭 결과</p>
-            <ul class="mt-2 space-y-2 text-sm">
-              {% for item in search_results.tabs %}
-                <li>
-                  <a href="{{ item.url }}" class="font-semibold text-indigo-600 hover:text-indigo-700">{{ item.title }}</a>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ item.meta }}</p>
-                </li>
-              {% empty %}
-                <li class="text-xs text-gray-500">일치하는 탭이 없어요.</li>
-              {% endfor %}
-            </ul>
-          </div>
-
-          <div class="rounded-xl border border-gray-200 bg-white p-3">
-            <p class="text-xs font-semibold text-gray-500">셀 결과</p>
-            <ul class="mt-2 space-y-2 text-sm">
-              {% for item in search_results.cells %}
-                <li>
-                  <a href="{{ item.url }}" class="font-semibold text-indigo-600 hover:text-indigo-700">{{ item.title }}</a>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ item.meta }}</p>
-                </li>
-              {% empty %}
-                <li class="text-xs text-gray-500">일치하는 셀이 없어요.</li>
-              {% endfor %}
-            </ul>
-          </div>
-
-          <div class="rounded-xl border border-gray-200 bg-white p-3">
-            <p class="text-xs font-semibold text-gray-500">실행 기록 결과</p>
-            <ul class="mt-2 space-y-2 text-sm">
-              {% for item in search_results.actions %}
-                <li>
-                  <a href="{{ item.url }}" class="font-semibold text-indigo-600 hover:text-indigo-700">{{ item.title }}</a>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ item.meta }}</p>
-                </li>
-              {% empty %}
-                <li class="text-xs text-gray-500">일치하는 실행 기록이 없어요.</li>
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
-      {% endif %}
-    </section>
 
     <section class="clay-card p-5 mb-5">
       <h2 class="text-lg font-bold text-gray-800 mb-3">탭 추가</h2>
@@ -197,7 +68,7 @@
       <div class="flex flex-wrap gap-2 mb-4">
         {% for tab in tabs %}
           <a
-            href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ tab.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if active_saved_view_id %}&view={{ active_saved_view_id }}{% endif %}{% if grid_view_filter %}&view_filter={{ grid_view_filter|urlencode }}{% endif %}{% if grid_view_sort_column_id %}&sort_col={{ grid_view_sort_column_id }}{% endif %}{% if grid_view_sort_direction == 'desc' %}&sort_dir=desc{% endif %}{% if show_sample_onboarding %}&onboarding=sample{% endif %}"
+            href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ tab.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}"
             class="px-3 py-1.5 rounded-lg text-sm font-semibold {% if selected_tab and selected_tab.id == tab.id %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}"
           >
             {{ tab.name }}
@@ -249,7 +120,6 @@
       debounceTimer: null,
       retryTimer: null,
       isSaving: false,
-      isUndoOperation: false,
       isDraggingSelection: false,
       selection: {
         startRowIndex: null,
@@ -259,26 +129,11 @@
         count: 0,
       },
       activeAction: "",
-      recommendation: {
-        primaryAction: "",
-        rankedActions: [],
-        signals: {},
-      },
       historyFilter: "all",
       toastTimer: null,
       isHistoryLoading: false,
       historyPagesLoaded: 0,
       renderRevision: 0,
-      focusTarget: {
-        rowId: 0,
-        colId: 0,
-        applied: false,
-      },
-      undoStack: [],
-      mobileRowPanel: {
-        isOpen: false,
-        rowIndex: 0,
-      },
     };
 
     const els = {
@@ -308,29 +163,11 @@
       actionToast: root.querySelector("#grid-action-toast"),
       actionHistoryMoreBtn: root.querySelector("#grid-action-history-more"),
       retryFailedBtn: root.querySelector("#grid-retry-failed-btn"),
-      undoBtn: root.querySelector("#grid-undo-btn"),
-      mobileRowOpenBtn: root.querySelector("#grid-mobile-row-open-btn"),
-      mobileRowPanel: root.querySelector("#grid-mobile-row-panel"),
-      mobileRowTitle: root.querySelector("#grid-mobile-row-title"),
-      mobileRowFields: root.querySelector("#grid-mobile-row-fields"),
-      mobileRowCloseBtn: root.querySelector("#grid-mobile-row-close-btn"),
-      mobileRowPrevBtn: root.querySelector("#grid-mobile-row-prev-btn"),
-      mobileRowNextBtn: root.querySelector("#grid-mobile-row-next-btn"),
       saveGuide: root.querySelector("#grid-save-guide"),
-      conflictBanner: root.querySelector("#grid-conflict-banner"),
-      conflictMessage: root.querySelector("#grid-conflict-message"),
-      conflictReloadBtn: root.querySelector("#grid-conflict-reload-btn"),
-      conflictCloseBtn: root.querySelector("#grid-conflict-close-btn"),
     };
 
     const csrfToken = getCookie("csrftoken");
     const failedCellClasses = ["border-red-300", "bg-red-50", "ring-1", "ring-red-100"];
-    const maxUndoDepth = 80;
-    const isMobileReadOnly = root.dataset.mobileReadOnly === "1";
-    const mobileReadOnlyMessage =
-      (root.dataset.mobileReadOnlyMessage || "").trim() ||
-      "휴대폰에서는 읽기 모드로 제공돼요. 수정/생성은 태블릿이나 PC에서 진행해 주세요.";
-    const actionDefaultOrder = ["calendar", "collect", "consent", "signature", "handoff", "notice"];
 
     (function initGridLimit() {
       const rawLimit = Number.parseInt(root.dataset.gridLimit || "50", 10);
@@ -339,14 +176,6 @@
         return;
       }
       state.gridLoad.limit = Math.max(20, Math.min(1000, rawLimit));
-    })();
-
-    (function initFocusTarget() {
-      const rowId = Number.parseInt(root.dataset.focusRowId || "0", 10);
-      const colId = Number.parseInt(root.dataset.focusColId || "0", 10);
-      state.focusTarget.rowId = Number.isFinite(rowId) && rowId > 0 ? rowId : 0;
-      state.focusTarget.colId = Number.isFinite(colId) && colId > 0 ? colId : 0;
-      state.focusTarget.applied = false;
     })();
 
     function setStatus(text, isError) {
@@ -367,286 +196,6 @@
       }
       els.saveGuide.textContent = text;
       els.saveGuide.classList.remove("hidden");
-    }
-
-    function notifyMobileReadOnly() {
-      setSaveStatus(mobileReadOnlyMessage, true);
-      showActionToast(mobileReadOnlyMessage, true);
-    }
-
-    function applyMobileReadOnlyUi() {
-      if (!isMobileReadOnly) return;
-      if (els.addRowBtn) {
-        els.addRowBtn.disabled = true;
-        els.addRowBtn.classList.add("opacity-60", "cursor-not-allowed");
-      }
-      if (els.addColumnForm) {
-        els.addColumnForm.querySelectorAll("input, select, button, textarea").forEach((control) => {
-          control.disabled = true;
-          control.classList.add("opacity-60", "cursor-not-allowed");
-        });
-      }
-      if (els.mobileRowOpenBtn) {
-        els.mobileRowOpenBtn.classList.add("hidden");
-      }
-      if (els.retryFailedBtn) {
-        els.retryFailedBtn.classList.add("hidden");
-      }
-      if (els.undoBtn) {
-        els.undoBtn.classList.add("hidden");
-      }
-      if (els.actionButtons && els.actionButtons.length) {
-        els.actionButtons.forEach((button) => {
-          button.disabled = true;
-          button.classList.add("opacity-60", "cursor-not-allowed");
-        });
-      }
-      if (els.previewConfirmBtn) {
-        els.previewConfirmBtn.disabled = true;
-        els.previewConfirmBtn.classList.add("opacity-60", "cursor-not-allowed");
-      }
-      if (els.actionLayer) {
-        els.actionLayer.classList.add("hidden");
-      }
-    }
-
-    function hideConflictBanner() {
-      if (!els.conflictBanner) return;
-      els.conflictBanner.classList.add("hidden");
-      if (els.conflictMessage) {
-        els.conflictMessage.textContent = "";
-      }
-    }
-
-    function showConflictBanner(message) {
-      if (!els.conflictBanner) return;
-      if (els.conflictMessage) {
-        els.conflictMessage.textContent = message || "다른 화면에서 먼저 저장돼 충돌이 생겼어요.";
-      }
-      els.conflictBanner.classList.remove("hidden");
-    }
-
-    function updateUndoUi() {
-      if (!els.undoBtn) return;
-      const count = state.undoStack.length;
-      els.undoBtn.classList.toggle("hidden", count <= 0);
-      if (count <= 0) {
-        els.undoBtn.textContent = "최근 변경 취소";
-        return;
-      }
-      els.undoBtn.textContent = `최근 변경 취소 (${count})`;
-    }
-
-    function pushUndoEntry(entry, savedValue) {
-      if (!entry || state.isUndoOperation) return;
-      const beforeValue = String(entry.original ?? "");
-      const afterValue = String(savedValue ?? "");
-      if (beforeValue === afterValue) return;
-      state.undoStack.push({
-        rowId: entry.rowId,
-        columnId: entry.columnId,
-        beforeValue,
-        afterValue,
-      });
-      if (state.undoStack.length > maxUndoDepth) {
-        state.undoStack.shift();
-      }
-      updateUndoUi();
-    }
-
-    function isCompactViewport() {
-      return window.matchMedia("(max-width: 767px)").matches;
-    }
-
-    function clampRowIndex(rowIndex) {
-      if (!state.rows.length) return 0;
-      const parsed = Number.parseInt(rowIndex, 10);
-      if (!Number.isFinite(parsed)) return 0;
-      return Math.max(0, Math.min(parsed, state.rows.length - 1));
-    }
-
-    function currentSelectedRowIndex() {
-      if (state.selection.startRowIndex !== null) {
-        return clampRowIndex(state.selection.startRowIndex);
-      }
-      return clampRowIndex(state.selected.rowIndex || 0);
-    }
-
-    function currentSelectedColIndex() {
-      if (!state.columns.length) return 0;
-      if (state.selection.startColIndex !== null) {
-        return Math.max(0, Math.min(state.selection.startColIndex, state.columns.length - 1));
-      }
-      const fallback = Number.parseInt(state.selected.colIndex || 0, 10);
-      if (!Number.isFinite(fallback)) return 0;
-      return Math.max(0, Math.min(fallback, state.columns.length - 1));
-    }
-
-    function hideMobileRowPanel() {
-      if (!els.mobileRowPanel) return;
-      state.mobileRowPanel.isOpen = false;
-      els.mobileRowPanel.classList.add("hidden");
-      updateMobileRowOpenButton();
-    }
-
-    function updateMobileRowOpenButton() {
-      if (!els.mobileRowOpenBtn) return;
-      const canUseMobileEditor = !isMobileReadOnly && isCompactViewport() && state.rows.length > 0 && state.columns.length > 0;
-      if (!canUseMobileEditor || state.mobileRowPanel.isOpen) {
-        els.mobileRowOpenBtn.classList.add("hidden");
-        return;
-      }
-      const rowIndex = currentSelectedRowIndex();
-      const row = state.rows[rowIndex];
-      const rowLabel = row ? (row.sort_order || rowIndex + 1) : rowIndex + 1;
-      els.mobileRowOpenBtn.textContent = `${rowLabel}행 편집`;
-      els.mobileRowOpenBtn.classList.remove("hidden");
-    }
-
-    function parseMobileFieldDisplayValue(columnType, rawValue) {
-      if (rawValue === null || rawValue === undefined) return "";
-      if (Array.isArray(rawValue)) {
-        return rawValue.join(", ");
-      }
-      if (columnType === "checkbox") {
-        if (rawValue === true) return "true";
-        if (rawValue === false) return "false";
-      }
-      return String(rawValue);
-    }
-
-    function syncMobileFieldValue(rowIndex, colIndex, inputValue, flushNow) {
-      const row = state.rows[rowIndex];
-      const column = state.columns[colIndex];
-      if (!row || !column) return;
-
-      const normalizedInput = inputValue === null || inputValue === undefined ? "" : String(inputValue);
-      const valueKey = String(column.id);
-      if (column.type === "checkbox") {
-        if (normalizedInput === "true") {
-          row.values[valueKey] = true;
-        } else if (normalizedInput === "false") {
-          row.values[valueKey] = false;
-        } else {
-          row.values[valueKey] = null;
-        }
-      } else {
-        row.values[valueKey] = normalizedInput;
-      }
-
-      const cellEl = getCellEl(rowIndex, colIndex);
-      if (!cellEl) return;
-      cellEl.textContent = normalizedInput;
-      queueCellForSave(cellEl);
-      if (flushNow) {
-        flushDirtyQueue(true);
-      }
-    }
-
-    function renderMobileRowPanel() {
-      if (!els.mobileRowPanel || !els.mobileRowFields) return;
-      const canUseMobileEditor = !isMobileReadOnly && isCompactViewport() && state.rows.length > 0 && state.columns.length > 0;
-      if (!canUseMobileEditor || !state.mobileRowPanel.isOpen) {
-        els.mobileRowPanel.classList.add("hidden");
-        updateMobileRowOpenButton();
-        return;
-      }
-
-      const rowIndex = clampRowIndex(state.mobileRowPanel.rowIndex);
-      state.mobileRowPanel.rowIndex = rowIndex;
-      const row = state.rows[rowIndex];
-      if (!row) {
-        els.mobileRowPanel.classList.add("hidden");
-        updateMobileRowOpenButton();
-        return;
-      }
-
-      const rowLabel = row.sort_order || rowIndex + 1;
-      if (els.mobileRowTitle) {
-        els.mobileRowTitle.textContent = `${rowLabel}행을 편집 중이에요.`;
-      }
-
-      els.mobileRowFields.innerHTML = "";
-      state.columns.forEach((column, colIndex) => {
-        const wrapper = document.createElement("label");
-        wrapper.className = "block rounded-xl border border-slate-200 bg-slate-50 px-2 py-2";
-
-        const label = document.createElement("span");
-        label.className = "mb-1 block text-[11px] font-semibold text-slate-700";
-        label.textContent = column.label;
-        wrapper.appendChild(label);
-
-        const value = row.values ? row.values[String(column.id)] : "";
-        let field;
-        if (column.type === "checkbox") {
-          field = document.createElement("select");
-          field.className = "w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700";
-          const emptyOption = document.createElement("option");
-          emptyOption.value = "";
-          emptyOption.textContent = "선택 안 함";
-          field.appendChild(emptyOption);
-          const trueOption = document.createElement("option");
-          trueOption.value = "true";
-          trueOption.textContent = "체크";
-          field.appendChild(trueOption);
-          const falseOption = document.createElement("option");
-          falseOption.value = "false";
-          falseOption.textContent = "해제";
-          field.appendChild(falseOption);
-          field.value = parseMobileFieldDisplayValue(column.type, value);
-          field.addEventListener("change", () => {
-            syncMobileFieldValue(rowIndex, colIndex, field.value, true);
-          });
-        } else if (column.type === "text" || column.type === "multi_select") {
-          field = document.createElement("textarea");
-          field.rows = 2;
-          field.className = "w-full resize-y rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700";
-          field.value = parseMobileFieldDisplayValue(column.type, value);
-          field.addEventListener("input", () => {
-            syncMobileFieldValue(rowIndex, colIndex, field.value, false);
-          });
-          field.addEventListener("blur", () => {
-            flushDirtyQueue(true);
-          });
-        } else {
-          field = document.createElement("input");
-          field.type = column.type === "number" ? "number" : (column.type === "date" ? "date" : "text");
-          if (field.type === "number") {
-            field.step = "any";
-          }
-          field.className = "w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700";
-          field.value = parseMobileFieldDisplayValue(column.type, value);
-          field.addEventListener("input", () => {
-            syncMobileFieldValue(rowIndex, colIndex, field.value, false);
-          });
-          field.addEventListener("blur", () => {
-            flushDirtyQueue(true);
-          });
-        }
-
-        wrapper.appendChild(field);
-        els.mobileRowFields.appendChild(wrapper);
-      });
-
-      if (els.mobileRowPrevBtn) {
-        els.mobileRowPrevBtn.disabled = rowIndex <= 0;
-        els.mobileRowPrevBtn.classList.toggle("opacity-40", rowIndex <= 0);
-      }
-      if (els.mobileRowNextBtn) {
-        const isLast = rowIndex >= state.rows.length - 1;
-        els.mobileRowNextBtn.disabled = isLast;
-        els.mobileRowNextBtn.classList.toggle("opacity-40", isLast);
-      }
-
-      els.mobileRowPanel.classList.remove("hidden");
-      updateMobileRowOpenButton();
-    }
-
-    function openMobileRowPanel() {
-      if (isMobileReadOnly || !isCompactViewport() || !state.rows.length) return;
-      state.mobileRowPanel.isOpen = true;
-      state.mobileRowPanel.rowIndex = currentSelectedRowIndex();
-      renderMobileRowPanel();
     }
 
     function findRowIndexById(rowId) {
@@ -738,37 +287,6 @@
       const colIndex = findColIndexById(entry.columnId);
       if (rowIndex < 0 || colIndex < 0) return null;
       return getCellEl(rowIndex, colIndex);
-    }
-
-    function applyFocusTargetIfNeeded() {
-      if (!state.focusTarget || state.focusTarget.applied) return;
-      const rowId = Number(state.focusTarget.rowId || 0);
-      if (!rowId) return;
-
-      const rowIndex = state.rows.findIndex((row) => String(row.id) === String(rowId));
-      if (rowIndex < 0) return;
-
-      let colIndex = 0;
-      const requestedColId = Number(state.focusTarget.colId || 0);
-      if (requestedColId) {
-        const foundColIndex = state.columns.findIndex((col) => String(col.id) === String(requestedColId));
-        if (foundColIndex >= 0) {
-          colIndex = foundColIndex;
-        }
-      }
-
-      const cell = getCellEl(rowIndex, colIndex);
-      if (!cell) return;
-      state.focusTarget.applied = true;
-
-      selectRange(rowIndex, colIndex, rowIndex, colIndex);
-      cell.focus();
-      cell.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-      cell.classList.add("ring-2", "ring-amber-300");
-      window.setTimeout(() => {
-        cell.classList.remove("ring-2", "ring-amber-300");
-      }, 1800);
-      setStatus(`검색 결과 위치로 이동했어요. (${buildCellRef(rowIndex, colIndex)})`, false);
     }
 
     function getHistoryUiStorageKey() {
@@ -898,18 +416,6 @@
       );
     }
 
-    function getCellElFromClientPoint(clientX, clientY) {
-      const target = document.elementFromPoint(clientX, clientY);
-      return target ? target.closest("[data-row-index][data-col-index]") : null;
-    }
-
-    function getCellElByIds(rowId, columnId) {
-      if (!els.table) return null;
-      return els.table.querySelector(
-        `[data-row-id="${String(rowId)}"][data-column-id="${String(columnId)}"]`
-      );
-    }
-
     function clearSelectionHighlight() {
       els.table.querySelectorAll('[data-grid-selected="true"]').forEach((cell) => {
         cell.dataset.gridSelected = "false";
@@ -928,26 +434,10 @@
         endColIndex: null,
         count: 0,
       };
-      state.recommendation = {
-        primaryAction: "",
-        rankedActions: actionDefaultOrder.slice(),
-        signals: {
-          token_count: 0,
-          date_ratio: 0,
-          phone_ratio: 0,
-          name_ratio: 0,
-        },
-      };
-      applyActionRecommendations(state.recommendation, { highlightTop: false });
-      updateMobileRowOpenButton();
     }
 
     function updateActionLayer() {
       if (!els.actionLayer || !els.selectionSummary) return;
-      if (isMobileReadOnly) {
-        els.actionLayer.classList.add("hidden");
-        return;
-      }
       const bounds = getSelectionBounds();
       if (!bounds || bounds.count <= 0) {
         hideActionLayer();
@@ -957,8 +447,6 @@
       els.selectionSummary.textContent = `${rangeText} · ${bounds.count}칸`;
       els.actionLayer.classList.remove("hidden");
       state.selection.count = bounds.count;
-      state.recommendation = analyzeSelectionForRecommendations(bounds);
-      applyActionRecommendations(state.recommendation);
     }
 
     function selectRange(startRowIndex, startColIndex, endRowIndex, endColIndex) {
@@ -998,14 +486,7 @@
           cell.classList.add("border-indigo-300", "bg-indigo-50");
         }
       }
-      state.selected.rowIndex = bounds.minRow;
-      state.selected.colIndex = bounds.minCol;
       updateActionLayer();
-      if (state.mobileRowPanel.isOpen) {
-        state.mobileRowPanel.rowIndex = bounds.minRow;
-        renderMobileRowPanel();
-      }
-      updateMobileRowOpenButton();
     }
 
     function getSelectionValues(maxRows, maxCols) {
@@ -1033,181 +514,6 @@
       return lines;
     }
 
-    function clampRatio(value) {
-      const parsed = Number.parseFloat(value);
-      if (!Number.isFinite(parsed)) return 0;
-      if (parsed < 0) return 0;
-      if (parsed > 1) return 1;
-      return Number(parsed.toFixed(3));
-    }
-
-    function isLikelyDateToken(token) {
-      const text = String(token || "").trim();
-      if (!text) return false;
-      return (
-        /^\d{4}[-./]\d{1,2}[-./]\d{1,2}$/.test(text) ||
-        /^\d{1,2}\s*월\s*\d{1,2}\s*일$/.test(text) ||
-        /^\d{1,2}[-./]\d{1,2}$/.test(text)
-      );
-    }
-
-    function isLikelyPhoneToken(token) {
-      const digits = String(token || "").replace(/\D/g, "");
-      return /^01\d{8,9}$/.test(digits);
-    }
-
-    function isLikelyNameToken(token) {
-      const text = String(token || "").trim();
-      if (!text) return false;
-      if (/^[가-힣]{2,4}$/.test(text)) return true;
-      return /^[A-Za-z][A-Za-z\s]{1,20}$/.test(text);
-    }
-
-    function getSelectionTokens(bounds, maxTokens) {
-      if (!bounds) return [];
-      const tokens = [];
-      const tokenLimit = Number.isFinite(maxTokens) ? maxTokens : 160;
-      for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex += 1) {
-        for (let colIndex = bounds.minCol; colIndex <= bounds.maxCol; colIndex += 1) {
-          const cell = getCellEl(rowIndex, colIndex);
-          const text = (cell?.textContent || "").trim();
-          if (!text) continue;
-          tokens.push(text);
-          if (tokens.length >= tokenLimit) {
-            return tokens;
-          }
-        }
-      }
-      return tokens;
-    }
-
-    function analyzeSelectionForRecommendations(bounds) {
-      const tokens = getSelectionTokens(bounds, 160);
-      const tokenCount = tokens.length;
-      if (!tokenCount) {
-        return {
-          primaryAction: "",
-          rankedActions: actionDefaultOrder.slice(),
-          signals: {
-            token_count: 0,
-            date_ratio: 0,
-            phone_ratio: 0,
-            name_ratio: 0,
-          },
-        };
-      }
-
-      let dateHits = 0;
-      let phoneHits = 0;
-      let nameHits = 0;
-      tokens.forEach((token) => {
-        if (isLikelyDateToken(token)) dateHits += 1;
-        if (isLikelyPhoneToken(token)) phoneHits += 1;
-        if (isLikelyNameToken(token)) nameHits += 1;
-      });
-
-      const signals = {
-        token_count: tokenCount,
-        date_ratio: clampRatio(dateHits / tokenCount),
-        phone_ratio: clampRatio(phoneHits / tokenCount),
-        name_ratio: clampRatio(nameHits / tokenCount),
-      };
-
-      const scores = {
-        calendar: 12,
-        collect: 18,
-        consent: 10,
-        signature: 10,
-        handoff: 8,
-        notice: 12,
-      };
-      if (signals.date_ratio >= 0.2) {
-        scores.calendar += 80;
-        scores.signature += 20;
-        scores.notice += 8;
-      }
-      if (signals.phone_ratio >= 0.2) {
-        scores.consent += 55;
-        scores.handoff += 18;
-      }
-      if (signals.name_ratio >= 0.2) {
-        scores.handoff += 50;
-        scores.signature += 32;
-        scores.consent += 24;
-      }
-      if (signals.name_ratio >= 0.2 && signals.phone_ratio >= 0.2) {
-        scores.consent += 20;
-      }
-      if (signals.date_ratio >= 0.2 && signals.name_ratio >= 0.2) {
-        scores.signature += 10;
-      }
-
-      const rankedActions = actionDefaultOrder
-        .slice()
-        .sort((left, right) => {
-          const scoreGap = (scores[right] || 0) - (scores[left] || 0);
-          if (scoreGap !== 0) return scoreGap;
-          return actionDefaultOrder.indexOf(left) - actionDefaultOrder.indexOf(right);
-        });
-
-      return {
-        primaryAction: rankedActions[0] || "",
-        rankedActions,
-        signals,
-      };
-    }
-
-    function applyActionRecommendations(recommendation, options) {
-      if (!els.actionButtons || !els.actionButtons.length) return;
-      const highlightTop = !(options && options.highlightTop === false);
-      const ranked = Array.isArray(recommendation?.rankedActions) && recommendation.rankedActions.length
-        ? recommendation.rankedActions
-        : actionDefaultOrder.slice();
-
-      const buttonMap = new Map();
-      els.actionButtons.forEach((button) => {
-        const action = String(button.dataset.gridAction || "").trim();
-        if (action) {
-          buttonMap.set(action, button);
-        }
-        const baseLabel = button.dataset.baseLabel || button.textContent.trim().replace(/^추천\s*[·-]?\s*/, "");
-        button.dataset.baseLabel = baseLabel;
-        button.textContent = baseLabel;
-        button.dataset.recommended = "false";
-        button.classList.remove("ring-2", "ring-amber-300", "bg-amber-50", "border-amber-300", "text-amber-800");
-      });
-
-      const orderedButtons = [];
-      ranked.forEach((action) => {
-        const button = buttonMap.get(action);
-        if (button) {
-          orderedButtons.push(button);
-          buttonMap.delete(action);
-        }
-      });
-      actionDefaultOrder.forEach((action) => {
-        const fallback = buttonMap.get(action);
-        if (fallback) {
-          orderedButtons.push(fallback);
-          buttonMap.delete(action);
-        }
-      });
-      buttonMap.forEach((button) => orderedButtons.push(button));
-
-      const buttonContainer = els.actionButtons[0].parentElement;
-      if (buttonContainer) {
-        orderedButtons.forEach((button) => buttonContainer.appendChild(button));
-      }
-
-      const primaryAction = String(recommendation?.primaryAction || "");
-      if (!highlightTop || !primaryAction) return;
-      const topButton = orderedButtons.find((button) => String(button.dataset.gridAction || "") === primaryAction) || orderedButtons[0];
-      if (!topButton) return;
-      topButton.dataset.recommended = "true";
-      topButton.textContent = `추천 · ${topButton.dataset.baseLabel || topButton.textContent.trim()}`;
-      topButton.classList.add("ring-2", "ring-amber-300", "bg-amber-50", "border-amber-300", "text-amber-800");
-    }
-
     function closeActionPreview() {
       if (!els.previewModal) return;
       els.previewModal.classList.add("hidden");
@@ -1217,10 +523,6 @@
     }
 
     function openActionPreview(action) {
-      if (isMobileReadOnly) {
-        notifyMobileReadOnly();
-        return;
-      }
       const bounds = getSelectionBounds();
       if (!bounds || !els.previewModal) return;
 
@@ -1236,10 +538,6 @@
         consent: {
           title: "동의서 만들기",
           description: "동의서 화면으로 이동하면서 제목/안내 문구/수신자 후보를 미리 채워둡니다.",
-        },
-        signature: {
-          title: "서명 요청 만들기",
-          description: "서명 화면으로 이동하면서 제목/일시/참석자 후보를 미리 채워둡니다.",
         },
         handoff: {
           title: "배부 체크 시작하기",
@@ -1447,18 +745,12 @@
       if (action === "calendar") return "달력 등록 중 문제가 생겼어요. 날짜 칸을 확인해 주세요.";
       if (action === "collect") return "간편 수합 만들기에 실패했어요. 선택한 칸을 다시 확인해 주세요.";
       if (action === "consent") return "동의서 연결 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
-      if (action === "signature") return "서명 요청 연결 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
       if (action === "handoff") return "배부 체크 만들기에 실패했어요. 이름 칸을 확인해 주세요.";
       if (action === "notice") return "안내문 연결 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
       return "실행에 실패했어요. 다시 시도해 주세요.";
     }
 
     async function runSelectedAction() {
-      if (isMobileReadOnly) {
-        closeActionPreview();
-        notifyMobileReadOnly();
-        return;
-      }
       if (!state.activeAction) {
         closeActionPreview();
         return;
@@ -1481,12 +773,6 @@
         end_row_index: bounds.maxRow,
         end_col_index: bounds.maxCol,
       };
-      if (state.recommendation && state.recommendation.primaryAction) {
-        requestPayload.recommendation_primary = state.recommendation.primaryAction;
-      }
-      if (state.recommendation && state.recommendation.signals) {
-        requestPayload.recommendation_signals = state.recommendation.signals;
-      }
       if (entrySource) {
         requestPayload.entry_source = entrySource;
       }
@@ -1533,7 +819,7 @@
           <td class="px-2 py-1">
             <div
               class="min-w-[120px] px-2 py-1 rounded border border-transparent focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 outline-none"
-              contenteditable="{% if sheetbook_mobile_read_only %}false{% else %}true{% endif %}"
+              contenteditable="true"
               data-row-id="${row.id}"
               data-column-id="${col.id}"
               data-row-index="${rowIndex}"
@@ -1606,22 +892,9 @@
     async function loadGrid() {
       // Cancel pending chunked render from older data before new fetch.
       state.renderRevision += 1;
-      hideConflictBanner();
       const url = new URL(root.dataset.gridUrl, window.location.origin);
       url.searchParams.set("offset", String(state.gridLoad.offset || 0));
       url.searchParams.set("limit", String(state.gridLoad.limit || 50));
-      const viewFilter = (root.dataset.viewFilter || "").trim();
-      const viewSortColumnId = Number.parseInt(root.dataset.viewSortColumnId || "0", 10);
-      const viewSortDirection = (root.dataset.viewSortDirection || "").trim().toLowerCase();
-      if (viewFilter) {
-        url.searchParams.set("view_filter", viewFilter);
-      }
-      if (Number.isFinite(viewSortColumnId) && viewSortColumnId > 0) {
-        url.searchParams.set("sort_col", String(viewSortColumnId));
-      }
-      if (viewSortDirection === "desc") {
-        url.searchParams.set("sort_dir", "desc");
-      }
       const response = await fetch(url.toString(), { method: "GET" });
       if (!response.ok) {
         setStatus("그리드 데이터를 불러오지 못했습니다.", true);
@@ -1651,18 +924,6 @@
           );
         }
       }
-      if (isMobileReadOnly && els.table) {
-        els.table.querySelectorAll("[data-row-id][data-column-id]").forEach((cell) => {
-          cell.classList.add("bg-slate-50", "text-slate-500", "cursor-default");
-        });
-      }
-      applyFocusTargetIfNeeded();
-      if (state.mobileRowPanel.isOpen) {
-        state.mobileRowPanel.rowIndex = clampRowIndex(state.mobileRowPanel.rowIndex);
-        renderMobileRowPanel();
-      } else {
-        updateMobileRowOpenButton();
-      }
     }
 
     async function postJson(url, payload) {
@@ -1677,7 +938,6 @@
     }
 
     function queueCellForSave(cellEl) {
-      if (isMobileReadOnly) return;
       if (!cellEl) return;
       const rowId = cellEl.dataset.rowId;
       const columnId = cellEl.dataset.columnId;
@@ -1691,7 +951,6 @@
         return;
       }
 
-      hideConflictBanner();
       state.retryQueue.delete(key);
       clearFailedEntry(key);
       state.dirtyQueue.set(key, {
@@ -1718,25 +977,13 @@
           row_id: entry.rowId,
           column_id: entry.columnId,
           value: entry.value,
-          client_original: entry.original,
         });
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          const isConflict = response.status === 409 || Boolean(data.conflict);
           const message = data.error || "셀 저장 중 오류가 발생했습니다.";
-          if (isConflict) {
-            const currentValue = cellDisplayValue(data.current_value);
-            return {
-              ok: false,
-              retryable: false,
-              conflict: true,
-              message,
-              currentValue,
-            };
-          }
           const retryable = response.status >= 500;
-          return { ok: false, retryable, conflict: false, message };
+          return { ok: false, retryable, message };
         }
 
         const data = await response.json();
@@ -1745,16 +992,10 @@
           entry.cellEl.dataset.original = savedValue;
           entry.cellEl.textContent = savedValue;
         }
-        pushUndoEntry(entry, savedValue);
         clearFailedEntry(entry.key);
-        return { ok: true, retryable: false, conflict: false, message: "" };
+        return { ok: true, retryable: false, message: "" };
       } catch (error) {
-        return {
-          ok: false,
-          retryable: true,
-          conflict: false,
-          message: "네트워크 오류로 저장에 실패했습니다.",
-        };
+        return { ok: false, retryable: true, message: "네트워크 오류로 저장에 실패했습니다." };
       }
     }
 
@@ -1786,7 +1027,6 @@
 
       let hasRetry = false;
       const failedEntries = [];
-      const conflictEntries = [];
       for (const entry of pendingEntries) {
         const result = await persistCell(entry);
         if (result.ok) continue;
@@ -1796,12 +1036,6 @@
           state.retryQueue.set(entry.key, entry);
           hasRetry = true;
           continue;
-        }
-        if (result.conflict) {
-          if (entry.cellEl && document.body.contains(entry.cellEl)) {
-            entry.cellEl.dataset.original = result.currentValue || "";
-          }
-          conflictEntries.push({ entry, result });
         }
         registerFailedEntry(entry, result.message);
         failedEntries.push(entry);
@@ -1816,75 +1050,12 @@
         const refText = shownRefs.length
           ? ` (${shownRefs.join(", ")}${refs.length > shownRefs.length ? ` 외 ${refs.length - shownRefs.length}칸` : ""})`
           : "";
-        if (conflictEntries.length) {
-          const firstConflict = conflictEntries[0];
-          const firstRef = resolveCellRef(firstConflict.entry) || "선택한 칸";
-          showConflictBanner(`${firstRef}: ${firstConflict.result.message}`);
-          setSaveStatus(
-            `충돌이 있는 칸 ${conflictEntries.length}개가 있어요. 노란 안내를 확인한 뒤 다시 저장해 주세요.`,
-            true
-          );
-        } else {
-          setSaveStatus(`저장 안 된 칸 ${state.failedQueue.size}개${refText}가 있어요. 빨간 칸을 확인해 주세요.`, true);
-        }
+        setSaveStatus(`저장 안 된 칸 ${state.failedQueue.size}개${refText}가 있어요. 빨간 칸을 확인해 주세요.`, true);
       } else if (hasRetry) {
         setSaveStatus("인터넷이 잠시 불안정해 다시 저장 중이에요...", false);
         scheduleRetry(2000);
       } else {
         setSaveStatus("저장됨", false);
-      }
-    }
-
-    async function undoLastSavedChange() {
-      if (state.isSaving) return;
-      await flushDirtyQueue(true);
-      if (!state.undoStack.length) {
-        setSaveStatus("되돌릴 최근 변경이 없어요.", false);
-        return;
-      }
-
-      const undoEntry = state.undoStack.pop();
-      updateUndoUi();
-      state.isUndoOperation = true;
-      try {
-        const response = await postJson(root.dataset.updateUrl, {
-          row_id: undoEntry.rowId,
-          column_id: undoEntry.columnId,
-          value: undoEntry.beforeValue,
-          client_original: undoEntry.afterValue,
-        });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const conflictMessage = data.error || "최근 변경 취소 중 충돌이 생겼어요.";
-          if (response.status === 409 || data.conflict) {
-            showConflictBanner(conflictMessage);
-            setSaveStatus("최근 변경 취소가 충돌로 중단됐어요. 현재 값을 다시 불러와 확인해 주세요.", true);
-          } else {
-            setSaveStatus(conflictMessage, true);
-          }
-          state.undoStack.push(undoEntry);
-          updateUndoUi();
-          return;
-        }
-
-        const data = await response.json();
-        const savedValue = cellDisplayValue(data.value);
-        const liveCell = getCellElByIds(undoEntry.rowId, undoEntry.columnId);
-        if (liveCell && document.body.contains(liveCell)) {
-          liveCell.textContent = savedValue;
-          liveCell.dataset.original = savedValue;
-        } else {
-          await loadGrid();
-        }
-        clearFailedEntry(makeCellKey(undoEntry.rowId, undoEntry.columnId));
-        hideConflictBanner();
-        setSaveStatus("최근 변경을 취소했어요.", false);
-      } catch (error) {
-        state.undoStack.push(undoEntry);
-        updateUndoUi();
-        setSaveStatus("최근 변경 취소 중 네트워크 오류가 발생했어요.", true);
-      } finally {
-        state.isUndoOperation = false;
       }
     }
 
@@ -1912,15 +1083,6 @@
     });
 
     els.table.addEventListener("keydown", (event) => {
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        if (isMobileReadOnly) {
-          notifyMobileReadOnly();
-          return;
-        }
-        undoLastSavedChange();
-        return;
-      }
       if (event.key === "Enter") {
         event.preventDefault();
         event.target.blur();
@@ -1932,9 +1094,6 @@
     });
 
     els.table.addEventListener("mousedown", (event) => {
-      if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) {
-        return;
-      }
       const cell = event.target.closest("[data-row-index][data-col-index]");
       if (!cell || event.button !== 0) return;
       const rowIndex = Number(cell.dataset.rowIndex || 0);
@@ -1966,55 +1125,11 @@
       );
     });
 
-    els.table.addEventListener("touchstart", (event) => {
-      const touch = event.touches && event.touches[0];
-      if (!touch) return;
-      const cell = getCellElFromClientPoint(touch.clientX, touch.clientY);
-      if (!cell) return;
-      event.preventDefault();
-      const rowIndex = Number(cell.dataset.rowIndex || 0);
-      const colIndex = Number(cell.dataset.colIndex || 0);
-      state.isDraggingSelection = true;
-      selectRange(rowIndex, colIndex, rowIndex, colIndex);
-      if (cell && typeof cell.focus === "function") {
-        cell.focus();
-      }
-    }, { passive: false });
-
-    els.table.addEventListener("touchmove", (event) => {
-      if (!state.isDraggingSelection) return;
-      const touch = event.touches && event.touches[0];
-      if (!touch) return;
-      const cell = getCellElFromClientPoint(touch.clientX, touch.clientY);
-      if (!cell) return;
-      event.preventDefault();
-      const rowIndex = Number(cell.dataset.rowIndex || 0);
-      const colIndex = Number(cell.dataset.colIndex || 0);
-      selectRange(
-        state.selection.startRowIndex,
-        state.selection.startColIndex,
-        rowIndex,
-        colIndex
-      );
-    }, { passive: false });
-
-    els.table.addEventListener("touchend", () => {
-      state.isDraggingSelection = false;
-    });
-    els.table.addEventListener("touchcancel", () => {
-      state.isDraggingSelection = false;
-    });
-
     document.addEventListener("mouseup", () => {
       state.isDraggingSelection = false;
     });
 
     els.table.addEventListener("paste", async (event) => {
-      if (isMobileReadOnly) {
-        event.preventDefault();
-        notifyMobileReadOnly();
-        return;
-      }
       const targetCell = event.target.closest("[data-row-index][data-col-index]");
       if (!targetCell) return;
       const text = (event.clipboardData || window.clipboardData).getData("text");
@@ -2045,10 +1160,6 @@
     });
 
     els.addRowBtn.addEventListener("click", async () => {
-      if (isMobileReadOnly) {
-        notifyMobileReadOnly();
-        return;
-      }
       await flushDirtyQueue(true);
       const response = await postJson(root.dataset.addRowUrl, {});
       if (!response.ok) {
@@ -2061,10 +1172,6 @@
 
     els.addColumnForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (isMobileReadOnly) {
-        notifyMobileReadOnly();
-        return;
-      }
       await flushDirtyQueue(true);
       const label = (els.newColLabel.value || "").trim();
       const columnType = els.newColType.value || "text";
@@ -2084,10 +1191,6 @@
 
     if (els.retryFailedBtn) {
       els.retryFailedBtn.addEventListener("click", async () => {
-        if (isMobileReadOnly) {
-          notifyMobileReadOnly();
-          return;
-        }
         if (state.isSaving || !state.failedQueue.size) return;
         const failedEntries = Array.from(state.failedQueue.values());
         state.failedQueue.forEach((entry) => clearFailedCellStyle(entry.cellEl));
@@ -2110,60 +1213,6 @@
         if (!state.dirtyQueue.size) return;
         setSaveStatus("저장 안 된 칸을 다시 저장하는 중...", false);
         await flushDirtyQueue(true);
-      });
-    }
-
-    if (els.undoBtn) {
-      els.undoBtn.addEventListener("click", async () => {
-        if (isMobileReadOnly) {
-          notifyMobileReadOnly();
-          return;
-        }
-        await undoLastSavedChange();
-      });
-    }
-
-    if (els.mobileRowOpenBtn) {
-      els.mobileRowOpenBtn.addEventListener("click", () => {
-        openMobileRowPanel();
-      });
-    }
-    if (els.mobileRowCloseBtn) {
-      els.mobileRowCloseBtn.addEventListener("click", () => {
-        hideMobileRowPanel();
-      });
-    }
-    if (els.mobileRowPrevBtn) {
-      els.mobileRowPrevBtn.addEventListener("click", () => {
-        if (!state.mobileRowPanel.isOpen) return;
-        const nextIndex = clampRowIndex(state.mobileRowPanel.rowIndex - 1);
-        state.mobileRowPanel.rowIndex = nextIndex;
-        const focusCol = currentSelectedColIndex();
-        selectRange(nextIndex, focusCol, nextIndex, focusCol);
-        renderMobileRowPanel();
-      });
-    }
-    if (els.mobileRowNextBtn) {
-      els.mobileRowNextBtn.addEventListener("click", () => {
-        if (!state.mobileRowPanel.isOpen) return;
-        const nextIndex = clampRowIndex(state.mobileRowPanel.rowIndex + 1);
-        state.mobileRowPanel.rowIndex = nextIndex;
-        const focusCol = currentSelectedColIndex();
-        selectRange(nextIndex, focusCol, nextIndex, focusCol);
-        renderMobileRowPanel();
-      });
-    }
-
-    if (els.conflictReloadBtn) {
-      els.conflictReloadBtn.addEventListener("click", async () => {
-        await loadGrid();
-        hideConflictBanner();
-        setSaveStatus("현재 값으로 다시 불러왔어요.", false);
-      });
-    }
-    if (els.conflictCloseBtn) {
-      els.conflictCloseBtn.addEventListener("click", () => {
-        hideConflictBanner();
       });
     }
 
@@ -2212,27 +1261,12 @@
       window.visualViewport.addEventListener("scroll", adjustActionLayerBottomOffset);
     }
     window.addEventListener("resize", adjustActionLayerBottomOffset);
-    window.addEventListener("resize", () => {
-      if (isCompactViewport()) {
-        renderMobileRowPanel();
-      } else {
-        hideMobileRowPanel();
-      }
-      updateMobileRowOpenButton();
-    });
     document.addEventListener("focusin", adjustActionLayerBottomOffset);
     document.addEventListener("focusout", () => {
       window.setTimeout(adjustActionLayerBottomOffset, 60);
     });
 
-    applyMobileReadOnlyUi();
     await loadGrid();
-    updateUndoUi();
-    hideConflictBanner();
-    if (isMobileReadOnly) {
-      setSaveStatus(mobileReadOnlyMessage, false);
-    }
-    updateMobileRowOpenButton();
     const savedHistoryUi = readHistoryUiState();
     state.historyPagesLoaded = Math.max(0, Number(savedHistoryUi.pages_loaded || 0));
     setHistoryFilter(savedHistoryUi.history_filter || "all");
@@ -2414,21 +1448,7 @@
     await loadEvents();
   }
 
-  function bindSheetbookSearchShortcut() {
-    const searchInput = document.getElementById("sheetbook-search-input");
-    if (!searchInput) return;
-    document.addEventListener("keydown", (event) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      if (String(event.key || "").toLowerCase() !== "k") return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      searchInput.focus();
-      searchInput.select();
-    }, true);
-  }
-
   document.addEventListener("DOMContentLoaded", initSheetbookGrid);
   document.addEventListener("DOMContentLoaded", initSheetbookCalendarTab);
-  document.addEventListener("DOMContentLoaded", bindSheetbookSearchShortcut);
 </script>
 {% endblock %}
