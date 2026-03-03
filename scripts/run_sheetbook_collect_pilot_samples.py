@@ -132,17 +132,20 @@ def _clear_collector_data(*, user) -> dict[str, int]:
     }
 
 
-def _supports_home_view_collection() -> bool:
+def _get_table_column_names(*, table_name: str) -> set[str]:
     from django.db import connection
 
-    table_name = "core_post"
+    with connection.cursor() as cursor:
+        table_info = connection.introspection.get_table_description(cursor, table_name)
+    return {str(col.name) for col in table_info}
+
+
+def _supports_home_view_collection() -> bool:
     required_column = "featured_from"
     try:
-        with connection.cursor() as cursor:
-            table_info = connection.introspection.get_table_description(cursor, table_name)
+        column_names = _get_table_column_names(table_name="core_post")
     except Exception:
         return False
-    column_names = {str(col.name) for col in table_info}
     return required_column in column_names
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import MagicMock, call, patch
 
@@ -74,6 +75,7 @@ from scripts.run_sheetbook_seed_metric_samples import (
 from scripts.run_sheetbook_collect_pilot_samples import (
     _count_workspace_home_source_events,
     _delta as _pilot_collect_delta,
+    _supports_home_view_collection,
 )
 from sheetbook.models import (
     ActionInvocation,
@@ -5812,6 +5814,26 @@ class SheetbookPilotCollectScriptTests(TestCase):
         self.assertEqual(result["workspace_home_opened"], 3)
         self.assertEqual(result["archive_event_count"], -1)
         self.assertEqual(result["home_source_sheetbook_created"], 3)
+
+
+class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
+    @patch("scripts.run_sheetbook_collect_pilot_samples._get_table_column_names")
+    def test_supports_home_view_collection_when_required_column_exists(
+        self,
+        mock_get_table_column_names,
+    ):
+        mock_get_table_column_names.return_value = {"id", "featured_from"}
+
+        self.assertTrue(_supports_home_view_collection())
+
+    @patch("scripts.run_sheetbook_collect_pilot_samples._get_table_column_names")
+    def test_supports_home_view_collection_returns_false_on_introspection_error(
+        self,
+        mock_get_table_column_names,
+    ):
+        mock_get_table_column_names.side_effect = RuntimeError("boom")
+
+        self.assertFalse(_supports_home_view_collection())
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
