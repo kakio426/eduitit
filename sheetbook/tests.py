@@ -5863,6 +5863,20 @@ class SheetbookPilotCollectScriptTests(TestCase):
             "python scripts/run_sheetbook_daily_start_bundle.py --days 7 --due-date 2026-03-06 --allow-pilot-hold-for-beta",
         )
 
+    @patch("scripts.run_sheetbook_collect_pilot_samples._default_bundle_due_date")
+    def test_build_next_steps_falls_back_to_default_due_date_when_invalid(
+        self,
+        mock_default_due_date,
+    ):
+        mock_default_due_date.return_value = "2099-01-02"
+
+        next_steps = _build_next_steps(days=14, due_date="bad-date")
+
+        self.assertEqual(
+            next_steps[2],
+            "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2099-01-02 --allow-pilot-hold-for-beta",
+        )
+
     def test_resolve_action_count_uses_auto_when_negative_or_invalid(self):
         self.assertEqual(_resolve_action_count(action_count=-1, create_count=5), 3)
         self.assertEqual(_resolve_action_count(action_count=-3, create_count=2), 2)

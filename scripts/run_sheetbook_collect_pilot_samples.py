@@ -122,9 +122,20 @@ def _default_bundle_due_date() -> str:
     return (date.today() + timedelta(days=1)).isoformat()
 
 
+def _normalize_due_date(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return _default_bundle_due_date()
+    try:
+        parsed = date.fromisoformat(raw)
+    except ValueError:
+        return _default_bundle_due_date()
+    return parsed.isoformat()
+
+
 def _build_next_steps(*, days: int, due_date: str | None = None) -> list[str]:
     safe_days = _to_nonnegative_int(days, default=14) or 14
-    safe_due_date = str(due_date or _default_bundle_due_date()).strip() or _default_bundle_due_date()
+    safe_due_date = _normalize_due_date(due_date)
     return [
         f"python scripts/run_sheetbook_release_readiness.py --days {safe_days}",
         f"python scripts/run_sheetbook_sample_gap_summary.py --days {safe_days}",
