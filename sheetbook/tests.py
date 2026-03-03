@@ -71,6 +71,10 @@ from scripts.run_sheetbook_seed_metric_samples import (
     _clear_seed_events,
     _seed_metric_events,
 )
+from scripts.run_sheetbook_collect_pilot_samples import (
+    _count_workspace_home_source_events,
+    _delta as _pilot_collect_delta,
+)
 from sheetbook.models import (
     ActionInvocation,
     SavedView,
@@ -5736,6 +5740,53 @@ class SheetbookSeedMetricSamplesScriptTests(TestCase):
             SheetbookMetricEvent.objects.first().metadata.get("seeded_by"),
             "another_seed_tag",
         )
+
+
+class SheetbookPilotCollectScriptTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sheetbook_collect_script_t1",
+            password="pw123456",
+            email="sheetbook_collect_script_t1@example.com",
+        )
+
+    def test_count_workspace_home_source_events_counts_only_workspace_home_source(self):
+        SheetbookMetricEvent.objects.create(
+            event_name="sheetbook_created",
+            user=self.user,
+            metadata={"entry_source": "workspace_home_create"},
+        )
+        SheetbookMetricEvent.objects.create(
+            event_name="sheetbook_created",
+            user=self.user,
+            metadata={"entry_source": "direct"},
+        )
+        SheetbookMetricEvent.objects.create(
+            event_name="action_execute_requested",
+            user=self.user,
+            metadata={"entry_source": "workspace_home_action"},
+        )
+        SheetbookMetricEvent.objects.create(
+            event_name="action_execute_requested",
+            user=self.user,
+            metadata={"entry_source": "sheetbook_detail"},
+        )
+
+        event_qs = SheetbookMetricEvent.objects.all()
+        create_count, action_count = _count_workspace_home_source_events(event_qs)
+
+        self.assertEqual(create_count, 1)
+        self.assertEqual(action_count, 1)
+
+    def test_delta_returns_after_minus_before_for_all_keys(self):
+        before = {"workspace_home_opened": 2, "archive_event_count": 1}
+        after = {"workspace_home_opened": 5, "home_source_sheetbook_created": 3}
+
+        result = _pilot_collect_delta(after, before)
+
+        self.assertEqual(result["workspace_home_opened"], 3)
+        self.assertEqual(result["archive_event_count"], -1)
+        self.assertEqual(result["home_source_sheetbook_created"], 3)
 
 
 class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):

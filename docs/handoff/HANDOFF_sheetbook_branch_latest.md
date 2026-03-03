@@ -188,6 +188,24 @@ Status: Working branch handoff (2026-03-03 19:55)
   - `sheetbook_release_readiness_latest.json`의 `overall.status=PASS`
   - 위 2개가 충족되면 그 시점부터 수동 signoff 재확인으로 이동
 
+## 1-7) 표본 수집 보조 스크립트 추가 (2026-03-03)
+
+- 신규 스크립트:
+  - `python scripts/run_sheetbook_collect_pilot_samples.py`
+- 목적:
+  - 로컬/스테이징에서 `pilot_home_opened`, `pilot_create`, `archive_event` 표본을
+    실제 뷰 플로우 기반으로 빠르게 확보해 gate 재판정을 반복 검증
+- 기본 수집(5/5/5):
+  - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-before --home-count 5 --create-count 5 --archive-event-count 5`
+- 정리(되돌리기):
+  - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
+- 동작 메모:
+  - `quick-create`/`bulk-archive`는 실제 뷰를 호출해 metric 이벤트를 생성
+  - 홈(`/`)이 현재 로컬 DB 스키마 이슈(`core_post.featured_from`)로 500이면,
+    `workspace_home_opened`는 자동으로 direct metric 폴백 기록(`home_collection_mode=auto`)
+  - 폴백을 강제로 쓰려면:
+    - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
