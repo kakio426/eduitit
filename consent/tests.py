@@ -4,7 +4,6 @@ from unittest.mock import patch
 from io import StringIO
 
 from django.contrib.auth.models import User
-from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.utils import DataError
 from django.test import TestCase
@@ -12,7 +11,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from consent.models import SignatureDocument, SignatureRecipient, SignatureRequest
-from consent.services import PdfRuntimeUnavailable
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
@@ -123,12 +121,7 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(first["안내문제목"], self.document.title)
         self.assertTrue(first["안내문SHA256"])
 
-    @patch("consent.views.generate_summary_pdf")
-    def test_summary_pdf_download(self, mocked_generate_summary_pdf):
-        mocked_generate_summary_pdf.return_value = ContentFile(
-            b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF",
-            name="summary.pdf",
-        )
+    def test_summary_pdf_download(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
@@ -185,27 +178,14 @@ class ConsentFlowTests(TestCase):
         reader = PdfReader(io.BytesIO(response.content))
         self.assertGreaterEqual(len(reader.pages), 2)
 
-    @patch("consent.views.generate_summary_pdf")
     @patch("django.db.models.fields.files.FieldFile.save", side_effect=RuntimeError("storage down"))
-    def test_summary_pdf_download_falls_back_when_storage_save_fails(self, mocked_save, mocked_generate_summary_pdf):
-        mocked_generate_summary_pdf.return_value = ContentFile(
-            b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF",
-            name="summary.pdf",
-        )
+    def test_summary_pdf_download_falls_back_when_storage_save_fails(self, mocked_save):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("application/pdf", response["Content-Type"])
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
-
-    @patch("consent.views.generate_summary_pdf", side_effect=PdfRuntimeUnavailable("missing reportlab, pypdf"))
-    def test_summary_pdf_download_shows_error_when_pdf_runtime_missing(self, mocked_generate_summary_pdf):
-        self.client.login(username="teacher", password="pw123456")
-        url = reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id})
-        response = self.client.get(url, follow=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PDF 엔진(reportlab, pypdf)이 준비되지 않아 요약 PDF를 생성할 수 없습니다.")
 
     def test_sign_link_expired(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT

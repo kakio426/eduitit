@@ -12,25 +12,6 @@ from .models import SignatureDocument, SignatureRecipient, SignatureRequest
 logger = logging.getLogger(__name__)
 
 
-class PdfRuntimeUnavailable(RuntimeError):
-    """PDF 생성 런타임(reportlab/pypdf) 의존성이 누락된 상태."""
-
-
-def _ensure_pdf_runtime():
-    missing = []
-    try:
-        import reportlab  # noqa: F401
-    except ModuleNotFoundError:
-        missing.append("reportlab")
-    try:
-        import pypdf  # noqa: F401
-    except ModuleNotFoundError:
-        missing.append("pypdf")
-    if missing:
-        joined = ", ".join(missing)
-        raise PdfRuntimeUnavailable(f"PDF 엔진 의존성이 누락되었습니다: {joined}")
-
-
 def _split_data_url(data_url: str):
     if "," not in data_url:
         raise ValueError("Invalid data URL")
@@ -138,7 +119,10 @@ def _build_document_evidence(request: SignatureRequest, original_bytes: bytes) -
 
 
 def _merge_pdf_bytes(source_pdf_bytes: bytes, summary_pdf_bytes: bytes, *, pdf_title: str = "") -> bytes:
-    from pypdf import PdfReader, PdfWriter
+    try:
+        from pypdf import PdfReader, PdfWriter
+    except ModuleNotFoundError:
+        return summary_pdf_bytes
 
     writer = PdfWriter()
     added_pages = 0
@@ -422,7 +406,11 @@ def _build_summary_section_pdf(
 
 
 def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
-    _ensure_pdf_runtime()
+    try:
+        # reportlab 불가 시 최소 PDF라도 내려갈 수 있도록 보조 경로 유지.
+        import reportlab  # noqa: F401
+    except ModuleNotFoundError:
+        return _generate_minimal_summary_pdf(request)
 
     try:
         recipients = list(request.recipients.order_by("student_name", "id"))
@@ -451,7 +439,7 @@ def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
         return ContentFile(merged_bytes, name=filename)
     except Exception:
         logger.exception("[consent] reportlab summary generation failed request_id=%s", request.request_id)
-        raise
+        return _generate_minimal_summary_pdf(request)
 
 
 def generate_merged_pdf(request: SignatureRequest, include_decline_summary: bool = False) -> ContentFile:
