@@ -527,7 +527,7 @@ class DutyTickerManager {
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
                         ${safeStudentNumber}
                     </div>
-                    <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
+                    <span class="text-sm font-bold ${isDone ? 'text-emerald-400' : 'text-slate-300'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
