@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 22:08)
+Status: Working branch handoff (2026-03-03 22:12)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 22:08)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `d99f8c9` (`chore(sheetbook): normalize archive batch size in collector output`)
+- latest backup commit: `f2bc7c1` (`feat(sheetbook): add strict input mode to pilot collector`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
