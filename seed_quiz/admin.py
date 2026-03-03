@@ -1,5 +1,10 @@
+import json
+
 from django.contrib import admin
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 
 from seed_quiz.models import (
     SQAttempt,
@@ -84,6 +89,101 @@ class SQQuizBankAdmin(admin.ModelAdmin):
             reviewed_at=timezone.now(),
         )
         self.message_user(request, f"{count}개 세트를 반려했습니다.")
+
+    # ── JSON 일괄 등록 커스텀 뷰 ──────────────────────────────
+    def get_urls(self):
+        custom_urls = [
+            path(
+                "json-import/",
+                self.admin_site.admin_view(self.json_import_view),
+                name="seed_quiz_sqquizbank_json_import",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["json_import_url"] = reverse(
+            "admin:seed_quiz_sqquizbank_json_import"
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def json_import_view(self, request):
+        results = []
+        error = None
+        json_data = ""
+
+        if request.method == "POST":
+            json_data = request.POST.get("json_data", "").strip()
+            if not json_data:
+                error = "JSON 데이터가 비어 있습니다."
+            else:
+                try:
+                    data = json.loads(json_data)
+                    if not isinstance(data, list):
+                        raise ValueError("최상위 구조는 JSON 배열([])이어야 합니다.")
+
+                    for s_data in data:
+                        title = s_data.get("title", "").strip()
+                        if not title:
+                            results.append("⚠️ title이 비어있는 항목을 건너뛰었습니다.")
+                            continue
+
+                        items = s_data.get("items", [])
+                        if not items:
+                            results.append(f"⚠️ [{title}] 문항(items)이 비어있어 건너뛰었습니다.")
+                            continue
+
+                        bank, created = SQQuizBank.objects.update_or_create(
+                            title=title,
+                            defaults={
+                                "grade": s_data.get("grade", 0),
+                                "preset_type": s_data.get("preset_type", "vocabulary"),
+                                "is_official": True,
+                                "is_public": True,
+                                "quality_status": "approved",
+                                "created_by": request.user,
+                                "source": "manual",
+                            },
+                        )
+                        bank.items.all().delete()
+
+                        for i, item in enumerate(items):
+                            choices = item.get("c", [])
+                            if len(choices) != 4:
+                                results.append(
+                                    f"⚠️ [{title}] {i+1}번 문항: 보기가 4개가 아닙니다 ({len(choices)}개). 건너뜀."
+                                )
+                                continue
+                            SQQuizBankItem.objects.create(
+                                bank=bank,
+                                order_no=i + 1,
+                                question_text=item.get("q", ""),
+                                choices=choices,
+                                correct_index=item.get("a", 0),
+                                explanation=item.get("e", ""),
+                            )
+
+                        status = "생성" if created else "업데이트"
+                        results.append(
+                            f"✅ [{title}] {status} 완료 ({len(items)}문항)"
+                        )
+
+                except json.JSONDecodeError as e:
+                    error = f"JSON 파싱 오류: {e}"
+                except Exception as e:
+                    error = f"처리 중 오류: {e}"
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "JSON 퀴즈 일괄 등록",
+            "results": results,
+            "error": error,
+            "json_data": json_data if error else "",
+        }
+        return TemplateResponse(
+            request, "admin/seed_quiz/json_import.html", context
+        )
 
 
 @admin.register(SQBatchJob)
