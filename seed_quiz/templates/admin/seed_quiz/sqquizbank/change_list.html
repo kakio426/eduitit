@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="{{ json_import_url }}" style="font-weight: bold;">📋 JSON 일괄 등록</a>
+    </li>
+    {{ block.super }}
+{% endblock %}
