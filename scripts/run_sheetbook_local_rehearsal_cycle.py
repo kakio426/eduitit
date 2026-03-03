@@ -20,14 +20,19 @@ def _to_nonnegative_int(value: Any, *, default: int = 0) -> int:
     return parsed
 
 
-def _resolve_action_count(value: Any, *, create_count: int) -> tuple[int, bool]:
+def _resolve_action_count(value: Any, *, create_count: int) -> tuple[int, str, bool]:
+    auto_value = min(max(0, int(create_count)), 3)
+    if value is None:
+        return auto_value, "auto", False
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        return min(max(0, int(create_count)), 3), True
-    if parsed < 0:
-        return min(max(0, int(create_count)), 3), True
-    return parsed, False
+        return auto_value, "auto", True
+    if parsed == -1:
+        return auto_value, "auto", False
+    if parsed < -1:
+        return auto_value, "auto", True
+    return parsed, "explicit", False
 
 
 def _normalize_due_date(value: Any) -> tuple[str, bool]:
@@ -223,7 +228,7 @@ def main() -> int:
     home_count = _to_nonnegative_int(args.home_count, default=0)
     create_count = _to_nonnegative_int(args.create_count, default=0)
     archive_event_count = _to_nonnegative_int(args.archive_event_count, default=0)
-    action_count, used_action_count_fallback = _resolve_action_count(
+    action_count, action_count_mode, used_action_count_fallback = _resolve_action_count(
         args.action_count,
         create_count=create_count,
     )
@@ -264,6 +269,7 @@ def main() -> int:
             "home_count": int(home_count),
             "create_count": int(create_count),
             "action_count": int(action_count),
+            "action_count_mode": str(action_count_mode),
             "archive_event_count": int(archive_event_count),
             "due_date": due_date,
             "allow_pilot_hold_for_beta": bool(args.allow_pilot_hold_for_beta),
@@ -293,4 +299,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -44,6 +44,7 @@ from scripts.run_sheetbook_daily_start_bundle import (
 )
 from scripts.run_sheetbook_local_rehearsal_cycle import (
     _build_command_plan as _build_local_rehearsal_command_plan,
+    _resolve_action_count as _resolve_local_rehearsal_action_count,
 )
 from scripts.run_sheetbook_grid_smoke import (
     _edit_cell_and_save as _edit_grid_cell_and_save,
@@ -5549,6 +5550,24 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
 
 
 class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
+    def test_resolve_local_rehearsal_action_count_auto_on_minus_one_without_warning(self):
+        count, mode, used_fallback = _resolve_local_rehearsal_action_count(-1, create_count=5)
+        self.assertEqual(count, 3)
+        self.assertEqual(mode, "auto")
+        self.assertFalse(used_fallback)
+
+    def test_resolve_local_rehearsal_action_count_marks_invalid_negative(self):
+        count, mode, used_fallback = _resolve_local_rehearsal_action_count(-3, create_count=5)
+        self.assertEqual(count, 3)
+        self.assertEqual(mode, "auto")
+        self.assertTrue(used_fallback)
+
+    def test_resolve_local_rehearsal_action_count_keeps_explicit(self):
+        count, mode, used_fallback = _resolve_local_rehearsal_action_count(2, create_count=5)
+        self.assertEqual(count, 2)
+        self.assertEqual(mode, "explicit")
+        self.assertFalse(used_fallback)
+
     def test_build_local_rehearsal_plan_includes_collect_verify_clear_restore(self):
         plan = _build_local_rehearsal_command_plan(
             days=14,
