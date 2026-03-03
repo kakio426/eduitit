@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 21:53)
+Status: Working branch handoff (2026-03-03 21:56)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 21:53)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `7526736` (`chore(sheetbook): report invalid due-date fallback in collector output`)
+- latest backup commit: `2643977` (`chore(sheetbook): tighten due-date fallback warning semantics`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
