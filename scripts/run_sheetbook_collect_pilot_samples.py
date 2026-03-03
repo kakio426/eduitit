@@ -176,6 +176,26 @@ def _resolve_archive_batch_size(value: Any) -> tuple[int, bool]:
     return raw, False
 
 
+def _collect_input_feedback(
+    *,
+    used_due_date_fallback: bool,
+    used_action_count_fallback: bool,
+    used_archive_batch_size_fallback: bool,
+) -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    errors: list[str] = []
+    if used_due_date_fallback:
+        warnings.append("next_due_date_invalid_fallback")
+        errors.append("next_due_date_invalid")
+    if used_action_count_fallback:
+        warnings.append("action_count_invalid_fallback")
+        errors.append("action_count_invalid")
+    if used_archive_batch_size_fallback:
+        warnings.append("archive_batch_size_invalid_fallback")
+        errors.append("archive_batch_size_invalid")
+    return warnings, errors
+
+
 def _clear_collector_data(*, user) -> dict[str, int]:
     from sheetbook.models import Sheetbook, SheetbookMetricEvent
 
@@ -405,6 +425,12 @@ def main() -> int:
         help="next_steps bundle command due-date override (YYYY-MM-DD)",
     )
     parser.add_argument(
+        "--strict-inputs",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="fail with mode=input_error when fallback normalization occurs",
+    )
+    parser.add_argument(
         "--clear-before",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -440,6 +466,37 @@ def main() -> int:
     )
     next_due_date_raw = str(args.next_due_date or "").strip()
     next_due_date, used_due_date_fallback = _resolve_next_due_date(next_due_date_raw)
+    input_warnings, input_errors = _collect_input_feedback(
+        used_due_date_fallback=used_due_date_fallback,
+        used_action_count_fallback=used_action_count_fallback,
+        used_archive_batch_size_fallback=used_archive_batch_size_fallback,
+    )
+
+    requested_payload = {
+        "home_count": _to_nonnegative_int(args.home_count, default=0),
+        "create_count": create_count,
+        "action_count": action_count,
+        "action_count_mode": action_count_mode,
+        "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
+        "archive_batch_size": archive_batch_size,
+        "next_due_date": next_due_date,
+    }
+
+    if bool(args.strict_inputs) and input_errors:
+        print(
+            json.dumps(
+                {
+                    "mode": "input_error",
+                    "collector_tag": COLLECTOR_TAG,
+                    "errors": input_errors,
+                    "warnings": input_warnings,
+                    "requested": requested_payload,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 2
+
     user_before = _snapshot_user_metrics(user=user)
     global_before = _snapshot_global_metrics(days=days)
 
@@ -480,15 +537,7 @@ def main() -> int:
         "username": str(user.username),
         "days": days,
         "clear_result": clear_result,
-        "requested": {
-            "home_count": _to_nonnegative_int(args.home_count, default=0),
-            "create_count": create_count,
-            "action_count": action_count,
-            "action_count_mode": action_count_mode,
-            "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
-            "archive_batch_size": archive_batch_size,
-            "next_due_date": next_due_date,
-        },
+        "requested": requested_payload,
         "flow_result": flow_result,
         "user_before": user_before,
         "user_after": user_after,
@@ -501,15 +550,8 @@ def main() -> int:
             due_date=next_due_date,
         ),
     }
-    warnings: list[str] = []
-    if used_due_date_fallback:
-        warnings.append("next_due_date_invalid_fallback")
-    if used_action_count_fallback:
-        warnings.append("action_count_invalid_fallback")
-    if used_archive_batch_size_fallback:
-        warnings.append("archive_batch_size_invalid_fallback")
-    if warnings:
-        result["warnings"] = warnings
+    if input_warnings:
+        result["warnings"] = input_warnings
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

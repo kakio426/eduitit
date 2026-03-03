@@ -73,6 +73,7 @@ from scripts.run_sheetbook_seed_metric_samples import (
     _seed_metric_events,
 )
 from scripts.run_sheetbook_collect_pilot_samples import (
+    _collect_input_feedback,
     _resolve_archive_batch_size,
     _build_next_steps,
     _count_workspace_home_source_events,
@@ -5940,6 +5941,40 @@ class SheetbookPilotCollectScriptTests(TestCase):
 
     def test_resolve_archive_batch_size_respects_positive(self):
         self.assertEqual(_resolve_archive_batch_size(3), (3, False))
+
+    def test_collect_input_feedback_returns_warnings_and_errors(self):
+        warnings, errors = _collect_input_feedback(
+            used_due_date_fallback=True,
+            used_action_count_fallback=True,
+            used_archive_batch_size_fallback=True,
+        )
+
+        self.assertEqual(
+            warnings,
+            [
+                "next_due_date_invalid_fallback",
+                "action_count_invalid_fallback",
+                "archive_batch_size_invalid_fallback",
+            ],
+        )
+        self.assertEqual(
+            errors,
+            [
+                "next_due_date_invalid",
+                "action_count_invalid",
+                "archive_batch_size_invalid",
+            ],
+        )
+
+    def test_collect_input_feedback_empty_when_no_fallback(self):
+        warnings, errors = _collect_input_feedback(
+            used_due_date_fallback=False,
+            used_action_count_fallback=False,
+            used_archive_batch_size_fallback=False,
+        )
+
+        self.assertEqual(warnings, [])
+        self.assertEqual(errors, [])
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
