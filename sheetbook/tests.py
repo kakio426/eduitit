@@ -4642,6 +4642,60 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         )
         self.assertTrue(any("local commit: fedcba" in text for text in printed_texts))
 
+    @patch("builtins.print")
+    @patch("scripts.run_sheetbook_guarded_commit.time.sleep")
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_stops_retry_on_non_retryable_push_failure(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+        mock_sleep,
+        mock_print,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="aa11bb\n", stderr=""),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="fatal: Authentication failed for 'https://github.com/x/y.git/'",
+            ),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): retry push",
+                allow_empty=False,
+                guard_only=False,
+                push=True,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=0.0,
+            )
+        )
+
+        self.assertEqual(code, 1)
+        self.assertEqual(mock_run.call_count, 3)
+        mock_sleep.assert_not_called()
+        printed_texts = [" ".join(str(arg) for arg in args) for args, _ in mock_print.call_args_list]
+        self.assertTrue(any("non-retryable push failure detected" in text for text in printed_texts))
+        self.assertTrue(any("local commit: aa11bb" in text for text in printed_texts))
+
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
     def test_build_daily_start_bundle_summary_uses_decision_when_commands_ok(self):

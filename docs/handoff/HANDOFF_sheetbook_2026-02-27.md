@@ -5348,3 +5348,25 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `129e6f6` `fix(sheetbook): add push-failure recovery guidance`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-147. 2026-03-03 guarded commit 비재시도 push 오류 분기 추가
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - push 실패를 retryable / non-retryable로 분류
+  - non-retryable 기준(예: authentication failed, repository not found, permission denied 등)
+    은 재시도 없이 즉시 중단
+  - 중단 시에도 로컬 커밋 해시 + 수동 push 명령 안내는 유지
+- `sheetbook/tests.py`
+  - 비재시도 오류에서 즉시 중단되는 케이스 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - 비재시도 오류 즉시 중단 규칙 문서화
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- 인증/권한 계열 실패에서 불필요한 재시도 없이 빠르게 원인 확인/수동 조치 가능.

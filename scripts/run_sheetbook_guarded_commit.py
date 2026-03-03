@@ -58,6 +58,21 @@ def _head_commit(root: Path) -> str:
     return result.stdout.strip()
 
 
+def _is_retryable_push_failure(result: subprocess.CompletedProcess[str]) -> bool:
+    if int(result.returncode) == 0:
+        return False
+    combined = f"{result.stdout}\n{result.stderr}".lower()
+    non_retryable_tokens = (
+        "authentication failed",
+        "repository not found",
+        "could not read username",
+        "permission denied",
+        "access denied",
+        "remote rejected",
+    )
+    return not any(token in combined for token in non_retryable_tokens)
+
+
 def _run_guard(root: Path, branch: str) -> int:
     guard_cmd = [
         sys.executable,
@@ -136,6 +151,14 @@ def run(args: argparse.Namespace) -> int:
             last_code = int(push_result.returncode)
             if last_code == 0:
                 return 0
+            retryable = _is_retryable_push_failure(push_result)
+            if not retryable:
+                print(
+                    "[sheetbook-guarded-commit] non-retryable push failure detected; "
+                    "skip retries.",
+                    file=sys.stderr,
+                )
+                break
             if attempt < attempts:
                 print(
                     f"[sheetbook-guarded-commit] push failed "
