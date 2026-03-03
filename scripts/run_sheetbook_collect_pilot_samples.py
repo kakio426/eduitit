@@ -196,6 +196,25 @@ def _collect_input_feedback(
     return warnings, errors
 
 
+def _resolve_output_path(value: Any) -> Path | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        path = _repo_root() / path
+    return path
+
+
+def _emit_payload(payload: dict[str, Any], *, output_path: Path | None) -> None:
+    data = dict(payload)
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        data["output"] = str(output_path)
+        output_path.write_text(json.dumps(data, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps(data, ensure_ascii=False))
+
+
 def _clear_collector_data(*, user) -> dict[str, int]:
     from sheetbook.models import Sheetbook, SheetbookMetricEvent
 
@@ -377,6 +396,7 @@ def main() -> int:
         )
     )
     parser.add_argument("--username", default="sheetbook_pilot_collector", help="collector user")
+    parser.add_argument("--output", default="", help="optional JSON output path")
     parser.add_argument(
         "--email",
         default="sheetbook-pilot-collector@example.com",
@@ -443,6 +463,7 @@ def main() -> int:
         help="clear collector user sample data and exit",
     )
     args = parser.parse_args()
+    output_path = _resolve_output_path(args.output)
 
     _setup_django()
 
@@ -483,17 +504,15 @@ def main() -> int:
     }
 
     if bool(args.strict_inputs) and input_errors:
-        print(
-            json.dumps(
-                {
-                    "mode": "input_error",
-                    "collector_tag": COLLECTOR_TAG,
-                    "errors": input_errors,
-                    "warnings": input_warnings,
-                    "requested": requested_payload,
-                },
-                ensure_ascii=False,
-            )
+        _emit_payload(
+            {
+                "mode": "input_error",
+                "collector_tag": COLLECTOR_TAG,
+                "errors": input_errors,
+                "warnings": input_warnings,
+                "requested": requested_payload,
+            },
+            output_path=output_path,
         )
         return 2
 
@@ -501,19 +520,17 @@ def main() -> int:
     global_before = _snapshot_global_metrics(days=days)
 
     if bool(args.clear_only):
-        print(
-            json.dumps(
-                {
-                    "mode": "clear_only",
-                    "collector_tag": COLLECTOR_TAG,
-                    "user_id": int(user.id),
-                    "username": str(user.username),
-                    "clear_result": clear_result,
-                    "user_before": user_before,
-                    "global_before": global_before,
-                },
-                ensure_ascii=False,
-            )
+        _emit_payload(
+            {
+                "mode": "clear_only",
+                "collector_tag": COLLECTOR_TAG,
+                "user_id": int(user.id),
+                "username": str(user.username),
+                "clear_result": clear_result,
+                "user_before": user_before,
+                "global_before": global_before,
+            },
+            output_path=output_path,
         )
         return 0
 
@@ -552,7 +569,7 @@ def main() -> int:
     }
     if input_warnings:
         result["warnings"] = input_warnings
-    print(json.dumps(result, ensure_ascii=False))
+    _emit_payload(result, output_path=output_path)
     return 0
 
 

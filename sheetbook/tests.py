@@ -74,6 +74,8 @@ from scripts.run_sheetbook_seed_metric_samples import (
 )
 from scripts.run_sheetbook_collect_pilot_samples import (
     _collect_input_feedback,
+    _emit_payload,
+    _resolve_output_path,
     _resolve_archive_batch_size,
     _build_next_steps,
     _count_workspace_home_source_events,
@@ -5975,6 +5977,37 @@ class SheetbookPilotCollectScriptTests(TestCase):
 
         self.assertEqual(warnings, [])
         self.assertEqual(errors, [])
+
+    @patch("scripts.run_sheetbook_collect_pilot_samples._repo_root")
+    def test_resolve_output_path_resolves_relative_from_repo_root(self, mock_repo_root):
+        mock_repo_root.return_value = Path("/tmp/repo")
+
+        output = _resolve_output_path("docs/result.json")
+
+        self.assertEqual(output, Path("/tmp/repo/docs/result.json"))
+
+    def test_resolve_output_path_returns_none_for_blank(self):
+        self.assertIsNone(_resolve_output_path(""))
+
+    @patch("builtins.print")
+    def test_emit_payload_writes_output_file_and_prints(self, mock_print):
+        with tempfile.NamedTemporaryFile(
+            suffix=".json",
+            delete=False,
+            dir=str(Path(__file__).resolve().parent),
+        ) as temp_file:
+            output_path = Path(temp_file.name)
+
+        self.addCleanup(lambda: output_path.unlink(missing_ok=True))
+        payload = {"mode": "collect", "ok": True}
+
+        _emit_payload(payload, output_path=output_path)
+
+        written = json.loads(output_path.read_text(encoding="utf-8"))
+        self.assertTrue(written["ok"])
+        self.assertEqual(written["output"], str(output_path))
+        printed_payload = json.loads(str(mock_print.call_args.args[0]))
+        self.assertEqual(printed_payload["output"], str(output_path))
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
