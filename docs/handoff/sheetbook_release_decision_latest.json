@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-03 21:29:29",
+  "generated_at": "2026-03-03 22:41:39",
   "readiness_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_release_readiness_latest.json",
   "manual_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_manual_signoff_latest.json",
   "readiness_overall": {
@@ -39,12 +39,12 @@
     "real_device_grid_1000": {
       "status": "PASS",
       "notes": "waived_by_policy(device-unavailable)",
-      "updated_at": "2026-03-03 21:29:29"
+      "updated_at": "2026-03-03 22:41:39"
     }
   },
-  "decision": "HOLD",
+  "decision": "GO",
   "decision_context": {
-    "decision": "HOLD",
+    "decision": "GO",
     "readiness_status": "HOLD",
     "manual_statuses": {
       "staging_allowlisted": "PASS",
@@ -61,20 +61,10 @@
     "automated_gate_pass": true,
     "waivers": {
       "real_device_grid_1000": true,
-      "pilot_hold_for_beta": false
+      "pilot_hold_for_beta": true
     }
   },
   "next_actions": [
-    {
-      "type": "optional_beta_go",
-      "description": "파일럿 HOLD를 베타 공개에서 조건부 허용할 때 GO 재산출",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta"
-    },
-    {
-      "type": "optional_beta_restore_hold",
-      "description": "조건부 GO 검증 후 운영 상태를 HOLD로 복구",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=HOLD:pending --set production_real_account_signoff=HOLD:pending"
-    },
     {
       "type": "refresh",
       "description": "게이트 상태 최신화 후 판정 재생성",

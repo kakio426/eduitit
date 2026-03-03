@@ -23,10 +23,8 @@
 - `manual_pending`: (없음)
 - `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff
 - `waived_manual_checks`: real_device_grid_1000_smoke
-- `pilot_hold_for_beta`: False
+- `pilot_hold_for_beta`: True
 - `next_actions` (decision json 자동 추천 명령):
-- 파일럿 HOLD를 베타 공개에서 조건부 허용할 때 GO 재산출: `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
-- 조건부 GO 검증 후 운영 상태를 HOLD로 복구: `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=HOLD:pending --set production_real_account_signoff=HOLD:pending`
 - 게이트 상태 최신화 후 판정 재생성: `python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py`
 - `decision_context.manual_alias_statuses`:
 - `production_real_account_signoff`: `PASS`
@@ -45,7 +43,7 @@
 
 ## 3) 최종 판정
 
-- decision: `HOLD`
+- decision: `GO`
 - owner: sheetbook-release
-- next_action: staging/prod 실계정 점검
-- due_date: 2026-03-03
+- next_action: pilot 표본 보강 + 상태 재판정
+- due_date: 2026-03-04
