@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-02 23:43:12",
+  "generated_at": "2026-03-03 11:42:35",
   "readiness_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_release_readiness_latest.json",
   "manual_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_manual_signoff_latest.json",
   "readiness_overall": {
@@ -17,69 +17,54 @@
   },
   "manual_checks": {
     "staging_allowlisted": {
-      "status": "HOLD",
-      "notes": "pending",
-      "updated_at": "2026-03-02 19:00:07"
+      "status": "PASS",
+      "notes": "staging-ok",
+      "updated_at": "2026-03-03 11:41:42"
     },
     "staging_non_allowlisted": {
-      "status": "HOLD",
-      "notes": "pending",
-      "updated_at": "2026-03-02 19:00:07"
+      "status": "PASS",
+      "notes": "staging-ok",
+      "updated_at": "2026-03-03 11:41:42"
     },
     "production_allowlisted": {
-      "status": "HOLD",
-      "notes": "pending",
-      "updated_at": "2026-03-02 19:00:07"
+      "status": "PASS",
+      "notes": "prod-ok",
+      "updated_at": "2026-03-03 11:41:42"
     },
     "production_non_allowlisted": {
-      "status": "HOLD",
-      "notes": "pending",
-      "updated_at": "2026-03-02 19:00:07"
+      "status": "PASS",
+      "notes": "prod-ok",
+      "updated_at": "2026-03-03 11:41:42"
     },
     "real_device_grid_1000": {
       "status": "PASS",
       "notes": "waived_by_policy(device-unavailable)",
-      "updated_at": "2026-03-02 23:43:12"
+      "updated_at": "2026-03-03 11:42:35"
     }
   },
-  "decision": "HOLD",
+  "decision": "GO",
   "decision_context": {
-    "decision": "HOLD",
+    "decision": "GO",
     "readiness_status": "HOLD",
     "manual_statuses": {
-      "staging_allowlisted": "HOLD",
-      "staging_non_allowlisted": "HOLD",
-      "production_allowlisted": "HOLD",
-      "production_non_allowlisted": "HOLD",
+      "staging_allowlisted": "PASS",
+      "staging_non_allowlisted": "PASS",
+      "production_allowlisted": "PASS",
+      "production_non_allowlisted": "PASS",
       "real_device_grid_1000": "PASS"
     },
     "manual_alias_statuses": {
-      "staging_real_account_signoff": "HOLD",
-      "production_real_account_signoff": "HOLD",
+      "staging_real_account_signoff": "PASS",
+      "production_real_account_signoff": "PASS",
       "real_device_grid_1000_smoke": "PASS"
     },
     "automated_gate_pass": true,
     "waivers": {
       "real_device_grid_1000": true,
-      "pilot_hold_for_beta": false
+      "pilot_hold_for_beta": true
     }
   },
   "next_actions": [
-    {
-      "type": "manual_signoff_batch",
-      "description": "스테이징/운영 실계정 점검 결과를 한 번에 PASS 반영",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok"
-    },
-    {
-      "type": "manual_signoff",
-      "description": "스테이징 실계정 점검 후 상태를 PASS로 반영",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok"
-    },
-    {
-      "type": "manual_signoff",
-      "description": "운영 실계정 점검 후 상태를 PASS로 반영",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --set production_real_account_signoff=PASS:prod-ok"
-    },
     {
       "type": "refresh",
       "description": "게이트 상태 최신화 후 판정 재생성",
