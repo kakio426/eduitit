@@ -209,6 +209,8 @@ Status: Working branch handoff (2026-03-03 20:59)
     bundle 기준 한 번에 리허설 수집/재판정/정리까지 실행 가능
   - 홈(`/`)이 현재 로컬 DB 스키마 이슈(`core_post.featured_from`)로 500이면,
     `workspace_home_opened`는 자동으로 direct metric 폴백 기록(`home_collection_mode=auto`)
+  - `home_collection_mode=auto`에서는 홈 수집 전 스키마 사전 점검을 수행하여
+    `core_post.featured_from` 미존재 시 홈 요청을 생략하고 바로 폴백으로 전환
 - 폴백을 강제로 쓰려면:
   - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event`
 

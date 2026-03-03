@@ -132,6 +132,20 @@ def _clear_collector_data(*, user) -> dict[str, int]:
     }
 
 
+def _supports_home_view_collection() -> bool:
+    from django.db import connection
+
+    table_name = "core_post"
+    required_column = "featured_from"
+    try:
+        with connection.cursor() as cursor:
+            table_info = connection.introspection.get_table_description(cursor, table_name)
+    except Exception:
+        return False
+    column_names = {str(col.name) for col in table_info}
+    return required_column in column_names
+
+
 def _run_collection_flow(
     *,
     user,
@@ -164,6 +178,12 @@ def _run_collection_flow(
         client.force_login(user)
 
         use_home_fallback = str(home_collection_mode or "auto").strip().lower() == "direct-event"
+        if (
+            str(home_collection_mode or "auto").strip().lower() == "auto"
+            and not _supports_home_view_collection()
+        ):
+            use_home_fallback = True
+            status["home_errors"].append("home_schema_missing_featured_from")
         for _ in range(home_count):
             if use_home_fallback:
                 SheetbookMetricEvent.objects.create(
