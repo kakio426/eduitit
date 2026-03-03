@@ -5573,7 +5573,7 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
             days=14,
             home_count=3,
             create_count=2,
-            action_count=2,
+            action_count_arg=2,
             archive_event_count=4,
             allow_pilot_hold_for_beta=True,
             due_date="2026-03-04",
@@ -5609,7 +5609,7 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
             days=7,
             home_count=0,
             create_count=0,
-            action_count=0,
+            action_count_arg=0,
             archive_event_count=0,
             allow_pilot_hold_for_beta=False,
             due_date="",
@@ -5621,6 +5621,22 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
         self.assertNotIn("--allow-pilot-hold-for-beta", bundle_cmd)
         self.assertNotIn("--due-date", bundle_cmd)
         self.assertEqual(bundle_cmd, ["python", "scripts/run_sheetbook_daily_start_bundle.py", "--days", "7"])
+
+    def test_build_local_rehearsal_plan_preserves_auto_action_count_flag(self):
+        plan = _build_local_rehearsal_command_plan(
+            days=14,
+            home_count=5,
+            create_count=5,
+            action_count_arg=-1,
+            archive_event_count=0,
+            allow_pilot_hold_for_beta=True,
+            due_date="2026-03-04",
+            collect_output="docs/handoff/collect.json",
+            clear_output="docs/handoff/clear.json",
+        )
+        collect_cmd = plan[0]
+        self.assertIn("--action-count", collect_cmd)
+        self.assertIn("-1", collect_cmd)
 
 
 class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
