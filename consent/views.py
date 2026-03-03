@@ -36,6 +36,7 @@ from .policy_content import (
 )
 from .schema import get_consent_schema_status
 from .services import (
+    PdfRuntimeUnavailable,
     generate_summary_pdf,
     guess_file_type,
 )
@@ -1041,6 +1042,17 @@ def consent_download_summary_pdf(request, request_id):
         response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
         response["Cache-Control"] = "no-store"
         return response
+    except PdfRuntimeUnavailable as exc:
+        logger.error(
+            "[consent] summary download blocked by missing pdf runtime request_id=%s err=%s",
+            consent_request.request_id,
+            exc,
+        )
+        messages.error(
+            request,
+            "PDF 엔진(reportlab, pypdf)이 준비되지 않아 요약 PDF를 생성할 수 없습니다. 운영팀에 환경 설정을 요청해 주세요.",
+        )
+        return redirect("consent:detail", request_id=consent_request.request_id)
     except Exception:
         logger.exception("[consent] summary download failed request_id=%s", consent_request.request_id)
         messages.error(request, "요약 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
