@@ -549,6 +549,25 @@ def student_edit(request, student_id):
 
 
 @login_required
+@require_POST
+def student_delete(request, student_id):
+    student = get_object_or_404(HSStudent, id=student_id)
+    classroom = get_teacher_classroom(request, student.classroom_id)
+
+    student.delete()
+
+    students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+    return render(
+        request,
+        "happy_seed/partials/student_grid.html",
+        {
+            "classroom": classroom,
+            "students": students,
+        },
+    )
+
+
+@login_required
 def consent_manage(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
     context = _build_consent_manage_context(request, classroom)

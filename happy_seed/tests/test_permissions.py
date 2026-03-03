@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from happy_seed.models import HSClassroom
+from happy_seed.models import HSClassroom, HSStudent
 
 
 User = get_user_model()
@@ -20,9 +20,18 @@ class HappySeedPermissionTests(TestCase):
             defaults={"nickname": "선생님B", "role": "school"},
         )
         self.classroom = HSClassroom.objects.create(teacher=self.teacher1, name="4-1")
+        self.student = HSStudent.objects.create(classroom=self.classroom, name="학생A", number=1)
 
     def test_other_teacher_cannot_access_classroom(self):
         self.client.login(username="teacherB", password="pw12345")
         url = reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id})
         res = self.client.get(url)
         self.assertEqual(res.status_code, 404)
+
+    def test_other_teacher_cannot_delete_student(self):
+        self.client.login(username="teacherB", password="pw12345")
+        url = reverse("happy_seed:student_delete", kwargs={"student_id": self.student.id})
+        res = self.client.post(url)
+        self.assertEqual(res.status_code, 404)
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.is_active)

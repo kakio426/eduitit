@@ -195,6 +195,18 @@ class HappySeedViewTests(TestCase):
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=4, name="다온").exists())
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=5, name="서준").exists())
 
+    def test_student_delete_removes_student_and_group_membership(self):
+        self.client.login(username="teacher2", password="pw12345")
+        group = HSStudentGroup.objects.create(classroom=self.classroom, name="삭제테스트모둠")
+        group.members.add(self.student)
+
+        delete_url = reverse("happy_seed:student_delete", kwargs={"student_id": self.student.id})
+        res = self.client.post(delete_url)
+        self.assertEqual(res.status_code, 200)
+
+        self.assertFalse(HSStudent.objects.filter(id=self.student.id).exists())
+        self.assertFalse(group.members.filter(id=self.student.id).exists())
+
     def test_consent_manual_approve(self):
         self.client.login(username="teacher2", password="pw12345")
         url = reverse("happy_seed:consent_manual_approve", kwargs={"classroom_id": self.classroom.id})

@@ -117,6 +117,12 @@ class HappySeedButtonActionSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, name="지훈", number=2).exists())
 
+    def test_student_delete_action(self):
+        url = reverse("happy_seed:student_delete", kwargs={"student_id": self.student.id})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(HSStudent.objects.filter(id=self.student.id).exists())
+
     def test_seed_grant_action(self):
         url = reverse("happy_seed:seed_grant", kwargs={"student_id": self.student.id})
         response = self.client.post(url, {"amount": 2, "detail": "교사 부여"})

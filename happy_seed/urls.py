@@ -21,6 +21,7 @@ urlpatterns = [
     path('<uuid:classroom_id>/students/add/', views.student_add, name='student_add'),
     path('<uuid:classroom_id>/students/bulk-add/', views.student_bulk_add, name='student_bulk_add'),
     path('student/<uuid:student_id>/edit/', views.student_edit, name='student_edit'),
+    path('student/<uuid:student_id>/delete/', views.student_delete, name='student_delete'),
     path('student/<uuid:student_id>/override/', views.set_teacher_override, name='set_teacher_override'),
 
     # Consent
