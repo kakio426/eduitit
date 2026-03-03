@@ -50,12 +50,35 @@ def _build_sample_gap_next_actions(
                 "command": f"python scripts/run_sheetbook_release_readiness.py --days {days_value}",
             }
         )
+        actions.append(
+            {
+                "type": "collect_pilot_samples_local_rehearsal",
+                "description": (
+                    "로컬 리허설용 표본 생성(운영 판정 분리): "
+                    + ", ".join(gap_tokens)
+                ),
+                "command": (
+                    "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    f"--clear-before --home-count {home_gap} --create-count {create_gap} --archive-event-count 0"
+                ),
+            }
+        )
     if archive_event_gap > 0:
         actions.append(
             {
                 "type": "collect_archive_events",
                 "description": f"아카이브 이벤트 {archive_event_gap}건 추가 확보 후 품질 판정 재확인",
                 "command": f"python scripts/run_sheetbook_archive_bulk_snapshot.py --days {days_value}",
+            }
+        )
+        actions.append(
+            {
+                "type": "collect_archive_events_local_rehearsal",
+                "description": f"로컬 리허설용 아카이브 이벤트 {archive_event_gap}건 생성(운영 판정 분리)",
+                "command": (
+                    "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    f"--home-count 0 --create-count 0 --archive-event-count {archive_event_gap}"
+                ),
             }
         )
     if actions:

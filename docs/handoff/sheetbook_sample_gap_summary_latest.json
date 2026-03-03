@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-03 20:45:46",
+  "generated_at": "2026-03-03 20:50:23",
   "days": 14,
   "pilot": {
     "counts": {
@@ -37,9 +37,19 @@
         "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
       },
       {
+        "type": "collect_pilot_samples_local_rehearsal",
+        "description": "로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건",
+        "command": "python scripts/run_sheetbook_collect_pilot_samples.py --clear-before --home-count 5 --create-count 5 --archive-event-count 0"
+      },
+      {
         "type": "collect_archive_events",
         "description": "아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인",
         "command": "python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14"
+      },
+      {
+        "type": "collect_archive_events_local_rehearsal",
+        "description": "로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리)",
+        "command": "python scripts/run_sheetbook_collect_pilot_samples.py --home-count 0 --create-count 0 --archive-event-count 5"
       },
       {
         "type": "refresh_gap_summary",

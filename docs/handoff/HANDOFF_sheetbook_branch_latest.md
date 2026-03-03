@@ -201,6 +201,9 @@ Status: Working branch handoff (2026-03-03 20:47)
   - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
 - 동작 메모:
   - `quick-create`/`bulk-archive`는 실제 뷰를 호출해 metric 이벤트를 생성
+  - `run_sheetbook_sample_gap_summary.py`의 `next_actions`에 로컬 리허설 수집 명령이 함께 노출됨:
+    - `collect_pilot_samples_local_rehearsal`
+    - `collect_archive_events_local_rehearsal`
   - 홈(`/`)이 현재 로컬 DB 스키마 이슈(`core_post.featured_from`)로 500이면,
     `workspace_home_opened`는 자동으로 direct metric 폴백 기록(`home_collection_mode=auto`)
   - 폴백을 강제로 쓰려면:

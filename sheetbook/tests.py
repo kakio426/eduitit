@@ -5825,7 +5825,9 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         next_actions = summary["overall"]["next_actions"]
         next_action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
         self.assertIn("collect_pilot_samples", next_action_types)
+        self.assertIn("collect_pilot_samples_local_rehearsal", next_action_types)
         self.assertIn("collect_archive_events", next_action_types)
+        self.assertIn("collect_archive_events_local_rehearsal", next_action_types)
         self.assertIn("refresh_gap_summary", next_action_types)
         self.assertTrue(
             any("--days 21" in str(item.get("command") or "") for item in next_actions if isinstance(item, dict))
