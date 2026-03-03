@@ -5367,6 +5367,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         )
         self.assertIn("--allow-pilot-hold-for-beta", local_collect_command)
         self.assertIn("--due-date 2026-03-04", local_collect_command)
+        rerun_command = (
+            "run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04"
+        )
+        self.assertGreaterEqual(local_collect_command.count(rerun_command), 2)
         self.assertTrue(
             any(
                 "--due-date 2026-03-04" in str(item.get("command") or "")

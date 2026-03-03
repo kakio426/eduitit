@@ -219,7 +219,7 @@ def _build_bundle_next_actions(
         actions.append(
             {
                 "type": "collect_samples_local_rehearsal",
-                "description": "로컬 리허설 표본 수집 후 bundle+gap summary 재실행(운영 판정 분리)",
+                "description": "로컬 리허설 표본 수집/검증 후 clear 및 bundle+gap summary 상태 복구",
                 "command": (
                     "python scripts/run_sheetbook_collect_pilot_samples.py "
                     "--home-collection-mode direct-event "
@@ -230,7 +230,9 @@ def _build_bundle_next_actions(
                     f"{rerun_bundle_command} && "
                     f"python scripts/run_sheetbook_sample_gap_summary.py --days {days} && "
                     "python scripts/run_sheetbook_collect_pilot_samples.py --clear-only "
-                    f"--output {local_clear_output}"
+                    f"--output {local_clear_output} && "
+                    f"{rerun_bundle_command} && "
+                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
                 ),
             }
         )
