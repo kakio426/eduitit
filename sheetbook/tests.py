@@ -73,6 +73,7 @@ from scripts.run_sheetbook_seed_metric_samples import (
     _seed_metric_events,
 )
 from scripts.run_sheetbook_collect_pilot_samples import (
+    _resolve_archive_batch_size,
     _build_next_steps,
     _count_workspace_home_source_events,
     _delta as _pilot_collect_delta,
@@ -5932,6 +5933,13 @@ class SheetbookPilotCollectScriptTests(TestCase):
             _resolve_action_count(action_count=2, create_count=5),
             (2, "explicit", False),
         )
+
+    def test_resolve_archive_batch_size_clamps_zero_or_negative(self):
+        self.assertEqual(_resolve_archive_batch_size(0), (1, True))
+        self.assertEqual(_resolve_archive_batch_size(-2), (1, True))
+
+    def test_resolve_archive_batch_size_respects_positive(self):
+        self.assertEqual(_resolve_archive_batch_size(3), (3, False))
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):

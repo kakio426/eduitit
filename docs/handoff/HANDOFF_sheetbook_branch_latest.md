@@ -208,6 +208,8 @@ Status: Working branch handoff (2026-03-03 22:01)
   - `--next-due-date` 파싱 실패 시 결과 JSON `warnings`에 `next_due_date_invalid_fallback`이 기록됨
   - `action_count`가 자동/보정되면 결과 JSON `requested.action_count_mode=auto`로 표시되며,
     비정상 입력(예: `--action-count -3`)은 `warnings`에 `action_count_invalid_fallback`이 함께 기록됨
+  - `--archive-batch-size`가 0 이하이거나 비정상이면 `requested.archive_batch_size=1`로 보정되고
+    `warnings`에 `archive_batch_size_invalid_fallback`이 기록됨
   - `run_sheetbook_sample_gap_summary.py`의 `next_actions`에 로컬 리허설 수집 명령이 함께 노출됨:
     - `collect_pilot_samples_local_rehearsal`
     - `collect_archive_events_local_rehearsal`

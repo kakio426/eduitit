@@ -166,6 +166,16 @@ def _resolve_action_count(*, action_count: Any, create_count: int) -> tuple[int,
     return raw_value, "explicit", False
 
 
+def _resolve_archive_batch_size(value: Any) -> tuple[int, bool]:
+    try:
+        raw = int(value)
+    except (TypeError, ValueError):
+        return 1, True
+    if raw <= 0:
+        return 1, True
+    return raw, False
+
+
 def _clear_collector_data(*, user) -> dict[str, int]:
     from sheetbook.models import Sheetbook, SheetbookMetricEvent
 
@@ -425,6 +435,9 @@ def main() -> int:
         action_count=args.action_count,
         create_count=create_count,
     )
+    archive_batch_size, used_archive_batch_size_fallback = _resolve_archive_batch_size(
+        args.archive_batch_size
+    )
     next_due_date_raw = str(args.next_due_date or "").strip()
     next_due_date, used_due_date_fallback = _resolve_next_due_date(next_due_date_raw)
     user_before = _snapshot_user_metrics(user=user)
@@ -453,7 +466,7 @@ def main() -> int:
         create_count=create_count,
         action_count=action_count,
         archive_event_count=_to_nonnegative_int(args.archive_event_count, default=0),
-        archive_batch_size=_to_nonnegative_int(args.archive_batch_size, default=1),
+        archive_batch_size=archive_batch_size,
         home_collection_mode=str(args.home_collection_mode or "auto"),
     )
 
@@ -473,7 +486,7 @@ def main() -> int:
             "action_count": action_count,
             "action_count_mode": action_count_mode,
             "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
-            "archive_batch_size": _to_nonnegative_int(args.archive_batch_size, default=1),
+            "archive_batch_size": archive_batch_size,
             "next_due_date": next_due_date,
         },
         "flow_result": flow_result,
@@ -493,6 +506,8 @@ def main() -> int:
         warnings.append("next_due_date_invalid_fallback")
     if used_action_count_fallback:
         warnings.append("action_count_invalid_fallback")
+    if used_archive_batch_size_fallback:
+        warnings.append("archive_batch_size_invalid_fallback")
     if warnings:
         result["warnings"] = warnings
     print(json.dumps(result, ensure_ascii=False))
