@@ -51,6 +51,13 @@ def _staged_files(root: Path) -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
+def _head_commit(root: Path) -> str:
+    result = _run(root, ["git", "rev-parse", "--short", "HEAD"])
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
 def _run_guard(root: Path, branch: str) -> int:
     guard_cmd = [
         sys.executable,
@@ -115,6 +122,7 @@ def run(args: argparse.Namespace) -> int:
     _echo(commit_result)
     if commit_result.returncode != 0:
         return int(commit_result.returncode)
+    committed_sha = _head_commit(root)
 
     if bool(args.push):
         push_cmd = ["git", "push", str(args.remote).strip() or "origin", branch]
@@ -135,6 +143,14 @@ def run(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
                 time.sleep(push_retry_delay)
+        push_command_text = " ".join(push_cmd)
+        commit_hint = f" (local commit: {committed_sha})" if committed_sha else ""
+        print(
+            "[sheetbook-guarded-commit] push failed after "
+            f"{attempts} attempt(s){commit_hint}. "
+            f"retry manually: `{push_command_text}`",
+            file=sys.stderr,
+        )
         return last_code
 
     return 0

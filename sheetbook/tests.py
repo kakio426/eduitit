@@ -4512,6 +4512,7 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         mock_run_guard.return_value = 0
         mock_run.side_effect = [
             subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="abc123\n", stderr=""),
             subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
         ]
 
@@ -4536,6 +4537,10 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         )
         self.assertEqual(
             mock_run.call_args_list[1].args,
+            (root, ["git", "rev-parse", "--short", "HEAD"]),
+        )
+        self.assertEqual(
+            mock_run.call_args_list[2].args,
             (root, ["git", "push", "origin", "feature/sheetbook"]),
         )
 
@@ -4561,6 +4566,7 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         mock_run_guard.return_value = 0
         mock_run.side_effect = [
             subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="def456\n", stderr=""),
             subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="push failed"),
             subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
         ]
@@ -4580,8 +4586,61 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         )
 
         self.assertEqual(code, 0)
-        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(mock_run.call_count, 4)
         mock_sleep.assert_called_once_with(0.0)
+
+    @patch("builtins.print")
+    @patch("scripts.run_sheetbook_guarded_commit.time.sleep")
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_reports_manual_push_command_when_all_retries_fail(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+        mock_sleep,
+        mock_print,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="fedcba\n", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=""),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): retry push",
+                allow_empty=False,
+                guard_only=False,
+                push=True,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=0.0,
+            )
+        )
+
+        self.assertEqual(code, 1)
+        self.assertEqual(mock_run.call_count, 5)
+        self.assertEqual(mock_sleep.call_count, 2)
+        printed_texts = [" ".join(str(arg) for arg in args) for args, _ in mock_print.call_args_list]
+        self.assertTrue(
+            any("retry manually: `git push origin feature/sheetbook`" in text for text in printed_texts)
+        )
+        self.assertTrue(any("local commit: fedcba" in text for text in printed_texts))
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):

@@ -34,3 +34,6 @@
   - 브랜치 전환 후 재실행 또는 `--branch`/`--expected-branch` 옵션 확인.
 - `branch-guard blocked`
   - 스테이징 파일 중 비허용 경로 포함. `git reset <file>`로 제외 후 재실행.
+- `push failed after N attempt(s)`
+  - 출력된 `local commit` 해시 확인 후 안내된 수동 명령 재실행:
+  - `git push origin feature/sheetbook`

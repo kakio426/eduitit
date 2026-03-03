@@ -5317,3 +5317,30 @@ Status: Working handoff (2026-02-27 EOD)
 
 결과:
 - 브랜치 분리 정책을 위반할 수 있는 override 경로가 커밋 전 단계에서 차단됨.
+
+### C. 커밋/원격 반영
+- `12e51ee` `fix(sheetbook): enforce branch assertion in guarded commit`
+- `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-146. 2026-03-03 guarded commit push 실패 후 복구 안내 보강
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - commit 성공 후 `HEAD` short hash를 확보
+  - `--push` 재시도 전부 실패 시
+    - 로컬 커밋 해시
+    - 수동 재시도 명령(`git push origin <branch>`)
+    를 함께 출력하도록 개선
+- `sheetbook/tests.py`
+  - push 연속 실패 시 안내 문구/해시 출력 검증 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - 실패 케이스 섹션에 수동 복구 절차 반영
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- 네트워크 실패로 자동 push가 끝까지 실패해도 즉시 다음 수동 조치가 명확히 노출됨.
