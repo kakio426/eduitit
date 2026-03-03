@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 23:20:54)
+# Sheetbook Daily Start Bundle (2026-03-03 23:25:56)
 
 - days: 14
 - overall: `GO`
@@ -25,7 +25,7 @@
 - [PASS] `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
 - [PASS] `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - [PASS] `python scripts/run_sheetbook_consent_freeze_snapshot.py`
-- [PASS] `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- [PASS] `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
 - [PASS] `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03 --daily-start C:\Users\kakio\eduitit\docs\handoff\sheetbook_daily_start_bundle_latest.json --output C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## Next Actions
@@ -37,5 +37,5 @@
 - 로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json`
 - 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - 로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 0 --create-count 0 --archive-event-count 5 --output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json`
-- 로컬 통합 리허설 사이클 1회 실행(수집 -> 검증 -> clear -> 복구): `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta`
+- 로컬 통합 리허설 사이클 1회 실행(수집 -> 검증 -> clear -> 복구): `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
 - 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`

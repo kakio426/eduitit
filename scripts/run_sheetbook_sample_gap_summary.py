@@ -28,12 +28,24 @@ def _to_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
+def _normalize_due_date(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = date.fromisoformat(raw)
+    except ValueError:
+        return ""
+    return parsed.isoformat()
+
+
 def _build_sample_gap_next_actions(
     *,
     days: int,
     home_gap: int,
     create_gap: int,
     archive_event_gap: int,
+    due_date: str = "",
 ) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     days_value = max(1, int(days))
@@ -107,6 +119,7 @@ def _build_sample_gap_next_actions(
                     f"--days {days_value} --home-count {home_gap} --create-count {create_gap} "
                     f"--action-count {action_gap} --archive-event-count {archive_event_gap} "
                     "--allow-pilot-hold-for-beta"
+                    + (f" --due-date {due_date}" if str(due_date or "").strip() else "")
                 ),
             }
         )
@@ -134,6 +147,7 @@ def _build_sample_gap_summary(
     generated_at: str,
     readiness: dict[str, Any],
     archive_snapshot: dict[str, Any],
+    due_date: str = "",
 ) -> dict[str, Any]:
     pilot = readiness.get("pilot") or {}
     pilot_counts = pilot.get("counts") or {}
@@ -168,6 +182,7 @@ def _build_sample_gap_summary(
         home_gap=home_gap,
         create_gap=create_gap,
         archive_event_gap=archive_event_gap,
+        due_date=str(due_date or "").strip(),
     )
 
     return {
@@ -273,6 +288,7 @@ def main() -> int:
         help="summary output path",
     )
     parser.add_argument("--days", type=int, default=14, help="집계 기간(일). 기본 14")
+    parser.add_argument("--due-date", default="", help="next action 명령에 포함할 due-date (YYYY-MM-DD)")
     parser.add_argument(
         "--md-output",
         default="",
@@ -299,6 +315,7 @@ def main() -> int:
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         readiness=readiness,
         archive_snapshot=archive_snapshot,
+        due_date=_normalize_due_date(args.due_date),
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

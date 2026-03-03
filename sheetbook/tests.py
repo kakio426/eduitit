@@ -6221,6 +6221,41 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertIn("--archive-event-count 4", str(collect_all_local.get("command") or ""))
         self.assertIn("--allow-pilot-hold-for-beta", str(collect_all_local.get("command") or ""))
 
+    def test_build_sample_gap_summary_includes_due_date_in_unified_cycle_action(self):
+        summary = _build_sample_gap_summary_payload(
+            days=14,
+            due_date="2026-03-04",
+            generated_at="2026-03-03 09:00:00",
+            readiness={
+                "pilot": {
+                    "counts": {
+                        "workspace_home_opened": 2,
+                        "home_source_sheetbook_created": 1,
+                        "home_source_action_execute_requested": 0,
+                    },
+                    "minimum_samples": {
+                        "workspace_home_opened": 5,
+                        "home_source_sheetbook_created": 4,
+                    },
+                }
+            },
+            archive_snapshot={
+                "event_count": 1,
+                "quality": {
+                    "sample_gap_count": 4,
+                    "next_step": "collect_more_samples",
+                },
+            },
+        )
+        next_actions = summary["overall"]["next_actions"]
+        collect_all_local = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "collect_all_local_rehearsal_cycle"
+        )
+        self.assertIn("--due-date 2026-03-04", str(collect_all_local.get("command") or ""))
+
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(
             days=7,

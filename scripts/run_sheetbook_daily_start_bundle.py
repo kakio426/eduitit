@@ -408,7 +408,14 @@ def main() -> int:
         ["python", "scripts/run_sheetbook_pilot_log_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_archive_bulk_snapshot.py", "--days", str(args.days)],
         ["python", "scripts/run_sheetbook_consent_freeze_snapshot.py"],
-        ["python", "scripts/run_sheetbook_sample_gap_summary.py", "--days", str(args.days)],
+        [
+            "python",
+            "scripts/run_sheetbook_sample_gap_summary.py",
+            "--days",
+            str(args.days),
+            "--due-date",
+            due_date,
+        ],
     ]
 
     command_results = [_run_command(root, cmd) for cmd in command_plan]
