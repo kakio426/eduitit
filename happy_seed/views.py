@@ -660,6 +660,11 @@ def student_add(request, classroom_id):
 @login_required
 def student_bulk_add(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
+
+    # Legacy route: keep POST compatibility but move all UI flow to student_manage.
+    if request.method != "POST":
+        return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
     if request.method == "POST":
         form = StudentBulkAddForm(request.POST, request.FILES)
         if form.is_valid():
@@ -673,17 +678,9 @@ def student_bulk_add(request, classroom_id):
                 messages.warning(request, "추가된 학생이 없습니다.")
             if skipped_count:
                 messages.warning(request, f"{skipped_count}건은 번호 중복으로 건너뛰었습니다.")
-            return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
-    else:
-        form = StudentBulkAddForm()
-    return render(
-        request,
-        "happy_seed/student_bulk_add.html",
-        {
-            "classroom": classroom,
-            "form": form,
-        },
-    )
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+        messages.error(request, "학생 일괄 추가 입력값을 확인해 주세요.")
+    return redirect("happy_seed:student_manage", classroom_id=classroom.id)
 
 
 @login_required

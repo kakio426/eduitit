@@ -232,6 +232,16 @@ class HappySeedViewTests(TestCase):
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=2, name="민수").exists())
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=3, name="지수").exists())
 
+    def test_student_bulk_add_get_redirects_to_student_manage(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:student_bulk_add", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 302)
+        self.assertRedirects(
+            res,
+            reverse("happy_seed:student_manage", kwargs={"classroom_id": self.classroom.id}),
+        )
+
     def test_student_bulk_add_with_csv_file(self):
         self.client.login(username="teacher2", password="pw12345")
         url = reverse("happy_seed:student_bulk_add", kwargs={"classroom_id": self.classroom.id})
