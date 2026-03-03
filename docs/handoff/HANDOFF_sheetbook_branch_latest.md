@@ -176,3 +176,21 @@ Status: Working branch handoff (2026-03-03 16:10)
 2. `git commit -m "wip(sheetbook): <짧은 설명>"`
 3. `git push origin feature/sheetbook`
 4. 본 문서/`HANDOFF_sheetbook_2026-02-27.md` 갱신
+
+## 5) 집에서 진행할 작업 (2026-03-03 저녁)
+
+1. 시작 동기화
+   - `git checkout feature/sheetbook`
+   - `git fetch origin`
+   - `git pull --ff-only origin feature/sheetbook`
+2. 오늘 기준 상태 재확인
+   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+3. 코드 작업 후 최소 검증
+   - `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+   - `python manage.py check`
+4. 백업/원격 반영(권장 1회 명령)
+   - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): home-session checkpoint" --push --refresh-handoff-latest --commit-handoff-refresh`
+5. 종료 확인
+   - `git status -sb`
+   - `docs/handoff/HANDOFF_sheetbook_branch_latest.md`의 `latest backup commit`이 최신 커밋으로 갱신됐는지 확인
