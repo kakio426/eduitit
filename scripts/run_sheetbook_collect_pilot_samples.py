@@ -133,9 +133,16 @@ def _normalize_due_date(value: Any) -> str:
     return parsed.isoformat()
 
 
+def _resolve_next_due_date(value: Any) -> tuple[str, bool]:
+    raw = str(value or "").strip()
+    normalized = _normalize_due_date(raw)
+    used_fallback = bool(raw) and normalized != raw
+    return normalized, used_fallback
+
+
 def _build_next_steps(*, days: int, due_date: str | None = None) -> list[str]:
     safe_days = _to_nonnegative_int(days, default=14) or 14
-    safe_due_date = _normalize_due_date(due_date)
+    safe_due_date, _ = _resolve_next_due_date(due_date)
     return [
         f"python scripts/run_sheetbook_release_readiness.py --days {safe_days}",
         f"python scripts/run_sheetbook_sample_gap_summary.py --days {safe_days}",
@@ -415,6 +422,8 @@ def main() -> int:
     days = _to_nonnegative_int(args.days, default=14) or 14
     create_count = _to_nonnegative_int(args.create_count, default=0)
     action_count = _resolve_action_count(action_count=args.action_count, create_count=create_count)
+    next_due_date_raw = str(args.next_due_date or "").strip()
+    next_due_date, used_due_date_fallback = _resolve_next_due_date(next_due_date_raw)
     user_before = _snapshot_user_metrics(user=user)
     global_before = _snapshot_global_metrics(days=days)
 
@@ -461,6 +470,7 @@ def main() -> int:
             "action_count": action_count,
             "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
             "archive_batch_size": _to_nonnegative_int(args.archive_batch_size, default=1),
+            "next_due_date": next_due_date,
         },
         "flow_result": flow_result,
         "user_before": user_before,
@@ -471,9 +481,13 @@ def main() -> int:
         "global_delta": _delta(global_after, global_before),
         "next_steps": _build_next_steps(
             days=days,
-            due_date=str(args.next_due_date or "").strip() or None,
+            due_date=next_due_date,
         ),
     }
+    if used_due_date_fallback:
+        result["warnings"] = [
+            "next_due_date_invalid_fallback",
+        ]
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

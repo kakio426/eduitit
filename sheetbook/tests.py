@@ -76,6 +76,7 @@ from scripts.run_sheetbook_collect_pilot_samples import (
     _build_next_steps,
     _count_workspace_home_source_events,
     _delta as _pilot_collect_delta,
+    _resolve_next_due_date,
     _resolve_action_count,
     _run_collection_flow,
     _supports_home_view_collection,
@@ -5876,6 +5877,24 @@ class SheetbookPilotCollectScriptTests(TestCase):
             next_steps[2],
             "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2099-01-02 --allow-pilot-hold-for-beta",
         )
+
+    @patch("scripts.run_sheetbook_collect_pilot_samples._default_bundle_due_date")
+    def test_resolve_next_due_date_marks_invalid_input(self, mock_default_due_date):
+        mock_default_due_date.return_value = "2099-01-02"
+
+        due_date, used_fallback = _resolve_next_due_date("bad-date")
+
+        self.assertEqual(due_date, "2099-01-02")
+        self.assertTrue(used_fallback)
+
+    @patch("scripts.run_sheetbook_collect_pilot_samples._default_bundle_due_date")
+    def test_resolve_next_due_date_keeps_valid_input(self, mock_default_due_date):
+        mock_default_due_date.return_value = "2099-01-02"
+
+        due_date, used_fallback = _resolve_next_due_date("2026-03-04")
+
+        self.assertEqual(due_date, "2026-03-04")
+        self.assertFalse(used_fallback)
 
     def test_resolve_action_count_uses_auto_when_negative_or_invalid(self):
         self.assertEqual(_resolve_action_count(action_count=-1, create_count=5), 3)
