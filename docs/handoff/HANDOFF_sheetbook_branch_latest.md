@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 20:51)
+Status: Working branch handoff (2026-03-03 20:54)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 20:51)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `88f8637` (`feat(sheetbook): add local rehearsal actions to sample gap summary`)
+- latest backup commit: `53e4eb1` (`chore(sheetbook): prefer direct-event local rehearsal actions`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
