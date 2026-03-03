@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 19:53)
+Status: Working branch handoff (2026-03-03 19:55)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 19:53)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `b0da785` (`chore(sheetbook): rerun rehearsal cycle and restore baseline snapshots`)
+- latest backup commit: `8949e0b` (`docs(sheetbook): add 2026-03-04 priority start guidance`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
