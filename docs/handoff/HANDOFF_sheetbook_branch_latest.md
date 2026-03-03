@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 12:54)
+Status: Working branch handoff (2026-03-03 13:01)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 12:54)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `994b7aa` (`feat(sheetbook): surface pilot-hold waiver in ops reports`)
+- latest backup commit: `f1b19f8` (`fix(sheetbook): preserve bundle rerun options in next actions`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -69,6 +69,7 @@ Status: Working branch handoff (2026-03-03 12:54)
     `pilot 표본 보강 + 상태 재판정`으로 자동 전환
   - release signoff markdown도 `manual_pending` effective + `manual_pending_raw(readiness)` 분리 노출로 정합성 통일
   - daily/ops/release 리포트에 `pilot_hold_for_beta` 표시 추가(조건부 GO 여부 명시)
+  - daily bundle `next_actions` 재실행 명령이 실행 옵션(`--allow-pilot-hold-for-beta`, `--due-date`)을 유지하도록 보정
   - 로컬 리허설용 metric seed 스크립트 추가:
     - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
 

@@ -5184,3 +5184,34 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `994b7aa` `feat(sheetbook): surface pilot-hold waiver in ops reports`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-141. 2026-03-03 daily bundle next_actions 옵션 보존
+
+### A. 구현 요약
+- `scripts/run_sheetbook_daily_start_bundle.py`
+  - bundle 요약 생성 시 실행 컨텍스트(`allow_pilot_hold_for_beta`, `due_date`)를
+    `next_actions` 생성 로직으로 전달하도록 보강
+  - `collect_samples`/`monitoring`/`rerun_failed_commands` 명령에서
+    재실행 커맨드가 기존 실행 옵션을 유지하도록 보정
+- `sheetbook/tests.py`
+  - `SheetbookDailyStartBundleScriptTests`에
+    옵션 전달(`--allow-pilot-hold-for-beta`, `--due-date`) 보존 검증 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+
+결과:
+- `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `next_actions[0].command`:
+    `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-03.md`
+  - Next Actions 동일 명령 반영
+- `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - daily_start 소스 액션 명령 동일 반영
+
+### C. 커밋/원격 반영
+- `f1b19f8` `fix(sheetbook): preserve bundle rerun options in next actions`
+- `origin/feature/sheetbook` push 완료
