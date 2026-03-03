@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 22:42:00)
+# Sheetbook Daily Start Bundle (2026-03-03 22:48:37)
 
 - days: 14
 - overall: `GO`
@@ -30,11 +30,11 @@
 
 ## Next Actions
 - 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
-- 로컬 리허설 표본 수집 후 bundle+gap summary 재실행(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 && python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14 && python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
+- 로컬 리허설 표본 수집 후 bundle+gap summary 재실행(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --output docs/handoff/smoke_sheetbook_collect_samples_bundle_latest.json && python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14 && python scripts/run_sheetbook_collect_pilot_samples.py --clear-only --output docs/handoff/smoke_sheetbook_collect_samples_bundle_clear_latest.json`
 
 ## Sample Gap Next Actions
 - 파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_release_readiness.py --days 14`
-- 로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0`
+- 로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json`
 - 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
-- 로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 0 --create-count 0 --archive-event-count 5`
+- 로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 0 --create-count 0 --archive-event-count 5 --output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json`
 - 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
