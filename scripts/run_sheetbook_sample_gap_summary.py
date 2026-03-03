@@ -124,11 +124,14 @@ def _build_sample_gap_next_actions(
             }
         )
     if actions:
+        refresh_command = f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}"
+        if str(due_date or "").strip():
+            refresh_command += f" --due-date {due_date}"
         actions.append(
             {
                 "type": "refresh_gap_summary",
                 "description": "표본 수집 후 gap summary 재생성",
-                "command": f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}",
+                "command": refresh_command,
             }
         )
         return actions
@@ -136,7 +139,10 @@ def _build_sample_gap_next_actions(
         {
             "type": "monitoring",
             "description": "표본 부족 없음, 주기적으로 gap summary 확인",
-            "command": f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}",
+            "command": (
+                f"python scripts/run_sheetbook_sample_gap_summary.py --days {days_value}"
+                + (f" --due-date {due_date}" if str(due_date or "").strip() else "")
+            ),
         }
     ]
 

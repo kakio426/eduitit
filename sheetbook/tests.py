@@ -6267,6 +6267,13 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
             and str(item.get("type")) == "collect_all_local_rehearsal_cycle"
         )
         self.assertIn("--due-date 2026-03-04", str(collect_all_local.get("command") or ""))
+        refresh_action = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "refresh_gap_summary"
+        )
+        self.assertIn("--due-date 2026-03-04", str(refresh_action.get("command") or ""))
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(

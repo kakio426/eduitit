@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 23:32:35)
+# Sheetbook Daily Start Bundle (2026-03-03 23:37:05)
 
 - days: 14
 - overall: `GO`
@@ -38,4 +38,4 @@
 - 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - 로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 0 --create-count 0 --archive-event-count 5 --output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json`
 - 로컬 통합 리허설 사이클 1회 실행(수집 -> 검증 -> clear -> 복구): `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
-- 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- 표본 수집 후 gap summary 재생성: `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
