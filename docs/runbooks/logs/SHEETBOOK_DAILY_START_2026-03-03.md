@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 20:53:15)
+# Sheetbook Daily Start Bundle (2026-03-03 20:57:52)
 
 - days: 14
 - overall: `GO`
@@ -30,6 +30,7 @@
 
 ## Next Actions
 - 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- 로컬 리허설 표본 수집 후 bundle+gap summary 재실행(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --archive-event-count 5 && python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14 && python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
 
 ## Sample Gap Next Actions
 - 파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_release_readiness.py --days 14`

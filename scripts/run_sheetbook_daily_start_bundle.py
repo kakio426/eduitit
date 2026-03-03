@@ -151,6 +151,19 @@ def _build_bundle_next_actions(
     allow_pilot_hold_for_beta: bool = False,
     due_date: str = "",
 ) -> list[dict[str, str]]:
+    def _extract_gap_count(prefix: str) -> int:
+        needle = f"{prefix}:"
+        for blocker in blockers:
+            token = str(blocker or "").strip()
+            if not token.startswith(needle):
+                continue
+            try:
+                parsed = int(token.split(":", 1)[1])
+            except (TypeError, ValueError):
+                return 0
+            return parsed if parsed > 0 else 0
+        return 0
+
     actions: list[dict[str, str]] = []
     days = int(summary.get("days") or 14)
     rerun_bundle_command = f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}"
@@ -194,6 +207,24 @@ def _build_bundle_next_actions(
                 "command": (
                     f"{rerun_bundle_command} && "
                     f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
+                ),
+            }
+        )
+        home_gap = _extract_gap_count("pilot_home_opened_gap")
+        create_gap = _extract_gap_count("pilot_create_gap")
+        archive_gap = _extract_gap_count("archive_event_gap")
+        actions.append(
+            {
+                "type": "collect_samples_local_rehearsal",
+                "description": "로컬 리허설 표본 수집 후 bundle+gap summary 재실행(운영 판정 분리)",
+                "command": (
+                    "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    "--home-collection-mode direct-event "
+                    f"--clear-before --home-count {home_gap} --create-count {create_gap} "
+                    f"--archive-event-count {archive_gap} && "
+                    f"{rerun_bundle_command} && "
+                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days} && "
+                    "python scripts/run_sheetbook_collect_pilot_samples.py --clear-only"
                 ),
             }
         )

@@ -5322,6 +5322,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
         self.assertIn("manual_signoff_pending", action_types)
         self.assertIn("collect_samples", action_types)
+        self.assertIn("collect_samples_local_rehearsal", action_types)
         self.assertTrue(
             any(
                 "--days 14" in str(item.get("command") or "")
@@ -5336,6 +5337,17 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
             )
         )
+        local_collect = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict) and str(item.get("type")) == "collect_samples_local_rehearsal"
+        )
+        local_collect_command = str(local_collect.get("command") or "")
+        self.assertIn("run_sheetbook_collect_pilot_samples.py", local_collect_command)
+        self.assertIn("--home-collection-mode direct-event", local_collect_command)
+        self.assertIn("--clear-only", local_collect_command)
+        self.assertIn("--allow-pilot-hold-for-beta", local_collect_command)
+        self.assertIn("--due-date 2026-03-04", local_collect_command)
         self.assertTrue(
             any(
                 "--due-date 2026-03-04" in str(item.get("command") or "")
@@ -5444,6 +5456,19 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         )
         self.assertIn("--allow-pilot-hold-for-beta", str(collect_samples.get("command") or ""))
         self.assertIn("--due-date 2026-03-04", str(collect_samples.get("command") or ""))
+        collect_samples_local = next(
+            item
+            for item in actions
+            if isinstance(item, dict) and str(item.get("type")) == "collect_samples_local_rehearsal"
+        )
+        self.assertIn(
+            "--allow-pilot-hold-for-beta",
+            str(collect_samples_local.get("command") or ""),
+        )
+        self.assertIn(
+            "--due-date 2026-03-04",
+            str(collect_samples_local.get("command") or ""),
+        )
 
     def test_build_daily_start_bundle_markdown_includes_commands_and_actions(self):
         summary = {
