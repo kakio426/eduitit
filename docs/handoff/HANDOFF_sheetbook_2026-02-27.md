@@ -5039,6 +5039,10 @@ Status: Working handoff (2026-02-27 EOD)
   - `manual_pending_raw(readiness): staging_real_account_signoff, production_real_account_signoff`
   - `decision: GO`, `next_action: pilot 표본 보강 + 상태 재판정`
 
+### C. 커밋/원격 반영
+- `0de7d1b` `fix(sheetbook): unify release signoff pending display`
+- `origin/feature/sheetbook` push 완료
+
 ---
 
 ### 0-136. 2026-03-03 추가 자동화 (daily bundle의 signoff next_action 기본값 전환)
@@ -5062,3 +5066,7 @@ Status: Working handoff (2026-02-27 EOD)
   - `next_action: pilot 표본 보강 + 상태 재판정`
   - `due_date: 2026-03-04`
   로 자동 갱신됨
+
+### C. 커밋/원격 반영
+- `ed67e6f` `feat(sheetbook): auto-adjust signoff next action for beta hold mode`
+- `origin/feature/sheetbook` push 완료
