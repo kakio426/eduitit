@@ -5356,7 +5356,15 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("run_sheetbook_collect_pilot_samples.py", local_collect_command)
         self.assertIn("--home-collection-mode direct-event", local_collect_command)
         self.assertIn("--action-count 0", local_collect_command)
+        self.assertIn(
+            "--output docs/handoff/smoke_sheetbook_collect_samples_bundle_latest.json",
+            local_collect_command,
+        )
         self.assertIn("--clear-only", local_collect_command)
+        self.assertIn(
+            "--output docs/handoff/smoke_sheetbook_collect_samples_bundle_clear_latest.json",
+            local_collect_command,
+        )
         self.assertIn("--allow-pilot-hold-for-beta", local_collect_command)
         self.assertIn("--due-date 2026-03-04", local_collect_command)
         self.assertTrue(
@@ -6080,6 +6088,20 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
             and str(item.get("type")) == "collect_pilot_samples_local_rehearsal"
         )
         self.assertIn("--action-count 3", str(collect_local.get("command") or ""))
+        self.assertIn(
+            "--output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json",
+            str(collect_local.get("command") or ""),
+        )
+        collect_archive_local = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "collect_archive_events_local_rehearsal"
+        )
+        self.assertIn(
+            "--output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json",
+            str(collect_archive_local.get("command") or ""),
+        )
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(
