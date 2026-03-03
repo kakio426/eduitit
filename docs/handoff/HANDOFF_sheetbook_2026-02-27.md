@@ -5370,3 +5370,7 @@ Status: Working handoff (2026-02-27 EOD)
 
 결과:
 - 인증/권한 계열 실패에서 불필요한 재시도 없이 빠르게 원인 확인/수동 조치 가능.
+
+### C. 커밋/원격 반영
+- `9e76ed3` `fix(sheetbook): skip retries on non-retryable push errors`
+- `origin/feature/sheetbook` push 완료
