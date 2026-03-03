@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -118,6 +118,23 @@ def _delta(after: dict[str, int], before: dict[str, int]) -> dict[str, int]:
     return {key: int(after.get(key, 0)) - int(before.get(key, 0)) for key in sorted(keys)}
 
 
+def _default_bundle_due_date() -> str:
+    return (date.today() + timedelta(days=1)).isoformat()
+
+
+def _build_next_steps(*, days: int, due_date: str | None = None) -> list[str]:
+    safe_days = _to_nonnegative_int(days, default=14) or 14
+    safe_due_date = str(due_date or _default_bundle_due_date()).strip() or _default_bundle_due_date()
+    return [
+        f"python scripts/run_sheetbook_release_readiness.py --days {safe_days}",
+        f"python scripts/run_sheetbook_sample_gap_summary.py --days {safe_days}",
+        (
+            "python scripts/run_sheetbook_daily_start_bundle.py "
+            f"--days {safe_days} --due-date {safe_due_date} --allow-pilot-hold-for-beta"
+        ),
+    ]
+
+
 def _clear_collector_data(*, user) -> dict[str, int]:
     from sheetbook.models import Sheetbook, SheetbookMetricEvent
 
@@ -154,6 +171,7 @@ def _run_collection_flow(
     user,
     home_count: int,
     create_count: int,
+    action_count: int,
     archive_event_count: int,
     archive_batch_size: int,
     home_collection_mode: str,
@@ -168,6 +186,7 @@ def _run_collection_flow(
         "home_fallback_events": 0,
         "home_errors": [],
         "quick_create_status_codes": [],
+        "action_fallback_events": 0,
         "bulk_archive_status_codes": [],
     }
 
@@ -237,6 +256,17 @@ def _run_collection_flow(
             )
             status["quick_create_status_codes"].append(int(response.status_code))
 
+        for _ in range(action_count):
+            SheetbookMetricEvent.objects.create(
+                event_name="action_execute_requested",
+                user=user,
+                metadata={
+                    "entry_source": "workspace_home_action_collect_fallback",
+                    "collector_tag": COLLECTOR_TAG,
+                },
+            )
+            status["action_fallback_events"] += 1
+
         owned_ids = list(
             Sheetbook.objects.filter(owner=user)
             .order_by("-updated_at", "-id")
@@ -282,7 +312,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Collect local sheetbook pilot samples via actual view flows "
-            "(home open, quick create, bulk archive)."
+            "(home open, quick create, action execute, bulk archive)."
         )
     )
     parser.add_argument("--username", default="sheetbook_pilot_collector", help="collector user")
@@ -299,6 +329,12 @@ def main() -> int:
     )
     parser.add_argument("--home-count", type=int, default=5, help="home open request count")
     parser.add_argument("--create-count", type=int, default=5, help="quick create request count")
+    parser.add_argument(
+        "--action-count",
+        type=int,
+        default=0,
+        help="workspace_home action execute sample count",
+    )
     parser.add_argument(
         "--archive-event-count",
         type=int,
@@ -372,6 +408,7 @@ def main() -> int:
         user=user,
         home_count=_to_nonnegative_int(args.home_count, default=0),
         create_count=_to_nonnegative_int(args.create_count, default=0),
+        action_count=_to_nonnegative_int(args.action_count, default=0),
         archive_event_count=_to_nonnegative_int(args.archive_event_count, default=0),
         archive_batch_size=_to_nonnegative_int(args.archive_batch_size, default=1),
         home_collection_mode=str(args.home_collection_mode or "auto"),
@@ -390,6 +427,7 @@ def main() -> int:
         "requested": {
             "home_count": _to_nonnegative_int(args.home_count, default=0),
             "create_count": _to_nonnegative_int(args.create_count, default=0),
+            "action_count": _to_nonnegative_int(args.action_count, default=0),
             "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
             "archive_batch_size": _to_nonnegative_int(args.archive_batch_size, default=1),
         },
@@ -400,11 +438,7 @@ def main() -> int:
         "global_before": global_before,
         "global_after": global_after,
         "global_delta": _delta(global_after, global_before),
-        "next_steps": [
-            "python scripts/run_sheetbook_release_readiness.py --days 14",
-            "python scripts/run_sheetbook_sample_gap_summary.py --days 14",
-            "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta",
-        ],
+        "next_steps": _build_next_steps(days=days),
     }
     print(json.dumps(result, ensure_ascii=False))
     return 0

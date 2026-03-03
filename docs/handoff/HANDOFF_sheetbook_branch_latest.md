@@ -197,6 +197,8 @@ Status: Working branch handoff (2026-03-03 21:12)
     실제 뷰 플로우 기반으로 빠르게 확보해 gate 재판정을 반복 검증
 - 기본 수집(5/5/5):
   - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --archive-event-count 5`
+- 액션 이벤트 포함 수집(5/5/3/5):
+  - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5`
 - 정리(되돌리기):
   - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
 - 동작 메모:

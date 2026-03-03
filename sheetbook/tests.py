@@ -73,8 +73,10 @@ from scripts.run_sheetbook_seed_metric_samples import (
     _seed_metric_events,
 )
 from scripts.run_sheetbook_collect_pilot_samples import (
+    _build_next_steps,
     _count_workspace_home_source_events,
     _delta as _pilot_collect_delta,
+    _run_collection_flow,
     _supports_home_view_collection,
 )
 from sheetbook.models import (
@@ -5814,6 +5816,49 @@ class SheetbookPilotCollectScriptTests(TestCase):
         self.assertEqual(result["workspace_home_opened"], 3)
         self.assertEqual(result["archive_event_count"], -1)
         self.assertEqual(result["home_source_sheetbook_created"], 3)
+
+    def test_run_collection_flow_adds_workspace_home_action_events(self):
+        flow_result = _run_collection_flow(
+            user=self.user,
+            home_count=0,
+            create_count=0,
+            action_count=2,
+            archive_event_count=0,
+            archive_batch_size=1,
+            home_collection_mode="direct-event",
+        )
+
+        self.assertEqual(flow_result["status"]["action_fallback_events"], 2)
+        rows = list(
+            SheetbookMetricEvent.objects.filter(event_name="action_execute_requested").values(
+                "metadata"
+            )
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertTrue(
+            all(
+                str((row.get("metadata") or {}).get("entry_source") or "").startswith(
+                    "workspace_home"
+                )
+                for row in rows
+            )
+        )
+
+    def test_build_next_steps_uses_days_and_due_date(self):
+        next_steps = _build_next_steps(days=7, due_date="2026-03-06")
+
+        self.assertEqual(
+            next_steps[0],
+            "python scripts/run_sheetbook_release_readiness.py --days 7",
+        )
+        self.assertEqual(
+            next_steps[1],
+            "python scripts/run_sheetbook_sample_gap_summary.py --days 7",
+        )
+        self.assertEqual(
+            next_steps[2],
+            "python scripts/run_sheetbook_daily_start_bundle.py --days 7 --due-date 2026-03-06 --allow-pilot-hold-for-beta",
+        )
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
