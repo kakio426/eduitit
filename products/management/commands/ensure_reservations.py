@@ -20,7 +20,7 @@ class Command(BaseCommand):
             # Update fields that are safe to update (Code-driven)
             product.lead_text = '복잡한 특별실 예약, 이제 클릭 한 번으로!'
             product.description = '과학실, 컴퓨터실 등 특별실 예약을 실시간으로 확인하고 간편하게 신청하세요. 선생님들의 업무가 줄어듭니다.'
-            product.icon = '📅'
+            product.icon = '🏫'
             product.color_theme = 'purple'
             product.card_size = 'small'
             product.is_guest_allowed = True # Students/Guests use it
@@ -49,7 +49,7 @@ class Command(BaseCommand):
                 is_active=True,
                 is_featured=False,
                 is_guest_allowed=True,
-                icon='📅',
+                icon='🏫',
                 color_theme='purple',
                 card_size='small',
                 display_order=99, # Default order
