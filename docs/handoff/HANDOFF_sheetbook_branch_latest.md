@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 19:49)
+Status: Working branch handoff (2026-03-03 19:50)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 19:49)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `8433aa1` (`test(sheetbook): add grid smoke retry unit tests`)
+- latest backup commit: `472714b` (`docs(sheetbook): record night smoke stabilization cycle`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
