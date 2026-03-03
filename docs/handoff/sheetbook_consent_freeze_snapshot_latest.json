@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-03-03 23:37:05",
+  "template_path": "C:\\Users\\kakio\\eduitit\\sheetbook\\templates\\sheetbook\\consent_review.html",
+  "strict_extras": false,
+  "status": "PASS",
+  "reasons": [],
+  "required": {
+    "ids": [
+      "recipients-textarea",
+      "recipients-cleanup-btn",
+      "recipients-cleanup-undo-btn",
+      "recipients-copy-issues-btn",
+      "recipients-prev-issue-btn",
+      "recipients-next-issue-btn",
+      "recipients-submit-btn"
+    ],
+    "testids": [
+      "recipients-textarea",
+      "recipients-cleanup-btn",
+      "recipients-cleanup-undo-btn",
+      "recipients-copy-issues-btn",
+      "recipients-prev-issue-btn",
+      "recipients-next-issue-btn",
+      "recipients-jump-top-btn",
+      "recipients-jump-bottom-btn",
+      "recipients-submit-btn"
+    ],
+    "jump_values": [
+      "top",
+      "bottom"
+    ],
+    "hidden_names": [
+      "recipients_cleanup_applied",
+      "recipients_cleanup_removed_count",
+      "recipients_cleanup_undo_used",
+      "recipients_issue_copy_used",
+      "recipients_issue_jump_count"
+    ],
+    "order_rules": [
+      {
+        "name": "cleanup button order",
+        "tokens": [
+          "id=\"recipients-cleanup-btn\"",
+          "id=\"recipients-cleanup-undo-btn\"",
+          "id=\"recipients-copy-issues-btn\""
+        ]
+      },
+      {
+        "name": "issue navigation order",
+        "tokens": [
+          "id=\"recipients-prev-issue-btn\"",
+          "id=\"recipients-next-issue-btn\"",
+          "data-testid=\"recipients-jump-top-btn\"",
+          "data-testid=\"recipients-jump-bottom-btn\""
+        ]
+      }
+    ]
+  },
+  "current": {
+    "ids": [
+      "recipients-action-guide",
+      "recipients-active-line",
+      "recipients-cleanup-applied",
+      "recipients-cleanup-btn",
+      "recipients-cleanup-removed-count",
+      "recipients-cleanup-status",
+      "recipients-cleanup-undo-btn",
+      "recipients-cleanup-undo-used",
+      "recipients-copy-issues-btn",
+      "recipients-issue-copy-used",
+      "recipients-issue-jump-count",
+      "recipients-issue-line-buttons",
+      "recipients-issue-line-list",
+      "recipients-issue-line-overflow",
+      "recipients-issue-line-panel",
+      "recipients-issue-minimap",
+      "recipients-issue-minimap-markers",
+      "recipients-issue-tip",
+      "recipients-jump-bottom-btn",
+      "recipients-jump-top-btn",
+      "recipients-live-summary",
+      "recipients-next-issue-btn",
+      "recipients-prev-issue-btn",
+      "recipients-submit-btn",
+      "recipients-textarea"
+    ],
+    "testids": [
+      "recipients-cleanup-btn",
+      "recipients-cleanup-undo-btn",
+      "recipients-copy-issues-btn",
+      "recipients-jump-bottom-btn",
+      "recipients-jump-top-btn",
+      "recipients-next-issue-btn",
+      "recipients-prev-issue-btn",
+      "recipients-submit-btn",
+      "recipients-textarea"
+    ],
+    "jump_values": [
+      "bottom",
+      "top"
+    ],
+    "hidden_names": [
+      "recipients_cleanup_applied",
+      "recipients_cleanup_removed_count",
+      "recipients_cleanup_undo_used",
+      "recipients_issue_copy_used",
+      "recipients_issue_jump_count",
+      "sb_seed"
+    ]
+  },
+  "missing": {
+    "ids": [],
+    "testids": [],
+    "jump_values": [],
+    "hidden_names": []
+  },
+  "extra": {
+    "ids": [
+      "recipients-action-guide",
+      "recipients-active-line",
+      "recipients-cleanup-applied",
+      "recipients-cleanup-removed-count",
+      "recipients-cleanup-status",
+      "recipients-cleanup-undo-used",
+      "recipients-issue-copy-used",
+      "recipients-issue-jump-count",
+      "recipients-issue-line-buttons",
+      "recipients-issue-line-list",
+      "recipients-issue-line-overflow",
+      "recipients-issue-line-panel",
+      "recipients-issue-minimap",
+      "recipients-issue-minimap-markers",
+      "recipients-issue-tip",
+      "recipients-jump-bottom-btn",
+      "recipients-jump-top-btn",
+      "recipients-live-summary"
+    ],
+    "testids": [],
+    "jump_values": [],
+    "hidden_names": []
+  },
+  "order_checks": [
+    {
+      "name": "cleanup button order",
+      "ok": true,
+      "tokens": [
+        "id=\"recipients-cleanup-btn\"",
+        "id=\"recipients-cleanup-undo-btn\"",
+        "id=\"recipients-copy-issues-btn\""
+      ],
+      "error": ""
+    },
+    {
+      "name": "issue navigation order",
+      "ok": true,
+      "tokens": [
+        "id=\"recipients-prev-issue-btn\"",
+        "id=\"recipients-next-issue-btn\"",
+        "data-testid=\"recipients-jump-top-btn\"",
+        "data-testid=\"recipients-jump-bottom-btn\""
+      ],
+      "error": ""
+    }
+  ],
+  "md_output": "C:\\Users\\kakio\\eduitit\\docs\\runbooks\\logs\\SHEETBOOK_CONSENT_FREEZE_2026-03-03.md"
+}

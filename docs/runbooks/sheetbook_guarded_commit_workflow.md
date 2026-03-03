@@ -1,0 +1,60 @@
+# Sheetbook Guarded Commit Workflow
+
+목적: `feature/sheetbook`에서 커밋 전에 경로 가드를 강제해 브랜치 분리 위반을 줄인다.
+
+## 1) 기본 사용
+
+1. 변경 파일 스테이징
+   - `git add <sheetbook-allowed-paths...>`
+2. 가드만 먼저 점검
+   - `python scripts/run_sheetbook_guarded_commit.py --guard-only`
+3. 커밋 실행
+   - `python scripts/run_sheetbook_guarded_commit.py -m "feat(sheetbook): <summary>"`
+
+## 2) 커밋 + 푸시 한 번에
+
+- `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push`
+- 커밋/푸시 후 handoff latest까지 자동 갱신:
+  - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push --refresh-handoff-latest`
+- 커밋/푸시 + handoff latest 자동 갱신 + 갱신분 자동 커밋/푸시:
+  - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push --refresh-handoff-latest --commit-handoff-refresh`
+- 기본 재시도 포함:
+  - push 실패 시 자동 재시도(기본 총 3회 시도)
+  - 옵션: `--push-retries <N>`, `--push-retry-delay <sec>`
+  - 단, 인증/권한/저장소 경로 오류는 비재시도 오류로 즉시 중단
+
+## 3) 동작 원리
+
+- 내부에서 `python scripts/branch_path_guard.py --branch feature/sheetbook --staged` 실행
+- 가드 실패 시 커밋/푸시를 중단
+- 기본적으로 현재 브랜치가 `feature/sheetbook`이 아니면 실행 차단
+- `--push` 사용 시 네트워크 일시 실패에 대해 재시도 후 최종 실패코드 반환
+- `--branch`를 주면 현재 브랜치와 일치하는지 추가 검증(불일치 시 차단)
+- `--refresh-handoff-latest` 사용 시 커밋/푸시 성공 직후
+  `run_sheetbook_refresh_handoff_latest.py`를 자동 실행
+- `--commit-handoff-refresh` 사용 시 refresh 결과 파일을 자동 커밋하고,
+  `--push`가 켜져 있으면 2차 push까지 수행
+- refresh 후 자동 커밋 직전에도 branch path guard를 다시 실행해
+  경로 우회 커밋을 차단
+
+## 4) 자주 보는 실패 케이스
+
+- `no staged files to commit`
+  - 스테이징 누락. `git add` 후 재실행.
+- `blocked: current branch ... != expected feature/sheetbook`
+  - 브랜치 전환 후 재실행 또는 `--branch`/`--expected-branch` 옵션 확인.
+- `branch-guard blocked`
+  - 스테이징 파일 중 비허용 경로 포함. `git reset <file>`로 제외 후 재실행.
+- `push failed after N attempt(s)`
+  - 출력된 `local commit` 해시 확인 후 안내된 수동 명령 재실행:
+  - `git push origin feature/sheetbook`
+
+## 5) handoff latest 자동 갱신
+
+- push 완료 후 아래 명령으로 최신 handoff 메타데이터 자동 갱신:
+  - `python scripts/run_sheetbook_refresh_handoff_latest.py`
+- 파일 쓰기 없이 미리보기:
+  - `python scripts/run_sheetbook_refresh_handoff_latest.py --dry-run`
+- 갱신 항목:
+  - `Status: Working branch handoff (...)`
+  - `latest backup commit` (HEAD 해시/제목)

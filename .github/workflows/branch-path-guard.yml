@@ -1,0 +1,66 @@
+name: Branch Path Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - feature/sheetbook
+      - feature/sheetbook/**
+
+jobs:
+  guard:
+    if: |
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/sheetbook')) ||
+      (github.event_name == 'push' && startsWith(github.ref_name, 'feature/sheetbook'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Collect changed files
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            BRANCH="${GITHUB_HEAD_REF}"
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            git fetch --no-tags --depth=1 origin "$BASE_REF"
+            MERGE_BASE=$(git merge-base "origin/$BASE_REF" "$HEAD_SHA")
+            git diff --name-only "$MERGE_BASE" "$HEAD_SHA" > changed_files.txt
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+            BEFORE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${GITHUB_SHA}"
+            if [[ "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+              git show --pretty="" --name-only "$HEAD_SHA" > changed_files.txt
+            else
+              git diff --name-only "$BEFORE_SHA" "$HEAD_SHA" > changed_files.txt
+            fi
+          fi
+
+          CHANGED_COUNT=$(grep -c . changed_files.txt || true)
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "count=$CHANGED_COUNT" >> "$GITHUB_OUTPUT"
+
+          echo "Branch: $BRANCH"
+          echo "Changed files ($CHANGED_COUNT):"
+          cat changed_files.txt || true
+
+      - name: Enforce branch path policy
+        if: steps.changed.outputs.count != '0'
+        run: |
+          python scripts/branch_path_guard.py \
+            --branch "${{ steps.changed.outputs.branch }}" \
+            --files-file changed_files.txt

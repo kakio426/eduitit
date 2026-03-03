@@ -1116,4 +1116,27 @@ image_url = "https://res.cloudinary.com/.../upload/f_auto,q_auto/v123/image.jpg"
 
 ---
 
-**마지막 업데이트:** 2026-03-01
+# 브랜치 충돌 방지 가드 (2026-03-02)
+
+### 목적
+- `feature/sheetbook`에는 sheetbook 관련 변경만 올라가도록 강제한다.
+- `artclass/sns` 같은 타 서비스 변경이 섞일 때 커밋/CI 단계에서 즉시 차단한다.
+
+### 로컬 강제 (pre-commit)
+- 기본값(권장): 로컬 자동 차단은 끄고 필요할 때 수동 점검만 사용
+- 수동 점검: `python scripts/branch_path_guard.py --branch feature/sheetbook --staged`
+- 자동 차단이 필요할 때만 설치: `pwsh scripts/install_git_hooks.ps1`
+- 자동 차단 해제: `git config --unset core.hooksPath`
+- 규칙 파일: `scripts/branch_path_rules.json`
+
+### 원격 강제 (GitHub Actions)
+- 워크플로우: `.github/workflows/branch-path-guard.yml`
+- `feature/sheetbook` 관련 PR/Push에서만 변경 파일을 검사하고, 위반 시 실패 처리
+
+### 운영 원칙
+- 브랜치별 허용 경로는 규칙 파일로만 변경한다.
+- 예외 상황도 "규칙 업데이트 커밋"을 먼저 만들고 이후 기능 커밋을 진행한다.
+
+---
+
+**마지막 업데이트:** 2026-03-02

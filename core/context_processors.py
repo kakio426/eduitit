@@ -87,6 +87,7 @@ def site_config(request):
 def search_products(request):
     """Ctrl+K 검색 모달용 서비스 목록 JSON 제공."""
     from django.conf import settings as django_settings
+    from django.urls import NoReverseMatch, reverse
     if not getattr(django_settings, 'GLOBAL_SEARCH_ENABLED', True):
         return {}
 
@@ -105,9 +106,21 @@ def search_products(request):
                 'icon': p.icon or '',
                 'service_type': p.service_type or '',
             })
-        return {'search_products_json': json.dumps(items, ensure_ascii=False)}
+        sheetbook_search_api_url = ''
+        if getattr(request, 'user', None) and request.user.is_authenticated:
+            try:
+                sheetbook_search_api_url = reverse('sheetbook:search_suggest')
+            except NoReverseMatch:
+                sheetbook_search_api_url = ''
+        return {
+            'search_products_json': json.dumps(items, ensure_ascii=False),
+            'sheetbook_search_api_url': sheetbook_search_api_url,
+        }
     except Exception:
-        return {'search_products_json': '[]'}
+        return {
+            'search_products_json': '[]',
+            'sheetbook_search_api_url': '',
+        }
 
 
 def seo_meta(request):

@@ -5,6 +5,7 @@ app_name = 'artclass'
 
 urlpatterns = [
     path('', views.setup_view, name='setup'),
+    path('setup/<int:pk>/fork/', views.setup_fork_view, name='setup_fork'),
     path('setup/<int:pk>/', views.setup_view, name='setup_edit'),
     path('setup/from-library/<int:pk>/', views.clone_for_edit_view, name='setup_clone'),
     path('classroom/<int:pk>/', views.classroom_view, name='classroom'),

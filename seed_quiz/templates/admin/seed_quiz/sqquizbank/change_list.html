@@ -2,7 +2,14 @@
 
 {% block object-tools-items %}
     <li>
-        <a href="{{ json_import_url }}" style="font-weight: bold;">📋 JSON 일괄 등록</a>
+        <a href="{{ cleanup_url }}" class="addlink" style="background-color: #ba2121; padding: 10px 15px; margin-right: 10px;" onclick="return confirm('문항수가 5개 미만인 모든 쓰레기 데이터를 삭제하시겠습니까?');">
+            🗑️ 쓰레기 세트 자동 정리
+        </a>
+    </li>
+    <li>
+        <a href="{{ json_import_url }}" class="addlink" style="background-color: #417690; padding: 10px 15px; margin-right: 10px;">
+            📝 JSON 퀴즈 일괄 등록
+        </a>
     </li>
     {{ block.super }}
 {% endblock %}

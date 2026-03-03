@@ -533,121 +533,6 @@ def student_manage(request, classroom_id):
             context = _build_student_manage_context(classroom, bulk_form=bulk_form)
             return render(request, "happy_seed/student_manage.html", context, status=400)
 
-        if action == "bulk_edit_students":
-            raw_student_ids = request.POST.getlist("edit_student_ids")
-            ordered_student_ids = []
-            seen_student_ids = set()
-            for raw_student_id in raw_student_ids:
-                student_id = (raw_student_id or "").strip()
-                if not student_id or student_id in seen_student_ids:
-                    continue
-                seen_student_ids.add(student_id)
-                ordered_student_ids.append(student_id)
-
-            if not ordered_student_ids:
-                messages.info(request, "저장할 학생 정보가 없습니다.")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            students = classroom.students.filter(id__in=ordered_student_ids)
-            student_map = {str(student.id): student for student in students}
-            if len(student_map) != len(ordered_student_ids):
-                messages.error(request, "유효하지 않은 학생이 포함되어 저장을 중단했습니다.")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            edits = []
-            field_errors = []
-            for student_id in ordered_student_ids:
-                student = student_map[student_id]
-                raw_number = (request.POST.get(f"number_{student_id}") or "").strip()
-                raw_name = (request.POST.get(f"name_{student_id}") or "").strip()
-
-                if not raw_name:
-                    field_errors.append(f"{student.number}번 학생: 이름이 비어 있습니다.")
-                    continue
-
-                try:
-                    number_value = int(raw_number)
-                except (TypeError, ValueError):
-                    field_errors.append(f"{student.name}: 번호는 숫자여야 합니다.")
-                    continue
-
-                if number_value < 0:
-                    field_errors.append(f"{student.name}: 번호는 0 이상이어야 합니다.")
-                    continue
-
-                edits.append(
-                    {
-                        "student": student,
-                        "name": raw_name,
-                        "number": number_value,
-                        "changed": student.name != raw_name or student.number != number_value,
-                    }
-                )
-
-            if field_errors:
-                preview = ", ".join(field_errors[:3])
-                if len(field_errors) > 3:
-                    preview = f"{preview} 외 {len(field_errors) - 3}건"
-                messages.error(request, f"일괄 저장 실패: {preview}")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            number_to_names = {}
-            for edit in edits:
-                number_to_names.setdefault(edit["number"], []).append(edit["student"].name)
-            duplicate_numbers = [
-                (number_value, names)
-                for number_value, names in number_to_names.items()
-                if len(names) > 1
-            ]
-            if duplicate_numbers:
-                duplicate_numbers.sort(key=lambda row: row[0])
-                preview = ", ".join(
-                    f"{number_value}번({'/'.join(names[:2])})"
-                    for number_value, names in duplicate_numbers[:3]
-                )
-                if len(duplicate_numbers) > 3:
-                    preview = f"{preview} 외 {len(duplicate_numbers) - 3}건"
-                messages.error(request, f"일괄 저장 실패: 같은 번호가 중복되었습니다. {preview}")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            edited_ids = [edit["student"].id for edit in edits]
-            edited_numbers = [edit["number"] for edit in edits]
-            occupied_numbers = list(
-                classroom.students.exclude(id__in=edited_ids)
-                .filter(number__in=edited_numbers)
-                .values_list("number", flat=True)
-                .distinct()
-                .order_by("number")
-            )
-            if occupied_numbers:
-                preview = ", ".join(f"{number}번" for number in occupied_numbers[:5])
-                if len(occupied_numbers) > 5:
-                    preview = f"{preview} 외 {len(occupied_numbers) - 5}건"
-                messages.error(request, f"일괄 저장 실패: 이미 사용 중인 번호가 있습니다. {preview}")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            changed_edits = [edit for edit in edits if edit["changed"]]
-            if not changed_edits:
-                messages.info(request, "변경된 학생 정보가 없습니다.")
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            try:
-                with transaction.atomic():
-                    for edit in changed_edits:
-                        student = edit["student"]
-                        student.number = edit["number"]
-                        student.name = edit["name"]
-                        student.save(update_fields=["number", "name", "updated_at"])
-            except IntegrityError:
-                messages.error(
-                    request,
-                    "번호 중복이 발생해 일괄 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-                )
-                return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
-            messages.success(request, f"{len(changed_edits)}명의 학생 정보를 일괄 저장했습니다.")
-            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
-
         if action == "edit_student":
             student_id = request.POST.get("student_id")
             student = get_object_or_404(HSStudent, id=student_id, classroom=classroom)
@@ -824,6 +709,25 @@ def student_edit(request, student_id):
             "classroom": classroom,
             "students": students,
             "error": error,
+        },
+    )
+
+
+@login_required
+@require_POST
+def student_delete(request, student_id):
+    student = get_object_or_404(HSStudent, id=student_id)
+    classroom = get_teacher_classroom(request, student.classroom_id)
+
+    student.delete()
+
+    students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
+    return render(
+        request,
+        "happy_seed/partials/student_grid.html",
+        {
+            "classroom": classroom,
+            "students": students,
         },
     )
 

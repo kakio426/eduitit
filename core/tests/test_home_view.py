@@ -68,6 +68,19 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('search_products_json', response.context)
 
+    def test_v1_sheetbook_search_api_url_empty_for_anonymous(self):
+        response = self.client.get(reverse('home'))
+        self.assertIn('sheetbook_search_api_url', response.context)
+        self.assertEqual(response.context['sheetbook_search_api_url'], '')
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v1_sheetbook_search_api_url_present_for_authenticated(self):
+        _create_onboarded_user('searchurluser')
+        self.client.login(username='searchurluser', password='pass1234')
+        response = self.client.get(reverse('home'))
+        self.assertIn('sheetbook_search_api_url', response.context)
+        self.assertEqual(response.context['sheetbook_search_api_url'], reverse('sheetbook:search_suggest'))
+
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_search_products_json_absent_when_global_search_disabled(self):
         """글로벌 검색 비활성화 시 컨텍스트에서 검색 데이터 제외"""
@@ -659,6 +672,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(f'action="{reverse("sheetbook:quick_copy")}"', content)
         self.assertIn('name="source" value="workspace_home_create"', content)
         self.assertIn('name="source" value="workspace_home_copy"', content)
+        self.assertIn('name="include_rows" value="1"', content)
+        self.assertIn('행 포함', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_today_rows_render(self):

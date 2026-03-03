@@ -62,7 +62,8 @@
         {% csrf_token %}
         <textarea name="json_data" placeholder='[&#10;  {&#10;    "title": "[사자성어] 1단계",&#10;    "grade": 0,&#10;    "preset_type": "sino_idiom",&#10;    "items": [&#10;      {"q": "多多益善 (다다익선)", "c": ["보기1","보기2","보기3","보기4"], "a": 1, "e": "해설..."}&#10;    ]&#10;  }&#10;]'>{{ json_data }}</textarea>
         <div class="btn-row">
-            <input type="submit" value="등록하기">
+            <input type="submit" name="action" value="등록하기">
+            <button type="submit" name="action" value="cleanup" style="background: #ba2121; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="return confirm('정말로 5문항 미만인 모든 세트를 삭제하시겠습니까?');">🗑️ 쓰레기 세트 정리 (5문항 미만 삭제)</button>
             <a href="{% url 'admin:seed_quiz_sqquizbank_changelist' %}">← 퀴즈 뱅크 목록으로</a>
         </div>
     </form>

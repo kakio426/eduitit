@@ -539,9 +539,13 @@ function homeCalendarWidget() {
                                     <i class="fa-solid fa-plus"></i> 새 수첩
                                 </button>
                             </form>
-                            <form method="post" action="{{ sheetbook_workspace.copy_action_url }}" class="inline-flex">
+                            <form method="post" action="{{ sheetbook_workspace.copy_action_url }}" class="inline-flex items-center gap-2">
                                 {% csrf_token %}
                                 <input type="hidden" name="source" value="workspace_home_copy">
+                                <label class="inline-flex items-center gap-1 rounded-xl border border-indigo-200 px-2 py-1 text-[11px] font-bold text-indigo-100">
+                                    <input type="checkbox" name="include_rows" value="1" class="h-3.5 w-3.5 rounded border-indigo-200 bg-transparent text-white">
+                                    행 포함
+                                </label>
                                 <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-black text-white hover:bg-white/10 transition">
                                     <i class="fa-regular fa-copy"></i> 작년 수첩 이어쓰기
                                 </button>

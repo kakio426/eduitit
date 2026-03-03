@@ -112,15 +112,14 @@
         <div class="mt-6 rounded-2xl bg-white p-6 border border-slate-200 shadow-sm overflow-hidden">
             <h2 class="text-lg font-black text-slate-800">주제 입력 가이드 (매우 중요)</h2>
             <p class="mt-2 text-sm text-slate-600">
-                주제 열에는 <strong>한글 이름</strong> 또는 <strong>영문 코드</strong>를 넣을 수 있습니다.
-                예: <code>맞춤법</code> 또는 <code>orthography</code>
+                주제 열에는 <strong>한글 주제명</strong>만 넣어 주세요.
+                예: <code>맞춤법</code>
             </p>
             <div class="mt-4 overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-slate-50 text-slate-700">
                             <th class="px-3 py-2 text-left font-bold whitespace-nowrap">주제(한글)</th>
-                            <th class="px-3 py-2 text-left font-bold whitespace-nowrap">주제 코드(영문)</th>
                             <th class="px-3 py-2 text-left font-bold">어떤 문제를 넣나요?</th>
                             <th class="px-3 py-2 text-left font-bold">문제 소재 예시</th>
                             <th class="px-3 py-2 text-left font-bold">작성 팁</th>
@@ -130,7 +129,6 @@
                         {% for row in topic_guide_rows %}
                         <tr class="border-t border-slate-100">
                             <td class="px-3 py-2 font-semibold text-slate-800 whitespace-nowrap">{{ row.label }}</td>
-                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap"><code>{{ row.key }}</code></td>
                             <td class="px-3 py-2 text-slate-600">{{ row.focus }}</td>
                             <td class="px-3 py-2 text-slate-600">{{ row.examples }}</td>
                             <td class="px-3 py-2 text-slate-600">{{ row.tip }}</td>

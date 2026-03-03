@@ -184,7 +184,82 @@ class SignatureSharedRosterSyncTests(TestCase):
         response = self.client.post(reverse("signatures:sync_roster", kwargs={"uuid": session.uuid}), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(session.expected_participants.count(), 2)
-
         response = self.client.post(reverse("signatures:sync_roster", kwargs={"uuid": session.uuid}), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(session.expected_participants.count(), 2)
+
+    def test_create_session_prefills_from_sheetbook_seed(self):
+        seed_token = "signature-seed-1"
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            seed_token: {
+                "action": "signature",
+                "data": {
+                    "title": "2학년 일정 서명 요청",
+                    "print_title": "2학년 참석 서명",
+                    "instructor": "김담임",
+                    "location": "시청각실",
+                    "datetime": "2026-03-15T14:00",
+                    "description": "교무수첩에서 가져온 서명 요청입니다.",
+                    "expected_count": 2,
+                    "participants_text": "김하늘,2-1\n박나래,2-2",
+                },
+            }
+        }
+        session.save()
+
+        response = self.client.get(reverse("signatures:create"), data={"sb_seed": seed_token})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교무수첩 선택 칸을 가져왔어요")
+        self.assertContains(response, "참석자 후보 2명")
+        self.assertEqual(response.context["form"]["title"].value(), "2학년 일정 서명 요청")
+        self.assertEqual(response.context["form"]["print_title"].value(), "2학년 참석 서명")
+        self.assertEqual(response.context["form"]["instructor"].value(), "김담임")
+        self.assertEqual(response.context["form"]["location"].value(), "시청각실")
+        self.assertEqual(response.context["form"]["datetime"].value(), "2026-03-15T14:00")
+        self.assertEqual(str(response.context["form"]["expected_count"].value()), "2")
+
+    def test_create_session_sheetbook_seed_auto_adds_expected_participants(self):
+        seed_token = "signature-seed-2"
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            seed_token: {
+                "action": "signature",
+                "data": {
+                    "participants_text": "김하늘,2-1\n박나래,2-2\n김하늘,2-1",
+                },
+            }
+        }
+        session.save()
+
+        session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        response = self.client.post(
+            reverse("signatures:create"),
+            data={
+                "sheetbook_seed_token": seed_token,
+                "apply_sheetbook_participants": "1",
+                "title": "교무수첩 연동 서명",
+                "print_title": "",
+                "instructor": "강사",
+                "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
+                "location": "시청각실",
+                "description": "",
+                "shared_roster_group": "",
+                "expected_count": "",
+                "is_active": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        created_session = TrainingSession.objects.get(title="교무수첩 연동 서명", created_by=self.user)
+        participants = list(
+            created_session.expected_participants.values_list("name", "affiliation").order_by("name")
+        )
+        self.assertEqual(participants, [("김하늘", "2-1"), ("박나래", "2-2")])
+
+        refreshed_session = self.client.session
+        self.assertNotIn(seed_token, refreshed_session.get("sheetbook_action_seeds", {}))

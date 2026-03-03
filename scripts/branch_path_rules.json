@@ -1,0 +1,50 @@
+{
+  "rules": [
+    {
+      "name": "sheetbook-feature-isolation",
+      "branch_patterns": [
+        "feature/sheetbook",
+        "feature/sheetbook/*",
+        "refs/heads/feature/sheetbook",
+        "refs/heads/feature/sheetbook/*"
+      ],
+      "allow": [
+        "sheetbook/**",
+        "docs/handoff/*sheetbook*",
+        "docs/handoff/*SHEETBOOK*",
+        "docs/plans/*sheetbook*",
+        "docs/plans/*SHEETBOOK*",
+        "docs/runbooks/*sheetbook*",
+        "docs/runbooks/*SHEETBOOK*",
+        "docs/runbooks/logs/*sheetbook*",
+        "docs/runbooks/logs/*SHEETBOOK*",
+        "docs/runbooks/templates/*sheetbook*",
+        "docs/runbooks/templates/*SHEETBOOK*",
+        "scripts/run_sheetbook_*",
+        "scripts/check_sheetbook_*",
+        "classcalendar/templates/classcalendar/sheetbook_*",
+        "classcalendar/tests/test_sheetbook_*",
+        "products/management/commands/ensure_sheetbook.py",
+        "products/tests/test_ensure_sheetbook.py",
+        ".env.example",
+        "config/settings.py",
+        "config/settings_production.py",
+        "core/context_processors.py",
+        "core/templates/base.html",
+        "core/templates/core/home_authenticated_v2.html",
+        "core/tests/test_home_view.py",
+        "seed_quiz/templates/seed_quiz/csv_guide.html",
+        "seed_quiz/tests/test_teacher_flow.py",
+        "seed_quiz/views.py",
+        "signatures/templates/signatures/create.html",
+        "signatures/tests/test_shared_roster_sync.py",
+        ".github/workflows/branch-path-guard.yml",
+        ".githooks/pre-commit",
+        "scripts/install_git_hooks.ps1",
+        "scripts/branch_path_guard.py",
+        "scripts/branch_path_rules.json",
+        "claude.md"
+      ]
+    }
+  ]
+}
