@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 13:53)
+Status: Working branch handoff (2026-03-03 14:59)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 13:53)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `9e76ed3` (`fix(sheetbook): skip retries on non-retryable push errors`)
+- latest backup commit: `ffa1bf3` (`docs(sheetbook): sync handoff for non-retryable push policy`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -82,6 +82,8 @@ Status: Working branch handoff (2026-03-03 13:53)
     - `--branch` 지정 시 현재 체크아웃 브랜치와 일치 여부 강제 검증(불일치 차단)
     - push 최종 실패 시 로컬 커밋 해시 + 수동 재시도 명령 안내 출력
     - 인증/권한/저장소 경로 오류는 비재시도 오류로 즉시 중단
+    - handoff latest 메타데이터 자동 갱신:
+      - `python scripts/run_sheetbook_refresh_handoff_latest.py`
     - 문서: `docs/runbooks/sheetbook_guarded_commit_workflow.md`
     - 테스트: `SheetbookGuardedCommitScriptTests` 추가
   - 로컬 리허설용 metric seed 스크립트 추가:

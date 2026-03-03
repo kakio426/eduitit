@@ -54,6 +54,9 @@ from scripts.run_sheetbook_release_signoff_log import (
 from scripts.run_sheetbook_guarded_commit import (
     run as _run_sheetbook_guarded_commit,
 )
+from scripts.run_sheetbook_refresh_handoff_latest import (
+    run as _run_sheetbook_refresh_handoff_latest,
+)
 from scripts.run_sheetbook_pilot_log_snapshot import (
     _build_markdown as _build_pilot_log_markdown,
     _collect_snapshot as _collect_pilot_log_snapshot,
@@ -4695,6 +4698,95 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         printed_texts = [" ".join(str(arg) for arg in args) for args, _ in mock_print.call_args_list]
         self.assertTrue(any("non-retryable push failure detected" in text for text in printed_texts))
         self.assertTrue(any("local commit: aa11bb" in text for text in printed_texts))
+
+
+class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._repo_root")
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._run_git")
+    def test_run_updates_status_and_latest_backup_commit(self, mock_run_git, mock_repo_root):
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            delete=False,
+            dir=str(Path.cwd()),
+            suffix=".md",
+            encoding="utf-8",
+        )
+        try:
+            handoff = Path(temp_file.name)
+            temp_file.write(
+                "\n".join(
+                    [
+                        "# HANDOFF",
+                        "Status: Working branch handoff (2026-03-03 13:00)",
+                        "- latest backup commit: `old123` (`old subject`)",
+                    ]
+                )
+                + "\n"
+            )
+            temp_file.close()
+
+            mock_repo_root.return_value = Path.cwd()
+            mock_run_git.side_effect = [
+                "feature/sheetbook",
+                "abc1234\tfeat(sheetbook): new backup",
+            ]
+
+            code = _run_sheetbook_refresh_handoff_latest(
+                Namespace(
+                    handoff=str(handoff),
+                    timestamp="2026-03-03 13:59",
+                    expected_branch="feature/sheetbook",
+                )
+            )
+
+            self.assertEqual(code, 0)
+            updated = handoff.read_text(encoding="utf-8")
+            self.assertIn("Status: Working branch handoff (2026-03-03 13:59)", updated)
+            self.assertIn(
+                "- latest backup commit: `abc1234` (`feat(sheetbook): new backup`)",
+                updated,
+            )
+        finally:
+            Path(temp_file.name).unlink(missing_ok=True)
+
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._repo_root")
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._run_git")
+    def test_run_blocks_on_branch_mismatch(self, mock_run_git, mock_repo_root):
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            delete=False,
+            dir=str(Path.cwd()),
+            suffix=".md",
+            encoding="utf-8",
+        )
+        try:
+            handoff = Path(temp_file.name)
+            original = "\n".join(
+                [
+                    "# HANDOFF",
+                    "Status: Working branch handoff (2026-03-03 13:00)",
+                    "- latest backup commit: `old123` (`old subject`)",
+                ]
+            ) + "\n"
+            temp_file.write(original)
+            temp_file.close()
+            mock_repo_root.return_value = Path.cwd()
+            mock_run_git.side_effect = [
+                "hotfix/main-ops",
+            ]
+
+            code = _run_sheetbook_refresh_handoff_latest(
+                Namespace(
+                    handoff=str(handoff),
+                    timestamp="2026-03-03 13:59",
+                    expected_branch="feature/sheetbook",
+                )
+            )
+
+            self.assertEqual(code, 2)
+            self.assertEqual(handoff.read_text(encoding="utf-8"), original)
+        finally:
+            Path(temp_file.name).unlink(missing_ok=True)
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):

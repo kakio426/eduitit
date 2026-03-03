@@ -38,3 +38,11 @@
 - `push failed after N attempt(s)`
   - 출력된 `local commit` 해시 확인 후 안내된 수동 명령 재실행:
   - `git push origin feature/sheetbook`
+
+## 5) handoff latest 자동 갱신
+
+- push 완료 후 아래 명령으로 최신 handoff 메타데이터 자동 갱신:
+  - `python scripts/run_sheetbook_refresh_handoff_latest.py`
+- 갱신 항목:
+  - `Status: Working branch handoff (...)`
+  - `latest backup commit` (HEAD 해시/제목)

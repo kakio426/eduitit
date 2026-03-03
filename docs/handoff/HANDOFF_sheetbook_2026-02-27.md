@@ -5374,3 +5374,29 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `9e76ed3` `fix(sheetbook): skip retries on non-retryable push errors`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-148. 2026-03-03 handoff latest 메타데이터 자동 갱신 스크립트 추가
+
+### A. 구현 요약
+- 신규 스크립트:
+  - `scripts/run_sheetbook_refresh_handoff_latest.py`
+  - 기능:
+    - `HANDOFF_sheetbook_branch_latest.md`의
+      - `Status: Working branch handoff (...)`
+      - `latest backup commit`
+      라인을 현재 시각/HEAD 커밋 정보로 자동 갱신
+    - 브랜치 불일치 시 실행 차단(`--expected-branch`, 기본 `feature/sheetbook`)
+- `sheetbook/tests.py`
+  - `SheetbookRefreshHandoffLatestScriptTests` 추가
+  - 정상 치환/브랜치 불일치 차단 테스트
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - push 완료 후 handoff latest 자동 갱신 절차 추가
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+- `python scripts/run_sheetbook_refresh_handoff_latest.py --help`
+
+결과:
+- handoff latest 메타데이터 갱신 수작업을 명령 한 번으로 대체 가능.
