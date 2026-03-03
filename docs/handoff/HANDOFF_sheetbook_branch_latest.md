@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 22:47)
+Status: Working branch handoff (2026-03-03 22:49)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 22:47)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `cf22b12` (`feat(sheetbook): add output artifacts to rehearsal next actions`)
+- latest backup commit: `08c2307` (`chore(sheetbook): refresh bundle artifacts after rehearsal output wiring`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
