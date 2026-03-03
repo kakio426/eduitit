@@ -70,21 +70,5 @@
         </form>
         {% endif %}
 
-        <!-- Student delete -->
-        <form hx-post="{% url 'happy_seed:student_delete' student_id=student.id %}" hx-target="#student-grid"
-            hx-swap="innerHTML" hx-indicator="find .js-student-delete-loading"
-            hx-disabled-elt="find button[type='submit']"
-            hx-on::response-error="alert('학생 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
-            onsubmit="return confirm('이 학생을 목록에서 삭제할까요?');">
-            {% csrf_token %}
-            <button type="submit"
-                class="w-full py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors inline-flex items-center justify-center gap-1"
-                style="min-height: 44px;">
-                <span class="js-student-delete-loading htmx-indicator">
-                    <i class="fas fa-circle-notch fa-spin text-[10px]"></i>
-                </span>
-                <span>삭제</span>
-            </button>
-        </form>
     </div>
 </div>
