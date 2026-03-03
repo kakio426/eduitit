@@ -4925,3 +4925,38 @@ Status: Working handoff (2026-02-27 EOD)
 3. 반영 후 bundle 재실행:
    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
 4. 상태가 여전히 HOLD면 ops index `next_actions` 상단 명령부터 순차 실행
+
+---
+
+### 0-132. 2026-03-03 후속 실행 (수동 signoff PASS + 조건부 GO + handoff/push 완료)
+
+### A. 실행 요약
+- 아래 명령 실행:
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+  - `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action "pilot 표본 보강 + 상태 재판정" --due-date 2026-03-03`
+- 결과:
+  - `manual_alias_statuses`: staging/prod/real-device 모두 `PASS`
+  - `decision`: `GO` (조건부: `pilot_hold_for_beta=true`)
+  - `readiness_status`: `HOLD` (pilot/archive 표본 부족 지속)
+  - sample gap blockers: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+
+### B. 산출물 갱신
+- JSON latest:
+  - `docs/handoff/sheetbook_release_decision_latest.json`
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`
+- 로그:
+  - `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_PILOT_EVENT_LOG_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_ARCHIVE_BULK_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_SAMPLE_GAP_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_CONSENT_FREEZE_2026-03-03.md`
+
+### C. 커밋/원격 반영
+- `e0b793f` `chore(sheetbook): refresh 2026-03-03 handoff ops snapshots`
+- `838c153` `docs(sheetbook): update latest branch handoff status`
+- `origin/feature/sheetbook` push 완료
