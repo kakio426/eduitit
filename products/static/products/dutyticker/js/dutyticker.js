@@ -87,6 +87,13 @@ class DutyTickerManager {
             });
         }
 
+        this.bindButtonAction('mainTimerDisplay', () => this.toggleTimer());
+        this.bindButtonAction('timerAddMinuteBtn', () => this.addTimerMinutes(1));
+        this.bindButtonAction('timerPreset5Btn', () => this.setTimerMode(300, true));
+        this.bindButtonAction('timerPreset10Btn', () => this.setTimerMode(600, true));
+        this.bindButtonAction('timerCustomApplyBtn', () => this.applyCustomTimerMinutes());
+        this.bindButtonAction('timerResetBtn', () => this.resetTimer());
+
         this.setupInlineMissionEditor();
 
         // Ensure timer display is correct on start
@@ -99,6 +106,17 @@ class DutyTickerManager {
             };
             window.addEventListener('resize', this.boundWindowResize, { passive: true });
         }
+    }
+
+    bindButtonAction(id, handler) {
+        const button = document.getElementById(id);
+        if (!button) return;
+        if (button.dataset.dtBound === '1') return;
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            handler();
+        });
+        button.dataset.dtBound = '1';
     }
 
     bindGlobalShortcuts() {
@@ -417,14 +435,6 @@ class DutyTickerManager {
             return;
         }
 
-        const roleIcons = {
-            '칠판 지우기': 'fa-solid fa-broom',
-            '우유': 'fa-solid fa-glass-water',
-            '불 끄기': 'fa-solid fa-lightbulb',
-            '컴퓨터': 'fa-solid fa-laptop',
-            '식물': 'fa-solid fa-leaf'
-        };
-
         const spotlightStudentId = Number(this.spotlightStudentId);
         const spotlightRoleIds = this.roles
             .filter((role) => Number(role.assigneeId) === spotlightStudentId)
@@ -439,7 +449,6 @@ class DutyTickerManager {
         });
 
         container.innerHTML = orderedRoles.map(role => {
-            const iconClass = roleIcons[role.name] || 'fa-solid fa-circle-user';
             const isCompleted = role.status === 'completed';
             const roleId = Number.isFinite(Number(role.id)) ? Number(role.id) : 0;
             const safeTimeSlot = this.escapeHtml(role.timeSlot || 'TASK');
@@ -451,20 +460,29 @@ class DutyTickerManager {
             const spotlightBadge = isSpotlightRole
                 ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-indigo-500/30 text-indigo-100 border border-indigo-300/40">집중</span>'
                 : '';
+            const statusBadge = isCompleted
+                ? '<span class="text-emerald-400 text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
+                : '<span class="text-slate-500 text-[10px] font-black uppercase tracking-wider">진행중</span>';
+            const assigneeToneClass = isCompleted
+                ? 'text-slate-300 bg-slate-700/40 border-slate-600/50'
+                : 'text-indigo-100 bg-indigo-500/20 border-indigo-400/30';
             return `
                 <div class="flex items-center p-4 bg-slate-800/30 backdrop-blur-md rounded-[1.5rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
-                    onclick="window.dtApp.openStudentModal(${roleId})">
-                    <div class="w-14 h-14 bg-slate-900/60 rounded-2xl flex items-center justify-center border border-white/5 group-hover:border-indigo-500/50 transition-all">
-                        <i class="${iconClass} text-2xl ${isCompleted ? 'text-emerald-400' : 'text-slate-400 group-hover:text-indigo-400'}"></i>
-                    </div>
-                    <div class="flex-1 ml-5">
-                        <div class="flex justify-between items-center mb-1">
-                            <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${safeTimeSlot}</p>
-                            ${isCompleted ? '<span class="text-emerald-400 text-[10px] font-black uppercase"><i class="fa-solid fa-check-circle"></i> DONE</span>' : ''}
+                    role="button"
+                    tabindex="0"
+                    onclick="window.dtApp.openStudentModal(${roleId})"
+                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.openStudentModal(${roleId}); }">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center gap-3 mb-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${safeTimeSlot}</p>
+                                ${spotlightBadge}
+                            </div>
+                            ${statusBadge}
                         </div>
-                        <div class="flex justify-between items-center text-xl font-black text-slate-100">
-                             <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}${spotlightBadge}</p>
-                              <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
+                        <div class="flex justify-between items-center gap-3 text-xl font-black text-slate-100">
+                            <p class="text-xl lg:text-2xl truncate ${isCompleted ? 'opacity-40 line-through' : ''}">${safeRoleName}</p>
+                            <div class="text-base lg:text-lg ${assigneeToneClass} px-3.5 py-1.5 rounded-xl border shrink-0">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -538,16 +556,25 @@ class DutyTickerManager {
     renderNotices() {
         const textEl = document.getElementById('dashboardBroadcastText');
         const titleEl = document.getElementById('noticeTitleDisplay');
+        const messageWrap = document.getElementById('noticeMessageWrap');
+        const divider = document.getElementById('noticeDivider');
+        const card = document.getElementById('noticeCard');
         if (!textEl || !titleEl) return;
 
         if (this.isBroadcasting && this.broadcastMessage) {
             titleEl.innerHTML = '<i class="fa-solid fa-bell text-yellow-500"></i> 알림사항';
             textEl.textContent = this.broadcastMessage;
             textEl.classList.add('text-yellow-100');
+            if (messageWrap) messageWrap.classList.remove('hidden');
+            if (divider) divider.classList.remove('hidden');
+            if (card) card.classList.remove('dt-notice-card-empty');
         } else {
-            titleEl.innerHTML = '<i class="fa-regular fa-bell text-slate-500"></i> 알림사항 없음';
-            textEl.textContent = "클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.";
+            titleEl.innerHTML = '<i class="fa-regular fa-bell text-slate-500"></i> 알림사항';
+            textEl.textContent = '';
             textEl.classList.remove('text-yellow-100');
+            if (messageWrap) messageWrap.classList.add('hidden');
+            if (divider) divider.classList.add('hidden');
+            if (card) card.classList.add('dt-notice-card-empty');
         }
     }
 
@@ -672,13 +699,13 @@ class DutyTickerManager {
         const text = document.getElementById('missionProgressText');
         if (total === 0) {
             if (bar) bar.style.width = '0%';
-            if (text) text.textContent = '0%';
+            if (text) text.textContent = '0% (0/0)';
             return;
         }
         const done = this.students.filter(s => s.status === 'done').length;
         const percent = Math.round((done / total) * 100);
         if (bar) bar.style.width = `${percent}%`;
-        if (text) text.textContent = `${percent}%`;
+        if (text) text.textContent = `${percent}% (${done}/${total})`;
     }
 
     // --- Actions ---
@@ -741,7 +768,7 @@ class DutyTickerManager {
 
     handleTimerTick() {
         if (!this.isTimerRunning || !this.timerEndAt) return;
-        const remaining = Math.max(0, Math.ceil((this.timerEndAt - Date.now()) / 1000));
+        const remaining = Math.max(0, Math.floor((this.timerEndAt - Date.now()) / 1000));
 
         if (remaining !== this.timerSeconds) {
             this.timerSeconds = remaining;
@@ -769,6 +796,7 @@ class DutyTickerManager {
         this.saveTimerState();
 
         this.startTimerTicker();
+        this.handleTimerTick();
     }
 
     pauseTimer() {
@@ -1338,6 +1366,7 @@ class DutyTickerManager {
             this.loadData();
         } catch (error) {
             console.error(error);
+            alert(error?.message || '데이터 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         }
     }
 
