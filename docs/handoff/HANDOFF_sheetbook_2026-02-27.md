@@ -5487,3 +5487,23 @@ Status: Working handoff (2026-02-27 EOD)
 - `99bde84` `feat(sheetbook): auto-commit refreshed handoff metadata`
 - `0673edc` `docs(sheetbook): refresh handoff latest metadata`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-152. 2026-03-03 refresh 자동 커밋 전 2차 branch guard 재검사 추가
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - `--commit-handoff-refresh` 경로에서
+    refresh 대상 파일 stage 후, 자동 커밋 직전에 `branch_path_guard`를 다시 실행
+  - 2차 guard 실패 시 자동 커밋 중단(`blocked: refreshed handoff file failed branch guard`)
+- `sheetbook/tests.py`
+  - 2차 guard 실패 시 중단되는 케이스 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - 2차 guard 재검사 동작 문서화
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+
+결과:
+- refresh 자동 커밋 경로에서도 경로 가드 우회 가능성을 추가로 차단.

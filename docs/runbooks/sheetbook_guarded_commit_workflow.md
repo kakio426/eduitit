@@ -34,6 +34,8 @@
   `run_sheetbook_refresh_handoff_latest.py`를 자동 실행
 - `--commit-handoff-refresh` 사용 시 refresh 결과 파일을 자동 커밋하고,
   `--push`가 켜져 있으면 2차 push까지 수행
+- refresh 후 자동 커밋 직전에도 branch path guard를 다시 실행해
+  경로 우회 커밋을 차단
 
 ## 4) 자주 보는 실패 케이스
 

@@ -290,6 +290,13 @@ def run(args: argparse.Namespace) -> int:
             if not staged_check.stdout.strip():
                 print("[sheetbook-guarded-commit] no handoff refresh changes to commit")
                 return 0
+            refresh_guard_code = _run_guard(root, branch)
+            if refresh_guard_code != 0:
+                print(
+                    "[sheetbook-guarded-commit] blocked: refreshed handoff file failed branch guard.",
+                    file=sys.stderr,
+                )
+                return int(refresh_guard_code)
 
             refresh_commit_message = str(
                 getattr(args, "refresh_handoff_commit_message", "")

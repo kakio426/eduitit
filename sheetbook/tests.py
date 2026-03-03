@@ -4962,6 +4962,65 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         self.assertEqual(code, 0)
         self.assertEqual(mock_run.call_count, 6)
 
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_blocks_refresh_commit_when_second_guard_fails(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.side_effect = [0, 1]
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="aa11bb\n", stderr=""),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout='{"status":"ok","handoff":"C:/repo/docs/handoff/HANDOFF_sheetbook_branch_latest.md"}',
+                stderr="",
+            ),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="docs/handoff/HANDOFF_sheetbook_branch_latest.md\n",
+                stderr="",
+            ),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): with refresh",
+                allow_empty=False,
+                guard_only=False,
+                push=False,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=1.0,
+                refresh_handoff_latest=True,
+                refresh_handoff_script="scripts/run_sheetbook_refresh_handoff_latest.py",
+                refresh_handoff_timestamp="",
+                refresh_handoff_target="docs/handoff/HANDOFF_sheetbook_branch_latest.md",
+                commit_handoff_refresh=True,
+                refresh_handoff_commit_message="docs(sheetbook): refresh handoff latest metadata",
+            )
+        )
+
+        self.assertEqual(code, 1)
+        self.assertEqual(mock_run_guard.call_count, 2)
+
 
 class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
     @patch("scripts.run_sheetbook_refresh_handoff_latest._repo_root")
