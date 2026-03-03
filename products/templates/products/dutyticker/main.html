@@ -427,39 +427,12 @@
     }
 
     #mainStudentGrid.dt-student-grid-fit-25>div>span {
-        font-size: clamp(1.02rem, 0.96rem + 0.24vw, 1.18rem);
+        font-size: clamp(0.9rem, 0.86rem + 0.16vw, 1.02rem);
         line-height: 1.2;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low>div>div.w-9.h-9 {
-        width: 2.4rem;
-        height: 2.4rem;
-        font-size: 1rem;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid>div>div.w-9.h-9 {
-        width: 2.2rem;
-        height: 2.2rem;
-        font-size: 0.92rem;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low>div>span {
-        font-size: clamp(1.42rem, 1.22rem + 0.56vw, 1.95rem);
-        line-height: 1.08;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid>div>span {
-        font-size: clamp(1.2rem, 1.08rem + 0.34vw, 1.48rem);
-        line-height: 1.14;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high>div>span {
-        font-size: clamp(1.04rem, 0.98rem + 0.22vw, 1.24rem);
-        line-height: 1.16;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25>div>button {
@@ -471,11 +444,11 @@
 
     #headerScheduleStrip {
         align-items: center;
-        gap: 0.58rem;
-        max-width: min(74vw, 980px);
+        gap: 0.45rem;
+        max-width: min(64vw, 760px);
         overflow-x: auto;
         overflow-y: hidden;
-        padding: 0.2rem 0.24rem;
+        padding: 0.15rem 0.2rem;
         white-space: nowrap;
         scrollbar-width: thin;
     }
@@ -483,14 +456,14 @@
     .dt-header-schedule-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.42rem;
-        padding: 0.36rem 0.78rem;
+        gap: 0.32rem;
+        padding: 0.28rem 0.62rem;
         border-radius: 9999px;
         background: rgba(15, 23, 42, 0.58);
         border: 1px solid rgba(148, 163, 184, 0.24);
-        font-size: clamp(0.98rem, 0.92rem + 0.22vw, 1.18rem);
+        font-size: clamp(0.78rem, 0.72rem + 0.18vw, 0.95rem);
         font-weight: 800;
-        line-height: 1.2;
+        line-height: 1.15;
         white-space: nowrap;
     }
 
@@ -509,9 +482,9 @@
 
     .dt-header-schedule-empty {
         color: rgba(148, 163, 184, 0.75);
-        font-size: 0.98rem;
+        font-size: 0.8rem;
         font-weight: 700;
-        padding-inline: 0.5rem;
+        padding-inline: 0.35rem;
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item,
@@ -555,49 +528,46 @@
         letter-spacing: 0;
     }
 
-    #bgmTrackRail {
-        position: absolute;
-        top: calc(100% + 0.45rem);
-        right: 0;
-        width: min(22rem, 72vw);
-        max-height: 17.5rem;
-        display: none;
-        flex-direction: column;
-        gap: 0.32rem;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 0.6rem;
-        border-radius: 0.9rem;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        background: rgba(15, 23, 42, 0.96);
-        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
-        z-index: 60;
-        scrollbar-width: thin;
+    .dt-notice-card-empty {
+        min-height: 14rem;
     }
 
-    #bgmTrackRail.is-open {
+    .dt-notice-card-empty #randomPickerPanel {
+        margin-top: 0.2rem;
+    }
+
+    #timerControls .dt-touch-action {
+        touch-action: manipulation;
+    }
+
+    #bgmTrackRail {
+        max-width: 10.5rem;
         display: flex;
+        align-items: center;
+        gap: 0.22rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding-bottom: 0.08rem;
     }
 
     .dt-bgm-chip {
-        display: flex;
-        width: 100%;
+        display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
-        padding: 0.34rem 0.46rem;
-        border-radius: 0.58rem;
+        gap: 0.25rem;
+        padding: 0.16rem 0.3rem;
+        border-radius: 0.45rem;
         border: 1px solid rgba(148, 163, 184, 0.28);
         background: rgba(15, 23, 42, 0.52);
-        font-size: 0.78rem;
+        font-size: 0.6rem;
         font-weight: 800;
         color: #cbd5e1;
     }
 
     .dt-bgm-chip input[type="checkbox"] {
         accent-color: #6366f1;
-        width: 0.86rem;
-        height: 0.86rem;
-        flex-shrink: 0;
+        width: 0.7rem;
+        height: 0.7rem;
     }
 
     .dt-bgm-chip-btn {
@@ -607,9 +577,7 @@
         font: inherit;
         cursor: pointer;
         padding: 0;
-        line-height: 1.2;
-        text-align: left;
-        width: 100%;
+        line-height: 1.1;
     }
 
     .dt-bgm-chip.is-current {
@@ -791,7 +759,7 @@
                 <!-- Schedule Strip -->
                 <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
                 <div id="headerScheduleStrip"
-                    class="hidden md:flex items-center min-w-0 max-w-[420px] lg:max-w-[700px] xl:max-w-[980px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                    class="hidden md:flex items-center min-w-0 max-w-[280px] lg:max-w-[560px] xl:max-w-[760px] overflow-x-auto overflow-y-hidden custom-scrollbar">
                     <!-- JS Populated -->
                 </div>
                 <div class="h-4 w-px bg-slate-700"></div>
@@ -826,7 +794,7 @@
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
                 <div id="bgmControls"
-                    class="hidden lg:flex relative items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
+                    class="hidden lg:flex items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
                     <button id="bgmToggleBtn" type="button" onclick="window.dtApp.toggleBgm()"
                         class="h-7 px-2 rounded-md bg-slate-700/70 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-indigo-600 hover:text-white transition"
                         title="배경음악 켜기/끄기">
@@ -847,12 +815,7 @@
                         title="다음 곡">
                         ▶
                     </button>
-                    <button id="bgmTrackPanelBtn" type="button" onclick="window.dtApp.toggleBgmTrackPanel()"
-                        class="h-7 px-2 rounded-md bg-slate-700/60 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
-                        title="배경음악 목록 열기/닫기">
-                        목록
-                    </button>
-                    <div id="bgmTrackRail" class="custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
+                    <div id="bgmTrackRail" class="flex custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
                         <!-- JS Populated -->
                     </div>
                 </div>
@@ -902,7 +865,7 @@
     <main class="dt-main-grid flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
 
         <!-- Left Column -->
-        <div class="dt-left-column lg:col-span-9 flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-left-column lg:col-span-8 flex flex-col gap-6 h-full min-h-0">
 
             <!-- 1. Timer & Current Mission Card -->
             <div
@@ -920,8 +883,8 @@
                 <div class="dt-timer-main flex-1 flex flex-col justify-center items-center w-full min-h-0 z-10">
                     <!-- Giant Timer -->
                     <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
-                        class="font-mono font-black text-6xl md:text-8xl tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
-                        onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
+                        class="dt-touch-action font-mono font-black text-6xl md:text-8xl tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
+                        title="타이머 시작/정지">
                         05:00
                     </button>
 
@@ -946,12 +909,12 @@
                 <div
                     id="timerControls"
                     class="flex-shrink-0 mt-8 flex flex-wrap justify-center gap-3 opacity-100 transition-all duration-500 z-10">
-                    <button onclick="window.dtApp.addTimerMinutes(1)"
-                        class="timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1분</button>
-                    <button onclick="window.dtApp.setTimerMode(300, true)"
-                        class="timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">5분</button>
-                    <button onclick="window.dtApp.setTimerMode(600, true)"
-                        class="timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">10분</button>
+                    <button id="timerAddMinuteBtn" type="button"
+                        class="dt-touch-action timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1분</button>
+                    <button id="timerPreset5Btn" type="button"
+                        class="dt-touch-action timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">5분</button>
+                    <button id="timerPreset10Btn" type="button"
+                        class="dt-touch-action timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">10분</button>
                     <div
                         class="timer-custom-wrap flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10">
                         <input id="customTimerMinutesInput" type="number" min="1" max="999" step="1" value="5"
@@ -959,8 +922,8 @@
                             class="w-16 bg-transparent text-center text-white font-black focus:outline-none"
                             aria-label="타이머 분 단위 설정">
                         <span class="text-indigo-100 font-bold">분</span>
-                        <button onclick="window.dtApp.applyCustomTimerMinutes()"
-                            class="px-3 py-1.5 bg-white/20 rounded-lg text-white font-black hover:bg-white/30 active:scale-95 transition-all">설정</button>
+                        <button id="timerCustomApplyBtn" type="button"
+                            class="dt-touch-action px-3 py-1.5 bg-white/20 rounded-lg text-white font-black hover:bg-white/30 active:scale-95 transition-all">설정</button>
                     </div>
                     <div
                         class="mission-font-wrap flex items-center gap-1.5 px-2 py-1.5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10">
@@ -973,31 +936,31 @@
                             title="글씨 크게">A+</button>
                     </div>
                     <div class="timer-divider w-px h-auto bg-white/10 mx-1"></div>
-                    <button onclick="window.dtApp.resetTimer()"
-                        class="timer-reset-btn px-5 py-2.5 bg-red-500/20 backdrop-blur-xl rounded-xl text-red-200 font-extrabold hover:bg-red-500/40 border border-red-500/20 active:scale-95 transition-all">초기화</button>
+                    <button id="timerResetBtn" type="button"
+                        class="dt-touch-action timer-reset-btn px-5 py-2.5 bg-red-500/20 backdrop-blur-xl rounded-xl text-red-200 font-extrabold hover:bg-red-500/40 border border-red-500/20 active:scale-95 transition-all">초기화</button>
                 </div>
             </div>
 
             <!-- 2. Student Status Grid (Bottom) -->
             <div id="mainStudentCard"
-                class="dt-student-card min-h-[20rem] lg:min-h-[21.5rem] bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex flex-col shadow-2xl">
-                <div class="flex justify-between items-center mb-6 px-2">
-                    <div class="flex items-center gap-4">
-                        <h3 class="text-2xl font-black flex items-center gap-2 text-white">
+                class="dt-student-card min-h-[20rem] lg:min-h-[21.5rem] bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 lg:p-7 border border-slate-700/50 flex flex-col shadow-2xl">
+                <div class="flex justify-between items-center mb-4 px-1">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-xl md:text-2xl font-black flex items-center gap-2 text-white">
                             <span class="text-yellow-400">🏆</span>
                             미션 현황
                         </h3>
                         <!-- Progress Bar -->
                         <div
-                            class="flex items-center gap-4 ml-6 bg-slate-900/40 px-5 py-2.5 rounded-2xl border border-slate-700/50">
-                            <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">완료율</div>
+                            class="flex items-center gap-3 md:gap-4 ml-1 md:ml-3 bg-slate-900/50 px-3.5 md:px-4 py-2 rounded-2xl border border-slate-700/60">
+                            <div class="text-[11px] text-slate-400 font-black uppercase tracking-[0.16em]">완료율</div>
                             <div
-                                class="w-48 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                                class="w-36 md:w-52 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
                                 <div id="missionProgressBar"
                                     class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 w-[0%] transition-all duration-1000 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
                                 </div>
                             </div>
-                            <div id="missionProgressText" class="text-sm font-black text-emerald-400 min-w-[30px]">0%
+                            <div id="missionProgressText" class="text-sm md:text-base font-black text-emerald-300 min-w-[94px] text-right">0% (0/0)
                             </div>
                         </div>
                     </div>
@@ -1021,7 +984,7 @@
         </div>
 
         <!-- Right Column -->
-        <div class="dt-right-column lg:col-span-3 flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-right-column lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
 
             <!-- 3. Today's Roles -->
             <div
@@ -1052,10 +1015,13 @@
             </div>
 
             <!-- 4. Notices / Broadcast -->
-            <div
-                class="dt-notice-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[18rem] flex flex-col shadow-2xl">
+            <div id="noticeCard"
+                class="dt-notice-card dt-notice-card-empty bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[15rem] flex flex-col shadow-2xl">
                 <div class="flex justify-between items-start mb-3 px-2">
-                    <h3 class="text-lg font-black text-white flex items-center gap-2" id="noticeTitleDisplay"></h3>
+                    <h3 class="text-lg font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
+                        <i class="fa-regular fa-bell text-yellow-400"></i>
+                        알림사항
+                    </h3>
                     <button id="broadcastToggleBtn"
                         class="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
                         onclick="window.dtApp.openBroadcastModal()">
@@ -1063,14 +1029,14 @@
                     </button>
                 </div>
 
-                <div class="px-2">
+                <div id="noticeMessageWrap" class="px-2 hidden">
                     <p class="text-slate-400 text-sm font-bold leading-relaxed whitespace-pre-line line-clamp-2"
                         id="dashboardBroadcastText"></p>
                 </div>
 
-                <div class="h-px bg-slate-700/60 my-3"></div>
+                <div id="noticeDivider" class="hidden h-px bg-slate-700/60 my-3"></div>
 
-                <div class="flex-1 min-h-0 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex flex-col">
+                <div id="randomPickerPanel" class="flex-1 min-h-0 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex flex-col">
                     <div class="flex items-center justify-between gap-2 mb-2">
                         <h4 class="text-base font-black text-indigo-200 flex items-center gap-2">
                             <i class="fa-solid fa-shuffle text-indigo-300"></i>
@@ -1305,36 +1271,26 @@
         toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
     };
     window.dtBgmTracks = {
-        denis_pavlov_music_brazilian_bossa_nova_jazz_acoustic_guitar_podcast_music_201763: { label: "Jazz · Brazilian Bossa Nova Jazz Acoustic Guitar Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-brazilian-bossa-nova-jazz-acoustic-guitar-podcast-music-201763.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_cozy_jazz_cafe_relaxing_podcast_r_background_music_202447: { label: "Jazz · Cozy Jazz Cafe Relaxing Podcast R Background Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-jazz-cafe-relaxing-podcast-r-background-music-202447.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_cozy_relax_jazz_podcast_coffee_ambiance_271621: { label: "Jazz · Cozy Relax Jazz Podcast Coffee Ambiance", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-relax-jazz-podcast-coffee-ambiance-271621.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_easy_cozy_morning_jazz_coffee_podcast_192585: { label: "Jazz · Easy Cozy Morning Jazz Coffee Podcast", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-easy-cozy-morning-jazz-coffee-podcast-192585.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_instrumental_jazz_bossa_nova_brazilian_guitar_vibes_485111: { label: "Jazz · Instrumental Jazz Bossa Nova Brazilian Guitar Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-instrumental-jazz-bossa-nova-brazilian-guitar-vibes-485111.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_piano_jazz_bossa_nova_cozy_cafe_coffee_shop_music_203916: { label: "Jazz · Piano Jazz Bossa Nova Cozy Cafe Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-piano-jazz-bossa-nova-cozy-cafe-coffee-shop-music-203916.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_easy_listening_music_219314: { label: "Jazz · Podcast Jazz Easy Listening Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-easy-listening-music-219314.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_music_168726: { label: "Jazz · Podcast Jazz Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-music-168726.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_waltz_cozy_relaxing_vibes_233733: { label: "Jazz · Podcast Jazz Waltz Cozy Relaxing Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-waltz-cozy-relaxing-vibes-233733.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_smooth_jazz_instrumental_music_225674: { label: "Jazz · Podcast Smooth Jazz Instrumental Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-smooth-jazz-instrumental-music-225674.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_relaxing_jazz_podcast_coffee_shop_music_192283: { label: "Jazz · Relaxing Jazz Podcast Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-jazz-podcast-coffee-shop-music-192283.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_relaxing_soft_warm_jazz_piano_bossa_nova_podcast_music_203913: { label: "Jazz · Relaxing Soft Warm Jazz Piano Bossa Nova Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-soft-warm-jazz-piano-bossa-nova-podcast-music-203913.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_romantic_jazz_rendezvous_relaxing_evening_fireplace_208122: { label: "Jazz · Romantic Jazz Rendezvous Relaxing Evening Fireplace", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-romantic-jazz-rendezvous-relaxing-evening-fireplace-208122.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_smooth_jazz_travel_vlog_podcast_music_290508: { label: "Jazz · Smooth Jazz Travel Vlog Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-smooth-jazz-travel-vlog-podcast-music-290508.mp3' %}", volume: 0.16 },
-        freegroove_seduction_jazz_112149: { label: "Jazz · Seduction Jazz", src: "{% static 'products/dutyticker/audio/freegroove-seduction-jazz-112149.mp3' %}", volume: 0.16 },
-        hitslab_lofi_chill_background_music_313055: { label: "Lofi · Lofi Chill Background Music", src: "{% static 'products/dutyticker/audio/hitslab-lofi-chill-background-music-313055.mp3' %}", volume: 0.14 },
-        innertune_relaxing_birds_and_piano_music_137153: { label: "Piano · Relaxing Birds And Piano Music", src: "{% static 'products/dutyticker/audio/innertune-relaxing-birds-and-piano-music-137153.mp3' %}", volume: 0.15 },
-        lexin_music_everythingx27s_gonna_be_alright_124710: { label: "Instrumental · Everything's Gonna Be Alright", src: "{% static 'products/dutyticker/audio/lexin_music-everythingx27s-gonna-be-alright-124710.mp3' %}", volume: 0.15 },
-        lexin_music_when_you_smile_151423: { label: "Instrumental · When You Smile", src: "{% static 'products/dutyticker/audio/lexin_music-when-you-smile-151423.mp3' %}", volume: 0.15 },
-        music_for_videos_a_jazz_piano_110481: { label: "Jazz · A Jazz Piano", src: "{% static 'products/dutyticker/audio/music_for_videos-a-jazz-piano-110481.mp3' %}", volume: 0.16 },
-        music_for_videos_restaurant_music_110483: { label: "Instrumental · Restaurant Music", src: "{% static 'products/dutyticker/audio/music_for_videos-restaurant-music-110483.mp3' %}", volume: 0.15 },
-        musicbyscandinavianz_scandinavianz_tranvik_free_download_158258: { label: "Instrumental · Scandinavianz Tranvik Free Download", src: "{% static 'products/dutyticker/audio/musicbyscandinavianz-scandinavianz-tranvik-free-download-158258.mp3' %}", volume: 0.15 },
-        nengjemping_lofi_music_background_hits_352712: { label: "Lofi · Lofi Music Background Hits", src: "{% static 'products/dutyticker/audio/nengjemping-lofi-music-background-hits-352712.mp3' %}", volume: 0.14 },
-        ogifeelthebeat_ogi_feel_the_beat_jazz_expresso_191266: { label: "Jazz · Ogi Feel The Beat Jazz Expresso", src: "{% static 'products/dutyticker/audio/ogifeelthebeat-ogi-feel-the-beat-jazz-expresso-191266.mp3' %}", volume: 0.16 },
-        paoloargento_dinner_at_the_luxury_hotel_166721: { label: "Instrumental · Dinner At The Luxury Hotel", src: "{% static 'products/dutyticker/audio/paoloargento-dinner-at-the-luxury-hotel-166721.mp3' %}", volume: 0.15 },
-        redproductions_inspiring_story_157524: { label: "Instrumental · Inspiring Story", src: "{% static 'products/dutyticker/audio/redproductions-inspiring-story-157524.mp3' %}", volume: 0.15 },
-        sergequadrado_moment_14023: { label: "Instrumental · Moment", src: "{% static 'products/dutyticker/audio/sergequadrado-moment-14023.mp3' %}", volume: 0.15 },
-        tobylane_save_as_115826: { label: "Instrumental · Save As", src: "{% static 'products/dutyticker/audio/tobylane-save-as-115826.mp3' %}", volume: 0.15 },
-        tramp963_relaxing_piano_lo_fi_music_268029: { label: "Piano · Relaxing Piano Lofi Music", src: "{% static 'products/dutyticker/audio/tramp963-relaxing-piano-lo-fi-music-268029.mp3' %}", volume: 0.15 },
-        u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
+        jazz_soft_loop: { label: "재즈 · 모닝 브리즈", src: "{% static 'products/dutyticker/audio/jazz_soft_loop.wav' %}", volume: 0.18 },
+        jazz_breeze_walk: { label: "재즈 · 산책 리듬", src: "{% static 'products/dutyticker/audio/jazz_breeze_walk.wav' %}", volume: 0.18 },
+        jazz_morning_lane: { label: "재즈 · 모닝 레인", src: "{% static 'products/dutyticker/audio/jazz_morning_lane.wav' %}", volume: 0.18 },
+        jazz_cozy_corner: { label: "재즈 · 코지 코너", src: "{% static 'products/dutyticker/audio/jazz_cozy_corner.wav' %}", volume: 0.18 },
+        jazz_fresh_start: { label: "재즈 · 프레시 스타트", src: "{% static 'products/dutyticker/audio/jazz_fresh_start.wav' %}", volume: 0.18 },
+        bossa_light_day: { label: "보사노바 · 라이트 데이", src: "{% static 'products/dutyticker/audio/bossa_light_day.wav' %}", volume: 0.17 },
+        bossa_soft_river: { label: "보사노바 · 소프트 리버", src: "{% static 'products/dutyticker/audio/bossa_soft_river.wav' %}", volume: 0.17 },
+        piano_calm_loop: { label: "피아노 · 잔잔한 오후", src: "{% static 'products/dutyticker/audio/piano_calm_loop.wav' %}", volume: 0.16 },
+        piano_sunlight_steps: { label: "피아노 · 햇살 발걸음", src: "{% static 'products/dutyticker/audio/piano_sunlight_steps.wav' %}", volume: 0.16 },
+        piano_green_window: { label: "피아노 · 그린 윈도우", src: "{% static 'products/dutyticker/audio/piano_green_window.wav' %}", volume: 0.16 },
+        piano_clear_sky: { label: "피아노 · 클리어 스카이", src: "{% static 'products/dutyticker/audio/piano_clear_sky.wav' %}", volume: 0.16 },
+        piano_soft_story: { label: "피아노 · 소프트 스토리", src: "{% static 'products/dutyticker/audio/piano_soft_story.wav' %}", volume: 0.16 },
+        acoustic_smile_groove: { label: "어쿠스틱 · 스마일", src: "{% static 'products/dutyticker/audio/acoustic_smile_groove.wav' %}", volume: 0.17 },
+        acoustic_class_smile: { label: "어쿠스틱 · 클래스 스마일", src: "{% static 'products/dutyticker/audio/acoustic_class_smile.wav' %}", volume: 0.17 },
+        acoustic_spring_steps: { label: "어쿠스틱 · 스프링 스텝", src: "{% static 'products/dutyticker/audio/acoustic_spring_steps.wav' %}", volume: 0.17 },
+        lofi_cloud_walk: { label: "로파이 · 클라우드 워크", src: "{% static 'products/dutyticker/audio/lofi_cloud_walk.wav' %}", volume: 0.15 },
+        lofi_warm_notebook: { label: "로파이 · 웜 노트북", src: "{% static 'products/dutyticker/audio/lofi_warm_notebook.wav' %}", volume: 0.15 },
+        lofi_peaceful_day: { label: "로파이 · 피스풀 데이", src: "{% static 'products/dutyticker/audio/lofi_peaceful_day.wav' %}", volume: 0.15 },
+        marimba_happy_breeze: { label: "마림바 · 해피 브리즈", src: "{% static 'products/dutyticker/audio/marimba_happy_breeze.wav' %}", volume: 0.16 },
+        marimba_sunny_glow: { label: "마림바 · 써니 글로우", src: "{% static 'products/dutyticker/audio/marimba_sunny_glow.wav' %}", volume: 0.16 },
     };
 </script>
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
@@ -1405,4 +1361,3 @@
     }
 </script>
 {% endblock %}
-

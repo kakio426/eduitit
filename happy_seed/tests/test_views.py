@@ -219,6 +219,58 @@ class HappySeedViewTests(TestCase):
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=2, name="민수").exists())
         self.assertTrue(HSStudent.objects.filter(classroom=self.classroom, number=3, name="지수").exists())
 
+    def test_student_manage_bulk_edit_students_updates_multiple_rows(self):
+        self.client.login(username="teacher2", password="pw12345")
+        student2 = HSStudent.objects.create(classroom=self.classroom, name="다온", number=2, ticket_count=0)
+        HSGuardianConsent.objects.create(student=student2, status="pending")
+        url = reverse("happy_seed:student_manage", kwargs={"classroom_id": self.classroom.id})
+
+        res = self.client.post(
+            url,
+            {
+                "action": "bulk_edit_students",
+                "edit_student_ids": [str(self.student.id), str(student2.id)],
+                f"number_{self.student.id}": "11",
+                f"name_{self.student.id}": "하늘이",
+                f"number_{student2.id}": "12",
+                f"name_{student2.id}": "다온이",
+            },
+        )
+
+        self.assertEqual(res.status_code, 302)
+        self.student.refresh_from_db()
+        student2.refresh_from_db()
+        self.assertEqual(self.student.number, 11)
+        self.assertEqual(self.student.name, "하늘이")
+        self.assertEqual(student2.number, 12)
+        self.assertEqual(student2.name, "다온이")
+
+    def test_student_manage_bulk_edit_students_blocks_duplicate_numbers(self):
+        self.client.login(username="teacher2", password="pw12345")
+        student2 = HSStudent.objects.create(classroom=self.classroom, name="다온", number=2, ticket_count=0)
+        HSGuardianConsent.objects.create(student=student2, status="pending")
+        url = reverse("happy_seed:student_manage", kwargs={"classroom_id": self.classroom.id})
+
+        res = self.client.post(
+            url,
+            {
+                "action": "bulk_edit_students",
+                "edit_student_ids": [str(self.student.id), str(student2.id)],
+                f"number_{self.student.id}": "9",
+                f"name_{self.student.id}": "하늘A",
+                f"number_{student2.id}": "9",
+                f"name_{student2.id}": "다온A",
+            },
+        )
+
+        self.assertEqual(res.status_code, 302)
+        self.student.refresh_from_db()
+        student2.refresh_from_db()
+        self.assertEqual(self.student.number, 1)
+        self.assertEqual(self.student.name, "하늘")
+        self.assertEqual(student2.number, 2)
+        self.assertEqual(student2.name, "다온")
+
     def test_student_bulk_add_with_excel_paste(self):
         self.client.login(username="teacher2", password="pw12345")
         url = reverse("happy_seed:student_bulk_add", kwargs={"classroom_id": self.classroom.id})

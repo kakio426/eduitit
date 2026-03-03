@@ -113,6 +113,22 @@ class TeacherFlowTest(TestCase):
             difficulty="easy",
         )
 
+    def _build_set_update_payload(self, draft_set, *, title="교사 수정 세트", duplicate_first=False):
+        payload = {"title": title}
+        for item in draft_set.items.order_by("order_no"):
+            item_id = str(item.id)
+            payload[f"question_text_{item_id}"] = f"{item.order_no}번 수정 문제"
+            payload[f"choice_1_{item_id}"] = f"{item.order_no}번 보기 A"
+            payload[f"choice_2_{item_id}"] = f"{item.order_no}번 보기 B"
+            payload[f"choice_3_{item_id}"] = f"{item.order_no}번 보기 C"
+            payload[f"choice_4_{item_id}"] = f"{item.order_no}번 보기 D"
+            if duplicate_first and item.order_no == 1:
+                payload[f"choice_2_{item_id}"] = payload[f"choice_1_{item_id}"]
+            payload[f"correct_index_{item_id}"] = "2"
+            payload[f"explanation_{item_id}"] = f"{item.order_no}번 수정 해설"
+            payload[f"difficulty_{item_id}"] = "hard"
+        return payload
+
     def test_dashboard_returns_200(self):
         url = reverse(
             "seed_quiz:teacher_dashboard",
@@ -629,6 +645,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(draft.source, "bank")
         self.assertEqual(draft.items.count(), 3)
         self.assertContains(resp, "학생에게 배포하기")
+        self.assertContains(resp, "문항 수정하기")
         self.assertContains(resp, "다른 세트 고르기")
         self.assertContains(resp, "세트 보관(숨김)")
         self.assertContains(resp, "data-seed-quiz-publish-button")
@@ -650,6 +667,81 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "2) 저장된 문제 확인")
         self.assertContains(resp, "다른 세트 고르기")
+
+    def test_set_edit_returns_form_for_draft(self):
+        select_url = reverse(
+            "seed_quiz:htmx_bank_select",
+            kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
+        )
+        self.client.post(select_url)
+        draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(draft)
+        first_item = draft.items.order_by("order_no").first()
+        self.assertIsNotNone(first_item)
+
+        edit_url = reverse(
+            "seed_quiz:htmx_set_edit",
+            kwargs={"classroom_id": self.classroom.id, "set_id": draft.id},
+        )
+        resp = self.client.get(edit_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "복제본 문항 수정")
+        self.assertContains(resp, f'name="question_text_{first_item.id}"')
+
+    def test_set_update_saves_teacher_copy_without_touching_bank_source(self):
+        select_url = reverse(
+            "seed_quiz:htmx_bank_select",
+            kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
+        )
+        self.client.post(select_url)
+        draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(draft)
+        original_bank_question = self.bank.items.order_by("order_no").first().question_text
+
+        update_url = reverse(
+            "seed_quiz:htmx_set_update",
+            kwargs={"classroom_id": self.classroom.id, "set_id": draft.id},
+        )
+        payload = self._build_set_update_payload(draft, title="교사 수정 세트")
+        resp = self.client.post(update_url, payload)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "복제본 수정사항을 저장했습니다")
+
+        draft.refresh_from_db()
+        self.assertEqual(draft.title, "교사 수정 세트")
+        updated_first = draft.items.order_by("order_no").first()
+        self.assertEqual(updated_first.question_text, "1번 수정 문제")
+        self.assertEqual(updated_first.correct_index, 1)
+        self.assertEqual(updated_first.difficulty, "hard")
+
+        self.bank.refresh_from_db()
+        self.assertEqual(self.bank.items.order_by("order_no").first().question_text, original_bank_question)
+
+    def test_set_update_rejects_duplicate_choice_and_keeps_existing_values(self):
+        select_url = reverse(
+            "seed_quiz:htmx_bank_select",
+            kwargs={"classroom_id": self.classroom.id, "bank_id": self.bank.id},
+        )
+        self.client.post(select_url)
+        draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
+        self.assertIsNotNone(draft)
+        before_question = draft.items.order_by("order_no").first().question_text
+
+        update_url = reverse(
+            "seed_quiz:htmx_set_update",
+            kwargs={"classroom_id": self.classroom.id, "set_id": draft.id},
+        )
+        payload = self._build_set_update_payload(
+            draft,
+            title="중복 보기 테스트",
+            duplicate_first=True,
+        )
+        resp = self.client.post(update_url, payload)
+        self.assertEqual(resp.status_code, 400)
+        self.assertContains(resp, "1번 문항의 보기에는 중복이 없어야 합니다.", status_code=400)
+
+        draft.refresh_from_db()
+        self.assertEqual(draft.items.order_by("order_no").first().question_text, before_question)
 
     def test_bank_select_allows_more_than_three_items(self):
         SQQuizBankItem.objects.create(
