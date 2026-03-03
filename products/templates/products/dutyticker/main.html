@@ -400,12 +400,6 @@
         column-gap: 0.65rem;
     }
 
-    @media (min-width: 1024px) {
-        .dt-main-grid {
-            grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
-        }
-    }
-
     .dt-student-card-fit-25 {
         min-height: clamp(23rem, 46vh, 28rem);
     }
@@ -856,10 +850,10 @@
 
 
     <!-- Main Grid -->
-    <main class="dt-main-grid flex-1 grid grid-cols-1 gap-6 min-h-0">
+    <main class="dt-main-grid flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
 
         <!-- Left Column -->
-        <div class="dt-left-column flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-left-column lg:col-span-8 flex flex-col gap-6 h-full min-h-0">
 
             <!-- 1. Timer & Current Mission Card -->
             <div
@@ -877,7 +871,7 @@
                 <div class="dt-timer-main flex-1 flex flex-col justify-center items-center w-full min-h-0 z-10">
                     <!-- Giant Timer -->
                     <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
-                        class="font-mono font-black tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
+                        class="font-mono font-black text-6xl md:text-8xl tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
                         onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
                         05:00
                     </button>
@@ -902,7 +896,7 @@
                 <!-- Timer Controls -->
                 <div
                     id="timerControls"
-                    class="flex-shrink-0 mt-8 flex flex-wrap justify-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 z-10 lg:translate-y-4 lg:group-hover:translate-y-0">
+                    class="flex-shrink-0 mt-8 flex flex-wrap justify-center gap-3 opacity-100 transition-all duration-500 z-10">
                     <button onclick="window.dtApp.addTimerMinutes(1)"
                         class="timer-btn px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-xl text-white font-black hover:bg-white/20 border border-white/10 active:scale-95 transition-all">+1분</button>
                     <button onclick="window.dtApp.setTimerMode(300, true)"
@@ -978,7 +972,7 @@
         </div>
 
         <!-- Right Column -->
-        <div class="dt-right-column flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-right-column lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
 
             <!-- 3. Today's Roles -->
             <div
