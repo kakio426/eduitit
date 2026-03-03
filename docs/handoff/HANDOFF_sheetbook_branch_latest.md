@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 23:26)
+Status: Working branch handoff (2026-03-03 23:34)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 23:26)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `658619f` (`feat(sheetbook): propagate due-date into unified rehearsal next actions`)
+- latest backup commit: `4fef68a` (`fix(sheetbook): include due-date in collect-samples gap rerun command`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
