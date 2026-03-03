@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-03-01 13:00:44",
+  "started_at": "2026-03-03 19:18:14",
   "base_url": "http://127.0.0.1:8003",
   "expected": {
     "valid_count": 180,
@@ -11,10 +11,10 @@
     "desktop": {
       "sheetbook_id": 79,
       "tab_id": 79,
-      "seed_token": "DxEWyE01__jOPR8g",
-      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=DxEWyE01__jOPR8g",
+      "seed_token": "25mPD5-8hEOb3MTj",
+      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=25mPD5-8hEOb3MTj",
       "session_cookie_name": "sessionid",
-      "session_cookie_value": "tpca8klcmd0ihorrytn6e4aowqia7mgi",
+      "session_cookie_value": "bt7kikwvf68i04i6aejxsxry7e2hd2pd",
       "initial_recipients_text_lines": 220,
       "expected": {
         "valid_count": 180,
@@ -26,10 +26,10 @@
     "tablet": {
       "sheetbook_id": 79,
       "tab_id": 79,
-      "seed_token": "IvsavDUqBFmMFebL",
-      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=IvsavDUqBFmMFebL",
+      "seed_token": "PH9pCflYXIphSrgY",
+      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=PH9pCflYXIphSrgY",
       "session_cookie_name": "sessionid",
-      "session_cookie_value": "1qhcg8jihe48jnd6gzm0aql29ljjc4bt",
+      "session_cookie_value": "xue4v5sf8kxrfggm5ozylwcohc9ddxmw",
       "initial_recipients_text_lines": 220,
       "expected": {
         "valid_count": 180,
@@ -42,9 +42,9 @@
   "desktop": {
     "scenario": "desktop",
     "device": "desktop-default",
-    "expected_seed_token": "DxEWyE01__jOPR8g",
-    "open_ms": 1191.3589999894612,
-    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=DxEWyE01__jOPR8g",
+    "expected_seed_token": "25mPD5-8hEOb3MTj",
+    "open_ms": 1783.1507000000784,
+    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=25mPD5-8hEOb3MTj",
     "initial_summary_text": "현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄",
     "initial_summary": {
       "input": 220,
@@ -114,9 +114,9 @@
       "duplicate": 21,
       "skipped": 21
     },
-    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=DxEWyE01__jOPR8g&from=sheetbook",
+    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=25mPD5-8hEOb3MTj&from=sheetbook",
     "final_path": "/consent/create/step1/",
-    "final_seed_token": "DxEWyE01__jOPR8g",
+    "final_seed_token": "25mPD5-8hEOb3MTj",
     "console_error_count": 0,
     "console_errors": [],
     "console_tail": [
@@ -127,9 +127,9 @@
   "tablet": {
     "scenario": "tablet",
     "device": "iPad Pro 11",
-    "expected_seed_token": "IvsavDUqBFmMFebL",
-    "open_ms": 864.6447000064654,
-    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=IvsavDUqBFmMFebL",
+    "expected_seed_token": "PH9pCflYXIphSrgY",
+    "open_ms": 1880.4485000000568,
+    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=PH9pCflYXIphSrgY",
     "initial_summary_text": "현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄",
     "initial_summary": {
       "input": 220,
@@ -199,9 +199,9 @@
       "duplicate": 21,
       "skipped": 21
     },
-    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=IvsavDUqBFmMFebL&from=sheetbook",
+    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=PH9pCflYXIphSrgY&from=sheetbook",
     "final_path": "/consent/create/step1/",
-    "final_seed_token": "IvsavDUqBFmMFebL",
+    "final_seed_token": "PH9pCflYXIphSrgY",
     "console_error_count": 0,
     "console_errors": [],
     "console_tail": [
