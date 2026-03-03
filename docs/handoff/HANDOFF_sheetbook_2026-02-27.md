@@ -5013,3 +5013,28 @@ Status: Working handoff (2026-02-27 EOD)
 - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action "pilot 표본 보강 + 상태 재판정" --due-date 2026-03-04`
 - 결과:
   - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`의 `next_action`/`due_date`가 현재 운영 상태에 맞게 갱신됨
+
+---
+
+### 0-135. 2026-03-03 추가 정합성 보정 (release signoff manual pending 표기 통일)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_release_signoff_log.py`
+  - `decision_context.manual_alias_statuses`를 기준으로 `manual_pending` effective 계산 추가
+  - readiness 원본은 `manual_pending_raw(readiness)`로 분리 표기
+  - 목적: daily bundle/ops index/release signoff 간 pending 표기 기준 통일
+- 테스트 보강(`sheetbook/tests.py`)
+  - `SheetbookReleaseSignoffLogScriptTests`에
+    - raw/effective 동시 표기 검증 추가
+    - alias PASS일 때 `manual_pending: (없음)` 검증 추가
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookReleaseSignoffLogScriptTests sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookOpsIndexReportScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+- `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action "pilot 표본 보강 + 상태 재판정" --due-date 2026-03-04`
+
+결과:
+- `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`
+  - `manual_pending: (없음)`
+  - `manual_pending_raw(readiness): staging_real_account_signoff, production_real_account_signoff`
+  - `decision: GO`, `next_action: pilot 표본 보강 + 상태 재판정`

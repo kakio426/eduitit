@@ -20,7 +20,8 @@
   - `docs/handoff/sheetbook_release_decision_latest.json`
 - `overall.status`: HOLD
 - `blocking_reasons`: (없음)
-- `manual_pending`: staging_real_account_signoff, production_real_account_signoff
+- `manual_pending`: (없음)
+- `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff
 - `waived_manual_checks`: real_device_grid_1000_smoke
 - `next_actions` (decision json 자동 추천 명령):
 - 게이트 상태 최신화 후 판정 재생성: `python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py`

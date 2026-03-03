@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 12:10:36)
+# Sheetbook Daily Start Bundle (2026-03-03 12:28:40)
 
 - days: 14
 - overall: `GO`
@@ -19,7 +19,7 @@
 ## Commands
 - [PASS] `python scripts/run_sheetbook_release_readiness.py --days 14`
 - [PASS] `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
-- [PASS] `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action staging/prod 실계정 점검 --due-date 2026-03-03`
+- [PASS] `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action staging/prod 실계정 점검 --due-date 2026-03-04`
 - [PASS] `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
 - [PASS] `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
 - [PASS] `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`

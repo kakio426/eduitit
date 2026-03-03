@@ -4312,6 +4312,10 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
         self.assertIn("작성일: 2026-03-02", markdown)
         self.assertIn("- `overall.status`: HOLD", markdown)
         self.assertIn("- `manual_pending`: staging_real_account_signoff, production_real_account_signoff", markdown)
+        self.assertIn(
+            "- `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff",
+            markdown,
+        )
         self.assertIn("- `waived_manual_checks`: real_device_grid_1000_smoke", markdown)
         self.assertIn(
             "| staging_real_account_signoff | staging | allowlisted | PASS | staging-ok |",
@@ -4339,12 +4343,66 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
 
         self.assertIn("- `blocking_reasons`: (없음)", markdown)
         self.assertIn("- `manual_pending`: (없음)", markdown)
+        self.assertIn("- `manual_pending_raw(readiness)`: (없음)", markdown)
         self.assertIn("- `waived_manual_checks`: (없음)", markdown)
         self.assertIn("- `next_actions` (decision json 자동 추천 명령):", markdown)
         self.assertIn("- decision: `HOLD`", markdown)
         self.assertIn("- owner: -", markdown)
         self.assertIn("- next_action: -", markdown)
         self.assertIn("- due_date: -", markdown)
+
+    def test_build_release_signoff_markdown_uses_effective_pending_from_alias_statuses(self):
+        readiness = {
+            "overall": {
+                "status": "HOLD",
+                "manual_pending": [
+                    "staging_real_account_signoff",
+                    "production_real_account_signoff",
+                ],
+                "waived_manual_checks": ["real_device_grid_1000_smoke"],
+            }
+        }
+        manual = {
+            "checks": {
+                "staging_allowlisted": {"status": "PASS", "notes": "staging-ok"},
+                "staging_non_allowlisted": {"status": "PASS", "notes": "staging-ok"},
+                "production_allowlisted": {"status": "PASS", "notes": "prod-ok"},
+                "production_non_allowlisted": {"status": "PASS", "notes": "prod-ok"},
+                "real_device_grid_1000": {
+                    "status": "PASS",
+                    "notes": "waived_by_policy(device-unavailable)",
+                },
+            }
+        }
+        decision = {
+            "decision": "GO",
+            "manual_checks": manual["checks"],
+            "decision_context": {
+                "manual_alias_statuses": {
+                    "staging_real_account_signoff": "PASS",
+                    "production_real_account_signoff": "PASS",
+                    "real_device_grid_1000_smoke": "PASS",
+                }
+            },
+            "next_actions": [],
+        }
+
+        markdown = _build_release_signoff_log_markdown(
+            record_date=date(2026, 3, 3),
+            author="qa-owner",
+            readiness=readiness,
+            manual=manual,
+            decision=decision,
+            owner="ops-team",
+            next_action="pilot 표본 보강",
+            due_date="2026-03-04",
+        )
+
+        self.assertIn("- `manual_pending`: (없음)", markdown)
+        self.assertIn(
+            "- `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff",
+            markdown,
+        )
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):

@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 12:16)
+Status: Working branch handoff (2026-03-03 12:30)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -65,6 +65,7 @@ Status: Working branch handoff (2026-03-03 12:16)
   - `manual_pending_raw(readiness)`를 별도 노출해 원본/보정값 동시 확인 가능
   - ops index가 daily bundle의 effective `manual_pending`을 우선 사용하도록 보정
   - daily bundle에 `--allow-pilot-hold-for-beta` 옵션 추가(조건부 GO 일괄 실행)
+  - release signoff markdown도 `manual_pending` effective + `manual_pending_raw(readiness)` 분리 노출로 정합성 통일
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영

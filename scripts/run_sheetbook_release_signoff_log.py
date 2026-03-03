@@ -54,6 +54,30 @@ def _normalize_manual_row(manual_checks: dict[str, Any], key: str) -> tuple[str,
     return status, notes
 
 
+def _derive_effective_manual_pending(
+    *,
+    manual_pending_raw: list[Any],
+    alias_statuses: dict[str, Any],
+) -> list[str]:
+    effective: list[str] = []
+    seen: set[str] = set()
+    for item in manual_pending_raw:
+        key = str(item or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        status = str(alias_statuses.get(key) or "").strip().upper()
+        if status == "PASS":
+            continue
+        effective.append(key)
+
+    for key in ("staging_real_account_signoff", "production_real_account_signoff"):
+        status = str(alias_statuses.get(key) or "").strip().upper()
+        if status and status != "PASS" and key not in seen and key not in effective:
+            effective.append(key)
+    return effective
+
+
 def _build_manual_rows(manual_checks: dict[str, Any]) -> str:
     lines: list[str] = []
     for key, check_id, env, account_type in MANUAL_ROW_SPECS:
@@ -103,15 +127,22 @@ def _build_markdown(
     readiness_overall = readiness.get("overall") or {}
     manual_checks = manual.get("checks") or decision.get("manual_checks") or {}
     decision_context = decision.get("decision_context") or {}
+    manual_alias_statuses = decision_context.get("manual_alias_statuses") or {}
     decision_value = str(decision.get("decision") or "HOLD").strip().upper()
     if decision_value not in {"GO", "HOLD", "STOP"}:
         decision_value = "HOLD"
 
     blocking_reasons = _format_items(readiness_overall.get("blocking_reasons") or [])
-    manual_pending = _format_items(readiness_overall.get("manual_pending") or [])
+    manual_pending_raw_list = list(readiness_overall.get("manual_pending") or [])
+    manual_pending_effective_list = _derive_effective_manual_pending(
+        manual_pending_raw=manual_pending_raw_list,
+        alias_statuses=manual_alias_statuses,
+    )
+    manual_pending = _format_items(manual_pending_effective_list)
+    manual_pending_raw = _format_items(manual_pending_raw_list)
     waived_manual_checks = _format_items(readiness_overall.get("waived_manual_checks") or [])
     next_actions = _build_next_actions_lines(decision.get("next_actions") or [])
-    alias_lines = _build_alias_lines(decision_context.get("manual_alias_statuses") or {})
+    alias_lines = _build_alias_lines(manual_alias_statuses)
     manual_rows = _build_manual_rows(manual_checks)
 
     rendered_author = author or "-"
@@ -142,6 +173,7 @@ def _build_markdown(
 - `overall.status`: {str(readiness_overall.get("status") or "HOLD").upper()}
 - `blocking_reasons`: {blocking_reasons}
 - `manual_pending`: {manual_pending}
+- `manual_pending_raw(readiness)`: {manual_pending_raw}
 - `waived_manual_checks`: {waived_manual_checks}
 - `next_actions` (decision json 자동 추천 명령):
 {next_actions}
