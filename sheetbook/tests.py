@@ -4423,6 +4423,28 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
 class SheetbookGuardedCommitScriptTests(SimpleTestCase):
     @patch("scripts.run_sheetbook_guarded_commit._repo_root")
     @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    def test_run_blocks_on_branch_override_mismatch(self, mock_current_branch, mock_repo_root):
+        mock_repo_root.return_value = Path("C:/repo")
+        mock_current_branch.return_value = "feature/sheetbook"
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="hotfix/main-ops",
+                expected_branch="feature/sheetbook",
+                message="",
+                allow_empty=False,
+                guard_only=True,
+                push=False,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=1.0,
+            )
+        )
+
+        self.assertEqual(code, 2)
+
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
     def test_run_blocks_on_branch_mismatch(self, mock_current_branch, mock_repo_root):
         mock_repo_root.return_value = Path("C:/repo")
         mock_current_branch.return_value = "hotfix/main-ops"

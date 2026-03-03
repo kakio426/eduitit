@@ -5296,3 +5296,24 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `66c6fb2` `fix(sheetbook): add push retry to guarded commit`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-145. 2026-03-03 guarded commit 브랜치 override 안전성 강화
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - `--branch`를 사용할 때 현재 체크아웃 브랜치와 불일치하면 즉시 차단
+  - 브랜치 혼선(다른 브랜치에서 잘못된 override 지정)으로 인한 오동작 방지
+  - help 문구를 assertion 의미로 정리
+- `sheetbook/tests.py`
+  - `SheetbookGuardedCommitScriptTests`에 override mismatch 차단 케이스 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - `--branch` 불일치 차단 동작 문서화
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- 브랜치 분리 정책을 위반할 수 있는 override 경로가 커밋 전 단계에서 차단됨.

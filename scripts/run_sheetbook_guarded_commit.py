@@ -66,7 +66,16 @@ def _run_guard(root: Path, branch: str) -> int:
 
 def run(args: argparse.Namespace) -> int:
     root = _repo_root()
-    branch = args.branch.strip() or _current_branch(root)
+    current_branch = _current_branch(root)
+    branch_override = str(args.branch or "").strip()
+    if branch_override and branch_override != current_branch:
+        print(
+            f"[sheetbook-guarded-commit] blocked: --branch '{branch_override}' "
+            f"!= current '{current_branch}'",
+            file=sys.stderr,
+        )
+        return 2
+    branch = current_branch
     expected_branch = str(args.expected_branch or "").strip()
 
     if expected_branch and branch != expected_branch:
@@ -135,7 +144,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run branch path guard on staged files, then commit (and optionally push)."
     )
-    parser.add_argument("--branch", default="", help="branch override (default: current branch)")
+    parser.add_argument(
+        "--branch",
+        default="",
+        help="optional current-branch assertion (must match current branch when set)",
+    )
     parser.add_argument(
         "--expected-branch",
         default="feature/sheetbook",
