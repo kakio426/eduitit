@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-03 22:48:37",
+  "generated_at": "2026-03-03 22:54:29",
   "days": 14,
   "pilot": {
     "counts": {
@@ -33,8 +33,8 @@
     "next_actions": [
       {
         "type": "collect_pilot_samples",
-        "description": "파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건",
-        "command": "python scripts/run_sheetbook_release_readiness.py --days 14"
+        "description": "파일럿 이벤트 추가 확보(누적): workspace_home_opened 5건, home_source_sheetbook_created 5건",
+        "command": "python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json"
       },
       {
         "type": "collect_pilot_samples_local_rehearsal",

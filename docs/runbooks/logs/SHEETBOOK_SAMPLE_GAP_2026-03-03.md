@@ -1,4 +1,4 @@
-# Sheetbook Sample Gap Summary (2026-03-03 22:48:37)
+# Sheetbook Sample Gap Summary (2026-03-03 22:54:29)
 
 - days: `14`
 - overall_ready: `False`
@@ -18,7 +18,7 @@
 - next_step: `collect_more_samples`
 
 ## Next Actions
-- 파일럿 이벤트 추가 확보: workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_release_readiness.py --days 14`
+- 파일럿 이벤트 추가 확보(누적): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json`
 - 로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json`
 - 아카이브 이벤트 5건 추가 확보 후 품질 판정 재확인: `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
 - 로컬 리허설용 아카이브 이벤트 5건 생성(운영 판정 분리): `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 0 --create-count 0 --archive-event-count 5 --output docs/handoff/smoke_sheetbook_collect_archive_events_latest.json`
