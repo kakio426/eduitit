@@ -92,11 +92,13 @@ def run(args: argparse.Namespace) -> int:
         )
         return 2
 
-    handoff_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    dry_run = bool(getattr(args, "dry_run", False))
+    if not dry_run:
+        handoff_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(
         json.dumps(
             {
-                "status": "ok",
+                "status": "dry-run" if dry_run else "ok",
                 "handoff": str(handoff_path),
                 "branch": current_branch,
                 "latest_backup_commit": commit_hash.strip(),
@@ -127,6 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--expected-branch",
         default="feature/sheetbook",
         help="block execution when current branch differs (default: feature/sheetbook)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="preview status/latest backup commit changes without writing file",
     )
     return parser
 

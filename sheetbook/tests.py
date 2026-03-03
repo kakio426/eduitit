@@ -4736,6 +4736,7 @@ class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
                     handoff=str(handoff),
                     timestamp="2026-03-03 13:59",
                     expected_branch="feature/sheetbook",
+                    dry_run=False,
                 )
             )
 
@@ -4780,10 +4781,53 @@ class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
                     handoff=str(handoff),
                     timestamp="2026-03-03 13:59",
                     expected_branch="feature/sheetbook",
+                    dry_run=False,
                 )
             )
 
             self.assertEqual(code, 2)
+            self.assertEqual(handoff.read_text(encoding="utf-8"), original)
+        finally:
+            Path(temp_file.name).unlink(missing_ok=True)
+
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._repo_root")
+    @patch("scripts.run_sheetbook_refresh_handoff_latest._run_git")
+    def test_run_dry_run_does_not_modify_file(self, mock_run_git, mock_repo_root):
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            delete=False,
+            dir=str(Path.cwd()),
+            suffix=".md",
+            encoding="utf-8",
+        )
+        try:
+            handoff = Path(temp_file.name)
+            original = "\n".join(
+                [
+                    "# HANDOFF",
+                    "Status: Working branch handoff (2026-03-03 13:00)",
+                    "- latest backup commit: `old123` (`old subject`)",
+                ]
+            ) + "\n"
+            temp_file.write(original)
+            temp_file.close()
+
+            mock_repo_root.return_value = Path.cwd()
+            mock_run_git.side_effect = [
+                "feature/sheetbook",
+                "abc1234\tfeat(sheetbook): new backup",
+            ]
+
+            code = _run_sheetbook_refresh_handoff_latest(
+                Namespace(
+                    handoff=str(handoff),
+                    timestamp="2026-03-03 14:20",
+                    expected_branch="feature/sheetbook",
+                    dry_run=True,
+                )
+            )
+
+            self.assertEqual(code, 0)
             self.assertEqual(handoff.read_text(encoding="utf-8"), original)
         finally:
             Path(temp_file.name).unlink(missing_ok=True)

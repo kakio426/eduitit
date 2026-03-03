@@ -43,6 +43,8 @@
 
 - push 완료 후 아래 명령으로 최신 handoff 메타데이터 자동 갱신:
   - `python scripts/run_sheetbook_refresh_handoff_latest.py`
+- 파일 쓰기 없이 미리보기:
+  - `python scripts/run_sheetbook_refresh_handoff_latest.py --dry-run`
 - 갱신 항목:
   - `Status: Working branch handoff (...)`
   - `latest backup commit` (HEAD 해시/제목)

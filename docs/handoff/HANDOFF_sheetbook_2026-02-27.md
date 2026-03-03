@@ -5404,3 +5404,23 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `550dd7f` `feat(sheetbook): automate branch handoff latest refresh`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-149. 2026-03-03 handoff latest refresh dry-run 추가
+
+### A. 구현 요약
+- `scripts/run_sheetbook_refresh_handoff_latest.py`
+  - `--dry-run` 옵션 추가
+  - 파일은 수정하지 않고 status/latest backup commit 갱신 결과만 출력
+- `sheetbook/tests.py`
+  - dry-run 실행 시 파일 내용이 유지되는 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - dry-run 사용법 반영
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+- `python scripts/run_sheetbook_refresh_handoff_latest.py --help`
+
+결과:
+- handoff 최신화 전에 변경 결과를 안전하게 미리 점검 가능.
