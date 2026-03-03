@@ -5215,3 +5215,28 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `f1b19f8` `fix(sheetbook): preserve bundle rerun options in next actions`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-142. 2026-03-03 브랜치 분리 가드 훅 활성화(로컬)
+
+### A. 실행 요약
+- 실행 명령:
+  - `powershell -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1`
+- 적용 결과:
+  - `git config --get core.hooksPath` => `.githooks` (설정)
+  - Windows 실행 호환 보강:
+    - `.githooks/pre-commit` shebang을 `#!/bin/sh`로 변경
+  - 환경 제약:
+    - `git commit` 시 `sh.exe` Win32 error 5 발생으로 훅 실행 실패
+  - 최종 운영 방식:
+    - `core.hooksPath` 해제
+    - 커밋 전 수동 가드 고정 실행:
+      - `python scripts/branch_path_guard.py --branch feature/sheetbook --staged`
+
+### B. 목적
+- `feature/sheetbook` 작업 중 커밋 단위에서 비허용 경로 변경을 자동 차단해
+  브랜치 분리 정책 위반을 조기에 방지.
+
+### C. 비고
+- 자동 훅은 환경 이슈로 비활성화되었고, 수동 guard 절차로 대체.

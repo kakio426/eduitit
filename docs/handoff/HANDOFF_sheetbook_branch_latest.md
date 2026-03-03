@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 13:01)
+Status: Working branch handoff (2026-03-03 13:08)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 13:01)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `f1b19f8` (`fix(sheetbook): preserve bundle rerun options in next actions`)
+- latest backup commit: `ab100ae` (`docs(sheetbook): update handoff after bundle next-action fix`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -70,6 +70,11 @@ Status: Working branch handoff (2026-03-03 13:01)
   - release signoff markdown도 `manual_pending` effective + `manual_pending_raw(readiness)` 분리 노출로 정합성 통일
   - daily/ops/release 리포트에 `pilot_hold_for_beta` 표시 추가(조건부 GO 여부 명시)
   - daily bundle `next_actions` 재실행 명령이 실행 옵션(`--allow-pilot-hold-for-beta`, `--due-date`)을 유지하도록 보정
+  - 로컬 pre-commit 가드 활성화 시도:
+    - `powershell -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1`
+    - Windows `sh.exe` 환경 오류(Win32 error 5)로 자동 훅 커밋 차단 발생
+    - 대응: `core.hooksPath` 해제 후 커밋 전 수동 가드 고정 실행
+      - `python scripts/branch_path_guard.py --branch feature/sheetbook --staged`
   - 로컬 리허설용 metric seed 스크립트 추가:
     - `python scripts/run_sheetbook_seed_metric_samples.py --clear-seeded`
 
