@@ -8,6 +8,7 @@ It is intended as a reliable fallback when Git pre-commit hooks are unavailable.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import time
@@ -58,6 +59,37 @@ def _head_commit(root: Path) -> str:
     return result.stdout.strip()
 
 
+def _repo_relative_path(root: Path, path_text: str) -> str:
+    raw = str(path_text or "").strip()
+    if not raw:
+        return ""
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        try:
+            rel = candidate.resolve().relative_to(root.resolve())
+            return str(rel).replace("\\", "/")
+        except Exception:
+            return raw.replace("\\", "/")
+    return raw.replace("\\", "/")
+
+
+def _parse_last_json_object(text: str) -> dict:
+    content = str(text or "").strip()
+    if not content:
+        return {}
+    for line in reversed(content.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return {}
+
+
 def _is_retryable_push_failure(result: subprocess.CompletedProcess[str]) -> bool:
     if int(result.returncode) == 0:
         return False
@@ -86,6 +118,54 @@ def _run_guard(root: Path, branch: str) -> int:
     return int(result.returncode)
 
 
+def _push_with_retry(
+    *,
+    root: Path,
+    push_cmd: list[str],
+    push_retries: int,
+    push_retry_delay: float,
+    committed_sha: str,
+) -> int:
+    attempts = 1 + max(0, int(push_retries))
+    delay = max(0.0, float(push_retry_delay))
+    last_code = 1
+    push_succeeded = False
+    for attempt in range(1, attempts + 1):
+        push_result = _run(root, push_cmd)
+        _echo(push_result)
+        last_code = int(push_result.returncode)
+        if last_code == 0:
+            push_succeeded = True
+            break
+        retryable = _is_retryable_push_failure(push_result)
+        if not retryable:
+            print(
+                "[sheetbook-guarded-commit] non-retryable push failure detected; "
+                "skip retries.",
+                file=sys.stderr,
+            )
+            break
+        if attempt < attempts:
+            print(
+                f"[sheetbook-guarded-commit] push failed "
+                f"(attempt {attempt}/{attempts}), retrying in {delay:.1f}s...",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+
+    if push_succeeded:
+        return 0
+    push_command_text = " ".join(push_cmd)
+    commit_hint = f" (local commit: {committed_sha})" if committed_sha else ""
+    print(
+        "[sheetbook-guarded-commit] push failed after "
+        f"{attempts} attempt(s){commit_hint}. "
+        f"retry manually: `{push_command_text}`",
+        file=sys.stderr,
+    )
+    return int(last_code)
+
+
 def run(args: argparse.Namespace) -> int:
     root = _repo_root()
     current_branch = _current_branch(root)
@@ -104,6 +184,15 @@ def run(args: argparse.Namespace) -> int:
         print(
             f"[sheetbook-guarded-commit] blocked: current branch '{branch}' "
             f"!= expected '{expected_branch}'",
+            file=sys.stderr,
+        )
+        return 2
+    if bool(getattr(args, "commit_handoff_refresh", False)) and not bool(
+        getattr(args, "refresh_handoff_latest", False)
+    ):
+        print(
+            "[sheetbook-guarded-commit] blocked: --commit-handoff-refresh requires "
+            "--refresh-handoff-latest",
             file=sys.stderr,
         )
         return 2
@@ -143,41 +232,15 @@ def run(args: argparse.Namespace) -> int:
         push_cmd = ["git", "push", str(args.remote).strip() or "origin", branch]
         push_retries = max(0, int(getattr(args, "push_retries", 2) or 0))
         push_retry_delay = max(0.0, float(getattr(args, "push_retry_delay", 1.0) or 0.0))
-        attempts = 1 + push_retries
-        last_code = 1
-        push_succeeded = False
-        for attempt in range(1, attempts + 1):
-            push_result = _run(root, push_cmd)
-            _echo(push_result)
-            last_code = int(push_result.returncode)
-            if last_code == 0:
-                push_succeeded = True
-                break
-            retryable = _is_retryable_push_failure(push_result)
-            if not retryable:
-                print(
-                    "[sheetbook-guarded-commit] non-retryable push failure detected; "
-                    "skip retries.",
-                    file=sys.stderr,
-                )
-                break
-            if attempt < attempts:
-                print(
-                    f"[sheetbook-guarded-commit] push failed "
-                    f"(attempt {attempt}/{attempts}), retrying in {push_retry_delay:.1f}s...",
-                    file=sys.stderr,
-                )
-                time.sleep(push_retry_delay)
-        if not push_succeeded:
-            push_command_text = " ".join(push_cmd)
-            commit_hint = f" (local commit: {committed_sha})" if committed_sha else ""
-            print(
-                "[sheetbook-guarded-commit] push failed after "
-                f"{attempts} attempt(s){commit_hint}. "
-                f"retry manually: `{push_command_text}`",
-                file=sys.stderr,
-            )
-            return last_code
+        push_code = _push_with_retry(
+            root=root,
+            push_cmd=push_cmd,
+            push_retries=push_retries,
+            push_retry_delay=push_retry_delay,
+            committed_sha=committed_sha,
+        )
+        if push_code != 0:
+            return push_code
 
     if bool(getattr(args, "refresh_handoff_latest", False)):
         refresh_script = str(getattr(args, "refresh_handoff_script", "") or "").strip()
@@ -201,6 +264,55 @@ def run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return int(refresh_result.returncode)
+        if bool(getattr(args, "commit_handoff_refresh", False)):
+            payload = _parse_last_json_object(refresh_result.stdout)
+            refresh_target = str(payload.get("handoff") or "").strip()
+            if not refresh_target:
+                refresh_target = str(getattr(args, "refresh_handoff_target", "") or "").strip()
+            refresh_target_rel = _repo_relative_path(root, refresh_target)
+            if not refresh_target_rel:
+                print(
+                    "[sheetbook-guarded-commit] handoff refresh target not found in output. "
+                    "run manual commit for refreshed handoff file.",
+                    file=sys.stderr,
+                )
+                return 2
+
+            add_result = _run(root, ["git", "add", "--", refresh_target_rel])
+            _echo(add_result)
+            if add_result.returncode != 0:
+                return int(add_result.returncode)
+
+            staged_check = _run(root, ["git", "diff", "--cached", "--name-only", "--", refresh_target_rel])
+            _echo(staged_check)
+            if staged_check.returncode != 0:
+                return int(staged_check.returncode)
+            if not staged_check.stdout.strip():
+                print("[sheetbook-guarded-commit] no handoff refresh changes to commit")
+                return 0
+
+            refresh_commit_message = str(
+                getattr(args, "refresh_handoff_commit_message", "")
+                or "docs(sheetbook): refresh handoff latest metadata"
+            ).strip()
+            refresh_commit_result = _run(root, ["git", "commit", "-m", refresh_commit_message])
+            _echo(refresh_commit_result)
+            if refresh_commit_result.returncode != 0:
+                return int(refresh_commit_result.returncode)
+            refresh_commit_sha = _head_commit(root)
+            if bool(args.push):
+                push_cmd = ["git", "push", str(args.remote).strip() or "origin", branch]
+                push_retries = max(0, int(getattr(args, "push_retries", 2) or 0))
+                push_retry_delay = max(0.0, float(getattr(args, "push_retry_delay", 1.0) or 0.0))
+                push_code = _push_with_retry(
+                    root=root,
+                    push_cmd=push_cmd,
+                    push_retries=push_retries,
+                    push_retry_delay=push_retry_delay,
+                    committed_sha=refresh_commit_sha,
+                )
+                if push_code != 0:
+                    return push_code
 
     return 0
 
@@ -255,6 +367,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--refresh-handoff-timestamp",
         default="",
         help="optional timestamp text forwarded to handoff refresh script",
+    )
+    parser.add_argument(
+        "--refresh-handoff-target",
+        default="docs/handoff/HANDOFF_sheetbook_branch_latest.md",
+        help="handoff file path to stage/commit after refresh when --commit-handoff-refresh is set",
+    )
+    parser.add_argument(
+        "--commit-handoff-refresh",
+        action="store_true",
+        help="commit refreshed handoff file after --refresh-handoff-latest succeeds",
+    )
+    parser.add_argument(
+        "--refresh-handoff-commit-message",
+        default="docs(sheetbook): refresh handoff latest metadata",
+        help="commit message used by --commit-handoff-refresh",
     )
     return parser
 

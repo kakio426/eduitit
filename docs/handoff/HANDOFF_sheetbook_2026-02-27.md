@@ -5456,3 +5456,29 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `baee412` `feat(sheetbook): chain guarded commit with handoff refresh`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-151. 2026-03-03 guarded commit에 handoff refresh 자동 커밋/푸시 옵션 추가
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - 신규 옵션:
+    - `--commit-handoff-refresh`
+    - `--refresh-handoff-target`
+    - `--refresh-handoff-commit-message`
+  - `--refresh-handoff-latest` 성공 후 handoff 파일을 자동 `git add/commit`
+  - `--push`와 함께 사용 시 refresh 커밋에 대해 2차 push 수행
+  - 잘못된 조합 차단:
+    - `--commit-handoff-refresh` 단독 사용 시 차단
+- `sheetbook/tests.py`
+  - 자동 커밋/2차 push, 변경 없음 skip, 옵션 조합 차단 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - one-command 사용법 확장 반영
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- commit/push 이후 handoff latest 반영 커밋까지 단일 명령 체인으로 처리 가능.

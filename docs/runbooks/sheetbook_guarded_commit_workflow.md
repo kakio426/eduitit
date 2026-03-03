@@ -16,6 +16,8 @@
 - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push`
 - 커밋/푸시 후 handoff latest까지 자동 갱신:
   - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push --refresh-handoff-latest`
+- 커밋/푸시 + handoff latest 자동 갱신 + 갱신분 자동 커밋/푸시:
+  - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push --refresh-handoff-latest --commit-handoff-refresh`
 - 기본 재시도 포함:
   - push 실패 시 자동 재시도(기본 총 3회 시도)
   - 옵션: `--push-retries <N>`, `--push-retry-delay <sec>`
@@ -30,6 +32,8 @@
 - `--branch`를 주면 현재 브랜치와 일치하는지 추가 검증(불일치 시 차단)
 - `--refresh-handoff-latest` 사용 시 커밋/푸시 성공 직후
   `run_sheetbook_refresh_handoff_latest.py`를 자동 실행
+- `--commit-handoff-refresh` 사용 시 refresh 결과 파일을 자동 커밋하고,
+  `--push`가 켜져 있으면 2차 push까지 수행
 
 ## 4) 자주 보는 실패 케이스
 
