@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 11:43)
+Status: Working branch handoff (2026-03-03 12:12)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 11:43)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `e0b793f` (`chore(sheetbook): refresh 2026-03-03 handoff ops snapshots`)
+- latest backup commit: `0e661a4` (`docs(sheetbook): sync ops index with conditional GO decision`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -27,7 +27,7 @@ Status: Working branch handoff (2026-03-03 11:43)
   3. `git rev-parse HEAD`
   4. `git rev-parse origin/feature/sheetbook`
   5. (해시 다를 때만) `git pull --ff-only origin feature/sheetbook`
-  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04`
+  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
 - 확인 파일:
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
   - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
@@ -36,11 +36,13 @@ Status: Working branch handoff (2026-03-03 11:43)
 
 - 실행 완료:
   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03 --allow-pilot-hold-for-beta`
   - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
   - `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
   - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 ...`
 - 상태 요약:
   - `manual_alias_statuses`: staging/prod/real-device 모두 `PASS`
+  - `manual_pending` 표시는 effective 기준 `(없음)` + raw(readiness) 분리 노출
   - `decision`: `GO` (조건: `pilot_hold_for_beta=true`)
   - `readiness_status`: `HOLD` (표본 부족 유지)
   - sample gap blockers: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
@@ -57,6 +59,11 @@ Status: Working branch handoff (2026-03-03 11:43)
   - release signoff 로그 자동 생성 스크립트 추가
   - readiness/decision/signoff log 최신화
   - 수동 signoff PASS 반영 + 조건부 베타 GO 재산출(`decision=GO`, `readiness=HOLD`)
+- `운영 정합성 개선`:
+  - daily bundle에서 `manual_pending`을 decision alias 기준으로 effective 계산
+  - `manual_pending_raw(readiness)`를 별도 노출해 원본/보정값 동시 확인 가능
+  - ops index가 daily bundle의 effective `manual_pending`을 우선 사용하도록 보정
+  - daily bundle에 `--allow-pilot-hold-for-beta` 옵션 추가(조건부 GO 일괄 실행)
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영
@@ -90,7 +97,7 @@ Status: Working branch handoff (2026-03-03 11:43)
    - `python scripts/run_sheetbook_release_readiness.py --days 14`
    - `python scripts/run_sheetbook_signoff_decision.py`
 2. signoff 로그 갱신
-   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-03`
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-04`
 3. 파일럿/품질 스냅샷 갱신
    - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
    - `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
@@ -100,9 +107,9 @@ Status: Working branch handoff (2026-03-03 11:43)
    - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
 5. 최종 재확인
    - `python scripts/run_sheetbook_signoff_decision.py`
-   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-03`
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-04`
 6. 원클릭 번들(권장)
-   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
 7. 표본 부족량 요약(권장)
    - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 8. 운영 인덱스 단독 갱신(필요 시)

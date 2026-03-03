@@ -4960,3 +4960,43 @@ Status: Working handoff (2026-02-27 EOD)
 - `e0b793f` `chore(sheetbook): refresh 2026-03-03 handoff ops snapshots`
 - `838c153` `docs(sheetbook): update latest branch handoff status`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-133. 2026-03-03 운영 정합성 보정 (manual pending effective + bundle 옵션화)
+
+### A. 문제/원인
+- 수동 signoff를 모두 `PASS`로 반영해도, `run_sheetbook_release_readiness.py`의 `overall.manual_pending`이 고정 항목으로 남아
+  - `daily_start` / `ops_index`에서 pending으로 보이는 혼선이 발생.
+
+### B. 구현 요약
+- `scripts/run_sheetbook_daily_start_bundle.py`
+  - `decision_context.manual_alias_statuses`를 기준으로 `manual_pending` effective 계산 추가
+  - raw 값은 `manual_pending_raw`로 분리 저장
+  - markdown에 `manual_pending_raw(readiness)` 라인 추가
+  - 신규 옵션:
+    - `--allow-pilot-hold-for-beta`
+    - bundle 내부 `run_sheetbook_signoff_decision.py` 실행 시 조건부 GO 플래그 전달
+- `scripts/run_sheetbook_ops_index_report.py`
+  - `manual_pending` 집계 시 daily bundle의 effective 값을 우선 사용
+  - readiness 원본은 `manual_pending_raw`로 별도 보존
+- `sheetbook/tests.py`
+  - `SheetbookDailyStartBundleScriptTests`:
+    - alias가 모두 PASS일 때 effective pending이 비워지는 케이스 추가
+  - `SheetbookOpsIndexReportScriptTests`:
+    - ops index가 daily_start effective pending을 우선 사용하는 케이스 추가
+
+### C. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookOpsIndexReportScriptTests`
+- `python manage.py check`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03 --allow-pilot-hold-for-beta`
+
+결과:
+- `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `manual_pending`: `[]`
+  - `manual_pending_raw`: `["staging_real_account_signoff", "production_real_account_signoff"]`
+  - `decision`: `GO`
+  - `overall`: `GO`
+- `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `manual_pending: (없음)`
+  - `decision: GO`, `overall: GO`

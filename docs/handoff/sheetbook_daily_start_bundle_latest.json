@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-03 11:42:03",
+  "generated_at": "2026-03-03 12:10:36",
   "days": 14,
   "ops_index_report": "C:\\Users\\kakio\\eduitit\\docs\\runbooks\\logs\\SHEETBOOK_OPS_INDEX_2026-03-03.md",
   "commands": [
@@ -27,15 +27,15 @@
         "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE=50.0",
         "SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE=5",
         "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE=5",
-        "{\"generated_at\": \"2026-03-03 11:41:54\", \"days\": 14, \"preflight\": {\"beta_strict\": {\"pass\": true, \"elapsed_ms\": 84.3, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}, \"global_strict\": {\"pass\": true, \"elapsed_ms\": 52.5, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}}, \"smokes\": {\"grid_1000\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 12:06:55\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": [], \"desktop_warnings\": [], \"tablet_warnings\": [], \"has_warnings\": false, \"thresholds\": {\"max_final_render_ms\": 2000.0, \"warn_initial_render_ms\": 3000.0}}}, \"consent_recipients\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:00:44\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"consent_recipients_300\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:01:13\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"allowlist_access\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 12:14:35\", \"evaluation\": {\"pass\": true, \"reasons\": []}}}, \"pilot\": {\"days\": 14, \"ready_for_recalibration\": false, \"counts\": {\"workspace_home_opened\": 0, \"home_source_sheetbook_created\": 0, \"home_source_action_execute_requested\": 0}, \"rates\": {\"home_to_create_pct\": 0.0, \"create_to_action_pct\": 0.0}, \"minimum_samples\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5}, \"status\": \"HOLD\"}, \"overall\": {\"status\": \"HOLD\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}}"
+        "{\"generated_at\": \"2026-03-03 12:10:27\", \"days\": 14, \"preflight\": {\"beta_strict\": {\"pass\": true, \"elapsed_ms\": 82.8, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}, \"global_strict\": {\"pass\": true, \"elapsed_ms\": 52.4, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}}, \"smokes\": {\"grid_1000\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 12:06:55\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": [], \"desktop_warnings\": [], \"tablet_warnings\": [], \"has_warnings\": false, \"thresholds\": {\"max_final_render_ms\": 2000.0, \"warn_initial_render_ms\": 3000.0}}}, \"consent_recipients\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:00:44\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"consent_recipients_300\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:01:13\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"allowlist_access\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 12:14:35\", \"evaluation\": {\"pass\": true, \"reasons\": []}}}, \"pilot\": {\"days\": 14, \"ready_for_recalibration\": false, \"counts\": {\"workspace_home_opened\": 0, \"home_source_sheetbook_created\": 0, \"home_source_action_execute_requested\": 0}, \"rates\": {\"home_to_create_pct\": 0.0, \"create_to_action_pct\": 0.0}, \"minimum_samples\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5}, \"status\": \"HOLD\"}, \"overall\": {\"status\": \"HOLD\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}}"
       ]
     },
     {
-      "command": "python scripts/run_sheetbook_signoff_decision.py",
+      "command": "python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta",
       "ok": true,
       "returncode": 0,
       "tail": [
-        "{\"generated_at\": \"2026-03-03 11:41:55\", \"readiness_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"readiness_overall\": {\"status\": \"HOLD\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}, \"manual_checks\": {\"staging_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"staging_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"production_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"production_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"real_device_grid_1000\": {\"status\": \"PASS\", \"notes\": \"waived_by_policy(device-unavailable)\", \"updated_at\": \"2026-03-03 11:41:55\"}}, \"decision\": \"HOLD\", \"decision_context\": {\"decision\": \"HOLD\", \"readiness_status\": \"HOLD\", \"manual_statuses\": {\"staging_allowlisted\": \"PASS\", \"staging_non_allowlisted\": \"PASS\", \"production_allowlisted\": \"PASS\", \"production_non_allowlisted\": \"PASS\", \"real_device_grid_1000\": \"PASS\"}, \"manual_alias_statuses\": {\"staging_real_account_signoff\": \"PASS\", \"production_real_account_signoff\": \"PASS\", \"real_device_grid_1000_smoke\": \"PASS\"}, \"automated_gate_pass\": true, \"waivers\": {\"real_device_grid_1000\": true, \"pilot_hold_for_beta\": false}}, \"next_actions\": [{\"type\": \"optional_beta_go\", \"description\": \"파일럿 HOLD를 베타 공개에서 조건부 허용할 때 GO 재산출\", \"command\": \"python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta\"}, {\"type\": \"optional_beta_restore_hold\", \"description\": \"조건부 GO 검증 후 운영 상태를 HOLD로 복구\", \"command\": \"python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=HOLD:pending --set production_real_account_signoff=HOLD:pending\"}, {\"type\": \"refresh\", \"description\": \"게이트 상태 최신화 후 판정 재생성\", \"command\": \"python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py\"}]}"
+        "{\"generated_at\": \"2026-03-03 12:10:28\", \"readiness_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"readiness_overall\": {\"status\": \"HOLD\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}, \"manual_checks\": {\"staging_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"staging_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"production_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"production_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-03 11:41:42\"}, \"real_device_grid_1000\": {\"status\": \"PASS\", \"notes\": \"waived_by_policy(device-unavailable)\", \"updated_at\": \"2026-03-03 12:10:28\"}}, \"decision\": \"GO\", \"decision_context\": {\"decision\": \"GO\", \"readiness_status\": \"HOLD\", \"manual_statuses\": {\"staging_allowlisted\": \"PASS\", \"staging_non_allowlisted\": \"PASS\", \"production_allowlisted\": \"PASS\", \"production_non_allowlisted\": \"PASS\", \"real_device_grid_1000\": \"PASS\"}, \"manual_alias_statuses\": {\"staging_real_account_signoff\": \"PASS\", \"production_real_account_signoff\": \"PASS\", \"real_device_grid_1000_smoke\": \"PASS\"}, \"automated_gate_pass\": true, \"waivers\": {\"real_device_grid_1000\": true, \"pilot_hold_for_beta\": true}}, \"next_actions\": [{\"type\": \"refresh\", \"description\": \"게이트 상태 최신화 후 판정 재생성\", \"command\": \"python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py\"}]}"
       ]
     },
     {
@@ -43,7 +43,7 @@
       "ok": true,
       "returncode": 0,
       "tail": [
-        "{\"record_date\": \"2026-03-03\", \"readiness_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"decision_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_decision_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md\", \"decision\": \"HOLD\", \"readiness_status\": \"HOLD\"}"
+        "{\"record_date\": \"2026-03-03\", \"readiness_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"decision_input\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_decision_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md\", \"decision\": \"GO\", \"readiness_status\": \"HOLD\"}"
       ]
     },
     {
@@ -138,13 +138,14 @@
       "ok": true,
       "returncode": 0,
       "tail": [
-        "{\"record_date\": \"2026-03-03\", \"overall\": \"HOLD\", \"decision\": \"HOLD\", \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_OPS_INDEX_2026-03-03.md\"}"
+        "{\"record_date\": \"2026-03-03\", \"overall\": \"GO\", \"decision\": \"GO\", \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_OPS_INDEX_2026-03-03.md\"}"
       ]
     }
   ],
   "readiness_status": "HOLD",
-  "decision": "HOLD",
-  "manual_pending": [
+  "decision": "GO",
+  "manual_pending": [],
+  "manual_pending_raw": [
     "staging_real_account_signoff",
     "production_real_account_signoff"
   ],
@@ -195,13 +196,8 @@
     ]
   },
   "has_command_failures": false,
-  "overall": "HOLD",
+  "overall": "GO",
   "next_actions": [
-    {
-      "type": "manual_signoff_pending",
-      "description": "수동 signoff 완료 후 PASS 반영",
-      "command": "python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok"
-    },
     {
       "type": "collect_samples",
       "description": "표본 부족량(blockers) 해소 후 bundle+gap summary 재실행",

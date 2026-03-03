@@ -1,10 +1,11 @@
-# Sheetbook Daily Start Bundle (2026-03-03 11:42:03)
+# Sheetbook Daily Start Bundle (2026-03-03 12:10:36)
 
 - days: 14
-- overall: `HOLD`
-- decision: `HOLD`
+- overall: `GO`
+- decision: `GO`
 - readiness_status: `HOLD`
-- manual_pending: staging_real_account_signoff, production_real_account_signoff
+- manual_pending: (없음)
+- manual_pending_raw(readiness): staging_real_account_signoff, production_real_account_signoff
 - sample_gap_ready: `False`
 - sample_gap_blockers: pilot_home_opened_gap:5, pilot_create_gap:5, archive_event_gap:5
 - archive_next_step: `collect_more_samples`
@@ -17,7 +18,7 @@
 
 ## Commands
 - [PASS] `python scripts/run_sheetbook_release_readiness.py --days 14`
-- [PASS] `python scripts/run_sheetbook_signoff_decision.py`
+- [PASS] `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
 - [PASS] `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 --author sheetbook-ops --owner sheetbook-release --next-action staging/prod 실계정 점검 --due-date 2026-03-03`
 - [PASS] `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
 - [PASS] `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
@@ -27,7 +28,6 @@
 - [PASS] `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03 --daily-start C:\Users\kakio\eduitit\docs\handoff\sheetbook_daily_start_bundle_latest.json --output C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## Next Actions
-- 수동 signoff 완료 후 PASS 반영: `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
 - 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 
 ## Sample Gap Next Actions

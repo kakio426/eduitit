@@ -40,6 +40,12 @@ def _build_summary(
     consent_freeze_snapshot: dict[str, Any],
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
+    daily_manual_pending = [
+        str(item) for item in (daily_start.get("manual_pending") or []) if str(item)
+    ]
+    readiness_manual_pending = [
+        str(item) for item in (readiness_overall.get("manual_pending") or []) if str(item)
+    ]
     sample_gap_overall = sample_gap_summary.get("overall") or {}
     archive_quality = archive_snapshot.get("quality") or {}
     consent_reasons = [str(item) for item in (consent_freeze_snapshot.get("reasons") or []) if str(item)]
@@ -68,11 +74,14 @@ def _build_summary(
                 }
             )
 
+    has_daily_manual_pending = isinstance(daily_start, dict) and "manual_pending" in daily_start
+
     return {
         "overall": str(daily_start.get("overall") or decision.get("decision") or "HOLD").upper(),
         "decision": str(decision.get("decision") or "HOLD").upper(),
         "readiness_status": str(readiness_overall.get("status") or "HOLD").upper(),
-        "manual_pending": [str(item) for item in (readiness_overall.get("manual_pending") or []) if str(item)],
+        "manual_pending": daily_manual_pending if has_daily_manual_pending else readiness_manual_pending,
+        "manual_pending_raw": readiness_manual_pending,
         "sample_gap_blockers": [
             str(item) for item in (sample_gap_overall.get("blockers") or []) if str(item)
         ],

@@ -44,6 +44,31 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _derive_effective_manual_pending(
+    *,
+    manual_pending_raw: list[str],
+    manual_alias_statuses: dict[str, Any],
+) -> list[str]:
+    effective: list[str] = []
+    seen: set[str] = set()
+    for item in manual_pending_raw:
+        key = str(item or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        status = str(manual_alias_statuses.get(key) or "").strip().upper()
+        if status == "PASS":
+            continue
+        effective.append(key)
+
+    # Keep key aliases visible even when readiness raw list is stale/missing.
+    for key in ("staging_real_account_signoff", "production_real_account_signoff"):
+        status = str(manual_alias_statuses.get(key) or "").strip().upper()
+        if status and status != "PASS" and key not in seen and key not in effective:
+            effective.append(key)
+    return effective
+
+
 def _build_bundle_summary(
     *,
     generated_at: str,
@@ -58,6 +83,12 @@ def _build_bundle_summary(
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
     decision_context = decision.get("decision_context") or {}
+    manual_alias_statuses = dict(decision_context.get("manual_alias_statuses") or {})
+    manual_pending_raw = [str(item) for item in (readiness_overall.get("manual_pending") or []) if str(item)]
+    manual_pending_effective = _derive_effective_manual_pending(
+        manual_pending_raw=manual_pending_raw,
+        manual_alias_statuses=manual_alias_statuses,
+    )
     pilot = readiness.get("pilot") or {}
     pilot_counts = pilot.get("counts") or {}
     archive_quality = archive_snapshot.get("quality") or {}
@@ -71,8 +102,9 @@ def _build_bundle_summary(
         "commands": command_results,
         "readiness_status": str(readiness_overall.get("status") or "HOLD").upper(),
         "decision": str(decision.get("decision") or "HOLD").upper(),
-        "manual_pending": list(readiness_overall.get("manual_pending") or []),
-        "manual_alias_statuses": dict(decision_context.get("manual_alias_statuses") or {}),
+        "manual_pending": manual_pending_effective,
+        "manual_pending_raw": manual_pending_raw,
+        "manual_alias_statuses": manual_alias_statuses,
         "pilot_counts": {
             "workspace_home_opened": int(pilot_counts.get("workspace_home_opened") or 0),
             "home_source_sheetbook_created": int(
@@ -210,6 +242,8 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 
     blockers = [str(item) for item in (summary.get("sample_gap") or {}).get("blockers", []) if str(item)]
     blocker_text = ", ".join(blockers) if blockers else "(없음)"
+    manual_pending_text = ", ".join(summary.get("manual_pending") or []) or "(없음)"
+    manual_pending_raw_text = ", ".join(summary.get("manual_pending_raw") or []) or "(없음)"
     consent_freeze_reasons = [
         str(item) for item in (summary.get("consent_freeze") or {}).get("reasons", []) if str(item)
     ]
@@ -221,7 +255,8 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - overall: `{summary.get("overall")}`
 - decision: `{summary.get("decision")}`
 - readiness_status: `{summary.get("readiness_status")}`
-- manual_pending: {", ".join(summary.get("manual_pending") or []) or "(없음)"}
+- manual_pending: {manual_pending_text}
+- manual_pending_raw(readiness): {manual_pending_raw_text}
 - sample_gap_ready: `{(summary.get("sample_gap") or {}).get("ready")}`
 - sample_gap_blockers: {blocker_text}
 - archive_next_step: `{(summary.get("archive") or {}).get("next_step", "")}`
@@ -266,15 +301,28 @@ def main() -> int:
         default="",
         help="markdown output path (default: docs/runbooks/logs/SHEETBOOK_DAILY_START_<YYYY-MM-DD>.md)",
     )
+    parser.add_argument(
+        "--allow-pilot-hold-for-beta",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "signoff decision 실행 시 pilot HOLD를 베타 공개에서 조건부 허용하여 "
+            "GO로 재산출할지 여부. 기본 False."
+        ),
+    )
     args = parser.parse_args()
 
     root = _repo_root()
     today = date.today().isoformat()
     due_date = args.due_date.strip() or today
 
+    decision_cmd = ["python", "scripts/run_sheetbook_signoff_decision.py"]
+    if bool(args.allow_pilot_hold_for_beta):
+        decision_cmd.append("--allow-pilot-hold-for-beta")
+
     command_plan: list[list[str]] = [
         ["python", "scripts/run_sheetbook_release_readiness.py", "--days", str(args.days)],
-        ["python", "scripts/run_sheetbook_signoff_decision.py"],
+        decision_cmd,
         [
             "python",
             "scripts/run_sheetbook_release_signoff_log.py",

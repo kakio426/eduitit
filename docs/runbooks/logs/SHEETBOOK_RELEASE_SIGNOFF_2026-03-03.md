@@ -43,5 +43,5 @@
 
 - decision: `GO`
 - owner: sheetbook-release
-- next_action: pilot 표본 보강 + 상태 재판정
+- next_action: staging/prod 실계정 점검
 - due_date: 2026-03-03

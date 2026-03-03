@@ -4440,6 +4440,48 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             )
         )
 
+    def test_build_daily_start_bundle_summary_clears_manual_pending_when_aliases_pass(self):
+        summary = _build_daily_start_bundle_summary(
+            generated_at="2026-03-03 11:45:00",
+            days=14,
+            ops_index_report="docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
+            command_results=[
+                {"command": "cmd1", "ok": True, "returncode": 0, "tail": []},
+            ],
+            readiness={
+                "overall": {
+                    "status": "HOLD",
+                    "manual_pending": [
+                        "staging_real_account_signoff",
+                        "production_real_account_signoff",
+                    ],
+                },
+                "pilot": {"counts": {}},
+            },
+            decision={
+                "decision": "GO",
+                "decision_context": {
+                    "manual_alias_statuses": {
+                        "staging_real_account_signoff": "PASS",
+                        "production_real_account_signoff": "PASS",
+                        "real_device_grid_1000_smoke": "PASS",
+                    }
+                },
+            },
+            archive_snapshot={"event_count": 0, "quality": {"next_step": "collect_more_samples"}},
+            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+            sample_gap_summary={"overall": {"ready": True, "blockers": []}},
+        )
+
+        self.assertEqual(
+            summary["manual_pending_raw"],
+            ["staging_real_account_signoff", "production_real_account_signoff"],
+        )
+        self.assertEqual(summary["manual_pending"], [])
+        next_actions = summary.get("next_actions") or []
+        action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
+        self.assertNotIn("manual_signoff_pending", action_types)
+
     def test_build_daily_start_bundle_summary_forces_hold_on_command_failure(self):
         summary = _build_daily_start_bundle_summary(
             generated_at="2026-03-03 09:00:00",
@@ -4594,6 +4636,30 @@ class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
         self.assertEqual(summary["archive_next_step"], "collect_more_samples")
         self.assertEqual(summary["decision"], "HOLD")
         self.assertEqual(summary["overall"], "HOLD")
+
+    def test_build_ops_index_summary_prefers_daily_start_effective_manual_pending(self):
+        summary = _build_ops_index_summary(
+            readiness={
+                "overall": {
+                    "status": "HOLD",
+                    "manual_pending": [
+                        "staging_real_account_signoff",
+                        "production_real_account_signoff",
+                    ],
+                }
+            },
+            decision={"decision": "GO", "next_actions": []},
+            daily_start={"overall": "HOLD", "manual_pending": [], "next_actions": []},
+            archive_snapshot={"quality": {"next_step": "collect_more_samples"}},
+            sample_gap_summary={"overall": {"blockers": []}},
+            consent_freeze_snapshot={"status": "PASS", "reasons": []},
+        )
+
+        self.assertEqual(summary["manual_pending"], [])
+        self.assertEqual(
+            summary["manual_pending_raw"],
+            ["staging_real_account_signoff", "production_real_account_signoff"],
+        )
 
     def test_build_ops_index_markdown_includes_reports_and_actions(self):
         markdown = _build_ops_index_markdown(
