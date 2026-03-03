@@ -23,6 +23,10 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'window.dtApp.setTimerMode(300, true)')
         self.assertContains(response, 'title="별빛 추첨기"')
         self.assertContains(response, reverse('ppobgi:main'))
+        self.assertContains(response, 'id="mainMissionTitle" contenteditable="true"')
+        self.assertContains(response, 'id="mainMissionDesc" contenteditable="true"')
+        self.assertContains(response, 'window.dtApp.changeMissionFontSize(-1)')
+        self.assertContains(response, 'id="missionFontSizeLabel"')
         self.assertContains(response, 'id="randomDrawName"')
         self.assertContains(response, 'id="randomDrawBtn"')
         self.assertContains(response, 'id="randomDrawResetBtn"')
@@ -33,6 +37,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="bgmLoopModeBtn"')
         self.assertContains(response, 'id="bgmTrackRail"')
         self.assertContains(response, 'window.dtBgmTracks = {')
+        self.assertNotContains(response, '천리 길도 한 걸음부터')
 
     def test_timer_script_contains_safety_and_restore_methods(self):
         script_path = Path(settings.BASE_DIR) / 'products' / 'static' / 'products' / 'dutyticker' / 'js' / 'dutyticker.js'
@@ -55,3 +60,6 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('renderBgmTrackRail()', script)
         self.assertIn('nextBgmTrack(', script)
         self.assertIn('prevBgmTrack(', script)
+        self.assertIn('setupInlineMissionEditor()', script)
+        self.assertIn('saveInlineMissionEdit()', script)
+        self.assertIn('changeMissionFontSize(', script)
