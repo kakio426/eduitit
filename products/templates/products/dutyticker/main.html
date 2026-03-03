@@ -325,12 +325,16 @@
     }
 
     #mainTimerDisplay {
-        font-size: clamp(4rem, 18vw, 10rem);
-        line-height: 0.88;
+        font-size: clamp(3.35rem, min(15vw, 19vh), 9.5rem);
+        line-height: 0.9;
+        letter-spacing: -0.05em;
         margin-bottom: clamp(0.5rem, 1.8vh, 1.5rem);
         background: transparent;
         border: 0;
         padding: 0;
+        max-width: 100%;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
     }
 
     #mainTimerDisplay:focus-visible {
@@ -354,6 +358,206 @@
         max-width: 100%;
         row-gap: 0.65rem;
         column-gap: 0.65rem;
+    }
+
+    @media (min-width: 1024px) {
+        .dt-main-grid {
+            grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+        }
+    }
+
+    .dt-student-card-fit-25 {
+        min-height: clamp(23rem, 46vh, 28rem);
+    }
+
+    .dt-student-grid-fit-25 {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 0.52rem !important;
+        overflow-y: hidden !important;
+        padding-right: 0 !important;
+        align-content: stretch;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25>div {
+        min-height: 0;
+        padding: 0.3rem 0.22rem;
+        gap: 0.2rem;
+        border-radius: 0.95rem;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25>div>div.w-9.h-9 {
+        width: 1.8rem;
+        height: 1.8rem;
+        font-size: 0.78rem;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25>div>span {
+        font-size: 0.7rem;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #mainStudentGrid.dt-student-grid-fit-25>div>button {
+        width: 1rem;
+        height: 1rem;
+        top: 0.2rem;
+        right: 0.2rem;
+    }
+
+    #headerScheduleStrip {
+        align-items: center;
+        gap: 0.45rem;
+        max-width: min(64vw, 760px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0.15rem 0.2rem;
+        white-space: nowrap;
+        scrollbar-width: thin;
+    }
+
+    .dt-header-schedule-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.32rem;
+        padding: 0.28rem 0.62rem;
+        border-radius: 9999px;
+        background: rgba(15, 23, 42, 0.58);
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        font-size: clamp(0.78rem, 0.72rem + 0.18vw, 0.95rem);
+        font-weight: 800;
+        line-height: 1.15;
+        white-space: nowrap;
+    }
+
+    .dt-header-schedule-period {
+        color: #a5b4fc;
+    }
+
+    .dt-header-schedule-sep {
+        color: rgba(148, 163, 184, 0.8);
+        font-weight: 600;
+    }
+
+    .dt-header-schedule-subject {
+        color: #f1f5f9;
+    }
+
+    .dt-header-schedule-empty {
+        color: rgba(148, 163, 184, 0.75);
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding-inline: 0.35rem;
+    }
+
+    html[data-theme="sunny"] .dt-header-schedule-item,
+    html[data-theme="pastel"] .dt-header-schedule-item,
+    html[data-theme="vivid"] .dt-header-schedule-item {
+        background: rgba(255, 255, 255, 0.84);
+        border-color: rgba(148, 163, 184, 0.45);
+    }
+
+    html[data-theme="sunny"] .dt-header-schedule-period,
+    html[data-theme="pastel"] .dt-header-schedule-period,
+    html[data-theme="vivid"] .dt-header-schedule-period {
+        color: var(--dt-readable-accent);
+    }
+
+    html[data-theme="sunny"] .dt-header-schedule-sep,
+    html[data-theme="pastel"] .dt-header-schedule-sep,
+    html[data-theme="vivid"] .dt-header-schedule-sep,
+    html[data-theme="sunny"] .dt-header-schedule-empty,
+    html[data-theme="pastel"] .dt-header-schedule-empty,
+    html[data-theme="vivid"] .dt-header-schedule-empty {
+        color: var(--dt-readable-muted);
+    }
+
+    html[data-theme="sunny"] .dt-header-schedule-subject,
+    html[data-theme="pastel"] .dt-header-schedule-subject,
+    html[data-theme="vivid"] .dt-header-schedule-subject {
+        color: var(--dt-readable-main);
+    }
+
+    #randomDrawName {
+        font-size: clamp(2rem, 3.8vw, 3.15rem);
+        line-height: 1.04;
+        letter-spacing: -0.02em;
+        min-height: 3.2rem;
+    }
+
+    #randomDrawName.is-empty {
+        font-size: clamp(1.02rem, 1.4vw, 1.32rem);
+        line-height: 1.35;
+        letter-spacing: 0;
+    }
+
+    #bgmTrackRail {
+        max-width: 10.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.22rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding-bottom: 0.08rem;
+    }
+
+    .dt-bgm-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.16rem 0.3rem;
+        border-radius: 0.45rem;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.52);
+        font-size: 0.6rem;
+        font-weight: 800;
+        color: #cbd5e1;
+    }
+
+    .dt-bgm-chip input[type="checkbox"] {
+        accent-color: #6366f1;
+        width: 0.7rem;
+        height: 0.7rem;
+    }
+
+    .dt-bgm-chip-btn {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1.1;
+    }
+
+    .dt-bgm-chip.is-current {
+        border-color: rgba(99, 102, 241, 0.6);
+        background: rgba(99, 102, 241, 0.24);
+        color: #e0e7ff;
+    }
+
+    .dt-bgm-chip.is-muted {
+        opacity: 0.48;
+    }
+
+    html[data-theme="sunny"] .dt-bgm-chip,
+    html[data-theme="pastel"] .dt-bgm-chip,
+    html[data-theme="vivid"] .dt-bgm-chip {
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--dt-readable-main);
+        border-color: rgba(148, 163, 184, 0.44);
+    }
+
+    html[data-theme="sunny"] .dt-bgm-chip.is-current,
+    html[data-theme="pastel"] .dt-bgm-chip.is-current,
+    html[data-theme="vivid"] .dt-bgm-chip.is-current {
+        border-color: rgba(99, 102, 241, 0.45);
+        background: rgba(99, 102, 241, 0.16);
+        color: var(--dt-readable-accent);
     }
 
     @media (max-width: 1023px) {
@@ -437,7 +641,7 @@
 
     @media (max-height: 760px) {
         #mainTimerDisplay {
-            font-size: clamp(3.4rem, 14vh, 7rem);
+            font-size: clamp(2.8rem, min(12vw, 12.8vh), 6.4rem);
         }
 
         #mainMissionTitle {
@@ -450,6 +654,12 @@
 
         .dt-timer-hint {
             display: none;
+        }
+    }
+
+    @media (max-height: 900px) {
+        #mainTimerDisplay.scale-105 {
+            transform: scale(1.02) !important;
         }
     }
 
@@ -511,9 +721,9 @@
                     <span class="text-base font-medium" id="headerDate">--. --. (.)</span>
                 </div>
                 <!-- Schedule Strip -->
-                <div class="h-4 w-px bg-slate-700 hidden lg:block"></div>
+                <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
                 <div id="headerScheduleStrip"
-                    class="hidden lg:flex lg:flex-wrap items-center content-center gap-x-2 gap-y-1 max-w-[380px] xl:max-w-[560px]">
+                    class="hidden md:flex items-center min-w-0 max-w-[280px] lg:max-w-[560px] xl:max-w-[760px] overflow-x-auto overflow-y-hidden custom-scrollbar">
                     <!-- JS Populated -->
                 </div>
                 <div class="h-4 w-px bg-slate-700"></div>
@@ -547,6 +757,32 @@
                     title="소리 설정">
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
+                <div id="bgmControls"
+                    class="hidden lg:flex items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
+                    <button id="bgmToggleBtn" type="button" onclick="window.dtApp.toggleBgm()"
+                        class="h-7 px-2 rounded-md bg-slate-700/70 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-indigo-600 hover:text-white transition"
+                        title="배경음악 켜기/끄기">
+                        BGM OFF
+                    </button>
+                    <button id="bgmLoopModeBtn" type="button" onclick="window.dtApp.toggleBgmLoopMode()"
+                        class="h-7 px-1.5 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
+                        title="반복 모드">
+                        전체
+                    </button>
+                    <button id="bgmPrevBtn" type="button" onclick="window.dtApp.prevBgmTrack()"
+                        class="h-7 w-7 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
+                        title="이전 곡">
+                        ◀
+                    </button>
+                    <button id="bgmNextBtn" type="button" onclick="window.dtApp.nextBgmTrack()"
+                        class="h-7 w-7 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
+                        title="다음 곡">
+                        ▶
+                    </button>
+                    <div id="bgmTrackRail" class="flex custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
                 <a href="{% url 'dt_admin_dashboard' %}"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
                     title="설정">
@@ -590,10 +826,10 @@
 
 
     <!-- Main Grid -->
-    <main class="dt-main-grid flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+    <main class="dt-main-grid flex-1 grid grid-cols-1 gap-6 min-h-0">
 
-        <!-- [Left Column - 8] Mission & Status -->
-        <div class="dt-left-column lg:col-span-8 flex flex-col gap-6 h-full min-h-0">
+        <!-- Left Column -->
+        <div class="dt-left-column flex flex-col gap-6 h-full min-h-0">
 
             <!-- 1. Timer & Current Mission Card -->
             <div
@@ -611,7 +847,7 @@
                 <div class="dt-timer-main flex-1 flex flex-col justify-center items-center w-full min-h-0 z-10">
                     <!-- Giant Timer -->
                     <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
-                        class="font-mono text-[8rem] lg:text-[10rem] leading-none font-black tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
+                        class="font-mono font-black tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
                         onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
                         05:00
                     </button>
@@ -665,8 +901,8 @@
             </div>
 
             <!-- 2. Student Status Grid (Bottom) -->
-            <div
-                class="dt-student-card h-64 bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex flex-col shadow-2xl">
+            <div id="mainStudentCard"
+                class="dt-student-card min-h-[20rem] lg:min-h-[21.5rem] bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 flex flex-col shadow-2xl">
                 <div class="flex justify-between items-center mb-6 px-2">
                     <div class="flex items-center gap-4">
                         <h3 class="text-2xl font-black flex items-center gap-2 text-white">
@@ -706,8 +942,8 @@
             </div>
         </div>
 
-        <!-- [Right Column - 4] Roles & Notices -->
-        <div class="dt-right-column lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
+        <!-- Right Column -->
+        <div class="dt-right-column flex flex-col gap-6 h-full min-h-0">
 
             <!-- 3. Today's Roles -->
             <div
@@ -739,21 +975,52 @@
 
             <!-- 4. Notices / Broadcast -->
             <div
-                class="dt-notice-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-700/50 h-60 flex flex-col shadow-2xl">
-                <div class="flex justify-between items-start mb-4 px-2">
-                    <h3 class="text-xl font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
+                class="dt-notice-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[18rem] flex flex-col shadow-2xl">
+                <div class="flex justify-between items-start mb-3 px-2">
+                    <h3 class="text-lg font-black text-white flex items-center gap-2" id="noticeTitleDisplay">
                         <i class="fa-regular fa-bell text-yellow-400"></i>
                         알림사항 없음
                     </h3>
                     <button id="broadcastToggleBtn"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
+                        class="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-yellow-400 hover:bg-slate-700/50 transition-all"
                         onclick="window.dtApp.openBroadcastModal()">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
 
-                <div class="flex-1 relative overflow-hidden">
-                    <p class="text-slate-400 font-bold leading-relaxed whitespace-pre-line" id="dashboardBroadcastText">클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.</p>
+                <div class="px-2">
+                    <p class="text-slate-400 text-sm font-bold leading-relaxed whitespace-pre-line line-clamp-2"
+                        id="dashboardBroadcastText">클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.</p>
+                </div>
+
+                <div class="h-px bg-slate-700/60 my-3"></div>
+
+                <div class="flex-1 min-h-0 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex flex-col">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <h4 class="text-base font-black text-indigo-200 flex items-center gap-2">
+                            <i class="fa-solid fa-shuffle text-indigo-300"></i>
+                            랜덤 뽑기
+                        </h4>
+                        <span id="randomDrawMeta"
+                            class="text-[11px] uppercase tracking-[0.16em] font-extrabold text-indigo-300">0 / 0</span>
+                    </div>
+
+                    <div class="flex-1 flex items-center justify-center text-center px-1">
+                        <p id="randomDrawName" class="font-black text-white break-keep is-empty">
+                            학생이 없어요
+                        </p>
+                    </div>
+
+                    <div class="mt-3 flex items-center justify-end gap-2">
+                        <button id="randomDrawResetBtn" type="button" onclick="window.dtApp.resetRandomPicker()"
+                            class="px-3.5 py-2 rounded-xl border border-slate-600 bg-slate-800/70 text-slate-300 font-bold hover:bg-slate-700/80 hover:text-white transition">
+                            초기화
+                        </button>
+                        <button id="randomDrawBtn" type="button" onclick="window.dtApp.drawRandomStudent()"
+                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black border border-indigo-500/20 transition">
+                            한 명 뽑기
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -995,6 +1262,28 @@
         resetUrl: "{% url 'dt_api_reset' %}",
         toggleMissionUrlTemplate: "{% url 'dt_api_toggle_mission' 999999 %}",
         toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
+    };
+    window.dtBgmTracks = {
+        jazz_soft_loop: { label: "재즈 · 모닝 브리즈", src: "{% static 'products/dutyticker/audio/jazz_soft_loop.wav' %}", volume: 0.18 },
+        jazz_breeze_walk: { label: "재즈 · 산책 리듬", src: "{% static 'products/dutyticker/audio/jazz_breeze_walk.wav' %}", volume: 0.18 },
+        jazz_morning_lane: { label: "재즈 · 모닝 레인", src: "{% static 'products/dutyticker/audio/jazz_morning_lane.wav' %}", volume: 0.18 },
+        jazz_cozy_corner: { label: "재즈 · 코지 코너", src: "{% static 'products/dutyticker/audio/jazz_cozy_corner.wav' %}", volume: 0.18 },
+        jazz_fresh_start: { label: "재즈 · 프레시 스타트", src: "{% static 'products/dutyticker/audio/jazz_fresh_start.wav' %}", volume: 0.18 },
+        bossa_light_day: { label: "보사노바 · 라이트 데이", src: "{% static 'products/dutyticker/audio/bossa_light_day.wav' %}", volume: 0.17 },
+        bossa_soft_river: { label: "보사노바 · 소프트 리버", src: "{% static 'products/dutyticker/audio/bossa_soft_river.wav' %}", volume: 0.17 },
+        piano_calm_loop: { label: "피아노 · 잔잔한 오후", src: "{% static 'products/dutyticker/audio/piano_calm_loop.wav' %}", volume: 0.16 },
+        piano_sunlight_steps: { label: "피아노 · 햇살 발걸음", src: "{% static 'products/dutyticker/audio/piano_sunlight_steps.wav' %}", volume: 0.16 },
+        piano_green_window: { label: "피아노 · 그린 윈도우", src: "{% static 'products/dutyticker/audio/piano_green_window.wav' %}", volume: 0.16 },
+        piano_clear_sky: { label: "피아노 · 클리어 스카이", src: "{% static 'products/dutyticker/audio/piano_clear_sky.wav' %}", volume: 0.16 },
+        piano_soft_story: { label: "피아노 · 소프트 스토리", src: "{% static 'products/dutyticker/audio/piano_soft_story.wav' %}", volume: 0.16 },
+        acoustic_smile_groove: { label: "어쿠스틱 · 스마일", src: "{% static 'products/dutyticker/audio/acoustic_smile_groove.wav' %}", volume: 0.17 },
+        acoustic_class_smile: { label: "어쿠스틱 · 클래스 스마일", src: "{% static 'products/dutyticker/audio/acoustic_class_smile.wav' %}", volume: 0.17 },
+        acoustic_spring_steps: { label: "어쿠스틱 · 스프링 스텝", src: "{% static 'products/dutyticker/audio/acoustic_spring_steps.wav' %}", volume: 0.17 },
+        lofi_cloud_walk: { label: "로파이 · 클라우드 워크", src: "{% static 'products/dutyticker/audio/lofi_cloud_walk.wav' %}", volume: 0.15 },
+        lofi_warm_notebook: { label: "로파이 · 웜 노트북", src: "{% static 'products/dutyticker/audio/lofi_warm_notebook.wav' %}", volume: 0.15 },
+        lofi_peaceful_day: { label: "로파이 · 피스풀 데이", src: "{% static 'products/dutyticker/audio/lofi_peaceful_day.wav' %}", volume: 0.15 },
+        marimba_happy_breeze: { label: "마림바 · 해피 브리즈", src: "{% static 'products/dutyticker/audio/marimba_happy_breeze.wav' %}", volume: 0.16 },
+        marimba_sunny_glow: { label: "마림바 · 써니 글로우", src: "{% static 'products/dutyticker/audio/marimba_sunny_glow.wav' %}", volume: 0.16 },
     };
 </script>
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>

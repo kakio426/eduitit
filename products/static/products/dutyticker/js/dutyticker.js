@@ -21,6 +21,21 @@ class DutyTickerManager {
         this.callModeAutoTimer = null;
         this.callModeAutoPlaying = false;
         this.boundGlobalKeydown = null;
+        this.boundWindowResize = null;
+        this.resizeRaf = null;
+        this.randomDrawnStudentIds = new Set();
+        this.randomCurrentStudentId = null;
+        this.bgmTracks = window.dtBgmTracks || {};
+        this.bgmTrackOrder = Object.keys(this.bgmTracks);
+        this.bgmTrackKey = this.bgmTrackOrder[0] || '';
+        this.bgmEnabled = false;
+        this.bgmLoopMode = 'all';
+        this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
+        this.bgmAwaitUserGesture = false;
+        this.bgmAudioEl = null;
+        this.bgmFadeRaf = null;
+        this.bgmStorageKey = 'dt-bgm-state-v1';
+        this.boundBgmUnlock = null;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -38,6 +53,9 @@ class DutyTickerManager {
         this.restoreTimerState();
         this.updateTimerDisplay();
         this.updateSoundUI();
+        this.setupBgm();
+        this.restoreBgmState();
+        this.updateBgmUI();
         this.bindGlobalShortcuts();
 
         // Anti-cache check
@@ -64,6 +82,14 @@ class DutyTickerManager {
 
         // Ensure timer display is correct on start
         this.updateTimerDisplay();
+
+        if (!this.boundWindowResize) {
+            this.boundWindowResize = () => {
+                if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
+                this.resizeRaf = requestAnimationFrame(() => this.applyStudentGridLayoutMode());
+            };
+            window.addEventListener('resize', this.boundWindowResize, { passive: true });
+        }
     }
 
     bindGlobalShortcuts() {
@@ -268,6 +294,7 @@ class DutyTickerManager {
                 number: s.number,
                 status: s.is_mission_completed ? 'done' : 'pending'
             }));
+            this.syncRandomPickerStudents();
 
             this.broadcastMessage = data.settings.last_broadcast || '';
             this.isBroadcasting = !!this.broadcastMessage;
@@ -321,6 +348,7 @@ class DutyTickerManager {
         this.renderRoleList();
         this.renderStudentGrid();
         this.renderNotices();
+        this.renderRandomPicker();
         const callModal = document.getElementById('callModeModal');
         const isCallModeOpen = !!callModal && !callModal.classList.contains('hidden');
         if (isCallModeOpen) this.renderCallMode();
@@ -335,7 +363,7 @@ class DutyTickerManager {
             .sort((a, b) => Number(a?.period || 0) - Number(b?.period || 0));
 
         if (periodSchedule.length === 0) {
-            container.innerHTML = '<span class="text-slate-500 text-[11px] font-bold px-1 opacity-70">오늘 시간표 없음</span>';
+            container.innerHTML = '<span class="dt-header-schedule-empty">오늘 시간표 없음</span>';
             return;
         }
 
@@ -348,8 +376,10 @@ class DutyTickerManager {
             const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
 
             return `
-                <span class="text-[11px] xl:text-xs font-bold text-slate-100/90 whitespace-nowrap">
-                    <span class="text-indigo-300">${this.escapeHtml(periodLabel)}</span><span class="text-slate-500 mx-0.5">:</span><span class="text-slate-200">${this.escapeHtml(subjectName)}</span>
+                <span class="dt-header-schedule-item">
+                    <span class="dt-header-schedule-period">${this.escapeHtml(periodLabel)}</span>
+                    <span class="dt-header-schedule-sep">·</span>
+                    <span class="dt-header-schedule-subject">${this.escapeHtml(subjectName)}</span>
                 </span>
             `;
         }).join('');
@@ -433,6 +463,23 @@ class DutyTickerManager {
         }).join('');
     }
 
+    applyStudentGridLayoutMode() {
+        const grid = document.getElementById('mainStudentGrid');
+        const card = document.getElementById('mainStudentCard');
+        if (!grid || !card) return;
+
+        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+        const shouldFitWithoutScroll = isDesktop && this.students.length > 0 && this.students.length <= 25;
+
+        grid.classList.toggle('dt-student-grid-fit-25', shouldFitWithoutScroll);
+        grid.classList.toggle('overflow-y-auto', !shouldFitWithoutScroll);
+        grid.classList.toggle('pr-2', !shouldFitWithoutScroll);
+        grid.classList.toggle('overflow-y-hidden', shouldFitWithoutScroll);
+        grid.classList.toggle('pr-0', shouldFitWithoutScroll);
+
+        card.classList.toggle('dt-student-card-fit-25', shouldFitWithoutScroll);
+    }
+
     renderStudentGrid() {
         const container = document.getElementById('mainStudentGrid');
         if (!container) return;
@@ -446,6 +493,7 @@ class DutyTickerManager {
                     </a>
                 </div>
             `;
+            this.applyStudentGridLayoutMode();
             this.updateProgress();
             return;
         }
@@ -474,6 +522,7 @@ class DutyTickerManager {
                 </div>
             `;
         }).join('');
+        this.applyStudentGridLayoutMode();
         this.updateProgress();
     }
 
@@ -491,6 +540,121 @@ class DutyTickerManager {
             textEl.textContent = "클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.";
             textEl.classList.remove('text-yellow-100');
         }
+    }
+
+    syncRandomPickerStudents() {
+        const validIds = new Set(
+            this.students
+                .map((student) => Number(student.id))
+                .filter((id) => Number.isFinite(id))
+        );
+
+        this.randomDrawnStudentIds = new Set(
+            [...this.randomDrawnStudentIds].filter((studentId) => validIds.has(Number(studentId)))
+        );
+
+        const currentId = Number(this.randomCurrentStudentId);
+        if (!Number.isFinite(currentId) || !validIds.has(currentId)) {
+            this.randomCurrentStudentId = null;
+            return;
+        }
+
+        this.randomCurrentStudentId = currentId;
+        this.randomDrawnStudentIds.add(currentId);
+    }
+
+    getRandomPickerAvailableStudents() {
+        const drawnIds = this.randomDrawnStudentIds;
+        return this.students.filter((student) => {
+            const studentId = Number(student.id);
+            return Number.isFinite(studentId) && !drawnIds.has(studentId);
+        });
+    }
+
+    renderRandomPicker() {
+        const nameEl = document.getElementById('randomDrawName');
+        const metaEl = document.getElementById('randomDrawMeta');
+        const drawBtn = document.getElementById('randomDrawBtn');
+        const resetBtn = document.getElementById('randomDrawResetBtn');
+        if (!nameEl || !metaEl || !drawBtn || !resetBtn) return;
+
+        const total = this.students.length;
+        const pickedCount = this.randomDrawnStudentIds.size;
+        const remaining = Math.max(total - pickedCount, 0);
+        const selectedStudent = this.students.find(
+            (student) => Number(student.id) === Number(this.randomCurrentStudentId)
+        );
+
+        if (total === 0) {
+            nameEl.textContent = '학생이 없어요';
+            nameEl.classList.add('is-empty');
+            metaEl.textContent = '0 / 0';
+            drawBtn.disabled = true;
+            drawBtn.textContent = '학생 없음';
+            drawBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            resetBtn.disabled = true;
+            resetBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            return;
+        }
+
+        metaEl.textContent = `${pickedCount} / ${total} · 남은 ${remaining}`;
+
+        if (selectedStudent) {
+            nameEl.textContent = `${selectedStudent.number}번 ${selectedStudent.name}`;
+            nameEl.classList.remove('is-empty');
+        } else {
+            nameEl.textContent = '버튼을 눌러 한 명 뽑으세요';
+            nameEl.classList.add('is-empty');
+        }
+
+        const done = remaining === 0;
+        drawBtn.disabled = done;
+        drawBtn.textContent = done ? '모두 뽑음' : '한 명 뽑기';
+        drawBtn.classList.toggle('opacity-60', done);
+        drawBtn.classList.toggle('cursor-not-allowed', done);
+
+        const canReset = pickedCount > 0 || !!selectedStudent;
+        resetBtn.disabled = !canReset;
+        resetBtn.classList.toggle('opacity-60', !canReset);
+        resetBtn.classList.toggle('cursor-not-allowed', !canReset);
+    }
+
+    drawRandomStudent() {
+        if (!this.students.length) {
+            this.renderRandomPicker();
+            return;
+        }
+
+        const availableStudents = this.getRandomPickerAvailableStudents();
+        if (!availableStudents.length) {
+            this.renderRandomPicker();
+            return;
+        }
+
+        const pickedStudent = availableStudents[Math.floor(Math.random() * availableStudents.length)];
+        const pickedStudentId = Number(pickedStudent.id);
+        this.randomCurrentStudentId = pickedStudentId;
+        this.randomDrawnStudentIds.add(pickedStudentId);
+        this.renderRandomPicker();
+        this.playCallChime('soft');
+
+        const nameEl = document.getElementById('randomDrawName');
+        if (nameEl && typeof nameEl.animate === 'function') {
+            nameEl.animate(
+                [
+                    { transform: 'scale(0.94)', opacity: 0.55 },
+                    { transform: 'scale(1.06)', opacity: 1 },
+                    { transform: 'scale(1)', opacity: 1 },
+                ],
+                { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+            );
+        }
+    }
+
+    resetRandomPicker() {
+        this.randomDrawnStudentIds.clear();
+        this.randomCurrentStudentId = null;
+        this.renderRandomPicker();
     }
 
     updateProgress() {
@@ -1087,6 +1251,345 @@ class DutyTickerManager {
         }
     }
 
+    // --- BGM ---
+    setupBgm() {
+        if (!this.bgmTrackOrder.length) return;
+
+        const audioContainer = document.getElementById('audioContainer');
+        if (audioContainer) {
+            const audioEl = document.createElement('audio');
+            audioEl.id = 'bgmAudio';
+            audioEl.preload = 'metadata';
+            audioEl.loop = false;
+            audioEl.volume = 0;
+            audioEl.setAttribute('aria-hidden', 'true');
+            audioEl.addEventListener('ended', () => this.handleBgmTrackEnded());
+            audioContainer.innerHTML = '';
+            audioContainer.appendChild(audioEl);
+            this.bgmAudioEl = audioEl;
+        }
+
+        const rail = document.getElementById('bgmTrackRail');
+        if (rail) {
+            rail.addEventListener('click', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) return;
+                const playKey = target.dataset.bgmPlay || '';
+                if (!playKey) return;
+                event.preventDefault();
+                this.setBgmTrack(playKey, { persist: true, userInitiated: true, autoplay: true });
+            });
+
+            rail.addEventListener('change', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLInputElement)) return;
+                if (target.type !== 'checkbox') return;
+                const trackKey = target.dataset.bgmToggle || '';
+                if (!trackKey) return;
+
+                if (target.checked) this.bgmEnabledTrackKeys.add(trackKey);
+                else this.bgmEnabledTrackKeys.delete(trackKey);
+
+                const playableKeys = this.getPlayableBgmTrackKeys();
+                if (!playableKeys.length) {
+                    this.bgmEnabled = false;
+                    this.bgmTrackKey = this.bgmTrackOrder[0] || '';
+                    this.pauseBgm({ save: false });
+                } else if (!this.bgmEnabledTrackKeys.has(this.bgmTrackKey)) {
+                    this.bgmTrackKey = playableKeys[0];
+                    if (this.bgmEnabled) this.playBgm({ userInitiated: true, forceReload: true });
+                }
+
+                this.saveBgmState();
+                this.updateBgmUI();
+            });
+        }
+
+        this.renderBgmTrackRail();
+        this.updateBgmUI();
+        this.ensureBgmUnlockListener();
+    }
+
+    ensureBgmUnlockListener() {
+        if (this.boundBgmUnlock) return;
+        this.boundBgmUnlock = () => {
+            this.resumeAudioContext();
+            if (this.bgmAwaitUserGesture && this.bgmEnabled) {
+                this.playBgm({ userInitiated: true });
+            }
+        };
+        document.addEventListener('pointerdown', this.boundBgmUnlock, { passive: true });
+        document.addEventListener('keydown', this.boundBgmUnlock);
+    }
+
+    saveBgmState() {
+        try {
+            localStorage.setItem(this.bgmStorageKey, JSON.stringify({
+                enabled: this.bgmEnabled,
+                trackKey: this.bgmTrackKey,
+                loopMode: this.bgmLoopMode,
+                enabledTrackKeys: [...this.bgmEnabledTrackKeys],
+            }));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save BGM state', error);
+        }
+    }
+
+    restoreBgmState() {
+        if (!this.bgmTrackOrder.length) return;
+        try {
+            const raw = localStorage.getItem(this.bgmStorageKey);
+            if (!raw) {
+                this.renderBgmTrackRail();
+                this.updateBgmUI();
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const validTrackSet = new Set(this.bgmTrackOrder);
+            const restoredTrackKeys = Array.isArray(parsed.enabledTrackKeys)
+                ? parsed.enabledTrackKeys.filter((key) => validTrackSet.has(String(key)))
+                : this.bgmTrackOrder.slice();
+
+            this.bgmEnabledTrackKeys = new Set(restoredTrackKeys);
+            this.bgmLoopMode = parsed.loopMode === 'one' ? 'one' : 'all';
+
+            const requestedTrack = String(parsed.trackKey || '');
+            if (validTrackSet.has(requestedTrack)) this.bgmTrackKey = requestedTrack;
+            else this.bgmTrackKey = this.bgmTrackOrder[0];
+
+            const canPlay = this.getPlayableBgmTrackKeys().length > 0;
+            this.bgmEnabled = parsed.enabled === true && canPlay;
+
+            this.renderBgmTrackRail();
+            this.updateBgmUI();
+            if (this.bgmEnabled) this.playBgm({ userInitiated: false, forceReload: true });
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore BGM state', error);
+            this.renderBgmTrackRail();
+            this.updateBgmUI();
+        }
+    }
+
+    getPlayableBgmTrackKeys() {
+        return this.bgmTrackOrder.filter((key) => this.bgmEnabledTrackKeys.has(key));
+    }
+
+    renderBgmTrackRail() {
+        const rail = document.getElementById('bgmTrackRail');
+        if (!rail) return;
+        if (!this.bgmTrackOrder.length) {
+            rail.innerHTML = '<span class="text-[10px] text-slate-500 font-bold px-1">곡 없음</span>';
+            return;
+        }
+
+        rail.innerHTML = this.bgmTrackOrder.map((trackKey, index) => {
+            const track = this.bgmTracks[trackKey] || {};
+            const enabled = this.bgmEnabledTrackKeys.has(trackKey);
+            const isCurrent = this.bgmTrackKey === trackKey;
+            const rawLabel = String(track.label || `트랙 ${index + 1}`);
+            const shortLabel = rawLabel.includes('·') ? rawLabel.split('·').pop().trim() : rawLabel;
+            const chipLabel = `${String(index + 1).padStart(2, '0')} ${this.escapeHtml(shortLabel)}`;
+            const checked = enabled ? 'checked' : '';
+            const chipClass = `dt-bgm-chip ${isCurrent ? 'is-current' : ''} ${enabled ? '' : 'is-muted'}`;
+
+            return `
+                <div class="${chipClass}">
+                    <input type="checkbox" data-bgm-toggle="${this.escapeHtml(trackKey)}" ${checked} aria-label="${this.escapeHtml(rawLabel)} 재생 포함">
+                    <button type="button" class="dt-bgm-chip-btn" data-bgm-play="${this.escapeHtml(trackKey)}" title="${this.escapeHtml(rawLabel)}">${chipLabel}</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateBgmUI() {
+        const toggleBtn = document.getElementById('bgmToggleBtn');
+        const loopBtn = document.getElementById('bgmLoopModeBtn');
+        const prevBtn = document.getElementById('bgmPrevBtn');
+        const nextBtn = document.getElementById('bgmNextBtn');
+
+        const playableCount = this.getPlayableBgmTrackKeys().length;
+        const hasTracks = this.bgmTrackOrder.length > 0;
+        const canPlay = hasTracks && playableCount > 0;
+
+        if (toggleBtn) {
+            toggleBtn.disabled = !canPlay;
+            toggleBtn.textContent = !canPlay
+                ? 'BGM 없음'
+                : this.bgmEnabled
+                    ? (this.bgmAwaitUserGesture ? '재생대기' : 'BGM ON')
+                    : 'BGM OFF';
+            toggleBtn.classList.toggle('opacity-60', !canPlay);
+            toggleBtn.classList.toggle('cursor-not-allowed', !canPlay);
+            toggleBtn.classList.toggle('bg-indigo-600', this.bgmEnabled && canPlay);
+            toggleBtn.classList.toggle('text-white', this.bgmEnabled && canPlay);
+        }
+
+        if (loopBtn) {
+            loopBtn.disabled = !canPlay;
+            loopBtn.textContent = this.bgmLoopMode === 'one' ? '1곡' : '전체';
+            loopBtn.classList.toggle('opacity-60', !canPlay);
+            loopBtn.classList.toggle('cursor-not-allowed', !canPlay);
+        }
+
+        if (prevBtn) {
+            prevBtn.disabled = playableCount <= 1;
+            prevBtn.classList.toggle('opacity-60', playableCount <= 1);
+            prevBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
+        }
+
+        if (nextBtn) {
+            nextBtn.disabled = playableCount <= 1;
+            nextBtn.classList.toggle('opacity-60', playableCount <= 1);
+            nextBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
+        }
+
+        this.renderBgmTrackRail();
+    }
+
+    toggleBgm() {
+        if (!this.getPlayableBgmTrackKeys().length) {
+            this.bgmEnabled = false;
+            this.updateBgmUI();
+            return;
+        }
+
+        this.bgmEnabled = !this.bgmEnabled;
+        if (this.bgmEnabled) this.playBgm({ userInitiated: true });
+        else this.pauseBgm({ save: false });
+        this.saveBgmState();
+        this.updateBgmUI();
+    }
+
+    toggleBgmLoopMode() {
+        this.bgmLoopMode = this.bgmLoopMode === 'one' ? 'all' : 'one';
+        if (this.bgmAudioEl) this.bgmAudioEl.loop = this.bgmLoopMode === 'one';
+        this.saveBgmState();
+        this.updateBgmUI();
+    }
+
+    setBgmTrack(trackKey, { persist = true, userInitiated = false, autoplay = true } = {}) {
+        const nextTrackKey = String(trackKey || '');
+        if (!this.bgmTrackOrder.includes(nextTrackKey)) return;
+
+        this.bgmTrackKey = nextTrackKey;
+        this.bgmEnabledTrackKeys.add(nextTrackKey);
+
+        if (persist) this.saveBgmState();
+        this.updateBgmUI();
+        if (autoplay && this.bgmEnabled) this.playBgm({ userInitiated, forceReload: true });
+    }
+
+    nextBgmTrack(userInitiated = true) {
+        const playable = this.getPlayableBgmTrackKeys();
+        if (!playable.length) return;
+        const currentIndex = Math.max(0, playable.indexOf(this.bgmTrackKey));
+        const nextTrack = playable[(currentIndex + 1) % playable.length];
+        this.setBgmTrack(nextTrack, { persist: true, userInitiated, autoplay: true });
+    }
+
+    prevBgmTrack(userInitiated = true) {
+        const playable = this.getPlayableBgmTrackKeys();
+        if (!playable.length) return;
+        const currentIndex = Math.max(0, playable.indexOf(this.bgmTrackKey));
+        const prevTrack = playable[(currentIndex - 1 + playable.length) % playable.length];
+        this.setBgmTrack(prevTrack, { persist: true, userInitiated, autoplay: true });
+    }
+
+    async fadeBgmVolume(targetVolume, duration = 260) {
+        const audio = this.bgmAudioEl;
+        if (!audio) return;
+        const safeTarget = Math.max(0, Math.min(1, Number(targetVolume) || 0));
+        if (duration <= 0) {
+            audio.volume = safeTarget;
+            return;
+        }
+
+        const startVolume = Number(audio.volume) || 0;
+        const startAt = performance.now();
+
+        if (this.bgmFadeRaf) cancelAnimationFrame(this.bgmFadeRaf);
+
+        await new Promise((resolve) => {
+            const step = (now) => {
+                const progress = Math.min(1, (now - startAt) / duration);
+                const eased = 1 - ((1 - progress) * (1 - progress));
+                audio.volume = startVolume + ((safeTarget - startVolume) * eased);
+                if (progress < 1) {
+                    this.bgmFadeRaf = requestAnimationFrame(step);
+                } else {
+                    this.bgmFadeRaf = null;
+                    resolve();
+                }
+            };
+            this.bgmFadeRaf = requestAnimationFrame(step);
+        });
+    }
+
+    async playBgm({ userInitiated = false, forceReload = false } = {}) {
+        const audio = this.bgmAudioEl;
+        if (!audio || !this.bgmEnabled) return;
+
+        const playable = this.getPlayableBgmTrackKeys();
+        if (!playable.length) {
+            this.bgmEnabled = false;
+            this.updateBgmUI();
+            return;
+        }
+
+        if (!this.bgmEnabledTrackKeys.has(this.bgmTrackKey)) {
+            this.bgmTrackKey = playable[0];
+        }
+
+        const track = this.bgmTracks[this.bgmTrackKey];
+        if (!track || !track.src) return;
+
+        const targetVolume = Math.max(0.06, Math.min(0.28, Number(track.volume) || 0.16));
+        const currentTrack = audio.dataset.trackKey || '';
+        const shouldReload = forceReload || currentTrack !== this.bgmTrackKey;
+
+        if (shouldReload) {
+            if (!audio.paused) await this.fadeBgmVolume(0, 180);
+            audio.pause();
+            audio.src = String(track.src);
+            audio.load();
+            audio.dataset.trackKey = this.bgmTrackKey;
+        }
+
+        audio.loop = this.bgmLoopMode === 'one';
+        audio.volume = 0.001;
+        this.resumeAudioContext();
+
+        try {
+            await audio.play();
+            this.bgmAwaitUserGesture = false;
+            await this.fadeBgmVolume(targetVolume, userInitiated ? 300 : 460);
+            this.saveBgmState();
+            this.updateBgmUI();
+        } catch (error) {
+            this.bgmAwaitUserGesture = true;
+            this.updateBgmUI();
+        }
+    }
+
+    async pauseBgm({ save = true } = {}) {
+        const audio = this.bgmAudioEl;
+        if (!audio) return;
+        await this.fadeBgmVolume(0, 180);
+        audio.pause();
+        if (save) this.saveBgmState();
+        this.updateBgmUI();
+    }
+
+    handleBgmTrackEnded() {
+        if (!this.bgmEnabled) return;
+        if (this.bgmLoopMode === 'one') {
+            this.playBgm({ userInitiated: false, forceReload: true });
+            return;
+        }
+        this.nextBgmTrack(false);
+    }
+
     // --- Utils ---
     getAudioCtx() {
         if (this.audioCtx) return this.audioCtx;
@@ -1106,13 +1609,14 @@ class DutyTickerManager {
         }
     }
 
-    playNote(freq, start, dur, vol = 0.2) {
+    playNote(freq, start, dur, vol = 0.2, waveType = 'sine') {
         if (!this.isSoundEnabled) return;
         const ctx = this.getAudioCtx();
         if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = waveType;
         osc.frequency.setValueAtTime(freq, start);
         gain.gain.setValueAtTime(0, start);
         gain.gain.linearRampToValueAtTime(vol, start + 0.05);
@@ -1121,10 +1625,29 @@ class DutyTickerManager {
     }
 
     playAlert() {
+        const display = document.getElementById('mainTimerDisplay');
+        if (display && typeof display.animate === 'function') {
+            display.animate(
+                [
+                    { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(250, 204, 21, 0))' },
+                    { transform: 'scale(1.06)', filter: 'drop-shadow(0 0 18px rgba(250, 204, 21, 0.72))' },
+                    { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(250, 204, 21, 0))' },
+                ],
+                { duration: 480, iterations: 3, easing: 'ease-out' }
+            );
+        }
+
+        this.resumeAudioContext();
         const ctx = this.getAudioCtx();
-        if (!ctx) return;
-        const now = ctx.currentTime;
-        this.playNote(880, now, 0.1, 0.4); this.playNote(440, now + 0.15, 0.4, 0.4);
+        if (!ctx || !this.isSoundEnabled) return;
+        const now = ctx.currentTime + 0.02;
+        const cycleOffsets = [0, 1.18];
+
+        cycleOffsets.forEach((offset) => {
+            this.playNote(659.25, now + offset, 0.22, 0.12, 'sine');
+            this.playNote(523.25, now + offset + 0.3, 0.3, 0.1, 'sine');
+            this.playNote(392.0, now + offset + 0.72, 0.36, 0.075, 'sine');
+        });
     }
 
     playSuccessSound() {
