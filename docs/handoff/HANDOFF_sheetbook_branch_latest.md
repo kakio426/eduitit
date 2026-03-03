@@ -168,6 +168,26 @@ Status: Working branch handoff (2026-03-03 19:53)
   - sample gap blockers는 기존과 동일:
     - `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
 
+## 1-6) 2026-03-04 시작 우선순위 판단
+
+- 현재 기준(2026-03-03 19:52:33):
+  - `overall=GO`, `decision=GO`, `readiness_status=HOLD`
+  - 미해소 blocker: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+- 내일(2026-03-04) 1순위:
+  - 파일럿/아카이브 표본 5건씩 먼저 확보해서 `readiness_status`를 `PASS`로 전환
+  - 이유: 현재 STOP 리스크는 기능 결함보다 표본 부족이며, 야간 스모크 안정화로 기능 게이트는 이미 PASS
+- 내일(2026-03-04) 권장 시작 순서:
+  1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+  2. 표본 수집 실행(운영 트래픽/파일럿 계정 활동)
+  3. `python scripts/run_sheetbook_release_readiness.py --days 14`
+  4. `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+  5. `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+- 판정 기준:
+  - `sheetbook_sample_gap_summary_latest.json`의 `overall.ready=true`
+  - `sheetbook_release_readiness_latest.json`의 `overall.status=PASS`
+  - 위 2개가 충족되면 그 시점부터 수동 signoff 재확인으로 이동
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
