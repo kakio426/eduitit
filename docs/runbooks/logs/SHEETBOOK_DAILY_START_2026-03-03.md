@@ -1,4 +1,4 @@
-# Sheetbook Daily Start Bundle (2026-03-03 23:25:56)
+# Sheetbook Daily Start Bundle (2026-03-03 23:32:35)
 
 - days: 14
 - overall: `GO`
@@ -29,7 +29,7 @@
 - [PASS] `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03 --daily-start C:\Users\kakio\eduitit\docs\handoff\sheetbook_daily_start_bundle_latest.json --output C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## Next Actions
-- 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
 - 로컬 리허설 사이클 실행(수집 -> 검증 -> clear -> 상태 복구): `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
 
 ## Sample Gap Next Actions

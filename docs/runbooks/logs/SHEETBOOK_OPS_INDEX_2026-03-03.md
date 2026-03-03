@@ -20,7 +20,7 @@
 - ops_index: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## Next Actions
-- [daily_start] 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+- [daily_start] 표본 부족량(blockers) 해소 후 bundle+gap summary 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04 && python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
 - [daily_start] 로컬 리허설 사이클 실행(수집 -> 검증 -> clear -> 상태 복구): `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
 - [sample_gap] 파일럿 이벤트 추가 확보(누적): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_progress_latest.json`
 - [sample_gap] 로컬 리허설용 표본 생성(운영 판정 분리): workspace_home_opened 5건, home_source_sheetbook_created 5건: `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 0 --output docs/handoff/smoke_sheetbook_collect_pilot_samples_latest.json`

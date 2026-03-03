@@ -172,6 +172,9 @@ def _build_bundle_next_actions(
     due_date_value = str(due_date or "").strip()
     if due_date_value:
         rerun_bundle_command += f" --due-date {due_date_value}"
+    rerun_gap_summary_command = f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
+    if due_date_value:
+        rerun_gap_summary_command += f" --due-date {due_date_value}"
 
     if bool(summary.get("has_command_failures")):
         actions.append(
@@ -206,7 +209,7 @@ def _build_bundle_next_actions(
                 "description": "표본 부족량(blockers) 해소 후 bundle+gap summary 재실행",
                 "command": (
                     f"{rerun_bundle_command} && "
-                    f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
+                    + rerun_gap_summary_command
                 ),
             }
         )

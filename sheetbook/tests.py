@@ -5371,6 +5371,14 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
             )
         )
+        self.assertTrue(
+            any(
+                "run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04"
+                in str(item.get("command") or "")
+                for item in next_actions
+                if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
+            )
+        )
 
     def test_build_daily_start_bundle_summary_clears_manual_pending_when_aliases_pass(self):
         summary = _build_daily_start_bundle_summary(
@@ -5472,6 +5480,10 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         )
         self.assertIn("--allow-pilot-hold-for-beta", str(collect_samples.get("command") or ""))
         self.assertIn("--due-date 2026-03-04", str(collect_samples.get("command") or ""))
+        self.assertIn(
+            "run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04",
+            str(collect_samples.get("command") or ""),
+        )
         collect_samples_local = next(
             item
             for item in actions
