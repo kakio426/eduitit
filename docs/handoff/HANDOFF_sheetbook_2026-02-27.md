@@ -5270,3 +5270,25 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `13d42e6` `feat(sheetbook): add guarded commit helper workflow`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-144. 2026-03-03 guarded commit push 재시도 보강
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - `--push` 실행 시 push 실패를 자동 재시도하도록 보강
+  - 신규 옵션:
+    - `--push-retries` (기본 2, 총 3회 시도)
+    - `--push-retry-delay` (기본 1.0초)
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - push 재시도 동작/옵션 문서화
+- `sheetbook/tests.py`
+  - `SheetbookGuardedCommitScriptTests`에 재시도 분기 테스트 추가
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- 네트워크 순간 오류가 발생해도 `--push` 경로에서 자동 재시도 후 성공 가능.

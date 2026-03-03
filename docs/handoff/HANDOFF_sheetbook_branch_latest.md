@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 13:21)
+Status: Working branch handoff (2026-03-03 13:27)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 13:21)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `13d42e6` (`feat(sheetbook): add guarded commit helper workflow`)
+- latest backup commit: `3d8d7cb` (`test(sheetbook): cover guarded commit helper`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -78,6 +78,7 @@ Status: Working branch handoff (2026-03-03 13:21)
   - 수동 가드 실수 방지용 guarded commit 헬퍼 추가:
     - `python scripts/run_sheetbook_guarded_commit.py --guard-only`
     - `python scripts/run_sheetbook_guarded_commit.py -m "feat(sheetbook): ..."`
+    - `--push` 시 네트워크 일시 실패 재시도(`--push-retries`, `--push-retry-delay`)
     - 문서: `docs/runbooks/sheetbook_guarded_commit_workflow.md`
     - 테스트: `SheetbookGuardedCommitScriptTests` 추가
   - 로컬 리허설용 metric seed 스크립트 추가:

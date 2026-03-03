@@ -14,12 +14,16 @@
 ## 2) 커밋 + 푸시 한 번에
 
 - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push`
+- 기본 재시도 포함:
+  - push 실패 시 자동 재시도(기본 총 3회 시도)
+  - 옵션: `--push-retries <N>`, `--push-retry-delay <sec>`
 
 ## 3) 동작 원리
 
 - 내부에서 `python scripts/branch_path_guard.py --branch feature/sheetbook --staged` 실행
 - 가드 실패 시 커밋/푸시를 중단
 - 기본적으로 현재 브랜치가 `feature/sheetbook`이 아니면 실행 차단
+- `--push` 사용 시 네트워크 일시 실패에 대해 재시도 후 최종 실패코드 반환
 
 ## 4) 자주 보는 실패 케이스
 

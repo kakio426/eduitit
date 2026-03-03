@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -108,9 +109,24 @@ def run(args: argparse.Namespace) -> int:
 
     if bool(args.push):
         push_cmd = ["git", "push", str(args.remote).strip() or "origin", branch]
-        push_result = _run(root, push_cmd)
-        _echo(push_result)
-        return int(push_result.returncode)
+        push_retries = max(0, int(getattr(args, "push_retries", 2) or 0))
+        push_retry_delay = max(0.0, float(getattr(args, "push_retry_delay", 1.0) or 0.0))
+        attempts = 1 + push_retries
+        last_code = 1
+        for attempt in range(1, attempts + 1):
+            push_result = _run(root, push_cmd)
+            _echo(push_result)
+            last_code = int(push_result.returncode)
+            if last_code == 0:
+                return 0
+            if attempt < attempts:
+                print(
+                    f"[sheetbook-guarded-commit] push failed "
+                    f"(attempt {attempt}/{attempts}), retrying in {push_retry_delay:.1f}s...",
+                    file=sys.stderr,
+                )
+                time.sleep(push_retry_delay)
+        return last_code
 
     return 0
 
@@ -135,6 +151,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--guard-only", action="store_true", help="run guard only without committing")
     parser.add_argument("--push", action="store_true", help="push after successful commit")
     parser.add_argument("--remote", default="origin", help="push remote name (default: origin)")
+    parser.add_argument(
+        "--push-retries",
+        type=int,
+        default=2,
+        help="additional push retries on failure (default: 2, total attempts: 3)",
+    )
+    parser.add_argument(
+        "--push-retry-delay",
+        type=float,
+        default=1.0,
+        help="seconds to wait between push retries (default: 1.0)",
+    )
     return parser
 
 
