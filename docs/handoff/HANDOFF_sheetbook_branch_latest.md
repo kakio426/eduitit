@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-03 21:24)
+Status: Working branch handoff (2026-03-03 21:28)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 21:24)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `bbad3f3` (`feat(sheetbook): extend pilot collector with action samples`)
+- latest backup commit: `7ce5380` (`chore(sheetbook): wire action-count into rehearsal next actions`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
