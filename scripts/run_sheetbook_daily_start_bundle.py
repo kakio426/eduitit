@@ -80,6 +80,8 @@ def _build_bundle_summary(
     archive_snapshot: dict[str, Any],
     consent_freeze_snapshot: dict[str, Any],
     sample_gap_summary: dict[str, Any],
+    allow_pilot_hold_for_beta: bool = False,
+    due_date: str = "",
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
     decision_context = decision.get("decision_context") or {}
@@ -135,19 +137,35 @@ def _build_bundle_summary(
         "has_command_failures": command_failed,
     }
     summary["overall"] = "HOLD" if command_failed else summary["decision"]
-    summary["next_actions"] = _build_bundle_next_actions(summary)
+    summary["next_actions"] = _build_bundle_next_actions(
+        summary,
+        allow_pilot_hold_for_beta=allow_pilot_hold_for_beta,
+        due_date=due_date,
+    )
     return summary
 
 
-def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
+def _build_bundle_next_actions(
+    summary: dict[str, Any],
+    *,
+    allow_pilot_hold_for_beta: bool = False,
+    due_date: str = "",
+) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     days = int(summary.get("days") or 14)
+    rerun_bundle_command = f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}"
+    if allow_pilot_hold_for_beta:
+        rerun_bundle_command += " --allow-pilot-hold-for-beta"
+    due_date_value = str(due_date or "").strip()
+    if due_date_value:
+        rerun_bundle_command += f" --due-date {due_date_value}"
+
     if bool(summary.get("has_command_failures")):
         actions.append(
             {
                 "type": "rerun_failed_commands",
                 "description": "실패한 명령을 우선 재실행하고 로그 tail 확인",
-                "command": f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}",
+                "command": rerun_bundle_command,
             }
         )
         return actions
@@ -174,7 +192,7 @@ def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
                 "type": "collect_samples",
                 "description": "표본 부족량(blockers) 해소 후 bundle+gap summary 재실행",
                 "command": (
-                    f"python scripts/run_sheetbook_daily_start_bundle.py --days {days} && "
+                    f"{rerun_bundle_command} && "
                     f"python scripts/run_sheetbook_sample_gap_summary.py --days {days}"
                 ),
             }
@@ -194,7 +212,7 @@ def _build_bundle_next_actions(summary: dict[str, Any]) -> list[dict[str, str]]:
             {
                 "type": "monitoring",
                 "description": "현재 상태 유지, 정기적으로 bundle 재실행",
-                "command": f"python scripts/run_sheetbook_daily_start_bundle.py --days {days}",
+                "command": rerun_bundle_command,
             }
         )
     return actions
@@ -393,6 +411,8 @@ def main() -> int:
         archive_snapshot=archive_snapshot,
         consent_freeze_snapshot=consent_freeze_snapshot,
         sample_gap_summary=sample_gap_summary,
+        allow_pilot_hold_for_beta=bool(args.allow_pilot_hold_for_beta),
+        due_date=due_date,
     )
     output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -423,6 +443,8 @@ def main() -> int:
         archive_snapshot=archive_snapshot,
         consent_freeze_snapshot=consent_freeze_snapshot,
         sample_gap_summary=sample_gap_summary,
+        allow_pilot_hold_for_beta=bool(args.allow_pilot_hold_for_beta),
+        due_date=due_date,
     )
     output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     md_output.write_text(

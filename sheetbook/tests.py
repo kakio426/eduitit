@@ -4474,6 +4474,8 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                     ],
                 }
             },
+            allow_pilot_hold_for_beta=True,
+            due_date="2026-03-04",
         )
 
         self.assertEqual(summary["overall"], "HOLD")
@@ -4505,6 +4507,20 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertTrue(
             any(
                 "--days 14" in str(item.get("command") or "")
+                for item in next_actions
+                if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
+            )
+        )
+        self.assertTrue(
+            any(
+                "--allow-pilot-hold-for-beta" in str(item.get("command") or "")
+                for item in next_actions
+                if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
+            )
+        )
+        self.assertTrue(
+            any(
+                "--due-date 2026-03-04" in str(item.get("command") or "")
                 for item in next_actions
                 if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
             )
@@ -4590,6 +4606,26 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             }
         )
         self.assertTrue(any(str(item.get("type")) == "monitoring" for item in actions))
+
+    def test_build_daily_start_bundle_next_actions_carries_allow_and_due_date(self):
+        actions = _build_daily_start_bundle_next_actions(
+            {
+                "days": 14,
+                "has_command_failures": False,
+                "manual_pending": [],
+                "sample_gap": {"blockers": ["pilot_home_opened_gap:1"]},
+                "decision": "GO",
+            },
+            allow_pilot_hold_for_beta=True,
+            due_date="2026-03-04",
+        )
+        collect_samples = next(
+            item
+            for item in actions
+            if isinstance(item, dict) and str(item.get("type")) == "collect_samples"
+        )
+        self.assertIn("--allow-pilot-hold-for-beta", str(collect_samples.get("command") or ""))
+        self.assertIn("--due-date 2026-03-04", str(collect_samples.get("command") or ""))
 
     def test_build_daily_start_bundle_markdown_includes_commands_and_actions(self):
         summary = {
