@@ -48,13 +48,33 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
         <!-- Student Management -->
         <div class="clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="100">
-            <div class="flex items-center gap-4 mb-8">
-                <div
-                    class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-2xl shadow-sm">
-                    <i class="fa-solid fa-graduation-cap"></i>
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-2xl shadow-sm">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-700">학생 명단</h2>
                 </div>
-                <h2 class="text-3xl font-bold text-gray-700">학생 명단</h2>
+                <form action="{% url 'dt_admin_sync_students_from_hs' %}" method="POST"
+                    onsubmit="return confirm('현재 반의 Happy Seed 학생 명단으로 동기화할까요? DutyTicker에만 있던 학생은 비활성화됩니다.');">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="px-4 py-2.5 rounded-xl font-bold transition flex items-center gap-2
+                            {% if active_classroom %}
+                                bg-sky-500 hover:bg-sky-600 text-white shadow-clay hover:shadow-clay-hover
+                            {% else %}
+                                bg-gray-300 text-gray-500 cursor-not-allowed
+                            {% endif %}"
+                        {% if not active_classroom %}disabled{% endif %}>
+                        <i class="fa-solid fa-rotate"></i>
+                        HS 명단 동기화
+                    </button>
+                </form>
             </div>
+            <p class="text-xs text-gray-500 font-bold mb-6">
+                상단에서 반을 선택한 뒤 동기화하면 해당 반의 Happy Seed 학생(활성) 목록을 DutyTicker 학생 명단으로 맞춥니다.
+            </p>
 
             <form action="{% url 'dt_admin_add_student' %}" method="POST" class="mb-8">
                 {% csrf_token %}

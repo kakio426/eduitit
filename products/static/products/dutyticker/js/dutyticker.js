@@ -328,8 +328,8 @@ class DutyTickerManager {
 
             this.broadcastMessage = data.settings.last_broadcast || '';
             this.isBroadcasting = !!this.broadcastMessage;
-            this.missionTitle = data.settings.mission_title || "수학 익힘책 풀기";
-            this.missionDesc = data.settings.mission_desc || "24~25페이지 풀고 채점하기";
+            this.missionTitle = data.settings.mission_title ?? "수학 익힘책 풀기";
+            this.missionDesc = data.settings.mission_desc ?? "24~25페이지 풀고 채점하기";
             this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
             this.theme = data.settings.theme || 'deep_space';
 
@@ -1265,8 +1265,8 @@ class DutyTickerManager {
         const descEl = document.getElementById('mainMissionDesc');
         if (!titleEl || !descEl) return;
 
-        const title = this.sanitizeMissionText(titleEl.innerText || this.missionTitle, 'title') || this.missionTitle;
-        const desc = this.sanitizeMissionText(descEl.innerText || this.missionDesc, 'desc') || this.missionDesc;
+        const title = this.sanitizeMissionText(titleEl.innerText, 'title');
+        const desc = this.sanitizeMissionText(descEl.innerText, 'desc');
 
         if (title === this.missionTitle && desc === this.missionDesc) {
             this.renderMission();
@@ -1277,8 +1277,8 @@ class DutyTickerManager {
     }
 
     async handleUpdateMission({ title, desc } = {}) {
-        const nextTitle = this.sanitizeMissionText(title ?? this.missionTitle, 'title') || this.missionTitle;
-        const nextDesc = this.sanitizeMissionText(desc ?? this.missionDesc, 'desc') || this.missionDesc;
+        const nextTitle = this.sanitizeMissionText(title ?? this.missionTitle, 'title');
+        const nextDesc = this.sanitizeMissionText(desc ?? this.missionDesc, 'desc');
         const prevTitle = this.missionTitle;
         const prevDesc = this.missionDesc;
         const requestId = ++this.missionSaveRequestId;

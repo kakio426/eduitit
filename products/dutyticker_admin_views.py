@@ -13,6 +13,7 @@ from .dutyticker_scope import (
     get_or_create_settings_for_scope,
 )
 from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
+from .dutyticker_sync import sync_dt_students_from_hs
 
 
 def _ensure_time_slots_for_scope(user, classroom):
@@ -223,8 +224,35 @@ def add_student(request):
     
     if new_students:
         DTStudent.objects.bulk_create(new_students)
-            
+             
     return redirect('dt_admin_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
+def sync_students_from_hs(request):
+    classroom = get_active_classroom_for_request(request)
+    if classroom is None:
+        messages.error(request, "상단에서 활성 학급을 먼저 선택해 주세요.")
+        return redirect("dt_admin_dashboard")
+
+    try:
+        summary = sync_dt_students_from_hs(request.user, classroom)
+    except Exception as exc:
+        messages.error(request, f"학급 명단 동기화에 실패했습니다: {exc}")
+        return redirect("dt_admin_dashboard")
+
+    messages.success(
+        request,
+        (
+            "학급 명단 동기화 완료: "
+            f"활성 {summary['active_count']}명, "
+            f"신규 {summary['created_count']}명, "
+            f"업데이트 {summary['updated_count']}명, "
+            f"비활성 {summary['deactivated_count']}명"
+        ),
+    )
+    return redirect("dt_admin_dashboard")
 
 @login_required
 def delete_student(request, pk):

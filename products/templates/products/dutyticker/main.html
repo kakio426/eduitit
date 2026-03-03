@@ -471,27 +471,28 @@
 
     #headerScheduleStrip {
         align-items: center;
-        gap: 0.58rem;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 0.44rem;
         max-width: min(74vw, 980px);
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 0.2rem 0.24rem;
-        white-space: nowrap;
-        scrollbar-width: thin;
+        overflow: visible;
+        padding: 0.08rem 0;
+        white-space: normal;
     }
 
     .dt-header-schedule-item {
         display: inline-flex;
         align-items: center;
         gap: 0.42rem;
-        padding: 0.36rem 0.78rem;
+        padding: 0.28rem 0.62rem;
         border-radius: 9999px;
         background: rgba(15, 23, 42, 0.58);
         border: 1px solid rgba(148, 163, 184, 0.24);
-        font-size: clamp(0.98rem, 0.92rem + 0.22vw, 1.18rem);
+        font-size: clamp(0.78rem, 0.74rem + 0.14vw, 0.95rem);
         font-weight: 800;
         line-height: 1.2;
         white-space: nowrap;
+        max-width: 10rem;
     }
 
     .dt-header-schedule-period {
@@ -505,6 +506,11 @@
 
     .dt-header-schedule-subject {
         color: #f1f5f9;
+        min-width: 0;
+        max-width: 5.2rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .dt-header-schedule-empty {
@@ -512,6 +518,10 @@
         font-size: 0.98rem;
         font-weight: 700;
         padding-inline: 0.5rem;
+    }
+
+    .dt-header-nowrap {
+        white-space: nowrap;
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item,
@@ -791,21 +801,21 @@
 
         <div class="flex items-center gap-3">
             <div
-                class="hidden md:flex items-center gap-4 bg-slate-800/50 backdrop-blur-xl px-6 py-2 rounded-full border border-slate-700/50 shadow-xl">
-                <div class="flex items-center gap-2 text-slate-300">
+                class="hidden md:flex min-w-0 items-center gap-4 bg-slate-800/50 backdrop-blur-xl px-6 py-2 rounded-full border border-slate-700/50 shadow-xl">
+                <div class="flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-calendar text-indigo-400"></i>
-                    <span class="text-base font-medium" id="headerDate">--. --. (.)</span>
+                    <span class="text-base font-medium dt-header-nowrap" id="headerDate">--. --. (.)</span>
                 </div>
                 <!-- Schedule Strip -->
                 <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
                 <div id="headerScheduleStrip"
-                    class="hidden md:flex items-center min-w-0 max-w-[420px] lg:max-w-[700px] xl:max-w-[980px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                    class="hidden md:flex flex-wrap items-center content-center min-w-0 max-w-[420px] lg:max-w-[700px] xl:max-w-[980px] gap-1.5">
                     <!-- JS Populated -->
                 </div>
                 <div class="h-4 w-px bg-slate-700"></div>
-                <div class="flex items-center gap-2 text-white font-mono text-xl font-bold tracking-wider">
+                <div class="flex items-center gap-2 text-white font-mono text-xl font-bold tracking-wider shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-clock text-indigo-400"></i>
-                    <span id="headerTime">--:--</span>
+                    <span id="headerTime" class="dt-header-nowrap">--:--</span>
                 </div>
             </div>
 
@@ -1297,26 +1307,36 @@
         toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
     };
     window.dtBgmTracks = {
-        jazz_soft_loop: { label: "재즈 · 모닝 브리즈", src: "{% static 'products/dutyticker/audio/jazz_soft_loop.wav' %}", volume: 0.18 },
-        jazz_breeze_walk: { label: "재즈 · 산책 리듬", src: "{% static 'products/dutyticker/audio/jazz_breeze_walk.wav' %}", volume: 0.18 },
-        jazz_morning_lane: { label: "재즈 · 모닝 레인", src: "{% static 'products/dutyticker/audio/jazz_morning_lane.wav' %}", volume: 0.18 },
-        jazz_cozy_corner: { label: "재즈 · 코지 코너", src: "{% static 'products/dutyticker/audio/jazz_cozy_corner.wav' %}", volume: 0.18 },
-        jazz_fresh_start: { label: "재즈 · 프레시 스타트", src: "{% static 'products/dutyticker/audio/jazz_fresh_start.wav' %}", volume: 0.18 },
-        bossa_light_day: { label: "보사노바 · 라이트 데이", src: "{% static 'products/dutyticker/audio/bossa_light_day.wav' %}", volume: 0.17 },
-        bossa_soft_river: { label: "보사노바 · 소프트 리버", src: "{% static 'products/dutyticker/audio/bossa_soft_river.wav' %}", volume: 0.17 },
-        piano_calm_loop: { label: "피아노 · 잔잔한 오후", src: "{% static 'products/dutyticker/audio/piano_calm_loop.wav' %}", volume: 0.16 },
-        piano_sunlight_steps: { label: "피아노 · 햇살 발걸음", src: "{% static 'products/dutyticker/audio/piano_sunlight_steps.wav' %}", volume: 0.16 },
-        piano_green_window: { label: "피아노 · 그린 윈도우", src: "{% static 'products/dutyticker/audio/piano_green_window.wav' %}", volume: 0.16 },
-        piano_clear_sky: { label: "피아노 · 클리어 스카이", src: "{% static 'products/dutyticker/audio/piano_clear_sky.wav' %}", volume: 0.16 },
-        piano_soft_story: { label: "피아노 · 소프트 스토리", src: "{% static 'products/dutyticker/audio/piano_soft_story.wav' %}", volume: 0.16 },
-        acoustic_smile_groove: { label: "어쿠스틱 · 스마일", src: "{% static 'products/dutyticker/audio/acoustic_smile_groove.wav' %}", volume: 0.17 },
-        acoustic_class_smile: { label: "어쿠스틱 · 클래스 스마일", src: "{% static 'products/dutyticker/audio/acoustic_class_smile.wav' %}", volume: 0.17 },
-        acoustic_spring_steps: { label: "어쿠스틱 · 스프링 스텝", src: "{% static 'products/dutyticker/audio/acoustic_spring_steps.wav' %}", volume: 0.17 },
-        lofi_cloud_walk: { label: "로파이 · 클라우드 워크", src: "{% static 'products/dutyticker/audio/lofi_cloud_walk.wav' %}", volume: 0.15 },
-        lofi_warm_notebook: { label: "로파이 · 웜 노트북", src: "{% static 'products/dutyticker/audio/lofi_warm_notebook.wav' %}", volume: 0.15 },
-        lofi_peaceful_day: { label: "로파이 · 피스풀 데이", src: "{% static 'products/dutyticker/audio/lofi_peaceful_day.wav' %}", volume: 0.15 },
-        marimba_happy_breeze: { label: "마림바 · 해피 브리즈", src: "{% static 'products/dutyticker/audio/marimba_happy_breeze.wav' %}", volume: 0.16 },
-        marimba_sunny_glow: { label: "마림바 · 써니 글로우", src: "{% static 'products/dutyticker/audio/marimba_sunny_glow.wav' %}", volume: 0.16 },
+        denis_pavlov_music_brazilian_bossa_nova_jazz_acoustic_guitar_podcast_music_201763: { label: "Jazz · Brazilian Bossa Nova Jazz Acoustic Guitar Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-brazilian-bossa-nova-jazz-acoustic-guitar-podcast-music-201763.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_cozy_jazz_cafe_relaxing_podcast_r_background_music_202447: { label: "Jazz · Cozy Jazz Cafe Relaxing Podcast R Background Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-jazz-cafe-relaxing-podcast-r-background-music-202447.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_cozy_relax_jazz_podcast_coffee_ambiance_271621: { label: "Jazz · Cozy Relax Jazz Podcast Coffee Ambiance", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-relax-jazz-podcast-coffee-ambiance-271621.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_easy_cozy_morning_jazz_coffee_podcast_192585: { label: "Jazz · Easy Cozy Morning Jazz Coffee Podcast", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-easy-cozy-morning-jazz-coffee-podcast-192585.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_instrumental_jazz_bossa_nova_brazilian_guitar_vibes_485111: { label: "Jazz · Instrumental Jazz Bossa Nova Brazilian Guitar Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-instrumental-jazz-bossa-nova-brazilian-guitar-vibes-485111.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_piano_jazz_bossa_nova_cozy_cafe_coffee_shop_music_203916: { label: "Jazz · Piano Jazz Bossa Nova Cozy Cafe Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-piano-jazz-bossa-nova-cozy-cafe-coffee-shop-music-203916.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_podcast_jazz_easy_listening_music_219314: { label: "Jazz · Podcast Jazz Easy Listening Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-easy-listening-music-219314.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_podcast_jazz_music_168726: { label: "Jazz · Podcast Jazz Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-music-168726.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_podcast_jazz_waltz_cozy_relaxing_vibes_233733: { label: "Jazz · Podcast Jazz Waltz Cozy Relaxing Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-waltz-cozy-relaxing-vibes-233733.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_podcast_smooth_jazz_instrumental_music_225674: { label: "Jazz · Podcast Smooth Jazz Instrumental Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-smooth-jazz-instrumental-music-225674.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_relaxing_jazz_podcast_coffee_shop_music_192283: { label: "Jazz · Relaxing Jazz Podcast Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-jazz-podcast-coffee-shop-music-192283.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_relaxing_soft_warm_jazz_piano_bossa_nova_podcast_music_203913: { label: "Jazz · Relaxing Soft Warm Jazz Piano Bossa Nova Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-soft-warm-jazz-piano-bossa-nova-podcast-music-203913.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_romantic_jazz_rendezvous_relaxing_evening_fireplace_208122: { label: "Jazz · Romantic Jazz Rendezvous Relaxing Evening Fireplace", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-romantic-jazz-rendezvous-relaxing-evening-fireplace-208122.mp3' %}", volume: 0.16 },
+        denis_pavlov_music_smooth_jazz_travel_vlog_podcast_music_290508: { label: "Jazz · Smooth Jazz Travel Vlog Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-smooth-jazz-travel-vlog-podcast-music-290508.mp3' %}", volume: 0.16 },
+        freegroove_seduction_jazz_112149: { label: "Jazz · Seduction Jazz", src: "{% static 'products/dutyticker/audio/freegroove-seduction-jazz-112149.mp3' %}", volume: 0.16 },
+        hitslab_lofi_chill_background_music_313055: { label: "Lofi · Lofi Chill Background Music", src: "{% static 'products/dutyticker/audio/hitslab-lofi-chill-background-music-313055.mp3' %}", volume: 0.14 },
+        innertune_relaxing_birds_and_piano_music_137153: { label: "Piano · Relaxing Birds And Piano Music", src: "{% static 'products/dutyticker/audio/innertune-relaxing-birds-and-piano-music-137153.mp3' %}", volume: 0.15 },
+        lexin_music_everythingx27s_gonna_be_alright_124710: { label: "Instrumental · Everything's Gonna Be Alright", src: "{% static 'products/dutyticker/audio/lexin_music-everythingx27s-gonna-be-alright-124710.mp3' %}", volume: 0.15 },
+        lexin_music_when_you_smile_151423: { label: "Instrumental · When You Smile", src: "{% static 'products/dutyticker/audio/lexin_music-when-you-smile-151423.mp3' %}", volume: 0.15 },
+        music_for_videos_a_jazz_piano_110481: { label: "Jazz · A Jazz Piano", src: "{% static 'products/dutyticker/audio/music_for_videos-a-jazz-piano-110481.mp3' %}", volume: 0.16 },
+        music_for_videos_restaurant_music_110483: { label: "Instrumental · Restaurant Music", src: "{% static 'products/dutyticker/audio/music_for_videos-restaurant-music-110483.mp3' %}", volume: 0.15 },
+        musicbyscandinavianz_scandinavianz_tranvik_free_download_158258: { label: "Instrumental · Scandinavianz Tranvik Free Download", src: "{% static 'products/dutyticker/audio/musicbyscandinavianz-scandinavianz-tranvik-free-download-158258.mp3' %}", volume: 0.15 },
+        nengjemping_lofi_music_background_hits_352712: { label: "Lofi · Lofi Music Background Hits", src: "{% static 'products/dutyticker/audio/nengjemping-lofi-music-background-hits-352712.mp3' %}", volume: 0.14 },
+        ogifeelthebeat_ogi_feel_the_beat_jazz_expresso_191266: { label: "Jazz · Ogi Feel The Beat Jazz Expresso", src: "{% static 'products/dutyticker/audio/ogifeelthebeat-ogi-feel-the-beat-jazz-expresso-191266.mp3' %}", volume: 0.16 },
+        paoloargento_dinner_at_the_luxury_hotel_166721: { label: "Instrumental · Dinner At The Luxury Hotel", src: "{% static 'products/dutyticker/audio/paoloargento-dinner-at-the-luxury-hotel-166721.mp3' %}", volume: 0.15 },
+        redproductions_inspiring_story_157524: { label: "Instrumental · Inspiring Story", src: "{% static 'products/dutyticker/audio/redproductions-inspiring-story-157524.mp3' %}", volume: 0.15 },
+        sergequadrado_moment_14023: { label: "Instrumental · Moment", src: "{% static 'products/dutyticker/audio/sergequadrado-moment-14023.mp3' %}", volume: 0.15 },
+        tobylane_save_as_115826: { label: "Instrumental · Save As", src: "{% static 'products/dutyticker/audio/tobylane-save-as-115826.mp3' %}", volume: 0.15 },
+        tramp963_relaxing_piano_lo_fi_music_268029: { label: "Piano · Relaxing Piano Lofi Music", src: "{% static 'products/dutyticker/audio/tramp963-relaxing-piano-lo-fi-music-268029.mp3' %}", volume: 0.15 },
+        u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
 <script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
@@ -1324,8 +1344,12 @@
     // Header Clock Logic
     function updateHeaderClock() {
         const now = new Date();
-        const dateStr = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-        const timeStr = now.toLocaleTimeString('ko-KR', { hour12: true, hour: '2-digit', minute: '2-digit' });
+        const dateStr = now
+            .toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+            .replace(/\s/g, '\u00A0');
+        const timeStr = now
+            .toLocaleTimeString('ko-KR', { hour12: true, hour: 'numeric', minute: '2-digit' })
+            .replace(/\s/g, '\u00A0');
 
         const dateEl = document.getElementById('headerDate');
         const timeEl = document.getElementById('headerTime');

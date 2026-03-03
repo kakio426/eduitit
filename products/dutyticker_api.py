@@ -13,6 +13,7 @@ from .dutyticker_scope import (
     get_or_create_settings_for_scope,
 )
 from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
+from .dutyticker_sync import sync_dt_students_from_hs
 
 
 def _build_today_fallback_schedule_from_classcalendar(user, classroom=None):
@@ -711,6 +712,29 @@ def rotation_trigger(request):
         'behavior': behavior,
         'rotated': rotated,
     })
+
+
+@require_http_methods(["POST"])
+def sync_students_from_hs_api(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': '로그인이 필요합니다.'}, status=401)
+
+    classroom = get_active_classroom_for_request(request)
+    if classroom is None:
+        return JsonResponse({'success': False, 'error': '상단에서 활성 학급을 먼저 선택해 주세요.'}, status=400)
+
+    try:
+        summary = sync_dt_students_from_hs(request.user, classroom)
+    except Exception as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+    return JsonResponse(
+        {
+            'success': True,
+            'message': '학급 명단 동기화가 완료되었습니다.',
+            'summary': summary,
+        }
+    )
 
 @require_http_methods(["POST"])
 def reset_data(request):
