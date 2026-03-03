@@ -5148,3 +5148,7 @@ Status: Working handoff (2026-02-27 EOD)
 
 ### C. 의미
 - 로컬 리허설 시드 데이터가 제거되어, 일상 운영 baseline 상태로 다시 복원됨.
+
+### D. 커밋/원격 반영
+- `b9760d3` `feat(sheetbook): add clear-only metric seed cleanup flow`
+- `origin/feature/sheetbook` push 완료
