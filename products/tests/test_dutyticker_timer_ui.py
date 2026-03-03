@@ -35,9 +35,14 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="bgmControls"')
         self.assertContains(response, 'id="bgmToggleBtn"')
         self.assertContains(response, 'id="bgmLoopModeBtn"')
+        self.assertContains(response, 'id="bgmTrackPanelBtn"')
         self.assertContains(response, 'id="bgmTrackRail"')
         self.assertContains(response, 'window.dtBgmTracks = {')
+        self.assertContains(response, 'podcast-smooth-jazz-instrumental-music-225674.mp3')
+        self.assertNotContains(response, 'jazz_soft_loop.wav')
         self.assertNotContains(response, '천리 길도 한 걸음부터')
+        self.assertNotContains(response, '알림사항 없음')
+        self.assertNotContains(response, '클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.')
 
     def test_timer_script_contains_safety_and_restore_methods(self):
         script_path = Path(settings.BASE_DIR) / 'products' / 'static' / 'products' / 'dutyticker' / 'js' / 'dutyticker.js'
@@ -57,6 +62,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('dt-bgm-state-v1', script)
         self.assertIn('setupBgm()', script)
         self.assertIn('toggleBgmLoopMode()', script)
+        self.assertIn('toggleBgmTrackPanel(', script)
         self.assertIn('renderBgmTrackRail()', script)
         self.assertIn('nextBgmTrack(', script)
         self.assertIn('prevBgmTrack(', script)

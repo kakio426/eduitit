@@ -36,6 +36,9 @@ class DutyTickerManager {
         this.bgmFadeRaf = null;
         this.bgmStorageKey = 'dt-bgm-state-v1';
         this.boundBgmUnlock = null;
+        this.bgmTrackPanelOpen = false;
+        this.boundBgmPanelOutsideClick = null;
+        this.boundBgmPanelEscape = null;
         this.missionFontSizeOrder = ['sm', 'md', 'lg'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
@@ -459,12 +462,12 @@ class DutyTickerManager {
                     </div>
                     <div class="flex-1 ml-5">
                         <div class="flex justify-between items-center mb-1">
-                            <p class="text-[10px] text-slate-500 font-extrabold tracking-[0.2em]">${safeTimeSlot}</p>
+                            <p class="text-xs text-slate-500 font-extrabold tracking-[0.18em]">${safeTimeSlot}</p>
                             ${isCompleted ? '<span class="text-emerald-400 text-[10px] font-black uppercase"><i class="fa-solid fa-check-circle"></i> DONE</span>' : ''}
                         </div>
-                        <div class="flex justify-between items-center text-xl font-black text-slate-100">
+                        <div class="flex justify-between items-center text-[1.35rem] font-black text-slate-100 gap-3">
                              <p class="${isCompleted ? 'opacity-30 line-through' : ''}">${safeRoleName}${spotlightBadge}</p>
-                              <div class="text-sm text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">${safeAssignee}</div>
+                              <div class="text-base font-black text-indigo-200 bg-indigo-500/15 px-3.5 py-2 rounded-xl border border-indigo-500/30 whitespace-nowrap">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -478,13 +481,17 @@ class DutyTickerManager {
         if (!grid || !card) return;
 
         const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-        const shouldFitWithoutScroll = isDesktop && this.students.length > 0 && this.students.length <= 25;
+        const studentCount = this.students.length;
+        const shouldFitWithoutScroll = isDesktop && studentCount > 0 && studentCount <= 25;
 
         grid.classList.toggle('dt-student-grid-fit-25', shouldFitWithoutScroll);
         grid.classList.toggle('overflow-y-auto', !shouldFitWithoutScroll);
         grid.classList.toggle('pr-2', !shouldFitWithoutScroll);
         grid.classList.toggle('overflow-y-hidden', shouldFitWithoutScroll);
         grid.classList.toggle('pr-0', shouldFitWithoutScroll);
+        grid.classList.toggle('dt-student-density-low', shouldFitWithoutScroll && studentCount <= 12);
+        grid.classList.toggle('dt-student-density-mid', shouldFitWithoutScroll && studentCount >= 13 && studentCount <= 18);
+        grid.classList.toggle('dt-student-density-high', shouldFitWithoutScroll && studentCount >= 19);
 
         card.classList.toggle('dt-student-card-fit-25', shouldFitWithoutScroll);
     }
@@ -527,7 +534,7 @@ class DutyTickerManager {
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
                         ${safeStudentNumber}
                     </div>
-                    <span class="text-sm font-bold ${isDone ? 'text-emerald-400' : 'text-slate-300'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
+                    <span class="text-base font-bold ${isDone ? 'text-emerald-400' : 'text-slate-200'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
@@ -540,13 +547,18 @@ class DutyTickerManager {
         const titleEl = document.getElementById('noticeTitleDisplay');
         if (!textEl || !titleEl) return;
 
-        if (this.isBroadcasting && this.broadcastMessage) {
-            titleEl.innerHTML = '<i class="fa-solid fa-bell text-yellow-500"></i> 알림사항';
+        const hasNotice = this.isBroadcasting && String(this.broadcastMessage || '').trim().length > 0;
+        if (hasNotice) {
+            titleEl.classList.remove('hidden');
+            textEl.classList.remove('hidden');
+            titleEl.innerHTML = '<i class="fa-solid fa-bell text-yellow-500"></i> 공지';
             textEl.textContent = this.broadcastMessage;
             textEl.classList.add('text-yellow-100');
         } else {
-            titleEl.innerHTML = '<i class="fa-regular fa-bell text-slate-500"></i> 알림사항 없음';
-            textEl.textContent = "클릭해서 아이들에게 전달할 공지사항이나 준비물을 입력하세요.";
+            titleEl.innerHTML = '';
+            textEl.textContent = '';
+            titleEl.classList.add('hidden');
+            textEl.classList.add('hidden');
             textEl.classList.remove('text-yellow-100');
         }
     }
@@ -1395,9 +1407,35 @@ class DutyTickerManager {
             });
         }
 
+        if (!this.boundBgmPanelOutsideClick) {
+            this.boundBgmPanelOutsideClick = (event) => {
+                const controls = document.getElementById('bgmControls');
+                if (!controls || !(event.target instanceof Node)) return;
+                if (controls.contains(event.target)) return;
+                this.toggleBgmTrackPanel(false);
+            };
+            document.addEventListener('click', this.boundBgmPanelOutsideClick, true);
+        }
+
+        if (!this.boundBgmPanelEscape) {
+            this.boundBgmPanelEscape = (event) => {
+                if (event.key !== 'Escape') return;
+                this.toggleBgmTrackPanel(false);
+            };
+            document.addEventListener('keydown', this.boundBgmPanelEscape);
+        }
+
         this.renderBgmTrackRail();
         this.updateBgmUI();
         this.ensureBgmUnlockListener();
+    }
+
+    toggleBgmTrackPanel(forceOpen = null) {
+        const rail = document.getElementById('bgmTrackRail');
+        const shouldOpen = forceOpen === null ? !this.bgmTrackPanelOpen : !!forceOpen;
+        this.bgmTrackPanelOpen = shouldOpen;
+        if (!rail) return;
+        rail.classList.toggle('is-open', shouldOpen);
     }
 
     ensureBgmUnlockListener() {
@@ -1469,7 +1507,7 @@ class DutyTickerManager {
         const rail = document.getElementById('bgmTrackRail');
         if (!rail) return;
         if (!this.bgmTrackOrder.length) {
-            rail.innerHTML = '<span class="text-[10px] text-slate-500 font-bold px-1">곡 없음</span>';
+            rail.innerHTML = '<span class="text-xs text-slate-400 font-bold px-1 py-1">곡 없음</span>';
             return;
         }
 
@@ -1478,8 +1516,7 @@ class DutyTickerManager {
             const enabled = this.bgmEnabledTrackKeys.has(trackKey);
             const isCurrent = this.bgmTrackKey === trackKey;
             const rawLabel = String(track.label || `트랙 ${index + 1}`);
-            const shortLabel = rawLabel.includes('·') ? rawLabel.split('·').pop().trim() : rawLabel;
-            const chipLabel = `${String(index + 1).padStart(2, '0')} ${this.escapeHtml(shortLabel)}`;
+            const chipLabel = `${String(index + 1).padStart(2, '0')} ${this.escapeHtml(rawLabel)}`;
             const checked = enabled ? 'checked' : '';
             const chipClass = `dt-bgm-chip ${isCurrent ? 'is-current' : ''} ${enabled ? '' : 'is-muted'}`;
 
@@ -1497,6 +1534,7 @@ class DutyTickerManager {
         const loopBtn = document.getElementById('bgmLoopModeBtn');
         const prevBtn = document.getElementById('bgmPrevBtn');
         const nextBtn = document.getElementById('bgmNextBtn');
+        const panelBtn = document.getElementById('bgmTrackPanelBtn');
 
         const playableCount = this.getPlayableBgmTrackKeys().length;
         const hasTracks = this.bgmTrackOrder.length > 0;
@@ -1533,6 +1571,15 @@ class DutyTickerManager {
             nextBtn.classList.toggle('opacity-60', playableCount <= 1);
             nextBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
         }
+
+        if (panelBtn) {
+            panelBtn.disabled = !hasTracks;
+            panelBtn.textContent = `목록 ${playableCount}/${this.bgmTrackOrder.length}`;
+            panelBtn.classList.toggle('opacity-60', !hasTracks);
+            panelBtn.classList.toggle('cursor-not-allowed', !hasTracks);
+        }
+
+        if (!hasTracks) this.toggleBgmTrackPanel(false);
 
         this.renderBgmTrackRail();
     }
