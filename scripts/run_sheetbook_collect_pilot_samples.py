@@ -135,6 +135,19 @@ def _build_next_steps(*, days: int, due_date: str | None = None) -> list[str]:
     ]
 
 
+def _resolve_action_count(*, action_count: Any, create_count: int) -> int:
+    create_value = _to_nonnegative_int(create_count, default=0)
+    if action_count is None:
+        return min(create_value, 3)
+    try:
+        raw_value = int(action_count)
+    except (TypeError, ValueError):
+        return min(create_value, 3)
+    if raw_value < 0:
+        return min(create_value, 3)
+    return raw_value
+
+
 def _clear_collector_data(*, user) -> dict[str, int]:
     from sheetbook.models import Sheetbook, SheetbookMetricEvent
 
@@ -332,8 +345,8 @@ def main() -> int:
     parser.add_argument(
         "--action-count",
         type=int,
-        default=0,
-        help="workspace_home action execute sample count",
+        default=-1,
+        help="workspace_home action execute sample count (-1: auto=min(create_count,3))",
     )
     parser.add_argument(
         "--archive-event-count",
@@ -384,6 +397,8 @@ def main() -> int:
         clear_result = _clear_collector_data(user=user)
 
     days = _to_nonnegative_int(args.days, default=14) or 14
+    create_count = _to_nonnegative_int(args.create_count, default=0)
+    action_count = _resolve_action_count(action_count=args.action_count, create_count=create_count)
     user_before = _snapshot_user_metrics(user=user)
     global_before = _snapshot_global_metrics(days=days)
 
@@ -407,8 +422,8 @@ def main() -> int:
     flow_result = _run_collection_flow(
         user=user,
         home_count=_to_nonnegative_int(args.home_count, default=0),
-        create_count=_to_nonnegative_int(args.create_count, default=0),
-        action_count=_to_nonnegative_int(args.action_count, default=0),
+        create_count=create_count,
+        action_count=action_count,
         archive_event_count=_to_nonnegative_int(args.archive_event_count, default=0),
         archive_batch_size=_to_nonnegative_int(args.archive_batch_size, default=1),
         home_collection_mode=str(args.home_collection_mode or "auto"),
@@ -426,8 +441,8 @@ def main() -> int:
         "clear_result": clear_result,
         "requested": {
             "home_count": _to_nonnegative_int(args.home_count, default=0),
-            "create_count": _to_nonnegative_int(args.create_count, default=0),
-            "action_count": _to_nonnegative_int(args.action_count, default=0),
+            "create_count": create_count,
+            "action_count": action_count,
             "archive_event_count": _to_nonnegative_int(args.archive_event_count, default=0),
             "archive_batch_size": _to_nonnegative_int(args.archive_batch_size, default=1),
         },

@@ -203,6 +203,7 @@ Status: Working branch handoff (2026-03-03 21:31)
   - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
 - 동작 메모:
   - `quick-create`/`bulk-archive`는 실제 뷰를 호출해 metric 이벤트를 생성
+  - `--action-count` 기본값은 `-1(auto)`이며 `create_count` 기준 `min(create_count, 3)`으로 자동 계산
   - `run_sheetbook_sample_gap_summary.py`의 `next_actions`에 로컬 리허설 수집 명령이 함께 노출됨:
     - `collect_pilot_samples_local_rehearsal`
     - `collect_archive_events_local_rehearsal`

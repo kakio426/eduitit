@@ -76,6 +76,7 @@ from scripts.run_sheetbook_collect_pilot_samples import (
     _build_next_steps,
     _count_workspace_home_source_events,
     _delta as _pilot_collect_delta,
+    _resolve_action_count,
     _run_collection_flow,
     _supports_home_view_collection,
 )
@@ -5861,6 +5862,16 @@ class SheetbookPilotCollectScriptTests(TestCase):
             next_steps[2],
             "python scripts/run_sheetbook_daily_start_bundle.py --days 7 --due-date 2026-03-06 --allow-pilot-hold-for-beta",
         )
+
+    def test_resolve_action_count_uses_auto_when_negative_or_invalid(self):
+        self.assertEqual(_resolve_action_count(action_count=-1, create_count=5), 3)
+        self.assertEqual(_resolve_action_count(action_count=-3, create_count=2), 2)
+        self.assertEqual(_resolve_action_count(action_count="x", create_count=4), 3)
+        self.assertEqual(_resolve_action_count(action_count=None, create_count=1), 1)
+
+    def test_resolve_action_count_respects_explicit_nonnegative_value(self):
+        self.assertEqual(_resolve_action_count(action_count=0, create_count=5), 0)
+        self.assertEqual(_resolve_action_count(action_count=2, create_count=5), 2)
 
 
 class SheetbookPilotCollectSupportScriptTests(SimpleTestCase):
