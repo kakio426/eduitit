@@ -5038,3 +5038,27 @@ Status: Working handoff (2026-02-27 EOD)
   - `manual_pending: (없음)`
   - `manual_pending_raw(readiness): staging_real_account_signoff, production_real_account_signoff`
   - `decision: GO`, `next_action: pilot 표본 보강 + 상태 재판정`
+
+---
+
+### 0-136. 2026-03-03 추가 자동화 (daily bundle의 signoff next_action 기본값 전환)
+
+### A. 구현 요약
+- `scripts/run_sheetbook_daily_start_bundle.py`
+  - `--next-action` 기본값을 빈 값으로 변경
+  - 런타임 기본값 규칙 추가:
+    - `--allow-pilot-hold-for-beta` 미사용: `staging/prod 실계정 점검`
+    - `--allow-pilot-hold-for-beta` 사용: `pilot 표본 보강 + 상태 재판정`
+  - 목적: 조건부 GO 번들 실행 시 release signoff 문구를 수동 재실행 없이 자동 정합
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookReleaseSignoffLogScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+
+결과:
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-03.md` command log에
+  - `--next-action pilot 표본 보강 + 상태 재판정` 자동 반영 확인
+- `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`의 final section이
+  - `next_action: pilot 표본 보강 + 상태 재판정`
+  - `due_date: 2026-03-04`
+  로 자동 갱신됨

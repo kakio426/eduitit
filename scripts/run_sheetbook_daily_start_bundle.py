@@ -287,7 +287,7 @@ def main() -> int:
     parser.add_argument("--owner", default="sheetbook-release", help="signoff log owner")
     parser.add_argument(
         "--next-action",
-        default="staging/prod 실계정 점검",
+        default="",
         help="signoff log next_action",
     )
     parser.add_argument("--due-date", default="", help="signoff log due_date (YYYY-MM-DD)")
@@ -315,6 +315,12 @@ def main() -> int:
     root = _repo_root()
     today = date.today().isoformat()
     due_date = args.due_date.strip() or today
+    next_action = str(args.next_action or "").strip()
+    if not next_action:
+        if bool(args.allow_pilot_hold_for_beta):
+            next_action = "pilot 표본 보강 + 상태 재판정"
+        else:
+            next_action = "staging/prod 실계정 점검"
 
     decision_cmd = ["python", "scripts/run_sheetbook_signoff_decision.py"]
     if bool(args.allow_pilot_hold_for_beta):
@@ -333,7 +339,7 @@ def main() -> int:
             "--owner",
             args.owner,
             "--next-action",
-            args.next_action,
+            next_action,
             "--due-date",
             due_date,
         ],
