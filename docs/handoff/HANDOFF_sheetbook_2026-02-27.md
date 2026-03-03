@@ -5180,3 +5180,7 @@ Status: Working handoff (2026-02-27 EOD)
   - `pilot_hold_for_beta: True`
 - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`
   - `pilot_hold_for_beta: True`
+
+### C. 커밋/원격 반영
+- `994b7aa` `feat(sheetbook): surface pilot-hold waiver in ops reports`
+- `origin/feature/sheetbook` push 완료

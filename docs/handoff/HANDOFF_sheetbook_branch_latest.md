@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-03 12:54)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `b9760d3` (`feat(sheetbook): add clear-only metric seed cleanup flow`)
+- latest backup commit: `994b7aa` (`feat(sheetbook): surface pilot-hold waiver in ops reports`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
