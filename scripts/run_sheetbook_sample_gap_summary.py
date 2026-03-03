@@ -59,6 +59,7 @@ def _build_sample_gap_next_actions(
                 ),
                 "command": (
                     "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    "--home-collection-mode direct-event "
                     f"--clear-before --home-count {home_gap} --create-count {create_gap} --archive-event-count 0"
                 ),
             }
@@ -77,6 +78,7 @@ def _build_sample_gap_next_actions(
                 "description": f"로컬 리허설용 아카이브 이벤트 {archive_event_gap}건 생성(운영 판정 분리)",
                 "command": (
                     "python scripts/run_sheetbook_collect_pilot_samples.py "
+                    "--home-collection-mode direct-event "
                     f"--home-count 0 --create-count 0 --archive-event-count {archive_event_gap}"
                 ),
             }
