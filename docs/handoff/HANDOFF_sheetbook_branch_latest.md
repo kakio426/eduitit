@@ -1,7 +1,7 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-02 23:47)
+Status: Working branch handoff (2026-03-03 11:43)
 
-작성일: 2026-03-02
+작성일: 2026-03-03
 대상 저장소: `eduitit`
 대상 브랜치: `feature/sheetbook`
 기준 브랜치: `main`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-02 23:47)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `1508b51` (`wip(sheetbook): checkpoint backup 14 (ops index report + bundle sync)`)
+- latest backup commit: `e0b793f` (`chore(sheetbook): refresh 2026-03-03 handoff ops snapshots`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
@@ -27,9 +27,26 @@ Status: Working branch handoff (2026-03-02 23:47)
   3. `git rev-parse HEAD`
   4. `git rev-parse origin/feature/sheetbook`
   5. (해시 다를 때만) `git pull --ff-only origin feature/sheetbook`
-  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04`
 - 확인 파일:
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+
+## 1-2) 2026-03-03 추가 실행 결과 (당일)
+
+- 실행 완료:
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-03`
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_signoff_decision.py --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-03 ...`
+- 상태 요약:
+  - `manual_alias_statuses`: staging/prod/real-device 모두 `PASS`
+  - `decision`: `GO` (조건: `pilot_hold_for_beta=true`)
+  - `readiness_status`: `HOLD` (표본 부족 유지)
+  - sample gap blockers: `pilot_home_opened_gap:5`, `pilot_create_gap:5`, `archive_event_gap:5`
+- 확인 파일:
+  - `docs/handoff/sheetbook_release_decision_latest.json`
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`
   - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
 ## 2) 오늘 반영 요약
@@ -38,7 +55,8 @@ Status: Working branch handoff (2026-03-02 23:47)
   - role 분해 임계치 추천(`--group-by-role`) + 파일럿 로그 역할별 스냅샷 반영
 - `SB-015`:
   - release signoff 로그 자동 생성 스크립트 추가
-  - readiness/decision/signoff log 최신화(`HOLD`)
+  - readiness/decision/signoff log 최신화
+  - 수동 signoff PASS 반영 + 조건부 베타 GO 재산출(`decision=GO`, `readiness=HOLD`)
 - `SB-108`:
   - consent freeze snapshot diff 자동화 스크립트 추가
   - freeze checklist/release signoff runbook 반영
@@ -88,7 +106,7 @@ Status: Working branch handoff (2026-03-02 23:47)
 7. 표본 부족량 요약(권장)
    - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
 8. 운영 인덱스 단독 갱신(필요 시)
-   - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-02`
+   - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03`
 
 ## 4) 중간 백업 규칙
 
