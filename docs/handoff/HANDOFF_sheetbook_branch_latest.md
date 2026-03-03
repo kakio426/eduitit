@@ -239,6 +239,27 @@ Status: Working branch handoff (2026-03-04 08:27)
 - 폴백을 강제로 쓰려면:
   - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event`
 
+## 1-8) 2026-03-04 오전 후속 실행 결과 (PASS 고정 + 최소 검증)
+
+- 실행:
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action "main 반영 준비 점검" --due-date 2026-03-05`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+  - `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+  - `python manage.py check`
+- 상태 요약:
+  - `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+  - 수동 signoff alias: `staging_real_account_signoff=PASS`, `production_real_account_signoff=PASS`, `real_device_grid_1000_smoke=PASS(waived)`
+- 산출물:
+  - `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-04.md`
+  - `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-04.md`
+  - `docs/handoff/sheetbook_release_decision_latest.json`
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
+- 다음 모니터링 명령(권장):
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
