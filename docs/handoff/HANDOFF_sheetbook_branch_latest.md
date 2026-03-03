@@ -85,6 +85,7 @@ Status: Working branch handoff (2026-03-03 15:04)
     - handoff latest 메타데이터 자동 갱신:
       - `python scripts/run_sheetbook_refresh_handoff_latest.py`
       - `python scripts/run_sheetbook_refresh_handoff_latest.py --dry-run`
+      - `run_sheetbook_guarded_commit.py --refresh-handoff-latest`로 후행 자동 실행 가능
     - 문서: `docs/runbooks/sheetbook_guarded_commit_workflow.md`
     - 테스트: `SheetbookGuardedCommitScriptTests` 추가
   - 로컬 리허설용 metric seed 스크립트 추가:

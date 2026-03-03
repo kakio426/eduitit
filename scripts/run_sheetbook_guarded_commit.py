@@ -145,12 +145,14 @@ def run(args: argparse.Namespace) -> int:
         push_retry_delay = max(0.0, float(getattr(args, "push_retry_delay", 1.0) or 0.0))
         attempts = 1 + push_retries
         last_code = 1
+        push_succeeded = False
         for attempt in range(1, attempts + 1):
             push_result = _run(root, push_cmd)
             _echo(push_result)
             last_code = int(push_result.returncode)
             if last_code == 0:
-                return 0
+                push_succeeded = True
+                break
             retryable = _is_retryable_push_failure(push_result)
             if not retryable:
                 print(
@@ -166,15 +168,39 @@ def run(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
                 time.sleep(push_retry_delay)
-        push_command_text = " ".join(push_cmd)
-        commit_hint = f" (local commit: {committed_sha})" if committed_sha else ""
-        print(
-            "[sheetbook-guarded-commit] push failed after "
-            f"{attempts} attempt(s){commit_hint}. "
-            f"retry manually: `{push_command_text}`",
-            file=sys.stderr,
-        )
-        return last_code
+        if not push_succeeded:
+            push_command_text = " ".join(push_cmd)
+            commit_hint = f" (local commit: {committed_sha})" if committed_sha else ""
+            print(
+                "[sheetbook-guarded-commit] push failed after "
+                f"{attempts} attempt(s){commit_hint}. "
+                f"retry manually: `{push_command_text}`",
+                file=sys.stderr,
+            )
+            return last_code
+
+    if bool(getattr(args, "refresh_handoff_latest", False)):
+        refresh_script = str(getattr(args, "refresh_handoff_script", "") or "").strip()
+        if not refresh_script:
+            refresh_script = "scripts/run_sheetbook_refresh_handoff_latest.py"
+        refresh_cmd = [
+            sys.executable,
+            refresh_script,
+            "--expected-branch",
+            branch,
+        ]
+        refresh_timestamp = str(getattr(args, "refresh_handoff_timestamp", "") or "").strip()
+        if refresh_timestamp:
+            refresh_cmd.extend(["--timestamp", refresh_timestamp])
+        refresh_result = _run(root, refresh_cmd)
+        _echo(refresh_result)
+        if refresh_result.returncode != 0:
+            print(
+                "[sheetbook-guarded-commit] handoff refresh failed after commit/push. "
+                "run manually: `python scripts/run_sheetbook_refresh_handoff_latest.py`",
+                file=sys.stderr,
+            )
+            return int(refresh_result.returncode)
 
     return 0
 
@@ -214,6 +240,21 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=1.0,
         help="seconds to wait between push retries (default: 1.0)",
+    )
+    parser.add_argument(
+        "--refresh-handoff-latest",
+        action="store_true",
+        help="run handoff latest refresh script after successful commit/push",
+    )
+    parser.add_argument(
+        "--refresh-handoff-script",
+        default="scripts/run_sheetbook_refresh_handoff_latest.py",
+        help="handoff refresh script path (default: scripts/run_sheetbook_refresh_handoff_latest.py)",
+    )
+    parser.add_argument(
+        "--refresh-handoff-timestamp",
+        default="",
+        help="optional timestamp text forwarded to handoff refresh script",
     )
     return parser
 

@@ -5,6 +5,7 @@ from io import BytesIO, StringIO
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import call, patch
@@ -4698,6 +4699,112 @@ class SheetbookGuardedCommitScriptTests(SimpleTestCase):
         printed_texts = [" ".join(str(arg) for arg in args) for args, _ in mock_print.call_args_list]
         self.assertTrue(any("non-retryable push failure detected" in text for text in printed_texts))
         self.assertTrue(any("local commit: aa11bb" in text for text in printed_texts))
+
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_refreshes_handoff_when_enabled(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="aa11bb\n", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout='{"status":"ok"}', stderr=""),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): with refresh",
+                allow_empty=False,
+                guard_only=False,
+                push=True,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=1.0,
+                refresh_handoff_latest=True,
+                refresh_handoff_script="scripts/run_sheetbook_refresh_handoff_latest.py",
+                refresh_handoff_timestamp="2026-03-03 15:10",
+            )
+        )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            mock_run.call_args_list[3].args,
+            (
+                root,
+                [
+                    sys.executable,
+                    "scripts/run_sheetbook_refresh_handoff_latest.py",
+                    "--expected-branch",
+                    "feature/sheetbook",
+                    "--timestamp",
+                    "2026-03-03 15:10",
+                ],
+            ),
+        )
+
+    @patch("builtins.print")
+    @patch("scripts.run_sheetbook_guarded_commit._repo_root")
+    @patch("scripts.run_sheetbook_guarded_commit._current_branch")
+    @patch("scripts.run_sheetbook_guarded_commit._staged_files")
+    @patch("scripts.run_sheetbook_guarded_commit._run_guard")
+    @patch("scripts.run_sheetbook_guarded_commit._run")
+    def test_run_returns_nonzero_when_handoff_refresh_fails(
+        self,
+        mock_run,
+        mock_run_guard,
+        mock_staged_files,
+        mock_current_branch,
+        mock_repo_root,
+        mock_print,
+    ):
+        root = Path("C:/repo")
+        mock_repo_root.return_value = root
+        mock_current_branch.return_value = "feature/sheetbook"
+        mock_staged_files.return_value = ["scripts/run_sheetbook_guarded_commit.py"]
+        mock_run_guard.return_value = 0
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="aa11bb\n", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            subprocess.CompletedProcess(args=[], returncode=2, stdout="", stderr="refresh failed"),
+        ]
+
+        code = _run_sheetbook_guarded_commit(
+            Namespace(
+                branch="",
+                expected_branch="feature/sheetbook",
+                message="feat(sheetbook): with refresh",
+                allow_empty=False,
+                guard_only=False,
+                push=True,
+                remote="origin",
+                push_retries=2,
+                push_retry_delay=1.0,
+                refresh_handoff_latest=True,
+                refresh_handoff_script="scripts/run_sheetbook_refresh_handoff_latest.py",
+                refresh_handoff_timestamp="",
+            )
+        )
+
+        self.assertEqual(code, 2)
+        printed_texts = [" ".join(str(arg) for arg in args) for args, _ in mock_print.call_args_list]
+        self.assertTrue(any("handoff refresh failed after commit/push" in text for text in printed_texts))
 
 
 class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):

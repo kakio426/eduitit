@@ -14,6 +14,8 @@
 ## 2) 커밋 + 푸시 한 번에
 
 - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push`
+- 커밋/푸시 후 handoff latest까지 자동 갱신:
+  - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): <summary>" --push --refresh-handoff-latest`
 - 기본 재시도 포함:
   - push 실패 시 자동 재시도(기본 총 3회 시도)
   - 옵션: `--push-retries <N>`, `--push-retry-delay <sec>`
@@ -26,6 +28,8 @@
 - 기본적으로 현재 브랜치가 `feature/sheetbook`이 아니면 실행 차단
 - `--push` 사용 시 네트워크 일시 실패에 대해 재시도 후 최종 실패코드 반환
 - `--branch`를 주면 현재 브랜치와 일치하는지 추가 검증(불일치 시 차단)
+- `--refresh-handoff-latest` 사용 시 커밋/푸시 성공 직후
+  `run_sheetbook_refresh_handoff_latest.py`를 자동 실행
 
 ## 4) 자주 보는 실패 케이스
 

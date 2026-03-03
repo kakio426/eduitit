@@ -5428,3 +5428,27 @@ Status: Working handoff (2026-02-27 EOD)
 ### C. 커밋/원격 반영
 - `566524a` `feat(sheetbook): add dry-run for handoff latest refresh`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-150. 2026-03-03 guarded commit에서 handoff latest 자동 연동 옵션 추가
+
+### A. 구현 요약
+- `scripts/run_sheetbook_guarded_commit.py`
+  - 신규 옵션:
+    - `--refresh-handoff-latest`
+    - `--refresh-handoff-script`
+    - `--refresh-handoff-timestamp`
+  - 커밋/푸시 성공 후 `run_sheetbook_refresh_handoff_latest.py` 자동 실행
+  - 자동 갱신 실패 시 안내 출력 후 non-zero 반환
+- `sheetbook/tests.py`
+  - 자동 갱신 성공/실패 분기 테스트 추가
+- `docs/runbooks/sheetbook_guarded_commit_workflow.md`
+  - one-command 사용법 반영
+
+### B. 검증
+- `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests`
+- `python scripts/run_sheetbook_guarded_commit.py --help`
+
+결과:
+- commit/push 후 handoff latest 갱신 누락 가능성을 명령 옵션으로 축소.
