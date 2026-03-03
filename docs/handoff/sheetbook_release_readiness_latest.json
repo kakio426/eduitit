@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-03-03 23:36:47",
+  "generated_at": "2026-03-04 08:21:08",
   "days": 14,
   "preflight": {
     "beta_strict": {
       "pass": true,
-      "elapsed_ms": 168.2,
+      "elapsed_ms": 87.3,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
@@ -16,7 +16,7 @@
     },
     "global_strict": {
       "pass": true,
-      "elapsed_ms": 121.4,
+      "elapsed_ms": 53.6,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
@@ -85,24 +85,24 @@
   },
   "pilot": {
     "days": 14,
-    "ready_for_recalibration": false,
+    "ready_for_recalibration": true,
     "counts": {
-      "workspace_home_opened": 0,
-      "home_source_sheetbook_created": 0,
-      "home_source_action_execute_requested": 0
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5,
+      "home_source_action_execute_requested": 3
     },
     "rates": {
-      "home_to_create_pct": 0.0,
-      "create_to_action_pct": 0.0
+      "home_to_create_pct": 100.0,
+      "create_to_action_pct": 60.0
     },
     "minimum_samples": {
       "workspace_home_opened": 5,
       "home_source_sheetbook_created": 5
     },
-    "status": "HOLD"
+    "status": "PASS"
   },
   "overall": {
-    "status": "HOLD",
+    "status": "PASS",
     "blocking_reasons": [],
     "advisory_reasons": [],
     "manual_pending": [
