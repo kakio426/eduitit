@@ -42,9 +42,24 @@ from seed_quiz.services.generation import generate_and_save_draft
 from seed_quiz.services.paste_parser import parse_pasted_text_to_csv_bytes
 from seed_quiz.services.grading import submit_and_reward
 from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
+from seed_quiz.services.validator import normalize_and_check, validate_quiz_payload
 from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
 
 logger = logging.getLogger("seed_quiz.views")
+
+QUIZ_DIFFICULTY_CHOICES = [
+    ("easy", "쉬움"),
+    ("medium", "보통"),
+    ("hard", "어려움"),
+]
+QUIZ_DIFFICULTY_ALIASES = {
+    "easy": "easy",
+    "쉬움": "easy",
+    "medium": "medium",
+    "보통": "medium",
+    "hard": "hard",
+    "어려움": "hard",
+}
 
 
 def _build_qr_data_url(raw_text: str) -> str:
@@ -393,6 +408,88 @@ def _build_bank_display_title(bank: SQQuizBank) -> str:
         grade_label = "전체학년"
 
     return f"{topic_label} · {grade_label} CSV 세트"
+
+
+def _normalize_difficulty(raw_value: str) -> str:
+    value = str(raw_value or "").strip()
+    if not value:
+        return "medium"
+    return QUIZ_DIFFICULTY_ALIASES.get(value.lower()) or QUIZ_DIFFICULTY_ALIASES.get(value) or "medium"
+
+
+def _build_set_edit_rows(items, post_data=None) -> list[dict]:
+    rows = []
+    for item in items:
+        item_id = str(item.id)
+        if post_data is None:
+            question_text = item.question_text
+            choices = list(item.choices or ["", "", "", ""])
+            correct_choice_no = int(item.correct_index) + 1
+            explanation = item.explanation or ""
+            difficulty = item.difficulty or "medium"
+        else:
+            question_text = post_data.get(f"question_text_{item_id}", item.question_text)
+            choices = [
+                post_data.get(f"choice_1_{item_id}", ""),
+                post_data.get(f"choice_2_{item_id}", ""),
+                post_data.get(f"choice_3_{item_id}", ""),
+                post_data.get(f"choice_4_{item_id}", ""),
+            ]
+            correct_raw = str(
+                post_data.get(f"correct_index_{item_id}", str(int(item.correct_index) + 1))
+            ).strip()
+            try:
+                correct_choice_no = int(correct_raw)
+            except (TypeError, ValueError):
+                correct_choice_no = int(item.correct_index) + 1
+            if correct_choice_no not in {1, 2, 3, 4}:
+                correct_choice_no = int(item.correct_index) + 1
+            explanation = post_data.get(f"explanation_{item_id}", "")
+            difficulty = _normalize_difficulty(post_data.get(f"difficulty_{item_id}", "medium"))
+
+        while len(choices) < 4:
+            choices.append("")
+        rows.append(
+            {
+                "item_id": item_id,
+                "order_no": item.order_no,
+                "question_text": str(question_text or ""),
+                "choices": [str(choice or "") for choice in choices[:4]],
+                "correct_choice_no": correct_choice_no,
+                "explanation": str(explanation or ""),
+                "difficulty": _normalize_difficulty(difficulty),
+            }
+        )
+    return rows
+
+
+def _render_set_edit_form(
+    request,
+    *,
+    classroom,
+    quiz_set,
+    items,
+    post_data=None,
+    form_errors: list[str] | None = None,
+    status: int = 200,
+):
+    if post_data is None:
+        title_value = quiz_set.title
+    else:
+        title_value = post_data.get("title", quiz_set.title)
+    return render(
+        request,
+        "seed_quiz/partials/teacher_edit.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "title_value": str(title_value or "").strip(),
+            "edit_rows": _build_set_edit_rows(items, post_data=post_data),
+            "difficulty_choices": QUIZ_DIFFICULTY_CHOICES,
+            "form_errors": form_errors or [],
+        },
+        status=status,
+    )
 
 
 def _resolve_latest_saved_bank_id(*, parsed_sets: list[dict], created_by) -> str:
@@ -1748,6 +1845,183 @@ def htmx_set_preview(request, classroom_id, set_id):
             "classroom": classroom,
             "quiz_set": quiz_set,
             "items": items,
+        },
+    )
+
+
+@login_required
+@require_GET
+def htmx_set_edit(request, classroom_id, set_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    quiz_set = get_object_or_404(
+        SQQuizSet,
+        id=set_id,
+        classroom=classroom,
+        status="draft",
+    )
+    items = list(quiz_set.items.order_by("order_no"))
+    return _render_set_edit_form(
+        request,
+        classroom=classroom,
+        quiz_set=quiz_set,
+        items=items,
+    )
+
+
+@login_required
+@require_POST
+def htmx_set_update(request, classroom_id, set_id):
+    classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
+    quiz_set = get_object_or_404(
+        SQQuizSet,
+        id=set_id,
+        classroom=classroom,
+        status="draft",
+    )
+    items = list(quiz_set.items.order_by("order_no"))
+    form_errors: list[str] = []
+
+    raw_title = str(request.POST.get("title", "") or "").strip()
+    if not raw_title:
+        form_errors.append("세트 제목을 입력해 주세요.")
+        normalized_title = ""
+    else:
+        try:
+            normalized_title = normalize_and_check(raw_title)
+        except ValueError:
+            normalized_title = ""
+            form_errors.append("세트 제목에 허용되지 않는 문자가 포함되어 있습니다.")
+    if normalized_title and len(normalized_title) > 100:
+        form_errors.append("세트 제목은 100자 이내로 입력해 주세요.")
+
+    normalized_item_rows = []
+    payload_items = []
+    for item in items:
+        item_id = str(item.id)
+        raw_question = str(request.POST.get(f"question_text_{item_id}", "") or "").strip()
+        if not raw_question:
+            form_errors.append(f"{item.order_no}번 문항의 문제를 입력해 주세요.")
+            continue
+        try:
+            question_text = normalize_and_check(raw_question)
+        except ValueError:
+            form_errors.append(f"{item.order_no}번 문항의 문제에 허용되지 않는 문자가 포함되어 있습니다.")
+            continue
+
+        choices = []
+        choice_has_error = False
+        for idx in range(1, 5):
+            raw_choice = str(request.POST.get(f"choice_{idx}_{item_id}", "") or "").strip()
+            if not raw_choice:
+                form_errors.append(f"{item.order_no}번 문항의 {idx}번 보기를 입력해 주세요.")
+                choice_has_error = True
+                continue
+            try:
+                choice_text = normalize_and_check(raw_choice)
+            except ValueError:
+                form_errors.append(
+                    f"{item.order_no}번 문항의 {idx}번 보기에 허용되지 않는 문자가 포함되어 있습니다."
+                )
+                choice_has_error = True
+                continue
+            choices.append(choice_text)
+        if choice_has_error:
+            continue
+        if len(set(choices)) != 4:
+            form_errors.append(f"{item.order_no}번 문항의 보기에는 중복이 없어야 합니다.")
+            continue
+
+        raw_correct = str(request.POST.get(f"correct_index_{item_id}", "") or "").strip()
+        try:
+            correct_choice_no = int(raw_correct)
+        except (TypeError, ValueError):
+            form_errors.append(f"{item.order_no}번 문항의 정답 번호를 선택해 주세요.")
+            continue
+        if correct_choice_no not in {1, 2, 3, 4}:
+            form_errors.append(f"{item.order_no}번 문항의 정답 번호는 1~4여야 합니다.")
+            continue
+
+        raw_explanation = str(request.POST.get(f"explanation_{item_id}", "") or "").strip()
+        if raw_explanation:
+            try:
+                explanation = normalize_and_check(raw_explanation)
+            except ValueError:
+                form_errors.append(f"{item.order_no}번 문항의 해설에 허용되지 않는 문자가 포함되어 있습니다.")
+                continue
+        else:
+            explanation = ""
+        difficulty = _normalize_difficulty(request.POST.get(f"difficulty_{item_id}", "medium"))
+
+        normalized_item_rows.append(
+            {
+                "item": item,
+                "question_text": question_text,
+                "choices": choices,
+                "correct_index": correct_choice_no - 1,
+                "explanation": explanation,
+                "difficulty": difficulty,
+            }
+        )
+        payload_items.append(
+            {
+                "question_text": question_text,
+                "choices": choices,
+                "correct_index": correct_choice_no - 1,
+                "explanation": explanation,
+                "difficulty": difficulty,
+            }
+        )
+
+    if not form_errors:
+        ok, validation_errors = validate_quiz_payload({"items": payload_items})
+        if not ok:
+            form_errors.append(
+                "문항 형식 검증에 실패했습니다. 문제/보기 길이, 정답 번호, 해설 길이를 확인해 주세요."
+            )
+            logger.warning(
+                "seed_quiz set update validation failed set=%s errors=%s",
+                str(quiz_set.id),
+                validation_errors,
+            )
+
+    if form_errors:
+        return _render_set_edit_form(
+            request,
+            classroom=classroom,
+            quiz_set=quiz_set,
+            items=items,
+            post_data=request.POST,
+            form_errors=form_errors,
+            status=400,
+        )
+
+    with transaction.atomic():
+        quiz_set.title = normalized_title
+        quiz_set.save(update_fields=["title", "updated_at"])
+        update_items = []
+        for row in normalized_item_rows:
+            item = row["item"]
+            item.question_text = row["question_text"]
+            item.choices = row["choices"]
+            item.correct_index = row["correct_index"]
+            item.explanation = row["explanation"]
+            item.difficulty = row["difficulty"]
+            update_items.append(item)
+        if update_items:
+            SQQuizItem.objects.bulk_update(
+                update_items,
+                ["question_text", "choices", "correct_index", "explanation", "difficulty"],
+            )
+
+    refreshed_items = quiz_set.items.order_by("order_no")
+    return render(
+        request,
+        "seed_quiz/partials/teacher_preview.html",
+        {
+            "classroom": classroom,
+            "quiz_set": quiz_set,
+            "items": refreshed_items,
+            "save_notice": "복제본 수정사항을 저장했습니다. 원본 퀴즈 은행 세트는 변경되지 않습니다.",
         },
     )
 
