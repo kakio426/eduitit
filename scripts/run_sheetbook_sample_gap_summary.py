@@ -37,6 +37,7 @@ def _build_sample_gap_next_actions(
 ) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     days_value = max(1, int(days))
+    action_gap = min(max(0, int(create_gap)), 3)
     if home_gap > 0 or create_gap > 0:
         gap_tokens: list[str] = []
         if home_gap > 0:
@@ -60,7 +61,8 @@ def _build_sample_gap_next_actions(
                 "command": (
                     "python scripts/run_sheetbook_collect_pilot_samples.py "
                     "--home-collection-mode direct-event "
-                    f"--clear-before --home-count {home_gap} --create-count {create_gap} --archive-event-count 0"
+                    f"--clear-before --home-count {home_gap} --create-count {create_gap} "
+                    f"--action-count {action_gap} --archive-event-count 0"
                 ),
             }
         )

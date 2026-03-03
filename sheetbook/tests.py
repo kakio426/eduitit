@@ -5349,6 +5349,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         local_collect_command = str(local_collect.get("command") or "")
         self.assertIn("run_sheetbook_collect_pilot_samples.py", local_collect_command)
         self.assertIn("--home-collection-mode direct-event", local_collect_command)
+        self.assertIn("--action-count 0", local_collect_command)
         self.assertIn("--clear-only", local_collect_command)
         self.assertIn("--allow-pilot-hold-for-beta", local_collect_command)
         self.assertIn("--due-date 2026-03-04", local_collect_command)
@@ -5447,7 +5448,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                 "days": 14,
                 "has_command_failures": False,
                 "manual_pending": [],
-                "sample_gap": {"blockers": ["pilot_home_opened_gap:1"]},
+                "sample_gap": {"blockers": ["pilot_home_opened_gap:1", "pilot_create_gap:2"]},
                 "decision": "GO",
             },
             allow_pilot_hold_for_beta=True,
@@ -5469,6 +5470,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             "--allow-pilot-hold-for-beta",
             str(collect_samples_local.get("command") or ""),
         )
+        self.assertIn("--action-count 2", str(collect_samples_local.get("command") or ""))
         self.assertIn(
             "--due-date 2026-03-04",
             str(collect_samples_local.get("command") or ""),
@@ -5924,6 +5926,13 @@ class SheetbookSampleGapSummaryScriptTests(SimpleTestCase):
         self.assertTrue(
             any("--days 21" in str(item.get("command") or "") for item in next_actions if isinstance(item, dict))
         )
+        collect_local = next(
+            item
+            for item in next_actions
+            if isinstance(item, dict)
+            and str(item.get("type")) == "collect_pilot_samples_local_rehearsal"
+        )
+        self.assertIn("--action-count 3", str(collect_local.get("command") or ""))
 
     def test_build_sample_gap_summary_ready_when_gaps_zero(self):
         summary = _build_sample_gap_summary_payload(

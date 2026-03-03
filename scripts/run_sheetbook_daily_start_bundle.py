@@ -213,6 +213,7 @@ def _build_bundle_next_actions(
         home_gap = _extract_gap_count("pilot_home_opened_gap")
         create_gap = _extract_gap_count("pilot_create_gap")
         archive_gap = _extract_gap_count("archive_event_gap")
+        action_gap = min(max(0, int(create_gap)), 3)
         actions.append(
             {
                 "type": "collect_samples_local_rehearsal",
@@ -221,6 +222,7 @@ def _build_bundle_next_actions(
                     "python scripts/run_sheetbook_collect_pilot_samples.py "
                     "--home-collection-mode direct-event "
                     f"--clear-before --home-count {home_gap} --create-count {create_gap} "
+                    f"--action-count {action_gap} "
                     f"--archive-event-count {archive_gap} && "
                     f"{rerun_bundle_command} && "
                     f"python scripts/run_sheetbook_sample_gap_summary.py --days {days} && "
