@@ -32,6 +32,18 @@ Status: Working branch handoff (2026-03-03 23:38)
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
   - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
 
+### 1-1-a) `"이어서 진행해줘"` 즉시 실행 템플릿
+
+- 아래 4단계를 그대로 실행하면 같은 맥락으로 즉시 재개 가능:
+  1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+  2. `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
+  3. blocker가 남아 있으면 `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count -1 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
+  4. 재판정 `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+
+- 재개 후 바로 확인할 핵심 값:
+  - `sheetbook_daily_start_bundle_latest.json`의 `overall`, `decision`, `readiness_status`
+  - `sheetbook_sample_gap_summary_latest.json`의 `overall.ready`, `overall.blockers`
+
 ## 1-2) 2026-03-03 추가 실행 결과 (당일)
 
 - 실행 완료:
@@ -181,7 +193,7 @@ Status: Working branch handoff (2026-03-03 23:38)
   2. 표본 수집 실행(운영 트래픽/파일럿 계정 활동)
   3. `python scripts/run_sheetbook_release_readiness.py --days 14`
   4. `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
-  5. `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+  5. `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
   6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
 - 판정 기준:
   - `sheetbook_sample_gap_summary_latest.json`의 `overall.ready=true`
@@ -247,7 +259,7 @@ Status: Working branch handoff (2026-03-03 23:38)
 6. 원클릭 번들(권장)
    - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
 7. 표본 부족량 요약(권장)
-   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
+   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
 8. 운영 인덱스 단독 갱신(필요 시)
    - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03`
 
