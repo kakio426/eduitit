@@ -36,6 +36,11 @@ class DutyTickerManager {
         this.bgmFadeRaf = null;
         this.bgmStorageKey = 'dt-bgm-state-v1';
         this.boundBgmUnlock = null;
+        this.missionFontSizeOrder = ['sm', 'md', 'lg'];
+        this.missionFontSize = 'md';
+        this.missionFontStorageKey = 'dt-mission-font-size-v1';
+        this.missionSaveRequestId = 0;
+        this.missionSaving = false;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -50,6 +55,8 @@ class DutyTickerManager {
         console.log("DutyTicker: Initializing...");
         this.loadData();
         this.setupEventListeners();
+        this.restoreMissionFontSize();
+        this.applyMissionFontSize();
         this.restoreTimerState();
         this.updateTimerDisplay();
         this.updateSoundUI();
@@ -79,6 +86,8 @@ class DutyTickerManager {
                 }
             });
         }
+
+        this.setupInlineMissionEditor();
 
         // Ensure timer display is correct on start
         this.updateTimerDisplay();
@@ -388,8 +397,8 @@ class DutyTickerManager {
     renderMission() {
         const titleEl = document.getElementById('mainMissionTitle');
         const descEl = document.getElementById('mainMissionDesc');
-        if (titleEl) titleEl.textContent = this.missionTitle;
-        if (descEl) descEl.textContent = this.missionDesc;
+        if (titleEl && document.activeElement !== titleEl) titleEl.textContent = this.missionTitle;
+        if (descEl && document.activeElement !== descEl) descEl.textContent = this.missionDesc;
     }
 
     renderRoleList() {
@@ -1183,43 +1192,124 @@ class DutyTickerManager {
         }
     }
 
-    openMissionModal() {
-        const titleInput = document.getElementById('missionTitleInput');
-        const descInput = document.getElementById('missionDescInput');
-        if (titleInput) titleInput.value = this.missionTitle;
-        if (descInput) descInput.value = this.missionDesc;
-        this.openModal('missionModal');
+    sanitizeMissionText(value, field) {
+        const raw = String(value || '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+        if (field === 'title') return raw.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+        return raw.split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).join('\n').trim();
     }
 
-    closeMissionModal() {
-        this.closeModal('missionModal');
+    setupInlineMissionEditor() {
+        const titleEl = document.getElementById('mainMissionTitle');
+        const descEl = document.getElementById('mainMissionDesc');
+        if (!titleEl || !descEl) return;
+
+        const stripPasteFormatting = (event) => {
+            event.preventDefault();
+            const text = event.clipboardData?.getData('text/plain') || '';
+            document.execCommand('insertText', false, text);
+        };
+
+        titleEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                titleEl.blur();
+            }
+        });
+        titleEl.addEventListener('paste', stripPasteFormatting);
+        descEl.addEventListener('paste', stripPasteFormatting);
+
+        const onBlurSave = () => this.saveInlineMissionEdit();
+        titleEl.addEventListener('blur', onBlurSave);
+        descEl.addEventListener('blur', onBlurSave);
     }
 
-    async handleUpdateMission() {
-        const titleInput = document.getElementById('missionTitleInput');
-        const descInput = document.getElementById('missionDescInput');
-        const title = titleInput ? titleInput.value : this.missionTitle;
-        const desc = descInput ? descInput.value : this.missionDesc;
+    async saveInlineMissionEdit() {
+        const titleEl = document.getElementById('mainMissionTitle');
+        const descEl = document.getElementById('mainMissionDesc');
+        if (!titleEl || !descEl) return;
+
+        const title = this.sanitizeMissionText(titleEl.innerText || this.missionTitle, 'title') || this.missionTitle;
+        const desc = this.sanitizeMissionText(descEl.innerText || this.missionDesc, 'desc') || this.missionDesc;
+
+        if (title === this.missionTitle && desc === this.missionDesc) {
+            this.renderMission();
+            return;
+        }
+
+        await this.handleUpdateMission({ title, desc });
+    }
+
+    async handleUpdateMission({ title, desc } = {}) {
+        const nextTitle = this.sanitizeMissionText(title ?? this.missionTitle, 'title') || this.missionTitle;
+        const nextDesc = this.sanitizeMissionText(desc ?? this.missionDesc, 'desc') || this.missionDesc;
         const prevTitle = this.missionTitle;
         const prevDesc = this.missionDesc;
+        const requestId = ++this.missionSaveRequestId;
 
-        this.missionTitle = title;
-        this.missionDesc = desc;
+        this.missionSaving = true;
+        this.missionTitle = nextTitle;
+        this.missionDesc = nextDesc;
         this.renderMission();
-        this.closeMissionModal();
 
         try {
             const response = await this.secureFetch(this.getApiUrl('missionUrl', '/products/dutyticker/api/mission/update/'), {
                 method: 'POST',
-                body: JSON.stringify({ title, description: desc })
+                body: JSON.stringify({ title: nextTitle, description: nextDesc })
             });
             await this.parseJsonResponse(response, '미션 내용을 저장하지 못했습니다.');
         } catch (error) {
             console.error(error);
+            if (requestId !== this.missionSaveRequestId) return;
             this.missionTitle = prevTitle;
             this.missionDesc = prevDesc;
             this.renderMission();
+        } finally {
+            if (requestId === this.missionSaveRequestId) this.missionSaving = false;
         }
+    }
+
+    restoreMissionFontSize() {
+        try {
+            const saved = localStorage.getItem(this.missionFontStorageKey);
+            if (saved && this.missionFontSizeOrder.includes(saved)) {
+                this.missionFontSize = saved;
+            }
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore mission font size', error);
+        }
+    }
+
+    saveMissionFontSize() {
+        try {
+            localStorage.setItem(this.missionFontStorageKey, this.missionFontSize);
+        } catch (error) {
+            console.warn('DutyTicker: failed to save mission font size', error);
+        }
+    }
+
+    applyMissionFontSize() {
+        const app = document.getElementById('mainAppContainer');
+        if (app) app.setAttribute('data-mission-size', this.missionFontSize);
+
+        const label = document.getElementById('missionFontSizeLabel');
+        if (label) {
+            label.textContent = this.missionFontSize === 'sm'
+                ? '작게'
+                : this.missionFontSize === 'lg'
+                    ? '크게'
+                    : '보통';
+        }
+    }
+
+    changeMissionFontSize(direction = 0) {
+        const step = Number(direction);
+        if (!Number.isFinite(step) || step === 0) return;
+        const currentIndex = this.missionFontSizeOrder.indexOf(this.missionFontSize);
+        const safeIndex = currentIndex >= 0 ? currentIndex : 1;
+        const nextIndex = Math.max(0, Math.min(this.missionFontSizeOrder.length - 1, safeIndex + (step > 0 ? 1 : -1)));
+        this.missionFontSize = this.missionFontSizeOrder[nextIndex];
+        this.applyMissionFontSize();
+        this.saveMissionFontSize();
     }
 
     async rotateRolesManually() {

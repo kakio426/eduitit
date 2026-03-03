@@ -353,6 +353,46 @@
         line-height: 1.22;
     }
 
+    #mainAppContainer[data-mission-size="sm"] #mainMissionTitle {
+        font-size: clamp(1.65rem, 6.2vw, 3.7rem);
+    }
+
+    #mainAppContainer[data-mission-size="sm"] #mainMissionDesc {
+        font-size: clamp(0.95rem, 2.9vw, 1.55rem);
+    }
+
+    #mainAppContainer[data-mission-size="lg"] #mainMissionTitle {
+        font-size: clamp(2.3rem, 8.2vw, 5.35rem);
+    }
+
+    #mainAppContainer[data-mission-size="lg"] #mainMissionDesc {
+        font-size: clamp(1.25rem, 4.5vw, 2.3rem);
+    }
+
+    #mainMissionTitle[contenteditable="true"],
+    #mainMissionDesc[contenteditable="true"] {
+        cursor: text;
+        border-radius: 0.85rem;
+        outline: none;
+        transition: box-shadow 180ms ease, background-color 180ms ease;
+    }
+
+    #mainMissionTitle[contenteditable="true"]:hover,
+    #mainMissionDesc[contenteditable="true"]:hover {
+        background: rgba(15, 23, 42, 0.14);
+    }
+
+    #mainMissionTitle[contenteditable="true"]:focus,
+    #mainMissionDesc[contenteditable="true"]:focus {
+        background: rgba(15, 23, 42, 0.24);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.32);
+    }
+
+    .mission-font-wrap button {
+        min-width: 2rem;
+        line-height: 1;
+    }
+
     #timerControls {
         margin-top: clamp(0.75rem, 2vh, 2rem);
         max-width: 100%;
@@ -613,9 +653,6 @@
             display: none;
         }
 
-        .mission-edit-btn {
-            opacity: 1;
-        }
     }
 
     @media (max-height: 860px) {
@@ -652,9 +689,6 @@
             font-size: clamp(1rem, 3vh, 1.4rem);
         }
 
-        .dt-timer-hint {
-            display: none;
-        }
     }
 
     @media (max-height: 900px) {
@@ -670,9 +704,6 @@
             transform: none !important;
         }
 
-        .mission-edit-btn {
-            opacity: 1 !important;
-        }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -681,8 +712,7 @@
         }
 
         #mainTimerDisplay,
-        #timerControls,
-        .mission-edit-btn {
+        #timerControls {
             transition: none !important;
         }
 
@@ -851,24 +881,19 @@
                         onclick="window.dtApp.toggleTimer()" title="타이머 시작/정지">
                         05:00
                     </button>
-                    <p class="dt-timer-hint text-sm md:text-base text-indigo-100/70 font-bold mb-4">
-                        숫자를 누르면 시작/일시정지
-                    </p>
 
                     <!-- Mission Text -->
-                    <div class="max-w-3xl px-4 relative group/mission">
-                        <div class="flex items-center justify-center gap-4 mb-3">
-                            <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep"
-                                id="mainMissionTitle">
+                    <div class="max-w-3xl px-4">
+                        <div class="flex items-center justify-center mb-3">
+                            <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep px-3 py-1.5"
+                                id="mainMissionTitle" contenteditable="true" spellcheck="false" data-mission-field="title"
+                                role="textbox" aria-label="메인 제목 바로 편집">
                                 수학 익힘책 풀기
                             </h2>
-                            <button onclick="window.dtApp.openMissionModal()"
-                                class="mission-edit-btn opacity-0 group-hover/mission:opacity-100 transition-opacity text-white/40 hover:text-white bg-white/10 w-10 h-10 rounded-full flex items-center justify-center">
-                                <i class="fa-solid fa-pen-to-square text-sm"></i>
-                            </button>
                         </div>
-                        <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep"
-                            id="mainMissionDesc">
+                        <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep px-3 py-1.5"
+                            id="mainMissionDesc" contenteditable="true" spellcheck="false" data-mission-field="desc"
+                            role="textbox" aria-label="설명 문구 바로 편집">
                             24~25페이지 풀고 채점하기
                         </p>
                     </div>
@@ -893,6 +918,16 @@
                         <span class="text-indigo-100 font-bold">분</span>
                         <button onclick="window.dtApp.applyCustomTimerMinutes()"
                             class="px-3 py-1.5 bg-white/20 rounded-lg text-white font-black hover:bg-white/30 active:scale-95 transition-all">설정</button>
+                    </div>
+                    <div
+                        class="mission-font-wrap flex items-center gap-1.5 px-2 py-1.5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10">
+                        <span id="missionFontSizeLabel" class="text-indigo-100 text-xs font-black">보통</span>
+                        <button type="button" onclick="window.dtApp.changeMissionFontSize(-1)"
+                            class="px-2 py-1 bg-white/15 rounded-md text-white text-xs font-black hover:bg-white/25 transition"
+                            title="글씨 작게">A-</button>
+                        <button type="button" onclick="window.dtApp.changeMissionFontSize(1)"
+                            class="px-2 py-1 bg-white/15 rounded-md text-white text-xs font-black hover:bg-white/25 transition"
+                            title="글씨 크게">A+</button>
                     </div>
                     <div class="timer-divider w-px h-auto bg-white/10 mx-1"></div>
                     <button onclick="window.dtApp.resetTimer()"
@@ -1026,11 +1061,6 @@
         </div>
     </main>
 
-    <!-- Footer Quote -->
-    <footer class="mt-4 text-center text-slate-600 text-sm font-medium">
-        "천리 길도 한 걸음부터! 오늘도 멋진 하루 보내자! 🚀"
-    </footer>
-
     <!-- Conflict Resolution Modal -->
     <div id="assignmentConflictModal"
         class="fixed inset-0 z-[220] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
@@ -1141,35 +1171,6 @@
                     class="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-check"></i> 완료 처리 / 취소
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mission Update Modal -->
-    <div id="missionModal"
-        class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
-        <div
-            class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
-            <h3 class="text-2xl font-bold text-white mb-6">🎯 미션 내용 변경</h3>
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">대제목</label>
-                    <input id="missionTitleInput" type="text"
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors"
-                        placeholder="예: 수업 시간에 집중하기">
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">소제목/설명</label>
-                    <textarea id="missionDescInput" rows="3"
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-base focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                        placeholder="예: 교과서 24쪽을 펴고 선생님을 보세요."></textarea>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <button onclick="window.dtApp.closeMissionModal()"
-                    class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
-                <button onclick="window.dtApp.handleUpdateMission()"
-                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">변경하기</button>
             </div>
         </div>
     </div>
