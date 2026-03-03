@@ -192,6 +192,7 @@ Status: Working branch handoff (2026-03-03 23:08)
 
 - 신규 스크립트:
   - `python scripts/run_sheetbook_collect_pilot_samples.py`
+  - `python scripts/run_sheetbook_local_rehearsal_cycle.py`
 - 목적:
   - 로컬/스테이징에서 `pilot_home_opened`, `pilot_create`, `archive_event` 표본을
     실제 뷰 플로우 기반으로 빠르게 확보해 gate 재판정을 반복 검증
@@ -201,6 +202,8 @@ Status: Working branch handoff (2026-03-03 23:08)
   - `python scripts/run_sheetbook_collect_pilot_samples.py --home-collection-mode direct-event --clear-before --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5`
 - 정리(되돌리기):
   - `python scripts/run_sheetbook_collect_pilot_samples.py --clear-only`
+- 리허설 사이클 1회 실행(수집 -> 검증 -> clear -> 복구):
+  - `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count 3 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
 - 동작 메모:
   - `quick-create`/`bulk-archive`는 실제 뷰를 호출해 metric 이벤트를 생성
   - `--action-count` 기본값은 `-1(auto)`이며 `create_count` 기준 `min(create_count, 3)`으로 자동 계산
@@ -216,7 +219,7 @@ Status: Working branch handoff (2026-03-03 23:08)
     - `collect_archive_events_local_rehearsal`
   - `run_sheetbook_daily_start_bundle.py`의 `next_actions`에도
     `collect_samples_local_rehearsal`이 함께 노출되어
-    bundle 기준 한 번에 리허설 수집/재판정/정리까지 실행 가능
+    `run_sheetbook_local_rehearsal_cycle.py` 기준으로 한 번에 리허설 수집/재판정/정리 가능
   - 홈(`/`)이 현재 로컬 DB 스키마 이슈(`core_post.featured_from`)로 500이면,
     `workspace_home_opened`는 자동으로 direct metric 폴백 기록(`home_collection_mode=auto`)
   - `home_collection_mode=auto`에서는 홈 수집 전 스키마 사전 점검을 수행하여
