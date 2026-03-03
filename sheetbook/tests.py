@@ -5896,6 +5896,15 @@ class SheetbookPilotCollectScriptTests(TestCase):
         self.assertEqual(due_date, "2026-03-04")
         self.assertFalse(used_fallback)
 
+    @patch("scripts.run_sheetbook_collect_pilot_samples._default_bundle_due_date")
+    def test_resolve_next_due_date_normalizes_compact_valid_input(self, mock_default_due_date):
+        mock_default_due_date.return_value = "2099-01-02"
+
+        due_date, used_fallback = _resolve_next_due_date("20260304")
+
+        self.assertEqual(due_date, "2026-03-04")
+        self.assertFalse(used_fallback)
+
     def test_resolve_action_count_uses_auto_when_negative_or_invalid(self):
         self.assertEqual(_resolve_action_count(action_count=-1, create_count=5), 3)
         self.assertEqual(_resolve_action_count(action_count=-3, create_count=2), 2)

@@ -123,21 +123,19 @@ def _default_bundle_due_date() -> str:
 
 
 def _normalize_due_date(value: Any) -> str:
-    raw = str(value or "").strip()
-    if not raw:
-        return _default_bundle_due_date()
-    try:
-        parsed = date.fromisoformat(raw)
-    except ValueError:
-        return _default_bundle_due_date()
-    return parsed.isoformat()
+    normalized, _ = _resolve_next_due_date(value)
+    return normalized
 
 
 def _resolve_next_due_date(value: Any) -> tuple[str, bool]:
     raw = str(value or "").strip()
-    normalized = _normalize_due_date(raw)
-    used_fallback = bool(raw) and normalized != raw
-    return normalized, used_fallback
+    if not raw:
+        return _default_bundle_due_date(), False
+    try:
+        parsed = date.fromisoformat(raw)
+    except ValueError:
+        return _default_bundle_due_date(), True
+    return parsed.isoformat(), False
 
 
 def _build_next_steps(*, days: int, due_date: str | None = None) -> list[str]:

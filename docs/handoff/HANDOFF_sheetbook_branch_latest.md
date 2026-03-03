@@ -205,7 +205,7 @@ Status: Working branch handoff (2026-03-03 21:53)
   - `quick-create`/`bulk-archive`는 실제 뷰를 호출해 metric 이벤트를 생성
   - `--action-count` 기본값은 `-1(auto)`이며 `create_count` 기준 `min(create_count, 3)`으로 자동 계산
   - `--next-due-date YYYY-MM-DD`를 주면 출력 `next_steps`의 bundle due-date를 고정값으로 지정 가능
-  - `--next-due-date` 형식이 잘못되면 결과 JSON `warnings`에 `next_due_date_invalid_fallback`이 기록됨
+  - `--next-due-date` 파싱 실패 시 결과 JSON `warnings`에 `next_due_date_invalid_fallback`이 기록됨
   - `run_sheetbook_sample_gap_summary.py`의 `next_actions`에 로컬 리허설 수집 명령이 함께 노출됨:
     - `collect_pilot_samples_local_rehearsal`
     - `collect_archive_events_local_rehearsal`
