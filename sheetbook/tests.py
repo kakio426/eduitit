@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 from urllib.parse import parse_qs, urlparse
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -40,6 +40,10 @@ from scripts.run_sheetbook_daily_start_bundle import (
     _build_bundle_markdown as _build_daily_start_bundle_markdown,
     _build_bundle_next_actions as _build_daily_start_bundle_next_actions,
     _build_bundle_summary as _build_daily_start_bundle_summary,
+)
+from scripts.run_sheetbook_grid_smoke import (
+    _edit_cell_and_save as _edit_grid_cell_and_save,
+    _wait_until_saved as _wait_until_grid_saved,
 )
 from scripts.run_sheetbook_ops_index_report import (
     _build_markdown as _build_ops_index_markdown,
@@ -5153,6 +5157,76 @@ class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
             self.assertEqual(handoff.read_text(encoding="utf-8"), original)
         finally:
             Path(temp_file.name).unlink(missing_ok=True)
+
+
+class SheetbookGridSmokeScriptTests(SimpleTestCase):
+    def test_wait_until_saved_returns_conflict_immediately(self):
+        page = MagicMock()
+        locator = MagicMock()
+        locator.inner_text.return_value = "저장 상태: 충돌이 있는 칸 1개가 있어요."
+        page.locator.return_value = locator
+
+        result = _wait_until_grid_saved(page, timeout_ms=3000)
+
+        self.assertFalse(result["ok"])
+        self.assertIn("충돌", result["status"])
+        page.wait_for_timeout.assert_not_called()
+
+    @patch("scripts.run_sheetbook_grid_smoke._click_with_retry")
+    @patch("scripts.run_sheetbook_grid_smoke._wait_until_saved")
+    def test_edit_cell_and_save_retries_once_on_conflict(
+        self, mock_wait_until_saved, mock_click_with_retry
+    ):
+        page = MagicMock()
+        locator = MagicMock()
+        locator.first = MagicMock()
+        page.locator.return_value = locator
+        mock_wait_until_saved.side_effect = [
+            {"ok": False, "status": "저장 상태: 충돌이 있는 칸 1개가 있어요.", "wait_ms": 5.0},
+            {"ok": True, "status": "저장 상태: 저장됨", "wait_ms": 12.0},
+        ]
+
+        result = _edit_grid_cell_and_save(
+            page,
+            selector="[data-row-index='499'][data-col-index='1']",
+            value="desktop-edit-row-500",
+            row_index=499,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["attempt"], 2)
+        self.assertEqual(mock_click_with_retry.call_count, 2)
+        self.assertEqual(mock_wait_until_saved.call_count, 2)
+        page.wait_for_timeout.assert_called_once_with(300)
+        page.keyboard.type.assert_any_call("desktop-edit-row-500")
+
+    @patch("scripts.run_sheetbook_grid_smoke._click_with_retry")
+    @patch("scripts.run_sheetbook_grid_smoke._wait_until_saved")
+    def test_edit_cell_and_save_stops_without_retry_on_non_conflict(
+        self, mock_wait_until_saved, mock_click_with_retry
+    ):
+        page = MagicMock()
+        locator = MagicMock()
+        locator.first = MagicMock()
+        page.locator.return_value = locator
+        mock_wait_until_saved.return_value = {
+            "ok": False,
+            "status": "timeout: 저장 상태: 처리 중",
+            "wait_ms": 20.0,
+        }
+
+        result = _edit_grid_cell_and_save(
+            page,
+            selector="[data-row-index='0'][data-col-index='1']",
+            value="desktop-edit-row-1",
+            row_index=0,
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["attempt"], 1)
+        self.assertEqual(mock_click_with_retry.call_count, 1)
+        self.assertEqual(mock_wait_until_saved.call_count, 1)
+        page.wait_for_timeout.assert_not_called()
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
