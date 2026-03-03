@@ -260,6 +260,24 @@ Status: Working branch handoff (2026-03-04 08:41)
   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
 
+## 1-9) 2026-03-04 오전 스모크 재검증 (중단 지점 이어서)
+
+- 재개 배경:
+  - `run_sheetbook_grid_smoke.py` 첫 실행에서 tablet 콘솔 `net::ERR_NAME_NOT_RESOLVED`로 `pass=false` 1회 발생
+- 재실행:
+  - `python scripts/run_sheetbook_allowlist_smoke.py`
+  - `python scripts/run_sheetbook_consent_smoke.py`
+  - `python scripts/run_sheetbook_grid_smoke.py --port 8015` (재실행)
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python manage.py check`
+- 최종 상태:
+  - `smoke_sheetbook_allowlist_latest.json`: `evaluation.pass=true`
+  - `smoke_sheetbook_consent_recipients_latest.json`: `evaluation.pass=true`
+  - `smoke_sheetbook_grid_1000_latest.json`: `evaluation.pass=true`
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
