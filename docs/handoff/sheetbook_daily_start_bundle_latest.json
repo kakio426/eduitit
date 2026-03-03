@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-04 08:26:10",
+  "generated_at": "2026-03-04 08:40:43",
   "days": 14,
   "ops_index_report": "C:\\Users\\kakio\\eduitit\\docs\\runbooks\\logs\\SHEETBOOK_OPS_INDEX_2026-03-04.md",
   "commands": [
@@ -27,7 +27,7 @@
         "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE=45.0",
         "SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE=5",
         "SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE=5",
-        "{\"generated_at\": \"2026-03-04 08:26:01\", \"days\": 14, \"preflight\": {\"beta_strict\": {\"pass\": true, \"elapsed_ms\": 90.3, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}, \"global_strict\": {\"pass\": true, \"elapsed_ms\": 58.0, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}}, \"smokes\": {\"grid_1000\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 19:34:10\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": [], \"desktop_warnings\": [\"initial_render_ms>3000\"], \"tablet_warnings\": [], \"has_warnings\": true, \"thresholds\": {\"max_final_render_ms\": 2000.0, \"warn_initial_render_ms\": 3000.0}}}, \"consent_recipients\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 19:18:14\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"consent_recipients_300\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:01:13\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"allowlist_access\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 18:52:03\", \"evaluation\": {\"pass\": true, \"reasons\": []}}}, \"pilot\": {\"days\": 14, \"ready_for_recalibration\": true, \"counts\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5, \"home_source_action_execute_requested\": 3}, \"rates\": {\"home_to_create_pct\": 100.0, \"create_to_action_pct\": 60.0}, \"minimum_samples\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5}, \"status\": \"PASS\"}, \"overall\": {\"status\": \"PASS\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}}"
+        "{\"generated_at\": \"2026-03-04 08:40:34\", \"days\": 14, \"preflight\": {\"beta_strict\": {\"pass\": true, \"elapsed_ms\": 93.5, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}, \"global_strict\": {\"pass\": true, \"elapsed_ms\": 54.5, \"log_tail\": [\"[sheetbook] preflight start\", \"- check_collect_schema\", \"- check_sheetbook_rollout --strict\", \"- check_sheetbook_consent_freeze\", \"- recommend_sheetbook_thresholds --days 14\", \"[sheetbook] preflight done\"]}}, \"smokes\": {\"grid_1000\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 19:34:10\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": [], \"desktop_warnings\": [\"initial_render_ms>3000\"], \"tablet_warnings\": [], \"has_warnings\": true, \"thresholds\": {\"max_final_render_ms\": 2000.0, \"warn_initial_render_ms\": 3000.0}}}, \"consent_recipients\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 19:18:14\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"consent_recipients_300\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-01 13:01:13\", \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}, \"allowlist_access\": {\"exists\": true, \"pass\": true, \"started_at\": \"2026-03-03 18:52:03\", \"evaluation\": {\"pass\": true, \"reasons\": []}}}, \"pilot\": {\"days\": 14, \"ready_for_recalibration\": true, \"counts\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5, \"home_source_action_execute_requested\": 3}, \"rates\": {\"home_to_create_pct\": 100.0, \"create_to_action_pct\": 60.0}, \"minimum_samples\": {\"workspace_home_opened\": 5, \"home_source_sheetbook_created\": 5}, \"status\": \"PASS\"}, \"overall\": {\"status\": \"PASS\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}}"
       ]
     },
     {
@@ -35,11 +35,11 @@
       "ok": true,
       "returncode": 0,
       "tail": [
-        "{\"generated_at\": \"2026-03-04 08:26:01\", \"readiness_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"readiness_overall\": {\"status\": \"PASS\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}, \"manual_checks\": {\"staging_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"staging_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"production_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"production_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"real_device_grid_1000\": {\"status\": \"PASS\", \"notes\": \"waived_by_policy(device-unavailable)\", \"updated_at\": \"2026-03-04 08:26:01\"}}, \"decision\": \"GO\", \"decision_context\": {\"decision\": \"GO\", \"readiness_status\": \"PASS\", \"manual_statuses\": {\"staging_allowlisted\": \"PASS\", \"staging_non_allowlisted\": \"PASS\", \"production_allowlisted\": \"PASS\", \"production_non_allowlisted\": \"PASS\", \"real_device_grid_1000\": \"PASS\"}, \"manual_alias_statuses\": {\"staging_real_account_signoff\": \"PASS\", \"production_real_account_signoff\": \"PASS\", \"real_device_grid_1000_smoke\": \"PASS\"}, \"automated_gate_pass\": true, \"waivers\": {\"real_device_grid_1000\": true, \"pilot_hold_for_beta\": false}}, \"next_actions\": [{\"type\": \"refresh\", \"description\": \"게이트 상태 최신화 후 판정 재생성\", \"command\": \"python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py\"}]}"
+        "{\"generated_at\": \"2026-03-04 08:40:34\", \"readiness_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_release_readiness_latest.json\", \"manual_file\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_manual_signoff_latest.json\", \"readiness_overall\": {\"status\": \"PASS\", \"blocking_reasons\": [], \"advisory_reasons\": [], \"manual_pending\": [\"staging_real_account_signoff\", \"production_real_account_signoff\"], \"waived_manual_checks\": [\"real_device_grid_1000_smoke\"], \"automated_gate_pass\": true}, \"manual_checks\": {\"staging_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"staging_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"staging-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"production_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"production_non_allowlisted\": {\"status\": \"PASS\", \"notes\": \"prod-ok\", \"updated_at\": \"2026-03-04 08:25:59\"}, \"real_device_grid_1000\": {\"status\": \"PASS\", \"notes\": \"waived_by_policy(device-unavailable)\", \"updated_at\": \"2026-03-04 08:40:34\"}}, \"decision\": \"GO\", \"decision_context\": {\"decision\": \"GO\", \"readiness_status\": \"PASS\", \"manual_statuses\": {\"staging_allowlisted\": \"PASS\", \"staging_non_allowlisted\": \"PASS\", \"production_allowlisted\": \"PASS\", \"production_non_allowlisted\": \"PASS\", \"real_device_grid_1000\": \"PASS\"}, \"manual_alias_statuses\": {\"staging_real_account_signoff\": \"PASS\", \"production_real_account_signoff\": \"PASS\", \"real_device_grid_1000_smoke\": \"PASS\"}, \"automated_gate_pass\": true, \"waivers\": {\"real_device_grid_1000\": true, \"pilot_hold_for_beta\": false}}, \"next_actions\": [{\"type\": \"refresh\", \"description\": \"게이트 상태 최신화 후 판정 재생성\", \"command\": \"python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py\"}]}"
       ]
     },
     {
-      "command": "python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action pilot 표본 보강 + 상태 재판정 --due-date 2026-03-04",
+      "command": "python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action pilot 표본 보강 + 상태 재판정 --due-date 2026-03-05",
       "ok": true,
       "returncode": 0,
       "tail": [
@@ -126,11 +126,11 @@
       ]
     },
     {
-      "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04",
+      "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05",
       "ok": true,
       "returncode": 0,
       "tail": [
-        "{\"overall_ready\": true, \"blockers\": [], \"next_actions\": [{\"type\": \"monitoring\", \"description\": \"표본 부족 없음, 주기적으로 gap summary 확인\", \"command\": \"python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04\"}], \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_sample_gap_summary_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_SAMPLE_GAP_2026-03-04.md\"}"
+        "{\"overall_ready\": true, \"blockers\": [], \"next_actions\": [{\"type\": \"monitoring\", \"description\": \"표본 부족 없음, 주기적으로 gap summary 확인\", \"command\": \"python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05\"}], \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_sample_gap_summary_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_SAMPLE_GAP_2026-03-04.md\"}"
       ]
     },
     {
@@ -181,7 +181,7 @@
       {
         "type": "monitoring",
         "description": "표본 부족 없음, 주기적으로 gap summary 확인",
-        "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04"
+        "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05"
       }
     ]
   },
@@ -191,7 +191,7 @@
     {
       "type": "monitoring",
       "description": "현재 상태 유지, 정기적으로 bundle 재실행",
-      "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04"
+      "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-05"
     }
   ]
 }

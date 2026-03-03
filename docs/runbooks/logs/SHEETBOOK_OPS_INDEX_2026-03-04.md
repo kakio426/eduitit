@@ -20,6 +20,6 @@
 - ops_index: `C:\Users\kakio\eduitit\docs\runbooks\logs\SHEETBOOK_OPS_INDEX_2026-03-04.md`
 
 ## Next Actions
-- [daily_start] 현재 상태 유지, 정기적으로 bundle 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-04`
-- [sample_gap] 표본 부족 없음, 주기적으로 gap summary 확인: `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
+- [daily_start] 현재 상태 유지, 정기적으로 bundle 재실행: `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --allow-pilot-hold-for-beta --due-date 2026-03-05`
+- [sample_gap] 표본 부족 없음, 주기적으로 gap summary 확인: `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
 - [decision] 게이트 상태 최신화 후 판정 재생성: `python scripts/run_sheetbook_release_readiness.py --days 14 && python scripts/run_sheetbook_signoff_decision.py`
