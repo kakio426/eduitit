@@ -40,6 +40,7 @@ def _build_summary(
     consent_freeze_snapshot: dict[str, Any],
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
+    decision_context = decision.get("decision_context") or {}
     daily_manual_pending = [
         str(item) for item in (daily_start.get("manual_pending") or []) if str(item)
     ]
@@ -79,6 +80,7 @@ def _build_summary(
     return {
         "overall": str(daily_start.get("overall") or decision.get("decision") or "HOLD").upper(),
         "decision": str(decision.get("decision") or "HOLD").upper(),
+        "pilot_hold_for_beta": bool((decision_context.get("waivers") or {}).get("pilot_hold_for_beta")),
         "readiness_status": str(readiness_overall.get("status") or "HOLD").upper(),
         "manual_pending": daily_manual_pending if has_daily_manual_pending else readiness_manual_pending,
         "manual_pending_raw": readiness_manual_pending,
@@ -126,6 +128,7 @@ def _build_markdown(
 
 - overall: `{summary.get("overall")}`
 - decision: `{summary.get("decision")}`
+- pilot_hold_for_beta: `{summary.get("pilot_hold_for_beta")}`
 - readiness_status: `{summary.get("readiness_status")}`
 - manual_pending: {manual_pending}
 - sample_gap_blockers: {blockers}

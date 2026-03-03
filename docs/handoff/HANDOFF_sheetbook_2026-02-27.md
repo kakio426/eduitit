@@ -5152,3 +5152,31 @@ Status: Working handoff (2026-02-27 EOD)
 ### D. 커밋/원격 반영
 - `b9760d3` `feat(sheetbook): add clear-only metric seed cleanup flow`
 - `origin/feature/sheetbook` push 완료
+
+---
+
+### 0-140. 2026-03-03 조건부 GO 가시성 강화 (pilot_hold_for_beta 표기 통일)
+
+### A. 구현 요약
+- 리포트 3종에 조건부 GO 플래그 표시 추가:
+  - `scripts/run_sheetbook_daily_start_bundle.py`
+    - summary에 `decision_waivers` 포함
+    - markdown에 `pilot_hold_for_beta` 라인 추가
+  - `scripts/run_sheetbook_ops_index_report.py`
+    - summary/markdown에 `pilot_hold_for_beta` 라인 추가
+  - `scripts/run_sheetbook_release_signoff_log.py`
+    - 자동 게이트 스냅샷 섹션에 `pilot_hold_for_beta` 라인 추가
+- 목적:
+  - `decision=GO`가 일반 GO인지 조건부 GO인지를 문서만 보고 즉시 구분
+
+### B. 테스트/검증
+- `python manage.py test sheetbook.tests.SheetbookDailyStartBundleScriptTests sheetbook.tests.SheetbookOpsIndexReportScriptTests sheetbook.tests.SheetbookReleaseSignoffLogScriptTests`
+- `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+
+결과:
+- `docs/runbooks/logs/SHEETBOOK_DAILY_START_2026-03-03.md`
+  - `pilot_hold_for_beta: True`
+- `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `pilot_hold_for_beta: True`
+- `docs/runbooks/logs/SHEETBOOK_RELEASE_SIGNOFF_2026-03-03.md`
+  - `pilot_hold_for_beta: True`

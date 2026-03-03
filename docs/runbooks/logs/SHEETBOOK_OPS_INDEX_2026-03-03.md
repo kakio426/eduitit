@@ -2,6 +2,7 @@
 
 - overall: `GO`
 - decision: `GO`
+- pilot_hold_for_beta: `True`
 - readiness_status: `HOLD`
 - manual_pending: (없음)
 - sample_gap_blockers: pilot_home_opened_gap:5, pilot_create_gap:5, archive_event_gap:5

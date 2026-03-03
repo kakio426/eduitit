@@ -83,6 +83,7 @@ def _build_bundle_summary(
 ) -> dict[str, Any]:
     readiness_overall = readiness.get("overall") or {}
     decision_context = decision.get("decision_context") or {}
+    decision_waivers = dict(decision_context.get("waivers") or {})
     manual_alias_statuses = dict(decision_context.get("manual_alias_statuses") or {})
     manual_pending_raw = [str(item) for item in (readiness_overall.get("manual_pending") or []) if str(item)]
     manual_pending_effective = _derive_effective_manual_pending(
@@ -102,6 +103,7 @@ def _build_bundle_summary(
         "commands": command_results,
         "readiness_status": str(readiness_overall.get("status") or "HOLD").upper(),
         "decision": str(decision.get("decision") or "HOLD").upper(),
+        "decision_waivers": decision_waivers,
         "manual_pending": manual_pending_effective,
         "manual_pending_raw": manual_pending_raw,
         "manual_alias_statuses": manual_alias_statuses,
@@ -254,6 +256,7 @@ def _build_bundle_markdown(*, summary: dict[str, Any], json_output_path: Path) -
 - days: {summary.get("days")}
 - overall: `{summary.get("overall")}`
 - decision: `{summary.get("decision")}`
+- pilot_hold_for_beta: `{(summary.get("decision_waivers") or {}).get("pilot_hold_for_beta")}`
 - readiness_status: `{summary.get("readiness_status")}`
 - manual_pending: {manual_pending_text}
 - manual_pending_raw(readiness): {manual_pending_raw_text}

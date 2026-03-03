@@ -128,6 +128,7 @@ def _build_markdown(
     manual_checks = manual.get("checks") or decision.get("manual_checks") or {}
     decision_context = decision.get("decision_context") or {}
     manual_alias_statuses = decision_context.get("manual_alias_statuses") or {}
+    decision_waivers = decision_context.get("waivers") or {}
     decision_value = str(decision.get("decision") or "HOLD").strip().upper()
     if decision_value not in {"GO", "HOLD", "STOP"}:
         decision_value = "HOLD"
@@ -175,6 +176,7 @@ def _build_markdown(
 - `manual_pending`: {manual_pending}
 - `manual_pending_raw(readiness)`: {manual_pending_raw}
 - `waived_manual_checks`: {waived_manual_checks}
+- `pilot_hold_for_beta`: {bool(decision_waivers.get("pilot_hold_for_beta"))}
 - `next_actions` (decision json 자동 추천 명령):
 {next_actions}
 - `decision_context.manual_alias_statuses`:

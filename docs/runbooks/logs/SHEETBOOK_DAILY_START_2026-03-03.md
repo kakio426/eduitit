@@ -1,8 +1,9 @@
-# Sheetbook Daily Start Bundle (2026-03-03 12:49:28)
+# Sheetbook Daily Start Bundle (2026-03-03 12:53:10)
 
 - days: 14
 - overall: `GO`
 - decision: `GO`
+- pilot_hold_for_beta: `True`
 - readiness_status: `HOLD`
 - manual_pending: (없음)
 - manual_pending_raw(readiness): staging_real_account_signoff, production_real_account_signoff

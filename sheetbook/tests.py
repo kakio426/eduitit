@@ -4293,7 +4293,8 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
                     "staging_real_account_signoff": "HOLD",
                     "production_real_account_signoff": "HOLD",
                     "real_device_grid_1000_smoke": "PASS",
-                }
+                },
+                "waivers": {"pilot_hold_for_beta": False},
             },
             "next_actions": [
                 {
@@ -4322,6 +4323,7 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
             markdown,
         )
         self.assertIn("- `waived_manual_checks`: real_device_grid_1000_smoke", markdown)
+        self.assertIn("- `pilot_hold_for_beta`: False", markdown)
         self.assertIn(
             "| staging_real_account_signoff | staging | allowlisted | PASS | staging-ok |",
             markdown,
@@ -4350,6 +4352,7 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
         self.assertIn("- `manual_pending`: (없음)", markdown)
         self.assertIn("- `manual_pending_raw(readiness)`: (없음)", markdown)
         self.assertIn("- `waived_manual_checks`: (없음)", markdown)
+        self.assertIn("- `pilot_hold_for_beta`: False", markdown)
         self.assertIn("- `next_actions` (decision json 자동 추천 명령):", markdown)
         self.assertIn("- decision: `HOLD`", markdown)
         self.assertIn("- owner: -", markdown)
@@ -4387,7 +4390,8 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
                     "staging_real_account_signoff": "PASS",
                     "production_real_account_signoff": "PASS",
                     "real_device_grid_1000_smoke": "PASS",
-                }
+                },
+                "waivers": {"pilot_hold_for_beta": True},
             },
             "next_actions": [],
         }
@@ -4408,6 +4412,7 @@ class SheetbookReleaseSignoffLogScriptTests(SimpleTestCase):
             "- `manual_pending_raw(readiness)`: staging_real_account_signoff, production_real_account_signoff",
             markdown,
         )
+        self.assertIn("- `pilot_hold_for_beta`: True", markdown)
 
 
 class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
@@ -4442,7 +4447,8 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                     "manual_alias_statuses": {
                         "staging_real_account_signoff": "HOLD",
                         "production_real_account_signoff": "HOLD",
-                    }
+                    },
+                    "waivers": {"pilot_hold_for_beta": False},
                 },
             },
             archive_snapshot={
@@ -4473,6 +4479,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertEqual(summary["overall"], "HOLD")
         self.assertFalse(summary["has_command_failures"])
         self.assertEqual(summary["decision"], "HOLD")
+        self.assertEqual(summary["decision_waivers"], {"pilot_hold_for_beta": False})
         self.assertEqual(summary["pilot_counts"]["workspace_home_opened"], 3)
         self.assertEqual(summary["archive"]["event_count"], 2)
         self.assertEqual(
@@ -4528,7 +4535,8 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
                         "staging_real_account_signoff": "PASS",
                         "production_real_account_signoff": "PASS",
                         "real_device_grid_1000_smoke": "PASS",
-                    }
+                    },
+                    "waivers": {"pilot_hold_for_beta": True},
                 },
             },
             archive_snapshot={"event_count": 0, "quality": {"next_step": "collect_more_samples"}},
@@ -4540,6 +4548,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             summary["manual_pending_raw"],
             ["staging_real_account_signoff", "production_real_account_signoff"],
         )
+        self.assertEqual(summary["decision_waivers"], {"pilot_hold_for_beta": True})
         self.assertEqual(summary["manual_pending"], [])
         next_actions = summary.get("next_actions") or []
         action_types = {str(item.get("type")) for item in next_actions if isinstance(item, dict)}
@@ -4589,6 +4598,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
             "ops_index_report": "docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md",
             "overall": "HOLD",
             "decision": "HOLD",
+            "decision_waivers": {"pilot_hold_for_beta": True},
             "readiness_status": "HOLD",
             "manual_pending": ["staging_real_account_signoff"],
             "sample_gap": {
@@ -4637,6 +4647,7 @@ class SheetbookDailyStartBundleScriptTests(SimpleTestCase):
         self.assertIn("SHEETBOOK_ARCHIVE_BULK_2026-03-03.md", markdown)
         self.assertIn("SHEETBOOK_CONSENT_FREEZE_2026-03-03.md", markdown)
         self.assertIn("unexpected_extra_tokens", markdown)
+        self.assertIn("- pilot_hold_for_beta: `True`", markdown)
 
 
 class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
@@ -4645,6 +4656,7 @@ class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
             readiness={"overall": {"status": "HOLD", "manual_pending": ["staging_real_account_signoff"]}},
             decision={
                 "decision": "HOLD",
+                "decision_context": {"waivers": {"pilot_hold_for_beta": True}},
                 "next_actions": [
                     {
                         "type": "review_hold_reasons",
@@ -4699,6 +4711,7 @@ class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
         self.assertEqual(summary["archive_next_step"], "collect_more_samples")
         self.assertEqual(summary["decision"], "HOLD")
         self.assertEqual(summary["overall"], "HOLD")
+        self.assertTrue(summary["pilot_hold_for_beta"])
 
     def test_build_ops_index_summary_prefers_daily_start_effective_manual_pending(self):
         summary = _build_ops_index_summary(
@@ -4730,6 +4743,7 @@ class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
             summary={
                 "overall": "HOLD",
                 "decision": "HOLD",
+                "pilot_hold_for_beta": True,
                 "readiness_status": "HOLD",
                 "manual_pending": ["staging_real_account_signoff"],
                 "sample_gap_blockers": ["pilot_home_opened_gap:2"],
@@ -4757,6 +4771,7 @@ class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
         self.assertIn("## Next Actions", markdown)
         self.assertIn("[daily_start] 표본 수집 후 bundle 재실행", markdown)
         self.assertIn("run_sheetbook_release_readiness.py --days 14", markdown)
+        self.assertIn("- pilot_hold_for_beta: `True`", markdown)
 
 
 class SheetbookArchiveBulkSnapshotScriptTests(SimpleTestCase):
