@@ -380,7 +380,7 @@
                     <div class="relative flex-shrink-0" x-data="classroomPicker()" @click.away="open = false" x-init="init()">
                         <button @click="open = !open"
                             class="flex items-center gap-2 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700 text-sm xl:text-base"
-                            :title="current ? '현재 학급: ' + current + ' (별빛 추첨기/우리반BTI 명단 자동 적용)' : '기본 학급을 선택하면 별빛 추첨기/우리반BTI 명단에 자동 적용됩니다.'">
+                            :title="current ? '현재 학급: ' + current + ' (로그인 시 자동 선택)' : '기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.'">
                             <i class="fa-solid fa-chalkboard-user text-purple-400"></i>
                             <span x-text="current || '학급 선택'" class="max-w-[120px] truncate"></span>
                             <i class="fa-solid fa-chevron-down text-sm transition-transform" :class="open ? 'rotate-180' : ''"></i>
@@ -396,7 +396,7 @@
                             <div class="clay-card p-2 bg-white/90 backdrop-blur-xl border border-white/50">
                                 <p class="text-xs text-gray-400 font-normal px-3 pt-1">기본 학급 선택</p>
                                 <p class="text-[11px] text-slate-500 px-3 pb-2 leading-4">
-                                    선택한 학급은 별빛 추첨기/우리반BTI 명단에 자동 적용됩니다.
+                                    선택 시 로그인 직후 자동 적용되고, 별빛 추첨기/우리반BTI 명단에도 바로 반영됩니다.
                                 </p>
                                 <template x-for="cls in classrooms" :key="cls.id">
                                     <button @click="select(cls)"
@@ -404,6 +404,7 @@
                                         :class="current === cls.name ? 'bg-purple-50 text-purple-600 font-bold' : 'text-gray-600'">
                                         <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
                                         <span class="text-xl font-bold truncate" x-text="cls.name"></span>
+                                        <span x-show="cls.is_default" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">기본</span>
                                     </button>
                                 </template>
                                 <div class="h-px bg-gray-100 my-1"></div>
@@ -522,7 +523,7 @@
                     <div x-data="classroomPicker()" x-init="init()" class="py-2 border-b border-gray-200/50">
                         <div class="px-3 mb-2">
                             <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
-                            <p class="text-xs text-slate-500 font-medium mt-0.5">선택한 학급은 별빛 추첨기·우리반BTI 명단에 자동 적용됩니다.</p>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">선택 시 로그인 직후 자동 적용되고, 별빛 추첨기·우리반BTI 명단에도 반영됩니다.</p>
                         </div>
                         <div class="flex flex-col gap-1">
                             <template x-for="cls in classrooms" :key="cls.id">
@@ -531,7 +532,8 @@
                                     :class="current === cls.name ? 'bg-purple-100 text-purple-600 font-bold' : 'text-gray-600 hover:bg-purple-50'">
                                     <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
                                     <span class="font-bold" x-text="cls.name"></span>
-                                    <i x-show="current === cls.name" class="fa-solid fa-check ml-auto text-purple-500 text-sm"></i>
+                                    <span x-show="cls.is_default" class="ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">기본</span>
+                                    <i x-show="current === cls.name" class="fa-solid fa-check text-purple-500 text-sm"></i>
                                 </button>
                             </template>
                             <button x-show="current" @click="clear()" class="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-500 text-sm transition-all">
@@ -1312,13 +1314,17 @@
                             'Content-Type': 'application/json',
                             'X-CSRFToken': token
                         },
-                        body: JSON.stringify({source: 'hs', classroom_id: cls.id})
+                        body: JSON.stringify({source: 'hs', classroom_id: cls.id, persist_default: true})
                     }).then(function(r) {
                         if (!r.ok) throw new Error('set classroom failed');
                         return r.json();
                     }).then(function(d) {
                         if (d.status === 'ok') {
                             self.current = d.name || cls.name;
+                            self.classrooms = self.classrooms.map(function(item) {
+                                item.is_default = item.id === cls.id;
+                                return item;
+                            });
                             self.open = false;
                         }
                     }).catch(function() {
@@ -1334,12 +1340,19 @@
                             'Content-Type': 'application/json',
                             'X-CSRFToken': token
                         },
-                        body: JSON.stringify({classroom_id: ''})
+                        body: JSON.stringify({classroom_id: '', persist_default: true})
                     }).then(function(r) {
                         if (!r.ok) throw new Error('clear classroom failed');
                         return r.json();
                     }).then(function(d) {
-                        if (d.status === 'cleared') { self.current = null; self.open = false; }
+                        if (d.status === 'cleared') {
+                            self.current = null;
+                            self.classrooms = self.classrooms.map(function(item) {
+                                item.is_default = false;
+                                return item;
+                            });
+                            self.open = false;
+                        }
                     }).catch(function() {
                         alert('학급 선택 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
                     });

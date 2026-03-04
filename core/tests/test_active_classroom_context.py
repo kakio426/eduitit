@@ -5,6 +5,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 
 from core.context_processors import active_classroom
+from core.models import UserProfile
 from happy_seed.models import HSClassroom
 
 
@@ -31,6 +32,7 @@ class ActiveClassroomContextTest(TestCase):
         context = active_classroom(request)
 
         self.assertIsNone(context["active_classroom"])
+        self.assertIsNone(context["default_classroom_id"])
         self.assertFalse(context["has_hs_classrooms"])
         self.assertEqual(context["hs_classrooms_json"], [])
 
@@ -58,3 +60,17 @@ class ActiveClassroomContextTest(TestCase):
         self.assertIsNone(context["active_classroom"])
         self.assertNotIn("active_classroom_source", request.session)
         self.assertNotIn("active_classroom_id", request.session)
+
+    def test_uses_default_classroom_when_session_is_empty(self):
+        classroom = HSClassroom.objects.create(teacher=self.user, name="4학년 2반")
+        profile = UserProfile.objects.get(user=self.user)
+        profile.default_classroom = classroom
+        profile.save(update_fields=["default_classroom"])
+        request = self._build_request(self.user)
+
+        context = active_classroom(request)
+
+        self.assertEqual(context["active_classroom"].id, classroom.id)
+        self.assertEqual(context["default_classroom_id"], str(classroom.id))
+        self.assertEqual(request.session["active_classroom_source"], "hs")
+        self.assertEqual(request.session["active_classroom_id"], str(classroom.id))

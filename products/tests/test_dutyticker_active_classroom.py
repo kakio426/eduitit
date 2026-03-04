@@ -83,3 +83,23 @@ class DutyTickerActiveClassroomTests(TestCase):
 
         self.assertEqual([row["name"] for row in payload["students"]], ["전역 학생"])
         self.assertEqual([row["name"] for row in payload["roles"]], ["전역 역할"])
+
+    def test_api_data_uses_default_classroom_when_session_is_empty(self):
+        profile = UserProfile.objects.get(user=self.user)
+        profile.default_classroom = self.classroom_b
+        profile.save(update_fields=["default_classroom"])
+
+        DTStudent.objects.create(user=self.user, classroom=self.classroom_b, name="기본반 학생", number=1)
+        DTRole.objects.create(user=self.user, classroom=self.classroom_b, name="기본반 역할", time_slot="점심")
+        DTStudent.objects.create(user=self.user, classroom=None, name="전역 학생", number=2)
+
+        self._set_active_classroom(None)
+        response = self.client.get(reverse("dt_api_data"))
+        self.assertEqual(response.status_code, 200)
+
+        payload = response.json()
+        self.assertEqual([row["name"] for row in payload["students"]], ["기본반 학생"])
+        self.assertEqual([row["name"] for row in payload["roles"]], ["기본반 역할"])
+        session = self.client.session
+        self.assertEqual(session["active_classroom_source"], "hs")
+        self.assertEqual(session["active_classroom_id"], str(self.classroom_b.id))

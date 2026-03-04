@@ -14,6 +14,7 @@ import base64
 import logging
 from urllib.parse import urlencode
 
+from core.active_classroom import get_active_classroom_for_request
 from .models import TestSession, StudentMBTIResult
 from .student_mbti_data import STUDENT_MBTI_RESULTS, STUDENT_QUESTIONS, STUDENT_MBTI_THEMES
 from products.models import Product
@@ -172,20 +173,7 @@ def session_create(request):
         if not session_name:
             session_name = f"검사 세션 ({timezone.now().strftime('%Y-%m-%d %H:%M')})"
 
-        classroom = None
-        source = request.session.get('active_classroom_source')
-        classroom_id = request.session.get('active_classroom_id')
-        if source == 'hs' and classroom_id:
-            try:
-                from happy_seed.models import HSClassroom
-
-                classroom = HSClassroom.objects.get(
-                    pk=classroom_id,
-                    teacher=request.user,
-                    is_active=True,
-                )
-            except Exception:
-                classroom = None
+        classroom = get_active_classroom_for_request(request)
 
         session = TestSession.objects.create(
             teacher=request.user,

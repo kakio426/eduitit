@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from happy_seed.models import HSClassroom
+from core.active_classroom import get_active_classroom_for_request
 from products.models import Product
 
 from .forms import CalendarEventCreateForm
@@ -206,10 +206,7 @@ def _get_integration_setting_for_user(user):
 
 
 def _get_active_classroom_for_user(request):
-    classroom_id = request.session.get("active_classroom_id")
-    if not classroom_id:
-        return None
-    return HSClassroom.objects.filter(id=classroom_id, teacher=request.user, is_active=True).first()
+    return get_active_classroom_for_request(request)
 
 
 def _get_calendar_access_for_user(user):

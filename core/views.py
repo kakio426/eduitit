@@ -19,6 +19,11 @@ from .models import (
     ProductFavorite,
     UserModeration,
 )
+from .active_classroom import (
+    set_active_classroom_session,
+    clear_active_classroom_session,
+    set_default_classroom_for_user,
+)
 from django.contrib import messages
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
@@ -1845,12 +1850,18 @@ def set_active_classroom(request):
 
     source = data.get('source', '')
     cid = data.get('classroom_id', '')
+    persist_default = data.get('persist_default')
+    if isinstance(persist_default, str):
+        persist_default = persist_default.strip().lower() in {'1', 'true', 'yes', 'on'}
+    else:
+        persist_default = bool(persist_default)
 
     # 선택 해제
     if not cid:
-        request.session.pop('active_classroom_source', None)
-        request.session.pop('active_classroom_id', None)
-        return JsonResponse({'status': 'cleared'})
+        clear_active_classroom_session(request)
+        if persist_default:
+            set_default_classroom_for_user(request.user, None)
+        return JsonResponse({'status': 'cleared', 'default_saved': persist_default})
 
     if source == 'hs':
         try:
@@ -1858,9 +1869,14 @@ def set_active_classroom(request):
             classroom = HSClassroom.objects.get(pk=cid, teacher=request.user)
         except Exception:
             return JsonResponse({'error': 'classroom not found'}, status=404)
-        request.session['active_classroom_source'] = 'hs'
-        request.session['active_classroom_id'] = str(classroom.pk)
-        return JsonResponse({'status': 'ok', 'name': classroom.name})
+        set_active_classroom_session(request, classroom)
+        if persist_default:
+            set_default_classroom_for_user(request.user, classroom)
+        return JsonResponse({
+            'status': 'ok',
+            'name': classroom.name,
+            'default_saved': persist_default,
+        })
 
     return JsonResponse({'error': 'unknown source'}, status=400)
 

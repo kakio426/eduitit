@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import UserProfile
 from happy_seed.models import HSClassroom
 
 
@@ -82,3 +83,33 @@ class SetActiveClassroomApiTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "unknown source")
+
+    def test_sets_default_classroom_when_persist_requested(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="5학년 2반")
+
+        response = self._post_json({
+            "source": "hs",
+            "classroom_id": str(classroom.pk),
+            "persist_default": True,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["default_saved"])
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.default_classroom_id, classroom.id)
+
+    def test_clear_resets_default_classroom_when_persist_requested(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="6학년 1반")
+        profile = UserProfile.objects.get(user=self.user)
+        profile.default_classroom = classroom
+        profile.save(update_fields=["default_classroom"])
+
+        response = self._post_json({"classroom_id": "", "persist_default": True})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "cleared")
+        self.assertTrue(response.json()["default_saved"])
+        profile.refresh_from_db()
+        self.assertIsNone(profile.default_classroom_id)
