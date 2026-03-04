@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-03-04 13:38:47",
+  "started_at": "2026-03-04 13:59:26",
   "base_url": "http://127.0.0.1:8015",
   "dataset": {
     "sheetbook_id": 78,
@@ -15,13 +15,13 @@
       "batch_size": 400
     },
     "session_cookie_name": "sessionid",
-    "session_cookie_value": "j1d3p4vv4v7rds2k807mf3tke66e9w8n"
+    "session_cookie_value": "7modbxlkjnvaxy9lyy1sov51u1tv9vgl"
   },
   "desktop": {
     "scenario": "desktop",
     "device": "desktop-default",
     "detail_path": "/sheetbook/78/?tab=78&grid_limit=1000",
-    "initial_render_ms": 2586.746100001619,
+    "initial_render_ms": 2631.7158000019845,
     "final_render_log": {
       "rows_loaded": 1000,
       "rows_total": 1000,
@@ -30,95 +30,35 @@
       "mode": "chunked",
       "chunks": 9,
       "chunk_size": 120,
-      "render_ms": 1034.5,
-      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1034.5",
-      "ts": 19849.4524241
+      "render_ms": 1111.1,
+      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1111.1",
+      "ts": 21089.1965395
     },
     "render_log_count": 1,
     "seek_ms": {
-      "row_0": 145.4106999990472,
-      "row_500": 118.92900000020745,
-      "row_1000": 105.17930000060005
+      "row_0": 112.70629999853554,
+      "row_500": 108.57490000125836,
+      "row_1000": 106.59460000169929
     },
     "edit_results": [
       {
         "ok": true,
         "status": "저장 상태: 저장됨",
-        "wait_ms": 14.11530000041239,
-        "row_index": 0,
-        "attempt": 2
-      },
-      {
-        "ok": true,
-        "status": "저장 상태: 저장됨",
-        "wait_ms": 1424.3892999984382,
-        "row_index": 499,
-        "attempt": 1
-      },
-      {
-        "ok": true,
-        "status": "저장 상태: 저장됨",
-        "wait_ms": 100.78630000134581,
-        "row_index": 999,
-        "attempt": 1
-      }
-    ],
-    "action_layer_visible": true,
-    "final_status": "저장 상태: 저장됨",
-    "console_error_count": 0,
-    "console_errors": [],
-    "ignored_console_error_count": 1,
-    "ignored_console_errors": [
-      "Failed to load resource: the server responded with a status of 409 (Conflict)"
-    ],
-    "console_tail": [
-      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
-      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1034.5",
-      "error: Failed to load resource: the server responded with a status of 409 (Conflict)"
-    ]
-  },
-  "tablet": {
-    "scenario": "tablet",
-    "device": "iPad Pro 11",
-    "detail_path": "/sheetbook/78/?tab=78&grid_limit=1000",
-    "initial_render_ms": 2440.676899997925,
-    "final_render_log": {
-      "rows_loaded": 1000,
-      "rows_total": 1000,
-      "cols": 10,
-      "limit": 1000,
-      "mode": "chunked",
-      "chunks": 9,
-      "chunk_size": 120,
-      "render_ms": 1070.6,
-      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1070.6",
-      "ts": 20044.5774126
-    },
-    "render_log_count": 1,
-    "seek_ms": {
-      "row_0": 95.6711999970139,
-      "row_500": 121.32130000100005,
-      "row_1000": 104.61260000010952
-    },
-    "edit_results": [
-      {
-        "ok": true,
-        "status": "저장 상태: 저장됨",
-        "wait_ms": 3833.352899997408,
+        "wait_ms": 98.7079000005906,
         "row_index": 0,
         "attempt": 1
       },
       {
         "ok": true,
         "status": "저장 상태: 저장됨",
-        "wait_ms": 1408.5316999990027,
+        "wait_ms": 1396.4953000031528,
         "row_index": 499,
         "attempt": 1
       },
       {
         "ok": true,
         "status": "저장 상태: 저장됨",
-        "wait_ms": 188.04939999972703,
+        "wait_ms": 97.491299999092,
         "row_index": 999,
         "attempt": 1
       }
@@ -131,7 +71,64 @@
     "ignored_console_errors": [],
     "console_tail": [
       "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
-      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1070.6"
+      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1111.1"
+    ]
+  },
+  "tablet": {
+    "scenario": "tablet",
+    "device": "iPad Pro 11",
+    "detail_path": "/sheetbook/78/?tab=78&grid_limit=1000",
+    "initial_render_ms": 2415.833900002326,
+    "final_render_log": {
+      "rows_loaded": 1000,
+      "rows_total": 1000,
+      "cols": 10,
+      "limit": 1000,
+      "mode": "chunked",
+      "chunks": 9,
+      "chunk_size": 120,
+      "render_ms": 1096.2,
+      "raw": "[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1096.2",
+      "ts": 21223.279758
+    },
+    "render_log_count": 1,
+    "seek_ms": {
+      "row_0": 128.19590000071912,
+      "row_500": 129.72109999827808,
+      "row_1000": 105.98160000154166
+    },
+    "edit_results": [
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 2793.6588000011398,
+        "row_index": 0,
+        "attempt": 1
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 1436.1814000003505,
+        "row_index": 499,
+        "attempt": 1
+      },
+      {
+        "ok": true,
+        "status": "저장 상태: 저장됨",
+        "wait_ms": 188.9498000018648,
+        "row_index": 999,
+        "attempt": 1
+      }
+    ],
+    "action_layer_visible": true,
+    "final_status": "저장 상태: 저장됨",
+    "console_error_count": 0,
+    "console_errors": [],
+    "ignored_console_error_count": 0,
+    "ignored_console_errors": [],
+    "console_tail": [
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+      "info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1096.2"
     ]
   },
   "evaluation": {
