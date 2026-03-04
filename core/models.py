@@ -16,6 +16,14 @@ class UserProfile(models.Model):
     nickname = models.CharField(max_length=50, blank=True, null=True, verbose_name="별명")
     gemini_api_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Gemini API Key")
     padlet_api_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Padlet API Key")
+    default_classroom = models.ForeignKey(
+        "happy_seed.HSClassroom",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="default_users",
+        verbose_name="기본 학급",
+    )
 
     def __str__(self):
         return self.user.username

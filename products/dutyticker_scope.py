@@ -1,27 +1,9 @@
 from .models import DTSettings
+from core.active_classroom import get_active_classroom_for_request as resolve_active_classroom
 
 
 def get_active_classroom_for_request(request):
-    if not getattr(request, "user", None) or not request.user.is_authenticated:
-        return None
-
-    if request.session.get("active_classroom_source") != "hs":
-        return None
-
-    classroom_id = request.session.get("active_classroom_id")
-    if not classroom_id:
-        return None
-
-    try:
-        from happy_seed.models import HSClassroom
-    except Exception:
-        return None
-
-    return HSClassroom.objects.filter(
-        id=classroom_id,
-        teacher=request.user,
-        is_active=True,
-    ).first()
+    return resolve_active_classroom(request)
 
 
 def classroom_scope_filter(classroom):

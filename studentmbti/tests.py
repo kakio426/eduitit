@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from collect.models import CollectionRequest
 from collect.integration import BTI_SOURCE_STUDENTMBTI
 from collect.models import Submission
+from core.models import UserProfile
 from .models import TestSession, StudentMBTIResult
 from .student_mbti_data import STUDENT_QUESTIONS_LOW, STUDENT_QUESTIONS_HIGH
 from happy_seed.models import HSClassroom
@@ -19,7 +20,6 @@ class StudentMBTITest(TestCase):
             self.user.userprofile.nickname = 'TeacherTest'
             self.user.userprofile.save()
         else:
-            from core.models import UserProfile
             UserProfile.objects.create(user=self.user, nickname='TeacherTest')
         
         self.client = Client()
@@ -65,6 +65,29 @@ class StudentMBTITest(TestCase):
 
         created = TestSession.objects.get(session_name='Classroom Linked Session')
         self.assertEqual(created.classroom_id, classroom.id)
+
+    def test_session_create_uses_default_classroom_when_session_is_empty(self):
+        classroom = HSClassroom.objects.create(teacher=self.user, name='5학년 1반')
+        profile = UserProfile.objects.get(user=self.user)
+        profile.default_classroom = classroom
+        profile.save(update_fields=["default_classroom"])
+
+        session_store = self.client.session
+        session_store.pop('active_classroom_source', None)
+        session_store.pop('active_classroom_id', None)
+        session_store.save()
+
+        response = self.client.post('/studentmbti/session/create/', {
+            'session_name': 'Default Classroom Session',
+            'test_type': 'low',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        created = TestSession.objects.get(session_name='Default Classroom Session')
+        self.assertEqual(created.classroom_id, classroom.id)
+        session_store = self.client.session
+        self.assertEqual(session_store['active_classroom_source'], 'hs')
+        self.assertEqual(session_store['active_classroom_id'], str(classroom.id))
 
     def test_session_test_serves_correct_questions(self):
         """세션 유형에 따라 다른 질문 개수를 반환하는지 확인"""

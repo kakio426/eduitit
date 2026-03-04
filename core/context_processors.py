@@ -1,4 +1,9 @@
 from .models import VisitorLog, SiteConfig
+from .active_classroom import (
+    get_active_classroom_for_request,
+    get_default_classroom_for_user,
+    list_hs_classrooms_for_user,
+)
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import logging
@@ -130,21 +135,31 @@ def seo_meta(request):
 def active_classroom(request):
     """세션에서 현재 학급 정보를 모든 템플릿에 제공."""
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
-        return {'active_classroom': None, 'has_hs_classrooms': False, 'hs_classrooms_json': []}
-    source = request.session.get('active_classroom_source')
-    cid = request.session.get('active_classroom_id')
+        return {
+            'active_classroom': None,
+            'default_classroom_id': None,
+            'has_hs_classrooms': False,
+            'hs_classrooms_json': [],
+        }
+
     classroom = None
+    default_classroom_id = None
     classrooms_data = []
     try:
-        from happy_seed.models import HSClassroom
-        qs = HSClassroom.objects.filter(teacher=request.user, is_active=True).order_by('-created_at')
-        classrooms_data = [{'id': str(c.pk), 'name': c.name} for c in qs]
-        if source == 'hs' and cid:
-            classroom = next((c for c in qs if str(c.pk) == cid), None)
-            if classroom is None:
-                # 학급이 삭제됐거나 비활성화된 경우 세션 초기화
-                request.session.pop('active_classroom_source', None)
-                request.session.pop('active_classroom_id', None)
+        classroom = get_active_classroom_for_request(request)
+        default_classroom = get_default_classroom_for_user(request.user)
+        if default_classroom:
+            default_classroom_id = str(default_classroom.pk)
+
+        qs = list_hs_classrooms_for_user(request.user)
+        classrooms_data = [
+            {
+                'id': str(c.pk),
+                'name': c.name,
+                'is_default': str(c.pk) == default_classroom_id,
+            }
+            for c in qs
+        ]
     except Exception:
         logger.exception(
             "[ActiveClassroom] 학급 컨텍스트 구성 실패 user_id=%s",
@@ -152,6 +167,7 @@ def active_classroom(request):
         )
     return {
         'active_classroom': classroom,
+        'default_classroom_id': default_classroom_id,
         'has_hs_classrooms': bool(classrooms_data),
         'hs_classrooms_json': classrooms_data,
     }
