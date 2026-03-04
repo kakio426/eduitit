@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-03-04 21:21:22",
+  "days": 14,
+  "pilot": {
+    "counts": {
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5,
+      "home_source_action_execute_requested": 3
+    },
+    "minimum_samples": {
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5
+    },
+    "gaps": {
+      "workspace_home_opened_gap": 0,
+      "home_source_sheetbook_created_gap": 0
+    },
+    "ready": true
+  },
+  "archive": {
+    "event_count": 5,
+    "event_gap": 0,
+    "next_step": "continue_monitoring",
+    "ready": true
+  },
+  "overall": {
+    "ready": true,
+    "blockers": [],
+    "next_actions": [
+      {
+        "type": "monitoring",
+        "description": "표본 부족 없음, 주기적으로 gap summary 확인",
+        "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05"
+      }
+    ]
+  }
+}
