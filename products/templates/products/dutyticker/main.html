@@ -46,6 +46,16 @@
         --dt-timer-control-text: #f8fafc;
         --dt-timer-input-bg: rgba(15, 23, 42, 0.3);
         --dt-focus-ring: rgba(129, 140, 248, 0.54);
+        --dt-student-tile-bg: #ffffff;
+        --dt-student-tile-border: #334155;
+        --dt-student-tile-hover: #e2e8f0;
+        --dt-student-tile-text: #0f172a;
+        --dt-student-tile-active-text: #ffffff;
+        --dt-student-tile-active-border: rgba(129, 140, 248, 0.75);
+        --dt-student-spotlight-idle-bg: #e2e8f0;
+        --dt-student-spotlight-idle-text: #475569;
+        --dt-student-spotlight-active-bg: #6366f1;
+        --dt-student-spotlight-active-text: #ffffff;
     }
 
     body {
@@ -144,11 +154,11 @@
     html[data-theme="vivid"] .bg-slate-900\/85 { background-color: rgba(255, 255, 255, 0.95) !important; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15); }
     html[data-theme="vivid"] .bg-slate-900\/60 { background-color: rgba(254, 243, 199, 0.8) !important; }
     html[data-theme="vivid"] .bg-slate-900\/40 { background-color: rgba(253, 230, 138, 0.6) !important; }
-    html[data-theme="vivid"] .bg-slate-800 { background-color: #ffffff !important; border: 2px solid #fcd34d !important; }
+    html[data-theme="vivid"] .bg-slate-800 { background-color: #ffffff !important; }
     html[data-theme="vivid"] .bg-slate-800\/70 { background-color: rgba(255, 255, 255, 0.9) !important; }
-    html[data-theme="vivid"] .bg-slate-800\/50 { background-color: rgba(255, 255, 255, 0.9) !important; border: 2px solid #fde68a !important;}
-    html[data-theme="vivid"] .bg-slate-800\/40 { background-color: rgba(255, 255, 255, 0.8) !important; box-shadow: 6px 6px 0px rgba(245, 158, 11, 0.1) !important; border: 3px solid #fcd34d !important;}
-    html[data-theme="vivid"] .bg-slate-800\/30 { background-color: rgba(255, 255, 255, 0.7) !important; border-left: 4px solid #f59e0b !important; }
+    html[data-theme="vivid"] .bg-slate-800\/50 { background-color: rgba(255, 255, 255, 0.9) !important; }
+    html[data-theme="vivid"] .bg-slate-800\/40 { background-color: rgba(255, 255, 255, 0.8) !important; box-shadow: 6px 6px 0px rgba(245, 158, 11, 0.1) !important; }
+    html[data-theme="vivid"] .bg-slate-800\/30 { background-color: rgba(255, 255, 255, 0.7) !important; }
     html[data-theme="vivid"] .bg-slate-700\/50 { background-color: rgba(253, 230, 138, 0.8) !important; }
     html[data-theme="vivid"] .bg-slate-700 { background-color: #fef3c7 !important; border-radius: 12px; }
     html[data-theme="vivid"] .hover\:bg-slate-700:hover { background-color: #fde68a !important; }
@@ -169,8 +179,8 @@
     html[data-theme="vivid"] .text-indigo-300 { color: #db2777 !important; }
     html[data-theme="vivid"] .text-indigo-200, html[data-theme="vivid"] .text-indigo-100 { color: #9d174d !important; }
     html[data-theme="vivid"] .bg-indigo-500\/10, html[data-theme="vivid"] .bg-indigo-600\/20 { background-color: rgba(236, 72, 153, 0.1) !important; }
-    html[data-theme="vivid"] .from-indigo-600 { --tw-gradient-from: #ec4899 !important; --tw-gradient-to: rgba(236, 72, 153, 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; border: 4px solid #db2777; box-shadow: 8px 8px 0px rgba(219, 39, 119, 0.2) !important;}
-    html[data-theme="vivid"] .to-violet-700 { --tw-gradient-to: #a855f7 !important; }
+    html[data-theme="vivid"] .from-indigo-600 { --tw-gradient-from: #f97316 !important; --tw-gradient-to: rgba(249, 115, 22, 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+    html[data-theme="vivid"] .to-violet-700 { --tw-gradient-to: #e11d48 !important; }
     html[data-theme="vivid"] .border-indigo-500\/20 { border-color: transparent !important; }
     html[data-theme="vivid"] .text-white\/40 { color: rgba(120, 53, 15, 0.4) !important; }
     html[data-theme="vivid"] .hover\:text-white:hover { color: #78350f !important; }
@@ -190,9 +200,9 @@
         --dt-panel-border: #cbd5e1;
         --dt-panel-text: #0f172a;
         --dt-panel-muted: #475569;
-        --dt-role-row-bg: #f8fafc;
-        --dt-role-row-hover: #eef2ff;
-        --dt-role-row-border: #cbd5e1;
+        --dt-role-row-bg: #fff7ed;
+        --dt-role-row-hover: #ffedd5;
+        --dt-role-row-border: #e4d2bd;
         --dt-role-slot: #475569;
         --dt-role-name: #0f172a;
         --dt-role-assignee-bg: #e0e7ff;
@@ -211,16 +221,26 @@
         --dt-spotlight-badge-bg: #c7d2fe;
         --dt-spotlight-badge-text: #312e81;
         --dt-spotlight-badge-border: #818cf8;
-        --dt-timer-from: #1e3a8a;
-        --dt-timer-to: #5b21b6;
-        --dt-timer-border: rgba(129, 140, 248, 0.54);
+        --dt-timer-from: #f59e0b;
+        --dt-timer-to: #f97316;
+        --dt-timer-border: rgba(245, 158, 11, 0.58);
         --dt-timer-text: #ffffff;
-        --dt-timer-control-bg: rgba(15, 23, 42, 0.34);
-        --dt-timer-control-bg-hover: rgba(15, 23, 42, 0.5);
+        --dt-timer-control-bg: rgba(124, 45, 18, 0.32);
+        --dt-timer-control-bg-hover: rgba(124, 45, 18, 0.48);
         --dt-timer-control-border: rgba(255, 255, 255, 0.36);
         --dt-timer-control-text: #f8fafc;
-        --dt-timer-input-bg: rgba(15, 23, 42, 0.32);
-        --dt-focus-ring: rgba(129, 140, 248, 0.56);
+        --dt-timer-input-bg: rgba(124, 45, 18, 0.3);
+        --dt-focus-ring: rgba(251, 146, 60, 0.62);
+        --dt-student-tile-bg: #ffffff;
+        --dt-student-tile-border: #d3bfa5;
+        --dt-student-tile-hover: #fff1e6;
+        --dt-student-tile-text: #111827;
+        --dt-student-tile-active-text: #ffffff;
+        --dt-student-tile-active-border: rgba(251, 146, 60, 0.8);
+        --dt-student-spotlight-idle-bg: #fde7d1;
+        --dt-student-spotlight-idle-text: #9a3412;
+        --dt-student-spotlight-active-bg: #ea580c;
+        --dt-student-spotlight-active-text: #ffffff;
     }
 
     html[data-theme="pastel"] {
@@ -233,9 +253,9 @@
         --dt-panel-border: #bfe5d2;
         --dt-panel-text: #0f172a;
         --dt-panel-muted: #475569;
-        --dt-role-row-bg: #ecfdf5;
+        --dt-role-row-bg: #f0fdf4;
         --dt-role-row-hover: #dcfce7;
-        --dt-role-row-border: #bfe5d2;
+        --dt-role-row-border: #9ed9bc;
         --dt-role-slot: #475569;
         --dt-role-name: #0f172a;
         --dt-role-assignee-bg: #d1fae5;
@@ -255,15 +275,25 @@
         --dt-spotlight-badge-text: #115e59;
         --dt-spotlight-badge-border: #5eead4;
         --dt-timer-from: #0f766e;
-        --dt-timer-to: #1d4ed8;
-        --dt-timer-border: rgba(45, 212, 191, 0.46);
+        --dt-timer-to: #15803d;
+        --dt-timer-border: rgba(16, 185, 129, 0.56);
         --dt-timer-text: #ffffff;
-        --dt-timer-control-bg: rgba(2, 44, 34, 0.34);
-        --dt-timer-control-bg-hover: rgba(2, 44, 34, 0.5);
+        --dt-timer-control-bg: rgba(2, 44, 34, 0.38);
+        --dt-timer-control-bg-hover: rgba(2, 44, 34, 0.56);
         --dt-timer-control-border: rgba(255, 255, 255, 0.34);
         --dt-timer-control-text: #f8fafc;
         --dt-timer-input-bg: rgba(2, 44, 34, 0.3);
-        --dt-focus-ring: rgba(45, 212, 191, 0.5);
+        --dt-focus-ring: rgba(16, 185, 129, 0.6);
+        --dt-student-tile-bg: #ffffff;
+        --dt-student-tile-border: #9ed9bc;
+        --dt-student-tile-hover: #ecfdf5;
+        --dt-student-tile-text: #0f172a;
+        --dt-student-tile-active-text: #ffffff;
+        --dt-student-tile-active-border: rgba(16, 185, 129, 0.82);
+        --dt-student-spotlight-idle-bg: #d1fae5;
+        --dt-student-spotlight-idle-text: #065f46;
+        --dt-student-spotlight-active-bg: #059669;
+        --dt-student-spotlight-active-text: #ffffff;
     }
 
     html[data-theme="vivid"] {
@@ -277,7 +307,7 @@
         --dt-panel-text: #111827;
         --dt-panel-muted: #4b5563;
         --dt-role-row-bg: #fff7ed;
-        --dt-role-row-hover: #ffedd5;
+        --dt-role-row-hover: #fee2e2;
         --dt-role-row-border: #e5d0b3;
         --dt-role-slot: #6b7280;
         --dt-role-name: #111827;
@@ -297,16 +327,26 @@
         --dt-spotlight-badge-bg: #fbcfe8;
         --dt-spotlight-badge-text: #9d174d;
         --dt-spotlight-badge-border: #f472b6;
-        --dt-timer-from: #6d28d9;
-        --dt-timer-to: #be185d;
-        --dt-timer-border: rgba(236, 72, 153, 0.52);
+        --dt-timer-from: #f97316;
+        --dt-timer-to: #e11d48;
+        --dt-timer-border: rgba(244, 63, 94, 0.58);
         --dt-timer-text: #ffffff;
-        --dt-timer-control-bg: rgba(76, 29, 149, 0.34);
-        --dt-timer-control-bg-hover: rgba(76, 29, 149, 0.52);
+        --dt-timer-control-bg: rgba(127, 29, 29, 0.34);
+        --dt-timer-control-bg-hover: rgba(127, 29, 29, 0.52);
         --dt-timer-control-border: rgba(255, 255, 255, 0.36);
-        --dt-timer-control-text: #fdf2f8;
-        --dt-timer-input-bg: rgba(76, 29, 149, 0.3);
-        --dt-focus-ring: rgba(244, 114, 182, 0.5);
+        --dt-timer-control-text: #ffffff;
+        --dt-timer-input-bg: rgba(127, 29, 29, 0.3);
+        --dt-focus-ring: rgba(251, 146, 60, 0.62);
+        --dt-student-tile-bg: #ffffff;
+        --dt-student-tile-border: #e5d0b3;
+        --dt-student-tile-hover: #fff1e6;
+        --dt-student-tile-text: #111827;
+        --dt-student-tile-active-text: #ffffff;
+        --dt-student-tile-active-border: rgba(244, 63, 94, 0.82);
+        --dt-student-spotlight-idle-bg: #fde2e8;
+        --dt-student-spotlight-idle-text: #9d174d;
+        --dt-student-spotlight-active-bg: #e11d48;
+        --dt-student-spotlight-active-text: #ffffff;
     }
 
     html[data-theme="sunny"] #mainAppContainer,
@@ -378,6 +418,7 @@
     #mainAppContainer #randomPickerPanel {
         background: var(--dt-panel-bg) !important;
         border-color: var(--dt-panel-border) !important;
+        border-width: 1.5px !important;
         color: var(--dt-panel-text) !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
@@ -392,6 +433,7 @@
     #mainAppContainer .dt-timer-card {
         background: linear-gradient(135deg, var(--dt-timer-from), var(--dt-timer-to)) !important;
         border-color: var(--dt-timer-border) !important;
+        border-width: 2px !important;
         color: var(--dt-timer-text) !important;
         box-shadow: 0 22px 54px rgba(2, 6, 23, 0.34);
     }
@@ -453,17 +495,23 @@
     #mainAppContainer #mainRoleList .dt-role-row {
         background: var(--dt-role-row-bg) !important;
         border-color: var(--dt-role-row-border) !important;
+        border-width: 1.5px !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08) !important;
+        padding: 0.85rem 0.95rem !important;
+        transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
     }
 
     #mainAppContainer #mainRoleList .dt-role-row:hover {
         background: var(--dt-role-row-hover) !important;
+        transform: translateY(-1px);
     }
 
     #mainAppContainer #mainRoleList .dt-role-row.dt-role-current-spotlight {
         border-color: var(--dt-spotlight-border) !important;
         background: var(--dt-spotlight-bg) !important;
         animation: none !important;
-        box-shadow: 0 0 0 1px var(--dt-spotlight-border);
+        box-shadow: 0 0 0 2px var(--dt-spotlight-border);
     }
 
     #mainAppContainer #mainRoleList .dt-role-spotlight-badge {
@@ -474,16 +522,56 @@
 
     #mainAppContainer #mainRoleList .dt-role-slot {
         color: var(--dt-role-slot) !important;
+        font-size: 0.68rem !important;
+        letter-spacing: 0.14em !important;
+        text-transform: uppercase;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
+        font-size: clamp(1.15rem, 1.8vw, 1.45rem) !important;
+        line-height: 1.15 !important;
+        letter-spacing: -0.01em;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name.is-completed {
-        opacity: 0.55;
+        opacity: 0.76;
         text-decoration: line-through;
         text-decoration-thickness: 2px;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-status {
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.42rem;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-main {
+        min-width: 0;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-width: 0;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-assignee-label {
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+        color: var(--dt-role-slot) !important;
+        white-space: nowrap;
     }
 
     #mainAppContainer #mainRoleList .dt-role-status.is-pending {
@@ -498,6 +586,12 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
+        font-size: 1rem !important;
+        font-weight: 900;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee.is-completed {
@@ -680,25 +774,25 @@
     }
 
     #mainStudentCard {
-        flex: 0 0 clamp(13.5rem, 30vh, 18rem);
-        min-height: clamp(13.5rem, 30vh, 18rem);
-        max-height: clamp(13.5rem, 30vh, 18rem);
+        flex: 0 0 clamp(13.4rem, 28vh, 17.2rem);
+        min-height: clamp(13.4rem, 28vh, 17.2rem);
+        max-height: clamp(13.4rem, 28vh, 17.2rem);
     }
 
     .dt-student-card-fit-25 {
         min-height: 0;
-        max-height: clamp(13.5rem, 30vh, 18rem);
+        max-height: clamp(13.4rem, 28vh, 17.2rem);
     }
 
     .dt-student-grid {
-        grid-auto-rows: minmax(0, 1fr);
-        gap: 0.5rem !important;
+        grid-auto-rows: minmax(2.05rem, 1fr);
+        gap: 0.34rem !important;
     }
 
     .dt-student-grid-fit-25 {
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(0, 1fr);
-        gap: 0.44rem !important;
+        grid-auto-rows: minmax(1.95rem, 1fr);
+        gap: 0.3rem !important;
         overflow-y: hidden !important;
         padding-right: 0 !important;
         align-content: stretch;
@@ -706,18 +800,26 @@
 
     #mainStudentGrid .dt-student-tile {
         min-height: 0;
-        padding: 0.3rem 0.28rem;
-        gap: 0.14rem;
-        border-radius: 0.8rem;
+        padding: 0.16rem 0.32rem;
+        border-radius: 0.64rem;
         user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--dt-student-tile-bg) !important;
+        border-color: var(--dt-student-tile-border) !important;
+        color: var(--dt-student-tile-text) !important;
+        transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
 
-    #mainStudentGrid .dt-student-number {
-        min-width: 1.55rem;
-        height: 1.2rem;
-        border-radius: 9999px;
-        font-size: 0.66rem;
-        line-height: 1;
+    #mainStudentGrid .dt-student-tile:hover {
+        background: var(--dt-student-tile-hover) !important;
+        transform: translateY(-1px);
+    }
+
+    #mainStudentGrid .dt-student-tile.is-done {
+        background: linear-gradient(135deg, var(--dt-timer-from), var(--dt-timer-to)) !important;
+        border-color: var(--dt-student-tile-active-border) !important;
     }
 
     #mainStudentGrid .dt-student-name {
@@ -727,95 +829,97 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        line-height: 1.06;
+        line-height: 1.08;
+        font-weight: 900;
+        color: var(--dt-student-tile-text) !important;
+        letter-spacing: -0.01em;
+    }
+
+    #mainStudentGrid .dt-student-tile.is-done .dt-student-name {
+        color: var(--dt-student-tile-active-text) !important;
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.8rem, 0.78rem + 0.14vw, 0.92rem);
+        font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.08rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.74rem, 0.72rem + 0.12vw, 0.84rem);
+        font-size: clamp(0.88rem, 0.84rem + 0.16vw, 0.98rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.66rem, 0.64rem + 0.1vw, 0.76rem);
+        font-size: clamp(0.8rem, 0.76rem + 0.14vw, 0.9rem);
         letter-spacing: -0.01em;
     }
 
     #mainStudentGrid .dt-student-spotlight-btn {
-        width: 1rem;
-        height: 1rem;
-        top: 0.16rem;
-        right: 0.16rem;
-        font-size: 0.52rem;
+        width: 0.82rem;
+        height: 0.82rem;
+        top: 0.1rem;
+        right: 0.1rem;
+        font-size: 0.42rem;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: var(--dt-student-spotlight-idle-bg) !important;
+        color: var(--dt-student-spotlight-idle-text) !important;
+    }
+
+    #mainStudentGrid .dt-student-tile.is-spotlight {
+        box-shadow: inset 0 0 0 1.5px var(--dt-spotlight-border), 0 0 0 1px var(--dt-spotlight-border);
+    }
+
+    #mainStudentGrid .dt-student-tile.is-spotlight .dt-student-spotlight-btn,
+    #mainStudentGrid .dt-student-spotlight-btn.is-active {
+        border-color: transparent;
+        background: var(--dt-student-spotlight-active-bg) !important;
+        color: var(--dt-student-spotlight-active-text) !important;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-tile {
         min-height: 0;
-        padding: 0.26rem 0.22rem;
-        gap: 0.12rem;
-        border-radius: 0.72rem;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25 .dt-student-number {
-        min-width: 1.38rem;
-        height: 1.08rem;
-        font-size: 0.62rem;
+        padding: 0.14rem 0.28rem;
+        border-radius: 0.58rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.74rem, 0.72rem + 0.1vw, 0.84rem);
+        font-size: clamp(0.88rem, 0.84rem + 0.14vw, 0.98rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.68rem, 0.66rem + 0.08vw, 0.76rem);
+        font-size: clamp(0.82rem, 0.78rem + 0.12vw, 0.9rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.62rem, 0.6rem + 0.08vw, 0.7rem);
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-number {
-        min-width: 1.52rem;
-        height: 1.16rem;
-        font-size: 0.66rem;
-    }
-
-    #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-number {
-        min-width: 1.44rem;
-        height: 1.12rem;
-        font-size: 0.64rem;
+        font-size: clamp(0.75rem, 0.71rem + 0.1vw, 0.83rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.79rem, 0.77rem + 0.1vw, 0.9rem);
+        font-size: clamp(0.9rem, 0.86rem + 0.12vw, 1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.76rem, 0.74rem + 0.08vw, 0.84rem);
+        font-size: clamp(0.86rem, 0.82rem + 0.1vw, 0.95rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.73rem, 0.7rem + 0.08vw, 0.8rem);
+        font-size: clamp(0.82rem, 0.79rem + 0.1vw, 0.9rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.69rem, 0.67rem + 0.08vw, 0.76rem);
+        font-size: clamp(0.78rem, 0.75rem + 0.1vw, 0.86rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.6rem, 0.58rem + 0.08vw, 0.68rem);
+        font-size: clamp(0.72rem, 0.69rem + 0.08vw, 0.8rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-spotlight-btn {
-        width: 0.88rem;
-        height: 0.88rem;
-        top: 0.12rem;
-        right: 0.12rem;
-        font-size: 0.48rem;
+        width: 0.74rem;
+        height: 0.74rem;
+        top: 0.08rem;
+        right: 0.08rem;
+        font-size: 0.38rem;
     }
 
     #headerScheduleStrip {
@@ -1391,7 +1495,7 @@
 
                 <!-- Student Grid Container -->
                 <div id="mainStudentGrid"
-                    class="dt-student-grid grid grid-cols-6 lg:grid-cols-8 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
+                    class="dt-student-grid grid grid-cols-5 lg:grid-cols-6 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
                     <div class="col-span-full text-center text-sm font-semibold text-slate-500 py-8">
                         학생 데이터를 불러오는 중입니다.
                     </div>
@@ -1700,7 +1804,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304b"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {

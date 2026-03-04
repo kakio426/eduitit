@@ -99,6 +99,20 @@ class SetActiveClassroomApiTest(TestCase):
         profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(profile.default_classroom_id, classroom.id)
 
+    def test_selection_persists_default_even_without_persist_flag(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
+
+        response = self._post_json({
+            "source": "hs",
+            "classroom_id": str(classroom.pk),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["default_saved"])
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.default_classroom_id, classroom.id)
+
     def test_clear_resets_default_classroom_when_persist_requested(self):
         self.client.force_login(self.user)
         classroom = HSClassroom.objects.create(teacher=self.user, name="6학년 1반")
