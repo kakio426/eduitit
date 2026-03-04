@@ -1714,10 +1714,13 @@ def service_guide_detail(request, pk):
         product__is_active=True
     )
     sections = manual.sections.all()
+    launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
     
     return render(request, 'core/service_guide_detail.html', {
         'manual': manual,
-        'sections': sections
+        'sections': sections,
+        'launch_href': launch_href,
+        'launch_is_external': launch_is_external,
     })
 
 
