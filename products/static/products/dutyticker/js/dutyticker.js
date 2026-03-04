@@ -461,29 +461,30 @@ class DutyTickerManager {
             const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
             const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
             const spotlightBadge = isSpotlightRole
-                ? '<span class="dt-role-spotlight-badge ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-black border">집중</span>'
+                ? '<span class="dt-role-spotlight-badge inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black border">집중</span>'
                 : '';
             const statusBadge = isCompleted
                 ? '<span class="dt-role-status is-completed text-[11px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
                 : '<span class="dt-role-status is-pending text-[11px] font-black uppercase tracking-wider">진행중</span>';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
             return `
-                <div class="dt-role-row flex items-center p-3.5 lg:p-3 rounded-[1.35rem] border transition-all cursor-pointer group shadow-lg ${spotlightClass}"
+                <div class="dt-role-row border cursor-pointer ${spotlightClass}"
                     role="button"
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
                     onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.openStudentModal(${roleId}); }">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center gap-2 mb-1.5">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <p class="dt-role-slot text-[11px] font-extrabold tracking-[0.16em]">${safeTimeSlot}</p>
-                                ${spotlightBadge}
-                            </div>
-                            ${statusBadge}
+                    <div class="dt-role-top">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <p class="dt-role-slot">${safeTimeSlot}</p>
+                            ${spotlightBadge}
                         </div>
-                        <div class="flex justify-between items-center gap-2 text-xl font-black">
-                            <p class="dt-role-name text-[1.55rem] lg:text-[1.65rem] leading-tight truncate ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
-                            <div class="dt-role-assignee text-lg lg:text-xl ${assigneeToneClass} px-3.5 py-1 rounded-xl border shrink-0 leading-tight">${safeAssignee}</div>
+                        ${statusBadge}
+                    </div>
+                    <div class="dt-role-main min-w-0">
+                        <p class="dt-role-name truncate ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
+                        <div class="dt-role-assignee-wrap">
+                            <span class="dt-role-assignee-label">담당</span>
+                            <div class="dt-role-assignee ${assigneeToneClass} px-3 py-1 rounded-lg border leading-tight">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -547,21 +548,25 @@ class DutyTickerManager {
             const safeStudentName = this.escapeHtml(student.name);
             const isSpotlight = Number(this.spotlightStudentId) === Number(student.id);
             const nameSizeClass = this.getStudentNameSizeClass(student.name);
+            const tileStateClass = `${isDone ? 'is-done' : ''} ${isSpotlight ? 'is-spotlight' : ''}`.trim();
+            const spotlightButtonClass = isSpotlight ? 'is-active' : '';
+            const studentTitle = `${safeStudentNumber}번 ${safeStudentName}`;
             return `
-                <div class="dt-student-tile relative border border-slate-700 bg-slate-800/50 flex flex-col items-center justify-center cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''} ${isSpotlight ? 'ring-2 ring-indigo-400 bg-indigo-500/10' : ''}"
-                    onclick="window.dtApp.handleStudentStatusToggle(${studentId})">
+                <div class="dt-student-tile relative border cursor-pointer ${tileStateClass}"
+                    role="button"
+                    tabindex="0"
+                    aria-label="${studentTitle}"
+                    onclick="window.dtApp.handleStudentStatusToggle(${studentId})"
+                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.handleStudentStatusToggle(${studentId}); }">
                     <button
                         type="button"
                         onclick="event.stopPropagation(); window.dtApp.toggleSpotlightStudent(${studentId})"
-                        class="dt-student-spotlight-btn absolute rounded-full flex items-center justify-center font-black transition ${isSpotlight ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-indigo-500 hover:text-white'}"
+                        class="dt-student-spotlight-btn is-compact absolute rounded-full flex items-center justify-center font-black transition ${spotlightButtonClass}"
                         title="${isSpotlight ? '반짝임 해제' : '반짝이기'}"
                     >
                         <i class="fa-solid fa-sparkles"></i>
                     </button>
-                    <div class="dt-student-number px-1 rounded-full flex items-center justify-center font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
-                        ${safeStudentNumber}
-                    </div>
-                    <span class="dt-student-name ${nameSizeClass} font-black ${isDone ? 'text-emerald-300' : 'text-slate-200'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
+                    <span class="dt-student-name ${nameSizeClass}" title="${studentTitle}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
