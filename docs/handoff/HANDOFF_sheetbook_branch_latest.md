@@ -345,6 +345,22 @@ Status: Working branch handoff (2026-03-04 10:04)
   - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
 
+## 1-14) 2026-03-04 전체 스모크 타임스탬프 동기화 (allowlist/consent/grid)
+
+- 실행:
+  - `python scripts/run_sheetbook_allowlist_smoke.py`
+  - `python scripts/run_sheetbook_consent_smoke.py`
+  - `python scripts/run_sheetbook_grid_smoke.py --port 8015`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python manage.py check`
+- 결과:
+  - `smoke_sheetbook_allowlist_latest.json`: `evaluation.pass=true` (`started_at=2026-03-04 10:06:14`)
+  - `smoke_sheetbook_consent_recipients_latest.json`: `evaluation.pass=true` (`started_at=2026-03-04 10:06:27`)
+  - `smoke_sheetbook_grid_1000_latest.json`: `evaluation.pass=true` (`started_at=2026-03-04 10:06:57`)
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
