@@ -1,5 +1,5 @@
 # HANDOFF: Sheetbook Branch Working Snapshot (latest)
-Status: Working branch handoff (2026-03-04 09:54)
+Status: Working branch handoff (2026-03-04 10:00)
 
 작성일: 2026-03-03
 대상 저장소: `eduitit`
@@ -10,7 +10,7 @@ Status: Working branch handoff (2026-03-04 09:54)
 
 - current branch: `feature/sheetbook`
 - tracking: `origin/feature/sheetbook`
-- latest backup commit: `bb19742` (`fix(sheetbook): ignore transient DNS console noise in grid smoke`)
+- latest backup commit: `f284354` (`chore(sheetbook): align allowlist and consent smoke snapshots`)
 - main은 미머지 상태 유지
 
 작업 트리(sheetbook 관련만):
