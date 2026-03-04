@@ -371,6 +371,27 @@ Status: Working branch handoff (2026-03-04 10:27)
   - `System check identified no issues`
   - 테스트 실행 후 작업트리 기준 sheetbook 변경 없음(운영 산출물/코드 무변경)
 
+## 1-16) 2026-03-04 체크리스트 풀런 재실행 (게이트/스냅샷/인덱스)
+
+- 실행:
+  - `python scripts/run_sheetbook_release_readiness.py --days 14`
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action "monitoring 유지 (daily/gap 재확인)" --due-date 2026-03-05`
+  - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
+  - `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
+  - `python scripts/run_sheetbook_archive_bulk_snapshot.py --days 14`
+  - `python scripts/run_sheetbook_consent_freeze_snapshot.py`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-04`
+  - `python manage.py check`
+- 결과:
+  - `sheetbook_release_readiness_latest.json`: `overall.status=PASS`
+  - `sheetbook_release_decision_latest.json`: `decision=GO`
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+  - `SHEETBOOK_OPS_INDEX_2026-03-04.md`: `overall=GO`, `decision=GO`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화

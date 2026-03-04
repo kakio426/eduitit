@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-04 10:12:23",
+  "generated_at": "2026-03-04 10:39:00",
   "readiness_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_release_readiness_latest.json",
   "manual_file": "C:\\Users\\kakio\\eduitit\\docs\\handoff\\sheetbook_manual_signoff_latest.json",
   "readiness_overall": {
@@ -19,27 +19,27 @@
     "staging_allowlisted": {
       "status": "PASS",
       "notes": "staging-ok",
-      "updated_at": "2026-03-04 10:03:02"
+      "updated_at": "2026-03-04 10:38:49"
     },
     "staging_non_allowlisted": {
       "status": "PASS",
       "notes": "staging-ok",
-      "updated_at": "2026-03-04 10:03:02"
+      "updated_at": "2026-03-04 10:38:49"
     },
     "production_allowlisted": {
       "status": "PASS",
       "notes": "prod-ok",
-      "updated_at": "2026-03-04 10:03:02"
+      "updated_at": "2026-03-04 10:38:49"
     },
     "production_non_allowlisted": {
       "status": "PASS",
       "notes": "prod-ok",
-      "updated_at": "2026-03-04 10:03:02"
+      "updated_at": "2026-03-04 10:38:49"
     },
     "real_device_grid_1000": {
       "status": "PASS",
       "notes": "waived_by_policy(device-unavailable)",
-      "updated_at": "2026-03-04 10:12:23"
+      "updated_at": "2026-03-04 10:39:00"
     }
   },
   "decision": "GO",
