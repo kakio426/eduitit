@@ -44,6 +44,8 @@ class DutyTickerManager {
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
         this.missionSaveRequestId = 0;
         this.missionSaving = false;
+        this.missionPanelCollapsed = true;
+        this.missionPanelStorageKey = 'dt-mission-panel-collapsed-v1';
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -60,6 +62,8 @@ class DutyTickerManager {
         this.setupEventListeners();
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
+        this.restoreMissionPanelState();
+        this.applyMissionPanelState();
         this.restoreTimerState();
         this.updateTimerDisplay();
         this.updateSoundUI();
@@ -96,6 +100,7 @@ class DutyTickerManager {
         this.bindButtonAction('timerPreset10Btn', () => this.setTimerMode(600, true));
         this.bindButtonAction('timerCustomApplyBtn', () => this.applyCustomTimerMinutes());
         this.bindButtonAction('timerResetBtn', () => this.resetTimer());
+        this.bindButtonAction('missionPanelToggleBtn', () => this.toggleMissionPanel());
 
         this.setupInlineMissionEditor();
 
@@ -420,6 +425,51 @@ class DutyTickerManager {
         const descEl = document.getElementById('mainMissionDesc');
         if (titleEl && document.activeElement !== titleEl) titleEl.textContent = this.missionTitle;
         if (descEl && document.activeElement !== descEl) descEl.textContent = this.missionDesc;
+    }
+
+    restoreMissionPanelState() {
+        try {
+            const saved = localStorage.getItem(this.missionPanelStorageKey);
+            if (saved === null) {
+                this.missionPanelCollapsed = true;
+                return;
+            }
+            this.missionPanelCollapsed = saved === '1';
+        } catch (error) {
+            this.missionPanelCollapsed = true;
+            console.warn('DutyTicker: failed to restore mission panel state', error);
+        }
+    }
+
+    saveMissionPanelState() {
+        try {
+            localStorage.setItem(this.missionPanelStorageKey, this.missionPanelCollapsed ? '1' : '0');
+        } catch (error) {
+            console.warn('DutyTicker: failed to save mission panel state', error);
+        }
+    }
+
+    applyMissionPanelState() {
+        const card = document.getElementById('mainStudentCard');
+        const toggleBtn = document.getElementById('missionPanelToggleBtn');
+        const toggleText = document.getElementById('missionPanelToggleText');
+        const expanded = !this.missionPanelCollapsed;
+
+        if (card) card.classList.toggle('is-collapsed', this.missionPanelCollapsed);
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            toggleBtn.setAttribute('aria-label', expanded ? '미션 현황 접기' : '미션 현황 펼치기');
+            toggleBtn.setAttribute('title', expanded ? '미션 현황 접기' : '미션 현황 펼치기');
+        }
+        if (toggleText) toggleText.textContent = expanded ? '접기' : '펼치기';
+
+        this.applyStudentGridLayoutMode();
+    }
+
+    toggleMissionPanel() {
+        this.missionPanelCollapsed = !this.missionPanelCollapsed;
+        this.applyMissionPanelState();
+        this.saveMissionPanelState();
     }
 
     renderRoleList() {

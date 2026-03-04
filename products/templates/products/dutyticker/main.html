@@ -13,6 +13,10 @@
         --dt-font-ui: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
         --dt-font-code: "JetBrains Mono", "D2Coding", "SFMono-Regular", "Consolas", "Menlo", monospace;
         --dt-page-gutter: clamp(0.85rem, 1.6vw, 1.4rem);
+        --dt-right-rail-min: 22.5rem;
+        --dt-right-rail-fluid: 24.5vw;
+        --dt-right-rail-max: 27.5rem;
+        --dt-mission-collapsed-height: clamp(6.2rem, 8.2vh, 7.1rem);
         --dt-indigo: #6366f1;
         --dt-violet: #8b5cf6;
         --dt-emerald: #10b981;
@@ -215,7 +219,7 @@
         --dt-role-row-bg: #fff7ed;
         --dt-role-row-hover: #ffedd5;
         --dt-role-row-border: #e4d2bd;
-        --dt-role-slot: #475569;
+        --dt-role-slot: #334155;
         --dt-role-name: #0f172a;
         --dt-role-assignee-bg: #e0e7ff;
         --dt-role-assignee-border: #a5b4fc;
@@ -270,7 +274,7 @@
         --dt-role-row-bg: #f0fdf4;
         --dt-role-row-hover: #dcfce7;
         --dt-role-row-border: #9ed9bc;
-        --dt-role-slot: #475569;
+        --dt-role-slot: #334155;
         --dt-role-name: #0f172a;
         --dt-role-assignee-bg: #d1fae5;
         --dt-role-assignee-border: #6ee7b7;
@@ -325,7 +329,7 @@
         --dt-role-row-bg: #fff7ed;
         --dt-role-row-hover: #fee2e2;
         --dt-role-row-border: #e5d0b3;
-        --dt-role-slot: #4b5563;
+        --dt-role-slot: #374151;
         --dt-role-name: #111827;
         --dt-role-assignee-bg: #fce7f3;
         --dt-role-assignee-border: #f9a8d4;
@@ -333,7 +337,7 @@
         --dt-role-assignee-done-bg: #dcfce7;
         --dt-role-assignee-done-border: #86efac;
         --dt-role-assignee-done-text: #14532d;
-        --dt-role-status-pending: #4b5563;
+        --dt-role-status-pending: #374151;
         --dt-role-status-done: #166534;
         --dt-role-empty-bg: #fff7ed;
         --dt-role-empty-border: #e5d0b3;
@@ -518,7 +522,7 @@
         border-width: 1.5px !important;
         border-radius: 1.08rem !important;
         box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08) !important;
-        padding: 1.05rem 1.15rem !important;
+        padding: 0.98rem 1.02rem !important;
         transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
     }
 
@@ -542,16 +546,16 @@
 
     #mainAppContainer #mainRoleList .dt-role-slot {
         color: var(--dt-role-slot) !important;
-        font-size: 0.82rem !important;
+        font-size: 0.86rem !important;
         font-weight: 800;
-        letter-spacing: 0.01em !important;
+        letter-spacing: 0 !important;
         text-transform: none;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.28rem, 1.08rem + 0.72vw, 1.72rem) !important;
-        line-height: 1.15 !important;
+        font-size: clamp(1.34rem, 1.16rem + 0.55vw, 1.82rem) !important;
+        line-height: 1.13 !important;
         letter-spacing: -0.01em;
     }
 
@@ -564,7 +568,8 @@
     #mainAppContainer #mainRoleList .dt-role-status {
         line-height: 1;
         white-space: nowrap;
-        font-size: 0.84rem !important;
+        font-size: 0.86rem !important;
+        font-weight: 800;
     }
 
     #mainAppContainer #mainRoleList .dt-role-top {
@@ -580,18 +585,18 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
-        margin-top: 0.5rem;
+        margin-top: 0.42rem;
         display: flex;
         align-items: center;
-        gap: 0.45rem;
+        gap: 0.42rem;
         min-width: 0;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        font-size: 0.76rem;
+        font-size: 0.79rem;
         font-weight: 900;
         text-transform: none;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
         color: var(--dt-role-slot) !important;
         white-space: nowrap;
     }
@@ -608,8 +613,9 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: clamp(1.16rem, 1.02rem + 0.36vw, 1.34rem) !important;
+        font-size: clamp(1.24rem, 1.12rem + 0.34vw, 1.52rem) !important;
         font-weight: 900;
+        line-height: 1.15;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -723,9 +729,14 @@
         gap: clamp(0.95rem, 1.2vw, 1.2rem) !important;
     }
 
+    .dt-right-column .dt-role-card,
+    .dt-right-column #randomPickerPanel {
+        padding: clamp(1rem, 1.3vw, 1.45rem) !important;
+    }
+
     @media (min-width: 1024px) {
         .dt-main-grid {
-            grid-template-columns: minmax(0, 1.54fr) minmax(24rem, 1.1fr);
+            grid-template-columns: minmax(0, 1fr) clamp(var(--dt-right-rail-min), var(--dt-right-rail-fluid), var(--dt-right-rail-max));
             align-items: stretch;
         }
 
@@ -736,7 +747,7 @@
 
         .dt-right-column {
             grid-column: 2;
-            min-width: 24rem;
+            min-width: clamp(var(--dt-right-rail-min), var(--dt-right-rail-fluid), var(--dt-right-rail-max));
             max-width: none;
             justify-self: stretch;
             height: 100%;
@@ -757,19 +768,58 @@
 
     .dt-timer-main {
         display: grid;
-        align-content: center;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
         justify-items: center;
-        gap: clamp(0.5rem, 1.6vh, 1.25rem);
+        gap: clamp(0.75rem, 1.8vh, 1.4rem);
         width: 100%;
         min-height: 0;
     }
 
+    .dt-timer-lane,
+    .dt-mission-lane {
+        width: 100%;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: clamp(0.38rem, 0.95vh, 0.78rem);
+    }
+
+    @media (min-width: 1280px) {
+        .dt-timer-main {
+            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+            column-gap: clamp(1.2rem, 2.8vw, 3rem);
+            justify-items: stretch;
+        }
+
+        .dt-timer-lane {
+            align-items: center;
+            justify-self: center;
+            text-align: center;
+        }
+
+        .dt-mission-lane {
+            align-items: flex-start;
+            text-align: left;
+            justify-self: stretch;
+            padding-right: clamp(0.35rem, 0.9vw, 0.8rem);
+        }
+
+        .dt-mission-lane #mainMissionTitle,
+        .dt-mission-lane #mainMissionDesc {
+            text-align: left;
+        }
+    }
+
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
-        font-size: clamp(3.35rem, min(15vw, 19vh), 9.5rem);
+        font-size: clamp(3.3rem, min(13.5vw, 17.5vh), 8.8rem);
         line-height: 0.9;
         letter-spacing: -0.05em;
-        margin-bottom: clamp(0.5rem, 1.8vh, 1.5rem);
+        margin-bottom: 0;
         background: transparent;
         border: 0;
         padding: 0;
@@ -785,29 +835,31 @@
     }
 
     #mainMissionTitle {
-        font-size: clamp(2rem, 7.5vw, 4.75rem);
-        line-height: 1.06;
+        font-size: clamp(2rem, 5.6vw, 4.15rem);
+        line-height: 1.08;
+        margin: 0;
     }
 
     #mainMissionDesc {
-        font-size: clamp(1.1rem, 4vw, 2rem);
-        line-height: 1.22;
+        font-size: clamp(1.08rem, 2.9vw, 1.82rem);
+        line-height: 1.24;
+        margin: 0;
     }
 
     #mainAppContainer[data-mission-size="sm"] #mainMissionTitle {
-        font-size: clamp(1.65rem, 6.2vw, 3.7rem);
+        font-size: clamp(1.62rem, 4.85vw, 3.52rem);
     }
 
     #mainAppContainer[data-mission-size="sm"] #mainMissionDesc {
-        font-size: clamp(0.95rem, 2.9vw, 1.55rem);
+        font-size: clamp(0.95rem, 2.24vw, 1.45rem);
     }
 
     #mainAppContainer[data-mission-size="lg"] #mainMissionTitle {
-        font-size: clamp(2.3rem, 8.2vw, 5.35rem);
+        font-size: clamp(2.28rem, 6.35vw, 4.78rem);
     }
 
     #mainAppContainer[data-mission-size="lg"] #mainMissionDesc {
-        font-size: clamp(1.25rem, 4.5vw, 2.3rem);
+        font-size: clamp(1.2rem, 3.05vw, 2.02rem);
     }
 
     #mainMissionTitle[contenteditable="true"],
@@ -849,11 +901,64 @@
         flex: 0 0 clamp(17.8rem, 34vh, 22.4rem);
         min-height: clamp(17.8rem, 34vh, 22.4rem);
         max-height: clamp(17.8rem, 34vh, 22.4rem);
+        transition: flex-basis 220ms ease, min-height 220ms ease, max-height 220ms ease;
+    }
+
+    #mainStudentCard .dt-mission-progress-wrap {
+        transition: max-width 200ms ease;
+    }
+
+    #mainStudentCard.is-collapsed {
+        flex: 0 0 var(--dt-mission-collapsed-height);
+        min-height: var(--dt-mission-collapsed-height);
+        max-height: var(--dt-mission-collapsed-height);
+    }
+
+    #mainStudentCard.is-collapsed .dt-mission-progress-wrap {
+        max-width: min(44vw, 29rem);
+    }
+
+    .dt-student-grid-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        transition: max-height 220ms ease, opacity 180ms ease, margin-top 220ms ease;
+        max-height: 100rem;
+        opacity: 1;
+    }
+
+    #mainStudentCard.is-collapsed .dt-student-grid-wrap {
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0 !important;
+        pointer-events: none;
+    }
+
+    #missionPanelToggleBtn {
+        min-height: 2.25rem;
+    }
+
+    #missionPanelToggleBtn .toggle-label {
+        font-size: 0.8rem;
+        letter-spacing: 0.01em;
+    }
+
+    #missionPanelToggleBtn .toggle-icon {
+        transition: transform 180ms ease;
+    }
+
+    #mainStudentCard.is-collapsed #missionPanelToggleBtn .toggle-icon {
+        transform: rotate(-90deg);
     }
 
     .dt-student-card-fit-25 {
         min-height: 0;
         max-height: clamp(17.8rem, 34vh, 22.4rem);
+    }
+
+    #mainStudentCard.is-collapsed.dt-student-card-fit-25 {
+        min-height: var(--dt-mission-collapsed-height);
+        max-height: var(--dt-mission-collapsed-height);
     }
 
     .dt-student-grid {
@@ -1223,6 +1328,16 @@
             max-height: none;
         }
 
+        #mainStudentCard.is-collapsed {
+            flex: 0 0 clamp(5.4rem, 8.5vh, 6rem);
+            min-height: clamp(5.4rem, 8.5vh, 6rem);
+            max-height: clamp(5.4rem, 8.5vh, 6rem);
+        }
+
+        #mainStudentCard.is-collapsed .dt-mission-progress-wrap {
+            max-width: min(64vw, 19rem);
+        }
+
         #timerControls .timer-btn,
         #timerControls .timer-reset-btn {
             padding: 0.6rem 0.95rem;
@@ -1269,6 +1384,12 @@
             flex: 1 1 auto;
             min-height: 14.5rem;
             max-height: none;
+        }
+
+        #mainStudentCard.is-collapsed {
+            flex: 0 0 clamp(5rem, 8vh, 5.8rem);
+            min-height: clamp(5rem, 8vh, 5.8rem);
+            max-height: clamp(5rem, 8vh, 5.8rem);
         }
     }
 
@@ -1474,24 +1595,21 @@
                     class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:bg-white/15 transition-all duration-1000">
                 </div>
 
-                <!-- Main Content (Timer + Message) -->
-                <div class="dt-timer-main flex-1 flex flex-col justify-center items-center w-full min-h-0 z-10">
-                    <!-- Giant Timer -->
-                    <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
-                        class="dt-touch-action font-mono font-black text-6xl md:text-8xl tracking-tighter mb-6 cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
-                        title="타이머 시작/정지">
-                        05:00
-                    </button>
-
-                    <!-- Mission Text -->
-                    <div class="max-w-3xl px-4">
-                        <div class="flex items-center justify-center mb-3">
-                            <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep px-3 py-1.5"
-                                id="mainMissionTitle" contenteditable="true" spellcheck="false" data-mission-field="title"
-                                role="textbox" aria-label="메인 제목 바로 편집">
-                                수학 익힘책 풀기
-                            </h2>
-                        </div>
+                <!-- Main Content (Timer + Mission Split) -->
+                <div class="dt-timer-main flex-1 w-full min-h-0 z-10">
+                    <div class="dt-timer-lane">
+                        <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
+                            class="dt-touch-action font-mono font-black text-6xl md:text-8xl tracking-tighter cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
+                            title="타이머 시작/정지">
+                            05:00
+                        </button>
+                    </div>
+                    <div class="dt-mission-lane max-w-[42rem]">
+                        <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep px-3 py-1.5"
+                            id="mainMissionTitle" contenteditable="true" spellcheck="false" data-mission-field="title"
+                            role="textbox" aria-label="메인 제목 바로 편집">
+                            수학 익힘책 풀기
+                        </h2>
                         <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep px-3 py-1.5"
                             id="mainMissionDesc" contenteditable="true" spellcheck="false" data-mission-field="desc"
                             role="textbox" aria-label="설명 문구 바로 편집">
@@ -1538,16 +1656,16 @@
 
             <!-- 2. Student Status Grid (Bottom) -->
             <div id="mainStudentCard"
-                class="dt-student-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-5 lg:p-6 border border-slate-700/50 flex flex-col shadow-2xl min-h-0">
-                <div class="flex justify-between items-center mb-4 px-1">
-                    <div class="flex items-center gap-3">
+                class="dt-student-card is-collapsed bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-5 lg:p-6 border border-slate-700/50 flex flex-col shadow-2xl min-h-0">
+                <div class="flex justify-between items-start mb-3.5 px-1 gap-3">
+                    <div class="flex items-start gap-3 flex-wrap min-w-0">
                         <h3 class="text-xl md:text-2xl font-black flex items-center gap-2 text-white">
                             <span class="text-yellow-400">🏆</span>
                             미션 현황
                         </h3>
                         <!-- Progress Bar -->
                         <div
-                            class="flex items-center gap-3 md:gap-4 ml-1 md:ml-3 bg-slate-900/50 px-3.5 md:px-4 py-2 rounded-2xl border border-slate-700/60">
+                            class="dt-mission-progress-wrap flex items-center gap-3 md:gap-4 ml-1 md:ml-3 bg-slate-900/50 px-3.5 md:px-4 py-2 rounded-2xl border border-slate-700/60">
                             <div class="text-[11px] text-slate-400 font-black uppercase tracking-[0.16em]">완료율</div>
                             <div
                                 class="w-36 md:w-52 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
@@ -1559,7 +1677,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center shrink-0">
+                        <button id="missionPanelToggleBtn" type="button"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-600 bg-slate-800/70 text-slate-200 hover:bg-slate-700/80 hover:text-white transition"
+                            aria-expanded="false" aria-controls="mainStudentGridWrap">
+                            <i class="toggle-icon fa-solid fa-chevron-down text-[11px]"></i>
+                            <span id="missionPanelToggleText" class="toggle-label font-black">펼치기</span>
+                        </button>
                         <button onclick="window.dtApp.resetToMockup()"
                             class="p-2.5 bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl transition-all"
                             title="데이터 초기화">
@@ -1569,10 +1693,12 @@
                 </div>
 
                 <!-- Student Grid Container -->
-                <div id="mainStudentGrid"
-                    class="dt-student-grid grid grid-cols-5 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
-                    <div class="col-span-full text-center text-sm font-semibold text-slate-500 py-8">
-                        학생 데이터를 불러오는 중입니다.
+                <div id="mainStudentGridWrap" class="dt-student-grid-wrap mt-1">
+                    <div id="mainStudentGrid"
+                        class="dt-student-grid grid grid-cols-5 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
+                        <div class="col-span-full text-center text-sm font-semibold text-slate-500 py-8">
+                            학생 데이터를 불러오는 중입니다.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1879,7 +2005,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304c"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304e"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
