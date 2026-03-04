@@ -27,18 +27,18 @@ Status: Working branch handoff (2026-03-04 08:57)
   3. `git rev-parse HEAD`
   4. `git rev-parse origin/feature/sheetbook`
   5. (해시 다를 때만) `git pull --ff-only origin feature/sheetbook`
-  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
 - 확인 파일:
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
-  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-03.md`
+  - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-04.md`
 
 ### 1-1-a) `"이어서 진행해줘"` 즉시 실행 템플릿
 
 - 아래 4단계를 그대로 실행하면 같은 맥락으로 즉시 재개 가능:
-  1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
-  2. `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
-  3. blocker가 남아 있으면 `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count -1 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-04`
-  4. 재판정 `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+  1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  2. `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  3. blocker가 남아 있으면 `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count -1 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-05`
+  4. 재판정 `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
 
 - 재개 후 바로 확인할 핵심 값:
   - `sheetbook_daily_start_bundle_latest.json`의 `overall`, `decision`, `readiness_status`
@@ -278,13 +278,28 @@ Status: Working branch handoff (2026-03-04 08:57)
   - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
 
+## 1-10) 2026-03-04 오전 게이트 재생성 + signoff 로그 재확정
+
+- 실행:
+  - `python scripts/run_sheetbook_release_readiness.py --days 14`
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action "main 반영 준비 점검" --due-date 2026-03-05`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python manage.py check`
+- 결과:
+  - `sheetbook_release_readiness_latest.json`: `overall.status=PASS`
+  - `sheetbook_release_decision_latest.json`: `decision=GO`
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
    - `python scripts/run_sheetbook_release_readiness.py --days 14`
    - `python scripts/run_sheetbook_signoff_decision.py`
 2. signoff 로그 갱신
-   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-04`
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "staging/prod 실계정 점검" --due-date 2026-03-05`
 3. 파일럿/품질 스냅샷 갱신
    - `python manage.py recommend_sheetbook_thresholds --days 14 --group-by-role`
    - `python scripts/run_sheetbook_pilot_log_snapshot.py --days 14`
@@ -294,13 +309,13 @@ Status: Working branch handoff (2026-03-04 08:57)
    - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
 5. 최종 재확인
    - `python scripts/run_sheetbook_signoff_decision.py`
-   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-04`
+   - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-05`
 6. 원클릭 번들(권장)
-   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
+   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
 7. 표본 부족량 요약(권장)
-   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-04`
+   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
 8. 운영 인덱스 단독 갱신(필요 시)
-   - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-03`
+   - `python scripts/run_sheetbook_ops_index_report.py --record-date 2026-03-04`
 
 ## 4) 중간 백업 규칙
 

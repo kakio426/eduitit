@@ -1,6 +1,6 @@
 # Sheetbook Pilot Event Log (2026-03-04)
 
-기록 시각: 2026-03-04 08:56  
+기록 시각: 2026-03-04 09:35  
 기준 명령: `python manage.py recommend_sheetbook_thresholds --days 14`
 
 ## 1) 일일 기록 표
