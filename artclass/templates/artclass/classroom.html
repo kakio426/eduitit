@@ -16,9 +16,98 @@
 
     /* Hide global nav in classroom mode */
 
+    :root {
+        --video-dock-max-h: 34vh;
+        --video-dock-pad-x: 1rem;
+        --video-dock-pad-y: 0.75rem;
+        --video-dock-label-size: 0.68rem;
+        --video-dock-chip-size: 0.82rem;
+        --video-dock-tip-size: 0.9rem;
+        --video-dock-tip-line: 1.45;
+    }
+
+    #videoStepMetaDock {
+        max-height: var(--video-dock-max-h);
+        padding: var(--video-dock-pad-y) var(--video-dock-pad-x);
+        overflow-y: auto;
+    }
+
+    #videoStepMetaDock::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #videoStepMetaDock::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.45);
+        border-radius: 9999px;
+    }
+
+    #videoStepMaterialsBlock>p,
+    #videoStepTipBlock>p {
+        font-size: var(--video-dock-label-size);
+    }
+
+    .video-meta-chip {
+        font-size: var(--video-dock-chip-size);
+    }
+
+    #videoStepTipText {
+        font-size: var(--video-dock-tip-size);
+        line-height: var(--video-dock-tip-line);
+    }
+
+    body.ui-density-compact {
+        --video-dock-max-h: 26vh;
+        --video-dock-pad-x: 0.75rem;
+        --video-dock-pad-y: 0.55rem;
+        --video-dock-label-size: 0.62rem;
+        --video-dock-chip-size: 0.74rem;
+        --video-dock-tip-size: 0.82rem;
+        --video-dock-tip-line: 1.35;
+    }
+
+    body.ui-density-compact .text-jumbo {
+        font-size: clamp(1.45rem, 3.4vw, 2.3rem);
+        line-height: 1.34;
+    }
+
+    body.ui-density-roomy {
+        --video-dock-max-h: 38vh;
+        --video-dock-pad-x: 1.1rem;
+        --video-dock-pad-y: 0.85rem;
+        --video-dock-label-size: 0.74rem;
+        --video-dock-chip-size: 0.88rem;
+        --video-dock-tip-size: 0.96rem;
+        --video-dock-tip-line: 1.5;
+    }
+
+    body.video-profile-9x16 {
+        --video-dock-max-h: 22vh;
+        --video-dock-tip-size: 0.82rem;
+    }
+
+    body.video-profile-4x3 {
+        --video-dock-max-h: 30vh;
+    }
+
+    body.video-profile-16x9 {
+        --video-dock-max-h: 35vh;
+    }
+
+    @media (max-height: 740px) {
+        :root {
+            --video-dock-max-h: 22vh;
+        }
+    }
+
+    @media (max-width: 1024px) {
+        :root {
+            --video-dock-max-h: 24vh;
+        }
+    }
+
     .text-jumbo {
-        font-size: clamp(2.05rem, 4.7vw, 3.45rem);
-        line-height: 1.28;
+        font-size: clamp(1.75rem, 4.1vw, 3rem);
+        line-height: 1.32;
         font-weight: 800;
         letter-spacing: -0.01em;
     }
@@ -96,7 +185,7 @@
     }
 
     body.dashboard-reading-mode .text-jumbo {
-        font-size: clamp(2.5rem, 5.6vw, 4.4rem);
+        font-size: clamp(2.2rem, 5.2vw, 4rem);
         line-height: 1.35;
     }
 
@@ -218,57 +307,78 @@
     <div id="classroomWorkspace" class="h-full min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
 
         <!-- Left: YouTube Theater -->
-        <div id="videoPanel" class="lg:w-3/5 xl:w-[65%] bg-black relative group flex items-center justify-center">
-            <div id="player" class="w-full h-full"></div>
-            <div id="externalVideoOverlay" class="absolute inset-0 hidden items-center justify-center bg-black/70 p-6 z-10">
-                <div class="max-w-xl w-full rounded-2xl bg-white/95 text-gray-900 p-6 md:p-8 shadow-2xl">
-                    <div class="flex items-start gap-3">
-                        <div class="w-11 h-11 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                            <i class="fa-brands fa-youtube text-xl"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-lg font-black text-gray-900">새 창 재생 모드</h3>
-                            <p id="externalVideoMessage" class="text-sm text-gray-700 mt-2 leading-relaxed">
-                                유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.
-                            </p>
-                            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                                <p class="text-[11px] font-black text-amber-700 uppercase tracking-widest">한 영상 반복 재생 팁</p>
-                                <p class="mt-1 text-xs text-amber-800 leading-relaxed">
-                                    새 창 유튜브 화면에서 <strong>마우스 오른쪽 클릭</strong> 후
-                                    <strong>동영상 연속 재생</strong>을 켜 주세요.
-                                    (반복 재생 URL도 함께 적용됩니다)
+        <div id="videoPanel" class="lg:w-3/5 xl:w-[65%] bg-slate-950 relative flex min-h-0 flex-col">
+            <div id="videoStage" class="relative flex-1 min-h-0 group flex items-center justify-center bg-black">
+                <div id="player" class="w-full h-full"></div>
+                <div id="externalVideoOverlay" class="absolute inset-0 hidden items-center justify-center bg-black/70 p-6 z-10">
+                    <div class="max-w-xl w-full rounded-2xl bg-white/95 text-gray-900 p-6 md:p-8 shadow-2xl">
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <i class="fa-brands fa-youtube text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-lg font-black text-gray-900">새 창 재생 모드</h3>
+                                <p id="externalVideoMessage" class="text-sm text-gray-700 mt-2 leading-relaxed">
+                                    유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.
+                                </p>
+                                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                    <p class="text-[11px] font-black text-amber-700 uppercase tracking-widest">한 영상 반복 재생 팁</p>
+                                    <p class="mt-1 text-xs text-amber-800 leading-relaxed">
+                                        새 창 유튜브 화면에서 <strong>마우스 오른쪽 클릭</strong> 후
+                                        <strong>동영상 연속 재생</strong>을 켜 주세요.
+                                        (반복 재생 URL도 함께 적용됩니다)
+                                    </p>
+                                </div>
+                                <p class="mt-3 text-xs text-gray-600 leading-relaxed">
+                                    브라우저 정책상 창을 자동으로 <strong>항상 위</strong>로 고정할 수는 없습니다.
+                                    대신 아래 버튼으로 영상 창을 앞으로 가져오거나, 새 창 유튜브 메뉴의
+                                    <strong>화면 속 화면(PiP)</strong>을 사용해 주세요.
                                 </p>
                             </div>
-                            <p class="mt-3 text-xs text-gray-600 leading-relaxed">
-                                브라우저 정책상 창을 자동으로 <strong>항상 위</strong>로 고정할 수는 없습니다.
-                                대신 아래 버튼으로 영상 창을 앞으로 가져오거나, 새 창 유튜브 메뉴의
-                                <strong>화면 속 화면(PiP)</strong>을 사용해 주세요.
-                            </p>
+                        </div>
+                        <div class="mt-5 flex flex-wrap gap-2">
+                            <button id="btnOpenExternalVideo"
+                                class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all">
+                                새 창 열기(반복 재생)
+                            </button>
+                            <button id="btnFocusExternalVideo"
+                                class="px-4 py-2.5 rounded-xl bg-white/90 text-gray-700 border border-gray-300 text-sm font-semibold hover:bg-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                영상 창 앞으로
+                            </button>
                         </div>
                     </div>
-                    <div class="mt-5 flex flex-wrap gap-2">
-                        <button id="btnOpenExternalVideo"
-                            class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all">
-                            새 창 열기(반복 재생)
-                        </button>
-                        <button id="btnFocusExternalVideo"
-                            class="px-4 py-2.5 rounded-xl bg-white/90 text-gray-700 border border-gray-300 text-sm font-semibold hover:bg-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                            영상 창 앞으로
-                        </button>
-                    </div>
+                </div>
+
+                <!-- Quick Overlays (Bottom) -->
+                <div
+                    class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 glass-dark px-5 py-2.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button id="btnLoop"
+                        class="flex items-center gap-2 text-white font-bold hover:text-purple-400 transition"
+                        title="현재 장면 10초 구간 반복">
+                        <i class="fa-solid fa-repeat"></i> <span id="loopStatus">구간 반복 OFF</span>
+                    </button>
+                    <div class="h-4 w-px bg-white/20"></div>
+                    <span id="totalTimer" class="font-mono text-white/80">00:00</span>
                 </div>
             </div>
-
-            <!-- Quick Overlays (Bottom) -->
-            <div
-                class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 glass-dark px-6 py-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                <button id="btnLoop"
-                    class="flex items-center gap-2 text-white font-bold hover:text-purple-400 transition"
-                    title="현재 장면 10초 구간 반복">
-                    <i class="fa-solid fa-repeat"></i> <span id="loopStatus">구간 반복 OFF</span>
-                </button>
-                <div class="h-4 w-px bg-white/20"></div>
-                <span id="totalTimer" class="font-mono text-white/80">00:00</span>
+            <div id="videoStepMetaDock" class="shrink-0 border-t border-slate-700/80 bg-slate-900/95 text-slate-100 px-4 py-3 md:px-5 md:py-3.5">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-emerald-300/90">영상 하단 교사 포인트</p>
+                    <span class="text-[10px] font-semibold text-slate-300 bg-slate-800/90 border border-slate-600/80 rounded-full px-2 py-0.5">
+                        준비물·팁 요약
+                    </span>
+                </div>
+                <div id="videoStepMaterialsBlock" class="hidden mt-3">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-indigo-200/95">준비물</p>
+                    <div id="videoStepMaterialsList" class="mt-2 flex flex-wrap gap-2"></div>
+                </div>
+                <div id="videoStepTipBlock" class="hidden mt-3 rounded-xl border border-amber-300/35 bg-amber-100/10 px-3 py-2.5">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-amber-200/90">교사 팁 / 추가 안내</p>
+                    <p id="videoStepTipText" class="mt-1.5 text-sm leading-relaxed font-semibold text-amber-50"></p>
+                </div>
+                <p id="videoStepMetaEmpty" class="mt-2 text-xs font-semibold text-slate-300/80">
+                    준비물 또는 교사 팁이 있으면 이 영역에 표시됩니다.
+                </p>
             </div>
         </div>
 
@@ -407,27 +517,33 @@
             </div>
 
             <div id="tvTeacherGuide"
-                class="hidden mx-3 mb-3 rounded-xl bg-gray-900/85 text-white px-3 py-2.5 shadow-2xl border border-white/15">
-                <p class="text-[10px] uppercase tracking-widest font-black text-emerald-200">TV Class Mode</p>
-                <p class="mt-1 text-[11px] font-semibold text-white/90">창 잠금 ON · 자동 복구 ON · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
-                <p class="mt-1 text-[10px] font-semibold text-white/80">비율: <span class="font-black">Ctrl+Alt+→</span> 확대 · <span class="font-black">Ctrl+Alt+←</span> 축소 · <span class="font-black">Ctrl+Alt+0</span> 기본</p>
-                <div class="mt-2 grid grid-cols-2 gap-1.5">
-                    <a href="eduitit-launcher://action?name=ratio_up"
-                        class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
-                        영상 더 크게
-                    </a>
-                    <a href="eduitit-launcher://action?name=ratio_reset"
-                        class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
-                        비율 원복
-                    </a>
-                    <a href="eduitit-launcher://action?name=move_display"
-                        class="px-2 py-1 rounded-lg bg-indigo-400/30 hover:bg-indigo-400/45 text-[10px] font-black text-center transition-all">
-                        화면 위치 변경
-                    </a>
-                    <a href="eduitit-launcher://quit"
-                        class="px-2 py-1 rounded-lg bg-rose-500/60 hover:bg-rose-500/80 text-[10px] font-black text-center transition-all">
-                        수업 종료
-                    </a>
+                class="hidden mx-3 mb-3 rounded-xl bg-gray-900/85 text-white p-2 shadow-2xl border border-white/15">
+                <button id="btnToggleTvGuide"
+                    class="w-full flex items-center justify-between gap-2 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-2 transition-all">
+                    <span class="text-[10px] uppercase tracking-widest font-black text-emerald-200">TV Class Mode</span>
+                    <span id="tvGuideToggleIcon" class="text-xs font-black text-white/80">+</span>
+                </button>
+                <div id="tvTeacherGuideBody" class="hidden mt-2 px-1 pb-1">
+                    <p class="text-[11px] font-semibold text-white/90">창 잠금 ON · 자동 복구 ON · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
+                    <p class="mt-1 text-[10px] font-semibold text-white/80">비율: <span class="font-black">Ctrl+Alt+→</span> 확대 · <span class="font-black">Ctrl+Alt+←</span> 축소 · <span class="font-black">Ctrl+Alt+0</span> 기본</p>
+                    <div class="mt-2 grid grid-cols-2 gap-1.5">
+                        <a href="eduitit-launcher://action?name=ratio_up"
+                            class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
+                            영상 더 크게
+                        </a>
+                        <a href="eduitit-launcher://action?name=ratio_reset"
+                            class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
+                            비율 원복
+                        </a>
+                        <a href="eduitit-launcher://action?name=move_display"
+                            class="px-2 py-1 rounded-lg bg-indigo-400/30 hover:bg-indigo-400/45 text-[10px] font-black text-center transition-all">
+                            화면 위치 변경
+                        </a>
+                        <a href="eduitit-launcher://quit"
+                            class="px-2 py-1 rounded-lg bg-rose-500/60 hover:bg-rose-500/80 text-[10px] font-black text-center transition-all">
+                            수업 종료
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -493,8 +609,17 @@
     const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
     const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
     const tvTeacherGuideEl = document.getElementById('tvTeacherGuide');
+    const btnToggleTvGuideEl = document.getElementById('btnToggleTvGuide');
+    const tvTeacherGuideBodyEl = document.getElementById('tvTeacherGuideBody');
+    const tvGuideToggleIconEl = document.getElementById('tvGuideToggleIcon');
     const btnBackToEditEl = document.getElementById('btnBackToEdit');
     const headerDividerEl = document.getElementById('headerDivider');
+    const videoStepMetaDockEl = document.getElementById('videoStepMetaDock');
+    const videoStepMaterialsBlockEl = document.getElementById('videoStepMaterialsBlock');
+    const videoStepMaterialsListEl = document.getElementById('videoStepMaterialsList');
+    const videoStepTipBlockEl = document.getElementById('videoStepTipBlock');
+    const videoStepTipTextEl = document.getElementById('videoStepTipText');
+    const videoStepMetaEmptyEl = document.getElementById('videoStepMetaEmpty');
     const stepTextContainerEl = document.getElementById('stepTextContainer');
     const btnToggleStepEditorEl = document.getElementById('btnToggleStepEditor');
     const stepEditorPanelEl = document.getElementById('stepEditorPanel');
@@ -513,7 +638,14 @@
     const AUTO_START_LAUNCHER = searchParams.get('autostart_launcher') === '1';
     const AUTO_START_LAUNCHER_DISABLED = searchParams.get('autostart_launcher') === '0';
     const AUTO_START_SESSION_KEY = `artclass_launcher_autostart_${CLASSROOM_ID}`;
+    const VALID_VIDEO_PROFILES = new Set(['16x9', '4x3', '9x16']);
+    const requestedVideoProfile = String(searchParams.get('video_profile') || '')
+        .trim()
+        .toLowerCase()
+        .replace(':', 'x');
+    const urlHintVideoProfile = /\/shorts\//i.test(VIDEO_URL) ? '9x16' : '16x9';
     let stepImageRequestToken = 0;
+    let responsiveTokenTimer = null;
 
     function setExternalWindowStatus(status) {
         if (!externalWindowStatusBadgeEl) return;
@@ -539,6 +671,98 @@
         if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = true;
     }
 
+    function setTvTeacherGuideExpanded(expanded) {
+        if (!tvTeacherGuideBodyEl || !tvGuideToggleIconEl || !btnToggleTvGuideEl) return;
+        const next = !!expanded;
+        tvTeacherGuideBodyEl.classList.toggle('hidden', !next);
+        tvGuideToggleIconEl.textContent = next ? '−' : '+';
+        btnToggleTvGuideEl.setAttribute('aria-expanded', next ? 'true' : 'false');
+    }
+
+    function resolveVideoProfile() {
+        if (VALID_VIDEO_PROFILES.has(requestedVideoProfile)) {
+            return requestedVideoProfile;
+        }
+        return urlHintVideoProfile;
+    }
+
+    function applyResponsiveTokens() {
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const nextProfile = resolveVideoProfile();
+
+        document.body.classList.remove('ui-density-compact', 'ui-density-standard', 'ui-density-roomy');
+        if (viewportWidth <= 1366 || viewportHeight <= 820) {
+            document.body.classList.add('ui-density-compact');
+        } else if (viewportWidth >= 1920 && viewportHeight >= 960) {
+            document.body.classList.add('ui-density-roomy');
+        } else {
+            document.body.classList.add('ui-density-standard');
+        }
+
+        document.body.classList.remove('video-profile-16x9', 'video-profile-4x3', 'video-profile-9x16');
+        document.body.classList.add(`video-profile-${nextProfile}`);
+    }
+
+    function queueResponsiveTokens() {
+        if (responsiveTokenTimer) {
+            clearTimeout(responsiveTokenTimer);
+        }
+        responsiveTokenTimer = window.setTimeout(() => {
+            applyResponsiveTokens();
+            const activeStep = getCurrentStepData();
+            if (activeStep && stepTextContainerEl) {
+                const parsed = parseStepText(activeStep.text || '');
+                const includeInlineMeta = !shouldRenderMetaInVideoDock();
+                renderStepNarrative(parsed, includeInlineMeta);
+                renderVideoStepMeta(parsed);
+                return;
+            }
+            renderVideoStepMeta(null);
+        }, 90);
+    }
+
+    function shouldRenderMetaInVideoDock() {
+        if (IS_DASHBOARD_ONLY) return false;
+        if (!videoPanelEl || videoPanelEl.classList.contains('hidden')) return false;
+        if (playbackMode === 'external_window') return false;
+        return true;
+    }
+
+    function renderVideoStepMeta(parsed) {
+        if (!videoStepMetaDockEl || !videoStepMaterialsBlockEl || !videoStepMaterialsListEl || !videoStepTipBlockEl || !videoStepTipTextEl || !videoStepMetaEmptyEl) {
+            return;
+        }
+
+        const useVideoDock = shouldRenderMetaInVideoDock();
+        videoStepMetaDockEl.classList.toggle('hidden', !useVideoDock);
+        if (!useVideoDock) return;
+
+        const materials = Array.isArray(parsed?.materials) ? parsed.materials : [];
+        const tip = String(parsed?.tip || '').trim();
+
+        if (materials.length) {
+            videoStepMaterialsListEl.innerHTML = materials
+                .map((material) => `<span class="video-meta-chip inline-flex items-center px-3 py-1 rounded-full font-black bg-indigo-400/20 border border-indigo-300/45 text-indigo-100">${escapeHtml(material)}</span>`)
+                .join('');
+            videoStepMaterialsBlockEl.classList.remove('hidden');
+        } else {
+            videoStepMaterialsListEl.innerHTML = '';
+            videoStepMaterialsBlockEl.classList.add('hidden');
+        }
+
+        if (tip) {
+            videoStepTipTextEl.innerHTML = escapeHtml(tip).replace(/\n/g, '<br>');
+            videoStepTipBlockEl.classList.remove('hidden');
+        } else {
+            videoStepTipTextEl.innerHTML = '';
+            videoStepTipBlockEl.classList.add('hidden');
+        }
+
+        const hasMeta = materials.length > 0 || !!tip;
+        videoStepMetaEmptyEl.classList.toggle('hidden', hasMeta);
+    }
+
     function applyDashboardOnlyUi() {
         if (!IS_DASHBOARD_ONLY) return;
         document.body.classList.add('dashboard-reading-mode');
@@ -557,6 +781,8 @@
             const showTeacherGuide = RUNTIME_MODE === 'launcher';
             tvTeacherGuideEl.classList.toggle('hidden', !showTeacherGuide);
         }
+        setTvTeacherGuideExpanded(false);
+        if (videoStepMetaDockEl) videoStepMetaDockEl.classList.add('hidden');
         if (btnToggleStepEditorEl) btnToggleStepEditorEl.classList.add('hidden');
         if (stepEditorPanelEl) stepEditorPanelEl.classList.add('hidden');
     }
@@ -605,8 +831,20 @@
         if (externalWindowStatusBadgeEl) {
             externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode || IS_DASHBOARD_ONLY);
         }
+        if (videoStepMetaDockEl && (isExternalWindowMode || IS_DASHBOARD_ONLY)) {
+            videoStepMetaDockEl.classList.add('hidden');
+        }
         if (!isExternalWindowMode) {
             setExternalOverlay(false);
+        }
+        const activeStep = getCurrentStepData();
+        if (activeStep && stepTextContainerEl) {
+            const parsed = parseStepText(activeStep.text || '');
+            const includeInlineMeta = !shouldRenderMetaInVideoDock();
+            renderStepNarrative(parsed, includeInlineMeta);
+            renderVideoStepMeta(parsed);
+        } else {
+            renderVideoStepMeta(null);
         }
     }
 
@@ -1007,6 +1245,44 @@
         };
     }
 
+    function renderStepNarrative(parsed, includeInlineMeta) {
+        const useInlineMeta = !!includeInlineMeta;
+        const hasInlineMeta = useInlineMeta && (parsed?.materials || parsed?.tip);
+        let html = `<p id="stepText" class="text-gray-800 text-jumbo leading-tight break-keep whitespace-pre-line ${hasInlineMeta ? 'mb-6' : 'mb-0'}">${escapeHtml(parsed?.mainText || '(설명 없음)')}</p>`;
+
+        if (useInlineMeta && parsed?.materials) {
+            const materialBadges = parsed.materials
+                .map((material) => `<span class="step-material-chip step-material-chip-base inline-flex items-center px-3.5 py-1.5 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">${escapeHtml(material)}</span>`)
+                .join('');
+            html += `
+                <div class="mt-4">
+                    <p class="step-meta-label step-meta-label-base text-indigo-500/80 mb-2">준비물</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${materialBadges}
+                    </div>
+                </div>
+            `;
+        }
+        if (useInlineMeta && parsed?.tip) {
+            html += `
+                <div class="mt-4 p-5 md:p-6 bg-amber-50 text-amber-800 rounded-2xl border border-amber-200 flex items-start gap-4 shadow-sm">
+                    <div class="mt-1 w-11 h-11 flex items-center justify-center bg-amber-200 rounded-full shrink-0">
+                        <i class="fa-solid fa-lightbulb text-amber-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="step-meta-label step-meta-label-base text-amber-600/80 mb-1">교사 팁 / 추가 안내</p>
+                        <p class="step-tip-body step-tip-body-base font-bold whitespace-pre-line">${escapeHtml(parsed.tip)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (stepTextContainerEl) {
+            stepTextContainerEl.innerHTML = html;
+            stepTextContainerEl.scrollTop = 0;
+        }
+    }
+
     function setStepEditorStatus(message, state = 'info') {
         if (!stepEditorStatusEl) return;
         stepEditorStatusEl.textContent = message || '';
@@ -1218,6 +1494,7 @@
                     <p id="stepText" class="text-gray-800 text-jumbo leading-tight break-keep mb-0">등록된 단계가 없습니다.</p>
                 `;
             }
+            renderVideoStepMeta(null);
             populateStepEditor(null);
             setStepEditorStatus('수정할 단계가 없습니다.', 'warn');
             document.getElementById('currentStepNum').textContent = 0;
@@ -1233,38 +1510,9 @@
         stepTextContainerEl.parentElement.classList.add('animate-slide-up');
 
         const parsed = parseStepText(step.text);
-
-        let html = `<p id="stepText" class="text-gray-800 text-jumbo leading-tight break-keep whitespace-pre-line ${parsed.materials || parsed.tip ? 'mb-6' : 'mb-0'}">${escapeHtml(parsed.mainText)}</p>`;
-
-        if (parsed.materials) {
-            const materialBadges = parsed.materials
-                .map((material) => `<span class="step-material-chip step-material-chip-base inline-flex items-center px-3.5 py-1.5 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">${escapeHtml(material)}</span>`)
-                .join('');
-            html += `
-                <div class="mt-4">
-                    <p class="step-meta-label step-meta-label-base text-indigo-500/80 mb-2">준비물</p>
-                    <div class="flex flex-wrap gap-2">
-                        ${materialBadges}
-                    </div>
-                </div>
-            `;
-        }
-        if (parsed.tip) {
-            html += `
-                <div class="mt-4 p-5 md:p-6 bg-amber-50 text-amber-800 rounded-2xl border border-amber-200 flex items-start gap-4 shadow-sm">
-                    <div class="mt-1 w-11 h-11 flex items-center justify-center bg-amber-200 rounded-full shrink-0">
-                        <i class="fa-solid fa-lightbulb text-amber-600 text-xl"></i>
-                    </div>
-                    <div>
-                        <p class="step-meta-label step-meta-label-base text-amber-600/80 mb-1">교사 팁 / 추가 안내</p>
-                        <p class="step-tip-body step-tip-body-base font-bold whitespace-pre-line">${escapeHtml(parsed.tip)}</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        stepTextContainerEl.innerHTML = html;
-        stepTextContainerEl.scrollTop = 0;
+        const includeInlineMeta = !shouldRenderMetaInVideoDock();
+        renderStepNarrative(parsed, includeInlineMeta);
+        renderVideoStepMeta(parsed);
         document.getElementById('currentStepNum').textContent = currentStep + 1;
         populateStepEditor(step);
         updateStepImage(step.image_url);
@@ -1359,6 +1607,13 @@
         btnResetStepEditorEl.onclick = () => {
             populateStepEditor(getCurrentStepData());
             setStepEditorStatus('현재 단계 내용을 다시 불러왔습니다.', 'info');
+        };
+    }
+
+    if (btnToggleTvGuideEl) {
+        btnToggleTvGuideEl.onclick = () => {
+            const expanded = !!tvTeacherGuideBodyEl && !tvTeacherGuideBodyEl.classList.contains('hidden');
+            setTvTeacherGuideExpanded(!expanded);
         };
     }
 
@@ -1524,12 +1779,16 @@
     document.addEventListener('mousemove', showHeader);
     document.addEventListener('touchstart', showHeader);
     document.addEventListener('keydown', showHeader);
+    window.addEventListener('resize', queueResponsiveTokens);
+    window.addEventListener('orientationchange', queueResponsiveTokens);
 
     // Initial trigger
     showHeader();
 
     // Init
+    applyResponsiveTokens();
     syncStepEditorPermissionUi();
+    setTvTeacherGuideExpanded(false);
     applyDashboardOnlyUi();
     setExternalWindowStatus('closed');
     applyPlaybackLayout(playbackMode);

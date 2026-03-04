@@ -7,7 +7,12 @@
 <style>
     :root {
         --dt-bg: #0f172a;
+        --dt-page-bg-start: #0b1224;
+        --dt-page-bg-end: #1b2a47;
         --dt-card: rgba(30, 41, 59, 0.5);
+        --dt-font-ui: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+        --dt-font-code: "JetBrains Mono", "D2Coding", "SFMono-Regular", "Consolas", "Menlo", monospace;
+        --dt-page-gutter: clamp(0.85rem, 1.6vw, 1.4rem);
         --dt-indigo: #6366f1;
         --dt-violet: #8b5cf6;
         --dt-emerald: #10b981;
@@ -60,8 +65,13 @@
 
     body {
         background-color: var(--dt-bg);
+        background-image:
+            radial-gradient(circle at 18% 10%, rgba(99, 102, 241, 0.2), transparent 40%),
+            radial-gradient(circle at 84% 90%, rgba(16, 185, 129, 0.14), transparent 42%),
+            linear-gradient(145deg, var(--dt-page-bg-start), var(--dt-page-bg-end));
         color: #f8fafc;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
     /* THEME OVERRIDES */
@@ -191,6 +201,8 @@
 
     /* LIGHT THEME READABILITY GUARD */
     html[data-theme="sunny"] {
+        --dt-page-bg-start: #fff9f0;
+        --dt-page-bg-end: #ffe8cf;
         --dt-readable-main: #0f172a;
         --dt-readable-muted: #334155;
         --dt-readable-accent: #9a3412;
@@ -221,8 +233,8 @@
         --dt-spotlight-badge-bg: #c7d2fe;
         --dt-spotlight-badge-text: #312e81;
         --dt-spotlight-badge-border: #818cf8;
-        --dt-timer-from: #f59e0b;
-        --dt-timer-to: #f97316;
+        --dt-timer-from: #b45309;
+        --dt-timer-to: #c2410c;
         --dt-timer-border: rgba(245, 158, 11, 0.58);
         --dt-timer-text: #ffffff;
         --dt-timer-control-bg: rgba(124, 45, 18, 0.32);
@@ -244,6 +256,8 @@
     }
 
     html[data-theme="pastel"] {
+        --dt-page-bg-start: #f0fdf6;
+        --dt-page-bg-end: #dcfce9;
         --dt-readable-main: #0f172a;
         --dt-readable-muted: #334155;
         --dt-readable-accent: #0f766e;
@@ -297,6 +311,8 @@
     }
 
     html[data-theme="vivid"] {
+        --dt-page-bg-start: #fff8ef;
+        --dt-page-bg-end: #ffe5c9;
         --dt-readable-main: #111827;
         --dt-readable-muted: #374151;
         --dt-readable-accent: #7c2d12;
@@ -309,7 +325,7 @@
         --dt-role-row-bg: #fff7ed;
         --dt-role-row-hover: #fee2e2;
         --dt-role-row-border: #e5d0b3;
-        --dt-role-slot: #6b7280;
+        --dt-role-slot: #4b5563;
         --dt-role-name: #111827;
         --dt-role-assignee-bg: #fce7f3;
         --dt-role-assignee-border: #f9a8d4;
@@ -327,9 +343,9 @@
         --dt-spotlight-badge-bg: #fbcfe8;
         --dt-spotlight-badge-text: #9d174d;
         --dt-spotlight-badge-border: #f472b6;
-        --dt-timer-from: #f97316;
-        --dt-timer-to: #e11d48;
-        --dt-timer-border: rgba(244, 63, 94, 0.58);
+        --dt-timer-from: #c2410c;
+        --dt-timer-to: #be185d;
+        --dt-timer-border: rgba(190, 24, 93, 0.58);
         --dt-timer-text: #ffffff;
         --dt-timer-control-bg: rgba(127, 29, 29, 0.34);
         --dt-timer-control-bg-hover: rgba(127, 29, 29, 0.52);
@@ -428,6 +444,10 @@
     #mainAppContainer .dt-role-card h3,
     #mainAppContainer #randomPickerPanel h3 {
         color: var(--dt-panel-text) !important;
+        font-family: var(--dt-font-ui);
+        font-size: clamp(1.14rem, 0.96rem + 0.54vw, 1.52rem) !important;
+        line-height: 1.12;
+        letter-spacing: -0.01em;
     }
 
     #mainAppContainer .dt-timer-card {
@@ -496,9 +516,9 @@
         background: var(--dt-role-row-bg) !important;
         border-color: var(--dt-role-row-border) !important;
         border-width: 1.5px !important;
-        border-radius: 1rem !important;
+        border-radius: 1.08rem !important;
         box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08) !important;
-        padding: 0.85rem 0.95rem !important;
+        padding: 0.78rem 0.9rem !important;
         transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
     }
 
@@ -522,15 +542,16 @@
 
     #mainAppContainer #mainRoleList .dt-role-slot {
         color: var(--dt-role-slot) !important;
-        font-size: 0.68rem !important;
-        letter-spacing: 0.14em !important;
-        text-transform: uppercase;
+        font-size: 0.78rem !important;
+        font-weight: 800;
+        letter-spacing: 0.02em !important;
+        text-transform: none;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.15rem, 1.8vw, 1.45rem) !important;
-        line-height: 1.15 !important;
+        font-size: clamp(1.03rem, 0.92rem + 0.48vw, 1.28rem) !important;
+        line-height: 1.2 !important;
         letter-spacing: -0.01em;
     }
 
@@ -543,6 +564,7 @@
     #mainAppContainer #mainRoleList .dt-role-status {
         line-height: 1;
         white-space: nowrap;
+        font-size: 0.74rem !important;
     }
 
     #mainAppContainer #mainRoleList .dt-role-top {
@@ -566,10 +588,10 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        font-size: 0.65rem;
+        font-size: 0.72rem;
         font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.11em;
+        text-transform: none;
+        letter-spacing: 0.02em;
         color: var(--dt-role-slot) !important;
         white-space: nowrap;
     }
@@ -586,7 +608,7 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: 1rem !important;
+        font-size: 0.94rem !important;
         font-weight: 900;
         max-width: 100%;
         overflow: hidden;
@@ -677,11 +699,59 @@
 
     #mainAppContainer {
         min-height: 100dvh;
+        font-family: var(--dt-font-ui);
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        padding-inline: var(--dt-page-gutter) !important;
+    }
+
+    .dt-main-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: clamp(0.9rem, 1.4vw, 1.35rem);
+    }
+
+    .dt-left-column,
+    .dt-right-column {
+        min-width: 0;
+    }
+
+    .dt-left-column {
+        gap: clamp(0.9rem, 1.25vw, 1.2rem) !important;
+    }
+
+    .dt-right-column {
+        gap: clamp(0.85rem, 1.15vw, 1.05rem) !important;
+    }
+
+    @media (min-width: 1024px) {
+        .dt-main-grid {
+            grid-template-columns: minmax(0, 1.86fr) minmax(18.5rem, 0.84fr);
+            align-items: stretch;
+        }
+
+        .dt-left-column {
+            grid-column: 1;
+            height: 100%;
+        }
+
+        .dt-right-column {
+            grid-column: 2;
+            max-width: 26.5rem;
+            justify-self: stretch;
+            height: 100%;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .dt-right-column {
+            width: min(100%, 36rem);
+            margin-inline: auto;
+        }
     }
 
     .dt-timer-card {
         padding: clamp(1.25rem, 2.2vw, 2rem);
-        min-height: clamp(22rem, 56vh, 40rem);
+        min-height: clamp(19.2rem, 51vh, 34rem);
     }
 
     .dt-timer-main {
@@ -694,6 +764,7 @@
     }
 
     #mainTimerDisplay {
+        font-family: var(--dt-font-code);
         font-size: clamp(3.35rem, min(15vw, 19vh), 9.5rem);
         line-height: 0.9;
         letter-spacing: -0.05em;
@@ -774,34 +845,34 @@
     }
 
     #mainStudentCard {
-        flex: 0 0 clamp(13.4rem, 28vh, 17.2rem);
-        min-height: clamp(13.4rem, 28vh, 17.2rem);
-        max-height: clamp(13.4rem, 28vh, 17.2rem);
+        flex: 0 0 clamp(17.8rem, 34vh, 22.4rem);
+        min-height: clamp(17.8rem, 34vh, 22.4rem);
+        max-height: clamp(17.8rem, 34vh, 22.4rem);
     }
 
     .dt-student-card-fit-25 {
         min-height: 0;
-        max-height: clamp(13.4rem, 28vh, 17.2rem);
+        max-height: clamp(17.8rem, 34vh, 22.4rem);
     }
 
     .dt-student-grid {
-        grid-auto-rows: minmax(2.05rem, 1fr);
-        gap: 0.34rem !important;
+        grid-auto-rows: minmax(2.45rem, 1fr);
+        gap: 0.45rem !important;
     }
 
     .dt-student-grid-fit-25 {
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(1.95rem, 1fr);
-        gap: 0.3rem !important;
-        overflow-y: hidden !important;
-        padding-right: 0 !important;
-        align-content: stretch;
+        grid-auto-rows: minmax(2.4rem, 1fr);
+        gap: 0.42rem !important;
+        overflow-y: auto !important;
+        padding-right: 0.1rem !important;
+        align-content: start;
     }
 
     #mainStudentGrid .dt-student-tile {
         min-height: 0;
-        padding: 0.16rem 0.32rem;
-        border-radius: 0.64rem;
+        padding: 0.28rem 0.42rem;
+        border-radius: 0.85rem;
         user-select: none;
         display: flex;
         align-items: center;
@@ -809,12 +880,15 @@
         background: var(--dt-student-tile-bg) !important;
         border-color: var(--dt-student-tile-border) !important;
         color: var(--dt-student-tile-text) !important;
-        transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
+        border-width: 1.5px;
+        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+        transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
     }
 
     #mainStudentGrid .dt-student-tile:hover {
         background: var(--dt-student-tile-hover) !important;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.14);
     }
 
     #mainStudentGrid .dt-student-tile.is-done {
@@ -840,15 +914,15 @@
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.08rem);
+        font-size: clamp(0.99rem, 0.93rem + 0.22vw, 1.12rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.88rem, 0.84rem + 0.16vw, 0.98rem);
+        font-size: clamp(0.93rem, 0.87rem + 0.19vw, 1.03rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.8rem, 0.76rem + 0.14vw, 0.9rem);
+        font-size: clamp(0.86rem, 0.81rem + 0.16vw, 0.96rem);
         letter-spacing: -0.01em;
     }
 
@@ -876,42 +950,42 @@
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-tile {
         min-height: 0;
-        padding: 0.14rem 0.28rem;
-        border-radius: 0.58rem;
+        padding: 0.24rem 0.36rem;
+        border-radius: 0.78rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.88rem, 0.84rem + 0.14vw, 0.98rem);
+        font-size: clamp(0.95rem, 0.9rem + 0.16vw, 1.04rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.82rem, 0.78rem + 0.12vw, 0.9rem);
+        font-size: clamp(0.9rem, 0.84rem + 0.14vw, 0.98rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.75rem, 0.71rem + 0.1vw, 0.83rem);
+        font-size: clamp(0.84rem, 0.79rem + 0.12vw, 0.9rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.9rem, 0.86rem + 0.12vw, 1rem);
+        font-size: clamp(0.98rem, 0.94rem + 0.12vw, 1.06rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.86rem, 0.82rem + 0.1vw, 0.95rem);
+        font-size: clamp(0.94rem, 0.89rem + 0.12vw, 1.01rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.82rem, 0.79rem + 0.1vw, 0.9rem);
+        font-size: clamp(0.9rem, 0.85rem + 0.1vw, 0.96rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.78rem, 0.75rem + 0.1vw, 0.86rem);
+        font-size: clamp(0.86rem, 0.81rem + 0.1vw, 0.92rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.72rem, 0.69rem + 0.08vw, 0.8rem);
+        font-size: clamp(0.8rem, 0.75rem + 0.1vw, 0.86rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-spotlight-btn {
@@ -1006,14 +1080,14 @@
     }
 
     #randomDrawName {
-        font-size: clamp(2rem, 3.8vw, 3.15rem);
-        line-height: 1.04;
+        font-size: clamp(1.78rem, 3.2vw, 2.72rem);
+        line-height: 1.08;
         letter-spacing: -0.02em;
-        min-height: 3.2rem;
+        min-height: 3rem;
     }
 
     #randomDrawName.is-empty {
-        font-size: clamp(1.02rem, 1.4vw, 1.32rem);
+        font-size: clamp(1rem, 1.3vw, 1.24rem);
         line-height: 1.35;
         letter-spacing: 0;
     }
@@ -1138,8 +1212,8 @@
         }
 
         .dt-student-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.75rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 0.55rem !important;
         }
 
         #mainStudentCard {
@@ -1249,10 +1323,10 @@
 {% block content %}
 <!-- Main App Container -->
 <div id="mainAppContainer"
-    class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-hidden flex flex-col z-[100]">
+    class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
-    <header class="flex-shrink-0 flex justify-between items-center mb-6 px-2">
+    <header class="flex-shrink-0 flex justify-between items-center mb-5 px-2">
         <div class="flex items-center gap-3">
             <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
@@ -1266,7 +1340,7 @@
 
         <div class="flex items-center gap-3">
             <div
-                class="hidden md:flex min-w-0 items-center gap-4 bg-slate-800/50 backdrop-blur-xl px-6 py-2 rounded-full border border-slate-700/50 shadow-xl">
+                class="hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-5 py-2 rounded-full border border-slate-700/50 shadow-xl">
                 <div class="flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-calendar text-indigo-400"></i>
                     <span class="text-base font-medium dt-header-nowrap" id="headerDate">--. --. (.)</span>
@@ -1382,10 +1456,10 @@
 
 
     <!-- Main Grid -->
-    <main class="dt-main-grid flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+    <main class="dt-main-grid flex-1 grid grid-cols-1 min-h-0">
 
         <!-- Left Column -->
-        <div class="dt-left-column lg:col-span-8 flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-left-column flex flex-col gap-5 h-full min-h-0">
 
             <!-- 1. Timer & Current Mission Card -->
             <div
@@ -1463,7 +1537,7 @@
 
             <!-- 2. Student Status Grid (Bottom) -->
             <div id="mainStudentCard"
-                class="dt-student-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 lg:p-7 border border-slate-700/50 flex flex-col shadow-2xl min-h-0">
+                class="dt-student-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-5 lg:p-6 border border-slate-700/50 flex flex-col shadow-2xl min-h-0">
                 <div class="flex justify-between items-center mb-4 px-1">
                     <div class="flex items-center gap-3">
                         <h3 class="text-xl md:text-2xl font-black flex items-center gap-2 text-white">
@@ -1495,7 +1569,7 @@
 
                 <!-- Student Grid Container -->
                 <div id="mainStudentGrid"
-                    class="dt-student-grid grid grid-cols-5 lg:grid-cols-6 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
+                    class="dt-student-grid grid grid-cols-5 gap-2 overflow-y-auto pr-2 custom-scrollbar h-full min-h-0 content-start">
                     <div class="col-span-full text-center text-sm font-semibold text-slate-500 py-8">
                         학생 데이터를 불러오는 중입니다.
                     </div>
@@ -1504,13 +1578,13 @@
         </div>
 
         <!-- Right Column -->
-        <div class="dt-right-column lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
+        <div class="dt-right-column flex flex-col gap-5 h-full min-h-0">
 
             <!-- 3. Today's Roles -->
             <div
-                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
+                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-5 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
                 <div class="flex justify-between items-center mb-4 px-1">
-                    <h3 class="text-2xl font-black text-white flex items-center gap-2">
+                    <h3 class="text-xl md:text-[1.45rem] font-black text-white flex items-center gap-2">
                         <span
                             class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
                         오늘의 역할
@@ -1536,7 +1610,7 @@
 
             <!-- 4. Random Picker -->
             <div id="randomPickerPanel"
-                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[15rem] flex flex-col shadow-2xl">
+                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-5 border border-slate-700/50 min-h-[11.8rem] flex flex-col shadow-2xl">
                 <div class="flex items-center justify-between gap-2 mb-3 px-1">
                     <h3 class="text-xl font-black text-white flex items-center gap-2">
                         <i class="fa-solid fa-shuffle text-indigo-300"></i>
@@ -1804,7 +1878,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304b"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304c"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
