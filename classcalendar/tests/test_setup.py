@@ -14,3 +14,21 @@ class SetupTest(TestCase):
         self.assertIsNotNone(manual)
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(manual.sections.count(), 3)
+
+    def test_ensure_classcalendar_backfills_legacy_product_route(self):
+        legacy = Product.objects.create(
+            title="교무수첩",
+            description="legacy desc",
+            price=0,
+            is_active=True,
+            launch_route_name="",
+            external_url="/products/legacy/",
+            service_type="etc",
+        )
+
+        call_command('ensure_classcalendar')
+
+        legacy.refresh_from_db()
+        self.assertEqual(legacy.launch_route_name, 'classcalendar:main')
+        self.assertEqual(legacy.external_url, "")
+        self.assertEqual(legacy.service_type, "classroom")
