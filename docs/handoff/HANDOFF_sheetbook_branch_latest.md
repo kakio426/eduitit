@@ -420,6 +420,19 @@ Status: Working branch handoff (2026-03-04 14:16)
     - daily: `overall=GO`, `readiness_status=PASS`
     - gap: `ready=true`
 
+## 1-19) 2026-03-04 퇴근 전 최종 handoff 스냅샷
+
+- 마지막 원클릭 실행:
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+- 최종 결과(2026-03-04 14:15 기준):
+  - `docs/handoff/smoke_sheetbook_ops_cycle_latest.json`: `status=PASS`
+  - `docs/handoff/sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `docs/handoff/sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+- 재개 기준 커맨드(집에서 1회):
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+- 권한 이슈 메모(Windows):
+  - `run_sheetbook_consent_smoke.py`에서 간헐적으로 `WinError 5`가 나면 관리자 PowerShell에서 동일 명령 재실행.
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
@@ -451,20 +464,22 @@ Status: Working branch handoff (2026-03-04 14:16)
 3. `git push origin feature/sheetbook`
 4. 본 문서/`HANDOFF_sheetbook_2026-02-27.md` 갱신
 
-## 5) 집에서 진행할 작업 (2026-03-03 저녁)
+## 5) 집에서 진행할 작업 (2026-03-04 밤)
 
 1. 시작 동기화
    - `git checkout feature/sheetbook`
    - `git fetch origin`
    - `git pull --ff-only origin feature/sheetbook`
-2. 오늘 기준 상태 재확인
-   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-04 --allow-pilot-hold-for-beta`
-   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14`
-3. 코드 작업 후 최소 검증
-   - `python manage.py test sheetbook.tests.SheetbookGuardedCommitScriptTests sheetbook.tests.SheetbookRefreshHandoffLatestScriptTests`
+2. 바로 재개(권장 1회 명령)
+   - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+3. 결과 확인(3개 파일만 체크)
+   - `docs/handoff/smoke_sheetbook_ops_cycle_latest.json`에서 `status=PASS`
+   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`에서 `overall=GO`, `readiness_status=PASS`
+   - `docs/handoff/sheetbook_sample_gap_summary_latest.json`에서 `overall.ready=true`
+4. 코드 작업 후 최소 검증
    - `python manage.py check`
-4. 백업/원격 반영(권장 1회 명령)
+5. 백업/원격 반영(권장 1회 명령)
    - `python scripts/run_sheetbook_guarded_commit.py -m "chore(sheetbook): home-session checkpoint" --push --refresh-handoff-latest --commit-handoff-refresh`
-5. 종료 확인
+6. 종료 확인
    - `git status -sb`
-   - `docs/handoff/HANDOFF_sheetbook_branch_latest.md`의 `latest backup commit`이 최신 커밋으로 갱신됐는지 확인
+   - `docs/handoff/HANDOFF_sheetbook_branch_latest.md`의 `latest backup commit` 갱신 확인
