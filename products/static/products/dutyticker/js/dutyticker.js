@@ -428,8 +428,8 @@ class DutyTickerManager {
 
         if (!this.roles.length) {
             container.innerHTML = `
-                <div class="rounded-2xl border border-slate-700 bg-slate-800/50 p-5 text-center">
-                    <p class="text-sm font-bold text-slate-300">등록된 역할이 없습니다.</p>
+                <div class="dt-role-empty rounded-2xl border p-5 text-center">
+                    <p class="dt-role-empty-text text-sm font-bold">등록된 역할이 없습니다.</p>
                     <a href="/products/dutyticker/admin/" class="inline-flex mt-3 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition">
                         설정에서 역할 추가
                     </a>
@@ -461,16 +461,14 @@ class DutyTickerManager {
             const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
             const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
             const spotlightBadge = isSpotlightRole
-                ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-black bg-indigo-500/30 text-indigo-100 border border-indigo-300/40">집중</span>'
+                ? '<span class="dt-role-spotlight-badge ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-black border">집중</span>'
                 : '';
             const statusBadge = isCompleted
-                ? '<span class="text-emerald-400 text-[11px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
-                : '<span class="text-slate-400 text-[11px] font-black uppercase tracking-wider">진행중</span>';
-            const assigneeToneClass = isCompleted
-                ? 'text-slate-300 bg-slate-700/40 border-slate-600/50'
-                : 'text-indigo-100 bg-indigo-500/20 border-indigo-400/30';
+                ? '<span class="dt-role-status is-completed text-[11px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
+                : '<span class="dt-role-status is-pending text-[11px] font-black uppercase tracking-wider">진행중</span>';
+            const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
             return `
-                <div class="flex items-center p-3.5 lg:p-3 bg-slate-800/30 backdrop-blur-md rounded-[1.35rem] border border-white/5 hover:bg-slate-700/40 transition-all cursor-pointer group shadow-lg ${spotlightClass}"
+                <div class="dt-role-row flex items-center p-3.5 lg:p-3 rounded-[1.35rem] border transition-all cursor-pointer group shadow-lg ${spotlightClass}"
                     role="button"
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
@@ -478,14 +476,14 @@ class DutyTickerManager {
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center gap-2 mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
-                                <p class="text-[11px] text-slate-400 font-extrabold tracking-[0.16em]">${safeTimeSlot}</p>
+                                <p class="dt-role-slot text-[11px] font-extrabold tracking-[0.16em]">${safeTimeSlot}</p>
                                 ${spotlightBadge}
                             </div>
                             ${statusBadge}
                         </div>
-                        <div class="flex justify-between items-center gap-2 text-xl font-black text-slate-100">
-                            <p class="text-[1.55rem] lg:text-[1.65rem] leading-tight truncate ${isCompleted ? 'opacity-40 line-through' : ''}">${safeRoleName}</p>
-                            <div class="text-lg lg:text-xl ${assigneeToneClass} px-3.5 py-1 rounded-xl border shrink-0 leading-tight">${safeAssignee}</div>
+                        <div class="flex justify-between items-center gap-2 text-xl font-black">
+                            <p class="dt-role-name text-[1.55rem] lg:text-[1.65rem] leading-tight truncate ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
+                            <div class="dt-role-assignee text-lg lg:text-xl ${assigneeToneClass} px-3.5 py-1 rounded-xl border shrink-0 leading-tight">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
@@ -516,6 +514,14 @@ class DutyTickerManager {
         card.classList.toggle('dt-student-card-fit-25', shouldFitWithoutScroll);
     }
 
+    getStudentNameSizeClass(name) {
+        const normalized = String(name || '').trim();
+        const length = Array.from(normalized).length;
+        if (length <= 3) return 'dt-student-name-short';
+        if (length <= 5) return 'dt-student-name-mid';
+        return 'dt-student-name-long';
+    }
+
     renderStudentGrid() {
         const container = document.getElementById('mainStudentGrid');
         if (!container) return;
@@ -540,21 +546,22 @@ class DutyTickerManager {
             const safeStudentNumber = this.escapeHtml(student.number);
             const safeStudentName = this.escapeHtml(student.name);
             const isSpotlight = Number(this.spotlightStudentId) === Number(student.id);
+            const nameSizeClass = this.getStudentNameSizeClass(student.name);
             return `
-                <div class="relative p-2 rounded-2xl border border-slate-700 bg-slate-800/50 flex flex-col items-center gap-1 cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''} ${isSpotlight ? 'ring-2 ring-indigo-400 bg-indigo-500/10' : ''}"
+                <div class="dt-student-tile relative border border-slate-700 bg-slate-800/50 flex flex-col items-center justify-center cursor-pointer transition group ${isDone ? 'border-emerald-500/50 bg-emerald-500/10' : ''} ${isSpotlight ? 'ring-2 ring-indigo-400 bg-indigo-500/10' : ''}"
                     onclick="window.dtApp.handleStudentStatusToggle(${studentId})">
                     <button
                         type="button"
                         onclick="event.stopPropagation(); window.dtApp.toggleSpotlightStudent(${studentId})"
-                        class="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition ${isSpotlight ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-indigo-500 hover:text-white'}"
+                        class="dt-student-spotlight-btn absolute rounded-full flex items-center justify-center font-black transition ${isSpotlight ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-indigo-500 hover:text-white'}"
                         title="${isSpotlight ? '반짝임 해제' : '반짝이기'}"
                     >
                         <i class="fa-solid fa-sparkles"></i>
                     </button>
-                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
+                    <div class="dt-student-number px-1 rounded-full flex items-center justify-center font-black transition-all ${isDone ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-300 group-hover:bg-indigo-500'}">
                         ${safeStudentNumber}
                     </div>
-                    <span class="text-base font-bold ${isDone ? 'text-emerald-300' : 'text-slate-200'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
+                    <span class="dt-student-name ${nameSizeClass} font-black ${isDone ? 'text-emerald-300' : 'text-slate-200'} ${isSpotlight ? 'text-indigo-200' : ''}">${safeStudentName}</span>
                 </div>
             `;
         }).join('');
