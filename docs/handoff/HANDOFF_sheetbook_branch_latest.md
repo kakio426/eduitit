@@ -361,6 +361,16 @@ Status: Working branch handoff (2026-03-04 10:13)
   - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
 
+## 1-15) 2026-03-04 sheetbook 회귀 테스트 재확인
+
+- 실행:
+  - `python manage.py test sheetbook.tests`
+  - `python manage.py check`
+- 결과:
+  - 총 `220`건 테스트 실행, `OK`
+  - `System check identified no issues`
+  - 테스트 실행 후 작업트리 기준 sheetbook 변경 없음(운영 산출물/코드 무변경)
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
