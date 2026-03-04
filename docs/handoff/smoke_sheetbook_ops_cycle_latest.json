@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-03-04 21:21:29",
+  "days": 14,
+  "due_date": "2026-03-05",
+  "used_due_date_fallback": false,
+  "allow_pilot_hold_for_beta": true,
+  "grid_port": 8015,
+  "with_check": true,
+  "success": true,
+  "failed_index": null,
+  "status": "PASS",
+  "commands": [
+    {
+      "command": "python scripts/run_sheetbook_allowlist_smoke.py",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "[INFO] 2026-03-04 21:15:06,481 [756e3921cffd] core.middleware - [VISITOR] Path: /sheetbook/134/ | IP: 127.0.0.1 | Already recorded: True",
+        "[INFO] 2026-03-04 21:15:06,487 [756e3921cffd] sheetbook.views - [sheetbook_metric] {\"event\": \"sheetbook_detail_opened\", \"user_id\": 58, \"sheetbook_id\": 134, \"tab_id\": 296, \"tab_type\": \"calendar\", \"entry_source\": \"direct\"}",
+        "[INFO] 2026-03-04 21:15:06,530 [756e3921cffd] core.middleware - [REQUEST] rid=756e3921cffd method=GET path=/sheetbook/134/ status=200 latency_ms=51",
+        "[INFO] 2026-03-04 21:15:06,572 [efd87ce32fe2] core.middleware - [VISITOR] Path: /sheetbook/ | IP: 127.0.0.1 | Already recorded: False",
+        "[INFO] 2026-03-04 21:15:06,573 [efd87ce32fe2] core.middleware - [VISITOR] DB operation - Created: False | IP: 127.0.0.1 | Bot: False | Date: 2026-03-04",
+        "[INFO] 2026-03-04 21:15:06,590 [efd87ce32fe2] core.middleware - [REQUEST] rid=efd87ce32fe2 method=GET path=/sheetbook/ status=404 latency_ms=21",
+        "[WARNING] 2026-03-04 21:15:06,591 [-] django.request - Not Found: /sheetbook/",
+        "[INFO] 2026-03-04 21:15:06,594 [67e0df00de67] core.middleware - [VISITOR] Path: /sheetbook/create/ | IP: 127.0.0.1 | Already recorded: True",
+        "[INFO] 2026-03-04 21:15:06,603 [67e0df00de67] core.middleware - [REQUEST] rid=67e0df00de67 method=POST path=/sheetbook/create/ status=404 latency_ms=11",
+        "[WARNING] 2026-03-04 21:15:06,603 [-] django.request - Not Found: /sheetbook/create/",
+        "[INFO] 2026-03-04 21:15:06,651 [ad7596c27c1c] core.middleware - [VISITOR] Path: /sheetbook/ | IP: 127.0.0.1 | Already recorded: False",
+        "[INFO] 2026-03-04 21:15:06,652 [ad7596c27c1c] core.middleware - [VISITOR] DB operation - Created: False | IP: 127.0.0.1 | Bot: False | Date: 2026-03-04",
+        "[INFO] 2026-03-04 21:15:06,657 [ad7596c27c1c] sheetbook.views - [sheetbook_metric] {\"event\": \"sheetbook_index_opened\", \"user_id\": 59, \"sheetbook_count\": 14, \"has_search\": false, \"entry_source\": \"direct\", \"status_filter\": \"active\"}",
+        "[INFO] 2026-03-04 21:15:06,683 [ad7596c27c1c] core.middleware - [REQUEST] rid=ad7596c27c1c method=GET path=/sheetbook/ status=200 latency_ms=36",
+        "[INFO] 2026-03-04 21:15:06,686 [4a8a2cc6979a] core.middleware - [VISITOR] Path: /sheetbook/create/ | IP: 127.0.0.1 | Already recorded: True",
+        "[INFO] 2026-03-04 21:15:06,796 [4a8a2cc6979a] sheetbook.views - [sheetbook_metric] {\"event\": \"sheetbook_created\", \"user_id\": 59, \"sheetbook_id\": 135, \"has_academic_year\": true, \"entry_source\": \"direct\"}",
+        "[INFO] 2026-03-04 21:15:06,804 [4a8a2cc6979a] core.middleware - [REQUEST] rid=4a8a2cc6979a method=POST path=/sheetbook/create/ status=302 latency_ms=120",
+        "[INFO] 2026-03-04 21:15:06,810 [2dc90067eaec] core.middleware - [VISITOR] Path: /sheetbook/135/ | IP: 127.0.0.1 | Already recorded: True",
+        "[INFO] 2026-03-04 21:15:06,816 [2dc90067eaec] sheetbook.views - [sheetbook_metric] {\"event\": \"sheetbook_detail_opened\", \"user_id\": 59, \"sheetbook_id\": 135, \"tab_id\": 300, \"tab_type\": \"calendar\", \"entry_source\": \"direct\"}",
+        "[INFO] 2026-03-04 21:15:06,835 [2dc90067eaec] core.middleware - [REQUEST] rid=2dc90067eaec method=GET path=/sheetbook/135/ status=200 latency_ms=29"
+      ]
+    },
+    {
+      "command": "python scripts/run_sheetbook_consent_smoke.py",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "[DATABASE] Using SQLite (development)",
+        "================================================================================",
+        "[CLOUDINARY] Environment variable check",
+        "================================================================================",
+        "CLOUDINARY_URL: [X] NOT SET",
+        "CLOUDINARY_CLOUD_NAME: dl5pq1o6o",
+        "CLOUDINARY_API_KEY: [X] NOT SET",
+        "CLOUDINARY_API_SECRET: SET",
+        "[CLOUDINARY] Using individual environment variables",
+        "[CLOUDINARY] USE_CLOUDINARY = False",
+        "[INFO] Cloudinary disabled - using local file system",
+        "================================================================================",
+        "[SENTRY] DSN=NOT SET, DEBUG=True",
+        "[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)",
+        "{\"started_at\": \"2026-03-04 21:15:17\", \"base_url\": \"http://127.0.0.1:8003\", \"expected\": {\"valid_count\": 180, \"duplicate_count\": 20, \"invalid_count\": 20, \"total_lines\": 220}, \"datasets\": {\"desktop\": {\"sheetbook_id\": 79, \"tab_id\": 79, \"seed_token\": \"JEAfT765QGdbcMX7\", \"review_path\": \"/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=JEAfT765QGdbcMX7\", \"session_cookie_name\": \"sessionid\", \"session_cookie_value\": \"i0i5ito9pj4eoe3amsix27ud53dl9tjt\", \"initial_recipients_text_lines\": 220, \"expected\": {\"valid_count\": 180, \"duplicate_count\": 20, \"invalid_count\": 20, \"total_lines\": 220}}, \"tablet\": {\"sheetbook_id\": 79, \"tab_id\": 79, \"seed_token\": \"dWPFPymK4942J1Xo\", \"review_path\": \"/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=dWPFPymK4942J1Xo\", \"session_cookie_name\": \"sessionid\", \"session_cookie_value\": \"1l0bzx3aezhg5kyake6peh5ika1b9m3w\", \"initial_recipients_text_lines\": 220, \"expected\": {\"valid_count\": 180, \"duplicate_count\": 20, \"invalid_count\": 20, \"total_lines\": 220}}}, \"desktop\": {\"scenario\": \"desktop\", \"device\": \"desktop-default\", \"expected_seed_token\": \"JEAfT765QGdbcMX7\", \"open_ms\": 4352.644400001736, \"review_path\": \"/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=JEAfT765QGdbcMX7\", \"initial_summary_text\": \"현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄\", \"initial_summary\": {\"input\": 220, \"accepted\": 180, \"duplicate\": 20, \"skipped\": 20}, \"issue_panel_visible\": true, \"issue_buttons_count\": 12, \"issue_list_count\": 12, \"minimap_visible\": true, \"marker_count\": 40, \"minimap_lane_count\": 3, \"minimap_duplicate_lane_top_count\": 0, \"minimap_dense_adjacencies\": 38, \"line_jump_by_button\": {\"target_line\": 91, \"current_line\": 91, \"indicator\": \"현재 확인 중: 91줄\", \"ok\": true}, \"line_jump_by_minimap\": {\"ok\": true, \"checked_count\": 4, \"samples\": [{\"index\": 0, \"target_line\": 91, \"target_lane\": 0, \"current_line\": 91, \"indicator\": \"현재 확인 중: 91줄\", \"ok\": true}, {\"index\": 1, \"target_line\": 92, \"target_lane\": 1, \"current_line\": 92, \"indicator\": \"현재 확인 중: 92줄\", \"ok\": true}, {\"index\": 20, \"target_line\": 201, \"target_lane\": 0, \"current_line\": 201, \"indicator\": \"현재 확인 중: 201줄\", \"ok\": true}, {\"index\": 39, \"target_line\": 220, \"target_lane\": 1, \"current_line\": 220, \"indicator\": \"현재 확인 중: 220줄\", \"ok\": true}], \"dense_adjacencies\": 38}, \"bottom_scroll_top\": 5088, \"top_scroll_top\": 0, \"updated_summary_text\": \"현재 입력 기준: 222줄 · 180명 반영 · 중복 21줄 · 형식 확인 21줄\", \"updated_summary\": {\"input\": 222, \"accepted\": 180, \"duplicate\": 21, \"skipped\": 21}, \"final_url\": \"http://127.0.0.1:8003/consent/create/step1/?sb_seed=JEAfT765QGdbcMX7&from=sheetbook\", \"final_path\": \"/consent/create/step1/\", \"final_seed_token\": \"JEAfT765QGdbcMX7\", \"console_error_count\": 0, \"console_errors\": [], \"console_tail\": [\"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\", \"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\"]}, \"tablet\": {\"scenario\": \"tablet\", \"device\": \"iPad Pro 11\", \"expected_seed_token\": \"dWPFPymK4942J1Xo\", \"open_ms\": 1237.9207999983919, \"review_path\": \"/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=dWPFPymK4942J1Xo\", \"initial_summary_text\": \"현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄\", \"initial_summary\": {\"input\": 220, \"accepted\": 180, \"duplicate\": 20, \"skipped\": 20}, \"issue_panel_visible\": true, \"issue_buttons_count\": 12, \"issue_list_count\": 12, \"minimap_visible\": true, \"marker_count\": 40, \"minimap_lane_count\": 3, \"minimap_duplicate_lane_top_count\": 0, \"minimap_dense_adjacencies\": 38, \"line_jump_by_button\": {\"target_line\": 91, \"current_line\": 91, \"indicator\": \"현재 확인 중: 91줄\", \"ok\": true}, \"line_jump_by_minimap\": {\"ok\": true, \"checked_count\": 4, \"samples\": [{\"index\": 0, \"target_line\": 91, \"target_lane\": 0, \"current_line\": 91, \"indicator\": \"현재 확인 중: 91줄\", \"ok\": true}, {\"index\": 1, \"target_line\": 92, \"target_lane\": 1, \"current_line\": 92, \"indicator\": \"현재 확인 중: 92줄\", \"ok\": true}, {\"index\": 20, \"target_line\": 201, \"target_lane\": 0, \"current_line\": 201, \"indicator\": \"현재 확인 중: 201줄\", \"ok\": true}, {\"index\": 39, \"target_line\": 220, \"target_lane\": 1, \"current_line\": 220, \"indicator\": \"현재 확인 중: 220줄\", \"ok\": true}], \"dense_adjacencies\": 38}, \"bottom_scroll_top\": 5088, \"top_scroll_top\": 0, \"updated_summary_text\": \"현재 입력 기준: 222줄 · 180명 반영 · 중복 21줄 · 형식 확인 21줄\", \"updated_summary\": {\"input\": 222, \"accepted\": 180, \"duplicate\": 21, \"skipped\": 21}, \"final_url\": \"http://127.0.0.1:8003/consent/create/step1/?sb_seed=dWPFPymK4942J1Xo&from=sheetbook\", \"final_path\": \"/consent/create/step1/\", \"final_seed_token\": \"dWPFPymK4942J1Xo\", \"console_error_count\": 0, \"console_errors\": [], \"console_tail\": [\"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\", \"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\"]}, \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": []}}"
+      ]
+    },
+    {
+      "command": "python scripts/run_sheetbook_grid_smoke.py --port 8015",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "[DATABASE] Using SQLite (development)",
+        "================================================================================",
+        "[CLOUDINARY] Environment variable check",
+        "================================================================================",
+        "CLOUDINARY_URL: [X] NOT SET",
+        "CLOUDINARY_CLOUD_NAME: dl5pq1o6o",
+        "CLOUDINARY_API_KEY: [X] NOT SET",
+        "CLOUDINARY_API_SECRET: SET",
+        "[CLOUDINARY] Using individual environment variables",
+        "[CLOUDINARY] USE_CLOUDINARY = False",
+        "[INFO] Cloudinary disabled - using local file system",
+        "================================================================================",
+        "[SENTRY] DSN=NOT SET, DEBUG=True",
+        "[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)",
+        "{\"started_at\": \"2026-03-04 21:15:46\", \"base_url\": \"http://127.0.0.1:8015\", \"dataset\": {\"sheetbook_id\": 78, \"tab_id\": 78, \"rows\": 1000, \"cols\": 10, \"paste_result\": {\"updated\": 10000, \"skipped\": 0, \"invalid_rows\": [], \"row_errors\": [], \"rows_added\": 1000, \"batch_size\": 400}, \"session_cookie_name\": \"sessionid\", \"session_cookie_value\": \"b15nc8ae5vr36dji8j1zbdu3nsgo8ul5\"}, \"desktop\": {\"scenario\": \"desktop\", \"device\": \"desktop-default\", \"detail_path\": \"/sheetbook/78/?tab=78&grid_limit=1000\", \"initial_render_ms\": 2511.3015999959316, \"final_render_log\": {\"rows_loaded\": 1000, \"rows_total\": 1000, \"cols\": 10, \"limit\": 1000, \"mode\": \"chunked\", \"chunks\": 9, \"chunk_size\": 120, \"render_ms\": 1248.5, \"raw\": \"[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1248.5\", \"ts\": 47272.4476208}, \"render_log_count\": 1, \"seek_ms\": {\"row_0\": 145.72690000204602, \"row_500\": 145.68380000127945, \"row_1000\": 120.28790000476874}, \"edit_results\": [{\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 109.49690000416012, \"row_index\": 0, \"attempt\": 1}, {\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 1570.4879999975674, \"row_index\": 499, \"attempt\": 1}, {\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 278.8351999988663, \"row_index\": 999, \"attempt\": 1}], \"action_layer_visible\": true, \"final_status\": \"저장 상태: 저장됨\", \"console_error_count\": 0, \"console_errors\": [], \"ignored_console_error_count\": 0, \"ignored_console_errors\": [], \"console_tail\": [\"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\", \"info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1248.5\"]}, \"tablet\": {\"scenario\": \"tablet\", \"device\": \"iPad Pro 11\", \"detail_path\": \"/sheetbook/78/?tab=78&grid_limit=1000\", \"initial_render_ms\": 2661.7006000014953, \"final_render_log\": {\"rows_loaded\": 1000, \"rows_total\": 1000, \"cols\": 10, \"limit\": 1000, \"mode\": \"chunked\", \"chunks\": 9, \"chunk_size\": 120, \"render_ms\": 1716.4, \"raw\": \"[sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1716.4\", \"ts\": 47423.1793044}, \"render_log_count\": 1, \"seek_ms\": {\"row_0\": 199.57200000499142, \"row_500\": 230.20350000297185, \"row_1000\": 174.95179999968968}, \"edit_results\": [{\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 3071.06819999899, \"row_index\": 0, \"attempt\": 1}, {\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 1600.0980000026175, \"row_index\": 499, \"attempt\": 1}, {\"ok\": true, \"status\": \"저장 상태: 저장됨\", \"wait_ms\": 196.40450000588316, \"row_index\": 999, \"attempt\": 1}], \"action_layer_visible\": true, \"final_status\": \"저장 상태: 저장됨\", \"console_error_count\": 0, \"console_errors\": [], \"ignored_console_error_count\": 0, \"ignored_console_errors\": [], \"console_tail\": [\"warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation\", \"info: [sheetbook:grid] render rows=1000/1000, cols=10, limit=1000, mode=chunked, chunks=9, chunk_size=120, render_ms=1716.4\"]}, \"evaluation\": {\"pass\": true, \"desktop_pass\": true, \"tablet_pass\": true, \"desktop_reasons\": [], \"tablet_reasons\": [], \"desktop_warnings\": [], \"tablet_warnings\": [], \"has_warnings\": false, \"thresholds\": {\"max_final_render_ms\": 2000.0, \"warn_initial_render_ms\": 3000.0}}}"
+      ]
+    },
+    {
+      "command": "python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "{\"overall\": \"GO\", \"decision\": \"GO\", \"has_command_failures\": false, \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_daily_start_bundle_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_DAILY_START_2026-03-04.md\"}"
+      ]
+    },
+    {
+      "command": "python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "{\"overall_ready\": true, \"blockers\": [], \"next_actions\": [{\"type\": \"monitoring\", \"description\": \"표본 부족 없음, 주기적으로 gap summary 확인\", \"command\": \"python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05\"}], \"output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\handoff\\\\sheetbook_sample_gap_summary_latest.json\", \"md_output\": \"C:\\\\Users\\\\kakio\\\\eduitit\\\\docs\\\\runbooks\\\\logs\\\\SHEETBOOK_SAMPLE_GAP_2026-03-04.md\"}"
+      ]
+    },
+    {
+      "command": "python manage.py check",
+      "ok": true,
+      "returncode": 0,
+      "tail": [
+        "[DATABASE] Using SQLite (development)",
+        "================================================================================",
+        "[CLOUDINARY] Environment variable check",
+        "================================================================================",
+        "CLOUDINARY_URL: [X] NOT SET",
+        "CLOUDINARY_CLOUD_NAME: dl5pq1o6o",
+        "CLOUDINARY_API_KEY: [X] NOT SET",
+        "CLOUDINARY_API_SECRET: SET",
+        "[CLOUDINARY] Using individual environment variables",
+        "[CLOUDINARY] USE_CLOUDINARY = False",
+        "[INFO] Cloudinary disabled - using local file system",
+        "================================================================================",
+        "[SENTRY] DSN=NOT SET, DEBUG=True",
+        "[SENTRY] SKIPPED (DSN=EMPTY, DEBUG=True)",
+        "System check identified no issues (0 silenced)."
+      ]
+    }
+  ],
+  "snapshot": {
+    "allowlist": {
+      "started_at": "2026-03-04 21:15:06",
+      "pass": true
+    },
+    "consent": {
+      "started_at": "2026-03-04 21:15:17",
+      "pass": true
+    },
+    "grid": {
+      "started_at": "2026-03-04 21:15:46",
+      "pass": true,
+      "has_warnings": false,
+      "desktop_warnings": [],
+      "tablet_warnings": []
+    },
+    "daily": {
+      "overall": "GO",
+      "decision": "GO",
+      "readiness_status": "PASS"
+    },
+    "release": {
+      "readiness_status": "PASS",
+      "decision": "GO"
+    },
+    "gap": {
+      "ready": true,
+      "blockers": []
+    }
+  }
+}

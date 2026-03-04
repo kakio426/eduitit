@@ -1,0 +1,115 @@
+{
+  "generated_at": "2026-03-04 21:21:12",
+  "days": 14,
+  "preflight": {
+    "beta_strict": {
+      "pass": true,
+      "elapsed_ms": 109.4,
+      "log_tail": [
+        "[sheetbook] preflight start",
+        "- check_collect_schema",
+        "- check_sheetbook_rollout --strict",
+        "- check_sheetbook_consent_freeze",
+        "- recommend_sheetbook_thresholds --days 14",
+        "[sheetbook] preflight done"
+      ]
+    },
+    "global_strict": {
+      "pass": true,
+      "elapsed_ms": 57.0,
+      "log_tail": [
+        "[sheetbook] preflight start",
+        "- check_collect_schema",
+        "- check_sheetbook_rollout --strict",
+        "- check_sheetbook_consent_freeze",
+        "- recommend_sheetbook_thresholds --days 14",
+        "[sheetbook] preflight done"
+      ]
+    }
+  },
+  "smokes": {
+    "grid_1000": {
+      "exists": true,
+      "pass": true,
+      "started_at": "2026-03-04 21:15:46",
+      "evaluation": {
+        "pass": true,
+        "desktop_pass": true,
+        "tablet_pass": true,
+        "desktop_reasons": [],
+        "tablet_reasons": [],
+        "desktop_warnings": [],
+        "tablet_warnings": [],
+        "has_warnings": false,
+        "thresholds": {
+          "max_final_render_ms": 2000.0,
+          "warn_initial_render_ms": 3000.0
+        }
+      }
+    },
+    "consent_recipients": {
+      "exists": true,
+      "pass": true,
+      "started_at": "2026-03-04 21:15:17",
+      "evaluation": {
+        "pass": true,
+        "desktop_pass": true,
+        "tablet_pass": true,
+        "desktop_reasons": [],
+        "tablet_reasons": []
+      }
+    },
+    "consent_recipients_300": {
+      "exists": true,
+      "pass": true,
+      "started_at": "2026-03-01 13:01:13",
+      "evaluation": {
+        "pass": true,
+        "desktop_pass": true,
+        "tablet_pass": true,
+        "desktop_reasons": [],
+        "tablet_reasons": []
+      }
+    },
+    "allowlist_access": {
+      "exists": true,
+      "pass": true,
+      "started_at": "2026-03-04 21:15:06",
+      "evaluation": {
+        "pass": true,
+        "reasons": []
+      }
+    }
+  },
+  "pilot": {
+    "days": 14,
+    "ready_for_recalibration": true,
+    "counts": {
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5,
+      "home_source_action_execute_requested": 3
+    },
+    "rates": {
+      "home_to_create_pct": 100.0,
+      "create_to_action_pct": 60.0
+    },
+    "minimum_samples": {
+      "workspace_home_opened": 5,
+      "home_source_sheetbook_created": 5
+    },
+    "status": "PASS"
+  },
+  "overall": {
+    "status": "PASS",
+    "blocking_reasons": [],
+    "advisory_reasons": [],
+    "manual_pending": [
+      "staging_real_account_signoff",
+      "production_real_account_signoff"
+    ],
+    "waived_manual_checks": [
+      "real_device_grid_1000_smoke"
+    ],
+    "automated_gate_pass": true
+  }
+}

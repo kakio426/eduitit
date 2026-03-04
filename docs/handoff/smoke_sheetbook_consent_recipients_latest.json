@@ -1,0 +1,219 @@
+{
+  "started_at": "2026-03-04 21:15:17",
+  "base_url": "http://127.0.0.1:8003",
+  "expected": {
+    "valid_count": 180,
+    "duplicate_count": 20,
+    "invalid_count": 20,
+    "total_lines": 220
+  },
+  "datasets": {
+    "desktop": {
+      "sheetbook_id": 79,
+      "tab_id": 79,
+      "seed_token": "JEAfT765QGdbcMX7",
+      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=JEAfT765QGdbcMX7",
+      "session_cookie_name": "sessionid",
+      "session_cookie_value": "i0i5ito9pj4eoe3amsix27ud53dl9tjt",
+      "initial_recipients_text_lines": 220,
+      "expected": {
+        "valid_count": 180,
+        "duplicate_count": 20,
+        "invalid_count": 20,
+        "total_lines": 220
+      }
+    },
+    "tablet": {
+      "sheetbook_id": 79,
+      "tab_id": 79,
+      "seed_token": "dWPFPymK4942J1Xo",
+      "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=dWPFPymK4942J1Xo",
+      "session_cookie_name": "sessionid",
+      "session_cookie_value": "1l0bzx3aezhg5kyake6peh5ika1b9m3w",
+      "initial_recipients_text_lines": 220,
+      "expected": {
+        "valid_count": 180,
+        "duplicate_count": 20,
+        "invalid_count": 20,
+        "total_lines": 220
+      }
+    }
+  },
+  "desktop": {
+    "scenario": "desktop",
+    "device": "desktop-default",
+    "expected_seed_token": "JEAfT765QGdbcMX7",
+    "open_ms": 4352.644400001736,
+    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=JEAfT765QGdbcMX7",
+    "initial_summary_text": "현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄",
+    "initial_summary": {
+      "input": 220,
+      "accepted": 180,
+      "duplicate": 20,
+      "skipped": 20
+    },
+    "issue_panel_visible": true,
+    "issue_buttons_count": 12,
+    "issue_list_count": 12,
+    "minimap_visible": true,
+    "marker_count": 40,
+    "minimap_lane_count": 3,
+    "minimap_duplicate_lane_top_count": 0,
+    "minimap_dense_adjacencies": 38,
+    "line_jump_by_button": {
+      "target_line": 91,
+      "current_line": 91,
+      "indicator": "현재 확인 중: 91줄",
+      "ok": true
+    },
+    "line_jump_by_minimap": {
+      "ok": true,
+      "checked_count": 4,
+      "samples": [
+        {
+          "index": 0,
+          "target_line": 91,
+          "target_lane": 0,
+          "current_line": 91,
+          "indicator": "현재 확인 중: 91줄",
+          "ok": true
+        },
+        {
+          "index": 1,
+          "target_line": 92,
+          "target_lane": 1,
+          "current_line": 92,
+          "indicator": "현재 확인 중: 92줄",
+          "ok": true
+        },
+        {
+          "index": 20,
+          "target_line": 201,
+          "target_lane": 0,
+          "current_line": 201,
+          "indicator": "현재 확인 중: 201줄",
+          "ok": true
+        },
+        {
+          "index": 39,
+          "target_line": 220,
+          "target_lane": 1,
+          "current_line": 220,
+          "indicator": "현재 확인 중: 220줄",
+          "ok": true
+        }
+      ],
+      "dense_adjacencies": 38
+    },
+    "bottom_scroll_top": 5088,
+    "top_scroll_top": 0,
+    "updated_summary_text": "현재 입력 기준: 222줄 · 180명 반영 · 중복 21줄 · 형식 확인 21줄",
+    "updated_summary": {
+      "input": 222,
+      "accepted": 180,
+      "duplicate": 21,
+      "skipped": 21
+    },
+    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=JEAfT765QGdbcMX7&from=sheetbook",
+    "final_path": "/consent/create/step1/",
+    "final_seed_token": "JEAfT765QGdbcMX7",
+    "console_error_count": 0,
+    "console_errors": [],
+    "console_tail": [
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+    ]
+  },
+  "tablet": {
+    "scenario": "tablet",
+    "device": "iPad Pro 11",
+    "expected_seed_token": "dWPFPymK4942J1Xo",
+    "open_ms": 1237.9207999983919,
+    "review_path": "/sheetbook/79/tabs/79/actions/consent/review/?sb_seed=dWPFPymK4942J1Xo",
+    "initial_summary_text": "현재 입력 기준: 220줄 · 180명 반영 · 중복 20줄 · 형식 확인 20줄",
+    "initial_summary": {
+      "input": 220,
+      "accepted": 180,
+      "duplicate": 20,
+      "skipped": 20
+    },
+    "issue_panel_visible": true,
+    "issue_buttons_count": 12,
+    "issue_list_count": 12,
+    "minimap_visible": true,
+    "marker_count": 40,
+    "minimap_lane_count": 3,
+    "minimap_duplicate_lane_top_count": 0,
+    "minimap_dense_adjacencies": 38,
+    "line_jump_by_button": {
+      "target_line": 91,
+      "current_line": 91,
+      "indicator": "현재 확인 중: 91줄",
+      "ok": true
+    },
+    "line_jump_by_minimap": {
+      "ok": true,
+      "checked_count": 4,
+      "samples": [
+        {
+          "index": 0,
+          "target_line": 91,
+          "target_lane": 0,
+          "current_line": 91,
+          "indicator": "현재 확인 중: 91줄",
+          "ok": true
+        },
+        {
+          "index": 1,
+          "target_line": 92,
+          "target_lane": 1,
+          "current_line": 92,
+          "indicator": "현재 확인 중: 92줄",
+          "ok": true
+        },
+        {
+          "index": 20,
+          "target_line": 201,
+          "target_lane": 0,
+          "current_line": 201,
+          "indicator": "현재 확인 중: 201줄",
+          "ok": true
+        },
+        {
+          "index": 39,
+          "target_line": 220,
+          "target_lane": 1,
+          "current_line": 220,
+          "indicator": "현재 확인 중: 220줄",
+          "ok": true
+        }
+      ],
+      "dense_adjacencies": 38
+    },
+    "bottom_scroll_top": 5088,
+    "top_scroll_top": 0,
+    "updated_summary_text": "현재 입력 기준: 222줄 · 180명 반영 · 중복 21줄 · 형식 확인 21줄",
+    "updated_summary": {
+      "input": 222,
+      "accepted": 180,
+      "duplicate": 21,
+      "skipped": 21
+    },
+    "final_url": "http://127.0.0.1:8003/consent/create/step1/?sb_seed=dWPFPymK4942J1Xo&from=sheetbook",
+    "final_path": "/consent/create/step1/",
+    "final_seed_token": "dWPFPymK4942J1Xo",
+    "console_error_count": 0,
+    "console_errors": [],
+    "console_tail": [
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+      "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+    ]
+  },
+  "evaluation": {
+    "pass": true,
+    "desktop_pass": true,
+    "tablet_pass": true,
+    "desktop_reasons": [],
+    "tablet_reasons": []
+  }
+}
