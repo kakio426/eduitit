@@ -300,12 +300,30 @@ def _rotate_guest_assignments(guest_data, behavior="sequential"):
         return False
 
     if behavior == "random":
-        target_assignments = [a for a in assignments if a.get("student_id") in student_name_map]
-        source_ids = [a.get("student_id") for a in target_assignments]
-        if len(source_ids) < 2:
+        if len(student_ids) < 2:
             return False
 
-        shuffled_ids = _shuffle_without_same_position(source_ids)
+        target_assignments = [a for a in assignments if a.get("student_id") in student_name_map]
+        source_ids = [a.get("student_id") for a in target_assignments]
+        if len(source_ids) < 1:
+            return False
+
+        if len(source_ids) >= 2:
+            shuffled_ids = _shuffle_without_same_position(source_ids)
+            # If shuffle still matches all positions, force a different student per role.
+            if shuffled_ids == source_ids:
+                forced_ids = []
+                for current_id in source_ids:
+                    candidates = [sid for sid in student_ids if sid != current_id]
+                    forced_ids.append(random.choice(candidates) if candidates else current_id)
+                shuffled_ids = forced_ids
+        else:
+            current_id = source_ids[0]
+            candidates = [sid for sid in student_ids if sid != current_id]
+            if not candidates:
+                return False
+            shuffled_ids = [random.choice(candidates)]
+
         for idx, assignment in enumerate(target_assignments):
             next_student_id = shuffled_ids[idx]
             assignment["student_id"] = next_student_id
@@ -351,12 +369,30 @@ def _rotate_user_assignments(user, behavior="sequential", classroom=None):
 
     updated_assignments = []
     if behavior == "random":
-        target_assignments = [assignment for assignment in assignments if assignment.student_id in student_map]
-        source_ids = [assignment.student_id for assignment in target_assignments]
-        if len(source_ids) < 2:
+        if len(student_ids) < 2:
             return False
 
-        shuffled_ids = _shuffle_without_same_position(source_ids)
+        target_assignments = [assignment for assignment in assignments if assignment.student_id in student_map]
+        source_ids = [assignment.student_id for assignment in target_assignments]
+        if len(source_ids) < 1:
+            return False
+
+        if len(source_ids) >= 2:
+            shuffled_ids = _shuffle_without_same_position(source_ids)
+            # If shuffle still matches all positions, force a different student per role.
+            if shuffled_ids == source_ids:
+                forced_ids = []
+                for current_id in source_ids:
+                    candidates = [sid for sid in student_ids if sid != current_id]
+                    forced_ids.append(random.choice(candidates) if candidates else current_id)
+                shuffled_ids = forced_ids
+        else:
+            current_id = source_ids[0]
+            candidates = [sid for sid in student_ids if sid != current_id]
+            if not candidates:
+                return False
+            shuffled_ids = [random.choice(candidates)]
+
         for idx, assignment in enumerate(target_assignments):
             assignment.student = student_map[shuffled_ids[idx]]
             assignment.is_completed = False
@@ -690,7 +726,8 @@ def rotation_trigger(request):
         behavior = requested_behavior or "sequential"
         rotated = _rotate_guest_assignments(guest_data, behavior=behavior)
         request.session.modified = True
-        return JsonResponse({'success': True, 'behavior': behavior, 'rotated': rotated})
+        message = '역할 순환이 적용되었습니다.' if rotated else '순환할 역할이 없습니다. 학생 배정을 먼저 확인해 주세요.'
+        return JsonResponse({'success': True, 'behavior': behavior, 'rotated': rotated, 'message': message})
 
     user = request.user
     classroom = get_active_classroom_for_request(request)
@@ -706,9 +743,10 @@ def rotation_trigger(request):
             settings.last_rotation_date = today
             settings.save(update_fields=["last_rotation_date"])
 
+    message = '역할 순환이 적용되었습니다.' if rotated else '순환할 역할이 없습니다. 학생 배정을 먼저 확인해 주세요.'
     return JsonResponse({
         'success': True,
-        'message': 'Rotated successfully',
+        'message': message,
         'behavior': behavior,
         'rotated': rotated,
     })

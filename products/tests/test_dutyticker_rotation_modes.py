@@ -107,6 +107,27 @@ class DutyTickerRotationModeTests(TestCase):
         self.assertEqual(assignments[1].student_id, s2.id)
         self.assertEqual(assignments[2].student_id, s1.id)
 
+    def test_rotation_trigger_random_behavior_rotates_with_single_assignment(self):
+        s1 = DTStudent.objects.create(user=self.user, name="학생1", number=1)
+        s2 = DTStudent.objects.create(user=self.user, name="학생2", number=2)
+        role = DTRole.objects.create(user=self.user, name="역할1", time_slot="아침")
+        assignment = DTRoleAssignment.objects.create(user=self.user, role=role, student=s1)
+
+        response = self.client.post(
+            reverse("dt_api_rotate"),
+            data='{"behavior":"random"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload.get("success"))
+        self.assertEqual(payload.get("behavior"), "random")
+        self.assertTrue(payload.get("rotated"))
+
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.student_id, s2.id)
+
     def test_admin_dashboard_shows_compact_rotation_controls(self):
         response = self.client.get(reverse("dt_admin_dashboard"))
         self.assertEqual(response.status_code, 200)

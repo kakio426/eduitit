@@ -10,6 +10,8 @@ class DutyTickerManager {
         this.roles = [];
         this.students = [];
         this.todaySchedule = [];
+        this.rotationMode = 'manual_sequential';
+        this.roleRotateInFlight = false;
         this.isBroadcasting = false;
         this.broadcastMessage = '';
         this.isSoundEnabled = localStorage.getItem('dt-broadcast-sound') !== 'false';
@@ -343,6 +345,7 @@ class DutyTickerManager {
             this.isBroadcasting = !!this.broadcastMessage;
             this.missionTitle = data.settings.mission_title ?? "수학 익힘책 풀기";
             this.missionDesc = data.settings.mission_desc ?? "24~25페이지 풀고 채점하기";
+            this.rotationMode = data.settings.rotation_mode || 'manual_sequential';
             this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
             this.theme = data.settings.theme || 'deep_space';
 
@@ -1534,13 +1537,32 @@ class DutyTickerManager {
     }
 
     async rotateRolesManually() {
+        if (this.roleRotateInFlight) return;
+        const rotateBtn = document.getElementById('roleRotateNowBtn');
+
         try {
-            const response = await this.secureFetch(this.getApiUrl('rotateUrl', '/products/dutyticker/api/rotate/'), { method: 'POST' });
-            await this.parseJsonResponse(response, '역할 순환에 실패했습니다.');
-            this.loadData();
+            this.roleRotateInFlight = true;
+            if (rotateBtn) rotateBtn.disabled = true;
+
+            const behavior = String(this.rotationMode || '').endsWith('_random') ? 'random' : 'sequential';
+            const response = await this.secureFetch(
+                this.getApiUrl('rotateUrl', '/products/dutyticker/api/rotate/'),
+                { method: 'POST', body: JSON.stringify({ behavior }) }
+            );
+            const payload = await this.parseJsonResponse(response, '역할 순환에 실패했습니다.');
+
+            if (!payload.rotated) {
+                alert(payload.message || '순환할 역할이 없습니다. 학생을 먼저 배정해 주세요.');
+                return;
+            }
+
+            await this.loadData();
         } catch (error) {
             console.error(error);
             alert(error?.message || '역할 순환에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            this.roleRotateInFlight = false;
+            if (rotateBtn) rotateBtn.disabled = false;
         }
     }
 

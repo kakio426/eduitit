@@ -691,6 +691,11 @@
         border-color: rgba(129, 140, 248, 0.62);
     }
 
+    .dt-role-action-btn:disabled {
+        opacity: 0.56;
+        cursor: not-allowed;
+    }
+
     html[data-theme="sunny"] .dt-role-subtitle,
     html[data-theme="pastel"] .dt-role-subtitle,
     html[data-theme="vivid"] .dt-role-subtitle {
@@ -1886,7 +1891,7 @@
                             <i class="fa-solid fa-bullhorn"></i>
                             호명
                         </button>
-                        <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환" class="dt-role-action-btn">
+                        <button id="roleRotateNowBtn" type="button" onclick="window.dtApp.rotateRolesManually()" title="역할 순환" class="dt-role-action-btn">
                             <i class="fa-solid fa-arrows-rotate"></i>
                             즉시순환
                         </button>
