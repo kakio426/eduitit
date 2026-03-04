@@ -464,8 +464,8 @@ class DutyTickerManager {
                 ? '<span class="dt-role-spotlight-badge inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black border">집중</span>'
                 : '';
             const statusBadge = isCompleted
-                ? '<span class="dt-role-status is-completed text-[11px] font-black uppercase tracking-wider"><i class="fa-solid fa-check-circle"></i> 완료</span>'
-                : '<span class="dt-role-status is-pending text-[11px] font-black uppercase tracking-wider">진행중</span>';
+                ? '<span class="dt-role-status is-completed text-[12px] font-black"><i class="fa-solid fa-check-circle"></i> 완료</span>'
+                : '<span class="dt-role-status is-pending text-[12px] font-black">진행중</span>';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
             return `
                 <div class="dt-role-row border cursor-pointer ${spotlightClass}"
