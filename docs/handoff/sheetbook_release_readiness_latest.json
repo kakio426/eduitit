@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-03-04 10:39:00",
+  "generated_at": "2026-03-04 11:35:18",
   "days": 14,
   "preflight": {
     "beta_strict": {
       "pass": true,
-      "elapsed_ms": 88.6,
+      "elapsed_ms": 87.7,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
@@ -16,7 +16,7 @@
     },
     "global_strict": {
       "pass": true,
-      "elapsed_ms": 57.8,
+      "elapsed_ms": 56.0,
       "log_tail": [
         "[sheetbook] preflight start",
         "- check_collect_schema",
@@ -31,7 +31,7 @@
     "grid_1000": {
       "exists": true,
       "pass": true,
-      "started_at": "2026-03-04 10:06:57",
+      "started_at": "2026-03-04 11:30:40",
       "evaluation": {
         "pass": true,
         "desktop_pass": true,
@@ -50,7 +50,7 @@
     "consent_recipients": {
       "exists": true,
       "pass": true,
-      "started_at": "2026-03-04 10:06:27",
+      "started_at": "2026-03-04 11:30:17",
       "evaluation": {
         "pass": true,
         "desktop_pass": true,
@@ -74,7 +74,7 @@
     "allowlist_access": {
       "exists": true,
       "pass": true,
-      "started_at": "2026-03-04 10:06:14",
+      "started_at": "2026-03-04 11:30:10",
       "evaluation": {
         "pass": true,
         "reasons": []

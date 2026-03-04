@@ -392,6 +392,20 @@ Status: Working branch handoff (2026-03-04 10:40)
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
   - `SHEETBOOK_OPS_INDEX_2026-03-04.md`: `overall=GO`, `decision=GO`
 
+## 1-17) 2026-03-04 스모크 동기화 원클릭 스크립트 추가
+
+- 신규 스크립트:
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py`
+- 목적:
+  - 반복되던 운영 명령(allowlist/consent/grid smoke + bundle/gap/check)을 단일 커맨드로 동기화
+- 기본 실행 예시:
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+- 생성 산출물:
+  - `docs/handoff/smoke_sheetbook_ops_cycle_latest.json`
+- 테스트/검증:
+  - `python manage.py test sheetbook.tests.SheetbookSmokeSyncCycleScriptTests`
+  - 스크립트 실실행 결과: `status=PASS`, `allowlist/consent/grid pass=true`, `daily_overall=GO`, `gap_ready=true`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화

@@ -46,6 +46,9 @@ from scripts.run_sheetbook_local_rehearsal_cycle import (
     _build_command_plan as _build_local_rehearsal_command_plan,
     _resolve_action_count as _resolve_local_rehearsal_action_count,
 )
+from scripts.run_sheetbook_smoke_sync_cycle import (
+    _build_command_plan as _build_smoke_sync_cycle_command_plan,
+)
 from scripts.run_sheetbook_grid_smoke import (
     _edit_cell_and_save as _edit_grid_cell_and_save,
     _should_ignore_console_error as _should_ignore_grid_console_error,
@@ -5665,6 +5668,55 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
         collect_cmd = plan[0]
         self.assertIn("--action-count", collect_cmd)
         self.assertIn("-1", collect_cmd)
+
+
+class SheetbookSmokeSyncCycleScriptTests(SimpleTestCase):
+    def test_build_smoke_sync_cycle_plan_includes_all_steps_with_check(self):
+        plan = _build_smoke_sync_cycle_command_plan(
+            days=14,
+            due_date="2026-03-05",
+            allow_pilot_hold_for_beta=True,
+            grid_port=8015,
+            with_check=True,
+        )
+
+        self.assertEqual(len(plan), 6)
+        self.assertEqual(plan[0], ["python", "scripts/run_sheetbook_allowlist_smoke.py"])
+        self.assertEqual(plan[1], ["python", "scripts/run_sheetbook_consent_smoke.py"])
+        self.assertEqual(
+            plan[2],
+            ["python", "scripts/run_sheetbook_grid_smoke.py", "--port", "8015"],
+        )
+        self.assertEqual(plan[3][0:2], ["python", "scripts/run_sheetbook_daily_start_bundle.py"])
+        self.assertIn("--allow-pilot-hold-for-beta", plan[3])
+        self.assertIn("--due-date", plan[3])
+        self.assertIn("2026-03-05", plan[3])
+        self.assertEqual(
+            plan[4],
+            [
+                "python",
+                "scripts/run_sheetbook_sample_gap_summary.py",
+                "--days",
+                "14",
+                "--due-date",
+                "2026-03-05",
+            ],
+        )
+        self.assertEqual(plan[5], ["python", "manage.py", "check"])
+
+    def test_build_smoke_sync_cycle_plan_can_skip_manage_check(self):
+        plan = _build_smoke_sync_cycle_command_plan(
+            days=7,
+            due_date="2026-03-06",
+            allow_pilot_hold_for_beta=False,
+            grid_port=8014,
+            with_check=False,
+        )
+
+        self.assertEqual(len(plan), 5)
+        self.assertNotIn("--allow-pilot-hold-for-beta", plan[3])
+        self.assertEqual(plan[2], ["python", "scripts/run_sheetbook_grid_smoke.py", "--port", "8014"])
+        self.assertEqual(plan[-1][0:2], ["python", "scripts/run_sheetbook_sample_gap_summary.py"])
 
 
 class SheetbookOpsIndexReportScriptTests(SimpleTestCase):
