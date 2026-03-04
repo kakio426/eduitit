@@ -761,7 +761,7 @@
         }
     }
 
-    .dt-timer-card {
+.dt-timer-card {
         padding: clamp(1.25rem, 2.2vw, 2rem);
         min-height: clamp(19.2rem, 51vh, 34rem);
     }
@@ -816,7 +816,7 @@
 
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
-        font-size: clamp(3.3rem, min(13.5vw, 17.5vh), 8.8rem);
+        font-size: clamp(3.9rem, min(15.3vw, 19.6vh), 10.3rem);
         line-height: 0.9;
         letter-spacing: -0.05em;
         margin-bottom: 0;
@@ -835,31 +835,63 @@
     }
 
     #mainMissionTitle {
-        font-size: clamp(2rem, 5.6vw, 4.15rem);
+        font-size: clamp(2.34rem, 6.4vw, 4.95rem);
         line-height: 1.08;
         margin: 0;
     }
 
     #mainMissionDesc {
-        font-size: clamp(1.08rem, 2.9vw, 1.82rem);
+        font-size: clamp(1.24rem, 3.25vw, 2.12rem);
         line-height: 1.24;
         margin: 0;
     }
 
     #mainAppContainer[data-mission-size="sm"] #mainMissionTitle {
-        font-size: clamp(1.62rem, 4.85vw, 3.52rem);
+        font-size: clamp(1.92rem, 5.5vw, 4.08rem);
     }
 
     #mainAppContainer[data-mission-size="sm"] #mainMissionDesc {
-        font-size: clamp(0.95rem, 2.24vw, 1.45rem);
+        font-size: clamp(1.04rem, 2.64vw, 1.72rem);
     }
 
     #mainAppContainer[data-mission-size="lg"] #mainMissionTitle {
-        font-size: clamp(2.28rem, 6.35vw, 4.78rem);
+        font-size: clamp(2.68rem, 7.15vw, 5.72rem);
     }
 
     #mainAppContainer[data-mission-size="lg"] #mainMissionDesc {
-        font-size: clamp(1.2rem, 3.05vw, 2.02rem);
+        font-size: clamp(1.34rem, 3.6vw, 2.38rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
+        gap: clamp(1rem, 2.25vh, 1.95rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
+        font-size: clamp(4.4rem, min(17.6vw, 23vh), 11.9rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
+        font-size: clamp(2.72rem, 7.45vw, 5.9rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] #mainMissionDesc {
+        font-size: clamp(1.42rem, 3.9vw, 2.56rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="sm"] #mainMissionTitle {
+        font-size: clamp(2.34rem, 6.6vw, 5rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="sm"] #mainMissionDesc {
+        font-size: clamp(1.16rem, 3.1vw, 2rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="lg"] #mainMissionTitle {
+        font-size: clamp(3rem, 8.1vw, 6.52rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="lg"] #mainMissionDesc {
+        font-size: clamp(1.52rem, 4.25vw, 2.86rem);
     }
 
     #mainMissionTitle[contenteditable="true"],
@@ -1444,7 +1476,7 @@
 
 {% block content %}
 <!-- Main App Container -->
-<div id="mainAppContainer"
+<div id="mainAppContainer" data-mission-panel="collapsed"
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
@@ -2005,7 +2037,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304e"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304f"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {

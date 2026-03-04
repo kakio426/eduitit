@@ -453,9 +453,11 @@ class DutyTickerManager {
         const card = document.getElementById('mainStudentCard');
         const toggleBtn = document.getElementById('missionPanelToggleBtn');
         const toggleText = document.getElementById('missionPanelToggleText');
+        const app = document.getElementById('mainAppContainer');
         const expanded = !this.missionPanelCollapsed;
 
         if (card) card.classList.toggle('is-collapsed', this.missionPanelCollapsed);
+        if (app) app.setAttribute('data-mission-panel', this.missionPanelCollapsed ? 'collapsed' : 'expanded');
         if (toggleBtn) {
             toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
             toggleBtn.setAttribute('aria-label', expanded ? '미션 현황 접기' : '미션 현황 펼치기');
