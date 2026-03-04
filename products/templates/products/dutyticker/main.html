@@ -546,7 +546,7 @@
 
     #mainAppContainer #mainRoleList .dt-role-slot {
         color: var(--dt-role-slot) !important;
-        font-size: 0.86rem !important;
+        font-size: clamp(0.98rem, 0.9rem + 0.22vw, 1.14rem) !important;
         font-weight: 800;
         letter-spacing: 0 !important;
         text-transform: none;
@@ -554,7 +554,7 @@
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.34rem, 1.16rem + 0.55vw, 1.82rem) !important;
+        font-size: clamp(1.48rem, 1.22rem + 0.72vw, 2.08rem) !important;
         line-height: 1.13 !important;
         letter-spacing: -0.01em;
     }
@@ -568,7 +568,7 @@
     #mainAppContainer #mainRoleList .dt-role-status {
         line-height: 1;
         white-space: nowrap;
-        font-size: 0.86rem !important;
+        font-size: 0.95rem !important;
         font-weight: 800;
     }
 
@@ -593,7 +593,7 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        font-size: 0.79rem;
+        font-size: 0.9rem;
         font-weight: 900;
         text-transform: none;
         letter-spacing: 0.01em;
@@ -613,13 +613,122 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: clamp(1.24rem, 1.12rem + 0.34vw, 1.52rem) !important;
+        font-size: clamp(1.38rem, 1.2rem + 0.46vw, 1.72rem) !important;
         font-weight: 900;
         line-height: 1.15;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-focus {
+        border-color: rgba(129, 140, 248, 0.8) !important;
+        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4) !important;
+        transform: translateY(-1px);
+    }
+
+    .dt-role-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.8rem;
+        margin-bottom: 0.75rem;
+        padding-inline: 0.2rem;
+    }
+
+    .dt-role-title-wrap {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .dt-role-title {
+        font-size: clamp(1.1rem, 0.98rem + 0.45vw, 1.5rem) !important;
+        line-height: 1.1;
+    }
+
+    .dt-role-subtitle {
+        font-size: 0.77rem;
+        color: rgba(148, 163, 184, 0.88);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+
+    .dt-role-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.38rem;
+    }
+
+    .dt-role-action-btn {
+        height: 2rem;
+        padding: 0 0.62rem;
+        border-radius: 0.7rem;
+        border: 1px solid rgba(148, 163, 184, 0.34);
+        background: rgba(15, 23, 42, 0.52);
+        color: #cbd5e1;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.36rem;
+        transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+    }
+
+    .dt-role-action-btn:hover {
+        background: rgba(51, 65, 85, 0.88);
+        color: #f8fafc;
+        border-color: rgba(148, 163, 184, 0.52);
+    }
+
+    .dt-role-action-btn.is-active {
+        background: rgba(79, 70, 229, 0.28);
+        color: #e0e7ff;
+        border-color: rgba(129, 140, 248, 0.62);
+    }
+
+    html[data-theme="sunny"] .dt-role-subtitle,
+    html[data-theme="pastel"] .dt-role-subtitle,
+    html[data-theme="vivid"] .dt-role-subtitle {
+        color: var(--dt-readable-muted);
+    }
+
+    html[data-theme="sunny"] .dt-role-action-btn,
+    html[data-theme="pastel"] .dt-role-action-btn,
+    html[data-theme="vivid"] .dt-role-action-btn {
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--dt-readable-main);
+        border-color: rgba(148, 163, 184, 0.5);
+    }
+
+    html[data-theme="sunny"] .dt-role-action-btn:hover,
+    html[data-theme="pastel"] .dt-role-action-btn:hover,
+    html[data-theme="vivid"] .dt-role-action-btn:hover {
+        background: rgba(226, 232, 240, 0.9);
+        border-color: rgba(148, 163, 184, 0.66);
+    }
+
+    html[data-theme="sunny"] .dt-role-action-btn.is-active,
+    html[data-theme="pastel"] .dt-role-action-btn.is-active,
+    html[data-theme="vivid"] .dt-role-action-btn.is-active {
+        background: rgba(99, 102, 241, 0.16);
+        color: var(--dt-readable-accent);
+        border-color: rgba(99, 102, 241, 0.45);
+    }
+
+    .dt-header-date {
+        font-size: clamp(1rem, 0.88rem + 0.28vw, 1.2rem) !important;
+        font-weight: 700;
+    }
+
+    .dt-header-clock {
+        font-size: clamp(1.4rem, 1.2rem + 0.42vw, 1.74rem) !important;
+        font-weight: 900;
+        letter-spacing: 0.02em;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee.is-completed {
@@ -1390,6 +1499,22 @@
             display: none;
         }
 
+        .dt-role-card-head {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        .dt-role-actions {
+            justify-content: flex-start;
+        }
+
+        .dt-role-action-btn {
+            height: 1.9rem;
+            font-size: 0.68rem;
+            padding: 0 0.52rem;
+        }
+
     }
 
     @media (max-height: 860px) {
@@ -1497,7 +1622,7 @@
                 class="hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-5 py-2 rounded-full border border-slate-700/50 shadow-xl">
                 <div class="flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-calendar text-indigo-400"></i>
-                    <span class="text-base font-medium dt-header-nowrap" id="headerDate">--. --. (.)</span>
+                    <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
                 </div>
                 <!-- Schedule Strip -->
                 <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
@@ -1506,9 +1631,9 @@
                     <!-- JS Populated -->
                 </div>
                 <div class="h-4 w-px bg-slate-700"></div>
-                <div class="flex items-center gap-2 text-white font-mono text-xl font-bold tracking-wider shrink-0 dt-header-nowrap">
+                <div class="flex items-center gap-2 text-white font-mono shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-clock text-indigo-400"></i>
-                    <span id="headerTime" class="dt-header-nowrap">--:--</span>
+                    <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
                 </div>
             </div>
 
@@ -1742,20 +1867,28 @@
             <!-- 3. Today's Roles -->
             <div
                 class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-7 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
-                <div class="flex justify-between items-center mb-4 px-1">
-                    <h3 class="text-[1.2rem] md:text-[1.72rem] font-black text-white flex items-center gap-2">
-                        <span
-                            class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
-                        오늘의 역할
-                    </h3>
-                    <div class="flex items-center gap-2">
-                        <button onclick="window.dtApp.openCallMode()" title="호명 모드"
-                            class="w-10 h-10 flex items-center justify-center rounded-xl text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 transition-all border border-transparent hover:border-amber-300/30">
-                            <i class="fa-solid fa-bullhorn"></i>
+                <div class="dt-role-card-head">
+                    <div class="dt-role-title-wrap">
+                        <h3 class="dt-role-title font-black text-white flex items-center gap-2">
+                            <span
+                                class="bg-pink-500/20 text-pink-400 w-9 h-9 flex items-center justify-center rounded-xl text-base">👑</span>
+                            오늘의 역할
+                        </h3>
+                        <p class="dt-role-subtitle">역할 목록이 아래로 순차 이동하며 전체 학생을 고르게 보여줍니다.</p>
+                    </div>
+                    <div class="dt-role-actions">
+                        <button id="roleTickerToggleBtn" type="button" title="역할 자동순환 켜기/끄기"
+                            class="dt-role-action-btn">
+                            <i class="fa-solid fa-wave-square"></i>
+                            자동순환 ON
                         </button>
-                        <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환"
-                            class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-slate-700 transition-all">
+                        <button onclick="window.dtApp.openCallMode()" title="호명 모드" class="dt-role-action-btn">
+                            <i class="fa-solid fa-bullhorn"></i>
+                            호명
+                        </button>
+                        <button onclick="window.dtApp.rotateRolesManually()" title="역할 순환" class="dt-role-action-btn">
                             <i class="fa-solid fa-arrows-rotate"></i>
+                            즉시순환
                         </button>
                     </div>
                 </div>
@@ -2037,7 +2170,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260304f"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260305a"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {

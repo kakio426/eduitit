@@ -23,6 +23,11 @@ class DutyTickerManager {
         this.boundGlobalKeydown = null;
         this.boundWindowResize = null;
         this.resizeRaf = null;
+        this.roleTickerEnabled = true;
+        this.roleTickerIntervalMs = 4200;
+        this.roleTickerTimer = null;
+        this.roleTickerIndex = -1;
+        this.roleTickerStorageKey = 'dt-role-ticker-enabled-v1';
         this.randomDrawnStudentIds = new Set();
         this.randomCurrentStudentId = null;
         this.bgmTracks = window.dtBgmTracks || {};
@@ -64,6 +69,9 @@ class DutyTickerManager {
         this.applyMissionFontSize();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
+        this.restoreRoleTickerState();
+        this.setupRoleTickerControls();
+        this.updateRoleTickerUI();
         this.restoreTimerState();
         this.updateTimerDisplay();
         this.updateSoundUI();
@@ -487,6 +495,7 @@ class DutyTickerManager {
                     </a>
                 </div>
             `;
+            this.stopRoleTicker();
             return;
         }
 
@@ -542,6 +551,122 @@ class DutyTickerManager {
                 </div>
             `;
         }).join('');
+
+        this.ensureRoleTickerRunning();
+        this.paintRoleTickerFocus({ force: true });
+    }
+
+    setupRoleTickerControls() {
+        const toggleBtn = document.getElementById('roleTickerToggleBtn');
+        if (!toggleBtn) return;
+        if (toggleBtn.dataset.dtBound === '1') return;
+        toggleBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.toggleRoleTicker();
+        });
+        toggleBtn.dataset.dtBound = '1';
+    }
+
+    restoreRoleTickerState() {
+        try {
+            const raw = localStorage.getItem(this.roleTickerStorageKey);
+            if (raw === null) {
+                this.roleTickerEnabled = true;
+                return;
+            }
+            this.roleTickerEnabled = raw !== 'false';
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore role ticker state', error);
+            this.roleTickerEnabled = true;
+        }
+    }
+
+    saveRoleTickerState() {
+        try {
+            localStorage.setItem(this.roleTickerStorageKey, this.roleTickerEnabled ? 'true' : 'false');
+        } catch (error) {
+            console.warn('DutyTicker: failed to save role ticker state', error);
+        }
+    }
+
+    updateRoleTickerUI() {
+        const toggleBtn = document.getElementById('roleTickerToggleBtn');
+        if (!toggleBtn) return;
+
+        const isOn = this.roleTickerEnabled;
+        toggleBtn.innerHTML = `<i class="fa-solid fa-wave-square"></i> ${isOn ? '자동순환 ON' : '자동순환 OFF'}`;
+        toggleBtn.classList.toggle('is-active', isOn);
+        toggleBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+        toggleBtn.setAttribute('title', isOn ? '자동순환 끄기' : '자동순환 켜기');
+    }
+
+    ensureRoleTickerRunning() {
+        this.stopRoleTicker();
+        if (!this.roleTickerEnabled) return;
+
+        const rows = this.getRoleRows();
+        if (rows.length <= 1) return;
+
+        this.roleTickerTimer = setInterval(() => {
+            this.stepRoleTicker();
+        }, this.roleTickerIntervalMs);
+    }
+
+    stopRoleTicker() {
+        if (this.roleTickerTimer) {
+            clearInterval(this.roleTickerTimer);
+            this.roleTickerTimer = null;
+        }
+    }
+
+    getRoleRows() {
+        const container = document.getElementById('mainRoleList');
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.dt-role-row'));
+    }
+
+    paintRoleTickerFocus({ force = false } = {}) {
+        const rows = this.getRoleRows();
+        if (!rows.length) return;
+        if (!this.roleTickerEnabled) {
+            rows.forEach((row) => row.classList.remove('dt-role-cycle-focus'));
+            return;
+        }
+
+        if (this.roleTickerIndex < 0 || this.roleTickerIndex >= rows.length || force) {
+            this.roleTickerIndex = Math.max(0, Math.min(rows.length - 1, this.roleTickerIndex));
+        }
+
+        rows.forEach((row, index) => row.classList.toggle('dt-role-cycle-focus', index === this.roleTickerIndex));
+    }
+
+    stepRoleTicker() {
+        const rows = this.getRoleRows();
+        if (rows.length <= 1) return;
+
+        this.roleTickerIndex = (this.roleTickerIndex + 1) % rows.length;
+        this.paintRoleTickerFocus();
+
+        const activeRow = rows[this.roleTickerIndex];
+        if (!activeRow) return;
+        activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+
+    toggleRoleTicker() {
+        this.roleTickerEnabled = !this.roleTickerEnabled;
+        this.updateRoleTickerUI();
+        this.saveRoleTickerState();
+
+        if (!this.roleTickerEnabled) {
+            this.stopRoleTicker();
+            const rows = this.getRoleRows();
+            rows.forEach((row) => row.classList.remove('dt-role-cycle-focus'));
+            return;
+        }
+
+        this.roleTickerIndex = -1;
+        this.ensureRoleTickerRunning();
+        this.stepRoleTicker();
     }
 
     applyStudentGridLayoutMode() {
@@ -1415,6 +1540,7 @@ class DutyTickerManager {
             this.loadData();
         } catch (error) {
             console.error(error);
+            alert(error?.message || '역할 순환에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         }
     }
 
@@ -1553,16 +1679,21 @@ class DutyTickerManager {
         try {
             const raw = localStorage.getItem(this.bgmStorageKey);
             if (!raw) {
+                this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
+                this.bgmLoopMode = 'all';
+                this.bgmTrackKey = this.bgmTrackOrder[0];
                 this.renderBgmTrackRail();
                 this.updateBgmUI();
+                this.saveBgmState();
                 return;
             }
 
             const parsed = JSON.parse(raw);
             const validTrackSet = new Set(this.bgmTrackOrder);
-            const restoredTrackKeys = Array.isArray(parsed.enabledTrackKeys)
+            const rawRestoredTrackKeys = Array.isArray(parsed.enabledTrackKeys)
                 ? parsed.enabledTrackKeys.filter((key) => validTrackSet.has(String(key)))
                 : this.bgmTrackOrder.slice();
+            const restoredTrackKeys = rawRestoredTrackKeys.length ? rawRestoredTrackKeys : this.bgmTrackOrder.slice();
 
             this.bgmEnabledTrackKeys = new Set(restoredTrackKeys);
             this.bgmLoopMode = parsed.loopMode === 'one' ? 'one' : 'all';
