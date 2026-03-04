@@ -245,6 +245,7 @@ def classroom_view(request, pk):
     art_class = get_object_or_404(ArtClass, pk=pk)
     display_mode = "dashboard" if request.GET.get("display") == "dashboard" else "classroom"
     runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
+    can_manage_classroom = _can_manage_art_class(request.user, art_class)
     
     # 조회수 증가
     art_class.view_count += 1
@@ -275,10 +276,46 @@ def classroom_view(request, pk):
         'steps': steps,
         'data': data,
         'data_json': json.dumps(data, ensure_ascii=False),
+        'can_manage_classroom': can_manage_classroom,
         'display_mode': display_mode,
         'runtime_mode': runtime_mode,
         'launcher_download_url': _get_launcher_download_url(),
     })
+
+
+@require_POST
+def update_step_text_api(request, pk, step_id):
+    """현재 수업 단계 텍스트를 업데이트한다."""
+    art_class = get_object_or_404(ArtClass, pk=pk)
+    step = get_object_or_404(ArtStep, pk=step_id, art_class=art_class)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "AUTH_REQUIRED", "message": "로그인이 필요합니다."}, status=401)
+    if not _can_manage_art_class(request.user, art_class):
+        return JsonResponse({"error": "FORBIDDEN", "message": "이 수업 단계를 저장할 권한이 없습니다."}, status=403)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "INVALID_JSON", "message": "요청 형식이 올바르지 않습니다."}, status=400)
+
+    text = str(payload.get("text") or "").strip()
+    if not text:
+        return JsonResponse({"error": "EMPTY_TEXT", "message": "단계 설명은 비워둘 수 없습니다."}, status=400)
+    if len(text) > 5000:
+        return JsonResponse({"error": "TEXT_TOO_LONG", "message": "단계 설명이 너무 깁니다."}, status=400)
+
+    if step.description != text:
+        step.description = text
+        step.save(update_fields=["description"])
+
+    return JsonResponse(
+        {
+            "success": True,
+            "stepId": step.pk,
+            "text": step.description,
+        }
+    )
 
 
 @require_POST

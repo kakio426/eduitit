@@ -296,6 +296,113 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["error"], "FORBIDDEN")
 
+    def test_update_step_text_api_success(self):
+        art_class = ArtClass.objects.create(
+            title="단계 저장 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        step = ArtStep.objects.create(
+            art_class=art_class,
+            step_number=1,
+            description="기존 설명",
+        )
+        url = reverse("artclass:update_step_text_api", kwargs={"pk": art_class.pk, "step_id": step.pk})
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"text": "새 설명\n준비물: 도화지, 연필\n교사 팁: 흐름을 천천히 안내"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        step.refresh_from_db()
+        self.assertEqual(step.description, payload["text"])
+        self.assertIn("준비물:", step.description)
+
+    def test_update_step_text_api_requires_authentication(self):
+        art_class = ArtClass.objects.create(
+            title="단계 인증 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        step = ArtStep.objects.create(art_class=art_class, step_number=1, description="기존 설명")
+        url = reverse("artclass:update_step_text_api", kwargs={"pk": art_class.pk, "step_id": step.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"text": "수정 시도"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error"], "AUTH_REQUIRED")
+
+    def test_update_step_text_api_forbidden_for_non_owner(self):
+        art_class = ArtClass.objects.create(
+            title="단계 권한 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        step = ArtStep.objects.create(art_class=art_class, step_number=1, description="기존 설명")
+        url = reverse("artclass:update_step_text_api", kwargs={"pk": art_class.pk, "step_id": step.pk})
+        self.client.force_login(self.other)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"text": "권한 없는 수정"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"], "FORBIDDEN")
+
+    def test_update_step_text_api_rejects_invalid_json(self):
+        art_class = ArtClass.objects.create(
+            title="단계 JSON 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        step = ArtStep.objects.create(art_class=art_class, step_number=1, description="기존 설명")
+        url = reverse("artclass:update_step_text_api", kwargs={"pk": art_class.pk, "step_id": step.pk})
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            url,
+            data="{bad json",
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "INVALID_JSON")
+
+    def test_update_step_text_api_rejects_empty_text(self):
+        art_class = ArtClass.objects.create(
+            title="단계 빈값 테스트",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+        )
+        step = ArtStep.objects.create(art_class=art_class, step_number=1, description="기존 설명")
+        url = reverse("artclass:update_step_text_api", kwargs={"pk": art_class.pk, "step_id": step.pk})
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"text": "   "}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "EMPTY_TEXT")
+
 
 class ArtClassDeleteTest(TestCase):
     def setUp(self):
