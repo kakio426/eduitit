@@ -329,6 +329,22 @@ Status: Working branch handoff (2026-03-04 10:00)
   - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
 
+## 1-13) 2026-03-04 signoff/readiness 재확정 (운영 고정)
+
+- 실행:
+  - `python scripts/run_sheetbook_release_readiness.py --days 14`
+  - `python scripts/run_sheetbook_signoff_decision.py --set staging_real_account_signoff=PASS:staging-ok --set production_real_account_signoff=PASS:prod-ok`
+  - `python scripts/run_sheetbook_release_signoff_log.py --date 2026-03-04 --author sheetbook-ops --owner sheetbook-release --next-action "monitoring 유지 (daily/gap 재확인)" --due-date 2026-03-05`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python manage.py check`
+- 결과:
+  - `sheetbook_release_readiness_latest.json`: `overall.status=PASS`
+  - `sheetbook_release_decision_latest.json`: `decision=GO`
+  - `sheetbook_release_signoff_2026-03-04.md`: `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
