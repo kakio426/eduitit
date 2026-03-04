@@ -27,14 +27,17 @@ Status: Working branch handoff (2026-03-04 11:36)
   3. `git rev-parse HEAD`
   4. `git rev-parse origin/feature/sheetbook`
   5. (해시 다를 때만) `git pull --ff-only origin feature/sheetbook`
-  6. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  6. `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
 - 확인 파일:
+  - `docs/handoff/smoke_sheetbook_ops_cycle_latest.json`
   - `docs/handoff/sheetbook_daily_start_bundle_latest.json`
   - `docs/runbooks/logs/SHEETBOOK_OPS_INDEX_2026-03-04.md`
 
 ### 1-1-a) `"이어서 진행해줘"` 즉시 실행 템플릿
 
-- 아래 4단계를 그대로 실행하면 같은 맥락으로 즉시 재개 가능:
+- 권장 1회 명령(스모크+번들+갭+체크 일괄):
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+- 수동 분해 실행(필요 시):
   1. `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
   2. `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
   3. blocker가 남아 있으면 `python scripts/run_sheetbook_local_rehearsal_cycle.py --days 14 --home-count 5 --create-count 5 --action-count -1 --archive-event-count 5 --allow-pilot-hold-for-beta --due-date 2026-03-05`
@@ -406,6 +409,17 @@ Status: Working branch handoff (2026-03-04 11:36)
   - `python manage.py test sheetbook.tests.SheetbookSmokeSyncCycleScriptTests`
   - 스크립트 실실행 결과: `status=PASS`, `allowlist/consent/grid pass=true`, `daily_overall=GO`, `gap_ready=true`
 
+## 1-18) 2026-03-04 원클릭 스모크 사이클 실사용 반영
+
+- 실행:
+  - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
+- 결과:
+  - `docs/handoff/smoke_sheetbook_ops_cycle_latest.json`: `status=PASS`, `success=true`
+  - snapshot:
+    - allowlist/consent/grid 모두 `pass=true`
+    - daily: `overall=GO`, `readiness_status=PASS`
+    - gap: `ready=true`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
@@ -423,8 +437,8 @@ Status: Working branch handoff (2026-03-04 11:36)
 5. 최종 재확인
    - `python scripts/run_sheetbook_signoff_decision.py`
    - `python scripts/run_sheetbook_release_signoff_log.py --author sheetbook-ops --owner sheetbook-release --next-action "beta go/no-go 재판정" --due-date 2026-03-05`
-6. 원클릭 번들(권장)
-   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+6. 원클릭 스모크+게이트 동기화(권장)
+   - `python scripts/run_sheetbook_smoke_sync_cycle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta --grid-port 8015`
 7. 표본 부족량 요약(권장)
    - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
 8. 운영 인덱스 단독 갱신(필요 시)
