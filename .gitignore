@@ -35,3 +35,5 @@ git_log_all.txt
 product_urls.txt
 scripts/check_output.txt
 scripts/staged_files.txt
+
+.worktrees/
