@@ -498,21 +498,23 @@ class DutyTickerManager {
         if (!grid || !card) return;
 
         const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-        const shouldFitWithoutScroll = isDesktop && this.students.length > 0 && this.students.length <= 25;
+        const studentCount = this.students.length;
+        const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 30;
 
-        grid.classList.toggle('dt-student-grid-fit-25', shouldFitWithoutScroll);
+        grid.classList.toggle('dt-student-grid-fit-25', shouldUseComfortFit);
         grid.classList.remove('dt-student-density-low', 'dt-student-density-mid', 'dt-student-density-high');
-        if (shouldFitWithoutScroll) {
-            if (this.students.length <= 12) grid.classList.add('dt-student-density-low');
-            else if (this.students.length <= 18) grid.classList.add('dt-student-density-mid');
+        if (shouldUseComfortFit) {
+            if (studentCount <= 10) grid.classList.add('dt-student-density-low');
+            else if (studentCount <= 20) grid.classList.add('dt-student-density-mid');
             else grid.classList.add('dt-student-density-high');
         }
-        grid.classList.toggle('overflow-y-auto', !shouldFitWithoutScroll);
-        grid.classList.toggle('pr-2', !shouldFitWithoutScroll);
-        grid.classList.toggle('overflow-y-hidden', shouldFitWithoutScroll);
-        grid.classList.toggle('pr-0', shouldFitWithoutScroll);
+        grid.classList.add('overflow-y-auto');
+        grid.classList.remove('overflow-y-hidden');
+        grid.classList.toggle('pr-2', !shouldUseComfortFit);
+        grid.classList.toggle('pr-1', shouldUseComfortFit);
+        grid.classList.remove('pr-0');
 
-        card.classList.toggle('dt-student-card-fit-25', shouldFitWithoutScroll);
+        card.classList.toggle('dt-student-card-fit-25', shouldUseComfortFit);
     }
 
     getStudentNameSizeClass(name) {
