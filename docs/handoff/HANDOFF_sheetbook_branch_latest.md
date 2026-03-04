@@ -293,6 +293,27 @@ Status: Working branch handoff (2026-03-04 09:42)
   - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
   - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
 
+## 1-11) 2026-03-04 grid smoke 변동성 완화 보강
+
+- 배경:
+  - tablet 시나리오에서 간헐적으로 `Failed to load resource: net::ERR_NAME_NOT_RESOLVED`가 콘솔 error로 잡혀
+    smoke가 `console_errors_present`로 실패 처리되는 케이스가 있었음.
+- 코드 보강:
+  - `scripts/run_sheetbook_grid_smoke.py`
+    - `_should_ignore_console_error` 추가
+    - 기존 409 충돌 노이즈 + `net::ERR_NAME_NOT_RESOLVED`를 `ignored_console_errors`로 분리
+    - 기존 PASS/FAIL 평가지표는 유지하되, 비기능성 외부 DNS 노이즈로 인한 false negative를 완화
+- 테스트:
+  - `sheetbook/tests.py` (`SheetbookGridSmokeScriptTests`)
+    - 409 오류 ignore 케이스
+    - DNS 해석 오류 ignore 케이스
+    - 일반 JS 오류 non-ignore 케이스
+- 검증:
+  - `python manage.py test sheetbook.tests.SheetbookGridSmokeScriptTests`
+  - `python scripts/run_sheetbook_grid_smoke.py --port 8015` 재실행 `evaluation.pass=true`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화

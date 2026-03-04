@@ -48,6 +48,7 @@ from scripts.run_sheetbook_local_rehearsal_cycle import (
 )
 from scripts.run_sheetbook_grid_smoke import (
     _edit_cell_and_save as _edit_grid_cell_and_save,
+    _should_ignore_console_error as _should_ignore_grid_console_error,
     _wait_until_saved as _wait_until_grid_saved,
 )
 from scripts.run_sheetbook_ops_index_report import (
@@ -5178,6 +5179,21 @@ class SheetbookRefreshHandoffLatestScriptTests(SimpleTestCase):
 
 
 class SheetbookGridSmokeScriptTests(SimpleTestCase):
+    def test_should_ignore_console_error_for_conflict(self):
+        self.assertTrue(
+            _should_ignore_grid_console_error(
+                "Failed to load resource: the server responded with a status of 409 (Conflict)"
+            )
+        )
+
+    def test_should_ignore_console_error_for_dns_resolution_flake(self):
+        self.assertTrue(
+            _should_ignore_grid_console_error("Failed to load resource: net::ERR_NAME_NOT_RESOLVED")
+        )
+
+    def test_should_not_ignore_unknown_console_error(self):
+        self.assertFalse(_should_ignore_grid_console_error("TypeError: cannot read properties of null"))
+
     def test_wait_until_saved_returns_conflict_immediately(self):
         page = MagicMock()
         locator = MagicMock()

@@ -18,6 +18,10 @@ RENDER_LOG_RE = re.compile(
 )
 DEFAULT_FINAL_RENDER_BUDGET_MS = 2000.0
 DEFAULT_INITIAL_RENDER_WARN_MS = 3000.0
+IGNORED_CONSOLE_ERROR_PATTERNS = (
+    "status of 409 (Conflict)",
+    "Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+)
 
 
 def _repo_root() -> Path:
@@ -162,6 +166,11 @@ def _parse_render_line(line: str) -> dict[str, Any] | None:
     }
 
 
+def _should_ignore_console_error(text: str) -> bool:
+    normalized = str(text or "")
+    return any(pattern in normalized for pattern in IGNORED_CONSOLE_ERROR_PATTERNS)
+
+
 def _wait_until_saved(page, timeout_ms: int = 15000) -> dict[str, Any]:
     started = time.perf_counter()
     deadline = time.time() + (timeout_ms / 1000.0)
@@ -273,7 +282,8 @@ def _run_scenario(
         text = text_attr() if callable(text_attr) else str(text_attr)
         raw_console.append(f"{msg.type}: {text}")
         if msg.type == "error":
-            if "status of 409 (Conflict)" in text:
+            # Expected save-race noise (409) and external DNS CDN misses are non-blocking.
+            if _should_ignore_console_error(text):
                 ignored_console_errors.append(text)
             else:
                 console_errors.append(text)
