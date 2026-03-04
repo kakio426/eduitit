@@ -1,0 +1,61 @@
+<div class="sq-container flex flex-col min-h-dvh px-4 py-8">
+
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-bold">{{ item_no }}/{{ total }}</span>
+        </div>
+        <div class="flex gap-1">
+            {% for _ in ""|ljust:total %}
+            <div class="w-4 h-4 rounded-full {% if forloop.counter <= item_no %}bg-purple-500{% else %}bg-gray-200{% endif %}"></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="sq-feedback-card {% if is_correct %}sq-feedback-card--correct{% else %}sq-feedback-card--wrong{% endif %}">
+        <div class="sq-feedback-emoji" aria-hidden="true">{% if is_correct %}🎉{% else %}❌{% endif %}</div>
+        <h2 class="sq-feedback-title">{% if is_correct %}정답이에요!{% else %}아쉬워요{% endif %}</h2>
+        <p class="sq-feedback-question">{{ item.question_text }}</p>
+
+        <div class="space-y-2 mt-4">
+            <div class="sq-feedback-row {% if is_correct %}sq-feedback-row--correct{% else %}sq-feedback-row--wrong{% endif %}">
+                <span class="sq-feedback-label">내 답</span>
+                <span class="sq-feedback-value">{{ selected_choice }}</span>
+            </div>
+            {% if not is_correct %}
+            <div class="sq-feedback-row sq-feedback-row--answer">
+                <span class="sq-feedback-label">정답</span>
+                <span class="sq-feedback-value">{{ correct_choice }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if item.explanation %}
+        <div class="sq-feedback-explanation">
+            <p class="sq-feedback-explanation-title">해설</p>
+            <p class="sq-feedback-explanation-body">{{ item.explanation }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-6">
+        {% if has_next %}
+        <button type="button"
+                class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-black text-lg hover:shadow-lg transition-all"
+                hx-get="{% url 'seed_quiz:htmx_play_next' %}"
+                hx-target="#quiz-area"
+                hx-swap="innerHTML">
+            다음 문제 →
+        </button>
+        {% else %}
+        <button type="button"
+                class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-black text-lg hover:shadow-lg transition-all"
+                hx-get="{% url 'seed_quiz:htmx_play_result' %}"
+                hx-target="#quiz-area"
+                hx-swap="innerHTML">
+            결과 확인하기 →
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="pb-safe mt-4"></div>
+</div>

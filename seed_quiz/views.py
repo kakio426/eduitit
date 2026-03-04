@@ -23,7 +23,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from happy_seed.models import HSClassroom, HSStudent
+from happy_seed.models import HSClassroom, HSClassroomConfig, HSStudent
 from seed_quiz.models import SQAttempt, SQAttemptAnswer, SQGenerationLog, SQQuizBank, SQQuizItem, SQQuizSet
 from seed_quiz.services.bank import (
     copy_bank_to_draft,
@@ -40,7 +40,7 @@ from seed_quiz.services.gate import (
 )
 from seed_quiz.services.generation import generate_and_save_draft
 from seed_quiz.services.paste_parser import parse_pasted_text_to_csv_bytes
-from seed_quiz.services.grading import submit_and_reward
+from seed_quiz.services.grading import claim_reward_for_attempt, submit_and_reward
 from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
 from seed_quiz.services.validator import normalize_and_check, validate_quiz_payload
 from seed_quiz.topics import DEFAULT_TOPIC, TOPIC_LABELS, normalize_topic
@@ -2423,21 +2423,7 @@ def student_play_shell(request):
     return render(request, "seed_quiz/student_play.html")
 
 
-def htmx_play_current(request):
-    attempt_id = request.session.get("sq_attempt_id")
-    if not attempt_id:
-        return HttpResponse(status=403)
-
-    attempt = get_object_or_404(SQAttempt, id=attempt_id)
-
-    if attempt.status in ("submitted", "rewarded"):
-        return _render_result(request, attempt)
-
-    item = get_current_item(attempt)
-    if not item:
-        # 모든 문항 답변됨 → 채점
-        return _do_finish(request, attempt)
-
+def _render_play_item(request, attempt: SQAttempt, item: SQQuizItem) -> HttpResponse:
     answered_count = attempt.answers.count()
     total_count = attempt.quiz_set.items.count()
     return render(
@@ -2449,6 +2435,39 @@ def htmx_play_current(request):
             "total": total_count,
         },
     )
+
+
+def _render_next_or_finish(request, attempt: SQAttempt) -> HttpResponse:
+    item = get_current_item(attempt)
+    if not item:
+        return _do_finish(request, attempt)
+    return _render_play_item(request, attempt, item)
+
+
+def htmx_play_current(request):
+    attempt_id = request.session.get("sq_attempt_id")
+    if not attempt_id:
+        return HttpResponse(status=403)
+
+    attempt = get_object_or_404(SQAttempt, id=attempt_id)
+
+    if attempt.status in ("submitted", "rewarded"):
+        return _render_result(request, attempt)
+
+    return _render_next_or_finish(request, attempt)
+
+
+@require_GET
+def htmx_play_next(request):
+    attempt_id = request.session.get("sq_attempt_id")
+    if not attempt_id:
+        return HttpResponse(status=403)
+
+    attempt = get_object_or_404(SQAttempt, id=attempt_id)
+    if attempt.status in ("submitted", "rewarded"):
+        return _render_result(request, attempt)
+
+    return _render_next_or_finish(request, attempt)
 
 
 @require_POST
@@ -2478,26 +2497,16 @@ def htmx_play_answer(request):
     expected_item = get_current_item(attempt)
     if expected_item is None or str(expected_item.id) != str(item.id):
         # 이미 완료되었거나 순서가 다름 → 현재 상태 기준으로 다음 화면 반환
-        next_item = get_current_item(attempt)
-        if next_item is None:
-            return _do_finish(request, attempt)
-        answered_count = attempt.answers.count()
-        total_count = attempt.quiz_set.items.count()
-        return render(
-            request,
-            "seed_quiz/partials/play_item.html",
-            {"item": next_item, "item_no": answered_count + 1, "total": total_count},
-        )
+        return _render_next_or_finish(request, attempt)
 
     # 답변 저장 (이미 답변한 경우 get_or_create로 무시)
-    SQAttempt.objects.select_for_update().filter(id=attempt.id)  # 잠금
+    answer_obj = None
     with transaction.atomic():
         attempt_locked = SQAttempt.objects.select_for_update().get(id=attempt.id)
         if attempt_locked.status in ("submitted", "rewarded"):
             return _render_result(request, attempt_locked)
 
-        from seed_quiz.models import SQAttemptAnswer
-        SQAttemptAnswer.objects.get_or_create(
+        answer_obj, _ = SQAttemptAnswer.objects.get_or_create(
             attempt=attempt_locked,
             item=item,
             defaults={
@@ -2506,18 +2515,32 @@ def htmx_play_answer(request):
             },
         )
 
-    # 다음 문항 확인
+    # 즉시 피드백 화면 반환
     attempt.refresh_from_db()
-    next_item = get_current_item(attempt)
-    if next_item is None:
-        return _do_finish(request, attempt)
-
     answered_count = attempt.answers.count()
     total_count = attempt.quiz_set.items.count()
+    has_next = get_current_item(attempt) is not None
+    choices = item.choices or []
+    selected_choice = (
+        choices[answer_obj.selected_index]
+        if answer_obj and 0 <= answer_obj.selected_index < len(choices)
+        else ""
+    )
+    correct_choice = choices[item.correct_index] if 0 <= item.correct_index < len(choices) else ""
     return render(
         request,
-        "seed_quiz/partials/play_item.html",
-        {"item": next_item, "item_no": answered_count + 1, "total": total_count},
+        "seed_quiz/partials/play_feedback.html",
+        {
+            "item": item,
+            "item_no": answered_count,
+            "total": total_count,
+            "is_correct": bool(answer_obj and answer_obj.is_correct),
+            "selected_index": answer_obj.selected_index if answer_obj else selected_index,
+            "selected_choice": selected_choice,
+            "correct_choice": correct_choice,
+            "has_next": has_next,
+            "is_last": not has_next,
+        },
     )
 
 
@@ -2526,21 +2549,60 @@ def htmx_play_result(request):
     if not attempt_id:
         return HttpResponse(status=403)
     attempt = get_object_or_404(SQAttempt, id=attempt_id)
+    if attempt.status == "in_progress":
+        if get_current_item(attempt) is not None:
+            return _render_next_or_finish(request, attempt)
+        attempt = _finalize_attempt_without_reward(attempt)
     return _render_result(request, attempt)
 
 
-def _do_finish(request, attempt: SQAttempt) -> HttpResponse:
-    """채점 + 보상 처리 후 결과 partial 반환."""
+@require_POST
+def htmx_play_claim_reward(request):
+    attempt_id = request.session.get("sq_attempt_id")
+    if not attempt_id:
+        return HttpResponse(status=403)
+
+    attempt = get_object_or_404(SQAttempt, id=attempt_id)
+    if attempt.status == "in_progress":
+        if get_current_item(attempt) is not None:
+            return _render_next_or_finish(request, attempt)
+        attempt = _finalize_attempt_without_reward(attempt)
+
+    attempt, claim_status = claim_reward_for_attempt(
+        attempt_id=attempt.id,
+        trigger="student_claim",
+    )
+    return _render_result(request, attempt, claim_status=claim_status)
+
+
+def _finalize_attempt_without_reward(attempt: SQAttempt) -> SQAttempt:
+    """문항 답안을 채점 완료 상태로 제출한다. 보상 지급은 분리한다."""
     answers = {
         a.item.order_no: a.selected_index
         for a in attempt.answers.select_related("item").all()
     }
-    attempt = submit_and_reward(attempt_id=attempt.id, answers=answers)
+    return submit_and_reward(
+        attempt_id=attempt.id,
+        answers=answers,
+        apply_reward=False,
+    )
+
+
+def _do_finish(request, attempt: SQAttempt) -> HttpResponse:
+    attempt = _finalize_attempt_without_reward(attempt)
     return _render_result(request, attempt)
 
 
-def _render_result(request, attempt: SQAttempt) -> HttpResponse:
-    attempt = SQAttempt.objects.select_related("quiz_set__classroom").get(id=attempt.id)
+def _resolve_student_consent_status(student) -> str:
+    try:
+        consent = student.consent
+        return str(consent.status or "none")
+    except Exception:
+        return "none"
+
+
+def _render_result(request, attempt: SQAttempt, claim_status: str = "") -> HttpResponse:
+    attempt = SQAttempt.objects.select_related("quiz_set__classroom", "student").get(id=attempt.id)
     answers_by_order = {
         a.item.order_no: a
         for a in attempt.answers.select_related("item")
@@ -2556,11 +2618,48 @@ def _render_result(request, attempt: SQAttempt) -> HttpResponse:
             "correct_choice": choices[item.correct_index] if 0 <= item.correct_index < len(choices) else "",
             "selected_choice": selected_choice,
         })
+
+    consent_status = _resolve_student_consent_status(attempt.student)
+    is_perfect = bool(attempt.max_score > 0 and attempt.score == attempt.max_score)
+    can_claim_reward = bool(
+        is_perfect
+        and attempt.status != "rewarded"
+        and consent_status == "approved"
+    )
+    reward_pending_consent = bool(
+        is_perfect
+        and attempt.status != "rewarded"
+        and consent_status != "approved"
+    )
+    config = (
+        HSClassroomConfig.objects.filter(classroom=attempt.quiz_set.classroom)
+        .only("seeds_per_bloom")
+        .first()
+    )
+    seeds_per_bloom = int((config.seeds_per_bloom if config else 10) or 10)
+    if seeds_per_bloom < 1:
+        seeds_per_bloom = 1
+    seed_balance = max(int(getattr(attempt.student, "seed_count", 0) or 0), 0)
+    ticket_balance = max(int(getattr(attempt.student, "ticket_count", 0) or 0), 0)
+    next_bloom_remaining = max(seeds_per_bloom - seed_balance, 0)
+    bloom_progress_pct = int(round((seed_balance / seeds_per_bloom) * 100))
+    bloom_progress_pct = max(0, min(100, bloom_progress_pct))
+
     return render(
         request,
         "seed_quiz/partials/play_result.html",
         {
             "attempt": attempt,
             "items_with_answers": items_with_answers,
+            "consent_status": consent_status,
+            "is_perfect": is_perfect,
+            "can_claim_reward": can_claim_reward,
+            "reward_pending_consent": reward_pending_consent,
+            "claim_status": claim_status,
+            "seed_balance": seed_balance,
+            "ticket_balance": ticket_balance,
+            "seeds_per_bloom": seeds_per_bloom,
+            "next_bloom_remaining": next_bloom_remaining,
+            "bloom_progress_pct": bloom_progress_pct,
         },
     )

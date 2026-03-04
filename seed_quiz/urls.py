@@ -52,5 +52,7 @@ urlpatterns = [
     path("play/", views.student_play_shell, name="student_play"),
     path("htmx/play/current/", views.htmx_play_current, name="htmx_play_current"),
     path("htmx/play/answer/", views.htmx_play_answer, name="htmx_play_answer"),
+    path("htmx/play/next/", views.htmx_play_next, name="htmx_play_next"),
     path("htmx/play/result/", views.htmx_play_result, name="htmx_play_result"),
+    path("htmx/play/claim-reward/", views.htmx_play_claim_reward, name="htmx_play_claim_reward"),
 ]

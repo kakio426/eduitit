@@ -8,6 +8,7 @@ from django.utils import timezone
 from core.models import UserProfile
 from happy_seed.models import HSClassroom, HSGuardianConsent, HSStudent
 from seed_quiz.models import SQAttempt, SQQuizItem, SQQuizSet
+from seed_quiz.services.grading import QUIZ_REWARD_SEEDS
 
 User = get_user_model()
 
@@ -39,6 +40,7 @@ def _setup_published_quiz(teacher, classroom):
             question_text=f"문제 {i}번",
             choices=["A", "B", "C", "D"],
             correct_index=0,
+            explanation=f"해설 {i}",
         )
     return qs
 
@@ -91,7 +93,7 @@ class StudentFlowTest(TestCase):
         session = self.client.session
         self.assertIn("sq_attempt_id", session)
 
-    def test_three_answers_trigger_grading(self):
+    def test_three_answers_keep_in_progress_until_result_view(self):
         # 학생 진입
         start_url = reverse("seed_quiz:student_start", kwargs={"class_slug": self.slug})
         self.client.post(start_url, {"number": "7", "name": "홍길동"})
@@ -104,13 +106,70 @@ class StudentFlowTest(TestCase):
                 answer_url,
                 {"item_id": str(item.id), "selected_index": "0"},
             )
-        # 마지막 응답은 결과 화면
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "문제")
+            self.assertEqual(resp.status_code, 200)
 
-        # attempt 상태 확인 (submitted 또는 rewarded)
+        # 마지막 답변까지는 즉시 피드백 단계이며 아직 제출되지 않음
         attempt = SQAttempt.objects.get(student=self.student, quiz_set=self.quiz_set)
-        self.assertIn(attempt.status, ["submitted", "rewarded"])
+        self.assertEqual(attempt.status, "in_progress")
+        self.assertEqual(attempt.answers.count(), 3)
+
+        result_url = reverse("seed_quiz:htmx_play_result")
+        result_resp = self.client.get(result_url)
+        self.assertEqual(result_resp.status_code, 200)
+        self.assertContains(result_resp, "보호자 동의")
+        self.assertContains(result_resp, "행복의 씨앗 현황")
+
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.status, "submitted")
+
+    def test_immediate_feedback_shows_correct_answer_and_explanation(self):
+        start_url = reverse("seed_quiz:student_start", kwargs={"class_slug": self.slug})
+        self.client.post(start_url, {"number": "7", "name": "홍길동"})
+
+        first_item = self.quiz_set.items.order_by("order_no").first()
+        answer_url = reverse("seed_quiz:htmx_play_answer")
+        resp = self.client.post(
+            answer_url,
+            {"item_id": str(first_item.id), "selected_index": "1"},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "아쉬워요")
+        self.assertContains(resp, "정답")
+        self.assertContains(resp, "해설")
+        self.assertContains(resp, "다음 문제")
+
+    def test_perfect_score_requires_claim_button_for_reward(self):
+        HSGuardianConsent.objects.create(student=self.student, status="approved")
+
+        start_url = reverse("seed_quiz:student_start", kwargs={"class_slug": self.slug})
+        self.client.post(start_url, {"number": "7", "name": "홍길동"})
+
+        answer_url = reverse("seed_quiz:htmx_play_answer")
+        for item in self.quiz_set.items.order_by("order_no"):
+            self.client.post(
+                answer_url,
+                {"item_id": str(item.id), "selected_index": "0"},
+            )
+
+        result_url = reverse("seed_quiz:htmx_play_result")
+        result_resp = self.client.get(result_url)
+        self.assertEqual(result_resp.status_code, 200)
+        self.assertContains(result_resp, "보상 받기")
+        self.assertContains(result_resp, "다음 블룸까지")
+
+        attempt = SQAttempt.objects.get(student=self.student, quiz_set=self.quiz_set)
+        self.assertEqual(attempt.status, "submitted")
+        self.assertEqual(attempt.reward_seed_amount, 0)
+
+        claim_url = reverse("seed_quiz:htmx_play_claim_reward")
+        claim_resp = self.client.post(claim_url)
+        self.assertEqual(claim_resp.status_code, 200)
+
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.status, "rewarded")
+        self.assertEqual(attempt.reward_seed_amount, QUIZ_REWARD_SEEDS)
+        self.assertContains(claim_resp, "씨앗 +")
 
     def test_already_submitted_redirects_to_result(self):
         # attempt 미리 submitted 상태로 생성

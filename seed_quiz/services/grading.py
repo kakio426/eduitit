@@ -53,13 +53,15 @@ def _reward_attempt_if_eligible(*, attempt: SQAttempt, consent_status: str) -> t
 
 
 @transaction.atomic
-def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict) -> SQAttempt:
+def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict, apply_reward: bool = True) -> SQAttempt:
     """
     채점 + 보상 원자 처리.
 
     answers = {order_no(int or str): selected_index(int), ...}
 
-    멱등: 이미 submitted/rewarded이면 기존 attempt 그대로 반환.
+    멱등:
+    - rewarded면 그대로 반환
+    - submitted면 apply_reward=True 인 경우에만 보상 시도
     동시 중복 방지: select_for_update로 attempt 잠금.
     """
     attempt = (
@@ -69,7 +71,39 @@ def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict) -> SQAttempt:
     )
 
     # 멱등 처리
-    if attempt.status in ("submitted", "rewarded"):
+    if attempt.status == "rewarded":
+        return attempt
+    if attempt.status == "submitted":
+        if not apply_reward:
+            return attempt
+        consent_status = _resolve_consent_status(attempt.student)
+        reward, rewarded_now = _reward_attempt_if_eligible(
+            attempt=attempt,
+            consent_status=consent_status,
+        )
+        if rewarded_now:
+            attempt.save(
+                update_fields=[
+                    "status",
+                    "reward_seed_amount",
+                    "reward_applied_at",
+                    "updated_at",
+                ]
+            )
+            SQGenerationLog.objects.create(
+                quiz_set=attempt.quiz_set,
+                level="info",
+                code="REWARD_CLAIM_OK",
+                message=(
+                    "student claim reward "
+                    f"score={attempt.score}/{attempt.max_score}, "
+                    f"consent={consent_status}, reward={reward}"
+                ),
+                payload={
+                    "attempt_id": str(attempt.id),
+                    "student_id": str(attempt.student.id),
+                },
+            )
         return attempt
 
     # 동의 상태 조회
@@ -102,8 +136,13 @@ def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict) -> SQAttempt:
     attempt.submitted_at = timezone.now()
     attempt.consent_snapshot = consent_status[:15]
 
-    # 보상 지급: 만점 + 동의 승인
-    reward, _ = _reward_attempt_if_eligible(attempt=attempt, consent_status=consent_status)
+    # 보상 지급: 만점 + 동의 승인 (선택 적용)
+    reward = 0
+    if apply_reward:
+        reward, _ = _reward_attempt_if_eligible(
+            attempt=attempt,
+            consent_status=consent_status,
+        )
 
     attempt.save(
         update_fields=[
@@ -117,12 +156,20 @@ def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict) -> SQAttempt:
         ]
     )
 
-    log_code = "REWARD_OK" if attempt.status == "rewarded" else "SUBMITTED"
+    if attempt.status == "rewarded":
+        log_code = "REWARD_OK"
+    elif apply_reward:
+        log_code = "SUBMITTED"
+    else:
+        log_code = "SUBMITTED_PENDING_REWARD"
     SQGenerationLog.objects.create(
         quiz_set=attempt.quiz_set,
         level="info",
         code=log_code,
-        message=f"score={score}/{attempt.max_score}, consent={consent_status}, reward={reward}",
+        message=(
+            f"score={score}/{attempt.max_score}, consent={consent_status}, "
+            f"reward={reward}, apply_reward={int(apply_reward)}"
+        ),
         payload={
             "attempt_id": str(attempt.id),
             "student_id": str(attempt.student.id),
@@ -136,6 +183,81 @@ def submit_and_reward(*, attempt_id: uuid.UUID, answers: dict) -> SQAttempt:
         attempt.status,
     )
     return attempt
+
+
+@transaction.atomic
+def claim_reward_for_attempt(
+    *,
+    attempt_id: uuid.UUID,
+    trigger: str = "student_claim",
+) -> tuple[SQAttempt, str]:
+    """
+    제출된 attempt에 대해 보상을 명시적으로 청구한다.
+
+    Returns:
+        (attempt, status_code)
+        status_code in [
+            "rewarded",
+            "already_rewarded",
+            "not_submitted",
+            "not_perfect",
+            "consent_not_approved",
+            "not_eligible",
+        ]
+    """
+    attempt = (
+        SQAttempt.objects.select_for_update()
+        .select_related("student", "quiz_set")
+        .get(id=attempt_id)
+    )
+
+    if attempt.status == "in_progress":
+        return attempt, "not_submitted"
+
+    if attempt.status == "rewarded" and attempt.reward_seed_amount >= QUIZ_REWARD_SEEDS:
+        return attempt, "already_rewarded"
+
+    consent_status = _resolve_consent_status(attempt.student)
+    reward, rewarded_now = _reward_attempt_if_eligible(
+        attempt=attempt,
+        consent_status=consent_status,
+    )
+    if not rewarded_now:
+        if not (attempt.max_score > 0 and attempt.score == attempt.max_score):
+            return attempt, "not_perfect"
+        if consent_status != "approved":
+            return attempt, "consent_not_approved"
+        return attempt, "not_eligible"
+
+    attempt.save(
+        update_fields=[
+            "status",
+            "reward_seed_amount",
+            "reward_applied_at",
+            "updated_at",
+        ]
+    )
+    SQGenerationLog.objects.create(
+        quiz_set=attempt.quiz_set,
+        level="info",
+        code="REWARD_CLAIM_OK",
+        message=(
+            f"reward claim trigger={trigger}, "
+            f"score={attempt.score}/{attempt.max_score}, "
+            f"consent={consent_status}, reward={reward}"
+        ),
+        payload={
+            "attempt_id": str(attempt.id),
+            "student_id": str(attempt.student.id),
+            "trigger": trigger,
+        },
+    )
+    logger.info(
+        "seed_quiz reward claim applied attempt=%s trigger=%s",
+        str(attempt.id),
+        trigger,
+    )
+    return attempt, "rewarded"
 
 
 def list_retroactive_reward_candidate_ids(

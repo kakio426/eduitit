@@ -67,6 +67,110 @@ body {
     transform: scale(0.97);
 }
 
+/* 즉시 피드백 카드 */
+.sq-feedback-card {
+    border-radius: 1.25rem;
+    border: 2px solid #e5e7eb;
+    background: #ffffff;
+    padding: 1.25rem;
+    text-align: left;
+}
+
+.sq-feedback-card--correct {
+    border-color: #86efac;
+    background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.sq-feedback-card--wrong {
+    border-color: #fca5a5;
+    background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%);
+}
+
+.sq-feedback-emoji {
+    font-size: 2.25rem;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.sq-feedback-title {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #111827;
+}
+
+.sq-feedback-question {
+    margin-top: 0.5rem;
+    color: #374151;
+    font-weight: 700;
+    line-height: 1.5;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.sq-feedback-row {
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid #e5e7eb;
+}
+
+.sq-feedback-row--correct {
+    border-color: #86efac;
+    background: #ecfdf3;
+}
+
+.sq-feedback-row--wrong {
+    border-color: #fca5a5;
+    background: #fff1f2;
+}
+
+.sq-feedback-row--answer {
+    border-color: #a5b4fc;
+    background: #eef2ff;
+}
+
+.sq-feedback-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #475569;
+    flex-shrink: 0;
+}
+
+.sq-feedback-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    text-align: right;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.sq-feedback-explanation {
+    margin-top: 0.9rem;
+    border-radius: 0.75rem;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    padding: 0.75rem;
+}
+
+.sq-feedback-explanation-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #1d4ed8;
+    margin-bottom: 0.25rem;
+}
+
+.sq-feedback-explanation-body {
+    font-size: 0.9rem;
+    color: #1e3a8a;
+    line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
 /* htmx 요청 중 버튼 비활성화 시각 피드백 */
 .sq-choice-btn[disabled],
 .sq-choice-btn.htmx-request {
@@ -144,5 +248,18 @@ body {
     .sq-star-board {
         width: min(100%, 36rem);
         grid-template-columns: repeat(20, minmax(0, 1fr));
+    }
+    .sq-feedback-title {
+        font-size: 1.55rem;
+    }
+    .sq-feedback-value {
+        font-size: 1.02rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sq-container,
+    .seed-reward-anim {
+        animation: none !important;
     }
 }
