@@ -1850,11 +1850,14 @@ def set_active_classroom(request):
 
     source = data.get('source', '')
     cid = data.get('classroom_id', '')
-    persist_default = data.get('persist_default')
-    if isinstance(persist_default, str):
-        persist_default = persist_default.strip().lower() in {'1', 'true', 'yes', 'on'}
+    persist_default_raw = data.get('persist_default', None)
+    if persist_default_raw is None:
+        # 기본 동작: HS 학급 선택 시에는 기본 학급으로 함께 저장
+        persist_default = bool(source == 'hs' and cid)
+    elif isinstance(persist_default_raw, str):
+        persist_default = persist_default_raw.strip().lower() in {'1', 'true', 'yes', 'on'}
     else:
-        persist_default = bool(persist_default)
+        persist_default = bool(persist_default_raw)
 
     # 선택 해제
     if not cid:
