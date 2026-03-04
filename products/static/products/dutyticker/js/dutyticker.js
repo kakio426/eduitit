@@ -549,7 +549,6 @@ class DutyTickerManager {
             const isSpotlight = Number(this.spotlightStudentId) === Number(student.id);
             const nameSizeClass = this.getStudentNameSizeClass(student.name);
             const tileStateClass = `${isDone ? 'is-done' : ''} ${isSpotlight ? 'is-spotlight' : ''}`.trim();
-            const spotlightButtonClass = isSpotlight ? 'is-active' : '';
             const studentTitle = `${safeStudentNumber}번 ${safeStudentName}`;
             return `
                 <div class="dt-student-tile relative border cursor-pointer ${tileStateClass}"
@@ -557,15 +556,9 @@ class DutyTickerManager {
                     tabindex="0"
                     aria-label="${studentTitle}"
                     onclick="window.dtApp.handleStudentStatusToggle(${studentId})"
-                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.handleStudentStatusToggle(${studentId}); }">
-                    <button
-                        type="button"
-                        onclick="event.stopPropagation(); window.dtApp.toggleSpotlightStudent(${studentId})"
-                        class="dt-student-spotlight-btn is-compact absolute rounded-full flex items-center justify-center font-black transition ${spotlightButtonClass}"
-                        title="${isSpotlight ? '반짝임 해제' : '반짝이기'}"
-                    >
-                        <i class="fa-solid fa-sparkles"></i>
-                    </button>
+                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.handleStudentStatusToggle(${studentId}); }"
+                    ondblclick="event.preventDefault(); window.dtApp.toggleSpotlightStudent(${studentId});"
+                    oncontextmenu="event.preventDefault(); window.dtApp.toggleSpotlightStudent(${studentId});">
                     <span class="dt-student-name ${nameSizeClass}" title="${studentTitle}">${safeStudentName}</span>
                 </div>
             `;
