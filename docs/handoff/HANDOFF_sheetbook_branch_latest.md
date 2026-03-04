@@ -314,6 +314,21 @@ Status: Working branch handoff (2026-03-04 09:54)
   - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
   - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
 
+## 1-12) 2026-03-04 스모크 스냅샷 정합화 (allowlist/consent 재실행)
+
+- 실행:
+  - `python scripts/run_sheetbook_allowlist_smoke.py`
+  - `python scripts/run_sheetbook_consent_smoke.py`
+  - `python scripts/run_sheetbook_daily_start_bundle.py --days 14 --due-date 2026-03-05 --allow-pilot-hold-for-beta`
+  - `python scripts/run_sheetbook_sample_gap_summary.py --days 14 --due-date 2026-03-05`
+  - `python manage.py check`
+- 결과:
+  - `smoke_sheetbook_allowlist_latest.json`: `evaluation.pass=true`
+  - `smoke_sheetbook_consent_recipients_latest.json`: `evaluation.pass=true`
+  - `smoke_sheetbook_grid_1000_latest.json`: `evaluation.pass=true` (1-11 보강 반영 상태 유지)
+  - `sheetbook_daily_start_bundle_latest.json`: `overall=GO`, `decision=GO`, `readiness_status=PASS`
+  - `sheetbook_sample_gap_summary_latest.json`: `overall.ready=true`, `overall.blockers=(없음)`
+
 ## 3) 내일 시작 체크리스트 (순서 고정)
 
 1. 게이트 최신화
