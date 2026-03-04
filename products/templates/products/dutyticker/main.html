@@ -518,7 +518,7 @@
         border-width: 1.5px !important;
         border-radius: 1.08rem !important;
         box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08) !important;
-        padding: 0.92rem 1.05rem !important;
+        padding: 1.05rem 1.15rem !important;
         transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
     }
 
@@ -550,8 +550,8 @@
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.16rem, 1.01rem + 0.58vw, 1.48rem) !important;
-        line-height: 1.18 !important;
+        font-size: clamp(1.28rem, 1.08rem + 0.72vw, 1.72rem) !important;
+        line-height: 1.15 !important;
         letter-spacing: -0.01em;
     }
 
@@ -564,7 +564,7 @@
     #mainAppContainer #mainRoleList .dt-role-status {
         line-height: 1;
         white-space: nowrap;
-        font-size: 0.79rem !important;
+        font-size: 0.84rem !important;
     }
 
     #mainAppContainer #mainRoleList .dt-role-top {
@@ -608,7 +608,7 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: 1.08rem !important;
+        font-size: clamp(1.16rem, 1.02rem + 0.36vw, 1.34rem) !important;
         font-weight: 900;
         max-width: 100%;
         overflow: hidden;
@@ -720,12 +720,12 @@
     }
 
     .dt-right-column {
-        gap: clamp(1rem, 1.3vw, 1.35rem) !important;
+        gap: clamp(0.95rem, 1.2vw, 1.2rem) !important;
     }
 
     @media (min-width: 1024px) {
         .dt-main-grid {
-            grid-template-columns: minmax(0, 1.64fr) minmax(21.75rem, 0.98fr);
+            grid-template-columns: minmax(0, 1.54fr) minmax(24rem, 1.1fr);
             align-items: stretch;
         }
 
@@ -736,7 +736,8 @@
 
         .dt-right-column {
             grid-column: 2;
-            max-width: 33rem;
+            min-width: 24rem;
+            max-width: none;
             justify-self: stretch;
             height: 100%;
         }
@@ -1582,9 +1583,9 @@
 
             <!-- 3. Today's Roles -->
             <div
-                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
+                class="dt-role-card bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-7 border border-slate-700/50 flex-1 flex flex-col shadow-2xl min-h-0">
                 <div class="flex justify-between items-center mb-4 px-1">
-                    <h3 class="text-[1.15rem] md:text-[1.62rem] font-black text-white flex items-center gap-2">
+                    <h3 class="text-[1.2rem] md:text-[1.72rem] font-black text-white flex items-center gap-2">
                         <span
                             class="bg-pink-500/20 text-pink-400 w-10 h-10 flex items-center justify-center rounded-xl text-lg">👑</span>
                         오늘의 역할
@@ -1610,7 +1611,7 @@
 
             <!-- 4. Random Picker -->
             <div id="randomPickerPanel"
-                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[14.2rem] flex flex-col shadow-2xl">
+                class="bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-slate-700/50 min-h-[15.6rem] flex flex-col shadow-2xl">
                 <div class="flex items-center justify-between gap-2 mb-3 px-1">
                     <h3 class="text-xl font-black text-white flex items-center gap-2">
                         <i class="fa-solid fa-shuffle text-indigo-300"></i>
