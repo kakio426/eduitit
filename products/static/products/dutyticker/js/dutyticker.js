@@ -48,13 +48,15 @@ class DutyTickerManager {
         this.bgmTrackPanelOpen = false;
         this.boundBgmPanelOutsideClick = null;
         this.boundBgmPanelEscape = null;
-        this.missionFontSizeOrder = ['sm', 'md', 'lg'];
+        this.missionFontSizeOrder = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
         this.missionSaveRequestId = 0;
         this.missionSaving = false;
         this.missionPanelCollapsed = true;
         this.missionPanelStorageKey = 'dt-mission-panel-collapsed-v1';
+        this.missionQuickPhraseStorageKey = 'dt-mission-quick-phrase-v1';
+        this.missionQuickPhrase = null;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -71,6 +73,8 @@ class DutyTickerManager {
         this.setupEventListeners();
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
+        this.restoreMissionQuickPhrase();
+        this.updateMissionQuickPhraseUI();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
         this.applyRoleViewMode();
@@ -114,6 +118,8 @@ class DutyTickerManager {
         this.bindButtonAction('timerCustomApplyBtn', () => this.applyCustomTimerMinutes());
         this.bindButtonAction('timerResetBtn', () => this.resetTimer());
         this.bindButtonAction('missionPanelToggleBtn', () => this.toggleMissionPanel());
+        this.bindButtonAction('missionQuickSaveBtn', () => this.saveMissionQuickPhraseFromCurrent());
+        this.bindButtonAction('missionQuickApplyBtn', () => this.applyMissionQuickPhrase());
 
         this.setupInlineMissionEditor();
 
@@ -431,32 +437,56 @@ class DutyTickerManager {
         const now = new Date();
         const nowMinutes = (now.getHours() * 60) + now.getMinutes();
 
-        container.innerHTML = periodSchedule.map((slot) => {
-            const periodNumber = Number(slot.period);
-            const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
-                ? `${periodNumber}교시`
-                : String(slot.slot_label || '');
-            const rawSubject = String(slot.name || '').trim();
-            const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
-            const startTime = String(slot.startTime || '').trim();
-            const endTime = String(slot.endTime || '').trim();
-            const startMinutes = this.timeStringToMinutes(startTime);
-            const endMinutes = this.timeStringToMinutes(endTime);
-            const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
-            const isCurrent = hasTimeRange && nowMinutes >= startMinutes && nowMinutes < endMinutes;
-            const chipClass = `dt-header-schedule-item${isCurrent ? ' is-current' : ''}`;
-            const titleText = hasTimeRange
-                ? `${periodLabel} · ${subjectName} (${startTime}-${endTime})`
-                : `${periodLabel} · ${subjectName}`;
+        const candidateSlots = periodSchedule
+            .map((slot) => {
+                const periodNumber = Number(slot.period);
+                const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
+                    ? `${periodNumber}교시`
+                    : String(slot.slot_label || '').trim() || '교시';
+                const rawSubject = String(slot.name || '').trim();
+                const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+                const startTime = String(slot.startTime || '').trim();
+                const endTime = String(slot.endTime || '').trim();
+                const startMinutes = this.timeStringToMinutes(startTime);
+                const endMinutes = this.timeStringToMinutes(endTime);
+                const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
+                if (!hasTimeRange) return null;
 
-            return `
-                <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
-                    <span class="dt-header-schedule-period">${this.escapeHtml(periodLabel)}</span>
-                    <span class="dt-header-schedule-sep">·</span>
-                    <span class="dt-header-schedule-subject">${this.escapeHtml(subjectName)}</span>
-                </span>
-            `;
-        }).join('');
+                const isCurrent = nowMinutes >= startMinutes && nowMinutes < endMinutes;
+                const isUpcoming = nowMinutes >= (startMinutes - 10) && nowMinutes < startMinutes;
+                if (!isCurrent && !isUpcoming) return null;
+
+                return {
+                    periodLabel,
+                    subjectName,
+                    startTime,
+                    endTime,
+                    startMinutes,
+                    isCurrent,
+                    isUpcoming,
+                };
+            })
+            .filter((slot) => !!slot);
+
+        if (!candidateSlots.length) {
+            container.innerHTML = '<span class="dt-header-schedule-empty">다음 교시 10분 전부터 표시됩니다</span>';
+            return;
+        }
+
+        const focusSlot = candidateSlots.find((slot) => slot.isCurrent)
+            || candidateSlots.sort((a, b) => a.startMinutes - b.startMinutes)[0];
+
+        const chipClass = `dt-header-schedule-item ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
+        const periodText = focusSlot.isUpcoming ? `곧 ${focusSlot.periodLabel}` : focusSlot.periodLabel;
+        const titleText = `${focusSlot.periodLabel} · ${focusSlot.subjectName} (${focusSlot.startTime}-${focusSlot.endTime})`;
+
+        container.innerHTML = `
+            <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
+                <span class="dt-header-schedule-period">${this.escapeHtml(periodText)}</span>
+                <span class="dt-header-schedule-sep">·</span>
+                <span class="dt-header-schedule-subject">${this.escapeHtml(focusSlot.subjectName)}</span>
+            </span>
+        `;
     }
 
     renderMission() {
@@ -572,11 +602,11 @@ class DutyTickerManager {
             const spotlightBadge = isSpotlightRole
                 ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>집중</span>'
                 : '';
-            const statusDotClass = isCompleted ? 'is-completed' : 'is-pending';
             const statusBadge = isCompleted
                 ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
                 : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
+            const assigneeLabel = isCompleted ? '완료 담당' : '담당';
             return `
                 <div class="dt-role-row border cursor-pointer ${spotlightClass}"
                     role="button"
@@ -589,11 +619,11 @@ class DutyTickerManager {
                             <div class="dt-role-meta">
                                 <p class="dt-role-slot">${safeTimeSlot}</p>
                                 ${spotlightBadge}
-                                <span class="dt-role-status-dot ${statusDotClass}" aria-hidden="true"></span>
                                 ${statusBadge}
                             </div>
                         </div>
                         <div class="dt-role-assignee-wrap">
+                            <span class="dt-role-assignee-label">${assigneeLabel}</span>
                             <div class="dt-role-assignee ${assigneeToneClass}" title="${safeAssignee}">${safeAssignee}</div>
                         </div>
                     </div>
@@ -1539,6 +1569,81 @@ class DutyTickerManager {
         }
     }
 
+    restoreMissionQuickPhrase() {
+        try {
+            const raw = localStorage.getItem(this.missionQuickPhraseStorageKey);
+            if (!raw) {
+                this.missionQuickPhrase = null;
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const title = this.sanitizeMissionText(parsed?.title || '', 'title');
+            const desc = this.sanitizeMissionText(parsed?.desc || '', 'desc');
+            if (!title && !desc) {
+                this.missionQuickPhrase = null;
+                return;
+            }
+
+            this.missionQuickPhrase = { title, desc };
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore mission quick phrase', error);
+            this.missionQuickPhrase = null;
+        }
+    }
+
+    saveMissionQuickPhraseToStorage() {
+        try {
+            if (!this.missionQuickPhrase) {
+                localStorage.removeItem(this.missionQuickPhraseStorageKey);
+                return;
+            }
+            localStorage.setItem(this.missionQuickPhraseStorageKey, JSON.stringify(this.missionQuickPhrase));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save mission quick phrase', error);
+        }
+    }
+
+    updateMissionQuickPhraseUI() {
+        const applyBtn = document.getElementById('missionQuickApplyBtn');
+        if (!applyBtn) return;
+
+        const hasQuickPhrase = !!(this.missionQuickPhrase && (this.missionQuickPhrase.title || this.missionQuickPhrase.desc));
+        applyBtn.disabled = !hasQuickPhrase;
+        applyBtn.classList.toggle('opacity-60', !hasQuickPhrase);
+        applyBtn.classList.toggle('cursor-not-allowed', !hasQuickPhrase);
+        applyBtn.setAttribute('title', hasQuickPhrase ? '저장한 문구 불러오기' : '먼저 문구를 저장해 주세요');
+    }
+
+    saveMissionQuickPhraseFromCurrent() {
+        const titleEl = document.getElementById('mainMissionTitle');
+        const descEl = document.getElementById('mainMissionDesc');
+        const title = this.sanitizeMissionText(titleEl ? titleEl.innerText : this.missionTitle, 'title');
+        const desc = this.sanitizeMissionText(descEl ? descEl.innerText : this.missionDesc, 'desc');
+
+        if (!title && !desc) {
+            alert('저장할 문구가 없습니다.');
+            return;
+        }
+
+        this.missionQuickPhrase = { title, desc };
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        alert('반복 문구를 저장했습니다.');
+    }
+
+    async applyMissionQuickPhrase() {
+        if (!this.missionQuickPhrase) {
+            alert('저장된 문구가 없습니다. 먼저 문구 저장을 눌러 주세요.');
+            return;
+        }
+
+        await this.handleUpdateMission({
+            title: this.missionQuickPhrase.title,
+            desc: this.missionQuickPhrase.desc,
+        });
+    }
+
     restoreMissionFontSize() {
         try {
             const saved = localStorage.getItem(this.missionFontStorageKey);
@@ -1564,11 +1669,16 @@ class DutyTickerManager {
 
         const label = document.getElementById('missionFontSizeLabel');
         if (label) {
-            label.textContent = this.missionFontSize === 'sm'
-                ? '작게'
-                : this.missionFontSize === 'lg'
-                    ? '크게'
-                    : '보통';
+            const sizeLabelMap = {
+                xxs: '최소',
+                xs: '아주작게',
+                sm: '작게',
+                md: '보통',
+                lg: '크게',
+                xl: '아주크게',
+                xxl: '최대',
+            };
+            label.textContent = sizeLabelMap[this.missionFontSize] || '보통';
         }
     }
 
@@ -1576,7 +1686,8 @@ class DutyTickerManager {
         const step = Number(direction);
         if (!Number.isFinite(step) || step === 0) return;
         const currentIndex = this.missionFontSizeOrder.indexOf(this.missionFontSize);
-        const safeIndex = currentIndex >= 0 ? currentIndex : 1;
+        const defaultIndex = this.missionFontSizeOrder.indexOf('md');
+        const safeIndex = currentIndex >= 0 ? currentIndex : (defaultIndex >= 0 ? defaultIndex : 0);
         const nextIndex = Math.max(0, Math.min(this.missionFontSizeOrder.length - 1, safeIndex + (step > 0 ? 1 : -1)));
         this.missionFontSize = this.missionFontSizeOrder[nextIndex];
         this.applyMissionFontSize();

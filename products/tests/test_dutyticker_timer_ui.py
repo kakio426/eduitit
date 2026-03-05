@@ -32,6 +32,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="mainMissionDesc" contenteditable="true"')
         self.assertContains(response, 'window.dtApp.changeMissionFontSize(-1)')
         self.assertContains(response, 'id="missionFontSizeLabel"')
+        self.assertContains(response, 'id="missionQuickSaveBtn"')
+        self.assertContains(response, 'id="missionQuickApplyBtn"')
         self.assertContains(response, 'id="randomDrawName"')
         self.assertContains(response, 'id="randomDrawBtn"')
         self.assertContains(response, 'id="randomDrawResetBtn"')
@@ -77,4 +79,9 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('setupInlineMissionEditor()', script)
         self.assertIn('saveInlineMissionEdit()', script)
         self.assertIn('changeMissionFontSize(', script)
+        self.assertIn("this.missionFontSizeOrder = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'];", script)
+        self.assertIn('dt-mission-quick-phrase-v1', script)
+        self.assertIn('restoreMissionQuickPhrase()', script)
+        self.assertIn('applyMissionQuickPhrase()', script)
+        self.assertIn('다음 교시 10분 전부터 표시됩니다', script)
 
