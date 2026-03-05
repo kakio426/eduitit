@@ -521,94 +521,6 @@ function homeCalendarWidget() {
 
             {% if sheetbook_workspace.enabled %}
             <div class="mb-6 space-y-4">
-                <section class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl border border-indigo-500 p-5 text-white">
-                    {% if sheetbook_workspace.recent_sheetbooks %}
-                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <p class="text-xs font-bold tracking-wide text-indigo-100">교무수첩</p>
-                            <h3 class="text-xl font-black mt-1">학급 운영 수첩(달력 포함)</h3>
-                            <p class="text-sm text-indigo-100 mt-2">복사·붙여넣기로 기록한 뒤, 필요한 기능만 골라 바로 쓰세요.</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-indigo-700 hover:bg-indigo-50 transition">
-                                <i class="fa-solid fa-book-open"></i> 최근 수첩 열기
-                            </a>
-                            {% if sheetbook_workspace.create_action_url %}
-                            <form method="post" action="{{ sheetbook_workspace.create_action_url }}" class="inline-flex">
-                                {% csrf_token %}
-                                <input type="hidden" name="source" value="workspace_home_create">
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-black text-white hover:bg-white/10 transition">
-                                    <i class="fa-solid fa-plus"></i> 새 수첩
-                                </button>
-                            </form>
-                            {% else %}
-                            <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-black text-white hover:bg-white/10 transition">
-                                <i class="fa-solid fa-plus"></i> 새 수첩
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if sheetbook_workspace.copy_action_url %}
-                    <form method="post" action="{{ sheetbook_workspace.copy_action_url }}" class="inline-flex mt-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="source" value="workspace_home_copy">
-                        <button type="submit" class="inline-flex items-center gap-2 text-xs font-black text-indigo-100 hover:text-white transition">
-                            <i class="fa-regular fa-copy"></i> 작년 수첩 이어쓰기
-                        </button>
-                    </form>
-                    {% endif %}
-                    {% else %}
-                    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="max-w-2xl">
-                            <p class="text-xs font-bold tracking-wide text-indigo-100">교무수첩 시작하기</p>
-                            <h3 class="text-xl font-black mt-1">첫 수첩을 1분 안에 시작해 보세요</h3>
-                            <p class="text-sm text-indigo-100 mt-2">처음에는 수첩 하나를 만든 뒤, 오늘 일정 1개만 등록해도 충분합니다.</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            {% if sheetbook_workspace.create_action_url %}
-                            <form method="post" action="{{ sheetbook_workspace.create_action_url }}" class="inline-flex">
-                                {% csrf_token %}
-                                <input type="hidden" name="source" value="workspace_home_create">
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-indigo-700 hover:bg-indigo-50 transition">
-                                    <i class="fa-solid fa-plus"></i> 첫 수첩 만들기
-                                </button>
-                            </form>
-                            {% else %}
-                            <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-indigo-700 hover:bg-indigo-50 transition">
-                                <i class="fa-solid fa-plus"></i> 첫 수첩 만들기
-                            </a>
-                            {% endif %}
-                            <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-black text-white hover:bg-white/10 transition">
-                                <i class="fa-solid fa-book-open"></i> 수첩 화면 보기
-                            </a>
-                            {% if sheetbook_workspace.copy_action_url %}
-                            <form method="post" action="{{ sheetbook_workspace.copy_action_url }}" class="inline-flex">
-                                {% csrf_token %}
-                                <input type="hidden" name="source" value="workspace_home_copy">
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-black text-white hover:bg-white/10 transition">
-                                    <i class="fa-regular fa-copy"></i> 작년 수첩 불러오기
-                                </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <div class="rounded-xl border border-white/30 bg-white/10 px-3 py-2">
-                            <p class="text-xs font-black text-indigo-100">1단계</p>
-                            <p class="text-sm font-bold text-white mt-1">첫 수첩 만들기</p>
-                        </div>
-                        <div class="rounded-xl border border-white/30 bg-white/10 px-3 py-2">
-                            <p class="text-xs font-black text-indigo-100">2단계</p>
-                            <p class="text-sm font-bold text-white mt-1">탭 1개 추가하기</p>
-                        </div>
-                        <div class="rounded-xl border border-white/30 bg-white/10 px-3 py-2">
-                            <p class="text-xs font-black text-indigo-100">3단계</p>
-                            <p class="text-sm font-bold text-white mt-1">오늘 일정 1건 등록</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                </section>
-
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
                     <section class="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-4">
                         <div class="flex items-center justify-between gap-3 mb-3">
@@ -654,13 +566,40 @@ function homeCalendarWidget() {
                     </section>
 
                     <section class="bg-white rounded-2xl border border-slate-200 p-4">
-                        <h3 class="text-sm font-black text-slate-700 flex items-center gap-2 mb-3">
-                            {% if sheetbook_workspace.recent_sheetbooks %}
-                            <i class="fa-solid fa-book text-indigo-500"></i> 내 교무수첩
-                            {% else %}
-                            <i class="fa-solid fa-list-check text-indigo-500"></i> 시작 체크리스트
-                            {% endif %}
-                        </h3>
+                        <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+                            <h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+                                {% if sheetbook_workspace.recent_sheetbooks %}
+                                <i class="fa-solid fa-book text-indigo-500"></i> 내 교무수첩
+                                {% else %}
+                                <i class="fa-solid fa-list-check text-indigo-500"></i> 시작 체크리스트
+                                {% endif %}
+                            </h3>
+                            <div class="flex flex-wrap gap-1.5">
+                                {% if sheetbook_workspace.recent_sheetbooks %}
+                                <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 hover:bg-indigo-100 transition">
+                                    <i class="fa-solid fa-book-open"></i> 최근 수첩 열기
+                                </a>
+                                {% else %}
+                                <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 hover:bg-indigo-100 transition">
+                                    <i class="fa-solid fa-book-open"></i> 수첩 화면 보기
+                                </a>
+                                {% endif %}
+                                {% if sheetbook_workspace.create_action_url %}
+                                <form method="post" action="{{ sheetbook_workspace.create_action_url }}" class="inline-flex">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="source" value="workspace_home_create">
+                                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
+                                        <i class="fa-solid fa-plus"></i> {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
+                                    </button>
+                                </form>
+                                {% else %}
+                                <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
+                                    <i class="fa-solid fa-plus"></i> {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
+                                </a>
+                                {% endif %}
+
+                            </div>
+                        </div>
                         {% if sheetbook_workspace.recent_sheetbooks %}
                         <div class="space-y-2">
                             {% for book in sheetbook_workspace.recent_sheetbooks %}
@@ -835,3 +774,4 @@ function homeCalendarWidget() {
 </div>
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {% endblock %}
+
