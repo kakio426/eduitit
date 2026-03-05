@@ -127,6 +127,29 @@
     return "";
   }
 
+  function resolveCsrfToken(rootEl) {
+    const rootToken = rootEl && rootEl.dataset && rootEl.dataset.csrfToken ? String(rootEl.dataset.csrfToken).trim() : "";
+    if (rootToken && rootToken !== "NOTPROVIDED") return rootToken;
+
+    const localTokenEl = rootEl ? rootEl.querySelector("input[name='csrfmiddlewaretoken']") : null;
+    const localToken = localTokenEl && localTokenEl.value ? String(localTokenEl.value).trim() : "";
+    if (localToken) return localToken;
+
+    const globalTokenEl = document.querySelector("input[name='csrfmiddlewaretoken']");
+    const globalToken = globalTokenEl && globalTokenEl.value ? String(globalTokenEl.value).trim() : "";
+    if (globalToken) return globalToken;
+
+    return getCookie("csrftoken");
+  }
+
+  async function readJsonSafely(response) {
+    return response.json().catch(() => ({}));
+  }
+
+  function csrfFailureMessage(defaultMessage) {
+    return defaultMessage || "보안 확인이 만료됐어요. 새로고침 후 다시 시도해 주세요.";
+  }
+
   async function initSheetbookGrid() {
     const root = document.getElementById("sheetbook-grid-editor");
     if (!root) return;
@@ -193,7 +216,7 @@
       saveGuide: root.querySelector("#grid-save-guide"),
     };
 
-    const csrfToken = getCookie("csrftoken");
+    const csrfToken = resolveCsrfToken(root);
     const failedCellClasses = ["border-red-300", "bg-red-50", "ring-1", "ring-red-100"];
 
     (function initGridLimit() {
@@ -960,6 +983,7 @@
     async function postJson(url, payload) {
       return fetch(url, {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": csrfToken,
@@ -1237,8 +1261,9 @@
       try {
         const response = await postJson(root.dataset.addRowUrl, {});
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          setSaveStatus(data.error || "줄 추가에 실패했습니다.", true);
+          const data = await readJsonSafely(response);
+          const fallbackMessage = response.status === 403 ? csrfFailureMessage("줄 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "줄 추가에 실패했습니다.";
+          setSaveStatus(data.error || fallbackMessage, true);
           return;
         }
         await loadGrid();
@@ -1259,8 +1284,9 @@
           column_type: columnType,
         });
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          setSaveStatus(data.error || "항목 추가에 실패했습니다.", true);
+          const data = await readJsonSafely(response);
+          const fallbackMessage = response.status === 403 ? csrfFailureMessage("항목 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "항목 추가에 실패했습니다.";
+          setSaveStatus(data.error || fallbackMessage, true);
           return;
         }
         els.newColLabel.value = "";
@@ -1384,7 +1410,7 @@
     const root = document.getElementById("sheetbook-calendar-tab");
     if (!root) return;
 
-    const csrfToken = getCookie("csrftoken");
+    const csrfToken = resolveCsrfToken(root);
     const state = {
       events: [],
       monthCursor: new Date(),
@@ -1540,15 +1566,17 @@
       try {
         const response = await fetch(root.dataset.syncUrl, {
           method: "POST",
+          credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken,
           },
           body: JSON.stringify({}),
         });
-        const payload = await response.json().catch(() => ({}));
+        const payload = await readJsonSafely(response);
         if (!response.ok) {
-          setStatus(payload.error || "일정 반영 중 오류가 발생했습니다.", true);
+          const fallbackMessage = response.status === 403 ? csrfFailureMessage("달력 반영 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "일정 반영 중 오류가 발생했습니다.";
+          setStatus(payload.error || fallbackMessage, true);
           return;
         }
         setStatus(
@@ -1615,16 +1643,18 @@
       try {
         const response = await fetch(root.dataset.createUrl, {
           method: "POST",
+          credentials: "same-origin",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "X-CSRFToken": csrfToken,
           },
           body: body.toString(),
         });
-        const payload = await response.json().catch(() => ({}));
+        const payload = await readJsonSafely(response);
         if (!response.ok) {
           const validationMessage = firstValidationMessage(payload.errors);
-          setStatus(validationMessage || payload.message || "일정 추가 중 오류가 발생했습니다.", true);
+          const fallbackMessage = response.status === 403 ? csrfFailureMessage("일정 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "일정 추가 중 오류가 발생했습니다.";
+          setStatus(validationMessage || payload.message || payload.error || fallbackMessage, true);
           return;
         }
         els.quickTitle.value = "";
@@ -1690,3 +1720,4 @@
   document.addEventListener("DOMContentLoaded", initSheetbookCalendarTab);
 </script>
 {% endblock %}
+
