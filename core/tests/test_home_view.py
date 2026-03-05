@@ -661,6 +661,16 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('name="source" value="workspace_home_copy"', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_workspace_shows_first_run_onboarding(self):
+        self._login('sheetbookonboarding')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('교무수첩 시작하기', content)
+        self.assertIn('첫 수첩을 1분 안에 시작해 보세요', content)
+        self.assertIn('시작 체크리스트', content)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_prefers_favorites_heading(self):
         from sheetbook.models import Sheetbook
 
