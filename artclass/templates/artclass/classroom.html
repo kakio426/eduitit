@@ -180,6 +180,16 @@
         background: #111827;
     }
 
+    #stepImageShell {
+        height: clamp(9.5rem, 24vh, 19rem);
+    }
+
+    @media (max-height: 860px) {
+        #stepImageShell {
+            height: clamp(8.25rem, 20vh, 13rem);
+        }
+    }
+
     #stepImageLoading {
         transition: opacity 0.2s ease;
     }
@@ -368,13 +378,13 @@
                         준비물·팁 요약
                     </span>
                 </div>
-                <div id="videoStepMaterialsBlock" class="hidden mt-3">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-indigo-200/95">준비물</p>
-                    <div id="videoStepMaterialsList" class="mt-2 flex flex-wrap gap-2"></div>
-                </div>
                 <div id="videoStepTipBlock" class="hidden mt-3 rounded-xl border border-amber-300/35 bg-amber-100/10 px-3 py-2.5">
                     <p class="text-[11px] font-black uppercase tracking-widest text-amber-200/90">교사 팁 / 추가 안내</p>
                     <p id="videoStepTipText" class="mt-1.5 text-sm leading-relaxed font-semibold text-amber-50"></p>
+                </div>
+                <div id="videoStepMaterialsBlock" class="hidden mt-3">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-indigo-200/95">준비물</p>
+                    <div id="videoStepMaterialsList" class="mt-2 flex flex-wrap gap-2"></div>
                 </div>
                 <p id="videoStepMetaEmpty" class="mt-2 text-xs font-semibold text-slate-300/80">
                     준비물 또는 교사 팁이 있으면 이 영역에 표시됩니다.
@@ -388,8 +398,7 @@
             <!-- Current Activity Feature -->
             <div class="flex-grow flex flex-col min-h-0 overflow-hidden">
                 <!-- Large Image Context -->
-                <div id="stepImageShell"
-                    class="h-[30vh] sm:h-[34vh] md:h-[40vh] xl:h-[45vh] shrink-0 relative bg-gray-300 overflow-hidden">
+                <div id="stepImageShell" class="shrink-0 relative bg-gray-300 overflow-hidden">
                     <img id="stepImage" src="" alt="" class="w-full h-full hidden">
                     <div id="stepImageLoading"
                         class="hidden absolute inset-0 z-[1] flex flex-col items-center justify-center bg-slate-900/70 text-white">
@@ -588,7 +597,7 @@
      * 1: Loop All (Loop through all steps)
      * 2: Loop One (Stay on current step)
      */
-    let stepRepeatMode = 0;
+    let stepRepeatMode = 1;
 
     const loopStatusEl = document.getElementById('loopStatus');
     const btnLoopEl = document.getElementById('btnLoop');
@@ -631,6 +640,7 @@
     const btnResetStepEditorEl = document.getElementById('btnResetStepEditor');
     const stepEditorStatusEl = document.getElementById('stepEditorStatus');
     const stepEditorPermissionBadgeEl = document.getElementById('stepEditorPermissionBadge');
+    const stepImageShellEl = document.getElementById('stepImageShell');
     const stepImageEl = document.getElementById('stepImage');
     const noImageEl = document.getElementById('noImage');
     const stepImageLoadingEl = document.getElementById('stepImageLoading');
@@ -761,6 +771,26 @@
 
         const hasMeta = materials.length > 0 || !!tip;
         videoStepMetaEmptyEl.classList.toggle('hidden', hasMeta);
+    }
+
+    function rebalanceStepLayout() {
+        if (!stepImageShellEl || !stepTextContainerEl) return;
+        if (IS_DASHBOARD_ONLY) return;
+
+        stepImageShellEl.style.height = '';
+        const minImageHeight = Math.max(132, Math.round((window.innerHeight || 800) * 0.16));
+        let imageHeight = Math.round(stepImageShellEl.getBoundingClientRect().height);
+        let guard = 0;
+
+        while (
+            stepTextContainerEl.scrollHeight > stepTextContainerEl.clientHeight + 2 &&
+            imageHeight > minImageHeight &&
+            guard < 30
+        ) {
+            imageHeight -= 10;
+            stepImageShellEl.style.height = `${imageHeight}px`;
+            guard += 1;
+        }
     }
 
     function applyDashboardOnlyUi() {
@@ -1250,19 +1280,6 @@
         const hasInlineMeta = useInlineMeta && (parsed?.materials || parsed?.tip);
         let html = `<p id="stepText" class="text-gray-800 text-jumbo leading-tight break-keep whitespace-pre-line ${hasInlineMeta ? 'mb-6' : 'mb-0'}">${escapeHtml(parsed?.mainText || '(설명 없음)')}</p>`;
 
-        if (useInlineMeta && parsed?.materials) {
-            const materialBadges = parsed.materials
-                .map((material) => `<span class="step-material-chip step-material-chip-base inline-flex items-center px-3.5 py-1.5 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">${escapeHtml(material)}</span>`)
-                .join('');
-            html += `
-                <div class="mt-4">
-                    <p class="step-meta-label step-meta-label-base text-indigo-500/80 mb-2">준비물</p>
-                    <div class="flex flex-wrap gap-2">
-                        ${materialBadges}
-                    </div>
-                </div>
-            `;
-        }
         if (useInlineMeta && parsed?.tip) {
             html += `
                 <div class="mt-4 p-5 md:p-6 bg-amber-50 text-amber-800 rounded-2xl border border-amber-200 flex items-start gap-4 shadow-sm">
@@ -1276,10 +1293,24 @@
                 </div>
             `;
         }
+        if (useInlineMeta && parsed?.materials) {
+            const materialBadges = parsed.materials
+                .map((material) => `<span class="step-material-chip step-material-chip-base inline-flex items-center px-3.5 py-1.5 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">${escapeHtml(material)}</span>`)
+                .join('');
+            html += `
+                <div class="mt-4">
+                    <p class="step-meta-label step-meta-label-base text-indigo-500/80 mb-2">준비물</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${materialBadges}
+                    </div>
+                </div>
+            `;
+        }
 
         if (stepTextContainerEl) {
             stepTextContainerEl.innerHTML = html;
             stepTextContainerEl.scrollTop = 0;
+            requestAnimationFrame(() => rebalanceStepLayout());
         }
     }
 
@@ -1731,12 +1762,11 @@
         };
     }
 
-    // Step Repeat Mode Toggle
-    document.getElementById('btnStepRepeat').onclick = () => {
-        stepRepeatMode = (stepRepeatMode + 1) % 3;
+    function syncStepRepeatUi() {
         const btn = document.getElementById('btnStepRepeat');
         const badge = document.getElementById('stepRepeatBadge');
 
+        if (!btn || !badge) return;
         if (stepRepeatMode === 0) {
             // None
             btn.classList.remove('text-purple-600');
@@ -1753,6 +1783,12 @@
             btn.classList.add('text-purple-600');
             badge.classList.remove('hidden');
         }
+    }
+
+    // Step Repeat Mode Toggle
+    document.getElementById('btnStepRepeat').onclick = () => {
+        stepRepeatMode = (stepRepeatMode + 1) % 3;
+        syncStepRepeatUi();
     };
 
     document.getElementById('btnFullscreen').onclick = () => {
@@ -1788,6 +1824,7 @@
     // Init
     applyResponsiveTokens();
     syncStepEditorPermissionUi();
+    syncStepRepeatUi();
     setTvTeacherGuideExpanded(false);
     applyDashboardOnlyUi();
     setExternalWindowStatus('closed');
