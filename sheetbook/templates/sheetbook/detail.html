@@ -28,43 +28,19 @@
     </div>
 
     <section class="clay-card p-5 mb-5">
-      <h2 class="text-lg font-bold text-gray-800 mb-3">탭 추가</h2>
-      <form
-        method="post"
-        action="{% url 'sheetbook:create_tab' pk=sheetbook.pk %}"
-        class="grid grid-cols-1 md:grid-cols-3 gap-3"
-        hx-post="{% url 'sheetbook:create_tab' pk=sheetbook.pk %}"
-        hx-target="#sheetbook-tab-list"
-        hx-swap="outerHTML"
-        hx-indicator="find .js-create-tab-loading"
-        hx-disabled-elt="find button[type='submit']"
-        hx-on::response-error="alert('탭 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
-      >
-        {% csrf_token %}
-        <div class="md:col-span-2">
-          {{ tab_create_form.name }}
-        </div>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          {{ tab_create_form.tab_type }}
+          <h2 class="text-lg font-bold text-gray-800">작업 탭</h2>
+          <p class="mt-1 text-xs text-gray-500">탭을 선택하고 복사한 표를 바로 붙여넣으세요.</p>
         </div>
-        <div class="md:col-span-3">
-          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 inline-flex items-center gap-2">
-            <span class="js-create-tab-loading htmx-indicator">
-              <i class="fa-solid fa-circle-notch fa-spin"></i>
-            </span>
-            <span>탭 추가</span>
-          </button>
-        </div>
-      </form>
-    </section>
+        <a
+          href="#sheetbook-tab-manage"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
+        >
+          탭 관리 열기
+        </a>
+      </div>
 
-    <section class="clay-card p-5">
-      <h2 class="text-lg font-bold text-gray-800 mb-3">탭 목록</h2>
-      {% include "sheetbook/_tab_list.html" %}
-    </section>
-
-    <section class="clay-card p-5 mt-5">
-      <h2 class="text-lg font-bold text-gray-800 mb-3">탭 열기</h2>
       <div class="flex flex-wrap gap-2 mb-4">
         {% for tab in tabs %}
           <a
@@ -74,6 +50,12 @@
             {{ tab.name }}
           </a>
         {% endfor %}
+        <a
+          href="#sheetbook-tab-manage"
+          class="px-3 py-1.5 rounded-lg border border-dashed border-gray-300 bg-white text-sm font-semibold text-gray-600 hover:border-indigo-300 hover:text-indigo-700"
+        >
+          + 탭 만들기
+        </a>
       </div>
 
       {% if selected_tab %}
@@ -86,6 +68,50 @@
         <p class="text-gray-500">열 수 있는 탭이 없습니다.</p>
       {% endif %}
     </section>
+
+    <details id="sheetbook-tab-manage" class="clay-card p-5" {% if not tabs %}open{% endif %}>
+      <summary class="cursor-pointer list-none text-lg font-bold text-gray-800 flex items-center justify-between">
+        <span>탭 관리 (추가/이름변경/순서/삭제)</span>
+        <span class="text-xs text-gray-500">열기/닫기</span>
+      </summary>
+      <div class="mt-4 space-y-5">
+        <section>
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">새 탭 추가</h3>
+          <form
+            method="post"
+            action="{% url 'sheetbook:create_tab' pk=sheetbook.pk %}"
+            class="grid grid-cols-1 md:grid-cols-3 gap-3"
+            hx-post="{% url 'sheetbook:create_tab' pk=sheetbook.pk %}"
+            hx-target="#sheetbook-tab-list"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-create-tab-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="alert('탭 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+          >
+            {% csrf_token %}
+            <div class="md:col-span-2">
+              {{ tab_create_form.name }}
+            </div>
+            <div>
+              {{ tab_create_form.tab_type }}
+            </div>
+            <div class="md:col-span-3">
+              <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 inline-flex items-center gap-2">
+                <span class="js-create-tab-loading htmx-indicator">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </span>
+                <span>탭 추가</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section>
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">탭 목록</h3>
+          {% include "sheetbook/_tab_list.html" %}
+        </section>
+      </div>
+    </details>
   </div>
 </main>
 {% endblock %}
@@ -937,6 +963,40 @@
       });
     }
 
+    async function applyGridPaste(text, startRowIndex, startColIndex) {
+      if (!text) return false;
+      await flushDirtyQueue(true);
+      try {
+        const response = await postJson(root.dataset.pasteUrl, {
+          raw_text: text,
+          start_row_index: Math.max(0, Number(startRowIndex) || 0),
+          start_col_index: Math.max(0, Number(startColIndex) || 0),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setStatus(data.error || "붙여넣기 처리 중 오류가 발생했습니다.", true);
+          return false;
+        }
+        const data = await response.json();
+        if (data.invalid_rows && data.invalid_rows.length) {
+          setSaveStatus(`붙여넣기 완료, 일부 행 제외: ${data.invalid_rows.join(", ")}`, true);
+        } else {
+          setSaveStatus(`붙여넣기 완료: ${data.updated}개 셀 반영`, false);
+        }
+        await loadGrid();
+        return true;
+      } catch (error) {
+        setStatus("네트워크 오류로 붙여넣기에 실패했습니다. 다시 시도해 주세요.", true);
+        return false;
+      }
+    }
+
+    function isTextEntryElement(element) {
+      if (!element || !(element instanceof HTMLElement)) return false;
+      if (element.isContentEditable) return true;
+      return !!element.closest("input, textarea, select");
+    }
+
     function queueCellForSave(cellEl) {
       if (!cellEl) return;
       const rowId = cellEl.dataset.rowId;
@@ -1135,39 +1195,36 @@
       const text = (event.clipboardData || window.clipboardData).getData("text");
       if (!text) return;
       event.preventDefault();
-      await flushDirtyQueue(true);
-
       const startRowIndex = Number(targetCell.dataset.rowIndex || 0);
       const startColIndex = Number(targetCell.dataset.colIndex || 0);
-      const response = await postJson(root.dataset.pasteUrl, {
-        raw_text: text,
-        start_row_index: startRowIndex,
-        start_col_index: startColIndex,
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setStatus(data.error || "붙여넣기 처리 중 오류가 발생했습니다.", true);
-        return;
-      }
+      await applyGridPaste(text, startRowIndex, startColIndex);
+    });
 
-      const data = await response.json();
-      if (data.invalid_rows && data.invalid_rows.length) {
-        setSaveStatus(`붙여넣기 완료, 일부 행 제외: ${data.invalid_rows.join(", ")}`, true);
-      } else {
-        setSaveStatus(`붙여넣기 완료: ${data.updated}개 셀 반영`, false);
-      }
-      await loadGrid();
+    document.addEventListener("paste", async (event) => {
+      if (event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("#grid-table")) return;
+      if (isTextEntryElement(target)) return;
+      const text = (event.clipboardData || window.clipboardData).getData("text");
+      if (!text) return;
+      event.preventDefault();
+      await applyGridPaste(text, state.selected.rowIndex || 0, state.selected.colIndex || 0);
     });
 
     els.addRowBtn.addEventListener("click", async () => {
       await flushDirtyQueue(true);
-      const response = await postJson(root.dataset.addRowUrl, {});
-      if (!response.ok) {
-        setSaveStatus("행 추가에 실패했습니다.", true);
-        return;
+      try {
+        const response = await postJson(root.dataset.addRowUrl, {});
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setSaveStatus(data.error || "행 추가에 실패했습니다.", true);
+          return;
+        }
+        await loadGrid();
+        setSaveStatus("행이 추가되었습니다.", false);
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 행 추가에 실패했습니다. 다시 시도해 주세요.", true);
       }
-      await loadGrid();
-      setSaveStatus("행이 추가되었습니다.", false);
     });
 
     els.addColumnForm.addEventListener("submit", async (event) => {
@@ -1175,18 +1232,22 @@
       await flushDirtyQueue(true);
       const label = (els.newColLabel.value || "").trim();
       const columnType = els.newColType.value || "text";
-      const response = await postJson(root.dataset.addColumnUrl, {
-        label: label || "새 열",
-        column_type: columnType,
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setSaveStatus(data.error || "열 추가에 실패했습니다.", true);
-        return;
+      try {
+        const response = await postJson(root.dataset.addColumnUrl, {
+          label: label || "새 열",
+          column_type: columnType,
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setSaveStatus(data.error || "열 추가에 실패했습니다.", true);
+          return;
+        }
+        els.newColLabel.value = "";
+        await loadGrid();
+        setSaveStatus("열이 추가되었습니다.", false);
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 열 추가에 실패했습니다. 다시 시도해 주세요.", true);
       }
-      els.newColLabel.value = "";
-      await loadGrid();
-      setSaveStatus("열이 추가되었습니다.", false);
     });
 
     if (els.retryFailedBtn) {
@@ -1294,6 +1355,7 @@
       events: [],
       monthCursor: new Date(),
       selectedDate: new Date(),
+      isCreating: false,
     };
 
     const els = {
@@ -1305,6 +1367,13 @@
       prevBtn: root.querySelector("#sheetbook-calendar-prev"),
       nextBtn: root.querySelector("#sheetbook-calendar-next"),
       syncBtn: root.querySelector("#sheetbook-calendar-sync-btn"),
+      jumpTodayBtn: root.querySelector("#sheetbook-calendar-jump-today"),
+      quickAddForm: root.querySelector("#sheetbook-calendar-quick-add-form"),
+      quickTitle: root.querySelector("#sheetbook-calendar-quick-title"),
+      quickAllDay: root.querySelector("#sheetbook-calendar-quick-all-day"),
+      quickStartTime: root.querySelector("#sheetbook-calendar-quick-start-time"),
+      quickEndTime: root.querySelector("#sheetbook-calendar-quick-end-time"),
+      quickSubmit: root.querySelector("#sheetbook-calendar-quick-submit"),
     };
 
     function setStatus(text, isError) {
@@ -1336,19 +1405,23 @@
         .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     }
 
+    function toKoreanTimeRangeText(event) {
+      if (event.is_all_day) return "하루 종일";
+      const start = new Date(event.start_time);
+      const end = new Date(event.end_time);
+      return `${start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+
     function renderSelectedDay() {
       const selectedEvents = getEventsForDate(state.selectedDate);
       els.selectedLabel.textContent = `${formatDateLabel(state.selectedDate)} 일정`;
       if (!selectedEvents.length) {
-        els.dayEvents.innerHTML = "<p class='text-sm text-gray-500'>등록된 일정이 없습니다.</p>";
+        els.dayEvents.innerHTML = "<p class='text-sm text-gray-500'>등록된 일정이 없습니다. 아래에서 바로 추가해 보세요.</p>";
         return;
       }
       els.dayEvents.innerHTML = selectedEvents
         .map((event) => {
-          const timeText = event.is_all_day
-            ? "하루 종일"
-            : `${new Date(event.start_time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} - ${new Date(event.end_time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
-          return `<div class="rounded-lg border border-gray-200 px-3 py-2"><p class="font-semibold text-gray-800">${event.title || "일정"}</p><p class="text-xs text-gray-500 mt-1">${timeText}</p></div>`;
+          return `<div class="rounded-lg border border-gray-200 px-3 py-2"><p class="font-semibold text-gray-800">${event.title || "일정"}</p><p class="text-xs text-gray-500 mt-1">${toKoreanTimeRangeText(event)}</p></div>`;
         })
         .join("");
     }
@@ -1386,39 +1459,151 @@
       els.grid.innerHTML = html.join("");
     }
 
-    async function loadEvents() {
-      const response = await fetch(root.dataset.eventsUrl, { method: "GET" });
-      if (!response.ok) {
-        setStatus("캘린더 데이터를 불러오지 못했습니다.", true);
-        return;
+    function setQuickTimeInputsDisabled(isAllDay) {
+      if (!els.quickStartTime || !els.quickEndTime) return;
+      els.quickStartTime.disabled = isAllDay;
+      els.quickEndTime.disabled = isAllDay;
+      els.quickStartTime.classList.toggle("bg-gray-100", isAllDay);
+      els.quickStartTime.classList.toggle("text-gray-400", isAllDay);
+      els.quickEndTime.classList.toggle("bg-gray-100", isAllDay);
+      els.quickEndTime.classList.toggle("text-gray-400", isAllDay);
+      if (!isAllDay) {
+        els.quickStartTime.classList.remove("bg-gray-100", "text-gray-400");
+        els.quickEndTime.classList.remove("bg-gray-100", "text-gray-400");
       }
-      const payload = await response.json();
-      state.events = payload.events || [];
-      renderCalendarGrid();
-      renderSelectedDay();
-      setStatus(`캘린더 일정 ${state.events.length}건을 불러왔습니다.`, false);
+    }
+
+    function firstValidationMessage(errors) {
+      if (!errors || typeof errors !== "object") return "";
+      const keys = Object.keys(errors);
+      for (const key of keys) {
+        const first = Array.isArray(errors[key]) ? errors[key][0] : null;
+        const message = first && typeof first.message === "string" ? first.message.trim() : "";
+        if (message) return message;
+      }
+      return "";
+    }
+
+    async function loadEvents() {
+      try {
+        const response = await fetch(root.dataset.eventsUrl, { method: "GET" });
+        if (!response.ok) {
+          setStatus("캘린더 데이터를 불러오지 못했습니다.", true);
+          return;
+        }
+        const payload = await response.json();
+        state.events = payload.events || [];
+        renderCalendarGrid();
+        renderSelectedDay();
+        setStatus(`캘린더 일정 ${state.events.length}건을 불러왔습니다.`, false);
+      } catch (error) {
+        setStatus("네트워크 오류로 캘린더를 불러오지 못했습니다.", true);
+      }
     }
 
     async function syncFromSchedule() {
       setStatus("일정 탭 데이터를 캘린더로 반영하는 중...", false);
-      const response = await fetch(root.dataset.syncUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify({}),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setStatus(payload.error || "일정 반영 중 오류가 발생했습니다.", true);
+      try {
+        const response = await fetch(root.dataset.syncUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify({}),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setStatus(payload.error || "일정 반영 중 오류가 발생했습니다.", true);
+          return;
+        }
+        setStatus(
+          `반영 완료: 생성 ${payload.created || 0}, 수정 ${payload.updated || 0}, 삭제 ${payload.deleted || 0}`,
+          false
+        );
+        await loadEvents();
+      } catch (error) {
+        setStatus("네트워크 오류로 일정 반영에 실패했습니다.", true);
+      }
+    }
+
+    async function createEventFromSelectedDate(event) {
+      event.preventDefault();
+      if (state.isCreating) return;
+      if (!els.quickTitle) return;
+
+      const title = (els.quickTitle.value || "").trim();
+      if (!title) {
+        setStatus("일정 제목을 입력해 주세요.", true);
+        els.quickTitle.focus();
         return;
       }
-      setStatus(
-        `반영 완료: 생성 ${payload.created || 0}, 수정 ${payload.updated || 0}, 삭제 ${payload.deleted || 0}`,
-        false
-      );
-      await loadEvents();
+
+      const dateKey = formatDateKey(state.selectedDate);
+      const allDay = !!(els.quickAllDay && els.quickAllDay.checked);
+      let startTime = `${dateKey}T00:00`;
+      let endTime = `${dateKey}T23:59`;
+
+      if (!allDay) {
+        const startClock = (els.quickStartTime && els.quickStartTime.value) || "";
+        const endClock = (els.quickEndTime && els.quickEndTime.value) || "";
+        if (!startClock || !endClock) {
+          setStatus("시작/종료 시간을 모두 입력해 주세요.", true);
+          return;
+        }
+        const startDate = new Date(`${dateKey}T${startClock}`);
+        const endDate = new Date(`${dateKey}T${endClock}`);
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+          setStatus("시간 형식을 확인해 주세요.", true);
+          return;
+        }
+        if (endDate <= startDate) {
+          setStatus("종료 시간은 시작 시간보다 늦어야 합니다.", true);
+          return;
+        }
+        startTime = `${dateKey}T${startClock}`;
+        endTime = `${dateKey}T${endClock}`;
+      }
+
+      state.isCreating = true;
+      if (els.quickSubmit) {
+        els.quickSubmit.disabled = true;
+      }
+      setStatus(`${formatDateLabel(state.selectedDate)}에 일정을 추가하는 중...`, false);
+
+      const body = new URLSearchParams();
+      body.append("title", title);
+      body.append("start_time", startTime);
+      body.append("end_time", endTime);
+      body.append("is_all_day", allDay ? "true" : "false");
+      body.append("color", "indigo");
+
+      try {
+        const response = await fetch(root.dataset.createUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-CSRFToken": csrfToken,
+          },
+          body: body.toString(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const validationMessage = firstValidationMessage(payload.errors);
+          setStatus(validationMessage || payload.message || "일정 추가 중 오류가 발생했습니다.", true);
+          return;
+        }
+        els.quickTitle.value = "";
+        setStatus(`${formatDateLabel(state.selectedDate)} 일정이 추가되었습니다.`, false);
+        await loadEvents();
+      } catch (error) {
+        setStatus("네트워크 오류로 일정 추가에 실패했습니다. 다시 시도해 주세요.", true);
+      } finally {
+        state.isCreating = false;
+        if (els.quickSubmit) {
+          els.quickSubmit.disabled = false;
+        }
+      }
     }
 
     els.prevBtn.addEventListener("click", () => {
@@ -1437,12 +1622,31 @@
       const dateKey = button.dataset.date;
       const [y, m, d] = dateKey.split("-").map((v) => Number(v));
       state.selectedDate = new Date(y, m - 1, d);
+      state.monthCursor = new Date(y, m - 1, 1);
       renderCalendarGrid();
       renderSelectedDay();
     });
 
     if (els.syncBtn) {
       els.syncBtn.addEventListener("click", syncFromSchedule);
+    }
+    if (els.jumpTodayBtn) {
+      els.jumpTodayBtn.addEventListener("click", () => {
+        const today = new Date();
+        state.selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        state.monthCursor = new Date(today.getFullYear(), today.getMonth(), 1);
+        renderCalendarGrid();
+        renderSelectedDay();
+      });
+    }
+    if (els.quickAllDay) {
+      els.quickAllDay.addEventListener("change", () => {
+        setQuickTimeInputsDisabled(els.quickAllDay.checked);
+      });
+      setQuickTimeInputsDisabled(els.quickAllDay.checked);
+    }
+    if (els.quickAddForm) {
+      els.quickAddForm.addEventListener("submit", createEventFromSelectedDate);
     }
 
     await loadEvents();
