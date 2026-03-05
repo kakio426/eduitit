@@ -16,6 +16,7 @@
   data-view-sort-column-id="{{ grid_view_sort_column_id|default:0 }}"
   data-view-sort-direction="{{ grid_view_sort_direction|default:'asc' }}"
   data-entry-source="{{ entry_source|default:'direct' }}"
+  data-csrf-token="{{ csrf_token }}"
   data-mobile-read-only="{{ sheetbook_mobile_read_only|yesno:'1,0' }}"
   data-mobile-read-only-message="{{ sheetbook_mobile_read_only_message|default:''|escape }}"
   class="flex flex-col gap-4"

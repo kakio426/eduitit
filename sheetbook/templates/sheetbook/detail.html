@@ -833,9 +833,12 @@
       const response = await postJson(root.dataset.actionExecuteUrl, {
         ...requestPayload,
       });
-      const payload = await response.json().catch(() => ({}));
+      const payload = await readJsonSafely(response);
       if (!response.ok || !payload.ok) {
-        const message = payload.error || actionFailureFallbackMessage(action);
+        const fallbackMessage = response.status === 403
+          ? csrfFailureMessage("실행 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+          : actionFailureFallbackMessage(action);
+        const message = payload.error || fallbackMessage;
         setStatus(message, true);
         showActionToast(message, true);
         if (payload.invocation) {
@@ -985,6 +988,7 @@
         method: "POST",
         credentials: "same-origin",
         headers: {
+          "Accept": "application/json",
           "Content-Type": "application/json",
           "X-CSRFToken": csrfToken,
         },
@@ -1002,8 +1006,11 @@
           start_col_index: Math.max(0, Number(startColIndex) || 0),
         });
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          setStatus(data.error || "붙여넣기 처리 중 오류가 발생했습니다.", true);
+          const data = await readJsonSafely(response);
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("붙여넣기 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "붙여넣기 처리 중 오류가 발생했습니다.";
+          setStatus(data.error || fallbackMessage, true);
           return false;
         }
         const data = await response.json();
@@ -1085,8 +1092,11 @@
         });
 
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const message = data.error || "칸 저장 중 오류가 발생했습니다.";
+          const data = await readJsonSafely(response);
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("칸 저장 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "칸 저장 중 오류가 발생했습니다.";
+          const message = data.error || fallbackMessage;
           const retryable = response.status >= 500;
           return { ok: false, retryable, message };
         }

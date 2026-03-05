@@ -4,6 +4,7 @@
   data-create-url="{% url 'classcalendar:api_create_event' %}"
   data-sync-url="{% url 'sheetbook:sync_calendar_from_schedule' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
   data-open-calendar-url="{% url 'classcalendar:legacy_main' %}"
+  data-csrf-token="{{ csrf_token }}"
   class="space-y-4"
 >
   <div class="flex flex-wrap items-center gap-2">
@@ -108,5 +109,4 @@
     </form>
   </div>
 </div>
-
 
