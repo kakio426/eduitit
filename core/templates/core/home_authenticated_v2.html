@@ -604,17 +604,34 @@ function homeCalendarWidget() {
                     </section>
                 </div>
 
-                {% if sheetbook_workspace.quick_actions %}
+                {% if favorite_items or sheetbook_workspace.quick_actions %}
                 <section class="bg-white rounded-2xl border border-slate-200 p-4">
                     <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
+                        {% if favorite_items %}
+                        <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
+                        {% else %}
                         <i class="fa-solid fa-bolt text-amber-500"></i> 빠른 실행
+                        {% endif %}
                     </h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {% if favorite_items %}
+                        {% for item in favorite_items|slice:":4" %}
+                        <a href="{{ item.href }}"
+                            {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                            data-product-id="{{ item.product.id }}"
+                            data-track="quick_action" data-track-label="{{ item.product.title }}"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-amber-300 hover:text-indigo-700 transition">
+                            <span>{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                            <span class="whitespace-nowrap">{{ item.product.title }}</span>
+                        </a>
+                        {% endfor %}
+                        {% else %}
                         {% for action in sheetbook_workspace.quick_actions %}
                         <a href="{{ action.href }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-indigo-200 hover:text-indigo-700 transition">
                             <i class="{{ action.icon }}"></i>{{ action.title }}
                         </a>
                         {% endfor %}
+                        {% endif %}
                     </div>
                 </section>
                 {% endif %}

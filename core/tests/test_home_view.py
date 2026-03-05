@@ -661,6 +661,19 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('name="source" value="workspace_home_copy"', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
+    def test_v2_authenticated_sheetbook_workspace_prefers_favorites_heading(self):
+        from sheetbook.models import Sheetbook
+
+        user = self._login('sheetbookfavorite')
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=1)
+        Sheetbook.objects.create(owner=user, title='즐겨찾기 테스트 수첩')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertRegex(content, r'fa-solid fa-star text-amber-500"></i>\s*즐겨찾기')
+
+    @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_today_rows_render(self):
         from sheetbook.models import Sheetbook, SheetTab, SheetColumn, SheetRow, SheetCell
 
