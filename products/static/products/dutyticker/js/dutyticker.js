@@ -56,6 +56,8 @@ class DutyTickerManager {
         this.missionPanelCollapsed = true;
         this.missionPanelStorageKey = 'dt-mission-panel-collapsed-v1';
         this.missionQuickPhraseStorageKey = 'dt-mission-quick-phrase-v1';
+        this.missionQuickPhrases = [];
+        this.missionQuickPhraseLimit = 20;
         this.missionQuickPhrase = null;
 
         this.timerSeconds = 300;
@@ -1573,46 +1575,75 @@ class DutyTickerManager {
         try {
             const raw = localStorage.getItem(this.missionQuickPhraseStorageKey);
             if (!raw) {
+                this.missionQuickPhrases = [];
                 this.missionQuickPhrase = null;
                 return;
             }
 
             const parsed = JSON.parse(raw);
-            const title = this.sanitizeMissionText(parsed?.title || '', 'title');
-            const desc = this.sanitizeMissionText(parsed?.desc || '', 'desc');
-            if (!title && !desc) {
-                this.missionQuickPhrase = null;
-                return;
-            }
+            const rawList = Array.isArray(parsed)
+                ? parsed
+                : (parsed && typeof parsed === 'object' ? [parsed] : []);
+            const normalizedList = rawList
+                .map((item, index) => {
+                    const title = this.sanitizeMissionText(item?.title || '', 'title');
+                    const desc = this.sanitizeMissionText(item?.desc || '', 'desc');
+                    if (!title && !desc) return null;
+                    const label = this.buildMissionQuickPhraseLabel(title, desc, String(item?.label || ''));
+                    return {
+                        id: String(item?.id || `legacy-${index + 1}`),
+                        label,
+                        title,
+                        desc,
+                        savedAt: Number(item?.savedAt) || Date.now(),
+                    };
+                })
+                .filter((item) => !!item)
+                .slice(0, this.missionQuickPhraseLimit);
 
-            this.missionQuickPhrase = { title, desc };
+            this.missionQuickPhrases = normalizedList;
+            this.missionQuickPhrase = normalizedList[0] || null;
         } catch (error) {
             console.warn('DutyTicker: failed to restore mission quick phrase', error);
+            this.missionQuickPhrases = [];
             this.missionQuickPhrase = null;
         }
     }
 
     saveMissionQuickPhraseToStorage() {
         try {
-            if (!this.missionQuickPhrase) {
+            if (!this.missionQuickPhrases.length) {
                 localStorage.removeItem(this.missionQuickPhraseStorageKey);
                 return;
             }
-            localStorage.setItem(this.missionQuickPhraseStorageKey, JSON.stringify(this.missionQuickPhrase));
+            localStorage.setItem(this.missionQuickPhraseStorageKey, JSON.stringify(this.missionQuickPhrases));
         } catch (error) {
             console.warn('DutyTicker: failed to save mission quick phrase', error);
         }
     }
 
+    buildMissionQuickPhraseLabel(title, desc, preferredLabel = '') {
+        const cleanPreferred = String(preferredLabel || '').trim();
+        if (cleanPreferred) return cleanPreferred.slice(0, 14);
+
+        const source = String(title || desc || '문구').trim();
+        if (!source) return '문구';
+        return source.length > 14 ? `${source.slice(0, 14)}…` : source;
+    }
+
     updateMissionQuickPhraseUI() {
         const applyBtn = document.getElementById('missionQuickApplyBtn');
+        const saveBtn = document.getElementById('missionQuickSaveBtn');
         if (!applyBtn) return;
 
-        const hasQuickPhrase = !!(this.missionQuickPhrase && (this.missionQuickPhrase.title || this.missionQuickPhrase.desc));
+        const count = this.missionQuickPhrases.length;
+        const hasQuickPhrase = count > 0;
         applyBtn.disabled = !hasQuickPhrase;
         applyBtn.classList.toggle('opacity-60', !hasQuickPhrase);
         applyBtn.classList.toggle('cursor-not-allowed', !hasQuickPhrase);
-        applyBtn.setAttribute('title', hasQuickPhrase ? '저장한 문구 불러오기' : '먼저 문구를 저장해 주세요');
+        applyBtn.textContent = hasQuickPhrase ? `문구불러오기(${count})` : '문구불러오기';
+        applyBtn.setAttribute('title', hasQuickPhrase ? '저장한 문구 중에서 선택해 불러오기' : '먼저 문구를 저장해 주세요');
+        if (saveBtn) saveBtn.setAttribute('title', hasQuickPhrase ? `현재 문구 저장 (저장 ${count}개)` : '현재 문구 저장');
     }
 
     saveMissionQuickPhraseFromCurrent() {
@@ -1626,21 +1657,69 @@ class DutyTickerManager {
             return;
         }
 
-        this.missionQuickPhrase = { title, desc };
+        const now = Date.now();
+        const duplicateCount = this.missionQuickPhrases.filter(
+            (item) => item.title === title && item.desc === desc
+        ).length;
+        const baseLabel = this.buildMissionQuickPhraseLabel(title, desc);
+        const label = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
+
+        this.missionQuickPhrases.unshift({
+            id: `phrase-${now}-${Math.random().toString(36).slice(2, 8)}`,
+            label,
+            title,
+            desc,
+            savedAt: now,
+        });
+        if (this.missionQuickPhrases.length > this.missionQuickPhraseLimit) {
+            this.missionQuickPhrases = this.missionQuickPhrases.slice(0, this.missionQuickPhraseLimit);
+        }
+
+        this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
         this.saveMissionQuickPhraseToStorage();
         this.updateMissionQuickPhraseUI();
-        alert('반복 문구를 저장했습니다.');
+        alert(`반복 문구를 저장했습니다. (총 ${this.missionQuickPhrases.length}개)`);
     }
 
     async applyMissionQuickPhrase() {
-        if (!this.missionQuickPhrase) {
+        if (!this.missionQuickPhrases.length) {
             alert('저장된 문구가 없습니다. 먼저 문구 저장을 눌러 주세요.');
             return;
         }
 
+        let selectedIndex = 0;
+        if (this.missionQuickPhrases.length > 1) {
+            const optionsText = this.missionQuickPhrases
+                .map((item, index) => `${index + 1}. ${item.label}`)
+                .join('\n');
+            const selectedRaw = prompt(`불러올 문구 번호를 입력하세요.\n${optionsText}`, '1');
+            if (selectedRaw === null) return;
+            const nextIndex = Number.parseInt(String(selectedRaw).trim(), 10) - 1;
+            if (!Number.isFinite(nextIndex) || nextIndex < 0 || nextIndex >= this.missionQuickPhrases.length) {
+                alert('올바른 번호를 입력해 주세요.');
+                return;
+            }
+            selectedIndex = nextIndex;
+        }
+
+        const selected = this.missionQuickPhrases[selectedIndex];
+        if (!selected) {
+            alert('선택한 문구를 찾지 못했습니다.');
+            return;
+        }
+
+        this.missionQuickPhrase = selected;
+
+        if (selectedIndex > 0) {
+            this.missionQuickPhrases.splice(selectedIndex, 1);
+            this.missionQuickPhrases.unshift(selected);
+            this.saveMissionQuickPhraseToStorage();
+            this.updateMissionQuickPhraseUI();
+        }
+
         await this.handleUpdateMission({
-            title: this.missionQuickPhrase.title,
-            desc: this.missionQuickPhrase.desc,
+            title: selected.title,
+            desc: selected.desc,
         });
     }
 
@@ -2290,4 +2369,3 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
-
