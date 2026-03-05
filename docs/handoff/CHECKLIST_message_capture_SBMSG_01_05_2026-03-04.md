@@ -48,12 +48,12 @@
 - [x] API 엔드포인트 추가: `message-captures/parse`
 - [x] 추출 항목: 제목/날짜/시간/할일요약/우선도/파싱근거
 - [x] 상태값: `parsed`, `needs_review`, `failed`
-- [ ] 골든 메시지 샘플 기반 기본 규칙 반영
+- [x] 골든 메시지 샘플 기반 기본 규칙 반영
 - [x] 응답 스키마 문서화
 
 완료 기준:
 
-- [ ] 날짜/시간 추출 정확도 기준치(내부 골든셋) 충족
+- [x] 날짜/시간 추출 정확도 기준치(내부 골든셋) 충족
 
 ### SBMSG-04: 신뢰도 점수 + 확인 필요
 
@@ -124,6 +124,13 @@
 1. `python manage.py check` 통과
 2. `python manage.py test classcalendar.tests.test_message_capture_parser classcalendar.tests.test_message_capture_api` 통과 (15 tests)
 3. 템플릿 inline JS는 Django 템플릿 태그 제거본으로 `node --check` 통과
+4. `python scripts/run_message_capture_golden_eval.py --case-count 150 --output docs/handoff/message_capture_golden_eval_latest.json` 통과
+   - `parse_status_accuracy=1.0000`, `datetime_accuracy=1.0000`, `title_accuracy=1.0000`, `evaluation.pass=true`
+
+### 4-2) 골든셋 산출물
+
+1. 결과 파일: `docs/handoff/message_capture_golden_eval_latest.json`
+2. 케이스 구성: 총 150건 (`parsed` 60 / `needs_review` 60 / `failed` 30)
 
 ## 5) 운영 로그 항목
 
