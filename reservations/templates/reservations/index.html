@@ -80,6 +80,16 @@
                 this.targetLabel = '';
             }
         },
+        resolveLockGrade(raw) {
+            if (raw === null || raw === undefined || raw === '') {
+                return null;
+            }
+            const parsed = Number(raw);
+            if (!Number.isFinite(parsed) || parsed < 1) {
+                return null;
+            }
+            return parsed;
+        },
         toggleRememberInfo() {
             localStorage.setItem('remember_reservation_info', this.rememberInfo ? '1' : '0');
             if (!this.rememberInfo) {
@@ -104,9 +114,9 @@
             this.selectedPeriod = period; 
             this.selectedPeriodLabel = periodLabel;
             this.selectedDate = date;
-            const numericLockGrade = Number(lockGrade);
-            this.gradeLockActive = Number.isFinite(numericLockGrade);
-            this.gradeLockGrade = this.gradeLockActive ? numericLockGrade : null;
+            const numericLockGrade = this.resolveLockGrade(lockGrade);
+            this.gradeLockActive = numericLockGrade !== null;
+            this.gradeLockGrade = numericLockGrade;
             this.overrideGradeLock = false;
             this.bookingKind = 'class';
             this.loadRememberedInfo();
@@ -122,9 +132,9 @@
             this.selectedPeriodLabel = payload.periodLabel;
             this.selectedDate = payload.date;
 
-            const numericLockGrade = Number(payload.lockGrade);
-            this.gradeLockActive = Number.isFinite(numericLockGrade);
-            this.gradeLockGrade = this.gradeLockActive ? numericLockGrade : null;
+            const numericLockGrade = this.resolveLockGrade(payload.lockGrade);
+            this.gradeLockActive = numericLockGrade !== null;
+            this.gradeLockGrade = numericLockGrade;
             this.overrideGradeLock = false;
 
             this.bookingKind = payload.targetLabel ? 'custom' : 'class';
@@ -141,7 +151,7 @@
 
             if (this.bookingKind === 'custom') {
                 if (!this.targetLabel || !this.targetLabel.trim()) {
-                    alert('기타 대상(예: 사서, 영양, 보건)을 입력해 주세요.');
+                    alert('역할 또는 소속을 입력해 주세요. (예: 사서, 영양, 보건, 상담, 돌봄, 늘봄, 교무실, 행정실)');
                     event.preventDefault();
                     return;
                 }
