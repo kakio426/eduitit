@@ -737,8 +737,8 @@ def delete_reservation(request, school_slug, reservation_id):
     messages.success(request, "예약이 취소되었습니다.")
 
     if request.htmx:
-        response = HttpResponse(status=200)
-        response['HX-Refresh'] = "true"
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = "refresh-reservations"
         return response
 
     return redirect('reservations:reservation_index', school_slug=school.slug)
@@ -759,6 +759,8 @@ def admin_delete_reservation(request, school_slug, reservation_id):
     # 대시보드로 리다이렉트할지, 인덱스로 갈지 결정. 보통 인덱스(현황판)에서 작업함.
     # HTMX 요청일 경우 200 OK + Grid Refresh
     if request.htmx:
-        return HttpResponse(status=200)
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = "refresh-reservations"
+        return response
         
     return redirect('reservations:reservation_index', school_slug=school.slug)

@@ -267,7 +267,7 @@
     <!-- Main Content (Grid) - HTMX Polling -->
     <div class="max-w-7xl mx-auto px-4" id="reservation-grid-container"
         hx-get="{% url 'reservations:reservation_index' school.slug %}?date={{ target_date|date:'Y-m-d' }}"
-        hx-trigger="load, every 30s" hx-swap="innerHTML">
+        hx-trigger="load, every 30s, refresh-reservations from:body" hx-swap="innerHTML">
 
         <!-- Loading Spinner -->
         <div class="flex justify-center py-20">

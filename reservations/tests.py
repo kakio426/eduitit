@@ -101,6 +101,27 @@ class ReservationsViewTest(TestCase):
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 
+    def test_delete_reservation_htmx_triggers_grid_refresh(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=2,
+            grade=5,
+            class_no=2,
+            name='HTMX Delete'
+        )
+
+        session = self.client.session
+        session['owned_reservation_ids'] = [reservation.id]
+        session.save()
+
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.headers.get('HX-Trigger'), 'refresh-reservations')
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
     def test_delete_reservation_by_creator_without_session_ownership(self):
         self.client.force_login(self.user)
         reservation = Reservation.objects.create(
@@ -263,6 +284,23 @@ class ReservationsViewTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.post(url)
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_admin_delete_reservation_htmx_triggers_grid_refresh(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=3,
+            grade=3,
+            class_no=3,
+            name='Admin HTMX Delete'
+        )
+        self.client.force_login(self.user)
+        url = reverse('reservations:admin_delete_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.headers.get('HX-Trigger'), 'refresh-reservations')
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 
     def test_blackout_prevention(self):
