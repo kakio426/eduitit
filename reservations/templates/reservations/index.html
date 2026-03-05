@@ -10,6 +10,9 @@
         selectedPeriod: null,
         selectedPeriodLabel: '',
         selectedDate: '{{ target_date|date:"Y-m-d" }}', 
+        gradeLockActive: false,
+        gradeLockGrade: null,
+        overrideGradeLock: false,
         rememberInfo: localStorage.getItem('remember_reservation_info') !== '0',
         grade: '', classNo: '', name: '', memo: '',
         loadRememberedInfo() {
@@ -36,17 +39,40 @@
                 }));
             }
         },
-        openBooking(roomId, roomName, period, date, periodLabel) { 
+        openBooking(roomId, roomName, period, date, periodLabel, lockGrade = null) { 
             this.selectedRoomId = roomId; 
             this.selectedRoom = roomName;
             this.selectedPeriod = period; 
             this.selectedPeriodLabel = periodLabel;
             this.selectedDate = date;
+            const numericLockGrade = Number(lockGrade);
+            this.gradeLockActive = Number.isFinite(numericLockGrade);
+            this.gradeLockGrade = this.gradeLockActive ? numericLockGrade : null;
+            this.overrideGradeLock = false;
             this.loadRememberedInfo();
             this.memo = '';
             this.showModal = true; 
         },
-        saveAndSubmit() { 
+        prepareReservationSubmit(event) {
+            const numericGrade = Number(this.grade);
+            this.overrideGradeLock = false;
+
+            if (
+                this.gradeLockActive &&
+                Number.isFinite(this.gradeLockGrade) &&
+                Number.isFinite(numericGrade) &&
+                numericGrade !== this.gradeLockGrade
+            ) {
+                const shouldOverride = confirm(
+                    `이 슬롯은 ${this.gradeLockGrade}학년 고정입니다.\n${numericGrade}학년으로 예약하면 고정이 해제됩니다.\n계속할까요?`
+                );
+                if (!shouldOverride) {
+                    event.preventDefault();
+                    return;
+                }
+                this.overrideGradeLock = true;
+            }
+
             if (this.rememberInfo) {
                 localStorage.setItem('my_reservation_info', JSON.stringify({
                     grade: this.grade,
@@ -57,7 +83,7 @@
                 localStorage.removeItem('my_reservation_info');
             }
             this.showModal = false; 
-        }, 
+        },
         myReservations: JSON.parse(localStorage.getItem('my_reservations') || '[]'), 
         addMyReservation(id) { 
             if (!this.myReservations.includes(id)) { 

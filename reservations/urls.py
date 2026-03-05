@@ -12,6 +12,7 @@ urlpatterns = [
     # HTMX Partial Views for Dashboard
     path('<str:school_slug>/settings/rooms/', views.room_settings, name='room_settings'),
     path('<str:school_slug>/settings/recurring/', views.recurring_settings, name='recurring_settings'),
+    path('<str:school_slug>/settings/grade-lock/', views.grade_lock_settings, name='grade_lock_settings'),
     path('<str:school_slug>/settings/blackout/', views.blackout_settings, name='blackout_settings'),
 
     # Public Reservation Views

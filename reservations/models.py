@@ -109,6 +109,22 @@ class RecurringSchedule(models.Model):
         days = ['월', '화', '수', '목', '금', '토', '일']
         return f"{self.room.name} {days[self.day_of_week]}요일 {self.period}교시 - {self.name}"
 
+class GradeRecurringLock(models.Model):
+    room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)
+    day_of_week = models.IntegerField()  # 0(Mon)~6(Sun)
+    period = models.IntegerField()
+    grade = models.IntegerField()  # 1~6
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['room', 'day_of_week', 'period'], name='unique_grade_lock_per_slot')
+        ]
+
+    def __str__(self):
+        days = ['월', '화', '수', '목', '금', '토', '일']
+        return f"{self.room.name} {days[self.day_of_week]}요일 {self.period}교시 - {self.grade}학년 고정"
+
 class BlackoutDate(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE)
     start_date = models.DateField()

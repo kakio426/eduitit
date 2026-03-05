@@ -11,12 +11,18 @@
 
         <form hx-post="{% url 'reservations:create_reservation' school.slug %}" hx-target="#reservation-grid-container"
             hx-swap="none" hx-indicator="#reservation-submit-indicator" hx-disabled-elt="find button[type='submit']"
-            hx-on::response-error="alert('예약 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
-            class="space-y-4" @submit="saveAndSubmit()">
+            hx-on::response-error="alert(event.detail.xhr.responseText || '예약 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+            class="space-y-4" @submit="prepareReservationSubmit($event)">
             {% csrf_token %}
             <input type="hidden" name="room_id" :value="selectedRoomId">
             <input type="hidden" name="date" :value="selectedDate">
             <input type="hidden" name="period" :value="selectedPeriod">
+            <input type="hidden" name="override_grade_lock" :value="overrideGradeLock ? '1' : '0'">
+
+            <div x-show="gradeLockActive" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                이 슬롯은 현재 <strong x-text="`${gradeLockGrade}학년`"></strong> 고정입니다.
+                다른 학년으로 예약하면 제출 시 고정 해제 확인창이 표시됩니다.
+            </div>
 
             <div class="flex gap-4">
                 <div class="w-1/3">

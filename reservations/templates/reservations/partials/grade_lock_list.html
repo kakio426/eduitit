@@ -1,0 +1,37 @@
+<div class="space-y-3 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
+    {% if grade_locks %}
+        {% for lock in grade_locks %}
+        <div class="flex items-center justify-between rounded-xl border border-purple-100 bg-purple-50/70 px-4 py-3">
+            <div class="min-w-0">
+                <p class="text-sm font-bold text-purple-700 truncate">
+                    {{ lock.room.icon }} {{ lock.room.name }} · {{ lock.grade }}학년 고정
+                </p>
+                <p class="text-xs text-purple-500 mt-0.5">
+                    {% if lock.day_of_week == 0 %}월요일{% elif lock.day_of_week == 1 %}화요일{% elif lock.day_of_week == 2 %}수요일{% elif lock.day_of_week == 3 %}목요일{% elif lock.day_of_week == 4 %}금요일{% elif lock.day_of_week == 5 %}토요일{% else %}일요일{% endif %}
+                    · {{ lock.period }}교시
+                </p>
+            </div>
+            <form hx-post="{% url 'reservations:grade_lock_settings' school.slug %}"
+                hx-target="#grade-lock-list-container" hx-swap="innerHTML"
+                hx-indicator="#grade-lock-delete-indicator-{{ lock.id }}"
+                hx-disabled-elt="find button[type='submit']"
+                hx-confirm="이 학년 고정을 해제하시겠습니까?"
+                hx-on::response-error="alert('학년 고정 해제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="item_id" value="{{ lock.id }}">
+                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-bold inline-flex items-center gap-1.5">
+                    <span id="grade-lock-delete-indicator-{{ lock.id }}" class="htmx-indicator">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                    </span>
+                    <i class="fas fa-unlock"></i> 해제
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="rounded-xl border border-gray-200 bg-white/70 px-4 py-5 text-sm text-gray-500 text-center">
+        설정된 학년 고정 슬롯이 없습니다.
+    </div>
+    {% endif %}
+</div>

@@ -8,7 +8,7 @@ from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 
-from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, BlackoutDate, Reservation
+from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
 from .utils import get_max_booking_date
 import logging
 
@@ -85,6 +85,8 @@ def admin_dashboard(request, school_slug):
         'school': school,
         'config': config,
         'rooms': school.specialroom_set.all(),
+        'grade_locks': GradeRecurringLock.objects.filter(room__school=school).select_related('room').order_by('day_of_week', 'period', 'room__name'),
+        'period_slots': config.get_period_slots(),
         'blackouts': school.blackoutdate_set.all().order_by('start_date'),
     }
     return render(request, 'reservations/dashboard.html', context)
@@ -176,6 +178,54 @@ def recurring_settings(request, school_slug):
         'rooms_data': rooms_data,
         'days': days,
         'day_names': ['월', '화', '수', '목', '금']
+    })
+
+@login_required
+def grade_lock_settings(request, school_slug):
+    school = get_object_or_404(School, slug=school_slug, owner=request.user)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add':
+            room_id = request.POST.get('room_id')
+            day_of_week = request.POST.get('day_of_week')
+            period = request.POST.get('period')
+            grade = request.POST.get('grade')
+
+            try:
+                room = get_object_or_404(SpecialRoom, id=int(room_id), school=school)
+                day_of_week = int(day_of_week)
+                period = int(period)
+                grade = int(grade)
+
+                if day_of_week < 0 or day_of_week > 6 or grade < 1 or grade > 6 or period < 1:
+                    raise ValueError("invalid-range")
+
+                if RecurringSchedule.objects.filter(room=room, day_of_week=day_of_week, period=period).exists():
+                    messages.error(request, "해당 슬롯에는 이미 고정 수업이 있어 학년 고정을 설정할 수 없습니다.")
+                else:
+                    GradeRecurringLock.objects.update_or_create(
+                        room=room,
+                        day_of_week=day_of_week,
+                        period=period,
+                        defaults={'grade': grade},
+                    )
+                    messages.success(request, "학년 고정 슬롯이 저장되었습니다.")
+            except Exception:
+                messages.error(request, "학년 고정 설정 값이 올바르지 않습니다.")
+
+        elif action == 'delete':
+            item_id = request.POST.get('item_id')
+            GradeRecurringLock.objects.filter(id=item_id, room__school=school).delete()
+            messages.success(request, "학년 고정 슬롯이 해제되었습니다.")
+
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+    grade_locks = GradeRecurringLock.objects.filter(room__school=school).select_related('room').order_by('day_of_week', 'period', 'room__name')
+    return render(request, 'reservations/partials/grade_lock_list.html', {
+        'school': school,
+        'grade_locks': grade_locks,
+        'period_slots': config.get_period_slots(),
     })
 
 @login_required
@@ -308,10 +358,12 @@ def reservation_index(request, school_slug):
     # 예약 및 고정 수업 조회
     reservations = Reservation.objects.filter(room__school=school, date=target_date).select_related('room')
     recurring = RecurringSchedule.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
+    grade_locks = GradeRecurringLock.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     
     # 매트릭스 구성
     reservation_map = {(r.room_id, r.period): r for r in reservations}
     recurring_map = {(r.room_id, r.period): r for r in recurring}
+    grade_lock_map = {(g.room_id, g.period): g for g in grade_locks}
     
     rooms_data = []
     for room in rooms:
@@ -319,6 +371,7 @@ def reservation_index(request, school_slug):
         for p in periods_data:
             res = reservation_map.get((room.id, p['id']))
             rec = recurring_map.get((room.id, p['id']))
+            grade_lock = grade_lock_map.get((room.id, p['id']))
             
             # 상태 결정
             state = 'available'
@@ -328,6 +381,8 @@ def reservation_index(request, school_slug):
                 state = 'recurring'
             elif res:
                 state = 'reserved'
+            elif grade_lock:
+                state = 'grade_locked'
             
             slots.append({
                 'period': p['id'],
@@ -336,6 +391,7 @@ def reservation_index(request, school_slug):
                 'display_label': p['display_label'],
                 'reservation': res,
                 'recurring': rec,
+                'grade_lock': grade_lock,
                 'state': state
             })
             
@@ -375,12 +431,15 @@ def create_reservation(request, school_slug):
     class_no = request.POST.get('class_no')
     name = request.POST.get('name')
     memo = request.POST.get('memo', '')
+    override_grade_lock = request.POST.get('override_grade_lock') == '1'
     
     # 유효성 검사
     try:
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
+        grade = int(grade)
+        class_no = int(class_no)
         
         # [Weekly Limit Check] 백엔드 검증
         if not request.user.is_authenticated or school.owner != request.user: # 관리자는 제한 무시
@@ -398,6 +457,16 @@ def create_reservation(request, school_slug):
         # 2. 고정 수업 체크
         if RecurringSchedule.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).exists():
             return HttpResponse("고정 수업이 있는 시간입니다.", status=400)
+
+        # 2-1. 학년 고정 체크 (반 무관)
+        grade_lock = GradeRecurringLock.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).first()
+        if grade_lock and grade != grade_lock.grade:
+            if not override_grade_lock:
+                return HttpResponse(
+                    f"이 슬롯은 현재 {grade_lock.grade}학년 고정입니다. 다른 학년으로 예약하려면 고정을 해제하고 진행해 주세요.",
+                    status=409,
+                )
+            grade_lock.delete()
             
         # 3. 중복 예약 체크 (Optimistic Locking 대용: Unique Constraint가 DB에서 막아주지만, 여기서도 체크)
         if Reservation.objects.filter(room=room, date=target_date, period=period).exists():

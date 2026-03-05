@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import School, SchoolConfig, SpecialRoom, Reservation, RecurringSchedule, BlackoutDate
+from .models import School, SchoolConfig, SpecialRoom, Reservation, RecurringSchedule, GradeRecurringLock, BlackoutDate
 
 class SchoolConfigInline(admin.StackedInline):
     model = SchoolConfig
@@ -55,6 +55,18 @@ class RecurringScheduleAdmin(admin.ModelAdmin):
     list_display = ('room_info', 'day_of_week', 'period', 'name')
     list_filter = ('room__school', 'day_of_week')
     
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('room', 'room__school')
+
+    def room_info(self, obj):
+        return f"{obj.room.school.name} - {obj.room.name}"
+    room_info.admin_order_field = 'room__name'
+
+@admin.register(GradeRecurringLock)
+class GradeRecurringLockAdmin(admin.ModelAdmin):
+    list_display = ('room_info', 'day_of_week', 'period', 'grade', 'created_at')
+    list_filter = ('room__school', 'day_of_week', 'grade')
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('room', 'room__school')
 

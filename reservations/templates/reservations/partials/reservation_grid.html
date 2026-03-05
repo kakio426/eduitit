@@ -81,6 +81,16 @@
                             <i class="fas fa-lock text-xs mb-1"></i>
                             <span class="text-xs font-bold">{{ s.recurring.name }}</span>
                         </div>
+                        {% elif s.state == 'grade_locked' %}
+                        <button
+                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', {{ s.grade_lock.grade }})"
+                            class="w-full h-full bg-amber-50 rounded-xl border border-amber-200 hover:border-amber-300 hover:shadow-md flex flex-col justify-center items-center gap-1 group transition-all">
+                            <div class="text-amber-700 text-xs font-extrabold flex items-center gap-1">
+                                <i class="fas fa-user-lock text-[10px]"></i>
+                                {{ s.grade_lock.grade }}학년 고정
+                            </div>
+                            <div class="text-[10px] text-amber-500 group-hover:text-amber-600">다른 학년 예약 시 고정 해제</div>
+                        </button>
                         {% elif s.state == 'blackout' %}
                         <div
                             class="w-full h-full bg-red-50 rounded-xl border border-red-100 flex justify-center items-center text-red-300 cursor-not-allowed">
@@ -89,7 +99,7 @@
                         {% else %}
                         <!-- Available -->
                         <button
-                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}')"
+                            @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', null)"
                             class="w-full h-full bg-white rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-md flex justify-center items-center group transition-all">
                             <i
                                 class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
@@ -178,6 +188,20 @@
                         <i class="fas fa-lock text-[10px]"></i> {{ s.recurring.name }}
                     </div>
                 </div>
+                {% elif s.state == 'grade_locked' %}
+                <button
+                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}', {{ s.grade_lock.grade }})"
+                    class="w-full bg-amber-50 rounded-lg p-3 border border-amber-200 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-amber-300 transition-all group relative">
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-amber-500 group-hover:text-amber-600 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-amber-400 group-hover:text-amber-500 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-amber-700 font-extrabold text-xs flex items-center gap-1">
+                        <i class="fas fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
+                    </div>
+                </button>
                 {% elif s.state == 'blackout' %}
                 <div class="bg-red-50 rounded-lg p-3 h-20 flex justify-center items-center opacity-50 relative">
                     <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
@@ -191,7 +215,7 @@
                 {% else %}
                 <!-- Available -->
                 <button
-                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}')"
+                    @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}', null)"
                     class="w-full bg-white rounded-lg p-3 border border-gray-100 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-purple-300 transition-all group relative">
                     <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
                         <div class="text-[10px] font-bold text-gray-400 group-hover:text-purple-400 truncate">{{ s.label }}</div>
