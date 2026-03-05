@@ -43,6 +43,7 @@ class DutyTickerManager {
         this.bgmAudioEl = null;
         this.bgmFadeRaf = null;
         this.bgmStorageKey = 'dt-bgm-state-v1';
+        this.bgmVolumePercent = 100;
         this.boundBgmUnlock = null;
         this.bgmTrackPanelOpen = false;
         this.boundBgmPanelOutsideClick = null;
@@ -1685,6 +1686,21 @@ class DutyTickerManager {
             });
         }
 
+        const volumeRange = document.getElementById('bgmVolumeRange');
+        if (volumeRange && volumeRange.dataset.dtBound !== '1') {
+            volumeRange.addEventListener('input', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLInputElement)) return;
+                this.setBgmVolumePercent(target.value, { persist: false, applyNow: true });
+            });
+            volumeRange.addEventListener('change', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLInputElement)) return;
+                this.setBgmVolumePercent(target.value, { persist: true, applyNow: true });
+            });
+            volumeRange.dataset.dtBound = '1';
+        }
+
         if (!this.boundBgmPanelOutsideClick) {
             this.boundBgmPanelOutsideClick = (event) => {
                 const controls = document.getElementById('bgmControls');
@@ -1735,6 +1751,7 @@ class DutyTickerManager {
                 trackKey: this.bgmTrackKey,
                 loopMode: this.bgmLoopMode,
                 enabledTrackKeys: [...this.bgmEnabledTrackKeys],
+                volumePercent: this.bgmVolumePercent,
             }));
         } catch (error) {
             console.warn('DutyTicker: failed to save BGM state', error);
@@ -1749,6 +1766,7 @@ class DutyTickerManager {
                 this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
                 this.bgmLoopMode = 'all';
                 this.bgmTrackKey = this.bgmTrackOrder[0];
+                this.bgmVolumePercent = 100;
                 this.renderBgmTrackRail();
                 this.updateBgmUI();
                 this.saveBgmState();
@@ -1764,6 +1782,7 @@ class DutyTickerManager {
 
             this.bgmEnabledTrackKeys = new Set(restoredTrackKeys);
             this.bgmLoopMode = parsed.loopMode === 'one' ? 'one' : 'all';
+            this.bgmVolumePercent = this.normalizeBgmVolumePercent(parsed.volumePercent, 100);
 
             const requestedTrack = String(parsed.trackKey || '');
             if (validTrackSet.has(requestedTrack)) this.bgmTrackKey = requestedTrack;
@@ -1784,6 +1803,40 @@ class DutyTickerManager {
 
     getPlayableBgmTrackKeys() {
         return this.bgmTrackOrder.filter((key) => this.bgmEnabledTrackKeys.has(key));
+    }
+
+    normalizeBgmVolumePercent(value, fallback = 100) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return fallback;
+        const rounded = Math.round(numeric);
+        return Math.max(0, Math.min(200, rounded));
+    }
+
+    getBgmMasterVolumeGain() {
+        return this.normalizeBgmVolumePercent(this.bgmVolumePercent, 100) / 100;
+    }
+
+    getBgmTrackTargetVolume(track) {
+        const baseVolume = Math.max(0.06, Math.min(0.28, Number(track?.volume) || 0.16));
+        const gain = this.getBgmMasterVolumeGain();
+        return Math.max(0, Math.min(1, baseVolume * gain));
+    }
+
+    setBgmVolumePercent(value, { persist = true, applyNow = true } = {}) {
+        this.bgmVolumePercent = this.normalizeBgmVolumePercent(value, this.bgmVolumePercent);
+
+        if (applyNow && this.bgmAudioEl) {
+            const track = this.bgmTracks[this.bgmTrackKey] || {};
+            const nextVolume = this.getBgmTrackTargetVolume(track);
+            if (this.bgmEnabled && !this.bgmAudioEl.paused) {
+                void this.fadeBgmVolume(nextVolume, 120);
+            } else {
+                this.bgmAudioEl.volume = nextVolume;
+            }
+        }
+
+        if (persist) this.saveBgmState();
+        this.updateBgmUI();
     }
 
     renderBgmTrackRail() {
@@ -1819,6 +1872,8 @@ class DutyTickerManager {
         const prevBtn = document.getElementById('bgmPrevBtn');
         const nextBtn = document.getElementById('bgmNextBtn');
         const panelBtn = document.getElementById('bgmTrackPanelBtn');
+        const volumeRange = document.getElementById('bgmVolumeRange');
+        const volumeValue = document.getElementById('bgmVolumeValue');
 
         const playableCount = this.getPlayableBgmTrackKeys().length;
         const hasTracks = this.bgmTrackOrder.length > 0;
@@ -1862,6 +1917,15 @@ class DutyTickerManager {
             panelBtn.classList.toggle('opacity-60', !hasTracks);
             panelBtn.classList.toggle('cursor-not-allowed', !hasTracks);
         }
+
+        if (volumeRange) {
+            volumeRange.value = String(this.bgmVolumePercent);
+            volumeRange.disabled = !hasTracks;
+            volumeRange.classList.toggle('opacity-50', !hasTracks);
+            volumeRange.classList.toggle('cursor-not-allowed', !hasTracks);
+        }
+
+        if (volumeValue) volumeValue.textContent = `${this.bgmVolumePercent}%`;
 
         if (!hasTracks) this.toggleBgmTrackPanel(false);
 
@@ -1965,7 +2029,7 @@ class DutyTickerManager {
         const track = this.bgmTracks[this.bgmTrackKey];
         if (!track || !track.src) return;
 
-        const targetVolume = Math.max(0.06, Math.min(0.28, Number(track.volume) || 0.16));
+        const targetVolume = this.getBgmTrackTargetVolume(track);
         const currentTrack = audio.dataset.trackKey || '';
         const shouldReload = forceReload || currentTrack !== this.bgmTrackKey;
 
@@ -2115,3 +2179,4 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
+

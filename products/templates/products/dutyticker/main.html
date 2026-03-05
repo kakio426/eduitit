@@ -1581,6 +1581,20 @@
         color: var(--dt-readable-accent);
     }
 
+    #bgmVolumeWrap {
+        min-width: 6.2rem;
+    }
+
+    #bgmVolumeRange {
+        width: 4.2rem;
+        accent-color: #6366f1;
+    }
+
+    #bgmVolumeValue {
+        min-width: 2.5rem;
+        text-align: right;
+    }
+
     @media (max-width: 1023px) {
         #mainAppContainer {
             overflow-y: auto;
@@ -1853,6 +1867,14 @@
                         title="다음 곡">
                         ▶
                     </button>
+                    <label id="bgmVolumeWrap"
+                        class="flex h-7 px-1.5 rounded-md bg-slate-700/55 border border-slate-600 items-center gap-1"
+                        for="bgmVolumeRange" title="배경음악 음량">
+                        <span class="text-[10px] font-black text-slate-300">음량</span>
+                        <input id="bgmVolumeRange" type="range" min="0" max="200" step="1" value="100"
+                            class="cursor-pointer" aria-label="배경음악 음량 조절">
+                        <span id="bgmVolumeValue" class="text-[10px] font-black text-slate-300">100%</span>
+                    </label>
                     <button id="bgmTrackPanelBtn" type="button" onclick="window.dtApp.toggleBgmTrackPanel()"
                         class="h-7 px-2 rounded-md bg-slate-700/60 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
                         title="배경음악 목록 열기/닫기">
@@ -2413,3 +2435,4 @@
     }
 </script>
 {% endblock %}
+

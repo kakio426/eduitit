@@ -41,6 +41,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="bgmToggleBtn"')
         self.assertContains(response, 'id="bgmLoopModeBtn"')
         self.assertContains(response, 'id="bgmTrackRail"')
+        self.assertContains(response, 'id="bgmVolumeRange"')
+        self.assertContains(response, 'id="bgmVolumeValue"')
         self.assertContains(response, 'window.dtBgmTracks = {')
         self.assertNotContains(response, '천리 길도 한 걸음부터')
 
@@ -65,7 +67,9 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('resetRoleAssignments()', script)
         self.assertIn("this.getApiUrl('resetAssignmentsUrl'", script)
         self.assertIn('dt-bgm-state-v1', script)
+        self.assertIn('bgmVolumePercent', script)
         self.assertIn('setupBgm()', script)
+        self.assertIn('setBgmVolumePercent(', script)
         self.assertIn('toggleBgmLoopMode()', script)
         self.assertIn('renderBgmTrackRail()', script)
         self.assertIn('nextBgmTrack(', script)
@@ -73,3 +77,4 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('setupInlineMissionEditor()', script)
         self.assertIn('saveInlineMissionEdit()', script)
         self.assertIn('changeMissionFontSize(', script)
+
