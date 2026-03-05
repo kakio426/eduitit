@@ -67,10 +67,18 @@
                         </svg>
                         새 버전 업로드
                     </h2>
-                    <form method="post" action="{% url 'version_manager:upload_version' document.id %}" enctype="multipart/form-data" class="space-y-4">
+                    <form id="uploadVersionForm" method="post" action="{% url 'version_manager:upload_version' document.id %}" enctype="multipart/form-data" class="space-y-4">
                         {% csrf_token %}
-                        <div class="relative">
-                            <input type="file" name="file" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
+                        <div id="uploadDropzone" class="relative rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/60 px-4 py-6 transition-colors hover:bg-purple-50">
+                            <div class="pointer-events-none flex flex-col items-center gap-2 text-center">
+                                <div class="w-10 h-10 rounded-full bg-white text-purple-500 flex items-center justify-center shadow-sm">
+                                    <i class="fa-solid fa-file-arrow-up"></i>
+                                </div>
+                                <p class="text-sm text-gray-700 font-semibold">파일을 드래그해서 놓거나 클릭해 선택하세요</p>
+                                <p class="text-xs text-gray-500">한 번에 1개 파일만 업로드됩니다.</p>
+                                <p id="uploadSelectedFileName" class="hidden text-xs text-purple-700 font-bold"></p>
+                            </div>
+                            <input id="uploadVersionFileInput" type="file" name="file" required aria-label="새 버전 파일 업로드" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         </div>
                         <button type="submit" class="w-full px-4 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition-colors">
                             업로드 하기
@@ -303,4 +311,64 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropzone = document.getElementById('uploadDropzone');
+    const fileInput = document.getElementById('uploadVersionFileInput');
+    const fileNameLabel = document.getElementById('uploadSelectedFileName');
+    if (!dropzone || !fileInput || !fileNameLabel) {
+        return;
+    }
+
+    const updateSelectedFile = (file) => {
+        if (!file) {
+            fileNameLabel.textContent = '';
+            fileNameLabel.classList.add('hidden');
+            return;
+        }
+        fileNameLabel.textContent = '선택된 파일: ' + file.name;
+        fileNameLabel.classList.remove('hidden');
+    };
+
+    fileInput.addEventListener('change', function () {
+        const selectedFile = this.files && this.files.length ? this.files[0] : null;
+        updateSelectedFile(selectedFile);
+    });
+
+    const dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
+    dragEvents.forEach(function (eventName) {
+        dropzone.addEventListener(eventName, function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+    });
+
+    ['dragenter', 'dragover'].forEach(function (eventName) {
+        dropzone.addEventListener(eventName, function () {
+            dropzone.classList.add('border-purple-400', 'bg-purple-100');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(function (eventName) {
+        dropzone.addEventListener(eventName, function () {
+            dropzone.classList.remove('border-purple-400', 'bg-purple-100');
+        });
+    });
+
+    dropzone.addEventListener('drop', function (event) {
+        const droppedFiles = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null;
+        if (!droppedFiles || droppedFiles.length === 0) {
+            return;
+        }
+        const droppedFile = droppedFiles[0];
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(droppedFile);
+        fileInput.files = dataTransfer.files;
+        updateSelectedFile(droppedFile);
+    });
+});
+</script>
 {% endblock %}
