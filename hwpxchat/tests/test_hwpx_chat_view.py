@@ -53,6 +53,8 @@ class HwpxChatViewTests(TestCase):
         self.assertContains(response, "action=\"/hwpx-chat/process/\"")
         self.assertContains(response, "action=\"/hwpx-chat/reset/\"")
         self.assertContains(response, "method=\"post\"")
+        self.assertContains(response, 'id="hwpx-drop-zone"', html=False)
+        self.assertContains(response, 'x-ref="hwpxFileInput"', html=False)
 
     def test_missing_file_returns_error(self):
         response = self.client.post(
