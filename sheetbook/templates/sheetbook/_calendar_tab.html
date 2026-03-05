@@ -1,0 +1,69 @@
+<div
+  id="sheetbook-calendar-tab"
+  data-events-url="{% url 'classcalendar:api_events' %}"
+  data-sync-url="{% url 'sheetbook:sync_calendar_from_schedule' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
+  data-open-calendar-url="{% url 'classcalendar:legacy_main' %}"
+  class="space-y-4"
+>
+  <div class="flex flex-wrap items-center gap-2">
+    <button
+      id="sheetbook-calendar-sync-btn"
+      type="button"
+      class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+    >
+      일정 탭에서 달력 반영
+    </button>
+    <a
+      href="{% url 'classcalendar:legacy_main' %}"
+      class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-indigo-300 hover:text-indigo-700"
+    >
+      학급 캘린더 열기
+    </a>
+  </div>
+
+  {% if schedule_source_tab %}
+  <p class="text-xs text-gray-500">
+    반영 대상 일정 탭: <span class="font-semibold text-gray-700">{{ schedule_source_tab.name }}</span>
+  </p>
+  {% else %}
+  <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+    연동할 그리드 탭이 없습니다. 먼저 일정 탭을 만들고 날짜를 입력해 주세요.
+  </p>
+  {% endif %}
+  <p id="sheetbook-calendar-status" class="text-xs text-gray-500">달력 데이터를 불러오는 중...</p>
+
+  <div class="rounded-xl border border-gray-200 bg-white p-3">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <button
+        id="sheetbook-calendar-prev"
+        type="button"
+        class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+      >
+        이전 달
+      </button>
+      <p id="sheetbook-calendar-month-label" class="text-sm font-bold text-gray-800"></p>
+      <button
+        id="sheetbook-calendar-next"
+        type="button"
+        class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+      >
+        다음 달
+      </button>
+    </div>
+    <div class="grid grid-cols-7 gap-1 text-[11px] font-semibold text-gray-500 mb-1">
+      <span class="text-center">일</span>
+      <span class="text-center">월</span>
+      <span class="text-center">화</span>
+      <span class="text-center">수</span>
+      <span class="text-center">목</span>
+      <span class="text-center">금</span>
+      <span class="text-center">토</span>
+    </div>
+    <div id="sheetbook-calendar-grid" class="grid grid-cols-7 gap-1"></div>
+  </div>
+
+  <div class="rounded-xl border border-gray-200 bg-white p-3">
+    <h3 id="sheetbook-calendar-selected-label" class="text-sm font-bold text-gray-800 mb-2">선택한 날짜 일정</h3>
+    <div id="sheetbook-calendar-day-events" class="space-y-2 text-sm text-gray-700"></div>
+  </div>
+</div>

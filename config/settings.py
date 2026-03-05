@@ -444,16 +444,40 @@ AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
-SHEETBOOK_ENABLED = os.environ.get('SHEETBOOK_ENABLED', 'False').lower() in ('true', '1', 'yes')
+
+
+def _rollout_env(name, default="", aliases=None):
+    value = os.environ.get(name)
+    if value is None and aliases:
+        for alias in aliases:
+            alias_value = os.environ.get(alias)
+            if alias_value is not None:
+                value = alias_value
+                break
+    if value is None:
+        return default
+    return value
+
+
+def _rollout_env_bool(name, default='False', aliases=None):
+    return str(_rollout_env(name, default=default, aliases=aliases)).strip().lower() in ('true', '1', 'yes')
+
+
+def _rollout_env_csv(name, aliases=None):
+    raw = _rollout_env(name, default='', aliases=aliases)
+    return [item.strip() for item in str(raw).split(',') if item.strip()]
+
+
+SHEETBOOK_ENABLED = _rollout_env_bool('SHEETBOOK_ENABLED', default='False', aliases=('sheetbook_enabled',))
 SHEETBOOK_APP_AVAILABLE = find_spec('sheetbook.apps') is not None
 if SHEETBOOK_APP_AVAILABLE:
     INSTALLED_APPS.append('sheetbook.apps.SheetbookConfig')
 elif SHEETBOOK_ENABLED:
     print('[SHEETBOOK] disabled: sheetbook package not available')
     SHEETBOOK_ENABLED = False
-SHEETBOOK_BETA_USERNAMES = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USERNAMES', '').split(',') if item.strip()]
-SHEETBOOK_BETA_EMAILS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_EMAILS', '').split(',') if item.strip()]
-SHEETBOOK_BETA_USER_IDS = [item.strip() for item in os.environ.get('SHEETBOOK_BETA_USER_IDS', '').split(',') if item.strip()]
+SHEETBOOK_BETA_USERNAMES = _rollout_env_csv('SHEETBOOK_BETA_USERNAMES', aliases=('sheetbook_beta_usernames',))
+SHEETBOOK_BETA_EMAILS = _rollout_env_csv('SHEETBOOK_BETA_EMAILS', aliases=('sheetbook_beta_emails',))
+SHEETBOOK_BETA_USER_IDS = _rollout_env_csv('SHEETBOOK_BETA_USER_IDS', aliases=('sheetbook_beta_user_ids',))
 SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES = int(os.environ.get('SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES', '50'))
 SHEETBOOK_PERIOD_FIRST_CLASS_HOUR = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_HOUR', '9'))
 SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE', '0'))
@@ -469,6 +493,23 @@ SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE = int(
 SHEETBOOK_ROLLOUT_STRICT_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_STRICT_STARTUP', 'False').lower() in ('true', '1', 'yes')
 SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP', 'False').lower() in ('true', '1', 'yes')
 SHEETBOOK_ROLLOUT_RECOMMEND_DAYS = int(os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_DAYS', '14'))
+FEATURE_MESSAGE_CAPTURE_ENABLED = _rollout_env_bool(
+    'FEATURE_MESSAGE_CAPTURE_ENABLED',
+    default='False',
+    aliases=('feature_message_capture_enabled',),
+)
+FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES = _rollout_env_csv(
+    'FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES',
+    aliases=('feature_message_capture_allowlist_usernames',),
+)
+FEATURE_MESSAGE_CAPTURE_ALLOWLIST_EMAILS = _rollout_env_csv(
+    'FEATURE_MESSAGE_CAPTURE_ALLOWLIST_EMAILS',
+    aliases=('feature_message_capture_allowlist_emails',),
+)
+FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS = _rollout_env_csv(
+    'FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS',
+    aliases=('feature_message_capture_allowlist_user_ids',),
+)
 ONBOARDING_EXEMPT_PATH_PREFIXES = []
 if TESTING:
     ONBOARDING_EXEMPT_PATH_PREFIXES.append('/autoarticle/')
