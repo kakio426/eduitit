@@ -31,13 +31,13 @@
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 class="text-lg font-bold text-gray-800">작업 탭</h2>
-          <p class="mt-1 text-xs text-gray-500">탭을 선택하고 복사한 표를 바로 붙여넣으세요.</p>
+          <p class="mt-1 text-xs text-gray-500">탭을 고른 뒤, 다른 곳에서 복사한 표를 바로 붙여넣으세요.</p>
         </div>
         <a
           href="#sheetbook-tab-manage"
           class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
         >
-          탭 관리 열기
+          탭 정리
         </a>
       </div>
 
@@ -65,13 +65,13 @@
           {% include "sheetbook/_calendar_tab.html" %}
         {% endif %}
       {% else %}
-        <p class="text-gray-500">열 수 있는 탭이 없습니다.</p>
+        <p class="text-gray-500">열 수 있는 탭이 없습니다. 아래에서 먼저 탭을 만들어 주세요.</p>
       {% endif %}
     </section>
 
     <details id="sheetbook-tab-manage" class="clay-card p-5" {% if not tabs %}open{% endif %}>
       <summary class="cursor-pointer list-none text-lg font-bold text-gray-800 flex items-center justify-between">
-        <span>탭 관리 (추가/이름변경/순서/삭제)</span>
+        <span>탭 정리 (추가/이름/순서/삭제)</span>
         <span class="text-xs text-gray-500">열기/닫기</span>
       </summary>
       <div class="mt-4 space-y-5">
@@ -107,7 +107,7 @@
         </section>
 
         <section>
-          <h3 class="text-sm font-semibold text-gray-700 mb-2">탭 목록</h3>
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">탭 순서/삭제</h3>
           {% include "sheetbook/_tab_list.html" %}
         </section>
       </div>
@@ -894,7 +894,7 @@
     async function render() {
       if (!state.columns.length) {
         els.thead.innerHTML = "";
-        els.tbody.innerHTML = "<tr><td class='px-3 py-4 text-gray-500'>열이 없습니다. 상단에서 열을 추가해 주세요.</td></tr>";
+        els.tbody.innerHTML = "<tr><td class='px-3 py-4 text-gray-500'>항목이 없습니다. 상단에서 항목을 추가해 주세요.</td></tr>";
         return { mode: "empty", chunkCount: 0, chunkSize: 0 };
       }
 
@@ -923,7 +923,7 @@
       url.searchParams.set("limit", String(state.gridLoad.limit || 50));
       const response = await fetch(url.toString(), { method: "GET" });
       if (!response.ok) {
-        setStatus("그리드 데이터를 불러오지 못했습니다.", true);
+        setStatus("표를 불러오지 못했습니다.", true);
         return;
       }
       const data = await response.json();
@@ -939,7 +939,7 @@
       hideActionLayer();
       if (!state.rows.length && state.columns.length) {
         // Empty row hint
-        els.tbody.innerHTML = "<tr><td colspan='99' class='px-3 py-4 text-gray-500'>행이 없습니다. 상단에서 행을 추가하세요.</td></tr>";
+        els.tbody.innerHTML = "<tr><td colspan='99' class='px-3 py-4 text-gray-500'>줄이 없습니다. 상단에서 줄을 추가하세요.</td></tr>";
       } else {
         const renderStart = window.performance ? performance.now() : 0;
         const renderResult = await render();
@@ -979,9 +979,9 @@
         }
         const data = await response.json();
         if (data.invalid_rows && data.invalid_rows.length) {
-          setSaveStatus(`붙여넣기 완료, 일부 행 제외: ${data.invalid_rows.join(", ")}`, true);
+          setSaveStatus(`붙여넣기 완료, 일부 줄 제외: ${data.invalid_rows.join(", ")}`, true);
         } else {
-          setSaveStatus(`붙여넣기 완료: ${data.updated}개 셀 반영`, false);
+          setSaveStatus(`붙여넣기 완료: ${data.updated}칸 반영`, false);
         }
         await loadGrid();
         return true;
@@ -1041,7 +1041,7 @@
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          const message = data.error || "셀 저장 중 오류가 발생했습니다.";
+          const message = data.error || "칸 저장 중 오류가 발생했습니다.";
           const retryable = response.status >= 500;
           return { ok: false, retryable, message };
         }
@@ -1217,13 +1217,13 @@
         const response = await postJson(root.dataset.addRowUrl, {});
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          setSaveStatus(data.error || "행 추가에 실패했습니다.", true);
+          setSaveStatus(data.error || "줄 추가에 실패했습니다.", true);
           return;
         }
         await loadGrid();
-        setSaveStatus("행이 추가되었습니다.", false);
+        setSaveStatus("줄이 추가되었습니다.", false);
       } catch (error) {
-        setSaveStatus("네트워크 오류로 행 추가에 실패했습니다. 다시 시도해 주세요.", true);
+        setSaveStatus("네트워크 오류로 줄 추가에 실패했습니다. 다시 시도해 주세요.", true);
       }
     });
 
@@ -1234,19 +1234,19 @@
       const columnType = els.newColType.value || "text";
       try {
         const response = await postJson(root.dataset.addColumnUrl, {
-          label: label || "새 열",
+          label: label || "새 항목",
           column_type: columnType,
         });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          setSaveStatus(data.error || "열 추가에 실패했습니다.", true);
+          setSaveStatus(data.error || "항목 추가에 실패했습니다.", true);
           return;
         }
         els.newColLabel.value = "";
         await loadGrid();
-        setSaveStatus("열이 추가되었습니다.", false);
+        setSaveStatus("항목이 추가되었습니다.", false);
       } catch (error) {
-        setSaveStatus("네트워크 오류로 열 추가에 실패했습니다. 다시 시도해 주세요.", true);
+        setSaveStatus("네트워크 오류로 항목 추가에 실패했습니다. 다시 시도해 주세요.", true);
       }
     });
 
@@ -1488,21 +1488,21 @@
       try {
         const response = await fetch(root.dataset.eventsUrl, { method: "GET" });
         if (!response.ok) {
-          setStatus("캘린더 데이터를 불러오지 못했습니다.", true);
+          setStatus("달력 데이터를 불러오지 못했습니다.", true);
           return;
         }
         const payload = await response.json();
         state.events = payload.events || [];
         renderCalendarGrid();
         renderSelectedDay();
-        setStatus(`캘린더 일정 ${state.events.length}건을 불러왔습니다.`, false);
+        setStatus(`달력 일정 ${state.events.length}건을 불러왔습니다.`, false);
       } catch (error) {
-        setStatus("네트워크 오류로 캘린더를 불러오지 못했습니다.", true);
+        setStatus("네트워크 오류로 달력을 불러오지 못했습니다.", true);
       }
     }
 
     async function syncFromSchedule() {
-      setStatus("일정 탭 데이터를 캘린더로 반영하는 중...", false);
+      setStatus("일정 표 내용을 달력에 반영하는 중...", false);
       try {
         const response = await fetch(root.dataset.syncUrl, {
           method: "POST",
@@ -1518,12 +1518,12 @@
           return;
         }
         setStatus(
-          `반영 완료: 생성 ${payload.created || 0}, 수정 ${payload.updated || 0}, 삭제 ${payload.deleted || 0}`,
+          `반영 완료: 새로 추가 ${payload.created || 0}, 바뀐 일정 ${payload.updated || 0}, 지운 일정 ${payload.deleted || 0}`,
           false
         );
         await loadEvents();
       } catch (error) {
-        setStatus("네트워크 오류로 일정 반영에 실패했습니다.", true);
+        setStatus("네트워크 오류로 달력 반영에 실패했습니다.", true);
       }
     }
 

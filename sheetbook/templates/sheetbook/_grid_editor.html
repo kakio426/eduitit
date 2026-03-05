@@ -31,51 +31,51 @@
 
   <div class="flex flex-wrap items-center gap-2">
     <button id="grid-add-row-btn" type="button" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-      + 행 추가
+      + 줄 추가
     </button>
 
     <form id="grid-add-column-form" class="flex items-center gap-2">
       <input
         type="text"
         id="grid-new-column-label"
-        placeholder="새 열 이름"
+        placeholder="새 항목 이름"
         class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm"
         maxlength="120"
         {% if sheetbook_mobile_read_only %}disabled{% endif %}
       >
       <select id="grid-new-column-type" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm" {% if sheetbook_mobile_read_only %}disabled{% endif %}>
-        <option value="text">텍스트</option>
+        <option value="text">글</option>
         <option value="number">숫자</option>
         <option value="date">날짜</option>
-        <option value="checkbox">체크박스</option>
+        <option value="checkbox">체크</option>
       </select>
       <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-        + 열 추가
+        + 항목 추가
       </button>
     </form>
   </div>
 
   <p class="text-xs text-gray-600">
-    복사한 표는 아무 칸이나 선택한 뒤 <span class="font-semibold text-gray-800">Ctrl+V</span>로 바로 붙여넣을 수 있어요.
-    행은 자동으로 늘어나고, 부족한 열은 자동으로 추가됩니다.
+    가장 쉬운 사용 순서: <span class="font-semibold text-gray-800">1) 표 복사 → 2) 아무 칸 클릭 → 3) Ctrl+V</span>
+    줄과 항목은 자동으로 늘어납니다.
   </p>
 
   <details class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">고급 도구 (보기 저장 / 파일 가져오기 / 내보내기)</summary>
+    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">선택 기능 (찾아보기 저장 / 파일 가져오기 / 내보내기)</summary>
     <div class="mt-3 space-y-3">
   <section class="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-sm font-semibold text-slate-800">
-          저장된 보기
+          찾아보기 모음
           {% if active_saved_view %}
             <span class="ml-1 text-indigo-700">{{ active_saved_view.name }}</span>
           {% else %}
-            <span class="ml-1 text-slate-500">기본 보기</span>
+            <span class="ml-1 text-slate-500">기본 화면</span>
           {% endif %}
         </p>
         <p class="text-[11px] text-slate-500 mt-1">
-          필터/정렬 조건을 저장해 탭을 복제하지 않고 바로 전환해요.
+          찾을 조건(검색어/정렬)을 저장해 두고 한 번에 바꿔 볼 수 있어요.
         </p>
       </div>
 
@@ -92,11 +92,11 @@
           name="view_filter"
           value="{{ grid_view_filter }}"
           maxlength="120"
-          placeholder="빠른 필터"
+          placeholder="찾을 말 입력"
           class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700"
         >
         <select name="sort_col" class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700">
-          <option value="">정렬 없음</option>
+          <option value="">정렬 안 함</option>
           {% for col in selected_tab.columns.all %}
             <option value="{{ col.id }}" {% if grid_view_sort_column_id == col.id %}selected{% endif %}>
               {{ col.label }}
@@ -108,7 +108,7 @@
           <option value="desc" {% if grid_view_sort_direction == "desc" %}selected{% endif %}>내림차순</option>
         </select>
         <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
-          보기 적용
+          적용
         </button>
         <a
           href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ selected_tab.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
@@ -131,7 +131,7 @@
           name="name"
           maxlength="80"
           required
-          placeholder="예: 상담 일정만 보기"
+          placeholder="예: 상담 일정"
           class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700"
         >
         <label class="inline-flex items-center gap-1 text-[11px] text-slate-600">
@@ -140,10 +140,10 @@
         </label>
         <label class="inline-flex items-center gap-1 text-[11px] text-slate-600">
           <input type="checkbox" name="is_default" class="rounded border-indigo-300">
-          기본 보기
+          기본 화면
         </label>
         <button type="submit" class="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:border-indigo-400">
-          현재 조건 저장
+          지금 화면 저장
         </button>
       </form>
     </div>
@@ -155,7 +155,7 @@
             href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ selected_tab.id }}&view={{ view.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
             class="text-xs font-semibold {% if active_saved_view and active_saved_view.id == view.id %}text-indigo-700{% else %}text-slate-700{% endif %}"
           >
-            {% if view.is_favorite %}★ {% endif %}{{ view.name }}{% if view.is_default %} (기본){% endif %}
+            {% if view.is_favorite %}★ {% endif %}{{ view.name }}{% if view.is_default %} (기본 화면){% endif %}
           </a>
           <form method="post" action="{% url 'sheetbook:toggle_saved_view_favorite' pk=sheetbook.pk tab_pk=selected_tab.pk view_pk=view.id %}">
             {% csrf_token %}
@@ -189,7 +189,7 @@
           </form>
         </div>
       {% empty %}
-        <p class="text-[11px] text-slate-500">저장된 보기가 아직 없어요. 위 조건을 저장해 두면 1클릭으로 전환할 수 있어요.</p>
+        <p class="text-[11px] text-slate-500">저장한 화면이 아직 없어요. 위 조건을 저장해 두면 한 번에 바꿔 볼 수 있어요.</p>
       {% endfor %}
     </div>
   </section>
@@ -224,7 +224,7 @@
           기존 행 지우기
         </label>
         <button type="submit" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          가져오기
+          파일 가져오기
         </button>
       </form>
 
@@ -233,18 +233,18 @@
           href="{% url 'sheetbook:export_grid_tab_csv' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
           class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-gray-400"
         >
-          CSV 내보내기
+          파일 저장(CSV)
         </a>
         <a
           href="{% url 'sheetbook:export_grid_tab_xlsx' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
           class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-gray-400"
         >
-          엑셀(.xlsx) 내보내기
+          파일 저장(엑셀)
         </a>
       </div>
     </div>
     <p class="mt-2 text-[11px] text-slate-500">
-      구글시트에서 내려받은 CSV/XLSX를 바로 가져올 수 있어요. 형식이 맞지 않는 칸은 줄 번호와 함께 제외 안내가 표시됩니다.
+      엑셀이나 표 파일(csv, xlsx)을 한 번에 가져올 수 있어요. 맞지 않는 칸은 줄 번호와 함께 안내됩니다.
     </p>
   </section>
     </div>

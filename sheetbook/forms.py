@@ -34,6 +34,15 @@ class SheetbookCreateForm(forms.ModelForm):
 
 
 class SheetTabCreateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tab_type = self.fields.get("tab_type")
+        if tab_type:
+            tab_type.choices = [
+                (SheetTab.TYPE_GRID, "표"),
+                (SheetTab.TYPE_CALENDAR, "달력"),
+            ]
+
     class Meta:
         model = SheetTab
         fields = ["name", "tab_type"]
@@ -41,7 +50,7 @@ class SheetTabCreateForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
-                    "placeholder": "새 탭 이름",
+                    "placeholder": "새 탭 이름 (예: 학생 명부)",
                     "maxlength": "100",
                 }
             ),
