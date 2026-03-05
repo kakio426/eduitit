@@ -466,7 +466,7 @@ def get_dutyticker_data(request):
             'id': a.id,
             'role_id': a.role.id,
             'student_id': a.student.id if a.student else None,
-            'student_name': a.student.name if a.student else "Unassigned",
+            'student_name': a.student.name if a.student else "미배정",
             'is_completed': a.is_completed
         })
         
@@ -793,3 +793,35 @@ def reset_data(request):
     settings.save()
     create_mockup_data(user, classroom=classroom)
     return JsonResponse({'success': True, 'message': 'Data reset to mockup'})
+
+
+@require_http_methods(["POST"])
+def reset_assignments_only(request):
+    if not request.user.is_authenticated:
+        guest_data = request.session.get('guest_dt_data') or get_guest_default_data()
+        assignments = guest_data.get('assignments') or []
+        for assignment in assignments:
+            assignment['student_id'] = None
+            assignment['student_name'] = '미배정'
+            assignment['is_completed'] = False
+
+        guest_data['assignments'] = assignments
+        request.session['guest_dt_data'] = guest_data
+        request.session.modified = True
+        return JsonResponse({
+            'success': True,
+            'message': '학생 배정만 초기화되었습니다.',
+            'updated_count': len(assignments),
+        })
+
+    classroom = get_active_classroom_for_request(request)
+    updated_count = apply_classroom_scope(
+        DTRoleAssignment.objects.filter(user=request.user),
+        classroom,
+    ).update(student=None, is_completed=False)
+
+    return JsonResponse({
+        'success': True,
+        'message': '학생 배정만 초기화되었습니다.',
+        'updated_count': updated_count,
+    })

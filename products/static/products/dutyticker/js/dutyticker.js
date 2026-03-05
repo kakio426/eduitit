@@ -1030,7 +1030,8 @@ class DutyTickerManager {
 
     resetTimer() {
         this.pauseTimer();
-        this.timerSeconds = this.timerMaxSeconds;
+        this.timerMaxSeconds = 300;
+        this.timerSeconds = 300;
         this.syncCustomTimerInput();
         this.updateTimerDisplay();
         this.saveTimerState();
@@ -1558,32 +1559,31 @@ class DutyTickerManager {
     }
 
     async rotateRolesManually() {
+        return this.resetRoleAssignments();
+    }
+
+    async resetRoleAssignments() {
         if (this.roleRotateInFlight) return;
-        const rotateBtn = document.getElementById('roleRotateNowBtn');
+        const resetBtn = document.getElementById('roleResetAssignmentsBtn') || document.getElementById('roleRotateNowBtn');
+        const shouldReset = confirm('역할은 유지하고 담당 학생 배정만 초기화할까요?');
+        if (!shouldReset) return;
 
         try {
             this.roleRotateInFlight = true;
-            if (rotateBtn) rotateBtn.disabled = true;
+            if (resetBtn) resetBtn.disabled = true;
 
-            const behavior = String(this.rotationMode || '').endsWith('_random') ? 'random' : 'sequential';
             const response = await this.secureFetch(
-                this.getApiUrl('rotateUrl', '/products/dutyticker/api/rotate/'),
-                { method: 'POST', body: JSON.stringify({ behavior }) }
+                this.getApiUrl('resetAssignmentsUrl', '/products/dutyticker/api/assignments/reset/'),
+                { method: 'POST' }
             );
-            const payload = await this.parseJsonResponse(response, '역할 순환에 실패했습니다.');
-
-            if (!payload.rotated) {
-                alert(payload.message || '순환할 역할이 없습니다. 학생을 먼저 배정해 주세요.');
-                return;
-            }
-
+            await this.parseJsonResponse(response, '학생 배정 초기화에 실패했습니다.');
             await this.loadData();
         } catch (error) {
             console.error(error);
-            alert(error?.message || '역할 순환에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            alert(error?.message || '학생 배정 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         } finally {
             this.roleRotateInFlight = false;
-            if (rotateBtn) rotateBtn.disabled = false;
+            if (resetBtn) resetBtn.disabled = false;
         }
     }
 

@@ -1941,9 +1941,9 @@
                             <i class="fa-solid fa-bullhorn"></i>
                             호명
                         </button>
-                        <button id="roleRotateNowBtn" type="button" onclick="window.dtApp.rotateRolesManually()" title="역할 순환" class="dt-role-action-btn">
-                            <i class="fa-solid fa-arrows-rotate"></i>
-                            즉시순환
+                        <button id="roleResetAssignmentsBtn" type="button" onclick="window.dtApp.resetRoleAssignments()" title="학생 배정 초기화" class="dt-role-action-btn">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            초기화
                         </button>
                     </div>
                 </div>
@@ -2188,6 +2188,7 @@
         broadcastUrl: "{% url 'dt_api_broadcast_update' %}",
         missionUrl: "{% url 'dt_api_mission_update' %}",
         spotlightUrl: "{% url 'dt_api_spotlight_update' %}",
+        resetAssignmentsUrl: "{% url 'dt_api_reset_assignments' %}",
         resetUrl: "{% url 'dt_api_reset' %}",
         toggleMissionUrlTemplate: "{% url 'dt_api_toggle_mission' 999999 %}",
         toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
@@ -2225,7 +2226,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260305a"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260305b"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
