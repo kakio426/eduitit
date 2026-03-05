@@ -244,6 +244,16 @@ class DutyTickerManager {
         });
     }
 
+    timeStringToMinutes(value) {
+        const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return Number.NaN;
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return Number.NaN;
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return Number.NaN;
+        return (hours * 60) + minutes;
+    }
+
     normalizeTimerSeconds(value, fallback = 300) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) return fallback;
@@ -417,6 +427,9 @@ class DutyTickerManager {
             return;
         }
 
+        const now = new Date();
+        const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+
         container.innerHTML = periodSchedule.map((slot) => {
             const periodNumber = Number(slot.period);
             const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
@@ -424,9 +437,19 @@ class DutyTickerManager {
                 : String(slot.slot_label || '');
             const rawSubject = String(slot.name || '').trim();
             const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+            const startTime = String(slot.startTime || '').trim();
+            const endTime = String(slot.endTime || '').trim();
+            const startMinutes = this.timeStringToMinutes(startTime);
+            const endMinutes = this.timeStringToMinutes(endTime);
+            const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
+            const isCurrent = hasTimeRange && nowMinutes >= startMinutes && nowMinutes < endMinutes;
+            const chipClass = `dt-header-schedule-item${isCurrent ? ' is-current' : ''}`;
+            const titleText = hasTimeRange
+                ? `${periodLabel} · ${subjectName} (${startTime}-${endTime})`
+                : `${periodLabel} · ${subjectName}`;
 
             return `
-                <span class="dt-header-schedule-item">
+                <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
                     <span class="dt-header-schedule-period">${this.escapeHtml(periodLabel)}</span>
                     <span class="dt-header-schedule-sep">·</span>
                     <span class="dt-header-schedule-subject">${this.escapeHtml(subjectName)}</span>
