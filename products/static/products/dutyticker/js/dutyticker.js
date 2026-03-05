@@ -59,6 +59,7 @@ class DutyTickerManager {
         this.missionQuickPhrases = [];
         this.missionQuickPhraseLimit = 20;
         this.missionQuickPhrase = null;
+        this.missionQuickSelectedId = null;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -121,7 +122,14 @@ class DutyTickerManager {
         this.bindButtonAction('timerResetBtn', () => this.resetTimer());
         this.bindButtonAction('missionPanelToggleBtn', () => this.toggleMissionPanel());
         this.bindButtonAction('missionQuickSaveBtn', () => this.saveMissionQuickPhraseFromCurrent());
-        this.bindButtonAction('missionQuickApplyBtn', () => this.applyMissionQuickPhrase());
+        this.bindButtonAction('missionQuickApplyBtn', () => this.openMissionQuickPhraseModal());
+        this.bindButtonAction('missionQuickModalCloseBtn', () => this.closeMissionQuickPhraseModal());
+        this.bindButtonAction('missionQuickLoadCurrentBtn', () => this.loadCurrentMissionIntoQuickPhraseForm());
+        this.bindButtonAction('missionQuickCreateBtn', () => this.createMissionQuickPhraseFromModal());
+        this.bindButtonAction('missionQuickUpdateBtn', () => this.updateSelectedMissionQuickPhrase());
+        this.bindButtonAction('missionQuickApplySelectedBtn', () => this.applyMissionQuickPhrase());
+        this.bindButtonAction('missionQuickDeleteBtn', () => this.deleteSelectedMissionQuickPhrase());
+        this.bindButtonAction('missionQuickDeleteAllBtn', () => this.clearMissionQuickPhrases());
 
         this.setupInlineMissionEditor();
 
@@ -438,37 +446,55 @@ class DutyTickerManager {
 
         const now = new Date();
         const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const showAllMorningSlots = nowMinutes >= (8 * 60) && nowMinutes <= ((8 * 60) + 50);
 
-        const candidateSlots = periodSchedule
-            .map((slot) => {
-                const periodNumber = Number(slot.period);
-                const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
-                    ? `${periodNumber}교시`
-                    : String(slot.slot_label || '').trim() || '교시';
-                const rawSubject = String(slot.name || '').trim();
-                const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
-                const startTime = String(slot.startTime || '').trim();
-                const endTime = String(slot.endTime || '').trim();
-                const startMinutes = this.timeStringToMinutes(startTime);
-                const endMinutes = this.timeStringToMinutes(endTime);
-                const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
-                if (!hasTimeRange) return null;
+        const normalizedSlots = periodSchedule.map((slot) => {
+            const periodNumber = Number(slot.period);
+            const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
+                ? `${periodNumber}교시`
+                : String(slot.slot_label || '').trim() || '교시';
+            const rawSubject = String(slot.name || '').trim();
+            const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+            const startTime = String(slot.startTime || '').trim();
+            const endTime = String(slot.endTime || '').trim();
+            const startMinutes = this.timeStringToMinutes(startTime);
+            const endMinutes = this.timeStringToMinutes(endTime);
+            const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
+            const isCurrent = hasTimeRange && nowMinutes >= startMinutes && nowMinutes < endMinutes;
+            const isUpcoming = hasTimeRange && nowMinutes >= (startMinutes - 10) && nowMinutes < startMinutes;
 
-                const isCurrent = nowMinutes >= startMinutes && nowMinutes < endMinutes;
-                const isUpcoming = nowMinutes >= (startMinutes - 10) && nowMinutes < startMinutes;
-                if (!isCurrent && !isUpcoming) return null;
+            return {
+                periodLabel,
+                subjectName,
+                startTime,
+                endTime,
+                startMinutes,
+                hasTimeRange,
+                isCurrent,
+                isUpcoming,
+            };
+        });
 
-                return {
-                    periodLabel,
-                    subjectName,
-                    startTime,
-                    endTime,
-                    startMinutes,
-                    isCurrent,
-                    isUpcoming,
-                };
-            })
-            .filter((slot) => !!slot);
+        if (showAllMorningSlots) {
+            container.innerHTML = normalizedSlots.map((slot) => {
+                const titleText = slot.hasTimeRange
+                    ? `${slot.periodLabel} · ${slot.subjectName} (${slot.startTime}-${slot.endTime})`
+                    : `${slot.periodLabel} · ${slot.subjectName}`;
+                const chipClass = slot.isCurrent
+                    ? 'dt-header-schedule-item is-current'
+                    : (slot.isUpcoming ? 'dt-header-schedule-item is-upcoming' : 'dt-header-schedule-item');
+                return `
+                    <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
+                        <span class="dt-header-schedule-period">${this.escapeHtml(slot.periodLabel)}</span>
+                        <span class="dt-header-schedule-sep">·</span>
+                        <span class="dt-header-schedule-subject">${this.escapeHtml(slot.subjectName)}</span>
+                    </span>
+                `;
+            }).join('');
+            return;
+        }
+
+        const candidateSlots = normalizedSlots.filter((slot) => slot.hasTimeRange && (slot.isCurrent || slot.isUpcoming));
 
         if (!candidateSlots.length) {
             container.innerHTML = '<span class="dt-header-schedule-empty">다음 교시 10분 전부터 표시됩니다</span>';
@@ -476,7 +502,7 @@ class DutyTickerManager {
         }
 
         const focusSlot = candidateSlots.find((slot) => slot.isCurrent)
-            || candidateSlots.sort((a, b) => a.startMinutes - b.startMinutes)[0];
+            || [...candidateSlots].sort((a, b) => a.startMinutes - b.startMinutes)[0];
 
         const chipClass = `dt-header-schedule-item ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
         const periodText = focusSlot.isUpcoming ? `곧 ${focusSlot.periodLabel}` : focusSlot.periodLabel;
@@ -1577,6 +1603,7 @@ class DutyTickerManager {
             if (!raw) {
                 this.missionQuickPhrases = [];
                 this.missionQuickPhrase = null;
+                this.missionQuickSelectedId = null;
                 return;
             }
 
@@ -1603,10 +1630,12 @@ class DutyTickerManager {
 
             this.missionQuickPhrases = normalizedList;
             this.missionQuickPhrase = normalizedList[0] || null;
+            this.missionQuickSelectedId = normalizedList[0]?.id || null;
         } catch (error) {
             console.warn('DutyTicker: failed to restore mission quick phrase', error);
             this.missionQuickPhrases = [];
             this.missionQuickPhrase = null;
+            this.missionQuickSelectedId = null;
         }
     }
 
@@ -1631,84 +1660,257 @@ class DutyTickerManager {
         return source.length > 14 ? `${source.slice(0, 14)}…` : source;
     }
 
-    updateMissionQuickPhraseUI() {
-        const applyBtn = document.getElementById('missionQuickApplyBtn');
-        const saveBtn = document.getElementById('missionQuickSaveBtn');
-        if (!applyBtn) return;
-
-        const count = this.missionQuickPhrases.length;
-        const hasQuickPhrase = count > 0;
-        applyBtn.disabled = !hasQuickPhrase;
-        applyBtn.classList.toggle('opacity-60', !hasQuickPhrase);
-        applyBtn.classList.toggle('cursor-not-allowed', !hasQuickPhrase);
-        applyBtn.textContent = hasQuickPhrase ? `문구불러오기(${count})` : '문구불러오기';
-        applyBtn.setAttribute('title', hasQuickPhrase ? '저장한 문구 중에서 선택해 불러오기' : '먼저 문구를 저장해 주세요');
-        if (saveBtn) saveBtn.setAttribute('title', hasQuickPhrase ? `현재 문구 저장 (저장 ${count}개)` : '현재 문구 저장');
+    formatMissionQuickPhraseSavedAt(savedAt) {
+        const date = new Date(Number(savedAt) || Date.now());
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
     }
 
-    saveMissionQuickPhraseFromCurrent() {
+    getCurrentMissionQuickPhraseDraft() {
         const titleEl = document.getElementById('mainMissionTitle');
         const descEl = document.getElementById('mainMissionDesc');
-        const title = this.sanitizeMissionText(titleEl ? titleEl.innerText : this.missionTitle, 'title');
-        const desc = this.sanitizeMissionText(descEl ? descEl.innerText : this.missionDesc, 'desc');
+        return {
+            title: this.sanitizeMissionText(titleEl ? titleEl.innerText : this.missionTitle, 'title'),
+            desc: this.sanitizeMissionText(descEl ? descEl.innerText : this.missionDesc, 'desc'),
+        };
+    }
 
-        if (!title && !desc) {
-            alert('저장할 문구가 없습니다.');
-            return;
-        }
+    getMissionQuickPhraseFormValues() {
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        const descInput = document.getElementById('missionQuickDescInput');
+        return {
+            title: this.sanitizeMissionText(titleInput ? titleInput.value : '', 'title'),
+            desc: this.sanitizeMissionText(descInput ? descInput.value : '', 'desc'),
+        };
+    }
 
+    setMissionQuickPhraseFormValues({ title = '', desc = '' } = {}) {
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        const descInput = document.getElementById('missionQuickDescInput');
+        if (titleInput) titleInput.value = title;
+        if (descInput) descInput.value = desc;
+    }
+
+    getMissionQuickPhraseById(phraseId) {
+        if (!phraseId) return null;
+        return this.missionQuickPhrases.find((item) => item.id === String(phraseId)) || null;
+    }
+
+    syncMissionQuickPhraseSelection(selectedId = null) {
+        const targetId = String(selectedId || this.missionQuickSelectedId || '').trim();
+        const selected = this.getMissionQuickPhraseById(targetId) || this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = selected ? selected.id : null;
+        return selected;
+    }
+
+    createMissionQuickPhraseEntry(title, desc) {
         const now = Date.now();
         const duplicateCount = this.missionQuickPhrases.filter(
             (item) => item.title === title && item.desc === desc
         ).length;
         const baseLabel = this.buildMissionQuickPhraseLabel(title, desc);
         const label = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
-
-        this.missionQuickPhrases.unshift({
+        return {
             id: `phrase-${now}-${Math.random().toString(36).slice(2, 8)}`,
             label,
             title,
             desc,
             savedAt: now,
-        });
+        };
+    }
+
+    setMissionQuickPhraseModalHint(message) {
+        const hintEl = document.getElementById('missionQuickModalHint');
+        if (hintEl) hintEl.textContent = message;
+    }
+
+    updateMissionQuickPhraseUI() {
+        const applyBtn = document.getElementById('missionQuickApplyBtn');
+        const saveBtn = document.getElementById('missionQuickSaveBtn');
+        if (!applyBtn) return;
+
+        const count = this.missionQuickPhrases.length;
+        applyBtn.disabled = false;
+        applyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        applyBtn.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+        applyBtn.setAttribute('title', count > 0 ? '저장한 문구를 불러오고 수정하거나 삭제합니다.' : '저장한 문구를 관리합니다.');
+        if (saveBtn) saveBtn.setAttribute('title', count > 0 ? `현재 문구를 새 항목으로 저장 (저장 ${count}개)` : '현재 문구를 새 항목으로 저장');
+    }
+
+    renderMissionQuickPhraseModal() {
+        const listEl = document.getElementById('missionQuickPhraseList');
+        if (!listEl) return;
+
+        const countEl = document.getElementById('missionQuickModalCount');
+        const updateBtn = document.getElementById('missionQuickUpdateBtn');
+        const applyBtn = document.getElementById('missionQuickApplySelectedBtn');
+        const deleteBtn = document.getElementById('missionQuickDeleteBtn');
+        const deleteAllBtn = document.getElementById('missionQuickDeleteAllBtn');
+        const count = this.missionQuickPhrases.length;
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+
+        if (countEl) countEl.textContent = `저장 ${count}개`;
+        if (updateBtn) updateBtn.disabled = !selected;
+        if (applyBtn) applyBtn.disabled = !selected;
+        if (deleteBtn) deleteBtn.disabled = !selected;
+        if (deleteAllBtn) deleteAllBtn.disabled = count === 0;
+
+        if (!count) {
+            listEl.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/45 p-5 text-center">
+                    <p class="text-sm font-black text-slate-200">저장된 문구가 없습니다.</p>
+                    <p class="mt-1 text-xs text-slate-400">아래 편집칸에서 새 문구를 저장하거나 현재 문구를 먼저 가져오세요.</p>
+                </div>
+            `;
+            this.setMissionQuickPhraseModalHint('현재 문구를 불러오거나 새 문구를 입력해 저장하세요.');
+            return;
+        }
+
+        listEl.innerHTML = this.missionQuickPhrases.map((item) => {
+            const isSelected = selected && item.id === selected.id;
+            const previewText = item.desc || item.title || '저장 문구';
+            return `
+                <button type="button"
+                    onclick="window.dtApp.selectMissionQuickPhrase('${item.id}')"
+                    class="dt-phrase-list-item ${isSelected ? 'is-selected' : ''} w-full rounded-2xl border border-slate-700 bg-slate-900/55 px-4 py-3 text-left transition hover:bg-slate-800/80">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-white break-keep">${this.escapeHtml(item.label)}</p>
+                            <p class="mt-1 text-xs leading-relaxed text-slate-400 break-words">${this.escapeHtml(previewText)}</p>
+                        </div>
+                        <span class="shrink-0 text-[10px] font-black text-slate-500">${this.escapeHtml(this.formatMissionQuickPhraseSavedAt(item.savedAt))}</span>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        this.setMissionQuickPhraseModalHint(selected
+            ? '선택한 문구를 적용하거나 수정, 삭제할 수 있습니다.'
+            : '목록에서 문구를 하나 선택하세요.');
+    }
+
+    openMissionQuickPhraseModal() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (selected) this.setMissionQuickPhraseFormValues(selected);
+        else this.loadCurrentMissionIntoQuickPhraseForm();
+        this.renderMissionQuickPhraseModal();
+        this.openModal('missionQuickPhraseModal');
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        if (titleInput) setTimeout(() => titleInput.focus(), 30);
+    }
+
+    closeMissionQuickPhraseModal() {
+        this.closeModal('missionQuickPhraseModal');
+    }
+
+    selectMissionQuickPhrase(phraseId) {
+        const selected = this.syncMissionQuickPhraseSelection(phraseId);
+        if (!selected) return;
+        this.setMissionQuickPhraseFormValues(selected);
+        this.renderMissionQuickPhraseModal();
+    }
+
+    loadCurrentMissionIntoQuickPhraseForm() {
+        const draft = this.getCurrentMissionQuickPhraseDraft();
+        this.setMissionQuickPhraseFormValues(draft);
+        this.setMissionQuickPhraseModalHint('현재 화면 문구를 편집칸으로 가져왔습니다. 새 항목 저장 또는 선택 항목 수정이 가능합니다.');
+    }
+
+    saveMissionQuickPhraseFromCurrent() {
+        const { title, desc } = this.getCurrentMissionQuickPhraseDraft();
+        if (!title && !desc) {
+            alert('저장할 문구가 없습니다.');
+            return;
+        }
+
+        const entry = this.createMissionQuickPhraseEntry(title, desc);
+        this.missionQuickPhrases.unshift(entry);
         if (this.missionQuickPhrases.length > this.missionQuickPhraseLimit) {
             this.missionQuickPhrases = this.missionQuickPhrases.slice(0, this.missionQuickPhraseLimit);
         }
 
         this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = entry.id;
         this.saveMissionQuickPhraseToStorage();
         this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(entry);
+        this.renderMissionQuickPhraseModal();
         alert(`반복 문구를 저장했습니다. (총 ${this.missionQuickPhrases.length}개)`);
     }
 
-    async applyMissionQuickPhrase() {
-        if (!this.missionQuickPhrases.length) {
-            alert('저장된 문구가 없습니다. 먼저 문구 저장을 눌러 주세요.');
+    createMissionQuickPhraseFromModal() {
+        const { title, desc } = this.getMissionQuickPhraseFormValues();
+        if (!title && !desc) {
+            alert('저장할 문구를 입력해 주세요.');
             return;
         }
 
-        let selectedIndex = 0;
-        if (this.missionQuickPhrases.length > 1) {
-            const optionsText = this.missionQuickPhrases
-                .map((item, index) => `${index + 1}. ${item.label}`)
-                .join('\n');
-            const selectedRaw = prompt(`불러올 문구 번호를 입력하세요.\n${optionsText}`, '1');
-            if (selectedRaw === null) return;
-            const nextIndex = Number.parseInt(String(selectedRaw).trim(), 10) - 1;
-            if (!Number.isFinite(nextIndex) || nextIndex < 0 || nextIndex >= this.missionQuickPhrases.length) {
-                alert('올바른 번호를 입력해 주세요.');
-                return;
-            }
-            selectedIndex = nextIndex;
+        const entry = this.createMissionQuickPhraseEntry(title, desc);
+        this.missionQuickPhrases.unshift(entry);
+        if (this.missionQuickPhrases.length > this.missionQuickPhraseLimit) {
+            this.missionQuickPhrases = this.missionQuickPhrases.slice(0, this.missionQuickPhraseLimit);
         }
 
-        const selected = this.missionQuickPhrases[selectedIndex];
+        this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = entry.id;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(entry);
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('새 문구를 저장했습니다.');
+    }
+
+    updateSelectedMissionQuickPhrase() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
         if (!selected) {
+            alert('수정할 문구를 먼저 선택해 주세요.');
+            return;
+        }
+
+        const { title, desc } = this.getMissionQuickPhraseFormValues();
+        if (!title && !desc) {
+            alert('저장할 문구를 입력해 주세요.');
+            return;
+        }
+
+        const currentIndex = this.missionQuickPhrases.findIndex((item) => item.id === selected.id);
+        if (currentIndex < 0) {
             alert('선택한 문구를 찾지 못했습니다.');
             return;
         }
 
+        const updated = {
+            ...selected,
+            label: this.buildMissionQuickPhraseLabel(title, desc),
+            title,
+            desc,
+            savedAt: Date.now(),
+        };
+
+        this.missionQuickPhrases.splice(currentIndex, 1);
+        this.missionQuickPhrases.unshift(updated);
+        this.missionQuickPhrase = updated;
+        this.missionQuickSelectedId = updated.id;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(updated);
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('선택한 문구를 수정했습니다.');
+    }
+
+    async applyMissionQuickPhrase(phraseId = null) {
+        const selected = phraseId
+            ? this.getMissionQuickPhraseById(phraseId)
+            : this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            alert('적용할 문구를 먼저 선택해 주세요.');
+            return;
+        }
+
+        const selectedIndex = this.missionQuickPhrases.findIndex((item) => item.id === selected.id);
         this.missionQuickPhrase = selected;
+        this.missionQuickSelectedId = selected.id;
 
         if (selectedIndex > 0) {
             this.missionQuickPhrases.splice(selectedIndex, 1);
@@ -1721,6 +1923,47 @@ class DutyTickerManager {
             title: selected.title,
             desc: selected.desc,
         });
+        this.setMissionQuickPhraseFormValues(selected);
+        this.renderMissionQuickPhraseModal();
+        this.closeMissionQuickPhraseModal();
+    }
+
+    deleteSelectedMissionQuickPhrase() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            alert('삭제할 문구를 먼저 선택해 주세요.');
+            return;
+        }
+
+        const shouldDelete = confirm(`'${selected.label}' 문구를 삭제할까요?`);
+        if (!shouldDelete) return;
+
+        this.missionQuickPhrases = this.missionQuickPhrases.filter((item) => item.id !== selected.id);
+        this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = this.missionQuickPhrases[0]?.id || null;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+
+        const nextSelected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (nextSelected) this.setMissionQuickPhraseFormValues(nextSelected);
+        else this.loadCurrentMissionIntoQuickPhraseForm();
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('선택한 문구를 삭제했습니다.');
+    }
+
+    clearMissionQuickPhrases() {
+        if (!this.missionQuickPhrases.length) return;
+        const shouldDeleteAll = confirm('저장한 문구를 모두 삭제할까요?');
+        if (!shouldDeleteAll) return;
+
+        this.missionQuickPhrases = [];
+        this.missionQuickPhrase = null;
+        this.missionQuickSelectedId = null;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.loadCurrentMissionIntoQuickPhraseForm();
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('저장 문구를 모두 비웠습니다.');
     }
 
     restoreMissionFontSize() {
@@ -2369,3 +2612,4 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
+

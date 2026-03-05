@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core import signing
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import Product
 
@@ -235,6 +236,7 @@ def yut_game(request):
         {'hide_navbar': _student_games_mode_enabled(request)},
     )
 
+@ensure_csrf_cookie
 def dutyticker_view(request):
     # 모바일 접근 체크
     is_mobile = _should_block_for_large_screen_service(request)

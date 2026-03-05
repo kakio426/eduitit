@@ -226,3 +226,17 @@ class DutyTickerRotationCsrfTests(TestCase):
         assignment.refresh_from_db()
         self.assertIsNone(assignment.student)
         self.assertFalse(assignment.is_completed)
+
+    def test_main_view_sets_csrf_cookie_for_reset_actions_even_without_students(self):
+        response = self.client.get(reverse("dutyticker"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", self.client.cookies)
+
+        response = self.client.post(
+            reverse("dt_api_reset_assignments"),
+            HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value,
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload.get("success"))
+        self.assertEqual(payload.get("updated_count"), 0)

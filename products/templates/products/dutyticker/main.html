@@ -979,15 +979,49 @@
 
     .dt-timer-main {
         display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: center;
-        justify-items: center;
-        gap: clamp(0.75rem, 1.8vh, 1.4rem);
+        grid-template-rows: minmax(0, 1fr) auto;
+        align-content: stretch;
+        justify-items: stretch;
+        gap: clamp(1rem, 2.2vh, 1.95rem);
         width: 100%;
         min-height: 0;
     }
 
-    .dt-timer-lane,
+    .dt-clock-stage {
+        width: 100%;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: clamp(0.45rem, 1.2vh, 1rem);
+    }
+
+    .dt-clock-shell {
+        width: min(100%, 62rem);
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(0.75rem, 1.7vw, 1.4rem) clamp(1rem, 2.3vw, 2rem);
+        border-radius: clamp(1.7rem, 2.6vw, 2.6rem);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.06));
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 28px 60px rgba(15, 23, 42, 0.18);
+        backdrop-filter: blur(10px);
+    }
+
+    .dt-mission-stage {
+        width: min(100%, 58rem);
+        min-width: 0;
+        margin-inline: auto;
+        padding: clamp(1rem, 2.3vw, 1.7rem) clamp(1.1rem, 2.8vw, 2rem);
+        border-radius: clamp(1.55rem, 2.5vw, 2.2rem);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.14));
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(14px);
+    }
+
     .dt-mission-lane {
         width: 100%;
         min-width: 0;
@@ -996,38 +1030,38 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        gap: clamp(0.38rem, 0.95vh, 0.78rem);
+        gap: clamp(0.34rem, 0.9vh, 0.78rem);
+    }
+
+    .dt-mission-kicker {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        padding: 0.42rem 0.82rem;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(224, 231, 255, 0.88);
+        font-size: clamp(0.76rem, 0.82rem + 0.18vw, 0.92rem);
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
     }
 
     @media (min-width: 1280px) {
-        .dt-timer-main {
-            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-            column-gap: clamp(1.2rem, 2.8vw, 3rem);
-            justify-items: stretch;
+        .dt-clock-shell {
+            width: min(100%, 66rem);
         }
 
-        .dt-timer-lane {
-            align-items: center;
-            justify-self: center;
-            text-align: center;
-        }
-
-        .dt-mission-lane {
-            align-items: flex-start;
-            text-align: left;
-            justify-self: stretch;
-            padding-right: clamp(0.35rem, 0.9vw, 0.8rem);
-        }
-
-        .dt-mission-lane #mainMissionTitle,
-        .dt-mission-lane #mainMissionDesc {
-            text-align: left;
+        .dt-mission-stage {
+            width: min(100%, 60rem);
         }
     }
 
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
-        font-size: clamp(4.35rem, min(17.8vw, 22.2vh), 12rem);
+        font-size: clamp(5rem, min(21.5vw, 27.5vh), 15.25rem);
         line-height: 0.9;
         letter-spacing: -0.05em;
         margin-bottom: 0;
@@ -1046,13 +1080,13 @@
     }
 
     #mainMissionTitle {
-        font-size: clamp(2.34rem, 6.4vw, 4.95rem);
+        font-size: clamp(2.46rem, 6.1vw, 5.15rem);
         line-height: 1.08;
         margin: 0;
     }
 
     #mainMissionDesc {
-        font-size: clamp(1.24rem, 3.25vw, 2.12rem);
+        font-size: clamp(1.12rem, 2.95vw, 2rem);
         line-height: 1.24;
         margin: 0;
     }
@@ -1106,11 +1140,19 @@
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
-        gap: clamp(1rem, 2.25vh, 1.95rem);
+        gap: clamp(1.25rem, 2.6vh, 2.15rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] .dt-clock-shell {
+        width: min(100%, 68rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
-        font-size: clamp(4.95rem, min(19.8vw, 25vh), 13.4rem);
+        font-size: clamp(5.55rem, min(23vw, 29.5vh), 16.1rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] .dt-mission-stage {
+        width: min(100%, 62rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
@@ -1196,6 +1238,19 @@
     .mission-quick-wrap button {
         min-width: 4.8rem;
         line-height: 1;
+    }
+
+    .dt-phrase-list-item.is-selected {
+        border-color: rgba(165, 180, 252, 0.7);
+        background: linear-gradient(180deg, rgba(49, 46, 129, 0.46), rgba(30, 41, 59, 0.88));
+        box-shadow: inset 0 0 0 1px rgba(165, 180, 252, 0.2), 0 16px 34px rgba(30, 41, 59, 0.26);
+    }
+
+    #missionQuickPhraseModal button:disabled {
+        opacity: 0.48;
+        cursor: not-allowed;
+        filter: saturate(0.76);
+        pointer-events: none;
     }
 
     #timerControls {
@@ -2031,26 +2086,31 @@
                     class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:bg-white/15 transition-all duration-1000">
                 </div>
 
-                <!-- Main Content (Timer + Mission Split) -->
+                <!-- Main Content (Clock Hero + Mission Panel) -->
                 <div class="dt-timer-main flex-1 w-full min-h-0 z-10">
-                    <div class="dt-timer-lane">
-                        <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
-                            class="dt-touch-action font-mono font-black text-6xl md:text-8xl tracking-tighter cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
-                            title="타이머 시작/정지">
-                            05:00
-                        </button>
+                    <div class="dt-clock-stage">
+                        <div class="dt-clock-shell">
+                            <button id="mainTimerDisplay" type="button" aria-pressed="false" aria-label="타이머 시작/일시정지"
+                                class="dt-touch-action font-mono font-black text-6xl md:text-8xl tracking-tighter cursor-pointer select-none transition-all duration-300 text-white drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] hover:scale-105 active:scale-95 appearance-none bg-transparent border-0 p-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 rounded-2xl"
+                                title="타이머 시작/정지">
+                                05:00
+                            </button>
+                        </div>
                     </div>
-                    <div class="dt-mission-lane max-w-[42rem]">
-                        <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep px-3 py-1.5"
-                            id="mainMissionTitle" contenteditable="true" spellcheck="false" data-mission-field="title"
-                            role="textbox" aria-label="메인 제목 바로 편집">
-                            수학 익힘책 풀기
-                        </h2>
-                        <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep px-3 py-1.5"
-                            id="mainMissionDesc" contenteditable="true" spellcheck="false" data-mission-field="desc"
-                            role="textbox" aria-label="설명 문구 바로 편집">
-                            24~25페이지 풀고 채점하기
-                        </p>
+                    <div class="dt-mission-stage">
+                        <div class="dt-mission-lane">
+                            <div class="dt-mission-kicker">오늘 안내</div>
+                            <h2 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight break-keep px-3 py-1.5"
+                                id="mainMissionTitle" contenteditable="true" spellcheck="false" data-mission-field="title"
+                                role="textbox" aria-label="메인 제목 바로 편집">
+                                수학 익힘책 풀기
+                            </h2>
+                            <p class="text-xl md:text-3xl text-indigo-100 font-bold opacity-80 break-keep px-3 py-1.5"
+                                id="mainMissionDesc" contenteditable="true" spellcheck="false" data-mission-field="desc"
+                                role="textbox" aria-label="설명 문구 바로 편집">
+                                24~25페이지 풀고 채점하기
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -2090,7 +2150,7 @@
                             title="현재 문구 저장">문구저장</button>
                         <button id="missionQuickApplyBtn" type="button"
                             class="px-2.5 py-1 bg-white/15 rounded-md text-white text-xs font-black hover:bg-white/25 transition"
-                            title="저장 문구 불러오기">문구불러오기</button>
+                            title="저장 문구 관리">문구관리</button>
                     </div>
                     <div class="timer-divider w-px h-auto bg-white/10 mx-1"></div>
                     <button id="timerResetBtn" type="button"
@@ -2257,7 +2317,7 @@
         <div
             class="w-full max-w-3xl mx-4 bg-slate-900/85 border border-indigo-400/25 rounded-[2rem] p-8 shadow-2xl">
             <div class="flex justify-between items-center gap-3 mb-6">
-                <h3 class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                <h3 id="missionQuickModalTitle" class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
                     <span class="text-amber-300 text-3xl">📣</span>
                     호명 모드
                 </h3>
@@ -2291,6 +2351,87 @@
                     class="py-3 rounded-xl bg-amber-500/90 hover:bg-amber-400 text-slate-900 font-black transition">
                     효과음 미리듣기
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="missionQuickPhraseModal" role="dialog" aria-modal="true" aria-labelledby="missionQuickModalTitle"
+        class="fixed inset-0 z-[225] hidden items-center justify-center bg-slate-950/82 backdrop-blur-md transition-opacity duration-300 opacity-0"
+        onclick="if (event.target === this) window.dtApp.closeMissionQuickPhraseModal()">
+        <div class="w-full max-w-5xl mx-4 bg-slate-900/92 border border-indigo-300/20 rounded-[2rem] p-5 md:p-7 shadow-2xl">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-5">
+                <div>
+                    <h3 id="missionQuickModalTitle" class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                        <span class="text-indigo-300 text-3xl">🗂️</span>
+                        문구 관리
+                    </h3>
+                    <p id="missionQuickModalCount" class="mt-1 text-sm font-bold text-slate-400" aria-live="polite">저장 0개</p>
+                </div>
+                <button id="missionQuickModalCloseBtn" type="button"
+                    class="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] gap-5">
+                <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-sm font-black text-white">저장 목록</p>
+                            <p class="text-xs text-slate-400">선택 후 적용, 수정, 삭제할 수 있습니다.</p>
+                        </div>
+                        <button id="missionQuickDeleteAllBtn" type="button"
+                            class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-200 text-xs font-black border border-rose-400/20 hover:bg-rose-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            전체 삭제
+                        </button>
+                    </div>
+                    <div id="missionQuickPhraseList" class="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2.5">
+                        <!-- JS Populated -->
+                    </div>
+                </section>
+
+                <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col gap-4">
+                    <div>
+                        <p class="text-sm font-black text-white">문구 편집</p>
+                        <p id="missionQuickModalHint" class="text-xs text-slate-400 mt-1" aria-live="polite">현재 문구를 불러오거나 저장 문구를 선택해 편집하세요.</p>
+                    </div>
+                    <div class="grid gap-3">
+                        <label class="grid gap-1.5">
+                            <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">제목</span>
+                            <input id="missionQuickTitleInput" type="text" maxlength="200"
+                                class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-lg font-black text-white focus:outline-none focus:border-indigo-400"
+                                placeholder="예: 국어 활동" />
+                        </label>
+                        <label class="grid gap-1.5">
+                            <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">설명</span>
+                            <textarea id="missionQuickDescInput" rows="5" maxlength="400"
+                                class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-base font-bold text-slate-100 focus:outline-none focus:border-indigo-400 resize-none"
+                                placeholder="예: 교과서 24~25쪽 문제 풀기"></textarea>
+                        </label>
+                    </div>
+                    <div class="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button id="missionQuickLoadCurrentBtn" type="button"
+                            class="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-black transition">
+                            현재 문구 가져오기
+                        </button>
+                        <button id="missionQuickCreateBtn" type="button"
+                            class="py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                            새 항목 저장
+                        </button>
+                        <button id="missionQuickUpdateBtn" type="button"
+                            class="py-3 rounded-2xl bg-amber-500/85 hover:bg-amber-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            선택 항목 수정
+                        </button>
+                        <button id="missionQuickApplySelectedBtn" type="button"
+                            class="py-3 rounded-2xl bg-emerald-500/85 hover:bg-emerald-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            선택 문구 적용
+                        </button>
+                        <button id="missionQuickDeleteBtn" type="button"
+                            class="sm:col-span-2 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 font-black border border-rose-400/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            선택 삭제
+                        </button>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -2458,7 +2599,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306a"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306c"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
@@ -2530,3 +2671,4 @@
     }
 </script>
 {% endblock %}
+
