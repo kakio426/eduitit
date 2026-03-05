@@ -568,7 +568,7 @@ class DutyTickerManager {
                     <div class="dt-role-main min-w-0">
                         <p class="dt-role-name truncate ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
                         <div class="dt-role-assignee-wrap">
-                            <span class="dt-role-assignee-label">담당</span>
+                            <span class="dt-role-assignee-label">담당 학생</span>
                             <div class="dt-role-assignee ${assigneeToneClass} px-3 py-1 rounded-lg border leading-tight">${safeAssignee}</div>
                         </div>
                     </div>

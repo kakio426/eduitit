@@ -581,19 +581,26 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 0.72rem;
         min-width: 0;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
-        margin-top: 0.42rem;
+        margin-top: 0;
         display: flex;
-        align-items: center;
-        gap: 0.42rem;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.22rem;
         min-width: 0;
+        text-align: right;
+        justify-self: end;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        font-size: 0.79rem;
+        font-size: 0.74rem;
         font-weight: 900;
         text-transform: none;
         letter-spacing: 0.01em;
@@ -613,7 +620,7 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: clamp(1.24rem, 1.12rem + 0.34vw, 1.52rem) !important;
+        font-size: clamp(1.56rem, 1.3rem + 0.62vw, 2.08rem) !important;
         font-weight: 900;
         line-height: 1.15;
         max-width: 100%;
@@ -691,11 +698,11 @@
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee-label {
-        font-size: 0.9rem;
+        font-size: 0.86rem;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee {
-        font-size: clamp(1.38rem, 1.2rem + 0.46vw, 1.72rem) !important;
+        font-size: clamp(1.72rem, 1.42rem + 0.78vw, 2.36rem) !important;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] .dt-role-card-head {
@@ -1570,6 +1577,17 @@
             padding: 0 0.52rem;
         }
 
+        #mainAppContainer #mainRoleList .dt-role-main {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.46rem;
+        }
+
+        #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
+            align-items: flex-start;
+            text-align: left;
+            justify-self: start;
+        }
+
     }
 
     @media (max-height: 860px) {
@@ -2226,7 +2244,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260305b"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260305c"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
