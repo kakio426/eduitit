@@ -422,6 +422,99 @@
     transition: width 220ms ease;
 }
 
+.ppb-picked-card {
+    margin: 0.72rem auto 0;
+    width: min(760px, 100%);
+    padding: 0.82rem 0.9rem 0.88rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.58), rgba(15, 23, 42, 0.34));
+    text-align: center;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.ppb-picked-card.is-picked {
+    border-color: rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.24);
+}
+
+.ppb-picked-label {
+    margin: 0;
+    color: rgba(253, 230, 138, 0.96);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.ppb-picked-name {
+    margin: 0.35rem 0 0;
+    font-size: clamp(1.55rem, 3.7vw, 2.35rem);
+    line-height: 1.08;
+    font-weight: 900;
+    color: #f8fafc;
+}
+
+.ppb-result-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.1rem;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.ppb-result-modal.is-hidden {
+    display: none;
+}
+
+.ppb-result-panel {
+    width: min(980px, 100%);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.22), transparent 60%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+    box-shadow: 0 0 42px rgba(251, 191, 36, 0.2);
+    padding: clamp(1.1rem, 2.5vw, 2rem);
+    text-align: center;
+}
+
+.ppb-result-label {
+    margin: 0;
+    color: rgba(253, 230, 138, 0.96);
+    font-size: clamp(0.78rem, 1.35vw, 0.95rem);
+    font-weight: 900;
+    letter-spacing: 0.16em;
+}
+
+.ppb-result-name {
+    margin: 0.55rem 0 0;
+    font-size: clamp(2.3rem, 8vw, 6rem);
+    line-height: 1.06;
+    font-weight: 900;
+    color: #f8fafc;
+    text-shadow: 0 0 24px rgba(250, 204, 21, 0.28);
+    word-break: keep-all;
+}
+
+.ppb-result-meta {
+    margin: 0.6rem 0 0;
+    color: rgba(226, 232, 240, 0.94);
+    font-size: clamp(1rem, 1.9vw, 1.45rem);
+    font-weight: 700;
+}
+
+.ppb-result-next-btn {
+    margin: 1.1rem auto 0;
+    min-width: min(360px, 88%);
+    font-size: clamp(1rem, 1.7vw, 1.2rem);
+    padding-top: 0.82rem;
+    padding-bottom: 0.82rem;
+}
+
 .ppb-orb-grid {
     margin-top: 0.6rem;
     min-height: 58vh;

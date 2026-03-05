@@ -32,6 +32,8 @@
         progressText: document.getElementById("ppb-progress-text"),
         progressBar: document.getElementById("ppb-progress-bar"),
         universeTitle: document.querySelector("#ppb-universe .ppb-universe-title"),
+        pickedCard: document.getElementById("ppb-picked-card"),
+        pickedName: document.getElementById("ppb-picked-name"),
         resetFromUniverseBtn: document.getElementById("ppb-reset-from-universe-btn"),
         rerollBtn: document.getElementById("ppb-reroll-btn"),
         undoBtn: document.getElementById("ppb-undo-btn"),
@@ -40,6 +42,11 @@
         liveCard: document.querySelector(".ppb-live-card"),
         liveName: document.getElementById("ppb-live-name"),
         liveMeta: document.getElementById("ppb-live-meta"),
+        resultModal: document.getElementById("ppb-result-modal"),
+        resultPanel: document.getElementById("ppb-result-panel"),
+        resultName: document.getElementById("ppb-result-name"),
+        resultMeta: document.getElementById("ppb-result-meta"),
+        resultNextBtn: document.getElementById("ppb-result-next-btn"),
         editorOverlay: document.getElementById("ppb-editor-overlay"),
         editorDrawer: document.getElementById("ppb-editor-drawer"),
         editorInput: document.getElementById("ppb-editor-input"),
@@ -74,6 +81,7 @@
         selectedName: "",
         transitionLock: false,
         reduceMotion: false,
+        resultModalOpen: false,
         editorOpen: false,
     };
 
@@ -369,6 +377,51 @@
         els.liveCard?.classList.toggle("is-selected", Boolean(name));
     }
 
+    function setPickedPanel(name) {
+        const pickedName = normalizeName(name);
+        if (els.pickedName) {
+            els.pickedName.textContent = pickedName || "아직 뽑지 않았어요";
+        }
+        els.pickedCard?.classList.toggle("is-picked", Boolean(pickedName));
+    }
+
+    function focusFirstOrb() {
+        const orb = els.orbGrid?.querySelector(".ppb-orb:not(:disabled)");
+        orb?.focus();
+    }
+
+    function closeResultModal(shouldFocus = true) {
+        if (!els.resultModal || !state.resultModalOpen) {
+            return;
+        }
+        els.resultModal.classList.add("is-hidden");
+        els.resultModal.setAttribute("aria-hidden", "true");
+        root.classList.remove("ppb-result-open");
+        state.resultModalOpen = false;
+        if (shouldFocus && state.appState === "universe") {
+            focusFirstOrb();
+        }
+    }
+
+    function openResultModal(name, leftCount) {
+        if (!els.resultModal || !els.resultName || !els.resultMeta) {
+            return;
+        }
+        const pickedName = normalizeName(name) || "이름 없음";
+        els.resultName.textContent = pickedName;
+        els.resultMeta.textContent = leftCount > 0
+            ? `남은 인원 ${leftCount}명`
+            : "모든 학생 추첨 완료";
+        if (els.resultNextBtn) {
+            els.resultNextBtn.textContent = leftCount > 0 ? "다음 추첨 계속" : "닫기";
+        }
+        els.resultModal.classList.remove("is-hidden");
+        els.resultModal.setAttribute("aria-hidden", "false");
+        root.classList.add("ppb-result-open");
+        state.resultModalOpen = true;
+        els.resultNextBtn?.focus();
+    }
+
     function persistRoster(names) {
         try {
             window.localStorage.setItem(STAR_ROSTER_KEY, JSON.stringify(names));
@@ -408,6 +461,8 @@
         renderHistory();
         renderOrbs();
         setLiveCard("준비 완료", `${names.length}명 명단으로 추첨을 시작하세요.`);
+        setPickedPanel("");
+        closeResultModal(false);
         if (message) {
             setSetupMessage(message, "info");
         }
@@ -454,6 +509,8 @@
                 ? `남은 인원 ${left}명 · 스페이스바로 다음 추첨`
                 : "모든 학생 추첨 완료",
         );
+        setPickedPanel(name);
+        openResultModal(name, left);
 
         if (els.flash) {
             els.flash.style.opacity = state.reduceMotion ? "0.4" : "0.8";
@@ -486,6 +543,8 @@
         renderHistory();
         renderOrbs();
         setLiveCard("다시 시작", `${state.totalNames.length}명 명단으로 추첨을 다시 시작합니다.`);
+        setPickedPanel("");
+        closeResultModal(false);
     }
 
     function undoLastDraw() {
@@ -502,6 +561,8 @@
         renderHistory();
         renderOrbs();
         setLiveCard("되돌리기", `${recent.name} 학생을 추첨 후보에 다시 추가했습니다.`);
+        setPickedPanel(state.history[0]?.name || "");
+        closeResultModal(false);
     }
 
     function goSetupScreen() {
@@ -509,6 +570,7 @@
             els.input.value = state.totalNames.join("\n");
         }
         updateSetupStats();
+        closeResultModal(false);
         setScreen("setup");
     }
 
@@ -645,7 +707,7 @@
     }
 
     function drawByKeyboard() {
-        if (!isStarsModeActive() || state.appState !== "universe" || state.transitionLock) {
+        if (!isStarsModeActive() || state.appState !== "universe" || state.transitionLock || state.resultModalOpen) {
             return;
         }
         const choices = Array.from(els.orbGrid?.querySelectorAll(".ppb-orb") || []).filter((btn) => !btn.disabled);
@@ -657,7 +719,21 @@
     }
 
     function handleKeydown(event) {
-        if (state.editorOpen || !isStarsModeActive()) {
+        if (!isStarsModeActive()) {
+            return;
+        }
+        if (state.editorOpen) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeEditor();
+            }
+            return;
+        }
+        if (state.resultModalOpen) {
+            if (event.key === "Escape" || event.key === "Enter" || event.code === "Space") {
+                event.preventDefault();
+                closeResultModal();
+            }
             return;
         }
         const tagName = String(event.target?.tagName || "").toUpperCase();
@@ -674,10 +750,6 @@
             event.preventDefault();
             undoLastDraw();
             return;
-        }
-        if (event.key === "Escape" && state.editorOpen) {
-            event.preventDefault();
-            closeEditor();
         }
     }
 
@@ -703,6 +775,13 @@
         els.rerollBtn?.addEventListener("click", rerollCurrentRoster);
         els.undoBtn?.addEventListener("click", undoLastDraw);
         els.editRosterBtn?.addEventListener("click", openEditor);
+        els.resultNextBtn?.addEventListener("click", () => closeResultModal());
+        els.resultModal?.addEventListener("click", (event) => {
+            if (event.target === els.resultModal) {
+                closeResultModal();
+            }
+        });
+        els.resultPanel?.addEventListener("click", (event) => event.stopPropagation());
 
         els.editorOverlay?.addEventListener("click", closeEditor);
         els.editorCloseBtn?.addEventListener("click", closeEditor);
@@ -744,6 +823,8 @@
         renderHistory();
         renderOrbs();
         setLiveCard("", "");
+        setPickedPanel("");
+        closeResultModal(false);
         syncFullscreenBtn();
 
         const stored = loadStoredRoster();
