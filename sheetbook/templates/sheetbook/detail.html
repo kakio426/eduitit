@@ -167,6 +167,7 @@
       thead: root.querySelector("#grid-thead"),
       tbody: root.querySelector("#grid-tbody"),
       addRowBtn: root.querySelector("#grid-add-row-btn"),
+      addColumnQuickBtn: root.querySelector("#grid-add-column-quick-btn"),
       addColumnForm: root.querySelector("#grid-add-column-form"),
       newColLabel: root.querySelector("#grid-new-column-label"),
       newColType: root.querySelector("#grid-new-column-type"),
@@ -360,6 +361,10 @@
 
     function adjustActionLayerBottomOffset() {
       if (!els.actionLayer) return;
+      if (!els.actionLayer.classList.contains("fixed")) {
+        els.actionLayer.style.bottom = "";
+        return;
+      }
       if (window.innerWidth >= 768) {
         els.actionLayer.style.bottom = "";
         return;
@@ -465,7 +470,7 @@
     function updateActionLayer() {
       if (!els.actionLayer || !els.selectionSummary) return;
       const bounds = getSelectionBounds();
-      if (!bounds || bounds.count <= 0) {
+      if (!bounds || bounds.count <= 1) {
         hideActionLayer();
         return;
       }
@@ -991,6 +996,22 @@
       }
     }
 
+    function buildDefaultColumnLabel() {
+      const existingLabels = new Set(
+        (state.columns || [])
+          .map((col) => (col && typeof col.label === "string" ? col.label.trim() : ""))
+          .filter(Boolean)
+      );
+      if (!existingLabels.has("새 항목")) {
+        return "새 항목";
+      }
+      let index = Math.max(1, Number(state.columns.length || 0));
+      while (existingLabels.has(`항목 ${index}`)) {
+        index += 1;
+      }
+      return `항목 ${index}`;
+    }
+
     function isTextEntryElement(element) {
       if (!element || !(element instanceof HTMLElement)) return false;
       if (element.isContentEditable) return true;
@@ -1249,6 +1270,19 @@
         setSaveStatus("네트워크 오류로 항목 추가에 실패했습니다. 다시 시도해 주세요.", true);
       }
     });
+
+    if (els.addColumnQuickBtn) {
+      els.addColumnQuickBtn.addEventListener("click", () => {
+        if (!els.addColumnForm) return;
+        if (els.newColLabel) {
+          els.newColLabel.value = buildDefaultColumnLabel();
+        }
+        if (els.newColType) {
+          els.newColType.value = "text";
+        }
+        els.addColumnForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      });
+    }
 
     if (els.retryFailedBtn) {
       els.retryFailedBtn.addEventListener("click", async () => {
