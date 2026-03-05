@@ -501,8 +501,8 @@ class DutyTickerManager {
         if (app) app.setAttribute('data-role-view-mode', this.roleViewMode);
         if (subtitle) {
             subtitle.textContent = this.roleViewMode === 'readable'
-                ? '역할 목록이 아래로 순차 이동하며 전체 학생을 고르게 보여줍니다.'
-                : '역할명 · 담당 · 상태를 빠르게 확인할 수 있어요.';
+                ? '멀리서도 보이도록 역할과 이름을 크게 보여줍니다.'
+                : '핵심 역할과 담당 학생만 크게 보여줍니다.';
         }
     }
 
@@ -546,11 +546,12 @@ class DutyTickerManager {
             const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
             const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
             const spotlightBadge = isSpotlightRole
-                ? '<span class="dt-role-spotlight-badge inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black border">집중</span>'
+                ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>집중</span>'
                 : '';
+            const statusDotClass = isCompleted ? 'is-completed' : 'is-pending';
             const statusBadge = isCompleted
-                ? '<span class="dt-role-status is-completed text-[12px] font-black"><i class="fa-solid fa-check-circle"></i> 완료</span>'
-                : '<span class="dt-role-status is-pending text-[12px] font-black">진행중</span>';
+                ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
+                : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
             return `
                 <div class="dt-role-row border cursor-pointer ${spotlightClass}"
@@ -558,18 +559,18 @@ class DutyTickerManager {
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
                     onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.dtApp.openStudentModal(${roleId}); }">
-                    <div class="dt-role-top">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <p class="dt-role-slot">${safeTimeSlot}</p>
-                            ${spotlightBadge}
-                        </div>
-                        ${statusBadge}
-                    </div>
                     <div class="dt-role-main min-w-0">
-                        <p class="dt-role-name truncate ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
+                        <div class="dt-role-content min-w-0">
+                            <p class="dt-role-name ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
+                            <div class="dt-role-meta">
+                                <p class="dt-role-slot">${safeTimeSlot}</p>
+                                ${spotlightBadge}
+                                <span class="dt-role-status-dot ${statusDotClass}" aria-hidden="true"></span>
+                                ${statusBadge}
+                            </div>
+                        </div>
                         <div class="dt-role-assignee-wrap">
-                            <span class="dt-role-assignee-label">담당 학생</span>
-                            <div class="dt-role-assignee ${assigneeToneClass} px-3 py-1 rounded-lg border leading-tight">${safeAssignee}</div>
+                            <div class="dt-role-assignee ${assigneeToneClass}" title="${safeAssignee}">${safeAssignee}</div>
                         </div>
                     </div>
                 </div>
