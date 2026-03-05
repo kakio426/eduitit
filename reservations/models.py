@@ -82,6 +82,7 @@ class Reservation(models.Model):
     period = models.IntegerField() # 1~max_periods
     grade = models.IntegerField()
     class_no = models.IntegerField()
+    target_label = models.CharField(max_length=40, blank=True, default="")  # 예: 사서, 보건, 영양
     name = models.CharField(max_length=20)
     memo = models.CharField(max_length=100, blank=True) # 한 줄 메모
     created_at = models.DateTimeField(auto_now_add=True)
@@ -92,7 +93,15 @@ class Reservation(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.date} {self.period}교시 - {self.room.name} ({self.grade}-{self.class_no} {self.name})"
+        if self.target_label:
+            who = f"{self.target_label} {self.name}".strip()
+        elif self.grade > 0 and self.class_no > 0:
+            who = f"{self.grade}-{self.class_no} {self.name}"
+        elif self.grade > 0:
+            who = f"{self.grade}학년 {self.name}"
+        else:
+            who = self.name
+        return f"{self.date} {self.period}교시 - {self.room.name} ({who})"
 
 class RecurringSchedule(models.Model):
     room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)

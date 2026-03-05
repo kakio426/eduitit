@@ -62,6 +62,25 @@ class ReservationsViewTest(TestCase):
         # Duplicate check
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 409)
+
+    def test_create_reservation_with_custom_target_label(self):
+        url = reverse('reservations:create_reservation', args=[self.school.slug])
+        data = {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 4,
+            'target_label': '보건',
+            'name': '김선생',
+            'memo': '응급키트 점검',
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        reservation = Reservation.objects.get(room=self.room, date=self.target_date, period=4)
+        self.assertEqual(reservation.grade, 0)
+        self.assertEqual(reservation.class_no, 0)
+        self.assertEqual(reservation.target_label, '보건')
+        self.assertEqual(reservation.name, '김선생')
         
     def test_delete_reservation(self):
         reservation = Reservation.objects.create(
@@ -146,6 +165,35 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(reservation.class_no, 3)
         self.assertEqual(reservation.name, 'After Update')
         self.assertEqual(reservation.memo, 'new memo')
+
+    def test_update_reservation_to_custom_target_by_creator(self):
+        self.client.force_login(self.user)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=5,
+            grade=3,
+            class_no=1,
+            name='Before',
+        )
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 5,
+            'target_label': '사서',
+            'name': 'After',
+            'memo': '도서관 수업',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.grade, 0)
+        self.assertEqual(reservation.class_no, 0)
+        self.assertEqual(reservation.target_label, '사서')
+        self.assertEqual(reservation.name, 'After')
 
     def test_update_reservation_forbidden_without_ownership(self):
         other_user = User.objects.create_user(username='other', password='password2', email='other@example.com')
@@ -273,6 +321,8 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, "예: 홍길동")
         self.assertContains(response, "remember_reservation_info")
         self.assertContains(response, "my_reservation_info")
+        self.assertContains(response, "reservation_profile_version")
+        self.assertContains(response, "학년/반 또는 역할을 다시 입력")
 
     def test_grade_lock_blocks_different_grade_without_override(self):
         GradeRecurringLock.objects.create(
@@ -401,3 +451,20 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'In Range')
         self.assertNotContains(response, 'Out Of Range')
+
+    def test_room_overview_displays_custom_target_label(self):
+        Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=6,
+            grade=0,
+            class_no=0,
+            target_label='영양',
+            name='박선생',
+        )
+
+        url = reverse('reservations:room_overview', args=[self.school.slug])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '영양 박선생')

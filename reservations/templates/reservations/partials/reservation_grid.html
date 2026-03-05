@@ -32,7 +32,7 @@
                         {% if s.state == 'reserved' %}
                         <div
                             class="w-full h-full bg-purple-100 rounded-xl border border-purple-200 p-2 flex flex-col justify-center items-center relative group">
-                            <span class="text-purple-800 font-bold text-sm">{{ s.reservation.grade }}-{{ s.reservation.class_no }} {{ s.reservation.name }}</span>
+                            <span class="text-purple-800 font-bold text-sm">{{ s.reservation_party }}</span>
                             {% if s.reservation.memo %}
                             <span class="text-[10px] text-gray-500 truncate max-w-[90%]">{{ s.reservation.memo }}</span>
                             {% endif %}
@@ -47,7 +47,7 @@
                             <!-- User Delete -->
                             {% if s.can_edit %}
                             <button
-                                @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ p.id }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                                @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ p.id }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
                                 type="button"
                                 class="absolute bottom-1 right-8 text-indigo-300 hover:text-indigo-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
@@ -147,7 +147,7 @@
                         <div class="text-[9px] text-gray-300 truncate">{{ s.time }}</div>
                         {% endif %}
                     </div>
-                    <div class="text-purple-800 font-bold text-sm">{{ s.reservation.grade }}-{{ s.reservation.class_no }} {{ s.reservation.name }}</div>
+                    <div class="text-purple-800 font-bold text-sm">{{ s.reservation_party }}</div>
 
                     <!-- My Reservation -->
                     {% if s.can_edit %}
@@ -159,7 +159,7 @@
                     <!-- User Delete -->
                     {% if s.can_edit %}
                     <button
-                        @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ s.period }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                        @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ s.period }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
                         type="button"
                         class="absolute bottom-1 right-8 text-indigo-500 hover:text-indigo-700 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
@@ -253,3 +253,4 @@
     </div>
     {% endfor %}
 </div>
+

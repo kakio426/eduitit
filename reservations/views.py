@@ -25,6 +25,35 @@ def _can_edit_reservation(request, reservation):
         return True
     return False
 
+
+def _normalize_reservation_party(grade_raw, class_no_raw, target_label_raw):
+    """
+    예약 주체 입력 정규화:
+    - 학급 예약: grade/class_no 사용
+    - 기타 예약: target_label 사용 (grade/class_no는 0으로 저장)
+    """
+    target_label = (target_label_raw or '').strip()
+    if target_label:
+        return 0, 0, target_label[:40]
+
+    grade = int(grade_raw)
+    class_no = int(class_no_raw)
+    if grade < 1 or class_no < 1:
+        raise ValueError("invalid-grade-class")
+    return grade, class_no, ''
+
+
+def _reservation_party_display(reservation):
+    if not reservation:
+        return ''
+    if reservation.target_label:
+        return f"{reservation.target_label} {reservation.name}".strip()
+    if reservation.grade > 0 and reservation.class_no > 0:
+        return f"{reservation.grade}-{reservation.class_no} {reservation.name}"
+    if reservation.grade > 0:
+        return f"{reservation.grade}학년 {reservation.name}"
+    return reservation.name
+
 @login_required
 def dashboard_landing(request):
     """
@@ -409,6 +438,7 @@ def reservation_index(request, school_slug):
                 'time': p['time'],
                 'display_label': p['display_label'],
                 'reservation': res,
+                'reservation_party': _reservation_party_display(res),
                 'recurring': rec,
                 'grade_lock': grade_lock,
                 'state': state,
@@ -492,6 +522,7 @@ def room_overview(request, school_slug):
         bucket['active_dates'].add(reservation.date)
         bucket['items'].append({
             'reservation': reservation,
+            'party_display': _reservation_party_display(reservation),
             'weekday_name': weekday_names[reservation.date.weekday()],
             'period_label': period_label,
             'period_time': period_time,
@@ -527,6 +558,7 @@ def create_reservation(request, school_slug):
     period = request.POST.get('period')
     grade = request.POST.get('grade')
     class_no = request.POST.get('class_no')
+    target_label = request.POST.get('target_label')
     name = request.POST.get('name')
     memo = request.POST.get('memo', '')
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
@@ -536,8 +568,7 @@ def create_reservation(request, school_slug):
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
-        grade = int(grade)
-        class_no = int(class_no)
+        grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
         
         # [Weekly Limit Check] 백엔드 검증
         if not request.user.is_authenticated or school.owner != request.user: # 관리자는 제한 무시
@@ -578,6 +609,7 @@ def create_reservation(request, school_slug):
             period=period,
             grade=grade,
             class_no=class_no,
+            target_label=target_label,
             name=name,
             memo=memo
         )
@@ -596,6 +628,8 @@ def create_reservation(request, school_slug):
         response['HX-Refresh'] = "true" # 전체 리프레시가 가장 깔끔함 (모달 닫기 등)
         return response
         
+    except ValueError:
+        return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
     except Exception as e:
         logger.error(f"[Reservation Error] {e}")
         return HttpResponse("예약 처리 중 오류가 발생했습니다.", status=500)
@@ -619,6 +653,7 @@ def update_reservation(request, school_slug, reservation_id):
     period = request.POST.get('period')
     grade = request.POST.get('grade')
     class_no = request.POST.get('class_no')
+    target_label = request.POST.get('target_label')
     name = request.POST.get('name')
     memo = request.POST.get('memo', '')
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
@@ -627,8 +662,7 @@ def update_reservation(request, school_slug, reservation_id):
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
-        grade = int(grade)
-        class_no = int(class_no)
+        grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
 
         if not request.user.is_authenticated or school.owner != request.user:
             max_date = get_max_booking_date(school)
@@ -661,9 +695,10 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.period = period
         reservation.grade = grade
         reservation.class_no = class_no
+        reservation.target_label = target_label
         reservation.name = name
         reservation.memo = memo
-        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'name', 'memo'])
+        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo'])
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
 
@@ -671,6 +706,8 @@ def update_reservation(request, school_slug, reservation_id):
         response['HX-Refresh'] = "true"
         return response
 
+    except ValueError:
+        return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
     except Exception as e:
         logger.error(f"[Reservation Update Error] {e}")
         return HttpResponse("예약 수정 중 오류가 발생했습니다.", status=500)

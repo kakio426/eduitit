@@ -17,6 +17,9 @@
         gradeLockActive: false,
         gradeLockGrade: null,
         overrideGradeLock: false,
+        profileVersionKey: 'reservation_profile_version',
+        profileVersion: '2026-03-role-reset-1',
+        profileResetNotice: false,
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
@@ -26,29 +29,70 @@
         getSubmitLabel() {
             return this.submitMode === 'edit' ? '수정하기' : '예약하기';
         },
+        init() {
+            this.applyProfileVersionReset();
+        },
+        applyProfileVersionReset() {
+            const currentVersion = localStorage.getItem(this.profileVersionKey);
+            if (currentVersion !== this.profileVersion) {
+                localStorage.removeItem('my_reservation_info');
+                localStorage.setItem(this.profileVersionKey, this.profileVersion);
+                this.profileResetNotice = true;
+            }
+        },
         rememberInfo: localStorage.getItem('remember_reservation_info') !== '0',
-        grade: '', classNo: '', name: '', memo: '',
+        bookingKind: 'class',
+        grade: '', classNo: '', targetLabel: '', name: '', memo: '',
         loadRememberedInfo() {
             if (!this.rememberInfo) {
                 this.grade = '';
                 this.classNo = '';
+                this.targetLabel = '';
                 this.name = '';
                 return;
             }
-            const saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}');
-            this.grade = saved.grade || '';
-            this.classNo = saved.classNo || '';
+            let saved = {};
+            try {
+                saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}');
+            } catch {
+                saved = {};
+            }
+            const savedTarget = (saved.targetLabel || '').trim();
+            if (savedTarget) {
+                this.bookingKind = 'custom';
+                this.grade = '';
+                this.classNo = '';
+                this.targetLabel = savedTarget;
+            } else {
+                this.bookingKind = 'class';
+                this.grade = saved.grade || '';
+                this.classNo = saved.classNo || '';
+                this.targetLabel = '';
+            }
             this.name = saved.name || '';
+        },
+        setBookingKind(kind) {
+            this.bookingKind = kind === 'custom' ? 'custom' : 'class';
+            if (this.bookingKind === 'custom') {
+                this.grade = '';
+                this.classNo = '';
+            } else {
+                this.targetLabel = '';
+            }
         },
         toggleRememberInfo() {
             localStorage.setItem('remember_reservation_info', this.rememberInfo ? '1' : '0');
             if (!this.rememberInfo) {
                 localStorage.removeItem('my_reservation_info');
             } else {
+                const remembered = this.bookingKind === 'custom'
+                    ? { grade: '', classNo: '', targetLabel: this.targetLabel, name: this.name }
+                    : { grade: this.grade, classNo: this.classNo, targetLabel: '', name: this.name };
                 localStorage.setItem('my_reservation_info', JSON.stringify({
-                    grade: this.grade,
-                    classNo: this.classNo,
-                    name: this.name
+                    grade: remembered.grade,
+                    classNo: remembered.classNo,
+                    targetLabel: remembered.targetLabel,
+                    name: remembered.name
                 }));
             }
         },
@@ -64,6 +108,7 @@
             this.gradeLockActive = Number.isFinite(numericLockGrade);
             this.gradeLockGrade = this.gradeLockActive ? numericLockGrade : null;
             this.overrideGradeLock = false;
+            this.bookingKind = 'class';
             this.loadRememberedInfo();
             this.memo = '';
             this.showModal = true; 
@@ -82,15 +127,34 @@
             this.gradeLockGrade = this.gradeLockActive ? numericLockGrade : null;
             this.overrideGradeLock = false;
 
-            this.grade = payload.grade ?? '';
-            this.classNo = payload.classNo ?? '';
+            this.bookingKind = payload.targetLabel ? 'custom' : 'class';
+            this.grade = payload.grade > 0 ? payload.grade : '';
+            this.classNo = payload.classNo > 0 ? payload.classNo : '';
+            this.targetLabel = payload.targetLabel ?? '';
             this.name = payload.name ?? '';
             this.memo = payload.memo ?? '';
             this.showModal = true;
         },
         prepareReservationSubmit(event) {
-            const numericGrade = Number(this.grade);
+            const numericGrade = this.bookingKind === 'class' ? Number(this.grade) : 0;
             this.overrideGradeLock = false;
+
+            if (this.bookingKind === 'custom') {
+                if (!this.targetLabel || !this.targetLabel.trim()) {
+                    alert('기타 대상(예: 사서, 영양, 보건)을 입력해 주세요.');
+                    event.preventDefault();
+                    return;
+                }
+                this.grade = 0;
+                this.classNo = 0;
+            } else {
+                if (!this.grade || !this.classNo) {
+                    alert('학년과 반을 입력해 주세요.');
+                    event.preventDefault();
+                    return;
+                }
+                this.targetLabel = '';
+            }
 
             if (
                 this.gradeLockActive &&
@@ -98,8 +162,11 @@
                 Number.isFinite(numericGrade) &&
                 numericGrade !== this.gradeLockGrade
             ) {
+                const modeText = this.bookingKind === 'custom'
+                    ? `${this.targetLabel.trim()} 예약으로 변경하면`
+                    : `${numericGrade}학년으로 예약하면`;
                 const shouldOverride = confirm(
-                    `이 슬롯은 ${this.gradeLockGrade}학년 고정입니다.\n${numericGrade}학년으로 예약하면 고정이 해제됩니다.\n계속할까요?`
+                    `이 슬롯은 ${this.gradeLockGrade}학년 고정입니다.\n${modeText} 고정이 해제됩니다.\n계속할까요?`
                 );
                 if (!shouldOverride) {
                     event.preventDefault();
@@ -109,10 +176,14 @@
             }
 
             if (this.rememberInfo) {
+                const remembered = this.bookingKind === 'custom'
+                    ? { grade: '', classNo: '', targetLabel: this.targetLabel, name: this.name }
+                    : { grade: this.grade, classNo: this.classNo, targetLabel: this.targetLabel, name: this.name };
                 localStorage.setItem('my_reservation_info', JSON.stringify({
-                    grade: this.grade,
-                    classNo: this.classNo,
-                    name: this.name
+                    grade: remembered.grade,
+                    classNo: remembered.classNo,
+                    targetLabel: remembered.targetLabel,
+                    name: remembered.name
                 }));
             } else {
                 localStorage.removeItem('my_reservation_info');
@@ -124,6 +195,10 @@
 
     <!-- Header & Date Navigation -->
     <div class="max-w-7xl mx-auto px-4 mb-6">
+        <div x-show="profileResetNotice" x-cloak class="mb-4 px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-semibold flex items-start justify-between gap-3">
+            <span>입력 방식이 변경되어 저장된 정보가 초기화되었습니다. 학년/반 또는 역할을 다시 입력해 주세요.</span>
+            <button type="button" @click="profileResetNotice = false" class="text-indigo-500 hover:text-indigo-700 text-xs font-bold whitespace-nowrap">닫기</button>
+        </div>
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">

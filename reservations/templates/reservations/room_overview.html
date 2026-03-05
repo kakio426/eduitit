@@ -83,7 +83,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-4 py-2 text-gray-700">
-                                    {{ item.reservation.grade }}-{{ item.reservation.class_no }} {{ item.reservation.name }}
+                                    {{ item.party_display }}
                                 </td>
                                 <td class="px-4 py-2 text-gray-500">{{ item.reservation.memo|default:"-" }}</td>
                             </tr>
