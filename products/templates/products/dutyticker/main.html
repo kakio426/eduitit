@@ -546,7 +546,7 @@
 
     #mainAppContainer #mainRoleList .dt-role-slot {
         color: var(--dt-role-slot) !important;
-        font-size: clamp(0.98rem, 0.9rem + 0.22vw, 1.14rem) !important;
+        font-size: 0.86rem !important;
         font-weight: 800;
         letter-spacing: 0 !important;
         text-transform: none;
@@ -554,7 +554,7 @@
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.48rem, 1.22rem + 0.72vw, 2.08rem) !important;
+        font-size: clamp(1.34rem, 1.16rem + 0.55vw, 1.82rem) !important;
         line-height: 1.13 !important;
         letter-spacing: -0.01em;
     }
@@ -568,7 +568,7 @@
     #mainAppContainer #mainRoleList .dt-role-status {
         line-height: 1;
         white-space: nowrap;
-        font-size: 0.95rem !important;
+        font-size: 0.86rem !important;
         font-weight: 800;
     }
 
@@ -593,7 +593,7 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        font-size: 0.9rem;
+        font-size: 0.79rem;
         font-weight: 900;
         text-transform: none;
         letter-spacing: 0.01em;
@@ -613,7 +613,7 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border-color: var(--dt-role-assignee-border) !important;
-        font-size: clamp(1.38rem, 1.2rem + 0.46vw, 1.72rem) !important;
+        font-size: clamp(1.24rem, 1.12rem + 0.34vw, 1.52rem) !important;
         font-weight: 900;
         line-height: 1.15;
         max-width: 100%;
@@ -631,25 +631,24 @@
     .dt-role-card-head {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 0.8rem;
-        margin-bottom: 0.75rem;
-        padding-inline: 0.2rem;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 0.46rem;
+        padding-inline: 0;
     }
 
     .dt-role-title-wrap {
         min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
+        display: block;
     }
 
     .dt-role-title {
-        font-size: clamp(1.1rem, 0.98rem + 0.45vw, 1.5rem) !important;
+        font-size: clamp(1.08rem, 0.98rem + 0.38vw, 1.34rem) !important;
         line-height: 1.1;
     }
 
     .dt-role-subtitle {
+        display: none;
         font-size: 0.77rem;
         color: rgba(148, 163, 184, 0.88);
         font-weight: 700;
@@ -660,23 +659,74 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 0.38rem;
+        gap: 0.32rem;
     }
 
     .dt-role-action-btn {
-        height: 2rem;
-        padding: 0 0.62rem;
+        height: 1.95rem;
+        padding: 0 0.58rem;
         border-radius: 0.7rem;
         border: 1px solid rgba(148, 163, 184, 0.34);
         background: rgba(15, 23, 42, 0.52);
         color: #cbd5e1;
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         font-weight: 900;
         letter-spacing: 0.02em;
         display: inline-flex;
         align-items: center;
         gap: 0.36rem;
         transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-slot {
+        font-size: clamp(0.98rem, 0.9rem + 0.22vw, 1.14rem) !important;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-name {
+        font-size: clamp(1.48rem, 1.22rem + 0.72vw, 2.08rem) !important;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-status {
+        font-size: 0.95rem !important;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee-label {
+        font-size: 0.9rem;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee {
+        font-size: clamp(1.38rem, 1.2rem + 0.46vw, 1.72rem) !important;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-card-head {
+        align-items: flex-start;
+        gap: 0.8rem;
+        margin-bottom: 0.75rem;
+        padding-inline: 0.2rem;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-title {
+        font-size: clamp(1.1rem, 0.98rem + 0.45vw, 1.5rem) !important;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-subtitle {
+        display: block;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-actions {
+        gap: 0.38rem;
+    }
+
+    #mainAppContainer[data-role-view-mode="readable"] .dt-role-action-btn {
+        height: 2rem;
+        padding: 0 0.62rem;
+        font-size: 0.72rem;
     }
 
     .dt-role-action-btn:hover {
@@ -1606,7 +1656,7 @@
 
 {% block content %}
 <!-- Main App Container -->
-<div id="mainAppContainer" data-mission-panel="collapsed"
+<div id="mainAppContainer" data-mission-panel="collapsed" data-role-view-mode="compact"
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
@@ -1879,7 +1929,7 @@
                                 class="bg-pink-500/20 text-pink-400 w-9 h-9 flex items-center justify-center rounded-xl text-base">👑</span>
                             오늘의 역할
                         </h3>
-                        <p class="dt-role-subtitle">역할 목록이 아래로 순차 이동하며 전체 학생을 고르게 보여줍니다.</p>
+                        <p id="roleCardSubtitle" class="dt-role-subtitle">역할명 · 담당 · 상태를 빠르게 확인할 수 있어요.</p>
                     </div>
                     <div class="dt-role-actions">
                         <button id="roleTickerToggleBtn" type="button" title="역할 자동순환 켜기/끄기"

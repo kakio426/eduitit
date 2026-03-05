@@ -139,6 +139,10 @@ class DTSettings(models.Model):
         ("pastel", "차분한 파스텔"),
         ("vivid", "비비드 팝 (캐주얼)"),
     ]
+    ROLE_VIEW_MODE_CHOICES = [
+        ("compact", "밀도형 (기본)"),
+        ("readable", "가독성형 (큰 글씨)"),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dutyticker_settings')
     classroom = models.ForeignKey(
@@ -176,6 +180,12 @@ class DTSettings(models.Model):
         choices=THEME_CHOICES,
         default="deep_space",
         help_text="디자인 테마",
+    )
+    role_view_mode = models.CharField(
+        max_length=20,
+        choices=ROLE_VIEW_MODE_CHOICES,
+        default="compact",
+        help_text="오늘의 역할 표시 모드",
     )
 
     class Meta:

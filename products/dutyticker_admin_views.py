@@ -117,7 +117,21 @@ def update_rotation_settings(request):
     if selected_theme in valid_themes:
         settings.theme = selected_theme
 
-    settings.save(update_fields=["rotation_mode", "auto_rotation", "rotation_frequency", "last_rotation_date", "theme"])
+    selected_role_view_mode = (request.POST.get("role_view_mode") or "").strip()
+    valid_role_view_modes = {choice[0] for choice in DTSettings.ROLE_VIEW_MODE_CHOICES}
+    if selected_role_view_mode in valid_role_view_modes:
+        settings.role_view_mode = selected_role_view_mode
+
+    settings.save(
+        update_fields=[
+            "rotation_mode",
+            "auto_rotation",
+            "rotation_frequency",
+            "last_rotation_date",
+            "theme",
+            "role_view_mode",
+        ]
+    )
 
     return redirect('dt_admin_dashboard')
 

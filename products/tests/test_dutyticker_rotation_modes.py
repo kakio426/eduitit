@@ -29,23 +29,25 @@ class DutyTickerRotationModeTests(TestCase):
 
         response = self.client.post(
             reverse("dt_admin_update_rotation_settings"),
-            data={"rotation_mode": "auto_random"},
+            data={"rotation_mode": "auto_random", "role_view_mode": "compact"},
         )
         self.assertEqual(response.status_code, 302)
 
         settings.refresh_from_db()
         self.assertEqual(settings.rotation_mode, "auto_random")
+        self.assertEqual(settings.role_view_mode, "compact")
         self.assertTrue(settings.auto_rotation)
         self.assertEqual(settings.rotation_frequency, "daily")
 
         response = self.client.post(
             reverse("dt_admin_update_rotation_settings"),
-            data={"rotation_mode": "manual_random"},
+            data={"rotation_mode": "manual_random", "role_view_mode": "readable"},
         )
         self.assertEqual(response.status_code, 302)
 
         settings.refresh_from_db()
         self.assertEqual(settings.rotation_mode, "manual_random")
+        self.assertEqual(settings.role_view_mode, "readable")
         self.assertFalse(settings.auto_rotation)
         self.assertIsNone(settings.last_rotation_date)
 
@@ -73,6 +75,15 @@ class DutyTickerRotationModeTests(TestCase):
         self.assertEqual(second_response.status_code, 200)
         assignment.refresh_from_db()
         self.assertEqual(assignment.student_id, s2.id)
+
+    def test_api_data_includes_role_view_mode(self):
+        settings, _ = DTSettings.objects.get_or_create(user=self.user)
+        settings.role_view_mode = "readable"
+        settings.save(update_fields=["role_view_mode"])
+
+        response = self.client.get(reverse("dt_api_data"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["settings"]["role_view_mode"], "readable")
 
     def test_rotation_trigger_random_behavior(self):
         s1 = DTStudent.objects.create(user=self.user, name="학생1", number=1)

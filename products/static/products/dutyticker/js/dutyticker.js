@@ -11,6 +11,7 @@ class DutyTickerManager {
         this.students = [];
         this.todaySchedule = [];
         this.rotationMode = 'manual_sequential';
+        this.roleViewMode = 'compact';
         this.roleRotateInFlight = false;
         this.isBroadcasting = false;
         this.broadcastMessage = '';
@@ -71,6 +72,7 @@ class DutyTickerManager {
         this.applyMissionFontSize();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
+        this.applyRoleViewMode();
         this.restoreRoleTickerState();
         this.setupRoleTickerControls();
         this.updateRoleTickerUI();
@@ -346,11 +348,13 @@ class DutyTickerManager {
             this.missionTitle = data.settings.mission_title ?? "수학 익힘책 풀기";
             this.missionDesc = data.settings.mission_desc ?? "24~25페이지 풀고 채점하기";
             this.rotationMode = data.settings.rotation_mode || 'manual_sequential';
+            this.roleViewMode = data.settings.role_view_mode || 'compact';
             this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
             this.theme = data.settings.theme || 'deep_space';
 
             // Apply Theme to DOM
             document.documentElement.setAttribute('data-theme', this.theme);
+            this.applyRoleViewMode();
 
             const today = new Date().getDay();
             this.todaySchedule = data.schedule[today] || [];
@@ -483,6 +487,23 @@ class DutyTickerManager {
         this.missionPanelCollapsed = !this.missionPanelCollapsed;
         this.applyMissionPanelState();
         this.saveMissionPanelState();
+    }
+
+    normalizeRoleViewMode(rawMode) {
+        return String(rawMode || '').trim().toLowerCase() === 'readable' ? 'readable' : 'compact';
+    }
+
+    applyRoleViewMode() {
+        const app = document.getElementById('mainAppContainer');
+        const subtitle = document.getElementById('roleCardSubtitle');
+        this.roleViewMode = this.normalizeRoleViewMode(this.roleViewMode);
+
+        if (app) app.setAttribute('data-role-view-mode', this.roleViewMode);
+        if (subtitle) {
+            subtitle.textContent = this.roleViewMode === 'readable'
+                ? '역할 목록이 아래로 순차 이동하며 전체 학생을 고르게 보여줍니다.'
+                : '역할명 · 담당 · 상태를 빠르게 확인할 수 있어요.';
+        }
     }
 
     renderRoleList() {
