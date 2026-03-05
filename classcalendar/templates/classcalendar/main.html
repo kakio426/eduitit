@@ -33,13 +33,24 @@
                 </h1>
                 <p class="mt-1 text-xs sm:text-sm font-medium text-slate-600">캘린더에서 일정을 바로 확인하고 관리하세요.</p>
             </div>
-            <button
-                type="button"
-                @click="openCreateModalForSelectedDate()"
-                class="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
-            >
-                새 일정
-            </button>
+            <div class="flex items-center gap-2">
+                {% if message_capture_enabled %}
+                <a
+                    href="{% url 'classcalendar:legacy_main' %}"
+                    @click.prevent="openMessageCaptureModal($event)"
+                    class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition"
+                >
+                    메시지 바로 등록
+                </a>
+                {% endif %}
+                <button
+                    type="button"
+                    @click="openCreateModalForSelectedDate()"
+                    class="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
+                >
+                    새 일정
+                </button>
+            </div>
         </div>
 
         <div class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5">
@@ -592,6 +603,276 @@
         </div>
     </div>
 
+    <div
+        x-show="messageCaptureModalOpen"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-3 sm:px-4"
+        @click.self="closeMessageCaptureModal()"
+        @keydown.escape.window="closeMessageCaptureModal()"
+    >
+        <div class="w-full max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-2xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-900">메시지 바로 등록</h3>
+                    <p class="mt-1 text-sm text-slate-600">메신저 내용을 붙여넣고 파일을 놓아주세요. 자동으로 읽고 저장 전에 한번 확인합니다.</p>
+                </div>
+                <button
+                    type="button"
+                    @click="closeMessageCaptureModal()"
+                    class="inline-flex items-center rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                >
+                    닫기
+                </button>
+            </div>
+
+            <div class="mt-4" x-show="messageCaptureStep === 'input'">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">메시지 원문</label>
+                        <textarea
+                            x-model="messageCaptureInputText"
+                            rows="7"
+                            class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            placeholder="예) 3월 15일(금) 오후 2시 과학실에서 실험 수업 진행. 준비물은 실험 노트와 필기구입니다."
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">메신저 종류(선택)</label>
+                        <select
+                            x-model="messageCaptureSourceHint"
+                            class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        >
+                            <option value="unknown">직접 붙여넣기</option>
+                            <option value="kakao">카카오톡</option>
+                            <option value="naver_band">네이버 밴드</option>
+                            <option value="sms">문자</option>
+                            <option value="email">이메일</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">첨부파일</label>
+                        <div
+                            class="rounded-xl border-2 border-dashed p-4 transition"
+                            :class="messageCaptureDropActive ? 'border-indigo-400 bg-indigo-50/70' : 'border-slate-300 bg-slate-50'"
+                            @dragover.prevent="messageCaptureDropActive = true"
+                            @dragleave.prevent="messageCaptureDropActive = false"
+                            @drop.prevent="handleMessageCaptureDrop($event)"
+                        >
+                            <p class="text-sm font-semibold text-slate-700">여기로 파일을 드래그하거나 선택 버튼을 눌러주세요.</p>
+                            <p class="mt-1 text-xs text-slate-500" x-text="messageCaptureFileLimitText"></p>
+                            <div class="mt-3">
+                                <input
+                                    x-ref="messageCaptureFileInput"
+                                    type="file"
+                                    class="hidden"
+                                    multiple
+                                    @change="handleMessageCaptureFileInput($event)"
+                                >
+                                <button
+                                    type="button"
+                                    @click="$refs.messageCaptureFileInput.click()"
+                                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                                >
+                                    파일 선택
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template x-if="messageCaptureFileErrors.length > 0">
+                        <div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5">
+                            <template x-for="(errorText, index) in messageCaptureFileErrors" :key="`capture-file-error-${index}`">
+                                <p class="text-xs font-semibold text-rose-700" x-text="errorText"></p>
+                            </template>
+                        </div>
+                    </template>
+
+                    <p
+                        x-show="messageCaptureErrorText"
+                        class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
+                        x-text="messageCaptureErrorText"
+                    ></p>
+
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5" x-show="messageCaptureFiles.length > 0">
+                        <p class="text-xs font-bold text-slate-700 mb-2">첨부 목록</p>
+                        <div class="space-y-1.5">
+                            <template x-for="fileItem in messageCaptureFiles" :key="fileItem.id">
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-slate-800 truncate" x-text="fileItem.name"></p>
+                                        <p class="text-xs text-slate-500" x-text="formatBytes(fileItem.size)"></p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="removeMessageCaptureFile(fileItem.id)"
+                                        class="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
+                                    >
+                                        삭제
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-end gap-2">
+                    <button
+                        type="button"
+                        @click="closeMessageCaptureModal()"
+                        class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold"
+                    >
+                        취소
+                    </button>
+                    <button
+                        type="button"
+                        @click="submitMessageCaptureParse()"
+                        :disabled="isParsingMessageCapture"
+                        class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60"
+                    >
+                        자동으로 읽기
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-4 space-y-3" x-show="messageCaptureStep === 'confirm'">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-lg border px-2 py-1 text-xs font-bold" :class="messageCaptureStatusClass" x-text="messageCaptureStatusText"></span>
+                    <span class="inline-flex items-center rounded-lg border px-2 py-1 text-xs font-bold" :class="messageCaptureConfidenceClass" x-text="messageCaptureConfidenceText"></span>
+                    <span
+                        x-show="messageCaptureNeedsCheck"
+                        class="inline-flex items-center rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700"
+                    >
+                        확인 필요
+                    </span>
+                </div>
+
+                <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5" x-show="messageCaptureWarnings.length > 0">
+                    <template x-for="(warningText, index) in messageCaptureWarnings" :key="`capture-warning-${index}`">
+                        <p class="text-xs font-semibold text-amber-800" x-text="warningText"></p>
+                    </template>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
+                    <input
+                        x-model="messageCaptureDraft.title"
+                        type="text"
+                        maxlength="200"
+                        class="w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        :class="messageCaptureFieldErrors.title ? 'border-rose-300 bg-rose-50' : 'border-slate-300'"
+                    >
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">시작일</label>
+                        <input
+                            x-model="messageCaptureDraft.start_date"
+                            type="date"
+                            class="w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            :class="messageCaptureFieldErrors.start_date ? 'border-rose-300 bg-rose-50' : 'border-slate-300'"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">종료일</label>
+                        <input
+                            x-model="messageCaptureDraft.end_date"
+                            type="date"
+                            class="w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            :class="messageCaptureFieldErrors.end_date ? 'border-rose-300 bg-rose-50' : 'border-slate-300'"
+                        >
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-bold text-slate-700">시간 설정</span>
+                        <button
+                            type="button"
+                            @click="messageCaptureDraft.has_time = !messageCaptureDraft.has_time"
+                            class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition"
+                            :class="messageCaptureDraft.has_time ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'"
+                        >
+                            <span x-text="messageCaptureDraft.has_time ? '설정됨' : '시간 없음'"></span>
+                        </button>
+                    </div>
+                    <div x-show="messageCaptureDraft.has_time" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">시작 시간</label>
+                            <input
+                                x-model="messageCaptureDraft.start_clock"
+                                type="time"
+                                class="w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                :class="messageCaptureFieldErrors.start_clock ? 'border-rose-300 bg-rose-50' : 'border-slate-300'"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">종료 시간</label>
+                            <input
+                                x-model="messageCaptureDraft.end_clock"
+                                type="time"
+                                class="w-full rounded-xl border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                :class="messageCaptureFieldErrors.end_clock ? 'border-rose-300 bg-rose-50' : 'border-slate-300'"
+                            >
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">할 일 요약</label>
+                    <textarea
+                        x-model="messageCaptureDraft.todo_summary"
+                        rows="4"
+                        class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    ></textarea>
+                </div>
+                <div x-show="messageCaptureServerAttachments.length > 0" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <p class="text-xs font-bold text-slate-700 mb-2">저장할 첨부 선택</p>
+                    <div class="space-y-1.5">
+                        <template x-for="attachment in messageCaptureServerAttachments" :key="`capture-attachment-${attachment.id}`">
+                            <label class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-slate-800 truncate" x-text="attachment.original_name"></p>
+                                    <p class="text-xs text-slate-500" x-text="formatBytes(attachment.size_bytes)"></p>
+                                </div>
+                                <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="attachment.is_selected">
+                            </label>
+                        </template>
+                    </div>
+                </div>
+
+                <label
+                    x-show="messageCaptureConfidenceLabel === 'low'"
+                    class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
+                >
+                    <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="messageCaptureLowConfidenceConfirmed">
+                    <span class="text-sm font-semibold text-amber-800">자동 인식값을 확인했고, 이 값으로 저장하겠습니다.</span>
+                </label>
+
+                <p
+                    x-show="messageCaptureErrorText"
+                    class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
+                    x-text="messageCaptureErrorText"
+                ></p>
+
+                <div class="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        @click="backToMessageCaptureInput()"
+                        class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold"
+                    >
+                        다시 붙여넣기
+                    </button>
+                    <button
+                        type="button"
+                        @click="submitMessageCaptureCommit()"
+                        :disabled="isCommittingMessageCapture"
+                        class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-60"
+                    >
+                        이대로 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div x-show="editModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="editModalOpen = false">
         <div class="w-full max-w-xl bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
             <h3 class="text-xl font-extrabold text-slate-900 mb-4">일정 수정</h3>
@@ -717,6 +998,7 @@
 {{ integration_settings_json|json_script:"integration-settings-data" }}
 {{ events_json|json_script:"events-data" }}
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
+{{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
 
 <script>
 function copyCalendarShareUrl() {
@@ -760,14 +1042,58 @@ function calendarApp() {
             reservation_enabled: true,
             signatures_training_enabled: true,
         },
+        messageCaptureEnabled: {{ message_capture_enabled|yesno:"true,false" }},
         calendarOwnerOptions: [],
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', color: 'indigo' },
         editForm: { title: '', note: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', color: 'indigo' },
+        messageCaptureModalOpen: false,
+        messageCaptureStep: 'input',
+        messageCaptureInputText: '',
+        messageCaptureSourceHint: 'unknown',
+        messageCaptureDropActive: false,
+        messageCaptureFiles: [],
+        messageCaptureFileErrors: [],
+        messageCaptureServerAttachments: [],
+        messageCaptureCaptureId: '',
+        messageCaptureWarnings: [],
+        messageCaptureNeedsCheck: false,
+        messageCaptureParseStatus: '',
+        messageCaptureConfidenceScore: 0,
+        messageCaptureConfidenceLabel: 'low',
+        messageCaptureLowConfidenceConfirmed: false,
+        messageCaptureErrorText: '',
+        isParsingMessageCapture: false,
+        isCommittingMessageCapture: false,
+        messageCaptureIdempotencyKey: '',
+        messageCaptureReturnFocusElement: null,
+        messageCaptureLimits: {
+            max_files: 5,
+            max_file_bytes: 8 * 1024 * 1024,
+            allowed_extensions: [],
+        },
+        messageCaptureDraft: {
+            title: '',
+            start_date: '',
+            end_date: '',
+            has_time: false,
+            start_clock: '09:00',
+            end_clock: '10:00',
+            todo_summary: '',
+            color: 'indigo',
+        },
+        messageCaptureFieldErrors: {
+            title: false,
+            start_date: false,
+            end_date: false,
+            start_clock: false,
+            end_clock: false,
+        },
 
         init() {
             this.loadCalendarOwnerOptions();
             this.loadIntegrationSettingsFromScript();
+            this.loadMessageCaptureLimitsFromScript();
             this.loadEventsFromScript();
             this.selectedDateKey = this.dateKey(new Date());
             this.registerReturnSync();
@@ -798,6 +1124,23 @@ function calendarApp() {
                 };
             } catch (e) {
                 window.showToast('연동 설정을 읽는 중 오류가 발생했습니다.', 'error');
+            }
+        },
+
+        loadMessageCaptureLimitsFromScript() {
+            try {
+                const raw = JSON.parse(document.getElementById('message-capture-limits-data').textContent || '{}');
+                this.messageCaptureLimits = {
+                    max_files: Number(raw.max_files || 5),
+                    max_file_bytes: Number(raw.max_file_bytes || (8 * 1024 * 1024)),
+                    allowed_extensions: Array.isArray(raw.allowed_extensions) ? raw.allowed_extensions : [],
+                };
+            } catch (e) {
+                this.messageCaptureLimits = {
+                    max_files: 5,
+                    max_file_bytes: 8 * 1024 * 1024,
+                    allowed_extensions: [],
+                };
             }
         },
 
@@ -897,6 +1240,338 @@ function calendarApp() {
         },
         buildUpdateUrl(eventId) { return `${this.calendarBaseUrl}api/events/${eventId}/update/`; },
         buildDeleteUrl(eventId) { return `${this.calendarBaseUrl}api/events/${eventId}/delete/`; },
+        buildMessageCaptureParseUrl() { return `${this.calendarBaseUrl}api/message-captures/parse/`; },
+        buildMessageCaptureCommitUrl(captureId) { return `${this.calendarBaseUrl}api/message-captures/${captureId}/commit/`; },
+
+        createMessageCaptureIdempotencyKey() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID().replace(/-/g, '');
+            }
+            return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+        },
+
+        formatBytes(sizeBytes) {
+            const size = Number(sizeBytes || 0);
+            if (size < 1024) return `${size}B`;
+            if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)}KB`;
+            return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+        },
+
+        getFileExtension(fileName) {
+            const name = String(fileName || '');
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot < 0) return '';
+            return name.slice(lastDot + 1).toLowerCase();
+        },
+
+        validateMessageCaptureFile(file) {
+            if (!file) {
+                return '파일을 읽을 수 없습니다.';
+            }
+            if (file.size > this.messageCaptureLimits.max_file_bytes) {
+                return `${file.name} 파일은 ${this.formatBytes(this.messageCaptureLimits.max_file_bytes)} 이하만 첨부할 수 있습니다.`;
+            }
+            const extension = this.getFileExtension(file.name);
+            const allowed = this.messageCaptureLimits.allowed_extensions || [];
+            if (allowed.length > 0 && !allowed.includes(extension)) {
+                return `${file.name} 파일 형식(.${extension || '없음'})은 지원하지 않습니다.`;
+            }
+            return '';
+        },
+
+        resetMessageCaptureFieldErrors() {
+            this.messageCaptureFieldErrors = {
+                title: false,
+                start_date: false,
+                end_date: false,
+                start_clock: false,
+                end_clock: false,
+            };
+        },
+
+        resetMessageCaptureFlow() {
+            this.messageCaptureStep = 'input';
+            this.messageCaptureInputText = '';
+            this.messageCaptureSourceHint = 'unknown';
+            this.messageCaptureDropActive = false;
+            this.messageCaptureFiles = [];
+            this.messageCaptureFileErrors = [];
+            this.messageCaptureServerAttachments = [];
+            this.messageCaptureCaptureId = '';
+            this.messageCaptureWarnings = [];
+            this.messageCaptureNeedsCheck = false;
+            this.messageCaptureParseStatus = '';
+            this.messageCaptureConfidenceScore = 0;
+            this.messageCaptureConfidenceLabel = 'low';
+            this.messageCaptureLowConfidenceConfirmed = false;
+            this.messageCaptureErrorText = '';
+            this.isParsingMessageCapture = false;
+            this.isCommittingMessageCapture = false;
+            this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+            this.messageCaptureDraft = {
+                title: '',
+                start_date: this.dateKey(new Date()),
+                end_date: this.dateKey(new Date()),
+                has_time: false,
+                start_clock: '09:00',
+                end_clock: '10:00',
+                todo_summary: '',
+                color: 'indigo',
+            };
+            this.resetMessageCaptureFieldErrors();
+        },
+
+        openMessageCaptureModal(event) {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 바로 등록 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            this.messageCaptureReturnFocusElement = event && event.currentTarget ? event.currentTarget : document.activeElement;
+            this.resetMessageCaptureFlow();
+            this.messageCaptureModalOpen = true;
+        },
+
+        closeMessageCaptureModal() {
+            this.messageCaptureModalOpen = false;
+            this.messageCaptureStep = 'input';
+            this.messageCaptureErrorText = '';
+            if (this.messageCaptureReturnFocusElement && typeof this.messageCaptureReturnFocusElement.focus === 'function') {
+                setTimeout(() => {
+                    this.messageCaptureReturnFocusElement.focus();
+                }, 0);
+            }
+        },
+
+        handleMessageCaptureDrop(event) {
+            this.messageCaptureDropActive = false;
+            const droppedFiles = event && event.dataTransfer ? event.dataTransfer.files : null;
+            this.addMessageCaptureFiles(droppedFiles);
+        },
+
+        handleMessageCaptureFileInput(event) {
+            const selectedFiles = event && event.target ? event.target.files : null;
+            this.addMessageCaptureFiles(selectedFiles);
+            if (event && event.target) {
+                event.target.value = '';
+            }
+        },
+
+        addMessageCaptureFiles(fileList) {
+            if (!fileList || fileList.length === 0) return;
+            this.messageCaptureFileErrors = [];
+            const maxFiles = Number(this.messageCaptureLimits.max_files || 5);
+            for (const file of Array.from(fileList)) {
+                if (this.messageCaptureFiles.length >= maxFiles) {
+                    this.messageCaptureFileErrors.push(`첨부파일은 최대 ${maxFiles}개까지 추가할 수 있습니다.`);
+                    break;
+                }
+                const duplicate = this.messageCaptureFiles.find((item) => item.name === file.name && item.size === file.size);
+                if (duplicate) {
+                    this.messageCaptureFileErrors.push(`${file.name} 파일은 이미 추가되어 있습니다.`);
+                    continue;
+                }
+                const validationError = this.validateMessageCaptureFile(file);
+                if (validationError) {
+                    this.messageCaptureFileErrors.push(validationError);
+                    continue;
+                }
+                this.messageCaptureFiles.push({
+                    id: this.createMessageCaptureIdempotencyKey(),
+                    name: file.name,
+                    size: file.size,
+                    file,
+                });
+            }
+        },
+
+        removeMessageCaptureFile(fileId) {
+            this.messageCaptureFiles = this.messageCaptureFiles.filter((item) => item.id !== fileId);
+        },
+
+        applyMessageCaptureResult(payload) {
+            const draft = payload.draft_event || {};
+            const start = draft.start_time ? new Date(draft.start_time) : null;
+            const end = draft.end_time ? new Date(draft.end_time) : null;
+            const fallbackDate = this.dateKey(new Date());
+            const hasTime = !!start && !!end && !draft.is_all_day;
+
+            this.messageCaptureCaptureId = String(payload.capture_id || '');
+            this.messageCaptureParseStatus = String(payload.parse_status || '');
+            this.messageCaptureConfidenceScore = Number(payload.confidence_score || 0);
+            this.messageCaptureConfidenceLabel = String(payload.confidence_label || 'low');
+            this.messageCaptureWarnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+            this.messageCaptureNeedsCheck = !!(draft.needs_confirmation || this.messageCaptureConfidenceLabel === 'low' || this.messageCaptureParseStatus !== 'parsed');
+            this.messageCaptureLowConfidenceConfirmed = this.messageCaptureConfidenceLabel !== 'low';
+            this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
+                ? payload.attachments.map((attachment) => ({
+                    id: String(attachment.id),
+                    original_name: attachment.original_name || '첨부파일',
+                    size_bytes: Number(attachment.size_bytes || 0),
+                    is_selected: attachment.is_selected !== false,
+                }))
+                : [];
+            this.messageCaptureDraft = {
+                title: draft.title || '',
+                start_date: start ? this.dateKey(start) : fallbackDate,
+                end_date: end ? this.dateKey(end) : (start ? this.dateKey(start) : fallbackDate),
+                has_time: hasTime,
+                start_clock: start ? this.toTimeInput(start) : '09:00',
+                end_clock: end ? this.toTimeInput(end) : '10:00',
+                todo_summary: draft.todo_summary || '',
+                color: 'indigo',
+            };
+            this.messageCaptureErrorText = '';
+            this.resetMessageCaptureFieldErrors();
+            this.messageCaptureStep = 'confirm';
+        },
+
+        async submitMessageCaptureParse() {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 바로 등록 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            if (!this.messageCaptureInputText.trim() && this.messageCaptureFiles.length === 0) {
+                this.messageCaptureErrorText = '메시지 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            this.isParsingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+
+            const formData = new FormData();
+            formData.append('raw_text', this.messageCaptureInputText);
+            formData.append('source_hint', this.messageCaptureSourceHint || 'unknown');
+            formData.append('idempotency_key', this.messageCaptureIdempotencyKey);
+            this.messageCaptureFiles.forEach((fileItem) => {
+                formData.append('files', fileItem.file);
+            });
+
+            try {
+                const payload = await this.requestJson(this.buildMessageCaptureParseUrl(), {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                    body: formData,
+                });
+                this.applyMessageCaptureResult(payload);
+                window.showToast('자동으로 읽은 결과를 확인해 주세요.', 'success');
+            } catch (err) {
+                this.messageCaptureErrorText = err.message || '메시지 읽기에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isParsingMessageCapture = false;
+            }
+        },
+
+        backToMessageCaptureInput() {
+            this.messageCaptureStep = 'input';
+            this.messageCaptureErrorText = '';
+            this.resetMessageCaptureFieldErrors();
+            this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+        },
+
+        buildMessageCaptureEventTimes() {
+            this.resetMessageCaptureFieldErrors();
+            const draft = this.messageCaptureDraft;
+            const title = String(draft.title || '').trim();
+            if (!title) this.messageCaptureFieldErrors.title = true;
+            if (!draft.start_date) this.messageCaptureFieldErrors.start_date = true;
+            if (!draft.end_date) this.messageCaptureFieldErrors.end_date = true;
+            if (draft.end_date && draft.start_date && draft.end_date < draft.start_date) {
+                this.messageCaptureFieldErrors.end_date = true;
+                this.messageCaptureErrorText = '종료일은 시작일보다 빠를 수 없습니다.';
+                return null;
+            }
+
+            if (draft.has_time) {
+                if (!draft.start_clock) this.messageCaptureFieldErrors.start_clock = true;
+                if (!draft.end_clock) this.messageCaptureFieldErrors.end_clock = true;
+            }
+
+            if (Object.values(this.messageCaptureFieldErrors).some((value) => value)) {
+                this.messageCaptureErrorText = '필수 항목을 확인해 주세요.';
+                return null;
+            }
+
+            if (!draft.has_time) {
+                return {
+                    start_time: `${draft.start_date}T00:00`,
+                    end_time: `${draft.end_date}T23:59`,
+                    is_all_day: true,
+                };
+            }
+
+            const start = new Date(`${draft.start_date}T${draft.start_clock}`);
+            const end = new Date(`${draft.end_date}T${draft.end_clock}`);
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                this.messageCaptureErrorText = '시간 형식을 확인해 주세요.';
+                return null;
+            }
+            if (end <= start) {
+                this.messageCaptureFieldErrors.end_clock = true;
+                this.messageCaptureErrorText = '종료 시간은 시작 시간 이후여야 합니다.';
+                return null;
+            }
+            return {
+                start_time: `${draft.start_date}T${draft.start_clock}`,
+                end_time: `${draft.end_date}T${draft.end_clock}`,
+                is_all_day: false,
+            };
+        },
+
+        async submitMessageCaptureCommit() {
+            if (!this.messageCaptureCaptureId) {
+                this.messageCaptureErrorText = '저장 대상 메시지를 다시 읽어주세요.';
+                return;
+            }
+            if (this.messageCaptureConfidenceLabel === 'low' && !this.messageCaptureLowConfidenceConfirmed) {
+                this.messageCaptureErrorText = '신뢰도가 낮아 확인 완료 체크가 필요합니다.';
+                return;
+            }
+
+            const eventTimes = this.buildMessageCaptureEventTimes();
+            if (!eventTimes) return;
+
+            this.isCommittingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+            const selectedAttachmentIds = this.messageCaptureServerAttachments
+                .filter((attachment) => attachment.is_selected)
+                .map((attachment) => attachment.id);
+
+            const body = {
+                title: String(this.messageCaptureDraft.title || '').trim(),
+                todo_summary: this.messageCaptureDraft.todo_summary || '',
+                start_time: eventTimes.start_time,
+                end_time: eventTimes.end_time,
+                is_all_day: eventTimes.is_all_day,
+                color: this.messageCaptureDraft.color || 'indigo',
+                selected_attachment_ids: selectedAttachmentIds,
+                confirm_low_confidence: this.messageCaptureLowConfidenceConfirmed,
+            };
+
+            try {
+                const payload = await this.requestJson(this.buildMessageCaptureCommitUrl(this.messageCaptureCaptureId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: JSON.stringify(body),
+                });
+                await this.refreshEvents();
+                this.closeMessageCaptureModal();
+                const warningCount = Array.isArray(payload.warnings) ? payload.warnings.length : 0;
+                if (warningCount > 0) {
+                    window.showToast(`일정은 저장됐지만 첨부 ${warningCount}개는 제외되었습니다.`, 'info');
+                } else {
+                    window.showToast('일정을 저장했습니다.', 'success');
+                }
+            } catch (err) {
+                this.messageCaptureErrorText = err.message || '일정 저장에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isCommittingMessageCapture = false;
+            }
+        },
 
         async refreshEvents(options = {}) {
             const forceSync = !!options.forceSync;
@@ -1149,6 +1824,47 @@ function calendarApp() {
             }
         },
 
+        get messageCaptureFileLimitText() {
+            const maxFiles = Number(this.messageCaptureLimits.max_files || 5);
+            const maxBytes = Number(this.messageCaptureLimits.max_file_bytes || (8 * 1024 * 1024));
+            const extensions = Array.isArray(this.messageCaptureLimits.allowed_extensions)
+                ? this.messageCaptureLimits.allowed_extensions.join(', ')
+                : '';
+            return `최대 ${maxFiles}개, 파일당 ${this.formatBytes(maxBytes)} 이하${extensions ? `, 지원 형식: ${extensions}` : ''}`;
+        },
+        get messageCaptureStatusText() {
+            const map = {
+                parsed: '파싱 완료',
+                needs_review: '검토 필요',
+                failed: '파싱 실패',
+            };
+            return map[this.messageCaptureParseStatus] || '확인 필요';
+        },
+        get messageCaptureStatusClass() {
+            const map = {
+                parsed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                needs_review: 'border-amber-200 bg-amber-50 text-amber-700',
+                failed: 'border-rose-200 bg-rose-50 text-rose-700',
+            };
+            return map[this.messageCaptureParseStatus] || 'border-slate-200 bg-slate-100 text-slate-700';
+        },
+        get messageCaptureConfidenceText() {
+            const score = Number(this.messageCaptureConfidenceScore || 0).toFixed(0);
+            const labelMap = {
+                high: '높음',
+                medium: '보통',
+                low: '낮음',
+            };
+            return `신뢰도 ${labelMap[this.messageCaptureConfidenceLabel] || '낮음'} (${score}점)`;
+        },
+        get messageCaptureConfidenceClass() {
+            const map = {
+                high: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                medium: 'border-amber-200 bg-amber-50 text-amber-700',
+                low: 'border-rose-200 bg-rose-50 text-rose-700',
+            };
+            return map[this.messageCaptureConfidenceLabel] || 'border-rose-200 bg-rose-50 text-rose-700';
+        },
         get currentMonthText() { return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`; },
         get todayEventsCount() { return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length; },
         get weekEventsCount() {

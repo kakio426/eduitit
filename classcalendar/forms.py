@@ -40,3 +40,41 @@ class CalendarEventCreateForm(forms.Form):
         if start_time and end_time and end_time < start_time:
             raise forms.ValidationError("종료 시간은 시작 시간보다 같거나 이후여야 합니다.")
         return cleaned_data
+
+
+class MessageCaptureParseForm(forms.Form):
+    raw_text = forms.CharField(required=False, max_length=20000)
+    source_hint = forms.CharField(required=False, max_length=30)
+    idempotency_key = forms.CharField(required=False, max_length=64)
+
+
+class MessageCaptureCommitForm(forms.Form):
+    title = forms.CharField(max_length=200)
+    todo_summary = forms.CharField(required=False, max_length=5000)
+    start_time = forms.DateTimeField(
+        input_formats=[
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S",
+        ]
+    )
+    end_time = forms.DateTimeField(
+        input_formats=[
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S",
+        ]
+    )
+    is_all_day = forms.BooleanField(required=False)
+    color = forms.ChoiceField(choices=EVENT_COLORS, required=False)
+    confirm_low_confidence = forms.BooleanField(required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get("start_time")
+        end_time = cleaned_data.get("end_time")
+        if start_time and end_time and end_time < start_time:
+            raise forms.ValidationError("종료 시간은 시작 시간보다 같거나 이후여야 합니다.")
+        return cleaned_data
