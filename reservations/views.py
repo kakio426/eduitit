@@ -15,6 +15,16 @@ import logging
 logger = logging.getLogger(__name__)
 OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
 
+
+def _can_edit_reservation(request, reservation):
+    """예약 생성자(로그인) 또는 동일 세션(익명)만 수정/삭제 허용."""
+    owned_ids = set(request.session.get(OWNED_RESERVATIONS_SESSION_KEY, []))
+    if reservation.id in owned_ids:
+        return True
+    if request.user.is_authenticated and reservation.created_by_id == request.user.id:
+        return True
+    return False
+
 @login_required
 def dashboard_landing(request):
     """
@@ -360,6 +370,9 @@ def reservation_index(request, school_slug):
     recurring = RecurringSchedule.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     grade_locks = GradeRecurringLock.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     
+    owned_ids = set(request.session.get(OWNED_RESERVATIONS_SESSION_KEY, []))
+    current_user_id = request.user.id if request.user.is_authenticated else None
+
     # 매트릭스 구성
     reservation_map = {(r.room_id, r.period): r for r in reservations}
     recurring_map = {(r.room_id, r.period): r for r in recurring}
@@ -372,6 +385,12 @@ def reservation_index(request, school_slug):
             res = reservation_map.get((room.id, p['id']))
             rec = recurring_map.get((room.id, p['id']))
             grade_lock = grade_lock_map.get((room.id, p['id']))
+            can_edit = bool(
+                res and (
+                    (res.id in owned_ids)
+                    or (current_user_id and res.created_by_id == current_user_id)
+                )
+            )
             
             # 상태 결정
             state = 'available'
@@ -392,7 +411,9 @@ def reservation_index(request, school_slug):
                 'reservation': res,
                 'recurring': rec,
                 'grade_lock': grade_lock,
-                'state': state
+                'state': state,
+                'can_edit': can_edit,
+                'can_admin_override': bool(request.user.is_authenticated and request.user == school.owner),
             })
             
         rooms_data.append({
@@ -418,6 +439,83 @@ def reservation_index(request, school_slug):
         return render(request, 'reservations/partials/reservation_grid.html', context)
         
     return render(request, 'reservations/index.html', context)
+
+
+def room_overview(request, school_slug):
+    """
+    특별실별 예약 현황 요약/목록 (교사/일반 예약자 공용 조회)
+    """
+    school = get_object_or_404(School, slug=school_slug)
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+
+    from_str = request.GET.get('from')
+    days_str = request.GET.get('days', '7')
+
+    try:
+        start_date = datetime.strptime(from_str, '%Y-%m-%d').date() if from_str else timezone.localdate()
+    except ValueError:
+        start_date = timezone.localdate()
+
+    try:
+        days = int(days_str)
+    except (TypeError, ValueError):
+        days = 7
+    days = max(1, min(days, 31))
+    end_date = start_date + timedelta(days=days - 1)
+
+    period_slots = config.get_period_slots()
+    period_map = {slot['id']: slot for slot in period_slots}
+    weekday_names = ['월', '화', '수', '목', '금', '토', '일']
+
+    rooms = list(school.specialroom_set.all().order_by('name'))
+    reservations = Reservation.objects.filter(
+        room__school=school,
+        date__range=(start_date, end_date),
+    ).select_related('room').order_by('room__name', 'date', 'period', 'created_at')
+
+    grouped = {
+        room.id: {
+            'room': room,
+            'total_count': 0,
+            'active_dates': set(),
+            'items': [],
+        }
+        for room in rooms
+    }
+
+    for reservation in reservations:
+        slot = period_map.get(reservation.period)
+        period_label = slot['label'] if slot else f"{reservation.period}교시"
+        period_time = slot['time'] if slot else ''
+        bucket = grouped[reservation.room_id]
+        bucket['total_count'] += 1
+        bucket['active_dates'].add(reservation.date)
+        bucket['items'].append({
+            'reservation': reservation,
+            'weekday_name': weekday_names[reservation.date.weekday()],
+            'period_label': period_label,
+            'period_time': period_time,
+        })
+
+    rooms_data = []
+    for room in rooms:
+        bucket = grouped[room.id]
+        rooms_data.append({
+            'room': room,
+            'total_count': bucket['total_count'],
+            'active_day_count': len(bucket['active_dates']),
+            'items': bucket['items'],
+        })
+
+    context = {
+        'school': school,
+        'rooms_data': rooms_data,
+        'start_date': start_date,
+        'end_date': end_date,
+        'days': days,
+        'total_count': sum(room_data['total_count'] for room_data in rooms_data),
+    }
+    return render(request, 'reservations/room_overview.html', context)
 
 @require_POST
 def create_reservation(request, school_slug):
@@ -502,6 +600,81 @@ def create_reservation(request, school_slug):
         logger.error(f"[Reservation Error] {e}")
         return HttpResponse("예약 처리 중 오류가 발생했습니다.", status=500)
 
+
+@require_POST
+def update_reservation(request, school_slug, reservation_id):
+    school = get_object_or_404(School, slug=school_slug)
+    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+
+    if not _can_edit_reservation(request, reservation):
+        logger.warning(
+            "[Reservation] Unauthorized update attempt blocked | reservation_id=%s | school=%s",
+            reservation_id,
+            school.slug,
+        )
+        return HttpResponseForbidden("수정 권한이 없습니다.")
+
+    room_id = request.POST.get('room_id')
+    date_str = request.POST.get('date')
+    period = request.POST.get('period')
+    grade = request.POST.get('grade')
+    class_no = request.POST.get('class_no')
+    name = request.POST.get('name')
+    memo = request.POST.get('memo', '')
+    override_grade_lock = request.POST.get('override_grade_lock') == '1'
+
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        period = int(period)
+        room = get_object_or_404(SpecialRoom, id=room_id, school=school)
+        grade = int(grade)
+        class_no = int(class_no)
+
+        if not request.user.is_authenticated or school.owner != request.user:
+            max_date = get_max_booking_date(school)
+            if max_date and target_date > max_date:
+                return HttpResponse(
+                    f"<script>alert('예약이 아직 열리지 않았습니다. {max_date.strftime('%Y-%m-%d')}까지만 예약 가능합니다.');</script>",
+                    status=200
+                )
+
+        if BlackoutDate.objects.filter(school=school, start_date__lte=target_date, end_date__gte=target_date).exists():
+            return HttpResponse("예약이 불가능한 날짜입니다.", status=400)
+
+        if RecurringSchedule.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).exists():
+            return HttpResponse("고정 수업이 있는 시간입니다.", status=400)
+
+        grade_lock = GradeRecurringLock.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).first()
+        if grade_lock and grade != grade_lock.grade:
+            if not override_grade_lock:
+                return HttpResponse(
+                    f"이 슬롯은 현재 {grade_lock.grade}학년 고정입니다. 다른 학년으로 예약하려면 고정을 해제하고 진행해 주세요.",
+                    status=409,
+                )
+            grade_lock.delete()
+
+        if Reservation.objects.filter(room=room, date=target_date, period=period).exclude(id=reservation.id).exists():
+            return HttpResponse("이미 예약된 시간입니다.", status=409)
+
+        reservation.room = room
+        reservation.date = target_date
+        reservation.period = period
+        reservation.grade = grade
+        reservation.class_no = class_no
+        reservation.name = name
+        reservation.memo = memo
+        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'name', 'memo'])
+
+        messages.success(request, f"{period}교시 예약이 수정되었습니다.")
+
+        response = HttpResponse()
+        response['HX-Refresh'] = "true"
+        return response
+
+    except Exception as e:
+        logger.error(f"[Reservation Update Error] {e}")
+        return HttpResponse("예약 수정 중 오류가 발생했습니다.", status=500)
+
 @require_POST
 def delete_reservation(request, school_slug, reservation_id):
     """
@@ -513,7 +686,7 @@ def delete_reservation(request, school_slug, reservation_id):
     reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
 
     owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
-    if reservation.id not in owned_ids:
+    if not _can_edit_reservation(request, reservation):
         logger.warning(
             "[Reservation] Unauthorized delete attempt blocked | reservation_id=%s | school=%s",
             reservation_id,

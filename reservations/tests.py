@@ -82,6 +82,25 @@ class ReservationsViewTest(TestCase):
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 
+    def test_delete_reservation_by_creator_without_session_ownership(self):
+        self.client.force_login(self.user)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=6,
+            grade=4,
+            class_no=1,
+            name='Creator Delete'
+        )
+
+        # 세션 owned_reservation_ids 없이도 created_by가 본인이면 삭제 가능해야 한다.
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url)
+
+        self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
     def test_delete_reservation_forbidden_without_ownership(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -96,6 +115,63 @@ class ReservationsViewTest(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_update_reservation_by_creator(self):
+        self.client.force_login(self.user)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=2,
+            grade=5,
+            class_no=2,
+            name='Before Update',
+            memo='old memo',
+        )
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 2,
+            'grade': 6,
+            'class_no': 3,
+            'name': 'After Update',
+            'memo': 'new memo',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.grade, 6)
+        self.assertEqual(reservation.class_no, 3)
+        self.assertEqual(reservation.name, 'After Update')
+        self.assertEqual(reservation.memo, 'new memo')
+
+    def test_update_reservation_forbidden_without_ownership(self):
+        other_user = User.objects.create_user(username='other', password='password2', email='other@example.com')
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=other_user,
+            date=self.target_date,
+            period=3,
+            grade=3,
+            class_no=1,
+            name='Protected Update',
+        )
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 3,
+            'grade': 4,
+            'class_no': 1,
+            'name': 'Should Fail',
+        })
+
+        self.assertEqual(response.status_code, 403)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.name, 'Protected Update')
 
     def test_anonymous_can_delete_only_own_session_reservation(self):
         self.client.logout()
@@ -266,3 +342,62 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Reservation.objects.filter(room=self.room, date=self.target_date, period=3).exists())
         self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=3).exists())
+
+    def test_room_overview_is_public_and_grouped_by_room(self):
+        second_room = SpecialRoom.objects.create(school=self.school, name='Music Room', icon='🎵')
+        Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=1,
+            grade=3,
+            class_no=2,
+            name='Alpha',
+            memo='실험',
+        )
+        Reservation.objects.create(
+            room=second_room,
+            date=self.target_date,
+            period=2,
+            grade=5,
+            class_no=1,
+            name='Beta',
+        )
+
+        self.client.logout()
+        url = reverse('reservations:room_overview', args=[self.school.slug])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '특별실별 예약 현황')
+        self.assertContains(response, 'Science Room')
+        self.assertContains(response, 'Music Room')
+        self.assertContains(response, 'Alpha')
+        self.assertContains(response, 'Beta')
+
+    def test_room_overview_respects_date_range_filter(self):
+        Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=1,
+            grade=4,
+            class_no=1,
+            name='In Range',
+        )
+        Reservation.objects.create(
+            room=self.room,
+            date=self.target_date + timedelta(days=10),
+            period=2,
+            grade=4,
+            class_no=2,
+            name='Out Of Range',
+        )
+
+        url = reverse('reservations:room_overview', args=[self.school.slug])
+        response = self.client.get(url, {
+            'from': self.target_date.strftime('%Y-%m-%d'),
+            'days': 7,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'In Range')
+        self.assertNotContains(response, 'Out Of Range')

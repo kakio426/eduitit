@@ -38,13 +38,22 @@
                             {% endif %}
 
                             <!-- My Reservation Highlight & Delete -->
-                            <div x-show="myReservations.includes({{ s.reservation.id }})"
-                                class="absolute top-1 right-1">
+                            {% if s.can_edit %}
+                            <div class="absolute top-1 right-1">
                                 <i class="fas fa-check-circle text-purple-500 text-xs"></i>
                             </div>
+                            {% endif %}
 
                             <!-- User Delete -->
-                            <button x-show="myReservations.includes({{ s.reservation.id }})"
+                            {% if s.can_edit %}
+                            <button
+                                @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ p.id }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                                type="button"
+                                class="absolute bottom-1 right-8 text-indigo-300 hover:text-indigo-500 hidden group-hover:block"
+                                onclick="event.stopPropagation()">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                            <button
                                 hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
                                 hx-confirm="예약을 취소하시겠습니까?" hx-target="#reservation-grid-container"
                                 hx-indicator="#reservation-delete-indicator-desktop-{{ s.reservation.id }}"
@@ -57,9 +66,10 @@
                                 </span>
                                 <i class="fas fa-trash-alt text-xs"></i>
                             </button>
+                            {% endif %}
 
                             <!-- Admin Delete Override -->
-                            {% if user.is_authenticated and user == school.owner %}
+                            {% if s.can_admin_override %}
                             <button
                                 hx-post="{% url 'reservations:admin_delete_reservation' school.slug s.reservation.id %}"
                                 hx-confirm="[관리자 권한] 이 예약을 강제로 삭제하시겠습니까?" hx-target="#reservation-grid-container"
@@ -140,12 +150,22 @@
                     <div class="text-purple-800 font-bold text-sm">{{ s.reservation.grade }}-{{ s.reservation.class_no }} {{ s.reservation.name }}</div>
 
                     <!-- My Reservation -->
-                    <div x-show="myReservations.includes({{ s.reservation.id }})" class="absolute top-1 right-2">
+                    {% if s.can_edit %}
+                    <div class="absolute top-1 right-2">
                         <i class="fas fa-check-circle text-purple-500 text-[10px]"></i>
                     </div>
+                    {% endif %}
 
                     <!-- User Delete -->
-                    <button x-show="myReservations.includes({{ s.reservation.id }})"
+                    {% if s.can_edit %}
+                    <button
+                        @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ s.period }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                        type="button"
+                        class="absolute bottom-1 right-8 text-indigo-500 hover:text-indigo-700 p-1 inline-flex items-center gap-1"
+                        onclick="event.stopPropagation()">
+                        <i class="fas fa-pen text-[10px]"></i>
+                    </button>
+                    <button
                         hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
                         hx-confirm="예약을 취소하시겠습니까?" hx-target="#reservation-grid-container"
                         hx-indicator="#reservation-delete-indicator-mobile-{{ s.reservation.id }}"
@@ -158,9 +178,10 @@
                         </span>
                         <i class="fas fa-trash-alt text-[10px]"></i>
                     </button>
+                    {% endif %}
 
                     <!-- Admin Delete Override -->
-                    {% if user.is_authenticated and user == school.owner %}
+                    {% if s.can_admin_override %}
                     <button hx-post="{% url 'reservations:admin_delete_reservation' school.slug s.reservation.id %}"
                         hx-confirm="[관리자 권한] 이 예약을 강제로 삭제하시겠습니까?" hx-target="#reservation-grid-container"
                         hx-indicator="#reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}"

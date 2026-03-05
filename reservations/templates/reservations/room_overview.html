@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="pb-16 min-h-screen bg-[#E0E5EC]"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 1.25rem);">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <span class="text-3xl">📊</span>
+                    <span>{{ school.name }} 특별실별 예약 현황</span>
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    {{ start_date|date:"Y.m.d" }} ~ {{ end_date|date:"Y.m.d" }} · 총 {{ total_count }}건
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{% url 'reservations:reservation_index' school.slug %}"
+                    class="px-3 py-2 rounded-lg bg-white text-gray-700 text-sm font-bold hover:bg-gray-50 border border-gray-200">
+                    예약 격자로 돌아가기
+                </a>
+            </div>
+        </div>
+
+        <form method="get" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:items-end gap-3">
+                <div>
+                    <label for="from" class="block text-xs font-bold text-gray-500 mb-1">시작일</label>
+                    <input id="from" type="date" name="from" value="{{ start_date|date:'Y-m-d' }}"
+                        class="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                </div>
+                <div>
+                    <label for="days" class="block text-xs font-bold text-gray-500 mb-1">조회 기간</label>
+                    <select id="days" name="days" class="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>7일</option>
+                        <option value="14" {% if days == 14 %}selected{% endif %}>14일</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>30일</option>
+                    </select>
+                </div>
+                <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                    현황 조회
+                </button>
+            </div>
+        </form>
+
+        <div class="space-y-4">
+            {% for room_data in rooms_data %}
+            <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+                    <h2 class="text-lg font-extrabold text-gray-800 flex items-center gap-2">
+                        <span class="text-2xl">{{ room_data.room.icon }}</span>
+                        <span>{{ room_data.room.name }}</span>
+                    </h2>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-gray-700">예약 {{ room_data.total_count }}건</div>
+                        <div class="text-xs text-gray-400">예약된 날짜 {{ room_data.active_day_count }}일</div>
+                    </div>
+                </div>
+
+                {% if room_data.items %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-500">
+                            <tr>
+                                <th class="text-left px-4 py-2 font-bold">날짜</th>
+                                <th class="text-left px-4 py-2 font-bold">교시</th>
+                                <th class="text-left px-4 py-2 font-bold">예약자</th>
+                                <th class="text-left px-4 py-2 font-bold">메모</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in room_data.items %}
+                            <tr class="border-t border-gray-100">
+                                <td class="px-4 py-2 text-gray-700">
+                                    {{ item.reservation.date|date:"m/d" }} ({{ item.weekday_name }})
+                                </td>
+                                <td class="px-4 py-2 text-gray-700">
+                                    {{ item.period_label }}
+                                    {% if item.period_time %}
+                                    <span class="text-xs text-gray-400">({{ item.period_time }})</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-2 text-gray-700">
+                                    {{ item.reservation.grade }}-{{ item.reservation.class_no }} {{ item.reservation.name }}
+                                </td>
+                                <td class="px-4 py-2 text-gray-500">{{ item.reservation.memo|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="px-5 py-6 text-sm text-gray-400">해당 기간 예약이 없습니다.</div>
+                {% endif %}
+            </section>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
