@@ -784,14 +784,13 @@ def reset_data(request):
 
     user = request.user
     classroom = get_active_classroom_for_request(request)
-    settings, _ = get_or_create_settings_for_scope(user, classroom)
-    settings.last_broadcast_message = ""
-    settings.spotlight_student = None
-    settings.save(update_fields=["last_broadcast_message", "spotlight_student"])
     apply_classroom_scope(DTStudent.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTRole.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom).delete()
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
+    settings.last_broadcast_message = ""
+    settings.save()
     create_mockup_data(user, classroom=classroom)
     return JsonResponse({'success': True, 'message': 'Data reset to mockup'})
 
@@ -826,7 +825,6 @@ def reset_assignments_only(request):
         'message': '학생 배정만 초기화되었습니다.',
         'updated_count': updated_count,
     })
-
 
 @require_http_methods(["POST"])
 def reset_student_missions(request):
