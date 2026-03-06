@@ -177,8 +177,12 @@ class DutyTickerManager {
         return cookieValue;
     }
 
+    getCsrfToken() {
+        return this.getCookie('csrftoken') || this.api.csrfToken || '';
+    }
+
     async secureFetch(url, options = {}) {
-        const csrftoken = this.getCookie('csrftoken');
+        const csrftoken = this.getCsrfToken();
         if (!options.headers) options.headers = {};
         if (csrftoken) options.headers['X-CSRFToken'] = csrftoken;
         if (!options.headers['X-Requested-With']) options.headers['X-Requested-With'] = 'XMLHttpRequest';
@@ -2290,4 +2294,5 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
+
 

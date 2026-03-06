@@ -968,31 +968,6 @@
         gap: clamp(0.38rem, 0.95vh, 0.78rem);
     }
 
-    @media (min-width: 1280px) {
-        .dt-timer-main {
-            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-            column-gap: clamp(1.2rem, 2.8vw, 3rem);
-            justify-items: stretch;
-        }
-
-        .dt-timer-lane {
-            align-items: center;
-            justify-self: center;
-            text-align: center;
-        }
-
-        .dt-mission-lane {
-            align-items: flex-start;
-            text-align: left;
-            justify-self: stretch;
-            padding-right: clamp(0.35rem, 0.9vw, 0.8rem);
-        }
-
-        .dt-mission-lane #mainMissionTitle,
-        .dt-mission-lane #mainMissionDesc {
-            text-align: left;
-        }
-    }
 
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
@@ -2315,6 +2290,7 @@
 {% block extra_js %}
 <script>
     window.dtApiEndpoints = {
+        csrfToken: "{{ csrf_token|escapejs }}",
         dataUrl: "{% url 'dt_api_data' %}",
         assignUrl: "{% url 'dt_api_assign' %}",
         rotateUrl: "{% url 'dt_api_rotate' %}",
@@ -2360,7 +2336,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306j"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306k"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
@@ -2432,4 +2408,6 @@
     }
 </script>
 {% endblock %}
+
+
 

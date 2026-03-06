@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.conf import settings
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 
@@ -15,6 +15,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertTemplateUsed(response, 'products/dutyticker/main.html')
 
         self.assertContains(response, 'id="customTimerMinutesInput"')
+        self.assertContains(response, 'csrfToken:')
         self.assertContains(response, 'max="999"')
         self.assertContains(response, 'step="1"')
         self.assertContains(response, 'id="mainTimerDisplay" type="button"')
@@ -52,6 +53,12 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'window.dtBgmTracks = {')
         self.assertNotContains(response, '천리 길도 한 걸음부터')
 
+    @override_settings(CSRF_COOKIE_HTTPONLY=True)
+    def test_dutyticker_page_exposes_csrf_token_for_http_only_cookie_mode(self):
+        response = self.client.get(reverse('dutyticker'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'csrfToken:')
+
     def test_timer_script_contains_safety_and_restore_methods(self):
         script_path = Path(settings.BASE_DIR) / 'products' / 'static' / 'products' / 'dutyticker' / 'js' / 'dutyticker.js'
         script = script_path.read_text(encoding='utf-8')
@@ -79,6 +86,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn("this.getApiUrl('resetAssignmentsUrl'", script)
         self.assertIn("this.getApiUrl('resetStudentMissionsUrl'", script)
         self.assertIn("options.credentials = 'same-origin'", script)
+        self.assertIn('getCsrfToken()', script)
+        self.assertIn('this.api.csrfToken', script)
         self.assertIn("cache: 'no-store'", script)
         self.assertIn("buildFreshUrl(url)", script)
         self.assertIn('clearRoleAssignmentsLocally()', script)
@@ -96,4 +105,5 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('setupInlineMissionEditor()', script)
         self.assertIn('saveInlineMissionEdit()', script)
         self.assertIn('changeMissionFontSize(', script)
+
 
