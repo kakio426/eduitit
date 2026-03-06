@@ -213,6 +213,12 @@ class DutyTickerManager {
         return this.api[key] || fallback;
     }
 
+    buildFreshUrl(url) {
+        const token = `dt=${Date.now()}`;
+        return String(url || '').includes('?') ? `${url}&${token}` : `${url}?${token}`;
+    }
+
+
     buildTemplateUrl(templateValue, idValue) {
         const template = String(templateValue || '');
         if (!template) return '';
@@ -328,7 +334,10 @@ class DutyTickerManager {
     // --- Data ---
     async loadData() {
         try {
-            const response = await fetch(this.getApiUrl('dataUrl', '/products/dutyticker/api/data/'));
+            const response = await this.secureFetch(
+                this.buildFreshUrl(this.getApiUrl('dataUrl', '/products/dutyticker/api/data/')),
+                { method: 'GET', cache: 'no-store' }
+            );
             const data = await response.json();
 
             if (!response.ok) {
@@ -466,6 +475,27 @@ class DutyTickerManager {
         const descEl = document.getElementById('mainMissionDesc');
         if (titleEl && document.activeElement !== titleEl) titleEl.textContent = this.missionTitle;
         if (descEl && document.activeElement !== descEl) descEl.textContent = this.missionDesc;
+    }
+
+    clearRoleAssignmentsLocally() {
+        this.roles = this.roles.map((role) => ({
+            ...role,
+            assignee: '미배정',
+            assigneeId: null,
+            status: 'pending',
+        }));
+        this.renderRoleList();
+    }
+
+    clearMissionProgressLocally() {
+        this.students = this.students.map((student) => ({
+            ...student,
+            status: 'pending',
+        }));
+        this.spotlightStudentId = null;
+        this.renderMission();
+        this.renderStudentGrid();
+        this.renderRoleList();
     }
 
     restoreMissionPanelState() {
@@ -1644,8 +1674,8 @@ class DutyTickerManager {
         if (this.roleRotateInFlight) return;
         this.requestResetConfirmation({
             title: '오늘의 역할 초기화',
-            message: '역할 이름은 유지하고 담당 학생 배정만 초기화합니다.',
-            confirmLabel: '학생 배정 초기화',
+            message: '오늘의 역할에 표시된 학생 이름과 완료 표시를 비웁니다.',
+            confirmLabel: '역할 배정 비우기',
             onConfirm: async () => this.performResetRoleAssignments(),
         });
     }
@@ -1663,8 +1693,9 @@ class DutyTickerManager {
                 { method: 'POST' }
             );
             await this.parseJsonResponse(response, '학생 배정 초기화에 실패했습니다.');
+            this.clearRoleAssignmentsLocally();
             await this.loadData();
-            this.showToast('오늘의 역할 학생 배정을 초기화했습니다.', 'success');
+            this.showToast('오늘의 역할 배정을 비웠습니다.', 'success');
         } catch (error) {
             console.error(error);
             this.showToast(error?.message || '학생 배정 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'error');
@@ -1678,7 +1709,7 @@ class DutyTickerManager {
         if (this.missionResetInFlight) return;
         this.requestResetConfirmation({
             title: '미션 현황 초기화',
-            message: '학생들의 미션 완료 상태만 초기화하고 역할과 문구는 그대로 둡니다.',
+            message: '미션현황 체크를 모두 해제합니다.',
             confirmLabel: '미션 현황 초기화',
             onConfirm: async () => this.performResetStudentMissionProgress(),
         });
@@ -1697,8 +1728,9 @@ class DutyTickerManager {
                 { method: 'POST' }
             );
             await this.parseJsonResponse(response, '학생 미션 상태 초기화에 실패했습니다.');
+            this.clearMissionProgressLocally();
             await this.loadData();
-            this.showToast('미션 현황 완료 상태를 초기화했습니다.', 'success');
+            this.showToast('미션현황 체크를 모두 해제했습니다.', 'success');
         } catch (error) {
             console.error(error);
             this.showToast(error?.message || '학생 미션 상태 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'error');
