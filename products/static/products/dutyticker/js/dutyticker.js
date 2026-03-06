@@ -579,15 +579,7 @@ class DutyTickerManager {
             return;
         }
 
-        const spotlightStudentId = Number(this.spotlightStudentId);
-        const spotlightRoleIds = this.roles
-            .filter((role) => Number(role.assigneeId) === spotlightStudentId)
-            .map((role) => Number(role.id));
-
         const orderedRoles = [...this.roles].sort((a, b) => {
-            const aSpot = spotlightRoleIds.includes(Number(a.id)) ? 0 : 1;
-            const bSpot = spotlightRoleIds.includes(Number(b.id)) ? 0 : 1;
-            if (aSpot !== bSpot) return aSpot - bSpot;
             if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
             return Number(a.id) - Number(b.id);
         });
@@ -598,19 +590,12 @@ class DutyTickerManager {
             const safeTimeSlot = this.escapeHtml(role.timeSlot || 'TASK');
             const safeRoleName = this.escapeHtml(role.name);
             const safeAssignee = this.escapeHtml(role.assignee || '미배정');
-            const numericRoleId = Number(role.id);
-            const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
-            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
-            const spotlightBadge = isSpotlightRole
-                ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>집중</span>'
-                : '';
-            const statusDotClass = isCompleted ? 'is-completed' : 'is-pending';
             const statusBadge = isCompleted
                 ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
                 : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
             return `
-                <div class="dt-role-row border cursor-pointer ${spotlightClass}"
+                <div class="dt-role-row border cursor-pointer"
                     role="button"
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
@@ -620,8 +605,6 @@ class DutyTickerManager {
                             <p class="dt-role-name ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
                             <div class="dt-role-meta">
                                 <p class="dt-role-slot">${safeTimeSlot}</p>
-                                ${spotlightBadge}
-                                <span class="dt-role-status-dot ${statusDotClass}" aria-hidden="true"></span>
                                 ${statusBadge}
                             </div>
                         </div>

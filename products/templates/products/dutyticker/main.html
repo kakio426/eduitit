@@ -532,19 +532,6 @@
         box-shadow: 0 14px 28px rgba(2, 6, 23, 0.16) !important;
     }
 
-    #mainAppContainer #mainRoleList .dt-role-row.dt-role-current-spotlight {
-        border-color: var(--dt-spotlight-border) !important;
-        background: var(--dt-spotlight-bg) !important;
-        animation: none !important;
-        box-shadow: 0 0 0 2px var(--dt-spotlight-border);
-    }
-
-    #mainAppContainer #mainRoleList .dt-role-spotlight-badge {
-        background: var(--dt-spotlight-badge-bg) !important;
-        color: var(--dt-spotlight-badge-text) !important;
-        border-color: var(--dt-spotlight-badge-border) !important;
-        letter-spacing: 0.01em;
-    }
 
     #mainAppContainer #mainRoleList .dt-role-main {
         display: flex;
@@ -605,22 +592,6 @@
         margin: 0;
     }
 
-    #mainAppContainer #mainRoleList .dt-role-status-dot {
-        width: 0.52rem;
-        height: 0.52rem;
-        border-radius: 999px;
-        display: inline-block;
-    }
-
-    #mainAppContainer #mainRoleList .dt-role-status-dot.is-pending {
-        background: var(--dt-role-status-pending);
-        opacity: 0.78;
-    }
-
-    #mainAppContainer #mainRoleList .dt-role-status-dot.is-completed {
-        background: var(--dt-role-status-done);
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.16);
-    }
 
     #mainAppContainer #mainRoleList .dt-role-status-text {
         font-size: 0.74rem;
@@ -1835,11 +1806,6 @@
                     title="별빛 추첨기">
                     <i class="fa-solid fa-shuffle"></i>
                 </a>
-                <button onclick="window.dtApp.toggleFullscreen()"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="전체화면">
-                    <i class="fa-solid fa-expand"></i>
-                </button>
                 <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
                     title="소리 설정">
@@ -1890,11 +1856,11 @@
                     <i class="fa-solid fa-gear"></i>
                 </a>
                 <div class="w-px h-6 bg-slate-700 mx-1"></div>
-                <a href="/"
-                    class="w-10 h-10 bg-slate-800 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg border border-slate-700 transition"
-                    title="나가기">
-                    <i class="fa-solid fa-house"></i>
-                </a>
+                <button onclick="window.dtApp.toggleFullscreen()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="전체화면">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
             </div>
         </div>
     </header>
@@ -2394,7 +2360,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306h"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306j"></script>
 <script>
     // Header Clock Logic
     function updateHeaderClock() {
