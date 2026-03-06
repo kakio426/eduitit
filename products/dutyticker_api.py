@@ -784,13 +784,14 @@ def reset_data(request):
 
     user = request.user
     classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(user, classroom)
+    settings.last_broadcast_message = ""
+    settings.spotlight_student = None
+    settings.save(update_fields=["last_broadcast_message", "spotlight_student"])
     apply_classroom_scope(DTStudent.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTRole.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom).delete()
-    settings, _ = get_or_create_settings_for_scope(user, classroom)
-    settings.last_broadcast_message = ""
-    settings.save()
     create_mockup_data(user, classroom=classroom)
     return JsonResponse({'success': True, 'message': 'Data reset to mockup'})
 
@@ -823,5 +824,41 @@ def reset_assignments_only(request):
     return JsonResponse({
         'success': True,
         'message': '학생 배정만 초기화되었습니다.',
+        'updated_count': updated_count,
+    })
+
+
+@require_http_methods(["POST"])
+def reset_student_missions(request):
+    if not request.user.is_authenticated:
+        guest_data = request.session.get('guest_dt_data') or get_guest_default_data()
+        students = guest_data.get('students') or []
+        for student in students:
+            student['is_mission_completed'] = False
+
+        settings_data = guest_data.setdefault('settings', {})
+        settings_data['spotlight_student_id'] = None
+        request.session['guest_dt_data'] = guest_data
+        request.session.modified = True
+        return JsonResponse({
+            'success': True,
+            'message': '학생 미션 완료 상태가 초기화되었습니다.',
+            'updated_count': len(students),
+        })
+
+    classroom = get_active_classroom_for_request(request)
+    updated_count = apply_classroom_scope(
+        DTStudent.objects.filter(user=request.user),
+        classroom,
+    ).update(is_mission_completed=False)
+
+    settings, _ = get_or_create_settings_for_scope(request.user, classroom)
+    if settings.spotlight_student_id is not None:
+        settings.spotlight_student = None
+        settings.save(update_fields=['spotlight_student'])
+
+    return JsonResponse({
+        'success': True,
+        'message': '학생 미션 완료 상태가 초기화되었습니다.',
         'updated_count': updated_count,
     })

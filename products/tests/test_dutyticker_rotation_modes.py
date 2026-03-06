@@ -240,3 +240,39 @@ class DutyTickerRotationCsrfTests(TestCase):
         payload = response.json()
         self.assertTrue(payload.get("success"))
         self.assertEqual(payload.get("updated_count"), 0)
+
+class DutyTickerMissionResetTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="mission_reset_teacher",
+            email="mission_reset_teacher@example.com",
+            password="pw123456",
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.nickname = "mission-reset-teacher"
+        profile.save(update_fields=["nickname"])
+
+        self.client = Client(enforce_csrf_checks=True)
+        self.client.login(username="mission_reset_teacher", password="pw123456")
+
+    def test_reset_student_missions_accepts_valid_csrf_and_clears_progress(self):
+        student = DTStudent.objects.create(user=self.user, name="학생1", number=1, is_mission_completed=True)
+        DTStudent.objects.create(user=self.user, name="학생2", number=2, is_mission_completed=True)
+        settings, _ = DTSettings.objects.get_or_create(user=self.user)
+        settings.spotlight_student = student
+        settings.save(update_fields=["spotlight_student"])
+
+        self.client.get(reverse("dutyticker"))
+        response = self.client.post(
+            reverse("dt_api_reset_student_missions"),
+            HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload.get("success"))
+        self.assertEqual(payload.get("updated_count"), 2)
+        self.assertFalse(DTStudent.objects.filter(user=self.user, is_mission_completed=True).exists())
+
+        settings.refresh_from_db()
+        self.assertIsNone(settings.spotlight_student)

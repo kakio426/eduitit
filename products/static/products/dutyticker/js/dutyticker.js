@@ -26,6 +26,8 @@ class DutyTickerManager {
         this.boundGlobalKeydown = null;
         this.boundWindowResize = null;
         this.resizeRaf = null;
+        this.layoutRaf = null;
+        this.layoutObserver = null;
         this.roleTickerEnabled = true;
         this.roleTickerIntervalMs = 4200;
         this.roleTickerTimer = null;
@@ -53,6 +55,7 @@ class DutyTickerManager {
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
         this.missionSaveRequestId = 0;
         this.missionSaving = false;
+        this.missionResetInFlight = false;
         this.missionPanelCollapsed = true;
         this.missionPanelStorageKey = 'dt-mission-panel-collapsed-v1';
         this.missionQuickPhraseStorageKey = 'dt-mission-quick-phrase-v1';
@@ -68,12 +71,17 @@ class DutyTickerManager {
         this.timerEndAt = null;
         this.timerStorageKey = 'dt-focus-timer-state-v1';
         this.audioCtx = null;
+        this.headerClockTimer = null;
+        this.headerClockMinuteKey = '';
+        this.hasLoadedData = false;
     }
 
     init() {
         console.log("DutyTicker: Initializing...");
+        this.startHeaderClock();
         this.loadData();
         this.setupEventListeners();
+        this.setupAdaptiveLayoutObserver();
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
         this.restoreMissionQuickPhrase();
@@ -139,10 +147,99 @@ class DutyTickerManager {
         if (!this.boundWindowResize) {
             this.boundWindowResize = () => {
                 if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
-                this.resizeRaf = requestAnimationFrame(() => this.applyStudentGridLayoutMode());
+                this.resizeRaf = requestAnimationFrame(() => {
+                    this.applyStudentGridLayoutMode();
+                    this.requestAdaptiveLayoutRefresh();
+                });
             };
             window.addEventListener('resize', this.boundWindowResize, { passive: true });
         }
+    }
+
+    startHeaderClock() {
+        this.updateHeaderClock();
+        if (this.headerClockTimer) clearInterval(this.headerClockTimer);
+        this.headerClockTimer = setInterval(() => this.updateHeaderClock(), 1000);
+    }
+
+    updateHeaderClock() {
+        const now = new Date();
+        const dateStr = now
+            .toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+            .replace(/\s/g, '\u00A0');
+        const timeStr = now
+            .toLocaleTimeString('ko-KR', { hour12: true, hour: 'numeric', minute: '2-digit' })
+            .replace(/\s/g, '\u00A0');
+
+        const dateEl = document.getElementById('headerDate');
+        const timeEl = document.getElementById('headerTime');
+        if (dateEl) dateEl.textContent = dateStr;
+        if (timeEl) timeEl.textContent = timeStr;
+
+        if (!this.hasLoadedData) return;
+
+        const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+        if (minuteKey !== this.headerClockMinuteKey) {
+            this.headerClockMinuteKey = minuteKey;
+            this.renderSchedule();
+        }
+    }
+
+    setupAdaptiveLayoutObserver() {
+        if (this.layoutObserver || typeof ResizeObserver !== 'function') return;
+
+        const targets = [
+            document.getElementById('mainAppContainer'),
+            document.querySelector('.dt-left-column'),
+            document.querySelector('.dt-timer-card'),
+            document.getElementById('mainStudentCard'),
+            document.getElementById('mainStudentGridWrap'),
+        ].filter(Boolean);
+
+        if (!targets.length) return;
+
+        this.layoutObserver = new ResizeObserver(() => this.requestAdaptiveLayoutRefresh());
+        targets.forEach((target) => this.layoutObserver.observe(target));
+    }
+
+    requestAdaptiveLayoutRefresh() {
+        if (this.layoutRaf) cancelAnimationFrame(this.layoutRaf);
+        this.layoutRaf = requestAnimationFrame(() => {
+            this.layoutRaf = null;
+            this.applyAdaptiveLayoutState();
+        });
+    }
+
+    applyAdaptiveLayoutState() {
+        const app = document.getElementById('mainAppContainer');
+        const leftColumn = document.querySelector('.dt-left-column');
+        const timerCard = document.querySelector('.dt-timer-card');
+        const studentCard = document.getElementById('mainStudentCard');
+        if (!app || !leftColumn || !timerCard) return;
+
+        const leftHeight = leftColumn.getBoundingClientRect().height;
+        const timerHeight = timerCard.getBoundingClientRect().height;
+        const studentHeight = studentCard ? studentCard.getBoundingClientRect().height : 0;
+        const isStudentPanelExpanded = !this.missionPanelCollapsed;
+
+        let density = 'hero';
+        if (
+            leftHeight < 920
+            || timerHeight < 560
+            || (isStudentPanelExpanded && studentHeight > 320)
+        ) {
+            density = 'balanced';
+        }
+        if (
+            leftHeight < 820
+            || timerHeight < 470
+            || (isStudentPanelExpanded && studentHeight > 360)
+        ) {
+            density = 'compact';
+        }
+
+        app.setAttribute('data-layout-density', density);
+        this.applyStudentGridLayoutMode();
     }
 
     bindButtonAction(id, handler) {
@@ -385,9 +482,11 @@ class DutyTickerManager {
 
             const today = new Date().getDay();
             this.todaySchedule = data.schedule[today] || [];
+            this.hasLoadedData = true;
 
             this.renderAll();
         } catch (error) {
+            this.hasLoadedData = false;
             console.error("Fetch Error:", error);
             this.renderLoadFailure();
         }
@@ -426,6 +525,7 @@ class DutyTickerManager {
         this.renderStudentGrid();
         this.renderNotices();
         this.renderRandomPicker();
+        this.requestAdaptiveLayoutRefresh();
         const callModal = document.getElementById('callModeModal');
         const isCallModeOpen = !!callModal && !callModal.classList.contains('hidden');
         if (isCallModeOpen) this.renderCallMode();
@@ -563,6 +663,7 @@ class DutyTickerManager {
         if (toggleText) toggleText.textContent = expanded ? '접기' : '펼치기';
 
         this.applyStudentGridLayoutMode();
+        this.requestAdaptiveLayoutRefresh();
     }
 
     toggleMissionPanel() {
@@ -779,13 +880,32 @@ class DutyTickerManager {
     applyStudentGridLayoutMode() {
         const grid = document.getElementById('mainStudentGrid');
         const card = document.getElementById('mainStudentCard');
+        const app = document.getElementById('mainAppContainer');
+        const gridWrap = document.getElementById('mainStudentGridWrap');
         if (!grid || !card) return;
 
         const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         const studentCount = this.students.length;
-        const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 30;
+        const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 36;
+        const layoutDensity = app ? String(app.getAttribute('data-layout-density') || 'hero') : 'hero';
+        const gridWrapHeight = gridWrap ? gridWrap.getBoundingClientRect().height : 0;
+        let gridColumns = '5';
+
+        if (
+            shouldUseComfortFit
+            && !this.missionPanelCollapsed
+            && (
+                layoutDensity === 'compact'
+                || gridWrapHeight < 210
+                || studentCount >= 21
+            )
+        ) {
+            gridColumns = '6';
+        }
 
         grid.classList.toggle('dt-student-grid-fit-25', shouldUseComfortFit);
+        if (shouldUseComfortFit) grid.dataset.gridColumns = gridColumns;
+        else delete grid.dataset.gridColumns;
         grid.classList.remove('dt-student-density-low', 'dt-student-density-mid', 'dt-student-density-high');
         if (shouldUseComfortFit) {
             if (studentCount <= 10) grid.classList.add('dt-student-density-low');
@@ -2045,6 +2165,31 @@ class DutyTickerManager {
         }
     }
 
+    async resetStudentMissionProgress() {
+        if (this.missionResetInFlight) return;
+        const resetBtn = document.getElementById('missionProgressResetBtn');
+        const shouldReset = confirm('학생 미션 완료 상태를 모두 초기화할까요?');
+        if (!shouldReset) return;
+
+        try {
+            this.missionResetInFlight = true;
+            if (resetBtn) resetBtn.disabled = true;
+
+            const response = await this.secureFetch(
+                this.getApiUrl('resetStudentMissionsUrl', '/products/dutyticker/api/students/reset-mission/'),
+                { method: 'POST' }
+            );
+            await this.parseJsonResponse(response, '미션 완료 상태 초기화에 실패했습니다.');
+            await this.loadData();
+        } catch (error) {
+            console.error(error);
+            alert(error?.message || '미션 완료 상태 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            this.missionResetInFlight = false;
+            if (resetBtn) resetBtn.disabled = false;
+        }
+    }
+
     async resetToMockup() {
         const shouldReset = confirm('정말로 기본 데이터로 초기화할까요? 현재 학급 상태가 초기화됩니다.');
         if (!shouldReset) return;
@@ -2058,7 +2203,7 @@ class DutyTickerManager {
             this.syncCustomTimerInput();
             this.updateTimerDisplay();
             this.saveTimerState();
-            this.loadData();
+            await this.loadData();
         } catch (error) {
             console.error(error);
             alert(error?.message || '데이터 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
