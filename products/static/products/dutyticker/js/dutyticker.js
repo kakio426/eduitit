@@ -294,6 +294,8 @@ class DutyTickerManager {
         const csrftoken = this.getCookie('csrftoken');
         if (!options.headers) options.headers = {};
         if (csrftoken) options.headers['X-CSRFToken'] = csrftoken;
+        if (!options.headers['X-Requested-With']) options.headers['X-Requested-With'] = 'XMLHttpRequest';
+        if (!options.credentials) options.credentials = 'same-origin';
         if (options.body && !options.headers['Content-Type']) {
             options.headers['Content-Type'] = 'application/json;charset=UTF-8';
         }

@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import random
-from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTTimeSlot
+from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTTimeSlot, DTSettings
 from .dutyticker_scope import (
     apply_classroom_scope,
     classroom_scope_create_kwargs,
@@ -852,10 +852,10 @@ def reset_student_missions(request):
         classroom,
     ).update(is_mission_completed=False)
 
-    settings, _ = get_or_create_settings_for_scope(request.user, classroom)
-    if settings.spotlight_student_id is not None:
-        settings.spotlight_student = None
-        settings.save(update_fields=['spotlight_student'])
+    apply_classroom_scope(
+        DTSettings.objects.filter(user=request.user),
+        classroom,
+    ).update(spotlight_student=None)
 
     return JsonResponse({
         'success': True,

@@ -276,3 +276,19 @@ class DutyTickerMissionResetTests(TestCase):
 
         settings.refresh_from_db()
         self.assertIsNone(settings.spotlight_student)
+
+    def test_reset_student_missions_succeeds_without_settings_row(self):
+        DTStudent.objects.create(user=self.user, name="학생1", number=1, is_mission_completed=True)
+
+        self.client.get(reverse("dutyticker"))
+        response = self.client.post(
+            reverse("dt_api_reset_student_missions"),
+            HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload.get("success"))
+        self.assertEqual(payload.get("updated_count"), 1)
+        self.assertFalse(DTSettings.objects.filter(user=self.user).exists())
+        self.assertFalse(DTStudent.objects.filter(user=self.user, is_mission_completed=True).exists())

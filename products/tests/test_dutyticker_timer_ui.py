@@ -87,6 +87,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('resetRoleAssignments()', script)
         self.assertIn("this.getApiUrl('resetAssignmentsUrl'", script)
         self.assertIn('dt-bgm-state-v1', script)
+        self.assertIn("options.credentials = 'same-origin';", script)
         self.assertIn('bgmVolumePercent', script)
         self.assertIn('setupBgm()', script)
         self.assertIn('setBgmVolumePercent(', script)

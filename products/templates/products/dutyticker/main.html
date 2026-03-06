@@ -1061,7 +1061,7 @@
 
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
-        font-size: clamp(5rem, min(21.5vw, 27.5vh), 15.25rem);
+        font-size: clamp(5.65rem, min(23.8vw, 30.2vh), 16.9rem);
         line-height: 0.9;
         letter-spacing: -0.05em;
         margin-bottom: 0;
@@ -1080,13 +1080,13 @@
     }
 
     #mainMissionTitle {
-        font-size: clamp(2.46rem, 6.1vw, 5.15rem);
+        font-size: clamp(2.86rem, 6.95vw, 5.95rem);
         line-height: 1.08;
         margin: 0;
     }
 
     #mainMissionDesc {
-        font-size: clamp(1.12rem, 2.95vw, 2rem);
+        font-size: clamp(1.28rem, 3.28vw, 2.26rem);
         line-height: 1.24;
         margin: 0;
     }
@@ -1140,27 +1140,40 @@
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
-        gap: clamp(1.25rem, 2.6vh, 2.15rem);
+        grid-template-rows: minmax(0, 1fr) auto;
+        align-content: center;
+        gap: clamp(0.88rem, 1.6vh, 1.38rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-clock-shell {
-        width: min(100%, 68rem);
+        width: min(100%, 73rem);
+        padding: clamp(0.92rem, 2vw, 1.58rem) clamp(1.15rem, 2.7vw, 2.25rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
-        font-size: clamp(5.55rem, min(23vw, 29.5vh), 16.1rem);
+        font-size: clamp(6.35rem, min(25.8vw, 33vh), 18.2rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-mission-stage {
-        width: min(100%, 62rem);
+        width: min(100%, 66rem);
+        padding: clamp(1.16rem, 2.5vw, 1.92rem) clamp(1.22rem, 3vw, 2.16rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] .dt-mission-lane {
+        gap: clamp(0.42rem, 1.08vh, 0.92rem);
+    }
+
+    #mainAppContainer[data-mission-panel="collapsed"] .dt-mission-kicker {
+        padding: 0.48rem 0.9rem;
+        font-size: clamp(0.82rem, 0.88rem + 0.18vw, 1rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
-        font-size: clamp(2.72rem, 7.45vw, 5.9rem);
+        font-size: clamp(3.12rem, 8.15vw, 6.5rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionDesc {
-        font-size: clamp(1.42rem, 3.9vw, 2.56rem);
+        font-size: clamp(1.6rem, 4.32vw, 2.96rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxs"] #mainMissionTitle {
@@ -1214,7 +1227,7 @@
     #mainMissionTitle[contenteditable="true"],
     #mainMissionDesc[contenteditable="true"] {
         cursor: text;
-        border-radius: 0.85rem;
+        border-radius: 0.74rem;
         outline: none;
         transition: box-shadow 180ms ease, background-color 180ms ease;
     }
@@ -1231,12 +1244,12 @@
     }
 
     .mission-font-wrap button {
-        min-width: 2rem;
+        min-width: 1.72rem;
         line-height: 1;
     }
 
     .mission-quick-wrap button {
-        min-width: 4.8rem;
+        min-width: 4.05rem;
         line-height: 1;
     }
 
@@ -1254,10 +1267,39 @@
     }
 
     #timerControls {
-        margin-top: clamp(0.75rem, 2vh, 2rem);
+        margin-top: clamp(0.48rem, 1.2vh, 1rem);
         max-width: 100%;
-        row-gap: 0.65rem;
-        column-gap: 0.65rem;
+        row-gap: 0.48rem;
+        column-gap: 0.48rem;
+    }
+
+    #timerControls .timer-btn,
+    #timerControls .timer-reset-btn {
+        padding: 0.52rem 0.84rem;
+        font-size: 0.9rem;
+        line-height: 1;
+    }
+
+    #timerControls .timer-custom-wrap,
+    #timerControls .mission-font-wrap,
+    #timerControls .mission-quick-wrap {
+        padding: 0.32rem 0.5rem;
+    }
+
+    #timerControls .timer-custom-wrap input {
+        width: 2.8rem;
+        font-size: 0.92rem;
+    }
+
+    #timerControls .timer-custom-wrap button,
+    #timerControls .mission-font-wrap button,
+    #timerControls .mission-quick-wrap button {
+        padding: 0.34rem 0.54rem;
+        font-size: 0.8rem;
+    }
+
+    #timerControls #missionFontSizeLabel {
+        font-size: 0.7rem;
     }
 
     .dt-left-column {
@@ -1329,14 +1371,14 @@
     }
 
     .dt-student-grid {
-        grid-auto-rows: minmax(2.45rem, 1fr);
-        gap: 0.45rem !important;
+        grid-auto-rows: minmax(2.16rem, 1fr);
+        gap: 0.36rem !important;
     }
 
     .dt-student-grid-fit-25 {
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(2.4rem, 1fr);
-        gap: 0.42rem !important;
+        grid-auto-rows: minmax(2.08rem, 1fr);
+        gap: 0.28rem !important;
         overflow-y: auto !important;
         padding-right: 0.1rem !important;
         align-content: start;
@@ -1344,8 +1386,8 @@
 
     #mainStudentGrid .dt-student-tile {
         min-height: 0;
-        padding: 0.28rem 0.42rem;
-        border-radius: 0.85rem;
+        padding: 0.18rem 0.3rem;
+        border-radius: 0.74rem;
         user-select: none;
         display: flex;
         align-items: center;
@@ -1387,15 +1429,15 @@
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.99rem, 0.93rem + 0.22vw, 1.12rem);
+        font-size: clamp(1.06rem, 1rem + 0.18vw, 1.18rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.93rem, 0.87rem + 0.19vw, 1.03rem);
+        font-size: clamp(1rem, 0.94rem + 0.16vw, 1.1rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.86rem, 0.81rem + 0.16vw, 0.96rem);
+        font-size: clamp(0.92rem, 0.87rem + 0.14vw, 1rem);
         letter-spacing: -0.01em;
     }
 
@@ -1423,42 +1465,42 @@
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-tile {
         min-height: 0;
-        padding: 0.24rem 0.36rem;
-        border-radius: 0.78rem;
+        padding: 0.12rem 0.22rem;
+        border-radius: 0.7rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.95rem, 0.9rem + 0.16vw, 1.04rem);
+        font-size: clamp(1rem, 0.95rem + 0.14vw, 1.1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.9rem, 0.84rem + 0.14vw, 0.98rem);
+        font-size: clamp(0.95rem, 0.9rem + 0.12vw, 1.03rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.84rem, 0.79rem + 0.12vw, 0.9rem);
+        font-size: clamp(0.89rem, 0.84rem + 0.1vw, 0.95rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.98rem, 0.94rem + 0.12vw, 1.06rem);
+        font-size: clamp(1.02rem, 0.98rem + 0.1vw, 1.1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.94rem, 0.89rem + 0.12vw, 1.01rem);
+        font-size: clamp(0.98rem, 0.93rem + 0.1vw, 1.05rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.9rem, 0.85rem + 0.1vw, 0.96rem);
+        font-size: clamp(0.94rem, 0.89rem + 0.09vw, 1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.86rem, 0.81rem + 0.1vw, 0.92rem);
+        font-size: clamp(0.9rem, 0.85rem + 0.09vw, 0.96rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.8rem, 0.75rem + 0.1vw, 0.86rem);
+        font-size: clamp(0.86rem, 0.81rem + 0.08vw, 0.92rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-spotlight-btn {
@@ -1496,21 +1538,21 @@
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainTimerDisplay {
-        font-size: clamp(4.2rem, min(17.8vw, 20vh), 11.8rem);
+        font-size: clamp(4.8rem, min(19.8vw, 22.6vh), 13.2rem);
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainTimerDisplay {
-        font-size: clamp(3.18rem, min(13.9vw, 14.8vh), 7.9rem);
+        font-size: clamp(3.72rem, min(15.8vw, 17.2vh), 9.1rem);
     }
 
     #mainAppContainer[data-layout-density="balanced"] .dt-mission-stage {
-        width: min(100%, 53rem);
-        padding: clamp(0.82rem, 1.7vw, 1.12rem) clamp(0.92rem, 1.95vw, 1.3rem);
+        width: min(100%, 55rem);
+        padding: clamp(0.9rem, 1.85vw, 1.2rem) clamp(1rem, 2.1vw, 1.42rem);
     }
 
     #mainAppContainer[data-layout-density="compact"] .dt-mission-stage {
-        width: min(100%, 48rem);
-        padding: clamp(0.62rem, 1.18vw, 0.86rem) clamp(0.78rem, 1.42vw, 1rem);
+        width: min(100%, 50rem);
+        padding: clamp(0.72rem, 1.3vw, 0.94rem) clamp(0.86rem, 1.56vw, 1.08rem);
     }
 
     #mainAppContainer[data-layout-density="balanced"] .dt-mission-kicker {
@@ -1524,19 +1566,19 @@
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainMissionTitle {
-        font-size: clamp(1.92rem, 4.6vw, 3.72rem);
+        font-size: clamp(2.22rem, 5.2vw, 4.22rem);
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainMissionDesc {
-        font-size: clamp(0.98rem, 2.2vw, 1.52rem);
+        font-size: clamp(1.06rem, 2.38vw, 1.64rem);
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainMissionTitle {
-        font-size: clamp(1.5rem, 3.55vw, 2.68rem);
+        font-size: clamp(1.82rem, 4.18vw, 3.12rem);
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainMissionDesc {
-        font-size: clamp(0.88rem, 1.8vw, 1.14rem);
+        font-size: clamp(0.94rem, 1.96vw, 1.22rem);
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainMissionDesc {
@@ -1580,17 +1622,17 @@
     }
 
     #mainAppContainer[data-layout-density="balanced"][data-mission-panel="expanded"] #mainStudentCard {
-        flex: 0 0 clamp(18.6rem, 36.5vh, 23.7rem);
-        min-height: clamp(18.6rem, 36.5vh, 23.7rem);
-        max-height: clamp(18.6rem, 36.5vh, 23.7rem);
-        padding: 1.15rem 1.2rem 1.2rem;
+        flex: 0 0 clamp(17.4rem, 33.8vh, 21.9rem);
+        min-height: clamp(17.4rem, 33.8vh, 21.9rem);
+        max-height: clamp(17.4rem, 33.8vh, 21.9rem);
+        padding: 1.02rem 1.08rem 1.08rem;
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainStudentCard {
-        flex: 0 0 clamp(19.2rem, 38.5vh, 24.8rem);
-        min-height: clamp(19.2rem, 38.5vh, 24.8rem);
-        max-height: clamp(19.2rem, 38.5vh, 24.8rem);
-        padding: 1rem 1.05rem 1.05rem;
+        flex: 0 0 clamp(18rem, 35.5vh, 22.8rem);
+        min-height: clamp(18rem, 35.5vh, 22.8rem);
+        max-height: clamp(18rem, 35.5vh, 22.8rem);
+        padding: 0.9rem 0.96rem 0.96rem;
     }
 
     #mainStudentCard .dt-student-card-head {
@@ -1598,21 +1640,21 @@
     }
 
     #mainAppContainer[data-layout-density="balanced"][data-mission-panel="expanded"] #mainStudentCard .dt-student-card-head {
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.64rem;
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainStudentCard .dt-student-card-head {
-        margin-bottom: 0.55rem;
+        margin-bottom: 0.46rem;
     }
 
     #mainAppContainer[data-layout-density="balanced"][data-mission-panel="expanded"] #mainStudentCard .dt-mission-progress-wrap {
-        padding: 0.55rem 0.84rem;
-        gap: 0.72rem;
+        padding: 0.48rem 0.74rem;
+        gap: 0.62rem;
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainStudentCard .dt-mission-progress-wrap {
-        padding: 0.45rem 0.72rem;
-        gap: 0.56rem;
+        padding: 0.4rem 0.62rem;
+        gap: 0.48rem;
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainStudentGridWrap {
@@ -1621,13 +1663,13 @@
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] {
         grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(2.05rem, 1fr);
-        gap: 0.34rem !important;
+        grid-auto-rows: minmax(1.8rem, 1fr);
+        gap: 0.24rem !important;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-tile {
-        padding: 0.16rem 0.26rem;
-        border-radius: 0.72rem;
+        padding: 0.12rem 0.22rem;
+        border-radius: 0.64rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name {
@@ -1635,15 +1677,15 @@
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.82rem, 0.79rem + 0.08vw, 0.88rem);
+        font-size: clamp(0.88rem, 0.84rem + 0.08vw, 0.95rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.78rem, 0.74rem + 0.08vw, 0.84rem);
+        font-size: clamp(0.84rem, 0.8rem + 0.08vw, 0.9rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.72rem, 0.68rem + 0.08vw, 0.78rem);
+        font-size: clamp(0.78rem, 0.74rem + 0.08vw, 0.84rem);
     }
 
     #headerScheduleStrip {
@@ -2777,7 +2819,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306e"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306f"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {
