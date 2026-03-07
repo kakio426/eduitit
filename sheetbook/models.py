@@ -24,6 +24,20 @@ class Sheetbook(models.Model):
         default=VISIBILITY_PRIVATE,
     )
     is_pinned = models.BooleanField(default=False)
+    preferred_schedule_tab = models.ForeignKey(
+        "sheetbook.SheetTab",
+        on_delete=models.SET_NULL,
+        related_name="preferred_schedule_sheetbooks",
+        null=True,
+        blank=True,
+    )
+    preferred_calendar_tab = models.ForeignKey(
+        "sheetbook.SheetTab",
+        on_delete=models.SET_NULL,
+        related_name="preferred_calendar_sheetbooks",
+        null=True,
+        blank=True,
+    )
     is_archived = models.BooleanField(default=False)
     archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

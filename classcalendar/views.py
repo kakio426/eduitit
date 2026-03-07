@@ -49,6 +49,7 @@ SERVICE_ROUTE = "classcalendar:main"
 INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
 INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
 RETENTION_NOTICE_TITLE = "[안내] 자동 정리 정책 안내"
+SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -448,6 +449,23 @@ def _extract_primary_note(event):
     return str(note_text).strip()
 
 
+def _resolve_attachment_url(attachment):
+    try:
+        return attachment.file.url if attachment.file else ""
+    except (ValueError, OSError):
+        return ""
+
+
+def _serialize_event_attachment(attachment):
+    return {
+        "id": str(attachment.id),
+        "original_name": attachment.original_name or "첨부파일",
+        "mime_type": attachment.mime_type or "",
+        "size_bytes": attachment.size_bytes or 0,
+        "url": _resolve_attachment_url(attachment),
+    }
+
+
 def _persist_primary_note(event, note_value):
     note_text = (note_value or "").strip()
     text_blocks = event.blocks.filter(block_type="text").order_by("order", "id")
@@ -474,6 +492,8 @@ def _persist_primary_note(event, note_value):
 
 def _serialize_event(event, *, current_user_id, editable_owner_ids):
     source_url, source_label = _resolve_integration_source_meta(event)
+    attachments = list(event.attachments.all())
+    attachments.sort(key=lambda attachment: (attachment.sort_order, attachment.id))
     return {
         "id": str(event.id),
         "title": event.title,
@@ -492,6 +512,10 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
         "calendar_owner_name": _display_user_name(event.author),
         "is_shared_calendar": event.author_id != current_user_id,
         "can_edit": event.author_id in editable_owner_ids,
+        "attachments": [
+            _serialize_event_attachment(attachment)
+            for attachment in attachments
+        ],
     }
 
 
@@ -605,7 +629,7 @@ def _get_teacher_visible_events(request, visible_owner_ids):
     return (
         CalendarEvent.objects.filter(query)
         .select_related("author", "classroom")
-        .prefetch_related("blocks")
+        .prefetch_related("blocks", "attachments")
         .distinct()
         .order_by("start_time", "id")
     )
@@ -783,13 +807,14 @@ def _build_shared_event_groups(events):
     return grouped
 
 
-def _resolve_sheetbook_calendar_entry_for_user(user):
+def _resolve_sheetbook_calendar_entry_for_user(request, user):
     result = {
         "sheetbook_enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
         "sheetbook_exists": False,
         "sheetbook_title": "",
         "sheetbook_entry_url": "",
         "sheetbook_index_url": "",
+        "sheetbook_context_label": "",
     }
     if not result["sheetbook_enabled"]:
         return result
@@ -808,29 +833,92 @@ def _resolve_sheetbook_calendar_entry_for_user(user):
     except Exception:
         return result
 
-    sheetbook = (
+    recent_sheetbook_id = 0
+    try:
+        recent_sheetbook_id = int(request.session.get(SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY) or 0)
+    except (TypeError, ValueError):
+        recent_sheetbook_id = 0
+
+    sheetbooks = list(
         Sheetbook.objects.filter(owner=user)
         .prefetch_related("tabs")
         .order_by("-updated_at", "-id")
-        .first()
     )
-    if not sheetbook:
+    if not sheetbooks:
         return result
 
-    calendar_tab = (
-        sheetbook.tabs.filter(tab_type=SheetTab.TYPE_CALENDAR)
-        .order_by("sort_order", "id")
-        .first()
-    )
-    detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.id})
-    if calendar_tab:
-        detail_url = f"{detail_url}?tab={calendar_tab.id}"
+    resolved_sheetbooks = []
+    for sheetbook in sheetbooks:
+        ordered_tabs = sorted(sheetbook.tabs.all(), key=lambda item: (item.sort_order, item.id))
+        preferred_calendar_tab_id = getattr(sheetbook, "preferred_calendar_tab_id", 0) or 0
+        explicit_calendar_tab = None
+        if preferred_calendar_tab_id:
+            explicit_calendar_tab = next(
+                (
+                    tab for tab in ordered_tabs
+                    if tab.id == preferred_calendar_tab_id and tab.tab_type == SheetTab.TYPE_CALENDAR
+                ),
+                None,
+            )
+        calendar_tab = explicit_calendar_tab or next(
+            (tab for tab in ordered_tabs if tab.tab_type == SheetTab.TYPE_CALENDAR),
+            None,
+        )
+        if calendar_tab is None:
+            continue
+        resolved_sheetbooks.append(
+            {
+                "sheetbook": sheetbook,
+                "calendar_tab": calendar_tab,
+                "is_explicit": explicit_calendar_tab is not None,
+            }
+        )
+
+    if not resolved_sheetbooks:
+        return result
+
+    prioritized_sheetbooks = []
+    prioritized_ids = set()
+
+    explicit_entry = next((item for item in resolved_sheetbooks if item["is_explicit"]), None)
+    if explicit_entry is not None:
+        prioritized_sheetbooks.append(explicit_entry)
+        prioritized_ids.add(explicit_entry["sheetbook"].id)
+
+    if recent_sheetbook_id:
+        recent_entry = next(
+            (item for item in resolved_sheetbooks if item["sheetbook"].id == recent_sheetbook_id),
+            None,
+        )
+        if recent_entry is not None and recent_entry["sheetbook"].id not in prioritized_ids:
+            prioritized_sheetbooks.append(recent_entry)
+            prioritized_ids.add(recent_entry["sheetbook"].id)
+
+    for item in resolved_sheetbooks:
+        sheetbook_id = item["sheetbook"].id
+        if sheetbook_id in prioritized_ids:
+            continue
+        prioritized_sheetbooks.append(item)
+        prioritized_ids.add(sheetbook_id)
+
+    selected_entry = prioritized_sheetbooks[0]
+    selected_sheetbook = selected_entry["sheetbook"]
+    detail_url = reverse("sheetbook:detail", kwargs={"pk": selected_sheetbook.id})
+    detail_url = f"{detail_url}?tab={selected_entry['calendar_tab'].id}"
+
+    if selected_entry["is_explicit"]:
+        context_label = "직접 연결한 수첩"
+    elif selected_sheetbook.id == recent_sheetbook_id:
+        context_label = "최근 열어본 수첩"
+    else:
+        context_label = "최근 수정한 수첩"
 
     result.update(
         {
             "sheetbook_exists": True,
-            "sheetbook_title": sheetbook.title,
+            "sheetbook_title": selected_sheetbook.title,
             "sheetbook_entry_url": detail_url,
+            "sheetbook_context_label": context_label,
         }
     )
     return result
@@ -839,15 +927,15 @@ def _resolve_sheetbook_calendar_entry_for_user(user):
 @login_required
 def main_entry(request):
     if not getattr(settings, "SHEETBOOK_ENABLED", False):
-        return main_view(request)
+        return redirect("classcalendar:main")
 
     if request.GET.get("legacy") == "1":
-        return main_view(request)
+        return redirect("classcalendar:main")
 
-    bridge_context = _resolve_sheetbook_calendar_entry_for_user(request.user)
+    bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
     bridge_context.update(
         {
-            "legacy_calendar_url": reverse("classcalendar:legacy_main"),
+            "calendar_url": reverse("classcalendar:main"),
         }
     )
     return render(request, "classcalendar/sheetbook_entry.html", bridge_context)
@@ -891,7 +979,7 @@ def collaborator_add(request):
     lookup = (request.POST.get("collaborator_query") or "").strip()
     if not lookup:
         messages.error(request, "협업자로 추가할 사용자의 가입시 적었던 이메일을 입력해 주세요.")
-        return redirect("classcalendar:legacy_main")
+        return redirect("classcalendar:main")
 
     collaborator = (
         User.objects.filter(email__iexact=lookup)
@@ -900,10 +988,10 @@ def collaborator_add(request):
     )
     if not collaborator:
         messages.error(request, "해당 이메일의 사용자를 찾지 못했습니다. 가입시 적었던 이메일인지 확인해 주세요.")
-        return redirect("classcalendar:legacy_main")
+        return redirect("classcalendar:main")
     if collaborator.id == request.user.id:
         messages.error(request, "본인은 협업자로 추가할 수 없습니다.")
-        return redirect("classcalendar:legacy_main")
+        return redirect("classcalendar:main")
 
     can_edit = _parse_bool_value(request.POST.get("can_edit", "true"))
     relation, created = CalendarCollaborator.objects.update_or_create(
@@ -916,7 +1004,7 @@ def collaborator_add(request):
     else:
         mode_text = "편집 가능" if relation.can_edit else "읽기 전용"
         messages.info(request, f"{_display_user_name(collaborator)} 님 협업 권한을 {mode_text}으로 업데이트했습니다.")
-    return redirect("classcalendar:legacy_main")
+    return redirect("classcalendar:main")
 
 
 @login_required
@@ -929,12 +1017,12 @@ def collaborator_remove(request, collaborator_id):
     )
     if not relation:
         messages.error(request, "협업자 정보를 찾지 못했습니다.")
-        return redirect("classcalendar:legacy_main")
+        return redirect("classcalendar:main")
 
     collaborator_name = _display_user_name(relation.collaborator)
     relation.delete()
     messages.info(request, f"{collaborator_name} 님의 협업 권한을 해제했습니다.")
-    return redirect("classcalendar:legacy_main")
+    return redirect("classcalendar:main")
 
 
 @login_required
@@ -945,7 +1033,7 @@ def share_enable(request):
         setting.share_enabled = True
         setting.save(update_fields=["share_enabled", "updated_at"])
     messages.success(request, "공유 링크를 활성화했습니다.")
-    return redirect("classcalendar:legacy_main")
+    return redirect("classcalendar:main")
 
 
 @login_required
@@ -956,7 +1044,7 @@ def share_disable(request):
         setting.share_enabled = False
         setting.save(update_fields=["share_enabled", "updated_at"])
     messages.info(request, "공유 링크를 비활성화했습니다.")
-    return redirect("classcalendar:legacy_main")
+    return redirect("classcalendar:main")
 
 
 @login_required
@@ -967,7 +1055,7 @@ def share_rotate(request):
     setting.share_enabled = True
     setting.save(update_fields=["share_uuid", "share_enabled", "updated_at"])
     messages.success(request, "공유 링크를 재발급했습니다.")
-    return redirect("classcalendar:legacy_main")
+    return redirect("classcalendar:main")
 
 
 @require_GET

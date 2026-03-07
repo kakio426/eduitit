@@ -1,6 +1,7 @@
 from argparse import Namespace
 from datetime import date, timedelta
 import csv
+from importlib import import_module
 from io import BytesIO, StringIO
 import json
 from pathlib import Path
@@ -33,19 +34,6 @@ from scripts.run_sheetbook_archive_bulk_snapshot import (
     _build_markdown as _build_archive_bulk_snapshot_markdown,
     _collect_snapshot as _collect_archive_bulk_snapshot,
 )
-from scripts.run_sheetbook_consent_freeze_snapshot import (
-    _build_markdown as _build_consent_freeze_snapshot_markdown,
-    _build_report as _build_consent_freeze_snapshot_report,
-)
-from scripts.run_sheetbook_daily_start_bundle import (
-    _build_bundle_markdown as _build_daily_start_bundle_markdown,
-    _build_bundle_next_actions as _build_daily_start_bundle_next_actions,
-    _build_bundle_summary as _build_daily_start_bundle_summary,
-)
-from scripts.run_sheetbook_local_rehearsal_cycle import (
-    _build_command_plan as _build_local_rehearsal_command_plan,
-    _resolve_action_count as _resolve_local_rehearsal_action_count,
-)
 from scripts.run_sheetbook_smoke_sync_cycle import (
     _build_command_plan as _build_smoke_sync_cycle_command_plan,
 )
@@ -54,44 +42,9 @@ from scripts.run_sheetbook_grid_smoke import (
     _should_ignore_console_error as _should_ignore_grid_console_error,
     _wait_until_saved as _wait_until_grid_saved,
 )
-from scripts.run_sheetbook_ops_index_report import (
-    _build_markdown as _build_ops_index_markdown,
-    _build_summary as _build_ops_index_summary,
-)
-from scripts.run_sheetbook_sample_gap_summary import (
-    _build_sample_gap_markdown as _build_sample_gap_markdown_payload,
-    _build_sample_gap_summary as _build_sample_gap_summary_payload,
-)
-from scripts.run_sheetbook_release_signoff_log import (
-    _build_markdown as _build_release_signoff_log_markdown,
-)
-from scripts.run_sheetbook_guarded_commit import (
-    run as _run_sheetbook_guarded_commit,
-)
-from scripts.run_sheetbook_refresh_handoff_latest import (
-    run as _run_sheetbook_refresh_handoff_latest,
-)
 from scripts.run_sheetbook_pilot_log_snapshot import (
     _build_markdown as _build_pilot_log_markdown,
     _collect_snapshot as _collect_pilot_log_snapshot,
-)
-from scripts.run_sheetbook_seed_metric_samples import (
-    SEED_TAG as SHEETBOOK_METRIC_SEED_TAG,
-    _clear_seed_events,
-    _seed_metric_events,
-)
-from scripts.run_sheetbook_collect_pilot_samples import (
-    _collect_input_feedback,
-    _emit_payload,
-    _resolve_output_path,
-    _resolve_archive_batch_size,
-    _build_next_steps,
-    _count_workspace_home_source_events,
-    _delta as _pilot_collect_delta,
-    _resolve_next_due_date,
-    _resolve_action_count,
-    _run_collection_flow,
-    _supports_home_view_collection,
 )
 from sheetbook.models import (
     ActionInvocation,
@@ -106,6 +59,108 @@ from sheetbook.models import (
 
 
 User = get_user_model()
+
+
+_OPTIONAL_SHEETBOOK_SCRIPT_IMPORT_ERRORS = {}
+
+
+def _optional_sheetbook_script_attr(module_name, attr_name):
+    try:
+        module = import_module(module_name)
+    except Exception as exc:
+        _OPTIONAL_SHEETBOOK_SCRIPT_IMPORT_ERRORS[module_name] = exc
+        return None
+    try:
+        return getattr(module, attr_name)
+    except AttributeError as exc:
+        _OPTIONAL_SHEETBOOK_SCRIPT_IMPORT_ERRORS[f"{module_name}.{attr_name}"] = exc
+        return None
+
+
+_build_consent_freeze_snapshot_markdown = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_consent_freeze_snapshot", "_build_markdown"
+)
+_build_consent_freeze_snapshot_report = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_consent_freeze_snapshot", "_build_report"
+)
+_build_daily_start_bundle_markdown = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_daily_start_bundle", "_build_bundle_markdown"
+)
+_build_daily_start_bundle_next_actions = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_daily_start_bundle", "_build_bundle_next_actions"
+)
+_build_daily_start_bundle_summary = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_daily_start_bundle", "_build_bundle_summary"
+)
+_build_local_rehearsal_command_plan = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_local_rehearsal_cycle", "_build_command_plan"
+)
+_resolve_local_rehearsal_action_count = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_local_rehearsal_cycle", "_resolve_action_count"
+)
+_build_ops_index_markdown = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_ops_index_report", "_build_markdown"
+)
+_build_ops_index_summary = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_ops_index_report", "_build_summary"
+)
+_build_sample_gap_markdown_payload = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_sample_gap_summary", "_build_sample_gap_markdown"
+)
+_build_sample_gap_summary_payload = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_sample_gap_summary", "_build_sample_gap_summary"
+)
+_build_release_signoff_log_markdown = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_release_signoff_log", "_build_markdown"
+)
+_run_sheetbook_guarded_commit = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_guarded_commit", "run"
+)
+_run_sheetbook_refresh_handoff_latest = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_refresh_handoff_latest", "run"
+)
+SHEETBOOK_METRIC_SEED_TAG = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_seed_metric_samples", "SEED_TAG"
+)
+_clear_seed_events = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_seed_metric_samples", "_clear_seed_events"
+)
+_seed_metric_events = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_seed_metric_samples", "_seed_metric_events"
+)
+_collect_input_feedback = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_collect_input_feedback"
+)
+_emit_payload = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_emit_payload"
+)
+_resolve_output_path = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_resolve_output_path"
+)
+_resolve_archive_batch_size = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_resolve_archive_batch_size"
+)
+_build_next_steps = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_build_next_steps"
+)
+_count_workspace_home_source_events = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_count_workspace_home_source_events"
+)
+_pilot_collect_delta = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_delta"
+)
+_resolve_next_due_date = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_resolve_next_due_date"
+)
+_resolve_action_count = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_resolve_action_count"
+)
+_run_collection_flow = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_run_collection_flow"
+)
+_supports_home_view_collection = _optional_sheetbook_script_attr(
+    "scripts.run_sheetbook_collect_pilot_samples", "_supports_home_view_collection"
+)
 
 
 class SheetbookFlagTests(TestCase):
@@ -1684,7 +1739,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="grid-mobile-row-open-btn"')
         self.assertContains(response, 'id="grid-mobile-row-panel"')
-        self.assertContains(response, "모바일 행 편집")
+        self.assertContains(response, "휴대폰 한 줄 수정")
         self.assertContains(response, "touchstart")
         self.assertContains(response, "touchmove")
 
@@ -1702,7 +1757,29 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["sheetbook_mobile_read_only"])
         self.assertContains(response, "휴대폰 읽기 모드")
+        self.assertContains(response, "지금 할 수 있는 일")
+        self.assertContains(response, "태블릿이나 PC에서 이어서 할 일")
+        self.assertContains(response, "선택한 칸 범위 확인")
         self.assertContains(response, 'data-mobile-read-only="1"')
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_calendar_tab_shows_mobile_next_step_guidance_and_disables_sync_for_phone_user_agent(self):
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),
+            data={"tab": self.calendar_tab.id},
+            HTTP_USER_AGENT=(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["sheetbook_mobile_read_only"])
+        self.assertContains(response, "휴대폰에서는 일정 확인과 직접 일정 넣기는 가능해요.")
+        self.assertContains(response, "연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.")
+        self.assertContains(response, 'id="sheetbook-calendar-sync-btn"')
+        self.assertContains(response, "disabled aria-disabled=\"true\"")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_detail_keeps_edit_mode_for_tablet_user_agent(self):
@@ -1750,6 +1827,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertFalse(payload["ok"])
         self.assertTrue(payload["mobile_read_only"])
         self.assertIn("휴대폰", payload["error"])
+        self.assertIn("태블릿이나 PC", payload["error"])
         title_cell = SheetCell.objects.get(row=self.row, column=self.col_title)
         self.assertEqual(title_cell.value_text, "생태체험")
 
@@ -2305,6 +2383,105 @@ class SheetbookGridApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("달력 탭", response.json().get("error", ""))
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_sync_calendar_from_schedule_uses_explicit_preferred_schedule_tab(self):
+        preferred_tab = SheetTab.objects.create(
+            sheetbook=self.sheetbook,
+            name="행사 일정",
+            tab_type=SheetTab.TYPE_GRID,
+            sort_order=3,
+        )
+        preferred_title_col = SheetColumn.objects.create(
+            tab=preferred_tab,
+            key="title",
+            label="제목",
+            column_type=SheetColumn.TYPE_TEXT,
+            sort_order=1,
+        )
+        preferred_day_col = SheetColumn.objects.create(
+            tab=preferred_tab,
+            key="date",
+            label="날짜",
+            column_type=SheetColumn.TYPE_DATE,
+            sort_order=2,
+        )
+        preferred_row = SheetRow.objects.create(
+            tab=preferred_tab,
+            sort_order=1,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        SheetCell.objects.create(row=preferred_row, column=preferred_title_col, value_text="체험학습")
+        SheetCell.objects.create(row=preferred_row, column=preferred_day_col, value_date=date(2026, 3, 28))
+        self.sheetbook.preferred_schedule_tab = preferred_tab
+        self.sheetbook.save(update_fields=["preferred_schedule_tab", "updated_at"])
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("sheetbook:sync_calendar_from_schedule", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.calendar_tab.pk}),
+            data={},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["created"], 1)
+
+        explicit_event = CalendarEvent.objects.filter(
+            author=self.user,
+            integration_source="sheetbook_schedule_sync",
+            integration_key=f"{self.sheetbook.id}:{preferred_tab.id}:{preferred_row.id}",
+        ).first()
+        self.assertIsNotNone(explicit_event)
+        self.assertEqual(explicit_event.title, "체험학습")
+        self.assertFalse(
+            CalendarEvent.objects.filter(
+                author=self.user,
+                integration_source="sheetbook_schedule_sync",
+                integration_key=f"{self.sheetbook.id}:{self.tab.id}:{self.row.id}",
+            ).exists()
+        )
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_update_calendar_link_settings_saves_preferences_and_clears_previous_bridge_target(self):
+        other_sheetbook = Sheetbook.objects.create(owner=self.user, title="다른 연결 수첩")
+        other_calendar_tab = SheetTab.objects.create(
+            sheetbook=other_sheetbook,
+            name="달력",
+            tab_type=SheetTab.TYPE_CALENDAR,
+            sort_order=1,
+        )
+        other_sheetbook.preferred_calendar_tab = other_calendar_tab
+        other_sheetbook.save(update_fields=["preferred_calendar_tab", "updated_at"])
+
+        preferred_schedule_tab = SheetTab.objects.create(
+            sheetbook=self.sheetbook,
+            name="행사 일정",
+            tab_type=SheetTab.TYPE_GRID,
+            sort_order=3,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("sheetbook:update_calendar_link_settings", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.calendar_tab.pk}),
+            data={
+                "schedule_source_tab_id": preferred_schedule_tab.id,
+                "prefer_calendar_entry": "1",
+                "source": "workspace_home",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            f"{reverse('sheetbook:detail', kwargs={'pk': self.sheetbook.pk})}?tab={self.calendar_tab.id}&source=workspace_home",
+            fetch_redirect_response=False,
+        )
+
+        self.sheetbook.refresh_from_db()
+        other_sheetbook.refresh_from_db()
+        self.assertEqual(self.sheetbook.preferred_schedule_tab_id, preferred_schedule_tab.id)
+        self.assertEqual(self.sheetbook.preferred_calendar_tab_id, self.calendar_tab.id)
+        self.assertIsNone(other_sheetbook.preferred_calendar_tab_id)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_execute_grid_action_calendar_creates_events_and_log(self):
@@ -3045,9 +3222,9 @@ class SheetbookGridApiTests(TestCase):
         self.assertContains(response, 'data-grid-action="notice"')
         self.assertContains(response, 'id="grid-action-preview-modal"')
         self.assertContains(response, 'id="grid-action-history"')
-        self.assertContains(response, "바로 만들기 전에 확인")
+        self.assertContains(response, "선택한 내용 확인")
         self.assertContains(response, "선택한 칸")
-        self.assertContains(response, "최근 만든 기록")
+        self.assertContains(response, "방금 만든 결과")
         self.assertContains(response, 'data-history-filter="success"')
         self.assertContains(response, 'id="grid-action-history-more"')
         self.assertContains(response, "data-action-history-url=")
@@ -6972,3 +7149,72 @@ class SheetbookBenchmarkCommandTests(TestCase):
                 stdout=out,
                 stderr=out,
             )
+
+
+def _apply_optional_sheetbook_script_test_skips():
+    optional_class_requirements = {
+        "SheetbookReleaseSignoffLogScriptTests": {
+            "scripts.run_sheetbook_release_signoff_log._build_markdown": _build_release_signoff_log_markdown,
+        },
+        "SheetbookGuardedCommitScriptTests": {
+            "scripts.run_sheetbook_guarded_commit.run": _run_sheetbook_guarded_commit,
+        },
+        "SheetbookRefreshHandoffLatestScriptTests": {
+            "scripts.run_sheetbook_refresh_handoff_latest.run": _run_sheetbook_refresh_handoff_latest,
+        },
+        "SheetbookDailyStartBundleScriptTests": {
+            "scripts.run_sheetbook_daily_start_bundle._build_bundle_markdown": _build_daily_start_bundle_markdown,
+            "scripts.run_sheetbook_daily_start_bundle._build_bundle_next_actions": _build_daily_start_bundle_next_actions,
+            "scripts.run_sheetbook_daily_start_bundle._build_bundle_summary": _build_daily_start_bundle_summary,
+        },
+        "SheetbookLocalRehearsalCycleScriptTests": {
+            "scripts.run_sheetbook_local_rehearsal_cycle._build_command_plan": _build_local_rehearsal_command_plan,
+            "scripts.run_sheetbook_local_rehearsal_cycle._resolve_action_count": _resolve_local_rehearsal_action_count,
+        },
+        "SheetbookOpsIndexReportScriptTests": {
+            "scripts.run_sheetbook_ops_index_report._build_markdown": _build_ops_index_markdown,
+            "scripts.run_sheetbook_ops_index_report._build_summary": _build_ops_index_summary,
+        },
+        "SheetbookSeedMetricSamplesScriptTests": {
+            "scripts.run_sheetbook_seed_metric_samples.SEED_TAG": SHEETBOOK_METRIC_SEED_TAG,
+            "scripts.run_sheetbook_seed_metric_samples._clear_seed_events": _clear_seed_events,
+            "scripts.run_sheetbook_seed_metric_samples._seed_metric_events": _seed_metric_events,
+        },
+        "SheetbookPilotCollectScriptTests": {
+            "scripts.run_sheetbook_collect_pilot_samples._collect_input_feedback": _collect_input_feedback,
+            "scripts.run_sheetbook_collect_pilot_samples._emit_payload": _emit_payload,
+            "scripts.run_sheetbook_collect_pilot_samples._resolve_output_path": _resolve_output_path,
+            "scripts.run_sheetbook_collect_pilot_samples._resolve_archive_batch_size": _resolve_archive_batch_size,
+            "scripts.run_sheetbook_collect_pilot_samples._build_next_steps": _build_next_steps,
+            "scripts.run_sheetbook_collect_pilot_samples._count_workspace_home_source_events": _count_workspace_home_source_events,
+            "scripts.run_sheetbook_collect_pilot_samples._delta": _pilot_collect_delta,
+            "scripts.run_sheetbook_collect_pilot_samples._resolve_next_due_date": _resolve_next_due_date,
+            "scripts.run_sheetbook_collect_pilot_samples._resolve_action_count": _resolve_action_count,
+            "scripts.run_sheetbook_collect_pilot_samples._run_collection_flow": _run_collection_flow,
+            "scripts.run_sheetbook_collect_pilot_samples._supports_home_view_collection": _supports_home_view_collection,
+        },
+        "SheetbookPilotCollectSupportScriptTests": {
+            "scripts.run_sheetbook_collect_pilot_samples._supports_home_view_collection": _supports_home_view_collection,
+        },
+        "SheetbookSampleGapSummaryScriptTests": {
+            "scripts.run_sheetbook_sample_gap_summary._build_sample_gap_markdown": _build_sample_gap_markdown_payload,
+            "scripts.run_sheetbook_sample_gap_summary._build_sample_gap_summary": _build_sample_gap_summary_payload,
+        },
+        "SheetbookConsentFreezeSnapshotScriptTests": {
+            "scripts.run_sheetbook_consent_freeze_snapshot._build_markdown": _build_consent_freeze_snapshot_markdown,
+            "scripts.run_sheetbook_consent_freeze_snapshot._build_report": _build_consent_freeze_snapshot_report,
+        },
+    }
+    for class_name, requirements in optional_class_requirements.items():
+        test_class = globals().get(class_name)
+        if test_class is None:
+            continue
+        missing = [name for name, value in requirements.items() if value is None]
+        if missing:
+            test_class.__unittest_skip__ = True
+            test_class.__unittest_skip_why__ = (
+                "optional sheetbook script helpers unavailable: " + ", ".join(missing)
+            )
+
+
+_apply_optional_sheetbook_script_test_skips()

@@ -60,6 +60,72 @@ def _recommend_min_sample(base_count: int, ratio: float) -> int:
     return max(5, min(50, suggested))
 
 
+def _normalize_role(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    return normalized or "unknown"
+
+
+def _build_funnel_snapshot(
+    *,
+    counts: dict[str, int],
+    current_to_create_target: float,
+    current_create_to_action_target: float,
+    min_home_sample: int,
+    min_create_sample: int,
+    current_to_create_min_sample: int,
+    current_create_to_action_min_sample: int,
+) -> dict[str, Any]:
+    home_count = counts["workspace_home_opened_count"]
+    create_count = counts["workspace_source_create_count"]
+    action_count = counts["workspace_source_action_requested_count"]
+
+    home_to_create_rate = round((create_count / home_count) * 100, 1) if home_count else 0.0
+    create_to_action_rate = round((action_count / create_count) * 100, 1) if create_count else 0.0
+
+    to_create_target = current_to_create_target
+    to_create_reason = "현재 설정 유지"
+    if home_count >= min_home_sample:
+        to_create_target, margin = _recommend_target_rate(home_to_create_rate, home_count)
+        to_create_reason = f"관측치 {home_to_create_rate}% - 안정 마진 {margin}%"
+    else:
+        to_create_reason = f"샘플 부족({home_count} < {min_home_sample})"
+
+    create_to_action_target = current_create_to_action_target
+    create_to_action_reason = "현재 설정 유지"
+    if create_count >= min_create_sample:
+        create_to_action_target, margin = _recommend_target_rate(create_to_action_rate, create_count)
+        create_to_action_reason = f"관측치 {create_to_action_rate}% - 안정 마진 {margin}%"
+    else:
+        create_to_action_reason = f"샘플 부족({create_count} < {min_create_sample})"
+
+    recommended_to_create_min_sample = (
+        _recommend_min_sample(home_count, ratio=0.2)
+        if home_count >= min_home_sample
+        else current_to_create_min_sample
+    )
+    recommended_create_to_action_min_sample = (
+        _recommend_min_sample(create_count, ratio=0.3)
+        if create_count >= min_create_sample
+        else current_create_to_action_min_sample
+    )
+
+    return {
+        "counts": counts,
+        "rates": {
+            "home_to_create": home_to_create_rate,
+            "create_to_action": create_to_action_rate,
+        },
+        "recommended": {
+            "to_create_target": to_create_target,
+            "create_to_action_target": create_to_action_target,
+            "to_create_min_sample": recommended_to_create_min_sample,
+            "create_to_action_min_sample": recommended_create_to_action_min_sample,
+            "to_create_reason": to_create_reason,
+            "create_to_action_reason": create_to_action_reason,
+        },
+    }
+
+
 def _read_workspace_funnel_counts(since) -> dict[str, int]:
     from sheetbook.models import SheetbookMetricEvent
 
@@ -91,6 +157,49 @@ def _read_workspace_funnel_counts(since) -> dict[str, int]:
     }
 
 
+def _read_workspace_funnel_counts_by_role(since) -> dict[str, dict[str, int]]:
+    from sheetbook.models import SheetbookMetricEvent
+
+    event_qs = SheetbookMetricEvent.objects.filter(created_at__gte=since)
+    grouped_counts: dict[str, dict[str, int]] = {}
+
+    def _ensure_role_counts(role_name: str) -> dict[str, int]:
+        return grouped_counts.setdefault(
+            role_name,
+            {
+                "workspace_home_opened_count": 0,
+                "workspace_source_create_count": 0,
+                "workspace_source_action_requested_count": 0,
+            },
+        )
+
+    home_roles = event_qs.filter(event_name="workspace_home_opened").values_list(
+        "user__userprofile__role",
+        flat=True,
+    )
+    for raw_role in home_roles:
+        _ensure_role_counts(_normalize_role(raw_role))["workspace_home_opened_count"] += 1
+
+    source_rows = event_qs.filter(
+        event_name__in=["sheetbook_created", "action_execute_requested"]
+    ).values("user__userprofile__role", "event_name", "metadata")
+
+    for row in source_rows:
+        metadata = row.get("metadata") or {}
+        if not isinstance(metadata, dict):
+            continue
+        source = str(metadata.get("entry_source") or "").strip().lower()
+        if not source.startswith("workspace_home"):
+            continue
+        role_counts = _ensure_role_counts(_normalize_role(row.get("user__userprofile__role")))
+        if row["event_name"] == "sheetbook_created":
+            role_counts["workspace_source_create_count"] += 1
+        elif row["event_name"] == "action_execute_requested":
+            role_counts["workspace_source_action_requested_count"] += 1
+
+    return {role_name: grouped_counts[role_name] for role_name in sorted(grouped_counts)}
+
+
 def _collect_snapshot(days: int) -> dict[str, Any]:
     from django.conf import settings
     from django.utils import timezone
@@ -113,64 +222,40 @@ def _collect_snapshot(days: int) -> dict[str, Any]:
     )
 
     since = timezone.now() - timedelta(days=days)
-    counts = _read_workspace_funnel_counts(since)
-    home_count = counts["workspace_home_opened_count"]
-    create_count = counts["workspace_source_create_count"]
-    action_count = counts["workspace_source_action_requested_count"]
-
-    home_to_create_rate = round((create_count / home_count) * 100, 1) if home_count else 0.0
-    create_to_action_rate = round((action_count / create_count) * 100, 1) if create_count else 0.0
-
-    to_create_target = current_to_create_target
-    to_create_reason = "현재 설정 유지"
-    if home_count >= current_to_create_min_sample:
-        to_create_target, margin = _recommend_target_rate(home_to_create_rate, home_count)
-        to_create_reason = f"관측치 {home_to_create_rate}% - 안정 마진 {margin}%"
-    else:
-        to_create_reason = f"샘플 부족({home_count} < {current_to_create_min_sample})"
-
-    create_to_action_target = current_create_to_action_target
-    create_to_action_reason = "현재 설정 유지"
-    if create_count >= current_create_to_action_min_sample:
-        create_to_action_target, margin = _recommend_target_rate(create_to_action_rate, create_count)
-        create_to_action_reason = f"관측치 {create_to_action_rate}% - 안정 마진 {margin}%"
-    else:
-        create_to_action_reason = (
-            f"샘플 부족({create_count} < {current_create_to_action_min_sample})"
+    snapshot_core = _build_funnel_snapshot(
+        counts=_read_workspace_funnel_counts(since),
+        current_to_create_target=current_to_create_target,
+        current_create_to_action_target=current_create_to_action_target,
+        min_home_sample=current_to_create_min_sample,
+        min_create_sample=current_create_to_action_min_sample,
+        current_to_create_min_sample=current_to_create_min_sample,
+        current_create_to_action_min_sample=current_create_to_action_min_sample,
+    )
+    role_breakdown = {
+        role_name: _build_funnel_snapshot(
+            counts=role_counts,
+            current_to_create_target=current_to_create_target,
+            current_create_to_action_target=current_create_to_action_target,
+            min_home_sample=current_to_create_min_sample,
+            min_create_sample=current_create_to_action_min_sample,
+            current_to_create_min_sample=current_to_create_min_sample,
+            current_create_to_action_min_sample=current_create_to_action_min_sample,
         )
-
-    recommended_to_create_min_sample = (
-        _recommend_min_sample(home_count, ratio=0.2)
-        if home_count >= current_to_create_min_sample
-        else current_to_create_min_sample
-    )
-    recommended_create_to_action_min_sample = (
-        _recommend_min_sample(create_count, ratio=0.3)
-        if create_count >= current_create_to_action_min_sample
-        else current_create_to_action_min_sample
-    )
+        for role_name, role_counts in _read_workspace_funnel_counts_by_role(since).items()
+    }
 
     return {
         "days": days,
-        "counts": counts,
-        "rates": {
-            "home_to_create": home_to_create_rate,
-            "create_to_action": create_to_action_rate,
-        },
+        "counts": snapshot_core["counts"],
+        "rates": snapshot_core["rates"],
         "current": {
             "to_create_target": current_to_create_target,
             "create_to_action_target": current_create_to_action_target,
             "to_create_min_sample": current_to_create_min_sample,
             "create_to_action_min_sample": current_create_to_action_min_sample,
         },
-        "recommended": {
-            "to_create_target": to_create_target,
-            "create_to_action_target": create_to_action_target,
-            "to_create_min_sample": recommended_to_create_min_sample,
-            "create_to_action_min_sample": recommended_create_to_action_min_sample,
-            "to_create_reason": to_create_reason,
-            "create_to_action_reason": create_to_action_reason,
-        },
+        "recommended": snapshot_core["recommended"],
+        "role_breakdown": role_breakdown,
     }
 
 
@@ -228,6 +313,25 @@ def _build_markdown(
     rates = snapshot["rates"]
     recommended = snapshot["recommended"]
     days = snapshot["days"]
+    role_breakdown = snapshot.get("role_breakdown") or {}
+
+    role_lines: list[str] = []
+    for role_name in sorted(role_breakdown):
+        role_snapshot = role_breakdown.get(role_name) or {}
+        role_counts = role_snapshot.get("counts") or {}
+        role_rates = role_snapshot.get("rates") or {}
+        role_recommended = role_snapshot.get("recommended") or {}
+        role_lines.append(
+            f"- role={role_name}: "
+            f"home={role_counts.get('workspace_home_opened_count', 0)}, "
+            f"create={role_counts.get('workspace_source_create_count', 0)}, "
+            f"action={role_counts.get('workspace_source_action_requested_count', 0)}, "
+            f"home_to_create={role_rates.get('home_to_create', 0.0)}%, "
+            f"create_to_action={role_rates.get('create_to_action', 0.0)}%, "
+            f"to_create_target={role_recommended.get('to_create_target', '-') } ({role_recommended.get('to_create_reason', '사유 없음')}), "
+            f"create_to_action_target={role_recommended.get('create_to_action_target', '-') } ({role_recommended.get('create_to_action_reason', '사유 없음')})"
+        )
+    role_markdown = "\n".join(role_lines) if role_lines else "- role breakdown 없음"
 
     return f"""# Sheetbook Pilot Event Log ({record_date.isoformat()})
 
@@ -251,7 +355,11 @@ def _build_markdown(
 - 주요 이슈: {"샘플 부족" if counts["workspace_home_opened_count"] < snapshot["current"]["to_create_min_sample"] else "집계 정상"}
 - 다음 주 액션: {row["next_action"]}
 
-## 3) 재보정 실행 기록
+## 3) 역할별 스냅샷 참고
+
+{role_markdown}
+
+## 4) 재보정 실행 기록
 
 ### Output Snapshot
 
@@ -373,6 +481,7 @@ def main() -> int:
         "counts": counts,
         "rates": rates,
         "recommended": snapshot["recommended"],
+        "role_breakdown": snapshot["role_breakdown"],
         "row": row,
     }
     print(json.dumps(result, ensure_ascii=False))
