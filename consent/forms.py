@@ -170,7 +170,26 @@ class ConsentSignForm(forms.Form):
             }
         ),
     )
+    phone_last4 = forms.CharField(
+        required=False,
+        min_length=4,
+        max_length=4,
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "inputmode": "numeric",
+                "maxlength": "4",
+                "placeholder": "전화번호 끝 4자리",
+            }
+        ),
+    )
     signature_data = forms.CharField(widget=forms.HiddenInput)
+
+    def clean_phone_last4(self):
+        value = (self.cleaned_data.get("phone_last4") or "").strip()
+        if value and not value.isdigit():
+            raise forms.ValidationError("숫자 4자리를 입력해 주세요.")
+        return value
 
     def clean_signature_data(self):
         value = (self.cleaned_data.get("signature_data") or "").strip()

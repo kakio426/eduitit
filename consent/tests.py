@@ -11,8 +11,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from consent.models import SignatureDocument, SignatureRecipient, SignatureRequest
-from consent.services import PdfRuntimeUnavailable
+from consent.models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
+from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_pdf, generate_summary_pdf
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
@@ -99,6 +99,95 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(self.recipient.decision, SignatureRecipient.DECISION_AGREE)
         self.assertTrue(bool(self.recipient.signature_data))
 
+
+    def test_sign_submission_with_phone_requires_last4(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.post(
+            sign_url,
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signature_data": "data:image/png;base64,AAA",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_PENDING)
+        self.assertContains(response, "전화번호 끝 4자리를 확인해 주세요.")
+        self.assertTrue(
+            ConsentAuditLog.objects.filter(
+                request=self.request_obj,
+                recipient=self.recipient,
+                event_type=ConsentAuditLog.EVENT_VERIFY_FAIL,
+            ).exists()
+        )
+
+    def test_sign_submission_with_phone_stores_verified_evidence(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.post(
+            sign_url,
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "phone_last4": "5678",
+                "signature_data": "data:image/png;base64,AAA",
+            },
+            HTTP_X_FORWARDED_FOR="203.0.113.10",
+            HTTP_USER_AGENT="ConsentTestAgent/1.0",
+        )
+
+        self.assertRedirects(response, reverse("consent:complete", kwargs={"token": self.recipient.access_token}))
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.identity_assurance, SignatureRecipient.IDENTITY_PHONE_LAST4)
+        self.assertIsNotNone(self.recipient.verified_at)
+        self.assertEqual(self.recipient.verified_ip_address, "203.0.113.10")
+        self.assertEqual(self.recipient.verified_user_agent, "ConsentTestAgent/1.0")
+        self.assertEqual(self.recipient.ip_address, "203.0.113.10")
+        self.assertEqual(self.recipient.user_agent, "ConsentTestAgent/1.0")
+        self.assertTrue(
+            ConsentAuditLog.objects.filter(
+                request=self.request_obj,
+                recipient=self.recipient,
+                event_type=ConsentAuditLog.EVENT_VERIFY_SUCCESS,
+            ).exists()
+        )
+
+    def test_sign_submission_without_phone_uses_token_only_assurance(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        sign_url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.post(
+            sign_url,
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signature_data": "data:image/png;base64,AAA",
+            },
+            HTTP_X_FORWARDED_FOR="203.0.113.11",
+            HTTP_USER_AGENT="ConsentNoPhone/1.0",
+        )
+
+        self.assertRedirects(response, reverse("consent:complete", kwargs={"token": self.recipient.access_token}))
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.identity_assurance, SignatureRecipient.IDENTITY_TOKEN_ONLY)
+        self.assertIsNone(self.recipient.verified_at)
+        self.assertEqual(self.recipient.ip_address, "203.0.113.11")
+        self.assertEqual(self.recipient.user_agent, "ConsentNoPhone/1.0")
+
     def test_sign_link_blocked_before_send_start(self):
         url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
@@ -117,6 +206,9 @@ class ConsentFlowTests(TestCase):
         self.assertIn("학생명", header)
         self.assertIn("요청ID", header)
         self.assertIn("안내문SHA256", header)
+        self.assertIn("증빙수준", header)
+        self.assertIn("본인확인IP", header)
+        self.assertIn("제출IP", header)
         first = dict(zip(header, rows[1]))
         self.assertEqual(first["요청ID"], str(self.request_obj.request_id))
         self.assertEqual(first["동의서제목"], self.request_obj.title)
@@ -228,6 +320,13 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
+        log = ConsentAuditLog.objects.filter(
+            request=self.request_obj,
+            recipient=self.recipient,
+            event_type=ConsentAuditLog.EVENT_DOCUMENT_VIEWED,
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.event_meta.get("mode"), "download")
 
     def test_public_document_blocked_before_send_start(self):
         url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
@@ -263,12 +362,29 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
 
+    def test_public_document_inline_logs_document_view(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse("consent:public_document_inline", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        log = ConsentAuditLog.objects.filter(
+            request=self.request_obj,
+            recipient=self.recipient,
+            event_type=ConsentAuditLog.EVENT_DOCUMENT_VIEWED,
+        ).latest("created_at")
+        self.assertEqual(log.event_meta.get("mode"), "inline")
+
     def test_document_source_returns_file(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
+        self.request_obj.refresh_from_db()
+        self.assertIsNotNone(self.request_obj.preview_checked_at)
 
     def test_recipients_csv_template_download(self):
         self.client.login(username="teacher", password="pw123456")
@@ -322,6 +438,76 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "제출 링크가 숨김 상태")
         self.assertContains(response, "발송 시작 후 수신자 링크가 표시됩니다.")
+
+
+    def test_download_recipient_pdf_returns_file_when_available(self):
+        self.recipient.status = SignatureRecipient.STATUS_SIGNED
+        self.recipient.decision = SignatureRecipient.DECISION_AGREE
+        self.recipient.signature_data = "data:image/png;base64,AAA"
+        self.recipient.signed_at = timezone.now()
+        self.recipient.signed_pdf.save(
+            "recipient-proof.pdf",
+            ContentFile(b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
+            save=True,
+        )
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_recipient_pdf", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/pdf", response["Content-Type"])
+        self.assertIn("attachment;", response.get("Content-Disposition", ""))
+
+    def test_regenerate_link_clears_evidence_fields(self):
+        old_token = self.recipient.access_token
+        self.recipient.identity_assurance = SignatureRecipient.IDENTITY_PHONE_LAST4
+        self.recipient.verified_at = timezone.now()
+        self.recipient.verified_ip_address = "203.0.113.20"
+        self.recipient.verified_user_agent = "VerifyAgent/1.0"
+        self.recipient.decision = SignatureRecipient.DECISION_AGREE
+        self.recipient.decline_reason = ""
+        self.recipient.signature_data = "data:image/png;base64,AAA"
+        self.recipient.signed_at = timezone.now()
+        self.recipient.ip_address = "203.0.113.21"
+        self.recipient.user_agent = "SubmitAgent/1.0"
+        self.recipient.signed_pdf.save(
+            "signed.pdf",
+            ContentFile(b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
+            save=False,
+        )
+        self.recipient.status = SignatureRecipient.STATUS_PENDING
+        self.recipient.save(
+            update_fields=[
+                "identity_assurance",
+                "verified_at",
+                "verified_ip_address",
+                "verified_user_agent",
+                "decision",
+                "decline_reason",
+                "signature_data",
+                "signed_at",
+                "ip_address",
+                "user_agent",
+                "signed_pdf",
+                "status",
+            ]
+        )
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:regenerate_link", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertNotEqual(self.recipient.access_token, old_token)
+        self.assertEqual(self.recipient.identity_assurance, SignatureRecipient.IDENTITY_TOKEN_ONLY)
+        self.assertIsNone(self.recipient.verified_at)
+        self.assertIsNone(self.recipient.verified_ip_address)
+        self.assertEqual(self.recipient.verified_user_agent, "")
+        self.assertEqual(self.recipient.decision, "")
+        self.assertEqual(self.recipient.signature_data, "")
+        self.assertIsNone(self.recipient.signed_at)
+        self.assertIsNone(self.recipient.ip_address)
+        self.assertEqual(self.recipient.user_agent, "")
 
     def test_detail_shows_progress_dashboard_counts(self):
         self.recipient.status = SignatureRecipient.STATUS_SIGNED
@@ -658,6 +844,116 @@ class ConsentEvidenceTests(TestCase):
         log = self.request_obj.audit_logs.filter(event_type="sign_submitted").first()
         self.assertIsNotNone(log)
         self.assertEqual(log.event_meta.get("document_sha256"), "abc123")
+
+
+    def test_summary_pdf_generation_handles_long_recipient_cards(self):
+        try:
+            from pypdf import PdfReader
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            self.skipTest("pypdf/reportlab unavailable")
+
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet)
+        c.drawString(72, 720, "source-document-page")
+        c.showPage()
+        c.save()
+        packet.seek(0)
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="layout-source",
+            original_file=SimpleUploadedFile(
+                "layout_source.pdf",
+                packet.getvalue(),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="layout-summary-test",
+            consent_text_version="v1",
+            document_name_snapshot="layout_source.pdf",
+            document_size_snapshot=len(packet.getvalue()),
+            document_sha256_snapshot="layoutsha256",
+        )
+        SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="아주긴이름학생" * 4,
+            parent_name="매우긴보호자이름" * 4,
+            phone_number="010-1111-2222",
+            status=SignatureRecipient.STATUS_DECLINED,
+            decision=SignatureRecipient.DECISION_DISAGREE,
+            decline_reason="비동의 사유가 길게 이어질 때 카드 안에서 줄바꿈과 높이 계산이 안정적으로 동작하는지 확인합니다. " * 5,
+            signature_data="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+G14J3QAAAABJRU5ErkJggg==",
+            signed_at=timezone.now(),
+            identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
+            verified_at=timezone.now(),
+            verified_ip_address="203.0.113.30",
+            ip_address="203.0.113.31",
+            user_agent="LayoutAgent/1.0" * 10,
+        )
+
+        summary_file = generate_summary_pdf(request_obj)
+        pdf_bytes = summary_file.read()
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertGreaterEqual(len(reader.pages), 2)
+
+    def test_recipient_evidence_pdf_generation_handles_long_text_and_signature(self):
+        try:
+            from pypdf import PdfReader
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            self.skipTest("pypdf/reportlab unavailable")
+
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet)
+        c.drawString(72, 720, "recipient-evidence-source")
+        c.showPage()
+        c.save()
+        packet.seek(0)
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="evidence-source",
+            original_file=SimpleUploadedFile(
+                "evidence_source.pdf",
+                packet.getvalue(),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="layout-evidence-test",
+            consent_text_version="v1",
+        )
+        recipient = SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="학생" * 12,
+            parent_name="보호자" * 12,
+            phone_number="010-2222-3333",
+            status=SignatureRecipient.STATUS_DECLINED,
+            decision=SignatureRecipient.DECISION_DISAGREE,
+            decline_reason="긴 비동의 사유가 개별 증빙 페이지에서 서명 영역과 겹치지 않는지 확인합니다. " * 6,
+            signature_data="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+G14J3QAAAABJRU5ErkJggg==",
+            signed_at=timezone.now(),
+            identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
+            verified_at=timezone.now(),
+            verified_ip_address="203.0.113.40",
+            ip_address="203.0.113.41",
+            user_agent="EvidenceAgent/1.0 " * 20,
+        )
+
+        evidence_file = generate_recipient_evidence_pdf(recipient)
+        pdf_bytes = evidence_file.read()
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertGreaterEqual(len(reader.pages), 2)
 
 
 class ConsentSharedRosterTests(TestCase):

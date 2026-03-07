@@ -1,4 +1,5 @@
 import base64
+import base64
 import hashlib
 import io
 import logging
@@ -137,6 +138,80 @@ def _build_document_evidence(request: SignatureRequest, original_bytes: bytes) -
     }
 
 
+def _wrap_pdf_lines(text: str, font_name: str, size: int, max_width: float, *, max_lines: int | None = None) -> list[str]:
+    from reportlab.lib.utils import simpleSplit
+
+    raw_text = (text or "").strip() or "-"
+    lines = []
+    for segment in raw_text.splitlines() or [raw_text]:
+        wrapped = simpleSplit(segment or " ", font_name, size, max_width)
+        lines.extend(wrapped or [" "])
+    if max_lines is not None and len(lines) > max_lines:
+        lines = lines[:max_lines]
+        last = (lines[-1] or "").rstrip()
+        lines[-1] = f"{last[:-1]}…" if len(last) > 1 else "…"
+    return lines
+
+
+
+def _draw_pdf_lines(c, lines: list[str], x: float, y: float, *, font_name: str, size: int, line_gap: int) -> float:
+    c.setFont(font_name, size)
+    for line in lines:
+        c.drawString(x, y, line)
+        y -= line_gap
+    return y
+
+
+
+def _draw_signature_preview(
+    c,
+    signature_data: str,
+    *,
+    box_x: float,
+    box_y: float,
+    box_w: float,
+    box_h: float,
+    font_name: str,
+):
+    from reportlab.lib.utils import ImageReader
+
+    c.roundRect(box_x, box_y, box_w, box_h, 6, stroke=1, fill=0)
+    if signature_data.startswith("data:image"):
+        try:
+            image = ImageReader(io.BytesIO(_split_data_url(signature_data)))
+            src_w, src_h = image.getSize()
+            pad = 4.0
+            avail_w = max(box_w - (pad * 2), 1)
+            avail_h = max(box_h - (pad * 2), 1)
+            scale = min(avail_w / src_w, avail_h / src_h)
+            draw_w = src_w * scale
+            draw_h = src_h * scale
+            draw_x = box_x + pad + ((avail_w - draw_w) / 2)
+            draw_y = box_y + pad + ((avail_h - draw_h) / 2)
+            clip_path = c.beginPath()
+            clip_path.rect(box_x + pad, box_y + pad, avail_w, avail_h)
+            c.saveState()
+            c.clipPath(clip_path, stroke=0, fill=0)
+            c.drawImage(
+                image,
+                draw_x,
+                draw_y,
+                width=draw_w,
+                height=draw_h,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+            c.restoreState()
+            return
+        except Exception:
+            fallback_text = "서명 이미지 로드 실패"
+    else:
+        fallback_text = "서명 없음"
+
+    c.setFont(font_name, 9)
+    c.drawCentredString(box_x + (box_w / 2), box_y + (box_h / 2) - 3, fallback_text)
+
+
 def _merge_pdf_bytes(source_pdf_bytes: bytes, summary_pdf_bytes: bytes, *, pdf_title: str = "") -> bytes:
     from pypdf import PdfReader, PdfWriter
 
@@ -239,7 +314,7 @@ def _build_summary_section_pdf(
     evidence: dict[str, str],
 ) -> bytes:
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.utils import ImageReader, simpleSplit
+    from reportlab.lib.utils import simpleSplit
     from reportlab.pdfgen import canvas
 
     packet = io.BytesIO()
@@ -351,68 +426,83 @@ def _build_summary_section_pdf(
         c.setFont(font_name, 10)
         c.drawString(32, y, "수신자가 없습니다.")
     else:
-        block_height = 136
+        header_gap = 12
+        meta_gap = 13
+        reason_gap = 11
+        signature_label_x = 40
+        signature_box_x = 78
+        signature_box_w = width - 124
+        signature_box_h = 42
+
         for idx, recipient in enumerate(recipients, start=1):
+            header_lines = _wrap_pdf_lines(
+                f"{idx}. 학생: {recipient.student_name} / 보호자: {recipient.parent_name}",
+                font_name,
+                10,
+                width - 84,
+                max_lines=2,
+            )
+            reason = (recipient.decline_reason or "").strip()
+            reason_lines = (
+                _wrap_pdf_lines(f"비동의 사유: {reason}", font_name, 9, width - 92, max_lines=4)
+                if reason
+                else []
+            )
+            block_height = 34 + (len(header_lines) * header_gap) + (2 * meta_gap) + (len(reason_lines) * reason_gap) + 18 + signature_box_h + 18
+            block_height = max(block_height, 148)
             if (y - block_height) < 28:
                 c.showPage()
                 y = draw_recipient_header()
 
-            c.roundRect(28, y - block_height + 8, width - 56, block_height - 12, 8, stroke=1, fill=0)
-            c.setFont(font_name, 10)
-            c.drawString(40, y - 12, f"{idx}. 학생: {recipient.student_name} / 보호자: {recipient.parent_name}")
-            c.drawString(40, y - 28, f"상태: {_status_label(recipient)}")
-            c.drawString(220, y - 28, f"결과: {_decision_label(recipient)}")
+            box_bottom = y - block_height + 8
+            c.roundRect(28, box_bottom, width - 56, block_height - 12, 8, stroke=1, fill=0)
+
+            cursor_y = y - 18
+            cursor_y = _draw_pdf_lines(
+                c,
+                header_lines,
+                40,
+                cursor_y,
+                font_name=font_name,
+                size=10,
+                line_gap=header_gap,
+            )
+            c.setFont(font_name, 9)
+            c.drawString(40, cursor_y, f"상태: {_status_label(recipient)}")
+            c.drawString(220, cursor_y, f"결과: {_decision_label(recipient)}")
+            cursor_y -= meta_gap
 
             signed_at_text = (
                 timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
                 if recipient.signed_at
                 else "-"
             )
-            c.drawString(40, y - 44, f"처리시각: {signed_at_text}")
+            c.drawString(40, cursor_y, f"처리시각: {signed_at_text}")
+            c.drawString(220, cursor_y, f"증빙수준: {_identity_assurance_label(recipient)}")
+            cursor_y -= meta_gap
 
-            reason = (recipient.decline_reason or "").strip()
-            if reason:
-                reason_lines = simpleSplit(f"비동의 사유: {reason}", font_name, 9, width - 84)
-                c.setFont(font_name, 9)
-                for line_idx, line in enumerate(reason_lines[:2]):
-                    c.drawString(40, y - 60 - (line_idx * 12), line)
+            if reason_lines:
+                cursor_y = _draw_pdf_lines(
+                    c,
+                    reason_lines,
+                    40,
+                    cursor_y,
+                    font_name=font_name,
+                    size=9,
+                    line_gap=reason_gap,
+                )
 
             c.setFont(font_name, 10)
-            c.drawString(40, y - 92, "서명")
-            sig_box_x = 75
-            sig_box_y = y - 114
-            sig_box_w = 190
-            sig_box_h = 34
-            c.rect(sig_box_x, sig_box_y, sig_box_w, sig_box_h, stroke=1, fill=0)
-
-            signature_data = recipient.signature_data or ""
-            if signature_data.startswith("data:image"):
-                try:
-                    image = ImageReader(io.BytesIO(_split_data_url(signature_data)))
-                    src_w, src_h = image.getSize()
-                    pad = 3.0
-                    avail_w = max(sig_box_w - (pad * 2), 1)
-                    avail_h = max(sig_box_h - (pad * 2), 1)
-                    scale = min(avail_w / src_w, avail_h / src_h)
-                    draw_w = src_w * scale
-                    draw_h = src_h * scale
-                    draw_x = sig_box_x + pad + ((avail_w - draw_w) / 2)
-                    draw_y = sig_box_y + pad + ((avail_h - draw_h) / 2)
-                    c.drawImage(
-                        image,
-                        draw_x,
-                        draw_y,
-                        width=draw_w,
-                        height=draw_h,
-                        preserveAspectRatio=True,
-                        mask="auto",
-                    )
-                except Exception:
-                    c.setFont(font_name, 9)
-                    c.drawString(sig_box_x + 8, sig_box_y + 13, "서명 이미지 로드 실패")
-            else:
-                c.setFont(font_name, 9)
-                c.drawString(sig_box_x + 8, sig_box_y + 13, "서명 없음")
+            c.drawString(signature_label_x, box_bottom + signature_box_h + 20, "서명")
+            _draw_signature_preview(
+                c,
+                recipient.signature_data or "",
+                box_x=signature_box_x,
+                box_y=box_bottom + 14,
+                box_w=signature_box_w,
+                box_h=signature_box_h,
+                font_name=font_name,
+            )
 
             y -= block_height
 
@@ -451,6 +541,152 @@ def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
         return ContentFile(merged_bytes, name=filename)
     except Exception:
         logger.exception("[consent] reportlab summary generation failed request_id=%s", request.request_id)
+        raise
+
+
+def _identity_assurance_label(recipient: SignatureRecipient) -> str:
+    if recipient.identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
+        return "전화번호 끝 4자리 확인"
+    return "링크 기반 제출"
+
+
+def _format_dt(value) -> str:
+    if not value:
+        return "-"
+    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _truncate_text(value: str, limit: int = 220) -> str:
+    value = (value or "").strip()
+    if len(value) <= limit:
+        return value
+    return f"{value[: limit - 1]}…"
+
+
+def _build_recipient_evidence_section_pdf(
+    recipient: SignatureRecipient,
+    evidence: dict[str, str],
+) -> bytes:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    request = recipient.request
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+    font_name = _resolve_font_name()
+    pdf_title_seed = (request.title or request.document.title or "동의서 증빙").strip() or "동의서 증빙"
+    c.setTitle(f"{pdf_title_seed} - {recipient.student_name} 증빙")
+    c.setAuthor("Eduitit")
+    c.setSubject("학부모 동의서 개별 제출 증빙")
+
+    def draw_wrapped(label: str, value: str, y: float, *, indent: float = 34, size: int = 9, line_gap: int = 12):
+        lines = _wrap_pdf_lines(f"{label}: {value or '-'}", font_name, size, width - (indent + 28))
+        return _draw_pdf_lines(c, lines, indent, y, font_name=font_name, size=size, line_gap=line_gap)
+
+    def draw_block_title(text: str, y: float):
+        c.setFont(font_name, 11)
+        c.drawString(32, y, text)
+        return y - 14
+
+    def start_continued_page(title_text: str) -> float:
+        c.showPage()
+        top = height - 40
+        c.setFont(font_name, 15)
+        c.drawString(32, top, title_text)
+        c.setFont(font_name, 9)
+        c.drawString(32, top - 16, f"요청 ID: {request.request_id}")
+        return top - 30
+
+    y = height - 40
+    c.setFont(font_name, 17)
+    c.drawString(32, y, "개별 제출 증빙")
+    y -= 24
+
+    for label, value in (
+        ("요청 ID", str(request.request_id)),
+        ("동의 요청 제목", request.title or "-"),
+        ("안내문 제목", request.document.title or "-"),
+        ("안내문 파일명", evidence.get("document_name", "-")),
+        ("안내문 SHA-256", evidence.get("document_sha256", "-")),
+        ("안내문 파일크기", evidence.get("document_size", "-")),
+        ("학생명", recipient.student_name or "-"),
+        ("보호자명", recipient.parent_name or "-"),
+        ("증빙 수준", _identity_assurance_label(recipient)),
+        ("본인확인 시각", _format_dt(recipient.verified_at)),
+        ("본인확인 IP", recipient.verified_ip_address or "-"),
+        ("제출 시각", _format_dt(recipient.signed_at)),
+        ("제출 IP", recipient.ip_address or "-"),
+        ("제출 브라우저", _truncate_text(recipient.user_agent, limit=180) or "-"),
+        ("처리 상태", _status_label(recipient)),
+        ("동의 결과", _decision_label(recipient)),
+    ):
+        y = draw_wrapped(label, value, y)
+
+    reason = (recipient.decline_reason or "").strip()
+    reason_lines = _wrap_pdf_lines(reason, font_name, 9, width - 76, max_lines=6) if reason else []
+    signature_box_h = 112
+    required_height = (18 + (len(reason_lines) * 11) if reason_lines else 0) + 22 + signature_box_h + 34
+    if (y - required_height) < 48:
+        y = start_continued_page("개별 제출 증빙 (서명)")
+
+    if reason_lines:
+        y -= 2
+        y = draw_block_title("비동의 사유", y)
+        y = _draw_pdf_lines(c, reason_lines, 44, y, font_name=font_name, size=9, line_gap=11)
+
+    y -= 4
+    y = draw_block_title("서명 이미지", y)
+    sig_box_y = y - signature_box_h - 4
+    _draw_signature_preview(
+        c,
+        recipient.signature_data or "",
+        box_x=42,
+        box_y=sig_box_y,
+        box_w=width - 84,
+        box_h=signature_box_h,
+        font_name=font_name,
+    )
+
+    footer_y = 34
+    c.setFont(font_name, 8)
+    c.drawString(32, footer_y, f"생성 시각: {_format_dt(timezone.now())}")
+    c.drawRightString(width - 32, footer_y, "Eduitit Consent Evidence")
+
+    c.save()
+    packet.seek(0)
+    return packet.read()
+
+
+def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFile:
+    _ensure_pdf_runtime()
+
+    request = recipient.request
+    try:
+        original_bytes = b""
+        source_pdf_bytes = b""
+        try:
+            original_bytes = get_document_original_bytes(request.document)
+            source_pdf_bytes = get_document_pdf_bytes(request.document)
+        except Exception:
+            logger.exception("[consent] recipient evidence source load failed request_id=%s recipient_id=%s", request.request_id, recipient.id)
+
+        evidence = _build_document_evidence(request, original_bytes)
+        evidence_section_bytes = _build_recipient_evidence_section_pdf(recipient, evidence)
+        title_seed = (request.title or request.document.title or "동의서 제출 증빙").strip() or "동의서 제출 증빙"
+        merged_bytes = _merge_pdf_bytes(
+            source_pdf_bytes,
+            evidence_section_bytes,
+            pdf_title=f"{title_seed} - {recipient.student_name} 증빙",
+        )
+        filename = f"recipient_{request.id}_{recipient.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        return ContentFile(merged_bytes, name=filename)
+    except Exception:
+        logger.exception(
+            "[consent] recipient evidence pdf generation failed request_id=%s recipient_id=%s",
+            request.request_id,
+            recipient.id,
+        )
         raise
 
 
