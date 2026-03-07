@@ -1,0 +1,234 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ deck.title }} | 수업 발표 메이커</title>
+    <link rel="stylesheet" href="{% static 'slidesmith/vendor/revealjs/dist/reset.css' %}">
+    <link rel="stylesheet" href="{% static 'slidesmith/vendor/revealjs/dist/reveal.css' %}">
+    <link rel="stylesheet" href="{% static 'slidesmith/vendor/revealjs/dist/theme/white.css' %}">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            margin: 0;
+            background: #d9e2ef;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+        }
+
+        .slidesmith-toolbar {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.86);
+            backdrop-filter: blur(18px);
+            box-shadow: 8px 8px 18px rgba(148, 163, 184, 0.18), -8px -8px 18px rgba(255, 255, 255, 0.7);
+        }
+
+        .slidesmith-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .slidesmith-toolbar-link,
+        .slidesmith-toolbar-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 16px;
+            border: 1px solid #dbe4f0;
+            background: #ffffff;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .slidesmith-toolbar-button {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            border: none;
+            color: #ffffff;
+        }
+
+        .slidesmith-toolbar-meta {
+            display: grid;
+            gap: 2px;
+            color: #475569;
+        }
+
+        .slidesmith-toolbar-meta small {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .reveal {
+            height: 100vh;
+        }
+
+        .reveal .slides {
+            text-align: left;
+        }
+
+        .slidesmith-stage {
+            min-height: 620px;
+            border-radius: 40px;
+            padding: 56px;
+            background:
+                radial-gradient(circle at top right, rgba(125, 211, 252, 0.22), transparent 28%),
+                linear-gradient(160deg, #f8fbff 0%, #eaf2fb 100%);
+            box-shadow: 18px 18px 36px rgba(148, 163, 184, 0.18), -16px -16px 32px rgba(255, 255, 255, 0.75);
+            color: #1e293b;
+        }
+
+        .slidesmith-stage[data-kind="cover"] {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.26), transparent 30%),
+                linear-gradient(145deg, #f5fbff 0%, #dfeefe 100%);
+        }
+
+        .slidesmith-kicker {
+            margin: 0 0 18px;
+            font-size: 18px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .slidesmith-title {
+            margin: 0;
+            font-size: clamp(42px, 5vw, 72px);
+            line-height: 1.05;
+            font-weight: 800;
+        }
+
+        .slidesmith-copy {
+            margin-top: 24px;
+            display: grid;
+            gap: 14px;
+            font-size: clamp(20px, 2vw, 28px);
+            line-height: 1.45;
+            color: #475569;
+        }
+
+        .slidesmith-points {
+            margin: 28px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 14px;
+        }
+
+        .slidesmith-points li {
+            padding: 18px 22px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.84);
+            box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+            font-size: clamp(18px, 1.7vw, 26px);
+            color: #334155;
+        }
+
+        .slidesmith-tip {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            z-index: 35;
+            max-width: 360px;
+            padding: 14px 16px;
+            border-radius: 22px;
+            background: rgba(15, 23, 42, 0.86);
+            color: #f8fafc;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: 10px 10px 24px rgba(15, 23, 42, 0.26);
+        }
+
+        @media (max-width: 768px) {
+            .slidesmith-toolbar {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 10px 12px;
+                border-radius: 20px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .slidesmith-stage {
+                min-height: auto;
+                padding: 32px 24px;
+                border-radius: 28px;
+            }
+
+            .slidesmith-tip {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slidesmith-toolbar">
+        <div class="slidesmith-toolbar-meta">
+            <strong>{{ deck.title }}</strong>
+            <small id="slidesmith-presentation-status">1 / {{ deck.slide_count }}장 · 방향키로 다음 슬라이드로 이동하세요.</small>
+        </div>
+        <div class="slidesmith-toolbar-actions">
+            <a href="{% url 'slidesmith:main' %}" class="slidesmith-toolbar-link">편집 화면으로 돌아가기</a>
+            <button type="button" id="slidesmith-print-guide-button" class="slidesmith-toolbar-button">PDF 저장 안내</button>
+        </div>
+    </div>
+
+    <div class="reveal">
+        <div class="slides">
+            {% for slide in deck.slides %}
+            <section data-slide-number="{{ forloop.counter }}" data-slide-label="{{ slide.title }}">
+                <div class="slidesmith-stage" data-kind="{{ slide.kind }}">
+                    <p class="slidesmith-kicker">{% if slide.kind == 'cover' %}Presentation{% else %}Slide {{ forloop.counter }}{% endif %}</p>
+                    <h1 class="slidesmith-title">{{ slide.title }}</h1>
+                    {% if slide.paragraphs %}
+                    <div class="slidesmith-copy">
+                        {% for paragraph in slide.paragraphs %}
+                        <p>{{ paragraph }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if slide.bullets %}
+                    <ul class="slidesmith-points">
+                        {% for bullet in slide.bullets %}
+                        <li>{{ bullet }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="slidesmith-tip" id="slidesmith-print-guide" hidden>
+        발표 화면에서 브라우저 메뉴의 인쇄를 누르면 PDF 저장으로 이어갈 수 있습니다. 인쇄 레이아웃이 필요하면 발표 전에 글자 크기와 줄 수를 한 번 확인해 주세요.
+    </div>
+
+    <script type="module" src="{% static 'slidesmith/slidesmith_present.js' %}"></script>
+</body>
+</html>

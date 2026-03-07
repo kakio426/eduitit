@@ -41,6 +41,9 @@ class Command(BaseCommand):
             ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
+            ("ensure_docviewer", lambda: call_command("ensure_docviewer")),
+            ("ensure_slidesmith", lambda: call_command("ensure_slidesmith")),
+            ("ensure_blockclass", lambda: call_command("ensure_blockclass")),
         ]
 
         for name, fn in steps:
