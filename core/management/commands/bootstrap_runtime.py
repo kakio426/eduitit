@@ -41,13 +41,10 @@ class Command(BaseCommand):
             ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
-<<<<<<< HEAD
             ("ensure_textbooks", lambda: call_command("ensure_textbooks")),
-=======
             ("ensure_docviewer", lambda: call_command("ensure_docviewer")),
             ("ensure_slidesmith", lambda: call_command("ensure_slidesmith")),
             ("ensure_blockclass", lambda: call_command("ensure_blockclass")),
->>>>>>> 91950e8 ([feat] 안정형 교사용 서비스 3종 추가)
         ]
 
         for name, fn in steps:
