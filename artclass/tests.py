@@ -66,11 +66,47 @@ class ManualPipelineParserTest(TestCase):
         self.assertEqual(len(result["steps"]), 3)
         self.assertIn("[00:10]", result["steps"][0]["text"])
 
-    def test_rejects_heavily_duplicated_steps(self):
+    def test_deduplicates_heavily_duplicated_steps_with_warning(self):
         payload = {"steps": [{"summary": "같은 문장이 반복됩니다"} for _ in range(5)]}
-        with self.assertRaises(ManualPipelineError) as exc:
-            parse_manual_pipeline_result(json.dumps(payload, ensure_ascii=False))
-        self.assertEqual(exc.exception.code, "DUPLICATED_STEPS")
+        result = parse_manual_pipeline_result(json.dumps(payload, ensure_ascii=False))
+
+        self.assertEqual(result["meta"]["step_count"], 1)
+        self.assertEqual(len(result["steps"]), 1)
+        self.assertTrue(any("중복" in warning for warning in result["warnings"]))
+
+    def test_parse_broken_json_falls_back_to_loose_extraction(self):
+        raw_text = """
+{
+  "steps": [
+    {"summary": "도화지 중앙에 큰 원을 그린다.",
+     "materials": ["도화지", "연필"]},
+    {"summary": "배경 색을 칠한다."
+     "teacher_tip": "밝은 색부터 칠하세요."}
+  ]
+}
+"""
+        result = parse_manual_pipeline_result(raw_text)
+
+        self.assertEqual(result["meta"]["mode"], "plain_text")
+        self.assertEqual(result["meta"]["step_count"], 2)
+        self.assertTrue(any("줄 단위" in warning for warning in result["warnings"]))
+        self.assertIn("준비물:", result["steps"][0]["text"])
+        self.assertIn("교사 팁:", result["steps"][1]["text"])
+
+    def test_skips_short_and_low_info_steps_when_valid_step_exists(self):
+        payload = {
+            "steps": [
+                {"summary": "짧다"},
+                {"summary": "요약할 수 있는 충분한 정보가 없습니다"},
+                {"summary": "도화지에 연필로 윤곽을 그린다."},
+            ]
+        }
+        result = parse_manual_pipeline_result(json.dumps(payload, ensure_ascii=False))
+
+        self.assertEqual(result["meta"]["step_count"], 1)
+        self.assertIn("윤곽", result["steps"][0]["text"])
+        self.assertTrue(any("짧아 제외" in warning for warning in result["warnings"]))
+        self.assertTrue(any("정보 부족" in warning for warning in result["warnings"]))
 
     def test_trims_steps_over_max_with_warning(self):
         payload = {
@@ -135,6 +171,37 @@ class ManualPipelineApiTest(TestCase):
         data = response.json()
         self.assertEqual(data["meta"]["step_count"], 2)
         self.assertIn("https://www.youtube.com/watch?v=2bBhnfh4StU", data["promptTemplate"])
+
+    def test_parse_gemini_steps_api_recovers_partial_json_with_warnings(self):
+        url = reverse("artclass:parse_gemini_steps_api")
+        raw = """
+{
+  "steps": [
+    {"summary": "도화지 중앙에 큰 원을 그린다.",
+     "materials": ["도화지", "연필"]},
+    {"summary": "배경 색을 칠한다."
+     "teacher_tip": "밝은 색부터 칠하세요."}
+  ]
+}
+"""
+
+        response = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                    "rawText": raw,
+                },
+                ensure_ascii=False,
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["meta"]["mode"], "plain_text")
+        self.assertEqual(data["meta"]["step_count"], 2)
+        self.assertTrue(data["warnings"])
 
     def test_parse_gemini_steps_api_rejects_empty_input(self):
         url = reverse("artclass:parse_gemini_steps_api")
@@ -512,6 +579,18 @@ class ArtClassSetupEditTest(TestCase):
         response = self.client.get(reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
         self.assertEqual(response.status_code, 403)
 
+    def test_setup_edit_renders_initial_steps_via_safe_json_script(self):
+        self.existing_step.description = '</script><script>alert(1)</script>'
+        self.existing_step.save(update_fields=["description"])
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode("utf-8")
+        self.assertIn('id="artclassInitialSteps"', body)
+        self.assertIn(r'\u003C/script\u003E\u003Cscript\u003Ealert(1)\u003C/script\u003E', body)
+
     def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
         self.client.force_login(self.owner)
         old_image_name = self.existing_step.image.name
@@ -621,8 +700,61 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertIn("물감", created.auto_tags)
         self.assertTrue(created.title)
 
+    def test_setup_accepts_invalid_step_interval_with_default(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "abc",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "1",
+                "step_text_0": "3학년 학생이 수채 물감으로 봄 풍경을 채색한다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
+        self.assertEqual(created.default_interval, 10)
+
+    def test_setup_recovers_steps_without_step_count(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+                "step_text_2": "색연필로 바탕을 채색한다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
+        self.assertEqual(created.steps.count(), 2)
+        self.assertEqual(
+            list(created.steps.values_list("description", flat=True)),
+            ["도화지에 연필로 큰 원을 그린다.", "색연필로 바탕을 채색한다."],
+        )
+
+    def test_setup_recovers_steps_when_step_count_is_invalid(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=UFQT5Wtamw0",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "abc",
+                "step_text_0": "새학기 삼각 이름표 밑그림을 연필로 잡는다.",
+                "step_text_1": "색연필로 이름표를 채색하고 꾸민다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
+        self.assertEqual(created.steps.count(), 2)
+
     @patch("artclass.views._fetch_youtube_title")
-    def test_setup_uses_youtube_title_when_available(self, mock_fetch_title):
+    def test_setup_does_not_fetch_youtube_title_during_save(self, mock_fetch_title):
         mock_fetch_title.return_value = "삼각 이름표 만들기"
 
         response = self.client.post(
@@ -639,7 +771,8 @@ class ArtClassAutoMetadataTest(TestCase):
 
         created = ArtClass.objects.latest("id")
         self.assertRedirects(response, reverse("artclass:classroom", kwargs={"pk": created.pk}))
-        self.assertEqual(created.title, "삼각 이름표 만들기")
+        mock_fetch_title.assert_not_called()
+        self.assertNotEqual(created.title, "삼각 이름표 만들기")
 
     def test_library_query_matches_step_text_and_auto_tags(self):
         art_class = ArtClass.objects.create(

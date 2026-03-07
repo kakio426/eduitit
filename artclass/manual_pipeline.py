@@ -56,17 +56,23 @@ def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
     if not raw_text or not str(raw_text).strip():
         raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 결과가 비어 있습니다.")
 
-    clean_input = str(raw_text).strip()
+    clean_input = _unwrap_fenced_block(str(raw_text).strip())
     warnings: list[str] = []
 
-    json_payload = _extract_json_payload(clean_input)
+    json_payload = _extract_json_payload(clean_input, warnings)
     if json_payload is not None:
-        steps = _parse_steps_from_json(json_payload, warnings)
-        mode = "json"
+        try:
+            steps = _parse_steps_from_json(json_payload, warnings)
+            mode = "json"
+        except ManualPipelineError as exc:
+            warnings.append(f"{exc} 줄 단위로 다시 해석했습니다.")
+            steps = _parse_steps_from_text(clean_input, warnings)
+            mode = "plain_text"
     else:
         steps = _parse_steps_from_text(clean_input, warnings)
         mode = "plain_text"
 
+    steps = _sanitize_steps(steps, warnings)
     if len(steps) > MAX_STEPS:
         warnings.append(
             f"단계가 {len(steps)}개로 많아 앞 {MAX_STEPS}개만 반영했습니다. "
@@ -74,7 +80,8 @@ def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
         )
         steps = steps[:MAX_STEPS]
 
-    _validate_steps(steps)
+    if not steps:
+        raise ManualPipelineError("NO_STEPS", "유효한 단계가 없습니다. JSON 또는 줄바꿈 형식을 확인해 주세요.")
 
     return {
         "steps": [
@@ -118,24 +125,30 @@ def build_manual_pipeline_prompt(video_url: str = "") -> str:
     )
 
 
-def _extract_json_payload(raw_text: str) -> Any | None:
+def _unwrap_fenced_block(raw_text: str) -> str:
     text = raw_text.strip()
-
     fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.IGNORECASE | re.DOTALL)
     if fenced:
-        text = fenced.group(1).strip()
+        return fenced.group(1).strip()
+    return text
+
+
+def _extract_json_payload(raw_text: str, warnings: list[str]) -> Any | None:
+    text = raw_text.strip()
 
     if text.startswith("{") and text.endswith("}"):
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            raise ManualPipelineError("INVALID_JSON", "JSON 형식이 올바르지 않습니다. 중괄호/쉼표를 확인해 주세요.")
+            warnings.append("JSON 형식이 조금 깨져 있어 줄 단위로 다시 해석했습니다.")
+            return None
 
     if text.startswith("[") and text.endswith("]"):
         try:
             return {"steps": json.loads(text)}
         except json.JSONDecodeError:
-            raise ManualPipelineError("INVALID_JSON", "JSON 배열 형식이 올바르지 않습니다.")
+            warnings.append("JSON 배열 형식이 조금 깨져 있어 줄 단위로 다시 해석했습니다.")
+            return None
 
     return None
 
@@ -205,25 +218,152 @@ def _parse_steps_from_text(raw_text: str, warnings: list[str]) -> list[ParsedSte
     if not lines:
         raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 결과에서 유효한 줄을 찾지 못했습니다.")
 
-    candidates: list[str] = []
-    for line in lines:
-        cleaned = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", line).strip()
-        if cleaned:
-            candidates.append(cleaned)
+    parsed_steps: list[ParsedStep] = []
+    for idx, line in enumerate(lines, start=1):
+        candidate = _extract_line_candidate(line)
+        if not candidate:
+            continue
 
-    if not candidates:
+        kind, value = candidate
+        if kind == "step":
+            start_sec, end_sec, body = _extract_inline_time_range(value)
+            body = _normalize_spaces(body)
+            if not body:
+                warnings.append(f"{idx}번째 줄은 내용이 비어 제외했습니다.")
+                continue
+            parsed_steps.append(ParsedStep(text=body, start_sec=start_sec, end_sec=end_sec))
+            continue
+
+        if kind == "materials" and parsed_steps:
+            parsed_steps[-1].text = _append_meta_line(parsed_steps[-1].text, f"준비물: {value}")
+            continue
+
+        if kind == "tip" and parsed_steps:
+            parsed_steps[-1].text = _append_meta_line(parsed_steps[-1].text, f"교사 팁: {value}")
+
+    if not parsed_steps:
         raise ManualPipelineError("NO_STEPS", "단계 문장을 찾지 못했습니다.")
 
-    parsed_steps: list[ParsedStep] = []
-    for idx, line in enumerate(candidates, start=1):
-        start_sec, end_sec, body = _extract_inline_time_range(line)
-        body = _normalize_spaces(body)
-        if not body:
-            warnings.append(f"{idx}번째 줄은 내용이 비어 제외했습니다.")
-            continue
-        parsed_steps.append(ParsedStep(text=body, start_sec=start_sec, end_sec=end_sec))
-
     return parsed_steps
+
+
+def _extract_line_candidate(line: str) -> tuple[str, str] | None:
+    cleaned = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", line).strip()
+    if not cleaned or cleaned.startswith("```"):
+        return None
+
+    candidate = cleaned.lstrip("{[").strip()
+    candidate = candidate.rstrip(",")
+    candidate = candidate.rstrip("}]").strip()
+    if not candidate:
+        return None
+
+    if re.fullmatch(r"[\[\]\{\},:]+", candidate):
+        return None
+
+    structural_keys = ("steps", "video_title", "title", "start", "end", "timecode", "timestamp", "time")
+    for keys, kind in ((TEXT_KEYS, "step"), (MATERIAL_KEYS, "materials"), (TIP_KEYS, "tip")):
+        match = _match_jsonish_key_value(candidate, keys)
+        if not match:
+            continue
+        _, raw_value = match
+        if kind == "materials":
+            normalized = _normalize_jsonish_materials(raw_value)
+        else:
+            normalized = _normalize_jsonish_scalar(raw_value)
+        if normalized:
+            return kind, normalized
+        return None
+
+    if _match_jsonish_key_value(candidate, structural_keys):
+        return None
+
+    return "step", candidate
+
+
+def _match_jsonish_key_value(text: str, keys: tuple[str, ...]) -> tuple[str, str] | None:
+    key_pattern = "|".join(re.escape(key) for key in keys)
+    match = re.match(rf'^"?({key_pattern})"?\s*:\s*(.+?)\s*,?$', text, flags=re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1), match.group(2)
+
+
+def _normalize_jsonish_scalar(value: str) -> str:
+    cleaned = value.strip().rstrip(",")
+    if cleaned.startswith('"') and cleaned.endswith('"'):
+        try:
+            return _normalize_spaces(json.loads(cleaned))
+        except json.JSONDecodeError:
+            pass
+
+    cleaned = cleaned.strip('"\'')
+    cleaned = cleaned.replace("\\n", "\n").replace('\\"', '"')
+    return _normalize_spaces(cleaned)
+
+
+def _normalize_jsonish_materials(value: str) -> str:
+    cleaned = value.strip().rstrip(",")
+    if cleaned.startswith("[") and cleaned.endswith("]"):
+        try:
+            return ", ".join(_normalize_materials(json.loads(cleaned)))
+        except json.JSONDecodeError:
+            pass
+
+    quoted = re.findall(r'"((?:\\.|[^"\\])*)"', cleaned)
+    if quoted:
+        decoded = []
+        for token in quoted:
+            try:
+                decoded.append(json.loads(f'"{token}"'))
+            except json.JSONDecodeError:
+                decoded.append(token)
+        return ", ".join(_normalize_materials(decoded))
+
+    return ", ".join(_normalize_materials(cleaned.strip("[]")))
+
+
+def _append_meta_line(text: str, line: str) -> str:
+    normalized_line = _normalize_spaces(line)
+    if not normalized_line or normalized_line in text:
+        return text
+    return f"{text}\n- {normalized_line}"
+
+
+def _sanitize_steps(steps: list[ParsedStep], warnings: list[str]) -> list[ParsedStep]:
+    usable: list[ParsedStep] = []
+    seen: set[str] = set()
+
+    for idx, step in enumerate(steps, start=1):
+        pure_text = _normalize_spaces(step.text)
+        if not pure_text:
+            warnings.append(f"{idx}단계 내용이 비어 제외했습니다.")
+            continue
+
+        if any(hint in pure_text for hint in NO_INFO_HINTS):
+            warnings.append(f"{idx}단계가 정보 부족 안내 문구라 제외되었습니다.")
+            continue
+
+        if len(pure_text) < MIN_TEXT_LEN:
+            warnings.append(f"{idx}단계 설명이 너무 짧아 제외했습니다.")
+            continue
+
+        if len(pure_text) > MAX_TEXT_LEN:
+            pure_text = pure_text[:MAX_TEXT_LEN].rstrip()
+            warnings.append(f"{idx}단계 설명이 길어 앞 {MAX_TEXT_LEN}자만 반영했습니다.")
+
+        normalized_text = re.sub(r"[^0-9a-z가-힣]+", "", pure_text.lower())
+        if not normalized_text:
+            warnings.append(f"{idx}단계 내용이 비어 제외했습니다.")
+            continue
+        if normalized_text in seen:
+            warnings.append(f"{idx}단계가 앞 단계와 중복되어 제외했습니다.")
+            continue
+
+        seen.add(normalized_text)
+        usable.append(ParsedStep(text=pure_text, start_sec=step.start_sec, end_sec=step.end_sec))
+
+    return usable
 
 
 def _pick_first_value(item: dict[str, Any], keys: tuple[str, ...]) -> Any:
@@ -336,35 +476,6 @@ def _normalize_materials(value: Any) -> list[str]:
         seen.add(norm)
         deduped.append(token)
     return deduped
-
-
-def _validate_steps(steps: list[ParsedStep]) -> None:
-    if not steps:
-        raise ManualPipelineError("NO_STEPS", "유효한 단계가 없습니다. JSON 또는 줄바꿈 형식을 확인해 주세요.")
-
-    if len(steps) < MIN_STEPS:
-        raise ManualPipelineError("TOO_FEW_STEPS", f"단계는 최소 {MIN_STEPS}개 필요합니다.")
-    if len(steps) > MAX_STEPS:
-        raise ManualPipelineError("TOO_MANY_STEPS", f"단계가 너무 많습니다. 최대 {MAX_STEPS}개까지 허용됩니다.")
-
-    normalized_texts: list[str] = []
-    for idx, step in enumerate(steps, start=1):
-        pure_text = _normalize_spaces(step.text)
-        if len(pure_text) < MIN_TEXT_LEN:
-            raise ManualPipelineError("STEP_TOO_SHORT", f"{idx}단계 설명이 너무 짧습니다.")
-        if len(pure_text) > MAX_TEXT_LEN:
-            raise ManualPipelineError("STEP_TOO_LONG", f"{idx}단계 설명이 너무 깁니다.")
-
-        for hint in NO_INFO_HINTS:
-            if hint in pure_text:
-                raise ManualPipelineError("LOW_INFO", "정보 부족 안내 문구만 포함되어 있어 단계를 만들 수 없습니다.")
-
-        norm = re.sub(r"[^0-9a-z가-힣]+", "", pure_text.lower())
-        normalized_texts.append(norm)
-
-    duplicates = len(normalized_texts) - len(set(normalized_texts))
-    if duplicates > max(1, len(steps) // 3):
-        raise ManualPipelineError("DUPLICATED_STEPS", "중복된 단계가 너무 많습니다. 결과를 다시 생성해 주세요.")
 
 
 def _format_timecode(total_seconds: int) -> str:
