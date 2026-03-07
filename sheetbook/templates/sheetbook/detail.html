@@ -200,7 +200,7 @@
       return "이 수첩은 읽기 전용이에요. 이어쓰기 후 다시 시도해 주세요.";
     }
     if (payload && payload.mobile_read_only) {
-      return "휴대폰에서는 확인만 할 수 있어요. 수정과 연결 변경은 태블릿이나 PC에서 진행해 주세요.";
+      return "휴대폰에서는 칸 수정과 줄/항목 정리 같은 간단 편집만 할 수 있어요. 이어지는 작업은 태블릿이나 PC에서 진행해 주세요.";
     }
     return defaultMessage;
   }
@@ -240,6 +240,9 @@
       renderRevision: 0,
       selectionRecommendation: null,
       mobileRowIndex: null,
+      mobileColumnId: null,
+      activeColumnRenameId: null,
+      undoAction: null,
       previewReturnFocusEl: null,
       mobileRowTouch: {
         active: false,
@@ -288,6 +291,16 @@
       mobileRowCloseBtn: root.querySelector("#grid-mobile-row-close-btn"),
       mobileRowPrevBtn: root.querySelector("#grid-mobile-row-prev-btn"),
       mobileRowNextBtn: root.querySelector("#grid-mobile-row-next-btn"),
+      mobileRowAddBtn: root.querySelector("#grid-mobile-row-add-btn"),
+      mobileRowDeleteBtn: root.querySelector("#grid-mobile-row-delete-btn"),
+      undoBtn: root.querySelector("#grid-undo-btn"),
+      mobileColumnPanel: root.querySelector("#grid-mobile-column-panel"),
+      mobileColumnTitle: root.querySelector("#grid-mobile-column-title"),
+      mobileColumnName: root.querySelector("#grid-mobile-column-name"),
+      mobileColumnCloseBtn: root.querySelector("#grid-mobile-column-close-btn"),
+      mobileColumnAddLeftBtn: root.querySelector("#grid-mobile-column-add-left-btn"),
+      mobileColumnAddRightBtn: root.querySelector("#grid-mobile-column-add-right-btn"),
+      mobileColumnDeleteBtn: root.querySelector("#grid-mobile-column-delete-btn"),
     };
 
     const csrfToken = resolveCsrfToken(root);
@@ -322,6 +335,60 @@
       }
       els.saveGuide.textContent = text;
       els.saveGuide.classList.remove("hidden");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function buildActionUrl(template, objectId) {
+      const rawTemplate = String(template || "").trim();
+      const numericId = Number(objectId || 0);
+      if (!rawTemplate || !Number.isFinite(numericId) || numericId <= 0) return "";
+      return rawTemplate.replace("/0/", `/${numericId}/`);
+    }
+
+    function isMobileCompactMode() {
+      return String(root.dataset.mobileCompactMode || "0") === "1";
+    }
+
+    function closeMobileColumnPanel() {
+      if (!els.mobileColumnPanel) return;
+      els.mobileColumnPanel.classList.add("hidden");
+    }
+
+    function hideUndoAction() {
+      state.undoAction = null;
+      if (!els.undoBtn) return;
+      els.undoBtn.classList.add("hidden");
+      els.undoBtn.textContent = "최근 변경 취소";
+    }
+
+    function showUndoAction(kind, payload) {
+      state.undoAction = { kind, payload };
+      if (!els.undoBtn) return;
+      els.undoBtn.textContent = kind === "column" ? "방금 삭제한 항목 되돌리기" : "방금 삭제한 줄 되돌리기";
+      els.undoBtn.classList.remove("hidden");
+    }
+
+    function closeGridOverlays() {
+      closeMobileRowPanel();
+      closeMobileColumnPanel();
+    }
+
+    function focusActiveColumnRenameInput() {
+      if (!state.activeColumnRenameId) return;
+      window.requestAnimationFrame(() => {
+        const input = els.thead.querySelector(`[data-column-rename-input="${state.activeColumnRenameId}"]`);
+        if (!input) return;
+        input.focus();
+        input.select();
+      });
     }
 
     function findRowIndexById(rowId) {
@@ -501,8 +568,16 @@
       return String(root.dataset.mobileReadOnly || "0") === "1";
     }
 
+    function isDesktopGridView() {
+      return window.innerWidth >= 768;
+    }
+
     function isMobileRowEditorEnabled() {
       return !isMobileReadOnly() && window.innerWidth < 768 && !!els.mobileRowOpenBtn && !!els.mobileRowPanel;
+    }
+
+    function isMobileColumnEditorEnabled() {
+      return !isMobileReadOnly() && window.innerWidth < 768 && !!els.mobileColumnPanel;
     }
 
     function clampMobileRowIndex(rowIndex) {
@@ -648,6 +723,7 @@
       const nextRowIndex = clampMobileRowIndex(rowIndex !== undefined ? rowIndex : state.selected.rowIndex);
       if (nextRowIndex === null) return;
       state.mobileRowIndex = nextRowIndex;
+      closeMobileColumnPanel();
       renderMobileRowFields();
       els.mobileRowPanel.classList.remove("hidden");
     }
@@ -655,6 +731,35 @@
     function closeMobileRowPanel() {
       if (!els.mobileRowPanel) return;
       els.mobileRowPanel.classList.add("hidden");
+    }
+
+    function renderMobileColumnPanel() {
+      if (!els.mobileColumnTitle || !els.mobileColumnName) return;
+      const columnId = Number(state.mobileColumnId || 0);
+      const column = state.columns.find((item) => Number(item.id) === columnId);
+      if (!column) {
+        els.mobileColumnTitle.textContent = "항목을 선택해 주세요.";
+        els.mobileColumnName.value = "";
+        return;
+      }
+      els.mobileColumnTitle.textContent = `${column.label || '새 항목'} 항목을 정리할 수 있어요.`;
+      els.mobileColumnName.value = column.label || "";
+    }
+
+    function openMobileColumnPanel(columnId) {
+      if (!isMobileColumnEditorEnabled()) return;
+      const numericId = Number(columnId || 0);
+      if (!numericId) return;
+      state.mobileColumnId = numericId;
+      renderMobileColumnPanel();
+      closeMobileRowPanel();
+      els.mobileColumnPanel.classList.remove("hidden");
+      window.setTimeout(() => {
+        if (els.mobileColumnName) {
+          els.mobileColumnName.focus();
+          els.mobileColumnName.select();
+        }
+      }, 30);
     }
 
     function stepMobileRow(step) {
@@ -677,11 +782,18 @@
       els.mobileRowOpenBtn.classList.toggle("hidden", !enabled);
       if (!enabled) {
         closeMobileRowPanel();
+      } else {
+        state.mobileRowIndex = clampMobileRowIndex(state.mobileRowIndex !== null ? state.mobileRowIndex : state.selected.rowIndex);
+        if (els.mobileRowPanel && !els.mobileRowPanel.classList.contains("hidden")) {
+          renderMobileRowFields();
+        }
+      }
+      if (!isMobileColumnEditorEnabled()) {
+        closeMobileColumnPanel();
         return;
       }
-      state.mobileRowIndex = clampMobileRowIndex(state.mobileRowIndex !== null ? state.mobileRowIndex : state.selected.rowIndex);
-      if (els.mobileRowPanel && !els.mobileRowPanel.classList.contains("hidden")) {
-        renderMobileRowFields();
+      if (els.mobileColumnPanel && !els.mobileColumnPanel.classList.contains("hidden")) {
+        renderMobileColumnPanel();
       }
     }
 
@@ -1348,24 +1460,53 @@
       return Math.max(20, Math.min(150, byColumns));
     }
 
+    function buildColumnHeaderHtml(column, colIndex) {
+      const columnLabel = column.label || `항목 ${colIndex + 1}`;
+      const isRenaming = Number(state.activeColumnRenameId || 0) === Number(column.id);
+      const safeLabel = escapeHtml(columnLabel);
+      const labelMarkup = isRenaming
+        ? `<input type="text" data-column-rename-input="${column.id}" data-column-id="${column.id}" maxlength="120" value="${safeLabel}" class="w-full rounded-lg border border-indigo-300 bg-white px-2 py-1 text-sm font-semibold text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100">`
+        : `<button type="button" data-grid-column-label="1" data-column-id="${column.id}" class="w-full rounded-lg border border-transparent px-2 py-1 text-left text-sm font-semibold text-slate-700 hover:border-indigo-200 hover:bg-indigo-50 focus:border-indigo-300 focus:bg-indigo-50 focus:outline-none">${safeLabel}</button>`;
+      return `
+        <th class="px-2 py-2 text-left text-gray-600 font-semibold align-top">
+          <div class="group flex items-start gap-2">
+            <div class="min-w-0 flex-1">
+              ${labelMarkup}
+              <p class="mt-1 px-2 text-[10px] text-slate-400">${colIndex + 1}번째 항목</p>
+            </div>
+            <div class="hidden md:flex md:flex-col md:gap-1 md:invisible md:opacity-0 md:transition md:group-hover:visible md:group-focus-within:visible md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+              <button type="button" data-grid-column-add-left="1" data-column-id="${column.id}" class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-700" aria-label="왼쪽에 항목 추가">←+</button>
+              <button type="button" data-grid-column-add-right="1" data-column-id="${column.id}" class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-700" aria-label="오른쪽에 항목 추가">+→</button>
+              <button type="button" data-grid-column-delete="1" data-column-id="${column.id}" class="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:border-rose-300" aria-label="항목 삭제">삭제</button>
+            </div>
+          </div>
+        </th>`;
+    }
+
     function buildGridRowHtml(row, rowIndex) {
-      const rowCells = [`<tr class="border-b border-gray-100"><td class="px-3 py-2 text-gray-400">${rowIndex + 1}</td>`];
+      const rowCells = [
+        `<tr class="border-b border-gray-100" data-grid-row="${row.id}"><td class="px-2 py-1 align-top text-gray-400"><div class="group flex items-start gap-2"><button type="button" data-grid-row-handle="1" data-row-id="${row.id}" data-row-index="${rowIndex}" class="min-w-[36px] rounded-lg border border-transparent px-2 py-1 text-left text-xs font-semibold text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 focus:border-indigo-300 focus:bg-indigo-50 focus:outline-none">${rowIndex + 1}</button><div class="hidden md:flex md:flex-col md:gap-1 md:invisible md:opacity-0 md:transition md:group-hover:visible md:group-focus-within:visible md:group-hover:opacity-100 md:group-focus-within:opacity-100"><button type="button" data-grid-row-add="1" data-row-id="${row.id}" class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-700" aria-label="이 아래 줄 추가">+줄</button><button type="button" data-grid-row-delete="1" data-row-id="${row.id}" class="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:border-rose-300" aria-label="이 줄 삭제">삭제</button></div></div></td>`
+      ];
       state.columns.forEach((col, colIndex) => {
         const value = row.values[String(col.id)];
         const displayValue = cellDisplayValue(value);
+        const safeValue = escapeHtml(displayValue);
+        const columnLabel = escapeHtml(col.label || `항목 ${colIndex + 1}`);
         rowCells.push(
           `
           <td class="px-2 py-1">
             <div
-              class="min-w-[120px] px-2 py-1 rounded border border-transparent focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 outline-none"
+              class="min-w-[120px] rounded border border-transparent px-2 py-1 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 outline-none"
               contenteditable="true"
+              role="textbox"
+              aria-label="${rowIndex + 1}줄 ${columnLabel}"
               data-row-id="${row.id}"
               data-column-id="${col.id}"
               data-row-index="${rowIndex}"
               data-col-index="${colIndex}"
               data-column-type="${col.type}"
-              data-original="${displayValue.replace(/"/g, "&quot;")}"
-            >${displayValue}</div>
+              data-original="${safeValue}"
+            >${safeValue}</div>
           </td>`
         );
       });
@@ -1407,25 +1548,28 @@
     async function render() {
       if (!state.columns.length) {
         els.thead.innerHTML = "";
-        els.tbody.innerHTML = "<tr><td class='px-3 py-4 text-gray-500'>항목이 없습니다. 상단에서 항목을 추가해 주세요.</td></tr>";
+        els.tbody.innerHTML = "<tr><td class='px-3 py-4 text-gray-500'>항목이 없습니다. 표 안에서 바로 항목을 추가해 주세요.</td></tr>";
+        closeMobileColumnPanel();
         return { mode: "empty", chunkCount: 0, chunkSize: 0 };
       }
 
       const headCells = [
-        "<tr class='bg-gray-50 border-b border-gray-200'><th class='w-12 px-3 py-2 text-left text-gray-500'>#</th>",
+        "<tr class='bg-gray-50 border-b border-gray-200'><th class='w-20 px-3 py-2 text-left text-gray-500'>#</th>",
       ];
-      state.columns.forEach((col) => {
-        headCells.push(`<th class="px-3 py-2 text-left text-gray-600 font-semibold">${col.label}</th>`);
+      state.columns.forEach((col, colIndex) => {
+        headCells.push(buildColumnHeaderHtml(col, colIndex));
       });
       headCells.push("</tr>");
       els.thead.innerHTML = headCells.join("");
 
       const renderRevision = state.renderRevision + 1;
       state.renderRevision = renderRevision;
-      if (state.rows.length < 300) {
-        return renderBodySync();
+      const renderResult = state.rows.length < 300 ? renderBodySync() : await renderBodyChunked(renderRevision);
+      if (state.activeColumnRenameId) {
+        focusActiveColumnRenameInput();
       }
-      return renderBodyChunked(renderRevision);
+      renderMobileColumnPanel();
+      return renderResult;
     }
 
     async function loadGrid() {
@@ -1451,18 +1595,16 @@
       clearSelectionHighlight();
       hideActionLayer();
       syncMobileRowButtonVisibility();
+      const renderStart = window.performance ? performance.now() : 0;
+      const renderResult = await render();
+      const renderMs = window.performance ? performance.now() - renderStart : 0;
       if (!state.rows.length && state.columns.length) {
-        // Empty row hint
-        els.tbody.innerHTML = "<tr><td colspan='99' class='px-3 py-4 text-gray-500'>줄이 없습니다. 상단에서 줄을 추가하세요.</td></tr>";
-      } else {
-        const renderStart = window.performance ? performance.now() : 0;
-        const renderResult = await render();
-        const renderMs = window.performance ? performance.now() - renderStart : 0;
-        if (window.console && state.rows.length >= 300) {
-          console.info(
-            `[sheetbook:grid] render rows=${state.rows.length}/${state.totalRows}, cols=${state.columns.length}, limit=${state.gridLoad.limit}, mode=${renderResult.mode}, chunks=${renderResult.chunkCount || 0}, chunk_size=${renderResult.chunkSize || 0}, render_ms=${renderMs.toFixed(1)}`
-          );
-        }
+        els.tbody.innerHTML = `<tr><td colspan="${Math.max(2, state.columns.length + 1)}" class="px-3 py-4 text-gray-500">줄이 없습니다. 표 안에서 바로 줄을 추가해 주세요.</td></tr>`;
+      }
+      if (window.console && state.rows.length >= 300) {
+        console.info(
+          `[sheetbook:grid] render rows=${state.rows.length}/${state.totalRows}, cols=${state.columns.length}, limit=${state.gridLoad.limit}, mode=${renderResult.mode}, chunks=${renderResult.chunkCount || 0}, chunk_size=${renderResult.chunkSize || 0}, render_ms=${renderMs.toFixed(1)}`
+        );
       }
     }
 
@@ -1524,6 +1666,211 @@
         index += 1;
       }
       return `항목 ${index}`;
+    }
+
+    async function createRowAt(afterRowId, options) {
+      const opts = options || {};
+      await flushDirtyQueue(true);
+      try {
+        const response = await postJson(root.dataset.addRowUrl, {
+          after_row_id: Number(afterRowId || 0) || 0,
+        });
+        const payload = await readJsonSafely(response);
+        if (!response.ok) {
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("줄 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "줄 추가에 실패했습니다.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return null;
+        }
+        hideUndoAction();
+        await loadGrid();
+        const newRowIndex = findRowIndexById(payload.row_id);
+        if (newRowIndex >= 0) {
+          state.selected.rowIndex = newRowIndex;
+          state.mobileRowIndex = newRowIndex;
+          const focusCell = getCellEl(newRowIndex, 0);
+          if (focusCell) {
+            focusCell.focus();
+            focusCell.scrollIntoView({ block: "nearest", inline: "nearest" });
+          }
+        }
+        if (!opts.silent) {
+          setSaveStatus("줄이 추가되었습니다.", false);
+        }
+        return payload;
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 줄 추가에 실패했습니다. 다시 시도해 주세요.", true);
+        return null;
+      }
+    }
+
+    async function createColumnAt(afterColumnId, options) {
+      const opts = options || {};
+      await flushDirtyQueue(true);
+      try {
+        const response = await postJson(root.dataset.addColumnUrl, {
+          label: opts.label || buildDefaultColumnLabel(),
+          column_type: opts.columnType || "text",
+          after_column_id: Number(afterColumnId || 0) || 0,
+        });
+        const payload = await readJsonSafely(response);
+        if (!response.ok) {
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("항목 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "항목 추가에 실패했습니다.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return null;
+        }
+        state.activeColumnRenameId = Number(payload.column_id || 0) || null;
+        hideUndoAction();
+        await loadGrid();
+        if (!opts.silent) {
+          setSaveStatus("항목이 추가되었습니다. 이름을 바로 바꿀 수 있어요.", false);
+        }
+        return payload;
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 항목 추가에 실패했습니다. 다시 시도해 주세요.", true);
+        return null;
+      }
+    }
+
+    function openColumnRename(columnId) {
+      const numericId = Number(columnId || 0);
+      if (!numericId) return;
+      if (isMobileColumnEditorEnabled()) {
+        openMobileColumnPanel(numericId);
+        return;
+      }
+      state.activeColumnRenameId = numericId;
+      render();
+    }
+
+    function closeColumnRename() {
+      if (!state.activeColumnRenameId) return;
+      state.activeColumnRenameId = null;
+      render();
+    }
+
+    async function commitColumnRename(columnId, nextLabel) {
+      const normalizedLabel = String(nextLabel || "").trim();
+      if (!normalizedLabel) {
+        setSaveStatus("항목 이름을 입력해 주세요.", true);
+        focusActiveColumnRenameInput();
+        return false;
+      }
+      const url = buildActionUrl(root.dataset.updateColumnUrlTemplate, columnId);
+      if (!url) return false;
+      try {
+        const response = await postJson(url, { label: normalizedLabel });
+        const payload = await readJsonSafely(response);
+        if (!response.ok) {
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("항목 이름을 바꾸는 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "항목 이름을 바꾸지 못했어요.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return false;
+        }
+        const target = state.columns.find((column) => Number(column.id) === Number(columnId));
+        if (target) {
+          target.label = payload.label || normalizedLabel;
+        }
+        state.activeColumnRenameId = null;
+        await render();
+        renderMobileColumnPanel();
+        setSaveStatus("항목 이름을 저장했어요.", false);
+        return true;
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 항목 이름을 저장하지 못했어요.", true);
+        return false;
+      }
+    }
+
+    async function requestDeleteRow(rowId, confirmed) {
+      const url = buildActionUrl(root.dataset.deleteRowUrlTemplate, rowId);
+      if (!url) return false;
+      await flushDirtyQueue(true);
+      try {
+        const response = await postJson(url, { confirm: Boolean(confirmed) });
+        const payload = await readJsonSafely(response);
+        if (response.status === 409 && payload.requires_confirmation) {
+          if (!window.confirm(payload.error || "값이 있는 줄입니다. 정말 삭제할까요?")) {
+            return false;
+          }
+          return requestDeleteRow(rowId, true);
+        }
+        if (!response.ok) {
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("줄 삭제 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "줄 삭제에 실패했습니다.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return false;
+        }
+        showUndoAction("row", payload.deleted_row || null);
+        await loadGrid();
+        closeMobileRowPanel();
+        setSaveStatus("줄을 삭제했어요. 필요하면 바로 되돌릴 수 있어요.", false);
+        return true;
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 줄 삭제에 실패했습니다. 다시 시도해 주세요.", true);
+        return false;
+      }
+    }
+
+    async function requestDeleteColumn(columnId, confirmed) {
+      const url = buildActionUrl(root.dataset.deleteColumnUrlTemplate, columnId);
+      if (!url) return false;
+      await flushDirtyQueue(true);
+      try {
+        const response = await postJson(url, { confirm: Boolean(confirmed) });
+        const payload = await readJsonSafely(response);
+        if (response.status === 409 && payload.requires_confirmation) {
+          const countText = payload.non_empty_cell_count ? `값이 있는 칸 ${payload.non_empty_cell_count}개` : "값이 있는 항목";
+          if (!window.confirm(payload.error || `${countText}가 있어요. 정말 삭제할까요?`)) {
+            return false;
+          }
+          return requestDeleteColumn(columnId, true);
+        }
+        if (!response.ok) {
+          const fallbackMessage = response.status === 403
+            ? csrfFailureMessage("항목 삭제 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+            : "항목 삭제에 실패했습니다.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return false;
+        }
+        showUndoAction("column", payload.deleted_column || null);
+        state.activeColumnRenameId = null;
+        await loadGrid();
+        closeMobileColumnPanel();
+        setSaveStatus("항목을 삭제했어요. 필요하면 바로 되돌릴 수 있어요.", false);
+        return true;
+      } catch (error) {
+        setSaveStatus("네트워크 오류로 항목 삭제에 실패했습니다. 다시 시도해 주세요.", true);
+        return false;
+      }
+    }
+
+    async function restoreLastStructureChange() {
+      if (!state.undoAction || !state.undoAction.payload) return;
+      const isColumn = state.undoAction.kind === "column";
+      const url = isColumn ? root.dataset.restoreColumnUrl : root.dataset.restoreRowUrl;
+      try {
+        const response = await postJson(url, isColumn ? { deleted_column: state.undoAction.payload } : { deleted_row: state.undoAction.payload });
+        const payload = await readJsonSafely(response);
+        if (!response.ok) {
+          const fallbackMessage = isColumn ? "항목 복구에 실패했습니다." : "줄 복구에 실패했습니다.";
+          setSaveStatus(blockedActionMessage(payload, fallbackMessage), true);
+          return;
+        }
+        hideUndoAction();
+        if (isColumn) {
+          state.activeColumnRenameId = Number(payload.column_id || 0) || null;
+        }
+        await loadGrid();
+        setSaveStatus(isColumn ? "삭제한 항목을 되돌렸어요." : "삭제한 줄을 되돌렸어요.", false);
+      } catch (error) {
+        setSaveStatus(isColumn ? "네트워크 오류로 항목 복구에 실패했습니다." : "네트워크 오류로 줄 복구에 실패했습니다.", true);
+      }
     }
 
     function isTextEntryElement(element) {
@@ -1786,46 +2133,28 @@
       await applyGridPaste(text, state.selected.rowIndex || 0, state.selected.colIndex || 0);
     });
 
-    els.addRowBtn.addEventListener("click", async () => {
-      await flushDirtyQueue(true);
-      try {
-        const response = await postJson(root.dataset.addRowUrl, {});
-        if (!response.ok) {
-          const data = await readJsonSafely(response);
-          const fallbackMessage = response.status === 403 ? csrfFailureMessage("줄 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "줄 추가에 실패했습니다.";
-          setSaveStatus(blockedActionMessage(data, fallbackMessage), true);
-          return;
-        }
-        await loadGrid();
-        setSaveStatus("줄이 추가되었습니다.", false);
-      } catch (error) {
-        setSaveStatus("네트워크 오류로 줄 추가에 실패했습니다. 다시 시도해 주세요.", true);
-      }
-    });
+    if (els.addRowBtn) {
+      els.addRowBtn.addEventListener("click", async () => {
+        const lastRow = state.rows.length ? state.rows[state.rows.length - 1] : null;
+        await createRowAt(lastRow ? lastRow.id : 0);
+      });
+    }
 
-    els.addColumnForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      await flushDirtyQueue(true);
-      const label = (els.newColLabel.value || "").trim();
-      const columnType = els.newColType.value || "text";
-      try {
-        const response = await postJson(root.dataset.addColumnUrl, {
+    if (els.addColumnForm) {
+      els.addColumnForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const label = (els.newColLabel.value || "").trim();
+        const columnType = els.newColType.value || "text";
+        const lastColumn = state.columns.length ? state.columns[state.columns.length - 1] : null;
+        const created = await createColumnAt(lastColumn ? lastColumn.id : 0, {
           label: label || "새 항목",
-          column_type: columnType,
+          columnType,
         });
-        if (!response.ok) {
-          const data = await readJsonSafely(response);
-          const fallbackMessage = response.status === 403 ? csrfFailureMessage("항목 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "항목 추가에 실패했습니다.";
-          setSaveStatus(blockedActionMessage(data, fallbackMessage), true);
-          return;
+        if (created && els.newColLabel) {
+          els.newColLabel.value = "";
         }
-        els.newColLabel.value = "";
-        await loadGrid();
-        setSaveStatus("항목이 추가되었습니다.", false);
-      } catch (error) {
-        setSaveStatus("네트워크 오류로 항목 추가에 실패했습니다. 다시 시도해 주세요.", true);
-      }
-    });
+      });
+    }
 
     if (els.addColumnQuickBtn) {
       els.addColumnQuickBtn.addEventListener("click", () => {
@@ -1837,6 +2166,162 @@
           els.newColType.value = "text";
         }
         els.addColumnForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      });
+    }
+
+    if (els.undoBtn) {
+      els.undoBtn.addEventListener("click", restoreLastStructureChange);
+    }
+
+    if (els.thead) {
+      els.thead.addEventListener("click", async (event) => {
+        const renameButton = event.target.closest("[data-grid-column-label]");
+        if (renameButton) {
+          const columnId = Number(renameButton.dataset.columnId || 0);
+          if (window.innerWidth < 768) {
+            openMobileColumnPanel(columnId);
+          } else {
+            openColumnRename(columnId);
+          }
+          return;
+        }
+        const addLeftButton = event.target.closest("[data-grid-column-add-left]");
+        if (addLeftButton) {
+          const columnId = Number(addLeftButton.dataset.columnId || 0);
+          const currentIndex = findColIndexById(columnId);
+          const previousColumn = currentIndex > 0 ? state.columns[currentIndex - 1] : null;
+          await createColumnAt(previousColumn ? previousColumn.id : 0, { label: buildDefaultColumnLabel() });
+          return;
+        }
+        const addRightButton = event.target.closest("[data-grid-column-add-right]");
+        if (addRightButton) {
+          const columnId = Number(addRightButton.dataset.columnId || 0);
+          await createColumnAt(columnId, { label: buildDefaultColumnLabel() });
+          return;
+        }
+        const deleteButton = event.target.closest("[data-grid-column-delete]");
+        if (deleteButton) {
+          const columnId = Number(deleteButton.dataset.columnId || 0);
+          await requestDeleteColumn(columnId, false);
+        }
+      });
+
+      els.thead.addEventListener("keydown", async (event) => {
+        const renameInput = event.target.closest("[data-column-rename-input]");
+        if (renameInput && event.key === "Enter") {
+          event.preventDefault();
+          await commitColumnRename(renameInput.dataset.columnId, renameInput.value);
+          return;
+        }
+        if (renameInput && event.key === "Escape") {
+          event.preventDefault();
+          closeColumnRename();
+          return;
+        }
+        const renameButton = event.target.closest("[data-grid-column-label]");
+        if (!renameButton) return;
+        if (event.key === "Enter" || event.key === "F2") {
+          event.preventDefault();
+          openColumnRename(renameButton.dataset.columnId);
+        }
+      });
+
+      els.thead.addEventListener("focusout", async (event) => {
+        const renameInput = event.target.closest("[data-column-rename-input]");
+        if (!renameInput) return;
+        await commitColumnRename(renameInput.dataset.columnId, renameInput.value);
+      });
+    }
+
+    if (els.table) {
+      els.table.addEventListener("click", async (event) => {
+        const rowHandle = event.target.closest("[data-grid-row-handle]");
+        if (rowHandle) {
+          const rowIndex = Number(rowHandle.dataset.rowIndex || 0);
+          state.mobileRowIndex = rowIndex;
+          state.selected.rowIndex = rowIndex;
+          if (window.innerWidth < 768) {
+            openMobileRowPanel(rowIndex);
+          } else {
+            const focusCell = getCellEl(rowIndex, 0);
+            if (focusCell) focusCell.focus();
+          }
+          return;
+        }
+        const rowAddButton = event.target.closest("[data-grid-row-add]");
+        if (rowAddButton) {
+          await createRowAt(Number(rowAddButton.dataset.rowId || 0));
+          return;
+        }
+        const rowDeleteButton = event.target.closest("[data-grid-row-delete]");
+        if (rowDeleteButton) {
+          await requestDeleteRow(Number(rowDeleteButton.dataset.rowId || 0), false);
+        }
+      });
+    }
+
+    if (els.mobileRowAddBtn) {
+      els.mobileRowAddBtn.addEventListener("click", async () => {
+        const row = state.rows[clampMobileRowIndex(state.mobileRowIndex !== null ? state.mobileRowIndex : state.selected.rowIndex) || 0];
+        if (!row) return;
+        await createRowAt(row.id);
+        openMobileRowPanel((findRowIndexById(row.id) + 1) || state.mobileRowIndex || 0);
+      });
+    }
+
+    if (els.mobileRowDeleteBtn) {
+      els.mobileRowDeleteBtn.addEventListener("click", async () => {
+        const row = state.rows[clampMobileRowIndex(state.mobileRowIndex !== null ? state.mobileRowIndex : state.selected.rowIndex) || 0];
+        if (!row) return;
+        await requestDeleteRow(row.id, false);
+      });
+    }
+
+    if (els.mobileColumnCloseBtn) {
+      els.mobileColumnCloseBtn.addEventListener("click", closeMobileColumnPanel);
+    }
+
+    if (els.mobileColumnName) {
+      els.mobileColumnName.addEventListener("change", async () => {
+        if (!state.mobileColumnId) return;
+        await commitColumnRename(state.mobileColumnId, els.mobileColumnName.value);
+        state.mobileColumnId = Number(state.mobileColumnId || 0);
+        renderMobileColumnPanel();
+      });
+      els.mobileColumnName.addEventListener("blur", async () => {
+        if (!state.mobileColumnId) return;
+        await commitColumnRename(state.mobileColumnId, els.mobileColumnName.value);
+        state.mobileColumnId = Number(state.mobileColumnId || 0);
+        renderMobileColumnPanel();
+      });
+    }
+
+    if (els.mobileColumnAddLeftBtn) {
+      els.mobileColumnAddLeftBtn.addEventListener("click", async () => {
+        const currentIndex = findColIndexById(state.mobileColumnId);
+        const previousColumn = currentIndex > 0 ? state.columns[currentIndex - 1] : null;
+        const created = await createColumnAt(previousColumn ? previousColumn.id : 0, { label: buildDefaultColumnLabel() });
+        if (created) {
+          state.mobileColumnId = Number(created.column_id || 0);
+          renderMobileColumnPanel();
+        }
+      });
+    }
+
+    if (els.mobileColumnAddRightBtn) {
+      els.mobileColumnAddRightBtn.addEventListener("click", async () => {
+        const created = await createColumnAt(state.mobileColumnId, { label: buildDefaultColumnLabel() });
+        if (created) {
+          state.mobileColumnId = Number(created.column_id || 0);
+          renderMobileColumnPanel();
+        }
+      });
+    }
+
+    if (els.mobileColumnDeleteBtn) {
+      els.mobileColumnDeleteBtn.addEventListener("click", async () => {
+        if (!state.mobileColumnId) return;
+        await requestDeleteColumn(state.mobileColumnId, false);
       });
     }
 
@@ -1915,6 +2400,14 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && els.previewModal && !els.previewModal.classList.contains("hidden")) {
         closeActionPreview();
+        return;
+      }
+      if (event.key === "Escape" && state.activeColumnRenameId) {
+        closeColumnRename();
+        return;
+      }
+      if (event.key === "Escape") {
+        closeMobileColumnPanel();
       }
     });
 
@@ -1960,364 +2453,91 @@
     setSaveStatus("저장됨", false);
   }
 
-  async function initSheetbookCalendarTab() {
-    const root = document.getElementById("sheetbook-calendar-tab");
+  async function initSheetbookCalendarEmbed() {
+    const root = document.getElementById("sheetbook-calendar-embed");
     if (!root) return;
 
+    const iframe = root.querySelector("#sheetbook-calendar-iframe");
+    const syncBtn = root.querySelector("#sheetbook-calendar-sync-btn");
+    const statusEl = root.querySelector("#sheetbook-calendar-status");
     const csrfToken = resolveCsrfToken(root);
-    const state = {
-      events: [],
-      monthCursor: new Date(),
-      selectedDate: new Date(),
-      isCreating: false,
-    };
-
-    const els = {
-      status: root.querySelector("#sheetbook-calendar-status"),
-      monthLabel: root.querySelector("#sheetbook-calendar-month-label"),
-      grid: root.querySelector("#sheetbook-calendar-grid"),
-      selectedLabel: root.querySelector("#sheetbook-calendar-selected-label"),
-      dayEvents: root.querySelector("#sheetbook-calendar-day-events"),
-      prevBtn: root.querySelector("#sheetbook-calendar-prev"),
-      nextBtn: root.querySelector("#sheetbook-calendar-next"),
-      syncBtn: root.querySelector("#sheetbook-calendar-sync-btn"),
-      jumpTodayBtn: root.querySelector("#sheetbook-calendar-jump-today"),
-      quickAddForm: root.querySelector("#sheetbook-calendar-quick-add-form"),
-      quickTitle: root.querySelector("#sheetbook-calendar-quick-title"),
-      quickAllDay: root.querySelector("#sheetbook-calendar-quick-all-day"),
-      quickStartTime: root.querySelector("#sheetbook-calendar-quick-start-time"),
-      quickEndTime: root.querySelector("#sheetbook-calendar-quick-end-time"),
-      quickSubmit: root.querySelector("#sheetbook-calendar-quick-submit"),
-    };
 
     function setStatus(text, isError) {
-      els.status.textContent = text;
-      els.status.className = isError
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.className = isError
         ? "inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700"
         : "inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600";
     }
 
-    function formatDateKey(dateObj) {
-      const y = dateObj.getFullYear();
-      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-      const d = String(dateObj.getDate()).padStart(2, "0");
-      return `${y}-${m}-${d}`;
-    }
-
-    function formatDateLabel(dateObj) {
-      const days = ["일", "월", "화", "수", "목", "금", "토"];
-      return `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 (${days[dateObj.getDay()]})`;
-    }
-
-    function escapeHtml(value) {
-      return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
-    function eventOverlapsDate(event, dateObj) {
-      const start = new Date(event.start_time);
-      const end = new Date(event.end_time);
-      const dayStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-      const nextDayStart = new Date(dayStart);
-      nextDayStart.setDate(nextDayStart.getDate() + 1);
-      return start < nextDayStart && end > dayStart;
-    }
-
-    function getEventsForDate(dateObj) {
-      return state.events
-        .filter((event) => eventOverlapsDate(event, dateObj))
-        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-    }
-
-    function toKoreanTimeRangeText(event) {
-      if (event.is_all_day) return "하루 종일";
-      const start = new Date(event.start_time);
-      const end = new Date(event.end_time);
-      return `${start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
-    }
-
-    function buildEventOpenUrl(event) {
-      return event.source_url || root.dataset.openCalendarUrl || "";
-    }
-
-    function buildEventOpenLabel(event) {
-      if (event.source_url) {
-        return event.source_label || "원본 서비스에서 보기";
-      }
-      return "학급 달력 전체 화면 열기";
-    }
-
-    function summarizeEventNote(event) {
-      const note = String(event.note || "").trim();
-      if (!note) return "";
-      return note.length > 80 ? `${note.slice(0, 80)}...` : note;
-    }
-
-    function renderSelectedDay() {
-      const selectedEvents = getEventsForDate(state.selectedDate);
-      els.selectedLabel.textContent = `${formatDateLabel(state.selectedDate)}에 있는 일정`;
-      if (!selectedEvents.length) {
-        els.dayEvents.innerHTML = "<p class='text-sm text-gray-500'>이 날짜에는 아직 일정이 없어요. 아래에서 바로 넣어 보세요.</p>";
+    function reloadEmbed() {
+      if (!iframe) return;
+      if (iframe.contentWindow && iframe.contentWindow.location) {
+        iframe.contentWindow.location.reload();
         return;
       }
-      els.dayEvents.innerHTML = selectedEvents
-        .map((event) => {
-          const titleText = escapeHtml(event.title || "일정");
-          const timeText = escapeHtml(toKoreanTimeRangeText(event));
-          const noteText = summarizeEventNote(event);
-          const attachmentCount = Array.isArray(event.attachments) ? event.attachments.length : 0;
-          const openUrl = buildEventOpenUrl(event);
-          const openLabel = escapeHtml(buildEventOpenLabel(event));
-          const noteHtml = noteText
-            ? `<p class="mt-2 text-xs text-slate-600 whitespace-pre-line">${escapeHtml(noteText)}</p>`
-            : "";
-          const attachmentHtml = attachmentCount > 0
-            ? `<p class="mt-1 text-[11px] font-semibold text-indigo-700">첨부 ${attachmentCount}개</p>`
-            : "";
-          const openLinkHtml = openUrl
-            ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 transition">${openLabel} (새 탭)</a>`
-            : "";
-          return `<div class="rounded-lg border border-gray-200 px-3 py-3"><div class="flex items-start justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-semibold text-gray-800">${titleText}</p><p class="text-xs text-gray-500 mt-1">${timeText}</p>${attachmentHtml}${noteHtml}</div>${openLinkHtml}</div></div>`;
-        })
-        .join("");
+      iframe.src = root.dataset.embedSrc || iframe.src;
     }
 
-    function renderCalendarGrid() {
-      const y = state.monthCursor.getFullYear();
-      const m = state.monthCursor.getMonth();
-      els.monthLabel.textContent = `${y}년 ${m + 1}월`;
-
-      const firstDay = new Date(y, m, 1);
-      const lastDay = new Date(y, m + 1, 0);
-      const start = new Date(firstDay);
-      start.setDate(start.getDate() - start.getDay());
-      const end = new Date(lastDay);
-      if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
-
-      const html = [];
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const cloned = new Date(d);
-        const key = formatDateKey(cloned);
-        const isCurrentMonth = cloned.getMonth() === m;
-        const isSelected = key === formatDateKey(state.selectedDate);
-        const count = getEventsForDate(cloned).length;
-        html.push(`
-          <button type="button" data-date="${key}" class="min-h-[64px] rounded-lg border px-1.5 py-1 text-left ${
-            isSelected ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white"
-          } ${isCurrentMonth ? "text-gray-800" : "text-gray-400"} hover:border-indigo-200">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold">${cloned.getDate()}</span>
-              ${count > 0 ? `<span class="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">${count}</span>` : ""}
-            </div>
-          </button>
-        `);
-      }
-      els.grid.innerHTML = html.join("");
+    function applyEmbedHeight(nextHeight) {
+      if (!iframe) return;
+      const parsed = Number(nextHeight || 0);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      iframe.style.height = `${Math.max(820, Math.ceil(parsed) + 12)}px`;
     }
 
-    function setQuickTimeInputsDisabled(isAllDay) {
-      if (!els.quickStartTime || !els.quickEndTime) return;
-      els.quickStartTime.disabled = isAllDay;
-      els.quickEndTime.disabled = isAllDay;
-      els.quickStartTime.classList.toggle("bg-gray-100", isAllDay);
-      els.quickStartTime.classList.toggle("text-gray-400", isAllDay);
-      els.quickEndTime.classList.toggle("bg-gray-100", isAllDay);
-      els.quickEndTime.classList.toggle("text-gray-400", isAllDay);
-      if (!isAllDay) {
-        els.quickStartTime.classList.remove("bg-gray-100", "text-gray-400");
-        els.quickEndTime.classList.remove("bg-gray-100", "text-gray-400");
-      }
+    function handleEmbedMessage(event) {
+      if (!iframe || event.origin !== window.location.origin) return;
+      if (iframe.contentWindow && event.source !== iframe.contentWindow) return;
+      const data = event.data || {};
+      if (data.type !== "classcalendar:embed-height") return;
+      applyEmbedHeight(data.height);
+      setStatus("연결된 달력을 열었어요.", false);
     }
 
-    function firstValidationMessage(errors) {
-      if (!errors || typeof errors !== "object") return "";
-      const keys = Object.keys(errors);
-      for (const key of keys) {
-        const first = Array.isArray(errors[key]) ? errors[key][0] : null;
-        const message = first && typeof first.message === "string" ? first.message.trim() : "";
-        if (message) return message;
-      }
-      return "";
-    }
+    window.addEventListener("message", handleEmbedMessage);
 
-    async function loadEvents() {
-      try {
-        const response = await fetch(root.dataset.eventsUrl, { method: "GET" });
-        if (!response.ok) {
-          setStatus("학급 달력을 불러오지 못했어요.", true);
-          return;
-        }
-        const payload = await response.json();
-        state.events = payload.events || [];
-        renderCalendarGrid();
-        renderSelectedDay();
-        setStatus(`학급 달력 일정 ${state.events.length}건을 불러왔어요.`, false);
-      } catch (error) {
-        setStatus("네트워크 오류로 학급 달력을 불러오지 못했어요.", true);
-      }
-    }
-
-    async function syncFromSchedule() {
-      setStatus("일정 표 내용을 학급 달력에 옮기는 중...", false);
-      try {
-        const response = await fetch(root.dataset.syncUrl, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken,
-          },
-          body: JSON.stringify({}),
-        });
-        const payload = await readJsonSafely(response);
-        if (!response.ok) {
-          const fallbackMessage = response.status === 403 ? csrfFailureMessage("학급 달력 반영 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "학급 달력 반영 중 오류가 발생했어요.";
-          setStatus(blockedActionMessage(payload, fallbackMessage), true);
-          return;
-        }
-        setStatus(
-          `반영 완료: 새로 들어간 일정 ${payload.created || 0}건, 바뀐 일정 ${payload.updated || 0}건, 지운 일정 ${payload.deleted || 0}건`,
-          false
-        );
-        await loadEvents();
-      } catch (error) {
-        setStatus("네트워크 오류로 학급 달력 반영에 실패했어요.", true);
-      }
-    }
-
-    async function createEventFromSelectedDate(event) {
-      event.preventDefault();
-      if (state.isCreating) return;
-      if (!els.quickTitle) return;
-
-      const title = (els.quickTitle.value || "").trim();
-      if (!title) {
-        setStatus("일정 제목을 입력해 주세요.", true);
-        els.quickTitle.focus();
-        return;
-      }
-
-      const dateKey = formatDateKey(state.selectedDate);
-      const allDay = !!(els.quickAllDay && els.quickAllDay.checked);
-      let startTime = `${dateKey}T00:00`;
-      let endTime = `${dateKey}T23:59`;
-
-      if (!allDay) {
-        const startClock = (els.quickStartTime && els.quickStartTime.value) || "";
-        const endClock = (els.quickEndTime && els.quickEndTime.value) || "";
-        if (!startClock || !endClock) {
-          setStatus("시작/종료 시간을 모두 입력해 주세요.", true);
-          return;
-        }
-        const startDate = new Date(`${dateKey}T${startClock}`);
-        const endDate = new Date(`${dateKey}T${endClock}`);
-        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          setStatus("시간 형식을 확인해 주세요.", true);
-          return;
-        }
-        if (endDate <= startDate) {
-          setStatus("종료 시간은 시작 시간보다 늦어야 합니다.", true);
-          return;
-        }
-        startTime = `${dateKey}T${startClock}`;
-        endTime = `${dateKey}T${endClock}`;
-      }
-
-      state.isCreating = true;
-      if (els.quickSubmit) {
-        els.quickSubmit.disabled = true;
-      }
-      setStatus(`${formatDateLabel(state.selectedDate)}에 일정을 넣는 중...`, false);
-
-      const body = new URLSearchParams();
-      body.append("title", title);
-      body.append("start_time", startTime);
-      body.append("end_time", endTime);
-      body.append("is_all_day", allDay ? "true" : "false");
-      body.append("color", "indigo");
-
-      try {
-        const response = await fetch(root.dataset.createUrl, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "X-CSRFToken": csrfToken,
-          },
-          body: body.toString(),
-        });
-        const payload = await readJsonSafely(response);
-        if (!response.ok) {
-          const validationMessage = firstValidationMessage(payload.errors);
-          const fallbackMessage = response.status === 403 ? csrfFailureMessage("일정 추가 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.") : "일정 추가 중 오류가 발생했어요.";
-          setStatus(validationMessage || payload.message || blockedActionMessage(payload, fallbackMessage), true);
-          return;
-        }
-        els.quickTitle.value = "";
-        setStatus(`${formatDateLabel(state.selectedDate)} 일정이 추가됐어요.`, false);
-        await loadEvents();
-      } catch (error) {
-        setStatus("네트워크 오류로 일정 추가에 실패했어요. 다시 시도해 주세요.", true);
-      } finally {
-        state.isCreating = false;
-        if (els.quickSubmit) {
-          els.quickSubmit.disabled = false;
-        }
-      }
-    }
-
-    els.prevBtn.addEventListener("click", () => {
-      state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() - 1, 1);
-      renderCalendarGrid();
-    });
-
-    els.nextBtn.addEventListener("click", () => {
-      state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() + 1, 1);
-      renderCalendarGrid();
-    });
-
-    els.grid.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-date]");
-      if (!button) return;
-      const dateKey = button.dataset.date;
-      const [y, m, d] = dateKey.split("-").map((v) => Number(v));
-      state.selectedDate = new Date(y, m - 1, d);
-      state.monthCursor = new Date(y, m - 1, 1);
-      renderCalendarGrid();
-      renderSelectedDay();
-    });
-
-    if (els.syncBtn) {
-      els.syncBtn.addEventListener("click", syncFromSchedule);
-    }
-    if (els.jumpTodayBtn) {
-      els.jumpTodayBtn.addEventListener("click", () => {
-        const today = new Date();
-        state.selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        state.monthCursor = new Date(today.getFullYear(), today.getMonth(), 1);
-        renderCalendarGrid();
-        renderSelectedDay();
+    if (iframe) {
+      iframe.addEventListener("load", () => {
+        setStatus("연결된 달력을 열었어요.", false);
       });
     }
-    if (els.quickAllDay) {
-      els.quickAllDay.addEventListener("change", () => {
-        setQuickTimeInputsDisabled(els.quickAllDay.checked);
-      });
-      setQuickTimeInputsDisabled(els.quickAllDay.checked);
-    }
-    if (els.quickAddForm) {
-      els.quickAddForm.addEventListener("submit", createEventFromSelectedDate);
-    }
 
-    await loadEvents();
+    if (syncBtn) {
+      syncBtn.addEventListener("click", async () => {
+        setStatus("일정 표를 달력에 반영하는 중...", false);
+        try {
+          const response = await fetch(root.dataset.syncUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({}),
+          });
+          const payload = await readJsonSafely(response);
+          if (!response.ok) {
+            const fallbackMessage = response.status === 403
+              ? csrfFailureMessage("달력 반영 권한이 없거나 보안 확인이 필요해요. 새로고침 후 다시 시도해 주세요.")
+              : "달력 반영 중 오류가 발생했어요.";
+            setStatus(blockedActionMessage(payload, fallbackMessage), true);
+            return;
+          }
+          setStatus(
+            `반영 완료: 새 일정 ${payload.created || 0}건, 바뀐 일정 ${payload.updated || 0}건, 지운 일정 ${payload.deleted || 0}건`,
+            false
+          );
+          reloadEmbed();
+        } catch (error) {
+          setStatus("네트워크 오류로 달력 반영에 실패했어요.", true);
+        }
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", initSheetbookGrid);
-  document.addEventListener("DOMContentLoaded", initSheetbookCalendarTab);
+  document.addEventListener("DOMContentLoaded", initSheetbookCalendarEmbed);
 </script>
 {% endblock %}
 

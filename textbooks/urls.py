@@ -13,6 +13,7 @@ urlpatterns = [
     path('shared/', views.shared_library, name='shared_library'),
     path('like/<uuid:pk>/', views.toggle_like, name='toggle_like'),
     path('fork/<uuid:pk>/', views.fork_material, name='fork_material'),
+    path('schedule/<uuid:pk>/', views.schedule_material, name='schedule_material'),
     path('<uuid:pk>/', views.material_detail, name='detail'),
     path('s/<uuid:pk>/', views.student_view, name='student_view'),
     path('s/<uuid:pk>/raw/', views.raw_content, name='raw_content'),

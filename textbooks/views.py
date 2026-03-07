@@ -3,8 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
+from django.contrib import messages
+from django.utils import timezone
+from datetime import datetime, time, timedelta
 from products.models import Product
 from .models import TextbookMaterial, AiUsage
+from classcalendar.models import CalendarEvent
+from classcalendar.views import _persist_primary_note
 
 SERVICE_ROUTE = 'textbooks:main'
 SERVICE_TITLE = '교육 자료실'
@@ -192,6 +197,47 @@ def fork_material(request, pk):
         is_published=False,  # 일단 비공개(미배포) 상태로 복구
         is_shared=True       # 자동 공유 정책에 따름
     )
-    
     return redirect('textbooks:detail', pk=forked_m.id)
+
+
+@login_required
+@require_POST
+def schedule_material(request, pk):
+    """지정된 자료를 학급 캘린더 일요일/날짜에 등록합니다."""
+    material = get_object_or_404(TextbookMaterial, id=pk, teacher=request.user)
+    date_str = request.POST.get('date')
+    
+    if not date_str:
+        return HttpResponseBadRequest("날짜가 지정되지 않았습니다.")
+        
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return HttpResponseBadRequest("날짜 형식이 올바르지 않습니다.")
+        
+    # 기본 시간 설정 (예: 오전 9시 수업)
+    start_time = timezone.make_aware(
+        datetime.combine(target_date, time(9, 0)),
+        timezone.get_current_timezone()
+    )
+    end_time = start_time + timedelta(minutes=40)
+    
+    event = CalendarEvent.objects.create(
+        title=f"[수업] {material.title}",
+        author=request.user,
+        start_time=start_time,
+        end_time=end_time,
+        visibility=CalendarEvent.VISIBILITY_CLASS, # 반 아이들과 공유하도록 설정
+        source=CalendarEvent.SOURCE_LOCAL,
+        integration_source='textbooks',
+        integration_key=f"textbooks:{material.id}",
+        color='indigo'
+    )
+    
+    # 캘린더 정규 필드인 "노트"에 링크 추가
+    student_url = request.build_absolute_uri(reverse('textbooks:student_view', args=[material.id]))
+    _persist_primary_note(event, f"{material.unit_title} 수업 자료입니다.\n\n🔗 학생용 링크: {student_url}")
+    
+    messages.success(request, f"'{material.title}' 자료가 {target_date.strftime('%m월 %d일')} 학급 일방에 등록되었습니다.")
+    return redirect('textbooks:detail', pk=material.id)
 

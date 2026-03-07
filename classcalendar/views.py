@@ -50,6 +50,7 @@ INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
 INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
 RETENTION_NOTICE_TITLE = "[안내] 자동 정리 정책 안내"
 SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
+SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_sync", "sheetbook_calendar_embed", "sheetbook_message_capture"}
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -359,6 +360,60 @@ def _split_integration_key(raw_key):
     return raw_key.split(":", 1)
 
 
+def _resolve_sheetbook_context(user, raw_sheetbook_id, raw_tab_id):
+    try:
+        sheetbook_id = int(raw_sheetbook_id or 0)
+        tab_id = int(raw_tab_id or 0)
+    except (TypeError, ValueError):
+        return None
+    if not sheetbook_id or not tab_id:
+        return None
+    try:
+        from sheetbook.models import SheetTab, Sheetbook
+    except Exception:
+        logger.exception("[ClassCalendar] failed to import sheetbook models for context resolution")
+        return None
+
+    sheetbook = Sheetbook.objects.filter(owner=user, id=sheetbook_id).only("id", "title").first()
+    if not sheetbook:
+        return None
+    tab = SheetTab.objects.filter(sheetbook_id=sheetbook.id, id=tab_id).only("id", "name", "tab_type").first()
+    if not tab:
+        return None
+    detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.id})
+    detail_url = f"{detail_url}?{urlencode({'tab': tab.id, 'source': 'calendar'})}"
+    return {
+        "sheetbook_id": sheetbook.id,
+        "sheetbook_title": sheetbook.title,
+        "tab_id": tab.id,
+        "tab_name": tab.name,
+        "tab_type": tab.tab_type,
+        "detail_url": detail_url,
+    }
+
+
+def _resolve_sheetbook_source_meta(event, *, current_user_id):
+    source = (event.integration_source or "").strip()
+    if source not in SHEETBOOK_SOURCE_SOURCES or event.author_id != current_user_id:
+        return None
+    key_parts = str(event.integration_key or "").split(":")
+    if len(key_parts) < 2:
+        return None
+    context = _resolve_sheetbook_context(event.author, key_parts[0], key_parts[1])
+    if not context:
+        return None
+    return {
+        "source_sheetbook_id": context["sheetbook_id"],
+        "source_sheetbook_title": context["sheetbook_title"],
+        "source_tab_id": context["tab_id"],
+        "source_tab_name": context["tab_name"],
+        "source_tab_type": context["tab_type"],
+        "source_detail_url": context["detail_url"],
+        "source_url": context["detail_url"],
+        "source_label": "연결된 수첩으로 돌아가기",
+    }
+
+
 def _resolve_integration_source_meta(event):
     source = (event.integration_source or "").strip()
     key = (event.integration_key or "").strip()
@@ -429,6 +484,13 @@ def _resolve_integration_source_meta(event):
                 pass
         return reverse("signatures:list"), "서명 연수 목록으로 이동"
 
+    if source == 'textbooks':
+        if payload:
+            return (
+                reverse("textbooks:detail", kwargs={"pk": payload}),
+                "수업 자료실로 이동",
+            )
+
     return "", ""
 
 
@@ -492,6 +554,10 @@ def _persist_primary_note(event, note_value):
 
 def _serialize_event(event, *, current_user_id, editable_owner_ids):
     source_url, source_label = _resolve_integration_source_meta(event)
+    sheetbook_source_meta = _resolve_sheetbook_source_meta(event, current_user_id=current_user_id) or {}
+    if sheetbook_source_meta.get("source_url"):
+        source_url = sheetbook_source_meta.get("source_url") or source_url
+        source_label = sheetbook_source_meta.get("source_label") or source_label
     attachments = list(event.attachments.all())
     attachments.sort(key=lambda attachment: (attachment.sort_order, attachment.id))
     return {
@@ -507,6 +573,12 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
         "integration_source": event.integration_source,
         "source_url": source_url,
         "source_label": source_label,
+        "source_sheetbook_id": sheetbook_source_meta.get("source_sheetbook_id") or 0,
+        "source_sheetbook_title": sheetbook_source_meta.get("source_sheetbook_title") or "",
+        "source_tab_id": sheetbook_source_meta.get("source_tab_id") or 0,
+        "source_tab_name": sheetbook_source_meta.get("source_tab_name") or "",
+        "source_tab_type": sheetbook_source_meta.get("source_tab_type") or "",
+        "source_detail_url": sheetbook_source_meta.get("source_detail_url") or "",
         "is_locked": event.is_locked,
         "calendar_owner_id": str(event.author_id),
         "calendar_owner_name": _display_user_name(event.author),
@@ -581,7 +653,7 @@ def _build_calendar_owner_options(user, editable_owner_ids):
         options.append(
             {
                 "id": str(user.id),
-                "label": "내 캘린더",
+                "label": "내 달력",
                 "is_default": True,
             }
         )
@@ -591,7 +663,7 @@ def _build_calendar_owner_options(user, editable_owner_ids):
         options.append(
             {
                 "id": str(owner.id),
-                "label": f"{_display_user_name(owner)} 캘린더",
+                "label": f"{_display_user_name(owner)} 달력",
                 "is_default": False,
             }
         )
@@ -600,7 +672,7 @@ def _build_calendar_owner_options(user, editable_owner_ids):
         options.append(
             {
                 "id": str(user.id),
-                "label": "내 캘린더",
+                "label": "내 달력",
                 "is_default": True,
             }
         )
@@ -929,28 +1001,34 @@ def main_entry(request):
     if not getattr(settings, "SHEETBOOK_ENABLED", False):
         return redirect("classcalendar:main")
 
-    if request.GET.get("legacy") == "1":
-        return redirect("classcalendar:main")
-
     bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
-    bridge_context.update(
-        {
-            "calendar_url": reverse("classcalendar:main"),
-        }
-    )
-    return render(request, "classcalendar/sheetbook_entry.html", bridge_context)
+    if bridge_context.get("sheetbook_entry_url"):
+        return redirect(bridge_context["sheetbook_entry_url"])
+    return redirect("classcalendar:main")
+
+
+@login_required
+def legacy_main_redirect(request):
+    return redirect("classcalendar:main")
 
 
 @login_required
 def main_view(request):
     _sync_integrations_if_needed(request)
+    embedded_sheetbook_context = None
+    if request.GET.get("embedded") == "sheetbook":
+        embedded_sheetbook_context = _resolve_sheetbook_context(
+            request.user,
+            request.GET.get("sheetbook_id"),
+            request.GET.get("tab_id"),
+        )
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     context = {
         "service": service,
-        "title": service.title if service else "학급 캘린더 (Eduitit Calendar)",
+        "title": service.title if service else "달력 (Eduitit Calendar)",
         "events_json": [
             _serialize_event(
                 event,
@@ -969,6 +1047,9 @@ def main_view(request):
         "show_retention_notice_banner": integration_setting.retention_notice_banner_dismissed_at is None,
         "message_capture_enabled": _is_message_capture_enabled_for_user(request.user),
         "message_capture_limits_json": _build_message_capture_limits_payload(),
+        "embedded_sheetbook_context": embedded_sheetbook_context,
+        "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
+        "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),
     }
     return render(request, "classcalendar/main.html", context)
 
@@ -1178,20 +1259,29 @@ def api_create_event(request):
         editable_owner_ids=editable_owner_ids,
     )
     if not event_owner:
-        return _permission_denied_response("선택한 캘린더에 일정을 추가할 권한이 없습니다.")
+        return _permission_denied_response("선택한 달력에 일정을 추가할 권한이 없습니다.")
 
     classroom = _get_active_classroom_for_user(request) if event_owner.id == request.user.id else None
-    event = CalendarEvent.objects.create(
-        title=form.cleaned_data["title"],
-        start_time=form.cleaned_data["start_time"],
-        end_time=form.cleaned_data["end_time"],
-        is_all_day=form.cleaned_data.get("is_all_day", False),
-        color=form.cleaned_data.get("color") or "indigo",
-        visibility=CalendarEvent.VISIBILITY_TEACHER,
-        author=event_owner,
-        classroom=classroom,
-        source=CalendarEvent.SOURCE_LOCAL,
+    source_context = _resolve_sheetbook_context(
+        request.user,
+        request.POST.get("source_sheetbook_id"),
+        request.POST.get("source_tab_id"),
     )
+    create_kwargs = {
+        "title": form.cleaned_data["title"],
+        "start_time": form.cleaned_data["start_time"],
+        "end_time": form.cleaned_data["end_time"],
+        "is_all_day": form.cleaned_data.get("is_all_day", False),
+        "color": form.cleaned_data.get("color") or "indigo",
+        "visibility": CalendarEvent.VISIBILITY_TEACHER,
+        "author": event_owner,
+        "classroom": classroom,
+        "source": CalendarEvent.SOURCE_LOCAL,
+    }
+    if source_context and event_owner.id == request.user.id:
+        create_kwargs["integration_source"] = "sheetbook_calendar_embed"
+        create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{uuid.uuid4().hex[:8]}"
+    event = CalendarEvent.objects.create(**create_kwargs)
     _persist_primary_note(event, form.cleaned_data.get("note", ""))
     event = CalendarEvent.objects.select_related("author").prefetch_related("blocks").get(id=event.id)
     return JsonResponse(
@@ -1556,17 +1646,26 @@ def api_message_capture_commit(request, capture_id):
         processing_ms = int((timezone.now() - capture_for_update.created_at).total_seconds() * 1000)
 
         classroom = _get_active_classroom_for_user(request)
-        event = CalendarEvent.objects.create(
-            title=form.cleaned_data["title"],
-            start_time=form.cleaned_data["start_time"],
-            end_time=form.cleaned_data["end_time"],
-            is_all_day=form.cleaned_data.get("is_all_day", False),
-            color=form.cleaned_data.get("color") or "indigo",
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-            author=request.user,
-            classroom=classroom,
-            source=CalendarEvent.SOURCE_LOCAL,
+        source_context = _resolve_sheetbook_context(
+            request.user,
+            payload.get("source_sheetbook_id"),
+            payload.get("source_tab_id"),
         )
+        create_kwargs = {
+            "title": form.cleaned_data["title"],
+            "start_time": form.cleaned_data["start_time"],
+            "end_time": form.cleaned_data["end_time"],
+            "is_all_day": form.cleaned_data.get("is_all_day", False),
+            "color": form.cleaned_data.get("color") or "indigo",
+            "visibility": CalendarEvent.VISIBILITY_TEACHER,
+            "author": request.user,
+            "classroom": classroom,
+            "source": CalendarEvent.SOURCE_LOCAL,
+        }
+        if source_context:
+            create_kwargs["integration_source"] = "sheetbook_message_capture"
+            create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
+        event = CalendarEvent.objects.create(**create_kwargs)
         _persist_primary_note(event, form.cleaned_data.get("todo_summary", ""))
         copied_attachments, attachment_warnings = _copy_capture_attachments_to_event(
             event,

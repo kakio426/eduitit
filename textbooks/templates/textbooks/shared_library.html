@@ -83,8 +83,9 @@
                         <!-- 복사(Fork) 폼 -->
                         <form method="post" action="{% url 'textbooks:fork_material' item.id %}" class="inline">
                             {% csrf_token %}
-                            <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-500 transition-colors" title="내 자료실로 복사하기">
+                            <button type="submit" class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold transition-colors shadow-sm border bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100" title="내 자료실로 복사하기">
                                 <i class="fa-solid fa-code-branch"></i>
+                                <span>가져오기</span>
                             </button>
                         </form>
                     </div>

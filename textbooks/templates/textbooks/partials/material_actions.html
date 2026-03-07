@@ -18,47 +18,45 @@
     </div>
 </div>
 
-<div class="flex-shrink-0 w-full md:w-auto flex flex-col gap-3">
-    <!-- 학생 배포 영역 -->
+<div class="flex-shrink-0 w-full md:w-auto flex flex-col gap-2">
+    <!-- 상태 표시 및 전환 -->
     {% if material.is_published %}
     <div class="flex flex-col gap-2">
-        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center justify-center font-bold text-lg mb-2">
-            <span class="relative flex h-3 w-3 mr-3">
+        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center justify-center font-bold text-base">
+            <span class="relative flex h-2 w-2 mr-2">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            학생 접속 허용됨
+            학생 접속 중
         </div>
         
-        <button @click="showQR = true" class="md:hidden px-6 py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-clay hover:shadow-clay-hover transition-all text-lg flex items-center justify-center gap-2 w-full">
-            <i class="fa-solid fa-qrcode"></i> 학생 QR 보여주기
-        </button>
-
         <form method="post" action="{% url 'textbooks:detail' pk=material.id %}" 
               hx-post="{% url 'textbooks:detail' pk=material.id %}" 
               hx-target="#material-actions" 
               hx-swap="outerHTML">
             {% csrf_token %}
             <input type="hidden" name="action" value="unpublish">
-            <button type="submit" class="w-full px-5 py-3 bg-white hover:bg-gray-50 text-gray-600 border border-gray-300 rounded-xl font-bold transition-all flex items-center justify-center gap-2" title="학생들의 접속을 즉시 차단합니다.">
-                <i class="fa-solid fa-lock"></i> 접속 차단하기 (비공개)
+            <button type="submit" class="w-full px-4 py-2 bg-white hover:bg-red-50 text-gray-500 hover:text-red-500 border border-gray-200 hover:border-red-200 rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-power-off"></i> 접속 중단하기
             </button>
         </form>
     </div>
     {% else %}
-    <div class="bg-gray-50 border border-gray-200 text-gray-500 px-4 py-3 rounded-xl flex items-center justify-center font-bold text-lg mb-2 w-full md:w-64">
-        <i class="fa-solid fa-lock mr-2 text-xl"></i> 비공개 상태
+    <div class="flex flex-col gap-2">
+        <div class="bg-gray-50 border border-gray-200 text-gray-500 px-4 py-3 rounded-xl flex items-center justify-center font-bold text-base">
+            <i class="fa-solid fa-lock mr-2"></i> 비공개 상태
+        </div>
+        
+        <form method="post" action="{% url 'textbooks:detail' pk=material.id %}"
+              hx-post="{% url 'textbooks:detail' pk=material.id %}" 
+              hx-target="#material-actions" 
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="publish">
+            <button type="submit" class="w-full px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-sm font-bold text-base transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rocket"></i> 지금 배포하기
+            </button>
+        </form>
     </div>
-    
-    <form method="post" action="{% url 'textbooks:detail' pk=material.id %}"
-          hx-post="{% url 'textbooks:detail' pk=material.id %}" 
-          hx-target="#material-actions" 
-          hx-swap="outerHTML">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="publish">
-        <button type="submit" class="w-full md:w-64 px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-clay hover:shadow-clay-hover font-bold text-lg transition-transform hover:-translate-y-1 flex items-center justify-center gap-2" title="학생들이 QR 코드로 접속할 수 있게 허용합니다.">
-            <i class="fa-solid fa-satellite-dish"></i> 학생들에게 배포하기
-        </button>
-    </form>
     {% endif %}
 </div>
