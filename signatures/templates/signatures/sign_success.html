@@ -11,7 +11,7 @@
             </div>
             <h1 class="text-4xl font-bold text-gray-700 mb-4">서명이 완료되었습니다</h1>
             <p class="text-2xl text-gray-500 mb-2">{{ session.title }}</p>
-            <p class="text-xl text-gray-400">연수 참여가 기록되었습니다.</p>
+            <p class="text-xl text-gray-400">출석·참여 확인이 기록되었습니다.</p>
 
             <div class="mt-8">
                 <a href="{% url 'signatures:sign' uuid=session.uuid %}"

@@ -18,6 +18,7 @@ from .models import (
     AffiliationCorrectionLog,
     ExpectedParticipant,
     Signature,
+    SignatureAuditLog,
     TrainingSession,
 )
 from .forms import TrainingSessionForm, SignatureForm
@@ -52,6 +53,17 @@ def _normalize_affiliation_text(value):
     normalized = re.sub(r"\s*/\s*", "/", normalized)
     normalized = re.sub(r"\s*-\s*", "-", normalized)
     return normalized[:100]
+
+
+def _request_client_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+def _request_user_agent(request):
+    return (request.META.get("HTTP_USER_AGENT", "") or "")[:1000]
 
 
 def _build_affiliation_suggestions(session, max_items=40):
@@ -444,44 +456,61 @@ def session_create(request):
 
 @login_required
 def session_detail(request, uuid):
-    """연수 상세 (관리자용) - 미매칭 및 중복 감지 포함"""
+    """연수 상세 (관리자용) - 미매칭, 중복, 반복 IP 감지 포함"""
     from django.http import HttpResponse
     import traceback
-    
+
     try:
         session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
         signatures = session.signatures.all()
         expected = session.expected_participants.all()
-        
-        # 1. 미매칭 서명 찾기 (명단이 있는 경우에만 수행)
+
         suggestions = []
         if expected.exists():
             matched_sig_ids = expected.filter(
                 matched_signature__isnull=False
             ).values_list('matched_signature_id', flat=True)
-            
+
             unmatched_signatures = signatures.exclude(id__in=matched_sig_ids)
-            
-            # 각 미매칭 서명에 대해 정확히 일치하는 예상 참석자 찾기
+
             for sig in unmatched_signatures:
                 exact_matches = expected.filter(
                     name=sig.participant_name,
                     matched_signature__isnull=True
                 )
-                
+
                 suggestions.append({
                     'signature': sig,
                     'exact_matches': list(exact_matches),
                     'has_matches': exact_matches.exists(),
                 })
-        
-        # 3. 중복 서명 감지 (항상 수행)
+
         sig_dict = defaultdict(list)
+        ip_dict = defaultdict(list)
         for sig in signatures:
             key = (sig.participant_name, sig.display_affiliation or '')
             sig_dict[key].append(sig)
-        
+            if sig.ip_address:
+                ip_dict[sig.ip_address].append(sig)
+
         duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
+        repeated_ip_groups = []
+        suspicious_window = timedelta(minutes=10)
+        for ip_address, ip_signatures in ip_dict.items():
+            ordered = sorted(ip_signatures, key=lambda item: item.created_at)
+            is_suspicious = any(
+                (ordered[idx].created_at - ordered[idx - 1].created_at) <= suspicious_window
+                for idx in range(1, len(ordered))
+            )
+            if is_suspicious and len(ordered) > 1:
+                repeated_ip_groups.append({
+                    'ip_address': ip_address,
+                    'signatures': ordered,
+                    'count': len(ordered),
+                    'first_at': ordered[0].created_at,
+                    'last_at': ordered[-1].created_at,
+                })
+
         share_link = request.build_absolute_uri(
             reverse("signatures:sign", kwargs={"uuid": session.uuid})
         )
@@ -498,8 +527,10 @@ def session_detail(request, uuid):
             'expected_participants': expected,
             'unmatched_suggestions': suggestions,
             'duplicates': duplicates,
+            'repeated_ip_groups': repeated_ip_groups,
             'has_unmatched': len(suggestions) > 0,
             'has_duplicates': len(duplicates) > 0,
+            'has_repeated_ips': len(repeated_ip_groups) > 0,
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
@@ -508,7 +539,6 @@ def session_detail(request, uuid):
     except Exception as e:
         traceback.print_exc()
         return HttpResponse(f"Server Error in session_detail: {str(e)}<br><pre>{traceback.format_exc()}</pre>", status=500)
-
 
 
 @login_required
@@ -580,7 +610,22 @@ def sign(request, uuid):
             signature = form.save(commit=False)
             signature.training_session = session
             signature.participant_affiliation = _normalize_affiliation_text(signature.participant_affiliation)
+            signature.submission_mode = Signature.SUBMISSION_MODE_OPEN
+            signature.ip_address = _request_client_ip(request)
+            signature.user_agent = _request_user_agent(request)
             signature.save()
+            SignatureAuditLog.objects.create(
+                training_session=session,
+                signature=signature,
+                event_type=SignatureAuditLog.EVENT_SIGN_SUBMITTED,
+                event_meta={
+                    'participant_name': signature.participant_name,
+                    'participant_affiliation': signature.display_affiliation,
+                    'submission_mode': signature.submission_mode,
+                },
+                ip_address=signature.ip_address,
+                user_agent=signature.user_agent,
+            )
             return render(request, 'signatures/sign_success.html', {'session': session})
     else:
         form = SignatureForm()

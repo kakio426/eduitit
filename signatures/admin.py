@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count
-from .models import AffiliationCorrectionLog, Signature, TrainingSession
+from .models import AffiliationCorrectionLog, Signature, SignatureAuditLog, TrainingSession
 
 
 class SignatureInline(admin.TabularInline):
@@ -31,10 +31,10 @@ class TrainingSessionAdmin(admin.ModelAdmin):
 
 @admin.register(Signature)
 class SignatureAdmin(admin.ModelAdmin):
-    list_display = ['participant_name', 'training_session', 'participant_affiliation', 'corrected_affiliation', 'created_at']
-    list_filter = ['training_session', 'created_at']
-    search_fields = ['participant_name']
-    readonly_fields = ['created_at']
+    list_display = ['participant_name', 'training_session', 'submission_mode', 'participant_affiliation', 'corrected_affiliation', 'ip_address', 'created_at']
+    list_filter = ['training_session', 'submission_mode', 'created_at']
+    search_fields = ['participant_name', 'ip_address']
+    readonly_fields = ['submission_mode', 'ip_address', 'user_agent', 'created_at']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('training_session')
@@ -62,3 +62,14 @@ class AffiliationCorrectionLogAdmin(admin.ModelAdmin):
             'signature',
             'expected_participant',
         )
+
+
+@admin.register(SignatureAuditLog)
+class SignatureAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['created_at', 'training_session', 'signature', 'event_type', 'ip_address']
+    list_filter = ['event_type', 'created_at']
+    search_fields = ['training_session__title', 'signature__participant_name', 'ip_address']
+    readonly_fields = ['created_at']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('training_session', 'signature', 'expected_participant')

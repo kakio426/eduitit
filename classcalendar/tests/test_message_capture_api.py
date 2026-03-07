@@ -220,6 +220,46 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(second_commit.status_code, 409)
         self.assertEqual(second_commit.json().get("code"), "duplicate_request")
 
+    def test_api_events_includes_message_capture_attachment_metadata(self):
+        upload = SimpleUploadedFile("memo.txt", b"memo file", content_type="text/plain")
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "2026-03-12 10:00-11:00 학부모 상담",
+                "idempotency_key": "capture-test-key-attachments-api",
+                "files": upload,
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+        capture_id = parse_payload["capture_id"]
+        selected_attachment_ids = [item["id"] for item in parse_payload.get("attachments", [])]
+
+        commit_response = self._commit(
+            capture_id,
+            {
+                "title": "학부모 상담",
+                "todo_summary": "상담실 준비",
+                "start_time": "2026-03-12T10:00",
+                "end_time": "2026-03-12T11:00",
+                "is_all_day": False,
+                "color": "indigo",
+                "selected_attachment_ids": selected_attachment_ids,
+                "confirm_low_confidence": True,
+            },
+        )
+        self.assertEqual(commit_response.status_code, 201)
+        event_id = commit_response.json()["event"]["id"]
+
+        events_response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(events_response.status_code, 200)
+        events = events_response.json().get("events", [])
+        event_payload = next(item for item in events if item.get("id") == event_id)
+        attachments = event_payload.get("attachments") or []
+        self.assertEqual(len(attachments), 1)
+        self.assertEqual(attachments[0].get("original_name"), "memo.txt")
+        self.assertTrue(attachments[0].get("url"))
+
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)
     def test_parse_returns_feature_disabled_when_flag_off(self):
         response = self.client.post(

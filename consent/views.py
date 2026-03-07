@@ -21,6 +21,7 @@ from django.http import FileResponse, Http404, HttpResponse, StreamingHttpRespon
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django_ratelimit.decorators import ratelimit
 
 from .forms import (
     ConsentDocumentForm,
@@ -37,6 +38,7 @@ from .policy_content import (
 from .schema import get_consent_schema_status
 from .services import (
     PdfRuntimeUnavailable,
+    generate_recipient_evidence_pdf,
     generate_summary_pdf,
     guess_file_type,
 )
@@ -165,6 +167,65 @@ def _request_document_evidence(consent_request: SignatureRequest):
             "document_size": size,
             "document_sha256": sha256,
         }
+
+
+def _request_client_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+def _request_user_agent(request):
+    return (request.META.get("HTTP_USER_AGENT", "") or "")[:1000]
+
+
+def _consent_public_ratelimit_key(group, request):
+    token = ""
+    resolver_match = getattr(request, "resolver_match", None)
+    if resolver_match is not None:
+        token = resolver_match.kwargs.get("token", "")
+    return f"{_request_client_ip(request) or 'unknown'}:{token or 'unknown'}"
+
+
+def _build_recipient_download_filename(recipient: SignatureRecipient) -> str:
+    consent_request = recipient.request
+    title_seed = (consent_request.title or consent_request.document.title or recipient.student_name).strip()
+    safe_base = _sanitize_filename_base(
+        f"{title_seed}_{recipient.student_name}_{recipient.parent_name}",
+        fallback="동의서_개별증빙",
+    )
+    request_short = str(consent_request.request_id).split("-")[0]
+    return f"{safe_base}_{request_short}.pdf"
+
+
+def _store_recipient_evidence_pdf(recipient: SignatureRecipient):
+    evidence_file = generate_recipient_evidence_pdf(recipient)
+    if hasattr(evidence_file, "seek"):
+        evidence_file.seek(0)
+    pdf_bytes = evidence_file.read() if hasattr(evidence_file, "read") else b""
+    if not pdf_bytes:
+        raise ValueError("recipient evidence pdf is empty")
+    recipient.signed_pdf.save(
+        _build_recipient_download_filename(recipient),
+        ContentFile(pdf_bytes),
+        save=False,
+    )
+    recipient.save(update_fields=["signed_pdf"])
+
+
+def _log_document_view(recipient: SignatureRecipient, request, *, mode: str):
+    ConsentAuditLog.objects.create(
+        request=recipient.request,
+        recipient=recipient,
+        event_type=ConsentAuditLog.EVENT_DOCUMENT_VIEWED,
+        event_meta={
+            "mode": mode,
+            **_request_document_evidence(recipient.request),
+        },
+        ip_address=_request_client_ip(request),
+        user_agent=_request_user_agent(request),
+    )
 
 
 def _parse_recipients(text):
@@ -861,6 +922,12 @@ def consent_detail(request, request_id):
         SignatureRequest.STATUS_COMPLETED,
     )
     source_file_available = _is_file_accessible(consent_request.document.original_file)
+    missing_phone_count = sum(1 for recipient in recipients if not recipient.phone_last4)
+    token_only_submitted_count = sum(
+        1
+        for recipient in recipients
+        if recipient.signed_at and recipient.identity_assurance == SignatureRecipient.IDENTITY_TOKEN_ONLY
+    )
     recipient_rows = []
     for recipient in recipients:
         sign_url = request.build_absolute_uri(reverse("consent:sign", kwargs={"token": recipient.access_token}))
@@ -870,6 +937,7 @@ def consent_detail(request, request_id):
                 "sign_url": sign_url,
                 "qr_code_base64": _generate_qr_base64(sign_url),
                 "copy_message": _compose_parent_message(consent_request, recipient, sign_url),
+                "download_url": reverse("consent:download_recipient_pdf", kwargs={"recipient_id": recipient.id}),
             }
         )
     return render(
@@ -883,6 +951,11 @@ def consent_detail(request, request_id):
             "source_file_available": source_file_available,
             "recipient_stats": recipient_stats,
             "links_released": links_released,
+            "evidence_warning_counts": {
+                "missing_phone": missing_phone_count,
+                "token_only_submitted": token_only_submitted_count,
+                "low_assurance_submitted": token_only_submitted_count,
+            },
         },
     )
 
@@ -955,7 +1028,7 @@ def consent_download_csv(request, request_id):
     response["Content-Disposition"] = (
         f'attachment; filename="consent_result_{consent_request.request_id}.csv"'
     )
-    response.write("\ufeff")
+    response.write("﻿")
     evidence = _request_document_evidence(consent_request)
     request_id_text = str(consent_request.request_id)
     request_title = consent_request.title or ""
@@ -977,7 +1050,12 @@ def consent_download_csv(request, request_id):
             "학부모명",
             "상태",
             "동의결과",
+            "증빙수준",
+            "본인확인시각",
+            "본인확인IP",
             "처리시각",
+            "제출IP",
+            "제출UA",
             "비동의사유",
             "요청ID",
             "동의서제목",
@@ -996,9 +1074,16 @@ def consent_download_csv(request, request_id):
                 recipient.parent_name,
                 recipient.get_status_display(),
                 recipient.get_decision_display() if recipient.decision else "",
+                recipient.get_identity_assurance_display() if recipient.identity_assurance else "",
+                timezone.localtime(recipient.verified_at).strftime("%Y-%m-%d %H:%M:%S")
+                if recipient.verified_at
+                else "",
+                recipient.verified_ip_address or "",
                 timezone.localtime(recipient.signed_at).strftime("%Y-%m-%d %H:%M:%S")
                 if recipient.signed_at
                 else "",
+                recipient.ip_address or "",
+                recipient.user_agent or "",
                 recipient.decline_reason or "",
                 request_id_text,
                 request_title,
@@ -1070,8 +1155,34 @@ def consent_download_recipient_pdf(request, recipient_id):
     if schema_block:
         return schema_block
 
-    get_object_or_404(SignatureRecipient, id=recipient_id, request__created_by=request.user)
-    raise Http404("개별 PDF 다운로드는 지원하지 않습니다. 요약 PDF를 사용해 주세요.")
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request__document"),
+        id=recipient_id,
+        request__created_by=request.user,
+    )
+    if recipient.status not in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        raise Http404("개별 증빙 PDF는 응답 완료 후에만 내려받을 수 있습니다.")
+
+    if not recipient.signed_pdf or not recipient.signed_pdf.name:
+        try:
+            _store_recipient_evidence_pdf(recipient)
+        except PdfRuntimeUnavailable:
+            messages.error(request, "PDF 엔진(reportlab, pypdf)이 준비되지 않아 개별 증빙 PDF를 생성할 수 없습니다.")
+            return redirect("consent:detail", request_id=recipient.request.request_id)
+        except Exception:
+            logger.exception(
+                "[consent] recipient pdf download generation failed request_id=%s recipient_id=%s",
+                recipient.request.request_id,
+                recipient.id,
+            )
+            messages.error(request, "개별 증빙 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    return _build_file_response(
+        recipient.signed_pdf,
+        inline=False,
+        filename_hint=_build_recipient_download_filename(recipient),
+    )
 
 
 @login_required
@@ -1087,6 +1198,8 @@ def consent_document_source(request, request_id):
     )
     file_field = consent_request.document.original_file
     try:
+        consent_request.preview_checked_at = timezone.now()
+        consent_request.save(update_fields=["preview_checked_at"])
         return _build_file_response(file_field, inline=True, filename_hint=consent_request.document.title)
     except Exception:
         logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
@@ -1100,6 +1213,7 @@ def consent_verify(request, token):
     return redirect("consent:sign", token=token)
 
 
+@ratelimit(key=_consent_public_ratelimit_key, rate="10/10m", method="POST", block=True, group="consent_public_sign")
 def consent_sign(request, token):
     schema_block = _schema_guard_response(request)
     if schema_block:
@@ -1117,49 +1231,113 @@ def consent_sign(request, token):
     if request.method == "POST":
         form = ConsentSignForm(request.POST)
         if form.is_valid():
-            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
-            if x_forwarded_for:
-                ip_address = x_forwarded_for.split(",")[0].strip()
-            else:
-                ip_address = request.META.get("REMOTE_ADDR")
-            user_agent = request.META.get("HTTP_USER_AGENT", "")
+            ip_address = _request_client_ip(request)
+            user_agent = _request_user_agent(request)
+            phone_last4 = (form.cleaned_data.get("phone_last4") or "").strip()
+            requires_phone_last4 = bool(recipient.phone_last4)
+            verified_at = None
+            identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
 
-            decision = form.cleaned_data["decision"]
-            recipient.decision = decision
-            recipient.decline_reason = form.cleaned_data.get("decline_reason", "").strip()
-            recipient.signature_data = form.cleaned_data["signature_data"]
-            recipient.signed_at = timezone.now()
-            recipient.status = (
-                SignatureRecipient.STATUS_SIGNED
-                if decision == SignatureRecipient.DECISION_AGREE
-                else SignatureRecipient.STATUS_DECLINED
-            )
-            recipient.ip_address = ip_address
-            recipient.user_agent = user_agent
-            recipient.save(update_fields=[
-                "decision", "decline_reason", "signature_data",
-                "signed_at", "status", "ip_address", "user_agent",
-            ])
+            if requires_phone_last4:
+                if not phone_last4 or phone_last4 != recipient.phone_last4:
+                    form.add_error("phone_last4", "전화번호 끝 4자리를 확인해 주세요.")
+                    ConsentAuditLog.objects.create(
+                        request=recipient.request,
+                        recipient=recipient,
+                        event_type=ConsentAuditLog.EVENT_VERIFY_FAIL,
+                        event_meta={
+                            "reason": "phone_last4_mismatch",
+                            **evidence,
+                        },
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                    )
+                else:
+                    verified_at = timezone.now()
+                    identity_assurance = SignatureRecipient.IDENTITY_PHONE_LAST4
 
-            ConsentAuditLog.objects.create(
-                request=recipient.request,
-                recipient=recipient,
-                event_type=ConsentAuditLog.EVENT_SIGN_SUBMITTED,
-                event_meta={
-                    "decision": recipient.decision,
-                    **evidence,
-                },
-                ip_address=ip_address,
-                user_agent=user_agent,
-            )
+            if not form.errors:
+                decision = form.cleaned_data["decision"]
+                recipient.decision = decision
+                recipient.decline_reason = form.cleaned_data.get("decline_reason", "").strip()
+                recipient.signature_data = form.cleaned_data["signature_data"]
+                recipient.signed_at = timezone.now()
+                recipient.status = (
+                    SignatureRecipient.STATUS_SIGNED
+                    if decision == SignatureRecipient.DECISION_AGREE
+                    else SignatureRecipient.STATUS_DECLINED
+                )
+                recipient.identity_assurance = identity_assurance
+                recipient.ip_address = ip_address
+                recipient.user_agent = user_agent
+                if identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
+                    recipient.verified_at = verified_at
+                    recipient.verified_ip_address = ip_address
+                    recipient.verified_user_agent = user_agent
+                else:
+                    recipient.verified_at = None
+                    recipient.verified_ip_address = None
+                    recipient.verified_user_agent = ""
+                recipient.save(update_fields=[
+                    "decision", "decline_reason", "signature_data",
+                    "signed_at", "status", "identity_assurance",
+                    "verified_at", "verified_ip_address", "verified_user_agent",
+                    "ip_address", "user_agent",
+                ])
 
-            if not recipient.request.recipients.exclude(
-                status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
-            ).exists():
-                recipient.request.status = SignatureRequest.STATUS_COMPLETED
-                recipient.request.save(update_fields=["status"])
+                if identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
+                    ConsentAuditLog.objects.create(
+                        request=recipient.request,
+                        recipient=recipient,
+                        event_type=ConsentAuditLog.EVENT_VERIFY_SUCCESS,
+                        event_meta={
+                            "identity_assurance": identity_assurance,
+                            **evidence,
+                        },
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                    )
 
-            return redirect("consent:complete", token=token)
+                try:
+                    _store_recipient_evidence_pdf(recipient)
+                except PdfRuntimeUnavailable:
+                    logger.warning(
+                        "[consent] recipient evidence pdf skipped by missing runtime request_id=%s recipient_id=%s",
+                        recipient.request.request_id,
+                        recipient.id,
+                    )
+                except Exception:
+                    logger.exception(
+                        "[consent] recipient evidence pdf save failed request_id=%s recipient_id=%s",
+                        recipient.request.request_id,
+                        recipient.id,
+                    )
+
+                ConsentAuditLog.objects.create(
+                    request=recipient.request,
+                    recipient=recipient,
+                    event_type=ConsentAuditLog.EVENT_SIGN_SUBMITTED,
+                    event_meta={
+                        "decision": recipient.decision,
+                        "identity_assurance": recipient.identity_assurance,
+                        "verified_at": (
+                            timezone.localtime(recipient.verified_at).isoformat()
+                            if recipient.verified_at
+                            else None
+                        ),
+                        **evidence,
+                    },
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+
+                if not recipient.request.recipients.exclude(
+                    status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
+                ).exists():
+                    recipient.request.status = SignatureRequest.STATUS_COMPLETED
+                    recipient.request.save(update_fields=["status"])
+
+                return redirect("consent:complete", token=token)
     else:
         form = ConsentSignForm()
 
@@ -1174,10 +1352,13 @@ def consent_sign(request, token):
             "is_expired": False,
             "document_evidence": evidence,
             "file_type": recipient.request.document.file_type,
+            "requires_phone_last4": bool(recipient.phone_last4),
         },
     )
 
 
+
+@ratelimit(key=_consent_public_ratelimit_key, rate="30/m", method="GET", block=True, group="consent_public_document")
 def consent_public_document(request, token):
     schema_block = _schema_guard_response(request)
     if schema_block:
@@ -1191,12 +1372,13 @@ def consent_public_document(request, token):
 
     file_field = recipient.request.document.original_file
     try:
-        # 학부모 화면은 인라인 뷰어 대신 다운로드를 기본값으로 제공한다.
-        return _build_file_response(
+        response = _build_file_response(
             file_field,
             inline=False,
             filename_hint=recipient.request.document.title,
         )
+        _log_document_view(recipient, request, mode="download")
+        return response
     except Exception:
         logger.exception("[consent] public document open failed token=%s", token)
         return render(
@@ -1210,6 +1392,7 @@ def consent_public_document(request, token):
         )
 
 
+@ratelimit(key=_consent_public_ratelimit_key, rate="30/m", method="GET", block=True, group="consent_public_document_inline")
 def consent_public_document_inline(request, token):
     schema_block = _schema_guard_response(request)
     if schema_block:
@@ -1226,11 +1409,13 @@ def consent_public_document_inline(request, token):
 
     file_field = recipient.request.document.original_file
     try:
-        return _build_file_response(
+        response = _build_file_response(
             file_field,
             inline=True,
             filename_hint=recipient.request.document.title,
         )
+        _log_document_view(recipient, request, mode="inline")
+        return response
     except Exception:
         logger.exception("[consent] public document inline open failed token=%s", token)
         return render(
@@ -1262,11 +1447,37 @@ def consent_regenerate_link(request, recipient_id):
 
     recipient.access_token = _issue_access_token()
     recipient.status = SignatureRecipient.STATUS_PENDING
-    recipient.save(update_fields=["access_token", "status"])
+    recipient.identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
+    recipient.verified_at = None
+    recipient.verified_ip_address = None
+    recipient.verified_user_agent = ""
+    recipient.decision = ""
+    recipient.decline_reason = ""
+    recipient.signature_data = ""
+    recipient.signed_at = None
+    recipient.ip_address = None
+    recipient.user_agent = ""
+    recipient.signed_pdf = None
+    recipient.save(update_fields=[
+        "access_token",
+        "status",
+        "identity_assurance",
+        "verified_at",
+        "verified_ip_address",
+        "verified_user_agent",
+        "decision",
+        "decline_reason",
+        "signature_data",
+        "signed_at",
+        "ip_address",
+        "user_agent",
+        "signed_pdf",
+    ])
     ConsentAuditLog.objects.create(
         request=recipient.request,
         recipient=recipient,
         event_type=ConsentAuditLog.EVENT_LINK_CREATED,
+        event_meta={"regenerated": True},
     )
     messages.success(request, f"{recipient.student_name} 수신자 링크를 재발급했습니다.")
     return redirect("consent:detail", request_id=recipient.request.request_id)

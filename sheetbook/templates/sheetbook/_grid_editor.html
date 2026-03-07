@@ -27,12 +27,170 @@
         {% if sheetbook_archived_read_only %}아카이브 읽기 모드{% else %}휴대폰 읽기 모드{% endif %}
       </p>
       <p class="mt-1 text-xs text-amber-700">{{ sheetbook_mobile_read_only_message }}</p>
+      <div class="mt-3 grid gap-3 md:grid-cols-2">
+        <section class="rounded-xl border border-amber-200 bg-white/80 px-3 py-3">
+          <p class="text-[11px] font-semibold text-amber-800">지금 할 수 있는 일</p>
+          <ul class="mt-2 space-y-1 text-[11px] text-slate-600">
+            {% if sheetbook_archived_read_only %}
+              <li>표 내용과 달력 일정을 확인하기</li>
+              <li>찾기와 방금 만든 결과 다시 보기</li>
+              <li>복제 전에 필요한 내용을 다시 점검하기</li>
+            {% else %}
+              <li>표 내용 확인과 찾기</li>
+              <li>선택한 칸 범위 확인</li>
+              <li>방금 만든 결과 다시 보기</li>
+            {% endif %}
+          </ul>
+        </section>
+        <section class="rounded-xl border border-amber-200 bg-white/80 px-3 py-3">
+          <p class="text-[11px] font-semibold text-amber-800">
+            {% if sheetbook_archived_read_only %}수정하려면{% else %}태블릿이나 PC에서 이어서 할 일{% endif %}
+          </p>
+          <ul class="mt-2 space-y-1 text-[11px] text-slate-600">
+            {% if sheetbook_archived_read_only %}
+              <li>이 수첩을 이어쓰기(복제)로 새로 열기</li>
+              <li>복제된 수첩에서 내용 수정과 추가 진행하기</li>
+              <li>새 수첩에서 달력 반영과 후속 작업 실행하기</li>
+            {% else %}
+              <li>칸 수정, 붙여넣기, 줄/항목 추가</li>
+              <li>달력에 표 반영, 간편 수합/배부 체크 만들기</li>
+              <li>동의서, 서명 요청, 안내문 열기</li>
+            {% endif %}
+          </ul>
+        </section>
+      </div>
     </section>
   {% endif %}
 
+
+  <section class="order-1 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50/70 px-4 py-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-sm font-semibold text-slate-800">이 화면에서 가장 많이 하는 일</p>
+        <p class="mt-1 text-[11px] text-slate-500">교사는 보통 표를 넣고, 필요한 칸을 고른 뒤, 달력이나 안내 화면으로 이어서 사용합니다.</p>
+      </div>
+      <p class="text-[11px] font-medium text-indigo-700">진한 버튼은 바로 만들기, 테두리 버튼은 다음 화면 열기입니다.</p>
+    </div>
+    <div class="mt-3 grid gap-3 md:grid-cols-3">
+      <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">1. 내용 넣기</p>
+        <p class="mt-2 text-sm font-semibold text-slate-800">표를 붙여넣거나 줄과 항목을 추가합니다.</p>
+        <p class="mt-1 text-[11px] text-slate-500">엑셀, 문자 명단, 일정표를 가져와 바로 정리할 수 있어요.</p>
+      </section>
+      <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">2. 필요한 칸 고르기</p>
+        <p class="mt-2 text-sm font-semibold text-slate-800">이름, 날짜, 연락처가 들어 있는 칸을 선택합니다.</p>
+        <p class="mt-1 text-[11px] text-slate-500">찾기 기능으로 원하는 칸을 먼저 찾고 바로 이동할 수도 있습니다.</p>
+      </section>
+      <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">3. 다음 작업으로 이어가기</p>
+        <p class="mt-2 text-sm font-semibold text-slate-800">달력 등록은 바로 만들고, 동의서/서명/안내문은 다음 화면으로 이어집니다.</p>
+        <p class="mt-1 text-[11px] text-slate-500">선택한 칸 아래에서 어떤 버튼을 눌러야 하는지 안내가 함께 보입니다.</p>
+      </section>
+    </div>
+  </section>
+
+  <section class="order-1 rounded-xl border border-slate-200 bg-white/80 px-4 py-3">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-sm font-semibold text-slate-800">표 안에서 바로 찾기</p>
+        <p class="mt-1 text-[11px] text-slate-500">이름, 일정, 준비물 같은 말을 넣으면 해당 칸이나 방금 만든 결과로 바로 갈 수 있어요.</p>
+      </div>
+      <form method="get" action="{% url 'sheetbook:detail' pk=sheetbook.pk %}" class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <input type="hidden" name="tab" value="{{ selected_tab.id }}">
+        {% if entry_source and entry_source != "direct" %}
+          <input type="hidden" name="source" value="{{ entry_source }}">
+        {% endif %}
+        <input
+          type="search"
+          id="sheetbook-search-input"
+          name="q"
+          value="{{ search_query|default:'' }}"
+          maxlength="120"
+          placeholder="이름, 일정, 키워드 찾기"
+          class="min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+        >
+        <div class="flex items-center gap-2">
+          <button type="submit" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900">
+            찾기
+          </button>
+          <a
+            href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ selected_tab.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}"
+            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-slate-300"
+          >
+            지우기
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+    {% if search_query %}
+    <section class="order-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3" aria-label="통합 검색 결과">
+      <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p class="text-sm font-semibold text-slate-800">통합 검색</p>
+          <p class="mt-1 text-[11px] text-slate-500">현재 수첩 안에서 탭, 칸 내용, 방금 만든 결과를 함께 찾아 보여줍니다.</p>
+        </div>
+        <p class="text-xs text-slate-500">검색어: <span class="font-semibold text-slate-700">{{ search_query }}</span></p>
+      </div>
+
+      <div class="mt-3 grid gap-3 lg:grid-cols-3">
+        <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-slate-700">탭 결과</p>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{{ search_results.tabs|length }}</span>
+          </div>
+          <ul class="mt-2 space-y-2 text-xs text-slate-600">
+            {% for item in search_results.tabs %}
+              <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <a href="{{ item.url }}" class="font-semibold text-slate-800 hover:text-indigo-700">{{ item.title }}</a>
+                <p class="mt-1 text-[11px] text-slate-500">{{ item.meta }}</p>
+              </li>
+            {% empty %}
+              <li class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">탭 이름에서 찾은 결과가 없어요.</li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-slate-700">칸 결과</p>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{{ search_results.cells|length }}</span>
+          </div>
+          <ul class="mt-2 space-y-2 text-xs text-slate-600">
+            {% for item in search_results.cells %}
+              <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <a href="{{ item.url }}" class="font-semibold text-slate-800 hover:text-indigo-700">{{ item.title }}</a>
+                <p class="mt-1 text-[11px] text-slate-500">{{ item.meta }}</p>
+              </li>
+            {% empty %}
+              <li class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">칸 내용에서 찾은 결과가 없어요.</li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white px-3 py-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-slate-700">방금 만든 결과</p>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{{ search_results.actions|length }}</span>
+          </div>
+          <ul class="mt-2 space-y-2 text-xs text-slate-600">
+            {% for item in search_results.actions %}
+              <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <a href="{{ item.url }}" class="font-semibold text-slate-800 hover:text-indigo-700">{{ item.title }}</a>
+                <p class="mt-1 text-[11px] text-slate-500">{{ item.meta }}</p>
+              </li>
+            {% empty %}
+              <li class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">방금 만든 결과에서 찾은 내용이 없어요.</li>
+            {% endfor %}
+          </ul>
+        </section>
+      </div>
+    </section>
+  {% endif %}
   <div class="order-1 flex flex-wrap items-center justify-between gap-2">
     <p class="text-xs text-gray-600">
-      가장 쉬운 사용 순서: <span class="font-semibold text-gray-800">1) 표 복사 → 2) 아무 칸 클릭 → 3) Ctrl+V</span>
+      가장 쉬운 사용 순서: <span class="font-semibold text-gray-800">1) 표 복사 → 2) 붙여넣을 칸 선택 → 3) 붙여넣기</span>
     </p>
     <div class="flex flex-wrap items-center gap-2">
       <button
@@ -71,21 +229,21 @@
   </form>
 
   <details class="order-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">도구 더보기 (자동 실행 / 찾아보기 / 파일)</summary>
+    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">가져오기 / 내려받기 / 화면 정리</summary>
     <div class="mt-3 space-y-3">
   <section class="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-sm font-semibold text-slate-800">
-          찾아보기 모음
+          자주 보는 화면
           {% if active_saved_view %}
             <span class="ml-1 text-indigo-700">{{ active_saved_view.name }}</span>
           {% else %}
-            <span class="ml-1 text-slate-500">기본 화면</span>
+            <span class="ml-1 text-slate-500">전체 보기</span>
           {% endif %}
         </p>
         <p class="text-[11px] text-slate-500 mt-1">
-          찾을 조건(검색어/정렬)을 저장해 두고 한 번에 바꿔 볼 수 있어요.
+          찾을 말과 보여줄 순서를 저장해 두고 한 번에 바꿔 볼 수 있어요.
         </p>
       </div>
 
@@ -102,11 +260,11 @@
           name="view_filter"
           value="{{ grid_view_filter }}"
           maxlength="120"
-          placeholder="찾을 말 입력"
+          placeholder="예: 상담 일정만 보기"
           class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700"
         >
         <select name="sort_col" class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700">
-          <option value="">정렬 안 함</option>
+          <option value="">순서 바꾸지 않음</option>
           {% for col in selected_tab.columns.all %}
             <option value="{{ col.id }}" {% if grid_view_sort_column_id == col.id %}selected{% endif %}>
               {{ col.label }}
@@ -114,17 +272,17 @@
           {% endfor %}
         </select>
         <select name="sort_dir" class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs text-slate-700">
-          <option value="asc" {% if grid_view_sort_direction != "desc" %}selected{% endif %}>오름차순</option>
-          <option value="desc" {% if grid_view_sort_direction == "desc" %}selected{% endif %}>내림차순</option>
+          <option value="asc" {% if grid_view_sort_direction != "desc" %}selected{% endif %}>앞에서부터 보기</option>
+          <option value="desc" {% if grid_view_sort_direction == "desc" %}selected{% endif %}>뒤에서부터 보기</option>
         </select>
         <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
-          적용
+          이 화면으로 보기
         </button>
         <a
           href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ selected_tab.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
           class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-indigo-300"
         >
-          초기화
+          다시 전체 보기
         </a>
       </form>
     </div>
@@ -150,7 +308,7 @@
         </label>
         <label class="inline-flex items-center gap-1 text-[11px] text-slate-600">
           <input type="checkbox" name="is_default" class="rounded border-indigo-300">
-          기본 화면
+          기본 보기
         </label>
         <button type="submit" class="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:border-indigo-400">
           지금 화면 저장
@@ -165,7 +323,7 @@
             href="{% url 'sheetbook:detail' pk=sheetbook.pk %}?tab={{ selected_tab.id }}&view={{ view.id }}{% if entry_source and entry_source != 'direct' %}&source={{ entry_source }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
             class="text-xs font-semibold {% if active_saved_view and active_saved_view.id == view.id %}text-indigo-700{% else %}text-slate-700{% endif %}"
           >
-            {% if view.is_favorite %}★ {% endif %}{{ view.name }}{% if view.is_default %} (기본 화면){% endif %}
+            {% if view.is_favorite %}★ {% endif %}{{ view.name }}{% if view.is_default %} (기본 보기){% endif %}
           </a>
           <form method="post" action="{% url 'sheetbook:toggle_saved_view_favorite' pk=sheetbook.pk tab_pk=selected_tab.pk view_pk=view.id %}">
             {% csrf_token %}
@@ -184,7 +342,7 @@
             <input type="hidden" name="sort_col" value="{{ grid_view_sort_column_id|default:0 }}">
             <input type="hidden" name="sort_dir" value="{{ grid_view_sort_direction|default:'asc' }}">
             <button type="submit" class="rounded px-1 text-[11px] text-slate-500 hover:bg-indigo-50 hover:text-indigo-700">
-              기본
+              기본 보기
             </button>
           </form>
           <form method="post" action="{% url 'sheetbook:delete_saved_view' pk=sheetbook.pk tab_pk=selected_tab.pk view_pk=view.id %}">
@@ -199,12 +357,16 @@
           </form>
         </div>
       {% empty %}
-        <p class="text-[11px] text-slate-500">저장한 화면이 아직 없어요. 위 조건을 저장해 두면 한 번에 바꿔 볼 수 있어요.</p>
+        <p class="text-[11px] text-slate-500">저장한 보기가 아직 없어요. 위 조건을 저장해 두면 한 번에 바꿔 볼 수 있어요.</p>
       {% endfor %}
     </div>
   </section>
 
   <section class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+    <div class="mb-2">
+      <p class="text-sm font-semibold text-slate-800">표 파일 가져오기 / 내려받기</p>
+      <p class="mt-1 text-[11px] text-slate-500">엑셀이나 표 파일을 한 번에 불러오거나 내려받을 수 있어요.</p>
+    </div>
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <form
         method="post"
@@ -227,14 +389,14 @@
         </label>
         <label class="inline-flex items-center gap-1 text-xs text-slate-600">
           <input type="checkbox" name="auto_add_columns" checked class="rounded border-gray-300" {% if sheetbook_mobile_read_only %}disabled{% endif %}>
-          부족한 열 자동 추가
+          없는 칸 자동 만들기
         </label>
         <label class="inline-flex items-center gap-1 text-xs text-slate-600">
           <input type="checkbox" name="replace_existing" class="rounded border-gray-300" {% if sheetbook_mobile_read_only %}disabled{% endif %}>
-          기존 행 지우기
+          기존 줄 지우기
         </label>
         <button type="submit" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          파일 가져오기
+          표 파일 가져오기
         </button>
       </form>
 
@@ -243,18 +405,18 @@
           href="{% url 'sheetbook:export_grid_tab_csv' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
           class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-gray-400"
         >
-          파일 저장(CSV)
+          CSV로 저장
         </a>
         <a
           href="{% url 'sheetbook:export_grid_tab_xlsx' pk=sheetbook.pk tab_pk=selected_tab.pk %}"
           class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-gray-400"
         >
-          파일 저장(엑셀)
+          엑셀로 저장
         </a>
       </div>
     </div>
     <p class="mt-2 text-[11px] text-slate-500">
-      엑셀이나 표 파일(csv, xlsx)을 한 번에 가져올 수 있어요. 맞지 않는 칸은 줄 번호와 함께 안내됩니다.
+      맞지 않는 칸이 있으면 줄 번호와 함께 안내돼서 바로 다시 확인할 수 있어요.
     </p>
   </section>
     </div>
@@ -262,32 +424,32 @@
 
   <p class="order-2 text-xs text-gray-500">
     {% if sheetbook_mobile_read_only %}
-      휴대폰에서는 읽기 중심으로 확인할 수 있어요. 수정/생성은 태블릿이나 PC에서 진행해 주세요.
+      휴대폰에서는 확인 중심으로 볼 수 있어요. 잠긴 작업은 위 안내에 따라 태블릿이나 PC에서 이어서 진행해 주세요.
     {% else %}
-      칸을 클릭해서 바로 수정할 수 있어요. 표 복사 후 `Ctrl+V`를 누르면 여러 칸이 한 번에 들어갑니다.
+      칸을 눌러 바로 적을 수 있어요. 엑셀이나 다른 표에서 복사한 내용도 한 번에 넣을 수 있습니다.
     {% endif %}
   </p>
   {% if not sheetbook_mobile_read_only %}
   <noscript>
     <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
       자동 선택 버튼이 지금은 작동하지 않아요.
-      아래 칸에 시작/끝 위치를 적고 실행해 주세요.
+      아래 칸에 시작/끝 줄과 칸 번호를 적고 실행해 주세요.
       <form method="post" action="{% url 'sheetbook:execute_grid_action' pk=sheetbook.pk tab_pk=selected_tab.pk %}" class="mt-2 space-y-2">
         {% csrf_token %}
         <input type="hidden" name="entry_source" value="{{ entry_source|default:'direct' }}">
         <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
           <select name="action" class="rounded-lg border border-amber-200 bg-white px-2 py-1">
-            <option value="calendar">달력 등록</option>
-            <option value="collect">간편 수합</option>
-            <option value="consent">동의서</option>
-            <option value="signature">서명 요청</option>
-            <option value="handoff">배부 체크</option>
-            <option value="notice">안내문</option>
+            <option value="calendar">달력에 바로 넣기</option>
+            <option value="collect">간편 수합 바로 만들기</option>
+            <option value="consent">동의서 화면 열기</option>
+            <option value="signature">서명 요청 화면 열기</option>
+            <option value="handoff">배부 체크 바로 만들기</option>
+            <option value="notice">안내문 화면 열기</option>
           </select>
-          <input type="number" min="0" name="start_row_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="시작 행">
-          <input type="number" min="0" name="start_col_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="시작 열">
-          <input type="number" min="0" name="end_row_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="끝 행">
-          <input type="number" min="0" name="end_col_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="끝 열">
+          <input type="number" min="0" name="start_row_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="시작 줄">
+          <input type="number" min="0" name="start_col_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="시작 칸">
+          <input type="number" min="0" name="end_row_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="끝 줄">
+          <input type="number" min="0" name="end_col_index" value="0" class="rounded-lg border border-amber-200 bg-white px-2 py-1" placeholder="끝 칸">
         </div>
         <button type="submit" class="rounded-lg bg-amber-600 px-3 py-1.5 text-white font-semibold">실행</button>
       </form>
@@ -295,13 +457,21 @@
   </noscript>
   {% endif %}
   <div class="order-3 flex flex-wrap items-center gap-2">
-    <p id="grid-status" class="text-xs text-gray-500">저장 상태: 바로 입력할 수 있어요.</p>
+    <p
+      id="grid-status"
+      class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      저장 상태: 바로 적을 수 있어요.
+    </p>
     <button
       type="button"
       id="grid-mobile-row-open-btn"
       class="hidden rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:border-indigo-400 md:hidden"
     >
-      모바일 행 편집
+      휴대폰 한 줄 수정
     </button>
     <button
       type="button"
@@ -318,8 +488,8 @@
       저장 안 된 칸 다시 저장
     </button>
   </div>
-  <p id="grid-save-guide" class="order-3 hidden text-xs text-red-600"></p>
-  <div id="grid-conflict-banner" class="order-3 hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+  <p id="grid-save-guide" class="order-3 hidden text-xs text-red-600" role="alert" aria-live="assertive"></p>
+  <div id="grid-conflict-banner" class="order-3 hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2" role="alert" aria-live="assertive">
     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <p id="grid-conflict-message" class="text-xs font-semibold text-amber-800">충돌이 생겼어요. 현재 값을 다시 확인해 주세요.</p>
       <div class="flex items-center gap-2">
@@ -335,8 +505,8 @@
   <div id="grid-mobile-row-panel" class="hidden fixed inset-x-3 bottom-3 z-[85] rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur md:hidden">
     <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
       <div>
-        <p class="text-[11px] font-semibold text-indigo-700">모바일 행 편집</p>
-        <p id="grid-mobile-row-title" class="text-xs text-slate-700">행을 선택해 주세요.</p>
+        <p class="text-[11px] font-semibold text-indigo-700">휴대폰에서 한 줄씩 수정</p>
+        <p id="grid-mobile-row-title" class="text-xs text-slate-700">줄을 선택해 주세요.</p>
       </div>
       <button type="button" id="grid-mobile-row-close-btn" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
         닫기
@@ -345,55 +515,76 @@
     <div id="grid-mobile-row-fields" class="max-h-[52vh] space-y-2 overflow-auto px-3 py-3"></div>
     <div class="flex items-center justify-between border-t border-slate-100 px-3 py-2">
       <button type="button" id="grid-mobile-row-prev-btn" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700">
-        이전 행
+        이전 줄
       </button>
       <p class="text-[11px] text-slate-500">입력 후 벗어나면 자동 저장돼요.</p>
       <button type="button" id="grid-mobile-row-next-btn" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700">
-        다음 행
+        다음 줄
       </button>
     </div>
   </div>
 
   <section id="grid-action-layer" class="order-5 hidden rounded-xl border border-indigo-100 bg-indigo-50/95 px-4 py-3">
-    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
         <p class="text-xs font-semibold text-indigo-600">선택한 칸</p>
-        <p id="grid-selection-summary" class="text-sm font-semibold text-slate-800">A1:A1 · 1칸</p>
+        <p id="grid-selection-summary" class="text-sm font-semibold text-slate-800">1줄 1칸 · 1칸 선택</p>
+        <p id="grid-selection-recommendation" class="hidden mt-1 text-xs font-medium text-slate-500"></p>
+        {% if sheetbook_mobile_read_only %}
+          <p class="mt-2 text-[11px] font-medium text-amber-700">휴대폰에서는 범위 확인까지만 할 수 있어요. 실행은 태블릿이나 PC에서 이어서 진행해 주세요.</p>
+        {% endif %}
+        <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+          <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 font-semibold text-indigo-700">진한 버튼: 바로 만들기</span>
+          <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-600">테두리 버튼: 다음 화면 열기</span>
+        </div>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" data-grid-action="calendar" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          달력 등록
-        </button>
-        <button type="button" data-grid-action="collect" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          간편 수합
-        </button>
-        <button type="button" data-grid-action="consent" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          동의서
-        </button>
-        <button type="button" data-grid-action="signature" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          서명 요청
-        </button>
-        <button type="button" data-grid-action="handoff" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          배부 체크
-        </button>
-        <button type="button" data-grid-action="notice" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
-          안내문
-        </button>
+      <div class="grid gap-3 md:min-w-[420px] md:grid-cols-2">
+        <section class="rounded-xl border border-indigo-200 bg-white/80 px-3 py-3" data-action-group="immediate">
+          <p class="text-[11px] font-semibold text-indigo-700">바로 만들기</p>
+          <p class="mt-1 text-[11px] text-slate-500">누르면 바로 만들어지고, 아래 방금 만든 결과에서 다시 열 수 있어요.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" data-grid-action="calendar" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              달력에 바로 넣기
+            </button>
+            <button type="button" data-grid-action="collect" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              간편 수합 바로 만들기
+            </button>
+            <button type="button" data-grid-action="handoff" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              배부 체크 바로 만들기
+            </button>
+          </div>
+        </section>
+        <section class="rounded-xl border border-slate-200 bg-white/80 px-3 py-3" data-action-group="followup">
+          <p class="text-[11px] font-semibold text-slate-700">다음 화면 열기</p>
+          <p class="mt-1 text-[11px] text-slate-500">다음 화면으로 이동해 제목, 대상, 안내 문구를 한 번 더 확인합니다.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" data-grid-action="consent" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              동의서 화면 열기
+            </button>
+            <button type="button" data-grid-action="signature" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              서명 요청 화면 열기
+            </button>
+            <button type="button" data-grid-action="notice" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60" {% if sheetbook_mobile_read_only %}disabled aria-disabled="true"{% endif %}>
+              안내문 화면 열기
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   </section>
 
   <details class="order-7 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">최근 만든 기록 보기</summary>
+    <summary class="cursor-pointer list-none text-xs font-semibold text-gray-700">방금 만든 결과 다시 보기</summary>
   <section id="grid-action-history" class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
     <div class="flex items-center justify-between gap-2">
-      <p class="text-sm font-semibold text-slate-800">최근 만든 기록</p>
+      <p class="text-sm font-semibold text-slate-800">방금 만든 결과</p>
       <div class="flex items-center gap-1">
         <button type="button" data-history-filter="all" class="px-2 py-1 rounded-lg bg-slate-700 text-white text-[11px] font-semibold">전체</button>
         <button type="button" data-history-filter="success" class="px-2 py-1 rounded-lg border border-slate-300 bg-white text-slate-600 text-[11px] font-semibold">완료</button>
         <button type="button" data-history-filter="failed" class="px-2 py-1 rounded-lg border border-slate-300 bg-white text-slate-600 text-[11px] font-semibold">실패</button>
       </div>
     </div>
+    <p class="mt-1 text-[11px] text-slate-500">초록은 완료, 빨강은 다시 확인이 필요한 결과예요.</p>
     <ul id="grid-action-history-list" class="mt-2 space-y-2 text-xs text-slate-600">
       {% for invocation in action_invocations %}
         <li class="rounded-lg border border-slate-200 bg-white px-3 py-2" data-invocation-id="{{ invocation.id }}" data-status="{{ invocation.status }}">
@@ -423,7 +614,7 @@
         </li>
       {% endif %}
       <li id="grid-action-history-filter-empty" class="hidden rounded-lg border border-dashed border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-500">
-        조건에 맞는 기록이 없어요.
+        조건에 맞는 결과가 없어요.
       </li>
     </ul>
     <div class="mt-2 flex justify-center">
@@ -433,7 +624,7 @@
         data-next-cursor="{{ action_history_next_cursor|default:'' }}"
         class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px] font-semibold text-slate-700 hover:border-slate-400 {% if not action_history_has_more %}hidden{% endif %}"
       >
-        이전 기록 더보기
+        이전 결과 더보기
       </button>
     </div>
   </section>
@@ -446,14 +637,22 @@
     </table>
   </div>
 
-  <div id="grid-action-preview-modal" class="hidden fixed inset-0 z-[80] bg-slate-900/40 px-4 py-10 md:py-16">
-    <div class="mx-auto w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
-      <h3 id="grid-action-preview-title" class="text-lg font-bold text-slate-800">바로 만들기 전에 확인</h3>
-      <p id="grid-action-preview-description" class="mt-1 text-sm text-slate-600">선택한 칸으로 무엇을 만들지 확인해 주세요.</p>
+  <div
+    id="grid-action-preview-modal"
+    class="hidden fixed inset-0 z-[80] bg-slate-900/40 px-4 py-10 md:py-16"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="grid-action-preview-title"
+    aria-describedby="grid-action-preview-description"
+    aria-hidden="true"
+  >
+    <div id="grid-action-preview-dialog" class="mx-auto w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl" tabindex="-1">
+      <h3 id="grid-action-preview-title" class="text-lg font-bold text-slate-800">선택한 내용 확인</h3>
+      <p id="grid-action-preview-description" class="mt-1 text-sm text-slate-600">선택한 내용으로 어떤 작업을 이어갈지 확인해 주세요.</p>
 
       <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-        <p id="grid-action-preview-range" class="text-sm font-semibold text-slate-700">선택 칸: A1:A1</p>
-        <p id="grid-action-preview-count" class="text-xs text-slate-500">선택 칸: 1개</p>
+        <p id="grid-action-preview-range" class="text-sm font-semibold text-slate-700">선택 범위: 1줄 1칸</p>
+        <p id="grid-action-preview-count" class="text-xs text-slate-500">선택한 칸: 1칸</p>
         <pre id="grid-action-preview-sample" class="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-slate-600"></pre>
       </div>
 
@@ -468,6 +667,12 @@
     </div>
   </div>
 
-  <div id="grid-action-toast" class="hidden pointer-events-none fixed bottom-5 right-4 z-[90] rounded-xl px-4 py-2 text-sm font-semibold shadow-lg"></div>
+  <div
+    id="grid-action-toast"
+    class="hidden pointer-events-none fixed bottom-5 right-4 z-[90] rounded-xl px-4 py-2 text-sm font-semibold shadow-lg"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
 </div>
 

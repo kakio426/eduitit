@@ -39,6 +39,7 @@ SHEETBOOK_CALENDAR_SYNC_SOURCE = "sheetbook_schedule_sync"
 SHEETBOOK_CALENDAR_ACTION_SOURCE = "sheetbook_action_calendar"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 SHEETBOOK_ENTRY_SOURCE_SESSION_KEY = "sheetbook_entry_source_map"
+SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
 CONSENT_REVIEW_PREVIEW_LIMIT = 10
 CONSENT_REVIEW_ISSUE_SAMPLE_LIMIT = 5
 CONSENT_REVIEW_ISSUE_LINE_LIMIT = 20
@@ -557,8 +558,35 @@ def _serialize_saved_view(saved_view):
     }
 
 
-def _resolve_schedule_source_tab(sheetbook):
-    grid_tabs = list(sheetbook.tabs.filter(tab_type=SheetTab.TYPE_GRID).order_by("sort_order", "id"))
+def _get_valid_preferred_schedule_tab(sheetbook, tabs=None):
+    preferred_tab_id = getattr(sheetbook, "preferred_schedule_tab_id", 0) or 0
+    if not preferred_tab_id:
+        return None
+    candidates = tabs if tabs is not None else list(sheetbook.tabs.all())
+    for tab in candidates:
+        if tab.id == preferred_tab_id and tab.tab_type == SheetTab.TYPE_GRID:
+            return tab
+    return None
+
+
+def _get_valid_preferred_calendar_tab(sheetbook, tabs=None):
+    preferred_tab_id = getattr(sheetbook, "preferred_calendar_tab_id", 0) or 0
+    if not preferred_tab_id:
+        return None
+    candidates = tabs if tabs is not None else list(sheetbook.tabs.all())
+    for tab in candidates:
+        if tab.id == preferred_tab_id and tab.tab_type == SheetTab.TYPE_CALENDAR:
+            return tab
+    return None
+
+
+def _resolve_schedule_source_tab(sheetbook, tabs=None):
+    all_tabs = tabs if tabs is not None else list(sheetbook.tabs.all().order_by("sort_order", "id"))
+    preferred_tab = _get_valid_preferred_schedule_tab(sheetbook, all_tabs)
+    if preferred_tab is not None:
+        return preferred_tab
+
+    grid_tabs = [tab for tab in all_tabs if tab.tab_type == SheetTab.TYPE_GRID]
     if not grid_tabs:
         return None
     for tab in grid_tabs:
@@ -607,7 +635,10 @@ def _is_sheetbook_mobile_read_only_request(request):
 
 
 def _sheetbook_mobile_read_only_message():
-    return "휴대폰에서는 읽기 모드로 제공돼요. 수정/생성은 태블릿이나 PC에서 진행해 주세요."
+    return (
+        "휴대폰에서는 표를 확인하고 찾을 수 있어요. "
+        "표 수정, 붙여넣기, 줄/항목 추가, 달력 연결 변경은 태블릿이나 PC에서 진행해 주세요."
+    )
 
 
 def _sheetbook_archive_read_only_message():
@@ -1384,6 +1415,13 @@ def _remember_sheetbook_entry_source(request, sheetbook_id, entry_source):
         oldest_key = next(iter(source_map))
         source_map.pop(oldest_key, None)
     request.session[SHEETBOOK_ENTRY_SOURCE_SESSION_KEY] = source_map
+    request.session.modified = True
+
+
+def _remember_recent_sheetbook(request, sheetbook_id):
+    if not sheetbook_id:
+        return
+    request.session[SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY] = int(sheetbook_id)
     request.session.modified = True
 
 
@@ -2406,7 +2444,7 @@ def _execute_calendar_registration(*, user, sheetbook, tab, rows, columns, cell_
     return {
         "summary": summary,
         "result_label": f"달력 일정 {created_count}건",
-        "result_url": reverse("classcalendar:legacy_main"),
+        "result_url": reverse("classcalendar:main"),
         "payload": {
             "created": created_count,
             "skipped_rows": skipped_rows,
@@ -3122,6 +3160,7 @@ def detail(request, pk):
         sheetbook_mobile_read_only = True
         sheetbook_mobile_read_only_message = _sheetbook_archive_read_only_message()
     _remember_sheetbook_entry_source(request, sheetbook.id, entry_source)
+    _remember_recent_sheetbook(request, sheetbook.id)
     search_results = {"tabs": [], "cells": [], "actions": []}
     if search_query:
         search_results = _build_sheetbook_search_results(sheetbook, search_query)
@@ -3135,6 +3174,9 @@ def detail(request, pk):
             action_result_count=len(search_results["actions"]),
         )
     tabs = list(sheetbook.tabs.all().order_by("sort_order", "id"))
+    schedule_tab_options = [tab for tab in tabs if tab.tab_type == SheetTab.TYPE_GRID]
+    preferred_schedule_tab = _get_valid_preferred_schedule_tab(sheetbook, tabs)
+    preferred_calendar_tab = _get_valid_preferred_calendar_tab(sheetbook, tabs)
     selected_tab = tabs[0] if tabs else None
     schedule_source_tab = None
     action_invocations = []
@@ -3147,7 +3189,7 @@ def detail(request, pk):
                 selected_tab = tab
                 break
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_CALENDAR:
-        schedule_source_tab = _resolve_schedule_source_tab(sheetbook)
+        schedule_source_tab = _resolve_schedule_source_tab(sheetbook, tabs)
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_GRID:
         saved_views = _list_saved_views_for_tab(selected_tab)
         if selected_saved_view_id:
@@ -3248,6 +3290,13 @@ def detail(request, pk):
             "selected_tab": selected_tab,
             "entry_source": entry_source,
             "schedule_source_tab": schedule_source_tab,
+            "schedule_tab_options": schedule_tab_options,
+            "schedule_source_tab_is_explicit": bool(
+                schedule_source_tab and preferred_schedule_tab and schedule_source_tab.id == preferred_schedule_tab.id
+            ),
+            "calendar_bridge_is_explicit": bool(
+                selected_tab and preferred_calendar_tab and selected_tab.id == preferred_calendar_tab.id
+            ),
             "action_invocations": action_invocations,
             "action_history_has_more": action_history_has_more,
             "action_history_next_cursor": action_history_next_cursor,
@@ -4874,6 +4923,74 @@ def action_history(request, pk, tab_pk):
             "next_cursor": next_cursor,
         }
     )
+
+
+@login_required
+@require_POST
+def update_calendar_link_settings(request, pk, tab_pk):
+    _ensure_sheetbook_enabled(request.user)
+    calendar_tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    entry_source = _sanitize_entry_source(request.POST.get("source"))
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        sheetbook_id=calendar_tab.sheetbook_id,
+        tab_id=calendar_tab.id,
+        entry_source=entry_source,
+        blocked_action="update_calendar_link_settings",
+    )
+    if blocked:
+        return blocked
+    if calendar_tab.tab_type != SheetTab.TYPE_CALENDAR:
+        messages.error(request, "달력 연결 설정은 달력 탭에서만 바꿀 수 있어요.")
+        return _redirect_sheetbook_tab_detail(calendar_tab.sheetbook_id, calendar_tab.id, entry_source=entry_source)
+
+    sheetbook = calendar_tab.sheetbook
+    tabs = list(sheetbook.tabs.all().order_by("sort_order", "id"))
+    schedule_tab_options = [tab for tab in tabs if tab.tab_type == SheetTab.TYPE_GRID]
+    requested_schedule_tab_id = _parse_positive_int(request.POST.get("schedule_source_tab_id"), default=0)
+    schedule_source_tab = None
+    if requested_schedule_tab_id:
+        schedule_source_tab = next((tab for tab in schedule_tab_options if tab.id == requested_schedule_tab_id), None)
+        if schedule_source_tab is None:
+            messages.error(request, "달력과 연결할 일정 탭을 다시 선택해 주세요.")
+            return _redirect_sheetbook_tab_detail(sheetbook.id, calendar_tab.id, entry_source=entry_source)
+
+    prefer_calendar_entry = _parse_bool_or_none(request.POST.get("prefer_calendar_entry")) is True
+    updated_fields = []
+    selected_schedule_tab_id = schedule_source_tab.id if schedule_source_tab else None
+    if sheetbook.preferred_schedule_tab_id != selected_schedule_tab_id:
+        sheetbook.preferred_schedule_tab_id = selected_schedule_tab_id
+        updated_fields.append("preferred_schedule_tab")
+
+    if prefer_calendar_entry:
+        Sheetbook.objects.filter(owner=request.user).exclude(id=sheetbook.id).exclude(preferred_calendar_tab__isnull=True).update(
+            preferred_calendar_tab=None,
+            updated_at=timezone.now(),
+        )
+        if sheetbook.preferred_calendar_tab_id != calendar_tab.id:
+            sheetbook.preferred_calendar_tab = calendar_tab
+            updated_fields.append("preferred_calendar_tab")
+    elif sheetbook.preferred_calendar_tab_id == calendar_tab.id:
+        sheetbook.preferred_calendar_tab = None
+        updated_fields.append("preferred_calendar_tab")
+
+    if updated_fields:
+        updated_fields.append("updated_at")
+        sheetbook.save(update_fields=updated_fields)
+        _log_sheetbook_metric(
+            "sheetbook_calendar_link_settings_updated",
+            user_id=request.user.id,
+            sheetbook_id=sheetbook.id,
+            tab_id=calendar_tab.id,
+            preferred_schedule_tab_id=sheetbook.preferred_schedule_tab_id or None,
+            preferred_calendar_tab_id=sheetbook.preferred_calendar_tab_id or None,
+            prefer_calendar_entry=prefer_calendar_entry,
+        )
+        messages.success(request, "학급 달력 연결을 저장했어요.")
+    else:
+        messages.success(request, "학급 달력 연결이 이미 지금 설정으로 저장돼 있어요.")
+
+    return _redirect_sheetbook_tab_detail(sheetbook.id, calendar_tab.id, entry_source=entry_source)
 
 
 @login_required

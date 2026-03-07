@@ -159,6 +159,13 @@ class SignaturePosition(models.Model):
 
 
 class SignatureRecipient(models.Model):
+    IDENTITY_TOKEN_ONLY = "token_only"
+    IDENTITY_PHONE_LAST4 = "phone_last4"
+    IDENTITY_ASSURANCE_CHOICES = [
+        (IDENTITY_TOKEN_ONLY, "링크 기반 제출"),
+        (IDENTITY_PHONE_LAST4, "전화번호 끝 4자리 확인"),
+    ]
+
     STATUS_PENDING = "pending"
     STATUS_VERIFIED = "verified"
     STATUS_SIGNED = "signed"
@@ -197,6 +204,14 @@ class SignatureRecipient(models.Model):
         blank=True,
         null=True,
     )
+    identity_assurance = models.CharField(
+        max_length=20,
+        choices=IDENTITY_ASSURANCE_CHOICES,
+        default=IDENTITY_TOKEN_ONLY,
+    )
+    verified_at = models.DateTimeField(blank=True, null=True)
+    verified_ip_address = models.GenericIPAddressField(blank=True, null=True)
+    verified_user_agent = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.TextField(blank=True)
     signed_at = models.DateTimeField(blank=True, null=True)
@@ -222,12 +237,14 @@ class ConsentAuditLog(models.Model):
     EVENT_SIGN_SUBMITTED = "sign_submitted"
     EVENT_LINK_CREATED = "link_created"
     EVENT_REQUEST_SENT = "request_sent"
+    EVENT_DOCUMENT_VIEWED = "document_viewed"
     EVENT_CHOICES = [
         (EVENT_VERIFY_SUCCESS, "Verify Success"),
         (EVENT_VERIFY_FAIL, "Verify Fail"),
         (EVENT_SIGN_SUBMITTED, "Sign Submitted"),
         (EVENT_LINK_CREATED, "Link Created"),
         (EVENT_REQUEST_SENT, "Request Sent"),
+        (EVENT_DOCUMENT_VIEWED, "Document Viewed"),
     ]
 
     request = models.ForeignKey(

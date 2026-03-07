@@ -65,6 +65,11 @@ class TrainingSession(models.Model):
 
 class Signature(models.Model):
     """서명 정보 모델"""
+    SUBMISSION_MODE_OPEN = "open"
+    SUBMISSION_MODE_CHOICES = [
+        (SUBMISSION_MODE_OPEN, "공유 링크"),
+    ]
+
     training_session = models.ForeignKey(
         TrainingSession,
         on_delete=models.CASCADE,
@@ -87,6 +92,9 @@ class Signature(models.Model):
 
     # Store signature as Base64 - efficient for small images
     signature_data = models.TextField('서명 데이터 (Base64)')
+    submission_mode = models.CharField('제출 방식', max_length=20, choices=SUBMISSION_MODE_CHOICES, default=SUBMISSION_MODE_OPEN)
+    ip_address = models.GenericIPAddressField('제출 IP', blank=True, null=True)
+    user_agent = models.TextField('제출 브라우저', blank=True)
 
     created_at = models.DateTimeField('서명 일시', auto_now_add=True)
 
@@ -269,4 +277,44 @@ class AffiliationCorrectionLog(models.Model):
     def __str__(self):
         target_label = self.get_target_type_display()
         return f"{target_label} {self.before_affiliation} -> {self.after_affiliation}"
+
+
+class SignatureAuditLog(models.Model):
+    EVENT_SIGN_SUBMITTED = "sign_submitted"
+    EVENT_CHOICES = [
+        (EVENT_SIGN_SUBMITTED, "서명 제출"),
+    ]
+
+    training_session = models.ForeignKey(
+        TrainingSession,
+        on_delete=models.CASCADE,
+        related_name="audit_logs",
+        verbose_name="연수",
+    )
+    signature = models.ForeignKey(
+        Signature,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+        verbose_name="서명",
+    )
+    expected_participant = models.ForeignKey(
+        ExpectedParticipant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+        verbose_name="예상 참석자",
+    )
+    event_type = models.CharField("이벤트 유형", max_length=40, choices=EVENT_CHOICES)
+    event_meta = models.JSONField("이벤트 메타", default=dict, blank=True)
+    ip_address = models.GenericIPAddressField("IP", blank=True, null=True)
+    user_agent = models.TextField("브라우저", blank=True)
+    created_at = models.DateTimeField("생성 시각", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "서명 감사 로그"
+        verbose_name_plural = "서명 감사 로그"
 

@@ -24,9 +24,15 @@
         {% if links_released %}학부모 링크 재발송(만료 재설정){% else %}학부모 링크 발송 시작{% endif %}
       </a>
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">수신자 등록/수정</a>
+      <a href="{% url 'consent:document_source' request_id=consent_request.request_id %}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">원본 안내문 열기</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
       <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출 결과 PDF 다운로드</a>
     </div>
+    {% if consent_request.preview_checked_at %}
+    <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+      마지막 원본 안내문 확인 시각: {{ consent_request.preview_checked_at|date:"Y-m-d H:i" }}
+    </div>
+    {% endif %}
 
     {% if consent_request.is_link_expired %}
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -43,6 +49,18 @@
     {% if not links_released %}
     <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
       아직 발송이 시작되지 않아 제출 링크가 숨김 상태입니다. <strong>학부모 링크 발송 시작</strong> 버튼을 누르면 전체 링크가 공개됩니다.
+    </div>
+    {% endif %}
+    {% if evidence_warning_counts.missing_phone or evidence_warning_counts.low_assurance_submitted %}
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p class="font-semibold mb-1">증빙 주의 사항</p>
+      {% if evidence_warning_counts.missing_phone %}
+      <p>연락처가 없는 수신자 {{ evidence_warning_counts.missing_phone }}명은 링크 기반 제출만 기록됩니다.</p>
+      {% endif %}
+      {% if evidence_warning_counts.low_assurance_submitted %}
+      <p>링크 기반으로 제출이 완료된 수신자 {{ evidence_warning_counts.low_assurance_submitted }}명이 있습니다.</p>
+      {% endif %}
+      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700">연락처 보강하기</a>
     </div>
     {% endif %}
 
@@ -92,10 +110,17 @@
             <p class="text-xs text-gray-500 mt-1">연락처: {{ r.phone_number }}</p>
             {% endif %}
           </div>
-          <div class="text-right">
+          <div class="text-right space-y-1">
             <p class="text-sm font-semibold text-gray-700">{{ r.get_status_display }}</p>
             {% if r.signed_at %}
+            {% if r.identity_assurance == "phone_last4" %}
+            <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">확인됨</span></p>
+            {% else %}
+            <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">링크 기반 제출</span></p>
+            {% endif %}
             <p class="text-xs text-gray-500">처리시각: {{ r.signed_at|date:"Y-m-d H:i" }}</p>
+            {% elif not r.phone_last4 %}
+            <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">연락처 없음</span></p>
             {% endif %}
           </div>
         </div>
@@ -112,6 +137,9 @@
                 <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">안내문+링크 복사</button>
                 {% if r.status == "pending" or r.status == "verified" %}
                 <a href="{% url 'consent:regenerate_link' recipient_id=r.id %}" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-semibold hover:bg-slate-800">링크 재발급</a>
+                {% endif %}
+                {% if r.status == "signed" or r.status == "declined" %}
+                <a href="{{ row.download_url }}" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">개별 증빙 PDF</a>
                 {% endif %}
               </div>
             </div>

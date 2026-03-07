@@ -48,5 +48,6 @@ urlpatterns = [
     path("<int:pk>/tabs/<int:tab_pk>/actions/execute/", views.execute_grid_action, name="execute_grid_action"),
     path("<int:pk>/tabs/<int:tab_pk>/actions/consent/review/", views.consent_seed_review, name="consent_seed_review"),
     path("<int:pk>/tabs/<int:tab_pk>/actions/history/", views.action_history, name="action_history"),
+    path("<int:pk>/tabs/<int:tab_pk>/calendar/link-settings/", views.update_calendar_link_settings, name="update_calendar_link_settings"),
     path("<int:pk>/tabs/<int:tab_pk>/calendar/sync-from-schedule/", views.sync_calendar_from_schedule, name="sync_calendar_from_schedule"),
 ]
