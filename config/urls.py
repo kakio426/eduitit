@@ -53,7 +53,13 @@ urlpatterns = [
     path('timetable/', include('timetable.urls', namespace='timetable')),
     path('classcalendar/', include('classcalendar.urls', namespace='classcalendar')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),
+<<<<<<< HEAD
     path('textbooks/', include('textbooks.urls', namespace='textbooks')),
+=======
+    path('docviewer/', include('docviewer.urls', namespace='docviewer')),
+    path('slidesmith/', include('slidesmith.urls', namespace='slidesmith')),
+    path('blockclass/', include('blockclass.urls', namespace='blockclass')),
+>>>>>>> 91950e8 ([feat] 안정형 교사용 서비스 3종 추가)
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 

@@ -93,6 +93,9 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
     'parentcomm.apps.ParentcommConfig',
+    'docviewer.apps.DocviewerConfig',
+    'slidesmith.apps.SlidesmithConfig',
+    'blockclass.apps.BlockclassConfig',
 
     # Auth & Allauth
     'django.contrib.sites',
