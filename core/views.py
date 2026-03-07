@@ -286,6 +286,7 @@ HOME_SECTION_BY_ROUTE = {
     "notebooklm_guide:main": "guide",
     "prompt_recipe:main": "guide",
     "insights:list": "guide",
+    "textbooks:main": "class_ops",
 }
 
 HOME_SECTION_KEYWORDS = [
@@ -306,6 +307,7 @@ HOME_SECTION_KEYWORDS = [
     ("행복의 씨앗", "class_ops"),
     ("추첨기", "class_ops"),
     ("미술 수업", "class_ops"),
+    ("자료실", "class_ops"),
     ("윷놀이", "class_activity"),
     ("체스", "class_activity"),
     ("장기", "class_activity"),
