@@ -132,6 +132,59 @@ def _get_launcher_download_url():
     return ""
 
 
+STEP_FORM_INDEX_RE = re.compile(r"^step_(?:text|existing_id|image)_(\d+)$")
+STEP_FORM_INDEX_LIMIT = 200
+
+
+def _normalize_int_input(value, *, default, min_value=None, max_value=None):
+    if value in (None, ""):
+        return default, False
+
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default, True
+
+    if min_value is not None and parsed < min_value:
+        return default, True
+    if max_value is not None and parsed > max_value:
+        return default, True
+    return parsed, False
+
+
+def _default_step_interval():
+    return int(ArtClass._meta.get_field("default_interval").default)
+
+
+def _resolve_step_indexes(request):
+    indexes = set()
+    step_count, corrected = _normalize_int_input(
+        request.POST.get("step_count"),
+        default=0,
+        min_value=0,
+        max_value=STEP_FORM_INDEX_LIMIT,
+    )
+    indexes.update(range(step_count))
+
+    for key in list(request.POST.keys()) + list(request.FILES.keys()):
+        matched = STEP_FORM_INDEX_RE.match(key)
+        if not matched:
+            continue
+        step_index = int(matched.group(1))
+        if 0 <= step_index < STEP_FORM_INDEX_LIMIT:
+            indexes.add(step_index)
+        else:
+            corrected = True
+
+    return sorted(indexes), corrected
+
+
+def _resolve_setup_title(posted_title, art_class):
+    if posted_title is None and art_class:
+        return art_class.title
+    return (posted_title or "").strip()
+
+
 def setup_view(request, pk=None):
     """Setup Page - 수업 준비 및 수정 페이지"""
     art_class = None
@@ -144,18 +197,19 @@ def setup_view(request, pk=None):
          
     if request.method == 'POST':
         video_url = (request.POST.get('videoUrl', '') or '').strip()
-        interval = int(request.POST.get('stepInterval', 10))
+        interval_default = art_class.default_interval if art_class else _default_step_interval()
+        interval, interval_corrected = _normalize_int_input(
+            request.POST.get('stepInterval'),
+            default=interval_default,
+            min_value=5,
+            max_value=3600,
+        )
         posted_title = request.POST.get('title')
-        youtube_title = _fetch_youtube_title(video_url)
-        if youtube_title:
-            title = youtube_title
-        elif posted_title is None and art_class:
-            title = art_class.title
-        else:
-            title = (posted_title or '').strip()
+        title = _resolve_setup_title(posted_title, art_class)
         selected_mode = (request.POST.get('playbackMode') or ArtClass.PLAYBACK_MODE_EMBED).strip()
         valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
         playback_mode = selected_mode if selected_mode in valid_modes else ArtClass.PLAYBACK_MODE_EMBED
+        auto_corrected = interval_corrected
         
         if art_class:
             # 기존 수업 수정
@@ -183,22 +237,23 @@ def setup_view(request, pk=None):
             }
 
         # Steps 처리
-        step_count = int(request.POST.get('step_count', 0))
+        step_indexes, step_input_corrected = _resolve_step_indexes(request)
+        auto_corrected = auto_corrected or step_input_corrected
         step_payloads = []
-        for i in range(step_count):
-            description = request.POST.get(f'step_text_{i}', '')
-            uploaded_image = request.FILES.get(f'step_image_{i}')
+        for step_number, step_index in enumerate(step_indexes, start=1):
+            description = request.POST.get(f'step_text_{step_index}', '')
+            uploaded_image = request.FILES.get(f'step_image_{step_index}')
             image_value = uploaded_image
 
             if not image_value:
-                existing_step_id_raw = (request.POST.get(f'step_existing_id_{i}') or '').strip()
+                existing_step_id_raw = (request.POST.get(f'step_existing_id_{step_index}') or '').strip()
                 if existing_step_id_raw.isdigit():
                     existing_step_id = int(existing_step_id_raw)
                     image_value = existing_step_image_names.get(existing_step_id)
 
             step_payloads.append(
                 {
-                    'step_number': i + 1,
+                    'step_number': step_number,
                     'description': description,
                     'image': image_value,
                 }
@@ -217,24 +272,26 @@ def setup_view(request, pk=None):
             )
 
         apply_auto_metadata(art_class)
+
+        if auto_corrected:
+            messages.info(request, "입력 일부를 자동 보정했습니다. 그대로 시작 가능합니다.")
          
         classroom_url = reverse("artclass:classroom", kwargs={"pk": art_class.pk})
         if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
             classroom_url = f"{classroom_url}?{urlencode({'autostart_launcher': '1'})}"
         return redirect(classroom_url)
     
-    # 수정 모드라면 기존 단계를 JSON으로 전달하여 JS에서 렌더링하도록 함
-    initial_steps_json = "[]"
+    # 수정 모드라면 기존 단계를 안전한 JSON 스크립트로 전달하여 JS에서 렌더링하도록 함
+    initial_steps = []
     if art_class:
         initial_steps = [
             {'id': step.pk, 'text': step.description, 'imagePreview': step.image.url if step.image else None}
             for step in art_class.steps.all()
         ]
-        initial_steps_json = json.dumps(initial_steps, ensure_ascii=False)
 
     return render(request, 'artclass/setup.html', {
         'art_class': art_class,
-        'initial_steps_json': initial_steps_json,
+        'initial_steps': initial_steps,
         'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
         'launcher_download_url': _get_launcher_download_url(),
     })
