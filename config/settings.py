@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
+    'textbooks.apps.TextbooksConfig',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',

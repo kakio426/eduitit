@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- 뒤로 가기 네비게이션 -->
+        <div class="mb-6">
+            <a href="{% url 'textbooks:main' %}" class="inline-flex items-center text-gray-500 hover:text-blue-500 font-bold transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i> 자료실 목록으로
+            </a>
+        </div>
+
+        <div class="clay-card p-6 md:p-10 bg-white/80">
+            <!-- 상태 배지 및 정보 -->
+            <div id="material-actions" class="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-6 border-b border-gray-100 mb-8">
+                {% include 'textbooks/partials/material_actions.html' %}
+            </div>
+
+            <!-- 자료 내용 표시 영역 -->
+            <div class="mb-10">
+                {% if material.is_html_document %}
+                <div class="w-full relative rounded-2xl overflow-hidden border border-gray-200" style="height: 60vh;">
+                    <iframe src="{% url 'textbooks:raw_content' material.id %}" class="w-full h-full border-0 absolute inset-0"></iframe>
+                    <div class="absolute bottom-4 right-4">
+                        <a href="{% url 'textbooks:raw_content' material.id %}" target="_blank" class="px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg font-bold text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-expand"></i> 전체화면으로 보기
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="prose prose-lg max-w-none text-gray-700 font-sans tracking-wide leading-relaxed">
+                    {{ material.content|safe|linebreaks }}
+                </div>
+                {% if not material.content %}
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fa-solid fa-file-circle-question text-4xl mb-3"></i>
+                    <p>등록된 상세 내용이 없습니다.</p>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+            
+            <!-- 관리자 도구 목록 하단 -->
+            <div class="border-t border-gray-100 pt-8 mt-10">
+                <h3 class="text-lg font-bold text-gray-600 mb-4"><i class="fa-solid fa-gear mr-2"></i>안전자료 관리</h3>
+                
+                <form method="post" action="{% url 'textbooks:detail' pk=material.id %}" onsubmit="return confirm('이 자료를 완전히 삭제하시겠습니까? 복구할 수 없습니다.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="px-5 py-3 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-bold transition-colors border border-red-100 items-center justify-center flex w-full md:w-auto">
+                        <i class="fa-regular fa-trash-can mr-2"></i>자료 영구 삭제
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- QR 모달 -->
+{% if material.is_published %}
+<div x-data="{ showQR: false }" 
+     @keydown.escape.window="showQR = false"
+     class="relative z-50">
+     
+    <!-- 배포 중일 때만 하단 플로팅 버튼 노출 (모바일 우선 대응) -->
+    <div class="fixed bottom-6 w-full flex justify-center px-4 pointer-events-none z-40 hidden md:flex">
+         <button @click="showQR = true" class="pointer-events-auto px-8 py-4 bg-green-500 text-white rounded-full font-bold shadow-clay hover:shadow-clay-hover hover:-translate-y-1 transition-all text-lg flex items-center gap-3">
+             <i class="fa-solid fa-qrcode text-xl"></i> 교실 화면에 QR 띄우기
+         </button>
+    </div>
+
+    <!-- QR Fullscreen 오버레이 -->
+    <div x-show="showQR" 
+         x-transition.opacity.duration.300ms
+         style="display: none;" 
+         class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
+        
+        <button @click="showQR = false" class="absolute top-6 right-6 lg:top-10 lg:right-10 w-14 h-14 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-2xl transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="text-center w-full max-w-3xl">
+            <h2 class="text-4xl lg:text-6xl font-bold text-gray-800 font-title mb-6">{{ material.title }}</h2>
+            <p class="text-2xl lg:text-3xl text-gray-500 mb-12 flex items-center justify-center gap-3">
+               학생들은 카메라로 아래 QR을 스캔하세요 <i class="fa-solid fa-camera-retro"></i>
+            </p>
+            
+            <div class="bg-white p-6 rounded-3xl shadow-clay-inner border-4 border-gray-100 inline-block mb-10">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={{ student_url|urlencode }}" 
+                     alt="학생 접속 QR" 
+                     class="w-64 h-64 lg:w-96 lg:h-96 object-contain">
+            </div>
+            
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 font-mono text-xl lg:text-3xl text-gray-600 select-all max-w-[90%] mx-auto overflow-hidden whitespace-nowrap overflow-ellipsis">
+                {{ student_url }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

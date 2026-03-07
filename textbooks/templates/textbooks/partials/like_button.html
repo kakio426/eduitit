@@ -1,0 +1,7 @@
+<button hx-post="{% url 'textbooks:toggle_like' pk=material.id %}" 
+        hx-target="#like-container-{{ material.id }}"
+        hx-swap="innerHTML"
+        class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold transition-colors shadow-sm border {% if request.user in material.likes.all %}bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100{% else %}bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100{% endif %}">
+    <i class="fa-solid fa-heart {% if request.user in material.likes.all %}text-pink-500{% else %}text-gray-400{% endif %}"></i>
+    <span>{{ material.likes.count }}</span>
+</button>

@@ -41,6 +41,7 @@ class Command(BaseCommand):
             ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
+            ("ensure_textbooks", lambda: call_command("ensure_textbooks")),
         ]
 
         for name, fn in steps:

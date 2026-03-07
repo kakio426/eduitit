@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<section class="pt-24 pb-20 px-4 min-h-screen bg-[#F0F4F8]">
+    <div class="max-w-4xl mx-auto">
+        <!-- 상단 헤더: 학생 친화적인 디자인 -->
+        <div class="bg-white rounded-3xl p-6 shadow-clay-inner border-2 border-green-100 mb-6 flex flex-col md:flex-row items-center gap-4 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 opacity-10">
+                <i class="fa-solid fa-graduation-cap text-9xl text-green-500"></i>
+            </div>
+            
+            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white text-3xl shadow-lg flex-shrink-0 z-10">
+                📚
+            </div>
+            
+            <div class="text-center md:text-left z-10">
+                <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-2">
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
+                        {{ material.get_subject_display }}
+                    </span>
+                    {% if material.grade %}
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-200">
+                        {{ material.grade }}
+                    </span>
+                    {% endif %}
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-title">{{ material.title }}</h1>
+                <p class="text-gray-500 text-sm mt-1">선생님이 준비한 수업 자료입니다.</p>
+            </div>
+        </div>
+
+        <!-- 본문 내용 (학생용 카드 패널) -->
+        {% if material.is_html_document %}
+        <div class="clay-card bg-white overflow-hidden flex flex-col items-center" style="height: 70vh;">
+            <div class="w-full h-full relative group">
+                <iframe src="{% url 'textbooks:raw_content' material.id %}" class="w-full h-full border-0 absolute inset-0 rounded-2xl"></iframe>
+                
+                <!-- 전체화면 열기 플로팅 버튼 (모바일 및 PC 호환) -->
+                <div class="absolute bottom-4 right-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                    <a href="{% url 'textbooks:raw_content' material.id %}" target="_blank" class="px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-expand"></i> 전체화면으로 보기
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="clay-card p-6 md:p-10 bg-white">
+            <div class="prose prose-lg md:prose-xl max-w-none text-gray-800 font-sans tracking-wide leading-relaxed">
+                {{ material.content|safe|linebreaks }}
+            </div>
+            
+            {% if not material.content %}
+            <div class="text-center py-12">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-face-smile text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-600 mb-2">자료를 불러왔습니다</h3>
+                <p class="text-gray-500">위쪽 제목을 확인하고 선생님의 설명을 잘 들어주세요!</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="text-center mt-8 text-gray-400 font-medium text-sm">
+            Powered by Eduitit
+        </div>
+    </div>
+</section>
+{% endblock %}

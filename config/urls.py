@@ -53,6 +53,7 @@ urlpatterns = [
     path('timetable/', include('timetable.urls', namespace='timetable')),
     path('classcalendar/', include('classcalendar.urls', namespace='classcalendar')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),
+    path('textbooks/', include('textbooks.urls', namespace='textbooks')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 

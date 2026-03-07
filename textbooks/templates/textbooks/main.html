@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <!-- 헤더 -->
+        <div class="text-center mb-12">
+            <div class="text-7xl mb-4 float-icon">{{ service.icon }}</div>
+            <h1 class="text-5xl font-bold text-gray-700 font-title">{{ title }}</h1>
+            <p class="text-xl text-gray-500 mt-4 max-w-2xl mx-auto">{{ service.description }}</p>
+            
+            <div class="mt-8 flex justify-center gap-4">
+                <a href="{% url 'textbooks:shared_library' %}" class="px-6 py-3 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white rounded-full font-bold shadow-sm transition-all border border-purple-200">
+                    <i class="fa-solid fa-globe mr-2"></i> 다른 선생님들의 교육 자료 둘러보기
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
+            <!-- 좌측: 새로운 자료 생성/검색 패널 -->
+            <div class="clay-card p-6 h-fit bg-white/80">
+                <h2 class="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                    <span class="text-3xl">✨</span> 새로운 자료 만들기
+                </h2>
+                
+                <form action="{% url 'textbooks:generate' %}" method="post" id="generate-form">
+                    {% csrf_token %}
+                    
+                        <div x-data="{ subject: '', unitTitle: '', content: '' }">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-600 font-bold mb-2">과목 선택</label>
+                                    <select name="subject" x-model="subject" class="w-full form-select rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50/50 p-3" required>
+                                        <option value="">과목을 선택하세요</option>
+                                        <option value="KOREAN">국어</option>
+                                        <option value="MATH">수학</option>
+                                        <option value="SOCIAL">사회</option>
+                                        <option value="SCIENCE">과학</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-600 font-bold mb-2">학년/학기 <span class="text-gray-400 font-normal text-sm font-sans">(선택)</span></label>
+                                    <input type="text" name="grade" class="w-full form-input rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50/50 p-3" placeholder="예: 3학년 1학기">
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-600 font-bold mb-2">단원명 또는 주제</label>
+                                    <input type="text" name="unit_title" x-model="unitTitle" class="w-full form-input rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50/50 p-3" placeholder="예: 화산과 지진" required>
+                                </div>
+                        
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-gray-600 font-bold">자세한 내용 <span class="text-gray-400 font-normal text-sm font-sans">(선택)</span></label>
+                            </div>
+                            <!-- 코드/문서 텍스트 입력 영역 -->
+                            <textarea name="content" x-model="content" rows="6" class="w-full form-textarea rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50/50 p-4 font-mono text-sm leading-relaxed" placeholder="여기에 교육할 텍스트나 인터랙티브 HTML 코드를 붙여넣어 주세요."></textarea>
+                            
+                            <!-- AI 자동 추천 로직 영역 -->
+                            <div class="mt-3 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-4"
+                                 x-data="{ isAnalyzing: false, errorMessage: '' }">
+                                <button type="button" 
+                                        class="flex-shrink-0 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg shadow-sm transition-all text-sm flex items-center gap-2"
+                                        :disabled="isAnalyzing || !content.trim()"
+                                        :class="{ 'opacity-50 cursor-not-allowed': isAnalyzing || !content.trim() }"
+                                        @click="
+                                            isAnalyzing = true; 
+                                            errorMessage = '';
+                                            
+                                            // Get CSRF token
+                                            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                                            
+                                            fetch('{% url 'textbooks:api_categorize' %}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                    'X-CSRFToken': csrfToken
+                                                },
+                                                body: new URLSearchParams({ content: content })
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.success) {
+                                                    subject = data.subject_code || subject;
+                                                    unitTitle = data.recommended_unit || unitTitle;
+                                                } else {
+                                                    errorMessage = data.error || '분석을 실패했습니다.';
+                                                }
+                                            })
+                                            .catch(error => {
+                                                console.error('Error:', error);
+                                                errorMessage = '서버 통신 중 오류가 발생했습니다.';
+                                            })
+                                            .finally(() => {
+                                                isAnalyzing = false;
+                                            });
+                                        ">
+                                    <i class="fa-solid" :class="isAnalyzing ? 'fa-spinner fa-spin' : 'fa-robot'"></i> 
+                                    <span x-text="isAnalyzing ? '분석 중...' : '자동으로 추천받기'"></span>
+                                </button>
+                                
+                                <div class="flex-grow text-sm text-blue-700 leading-tight">
+                                    <p class="font-bold mb-1">내용만 넣으셔도 AI가 과목과 단원명을 제안해드려요!</p>
+                                    <p class="text-blue-500 opacity-80" x-show="errorMessage" x-text="errorMessage" style="display: none;"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <button type="submit" class="w-full mt-6 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xl font-bold shadow-clay hover:shadow-clay-hover transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> 자료 생성하기
+                    </button>
+                </form>
+            </div>
+
+            <!-- 우측: 내 자료 보관함 및 AI 프롬프트 헬퍼 -->
+            <div class="flex flex-col gap-8">
+                
+                <!-- AI 프롬프트 도우미 패널 -->
+                <div class="clay-card p-6 md:p-8 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100">
+                    <h2 class="text-2xl font-bold text-indigo-800 mb-3 flex items-center gap-2">
+                        <span class="text-3xl">✨</span> AI 프롬프트 도우미
+                    </h2>
+                    <p class="text-indigo-600 mb-4 text-sm font-medium">
+                        좌측에 단원명을 입력하고 아래 버튼을 누르면 딥시크(DeepSeek) AI가 완벽한 프롬프트를 작성해 드립니다.
+                        <br><span class="inline-block mt-2 font-bold px-2 py-1 bg-indigo-200 text-indigo-800 rounded-md shadow-sm">오늘 남은 횟수: <span id="prompt-remaining-count"></span>회</span>
+                    </p>
+                    
+                    <button type="button" id="btn-generate-prompt" onclick="fetchAIPrompt()" class="w-full py-3 mb-4 bg-white border border-indigo-300 text-indigo-600 hover:bg-indigo-50 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 딥시크 AI로 맞춤 프롬프트 생성하기
+                    </button>
+                    
+                    <div class="bg-white rounded-xl p-4 border border-indigo-200 shadow-inner min-h-[120px] relative font-mono text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" id="prompt-preview">
+                        <span class="text-gray-400">명령을 기다리고 있습니다...</span>
+                    </div>
+                    
+                    <button type="button" onclick="copyPromptToClipboard()" class="mt-4 w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-regular fa-copy"></i> 작성된 프롬프트 복사하기
+                    </button>
+                    <script>
+                        let remainCount = 5 - parseInt('{{ ai_usage.prompt_count|default:0 }}', 10);
+                        document.getElementById('prompt-remaining-count').textContent = remainCount;
+                        
+                        function fetchAIPrompt() {
+                            if (remainCount <= 0) {
+                                alert('오늘 프롬프트 생성 한도(5회)를 모두 소진하셨습니다. 내일 다시 이용해주세요.');
+                                return;
+                            }
+                        
+                            const subjectSelect = document.querySelector('select[name="subject"]');
+                            const unitInput = document.querySelector('input[name="unit_title"]');
+                            const gradeInput = document.querySelector('input[name="grade"]');
+                            const previewDiv = document.getElementById('prompt-preview');
+                            const btnGen = document.getElementById('btn-generate-prompt');
+                            
+                            const subjectValue = subjectSelect.options[subjectSelect.selectedIndex]?.text || '';
+                            const unitValue = unitInput.value.trim();
+                            const gradeValue = gradeInput.value.trim();
+                            
+                            if (!unitValue) {
+                                alert('좌측에서 단원명이나 주제를 먼저 입력해주세요.');
+                                return;
+                            }
+                            
+                            // UI 로딩 상태
+                            btnGen.disabled = true;
+                            btnGen.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 인공지능이 생각하는 중...';
+                            previewDiv.innerHTML = '<span class="text-gray-400">딥시크 AI가 초등학생 눈높이에 맞는 이상적인 코딩 프롬프트를 고민하고 있습니다...</span>';
+                            
+                            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            
+                            fetch('{% url "textbooks:api_generate_prompt" %}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: new URLSearchParams({ 
+                                    subject: subjectValue !== '과목을 선택하세요' ? subjectValue : '', 
+                                    grade: gradeValue,
+                                    unit_title: unitValue
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    previewDiv.textContent = data.prompt_text;
+                                    previewDiv.dataset.prompt = data.prompt_text;
+                                    remainCount = data.remaining_count;
+                                    document.getElementById('prompt-remaining-count').textContent = remainCount;
+                                } else {
+                                    previewDiv.innerHTML = `<span class="text-red-500">${data.error || '오류가 발생했습니다.'}</span>`;
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                previewDiv.innerHTML = '<span class="text-red-500">서버 통신 중 오류가 발생했습니다.</span>';
+                            })
+                            .finally(() => {
+                                btnGen.disabled = false;
+                                btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 딥시크 AI로 맞춤 프롬프트 생성하기';
+                            });
+                        }
+
+                        function copyPromptToClipboard() {
+                            const previewDiv = document.getElementById('prompt-preview');
+                            const text = previewDiv.dataset.prompt;
+                            if (!text) {
+                                alert('먼저 AI로 프롬프트를 생성해주세요.');
+                                return;
+                            }
+                            
+                            navigator.clipboard.writeText(text).then(() => {
+                                const btn = document.querySelector('button[onclick="copyPromptToClipboard()"]');
+                                const originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<i class="fa-solid fa-check"></i> 복사 완료! 이제 AI(Claude 등)에 붙여넣으세요';
+                                btn.classList.replace('bg-indigo-500', 'bg-green-500');
+                                btn.classList.replace('hover:bg-indigo-600', 'hover:bg-green-600');
+                                
+                                setTimeout(() => {
+                                    btn.innerHTML = originalHtml;
+                                    btn.classList.replace('bg-green-500', 'bg-indigo-500');
+                                    btn.classList.replace('hover:bg-green-600', 'hover:bg-indigo-600');
+                                }, 3000);
+                            });
+                        }
+                    </script>
+                </div>
+                
+                <div class="clay-card p-6 md:p-8 bg-white/80">
+                <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                    <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
+                        <span class="text-3xl">📂</span> 최근 만든 자료
+                    </h2>
+                    <span class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-full font-bold text-sm">
+                        총 {{ materials.count|default:0 }}개
+                    </span>
+                </div>
+
+                {% if materials %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                    {% for item in materials %}
+                    <a href="{% url 'textbooks:detail' pk=item.id %}" class="block group relative bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all hover:-translate-y-1 overflow-hidden h-full flex flex-col">
+                        
+                        {% if item.is_published %}
+                        <div class="absolute top-0 right-0">
+                            <div class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow-sm">
+                                <i class="fa-solid fa-wifi mr-1"></i> 배포중
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <span class="inline-block px-2 py-1 bg-{{ item.get_subject_display|yesno:'blue,blue,blue'|default:'gray' }}-50 text-blue-600 text-xs font-bold rounded-md border border-blue-100 mb-2">
+                                {{ item.get_subject_display }}
+                            </span>
+                            {% if item.grade %}
+                            <span class="inline-block px-2 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-md border border-gray-100 mb-2 ml-1">
+                                {{ item.grade }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2 leading-snug group-hover:text-blue-500 transition-colors">
+                            {{ item.title }}
+                        </h3>
+                        
+                        <div class="mt-auto pt-4 flex items-center justify-between text-sm text-gray-500">
+                            <span><i class="fa-regular fa-clock mr-1"></i>{{ item.created_at|date:"n월 j일" }}</span>
+                            <!-- 호버 시 보이는 액션 표시 -->
+                            <span class="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 font-medium">관리하기 →</span>
+                        </div>
+                    </a>
+                    {% endendfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-20 bg-gray-50/50 rounded-2xl border border-gray-100 border-dashed">
+                    <div class="text-5xl mb-4 text-gray-300">📄</div>
+                    <h3 class="text-2xl font-bold text-gray-600 mb-2">만든 자료가 없습니다</h3>
+                    <p class="text-gray-500">좌측 패널에서 첫 번째 수업 자료를 만들어보세요!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
