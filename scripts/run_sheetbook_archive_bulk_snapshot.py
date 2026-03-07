@@ -157,6 +157,35 @@ def _collect_snapshot(
     }
 
 
+def _build_markdown(*, snapshot: dict[str, Any], json_output_path: Path) -> str:
+    quality = snapshot.get("quality") or {}
+    counts = snapshot.get("counts") or {}
+    rates = snapshot.get("rates") or {}
+    lines = [
+        "# Sheetbook Archive Bulk Snapshot",
+        "",
+        f"- json_output: `{json_output_path}`",
+        f"- md_output: `{snapshot.get('md_output') or ''}`",
+        f"- days: `{snapshot.get('days')}`",
+        f"- event_count: `{snapshot.get('event_count')}`",
+        f"- archive_changed_total: `{counts.get('archive_changed_total', 0)}`",
+        f"- unarchive_changed_total: `{counts.get('unarchive_changed_total', 0)}`",
+        f"- changed_rate_pct: `{rates.get('changed_rate_pct', 0.0)}`",
+        f"- unchanged_rate_pct: `{rates.get('unchanged_rate_pct', 0.0)}`",
+        f"- ignored_rate_pct: `{rates.get('ignored_rate_pct', 0.0)}`",
+        "",
+        "## Quality",
+        f"- has_enough_samples: `{quality.get('has_enough_samples')}`",
+        f"- sample_gap_count: `{quality.get('sample_gap_count', 0)}`",
+        f"- needs_attention: `{quality.get('needs_attention')}`",
+        f"- next_step: `{quality.get('next_step') or ''}`",
+    ]
+    attention_reasons = quality.get("attention_reasons") or []
+    if attention_reasons:
+        lines.append("- attention_reasons:")
+        lines.extend(f"  - `{reason}`" for reason in attention_reasons)
+    return "\n".join(lines) + "\n"
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Collect sheetbook bulk archive/unarchive quality snapshot."
