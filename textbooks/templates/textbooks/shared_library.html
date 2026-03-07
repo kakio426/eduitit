@@ -75,8 +75,18 @@
                         <span class="text-sm font-bold text-gray-600">{{ item.teacher.username }}</span>
                     </div>
                     
-                    <div id="like-container-{{ item.id }}">
-                        {% include 'textbooks/partials/like_button.html' with material=item %}
+                    <div class="flex items-center gap-2">
+                        <div id="like-container-{{ item.id }}">
+                            {% include 'textbooks/partials/like_button.html' with material=item %}
+                        </div>
+                        
+                        <!-- 복사(Fork) 폼 -->
+                        <form method="post" action="{% url 'textbooks:fork_material' item.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-500 transition-colors" title="내 자료실로 복사하기">
+                                <i class="fa-solid fa-code-branch"></i>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

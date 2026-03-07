@@ -42,6 +42,46 @@
                 {% endif %}
             </div>
             
+            <!-- AI 형성평가 자동 생성 영역 -->
+            <div class="mt-8 pt-8 border-t border-gray-100" x-data="{ quizText: '', isLoading: false }">
+                <div class="flex flex-col sm:flex-row items-center justify-between bg-indigo-50 rounded-2xl p-6 border border-indigo-100 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-indigo-800 flex items-center gap-2 mb-1">
+                            <span class="text-xl">🤖</span> AI 형성평가 퀴즈 만들기
+                        </h3>
+                        <p class="text-indigo-600 text-sm">위 수업 자료의 내용만으로 아이들이 풀 수 있는 O/X 혹은 객관식 세 문제를 바로 만들어줍니다.</p>
+                    </div>
+                    <button type="button" @click="
+                        isLoading = true;
+                        fetch('{% url "textbooks:api_generate_quiz" pk=material.id %}', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            isLoading = false;
+                            if(data.success) { quizText = data.quiz_text; }
+                            else { alert(data.error); }
+                        })
+                        .catch(() => { isLoading = false; alert('통신 오류가 발생했습니다.'); })"
+                        class="px-5 py-3 bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl font-bold whitespace-nowrap border border-indigo-200 shadow-sm transition-colors w-full sm:w-auto text-center"
+                        :disabled="isLoading">
+                        <span x-show="!isLoading"><i class="fa-solid fa-wand-magic-sparkles"></i> 퀴즈 3개 생성하기</span>
+                        <span x-show="isLoading"><i class="fa-solid fa-spinner fa-spin"></i> 딥시크가 문제 내는 중...</span>
+                    </button>
+                </div>
+                
+                <div x-show="quizText" x-transition.opacity style="display: none;" class="mt-4 p-6 bg-white border-2 border-indigo-100 rounded-2xl shadow-inner font-sans">
+                    <h4 class="font-bold text-indigo-800 mb-4 pb-2 border-b border-indigo-50"><i class="fa-solid fa-check-double mr-2"></i>딥시크 AI가 출제한 오늘의 형성평가</h4>
+                    <pre class="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed max-w-none text-base" x-text="quizText"></pre>
+                    <div class="mt-4 pt-4 border-t border-indigo-50 text-right">
+                        <button type="button" @click="navigator.clipboard.writeText(quizText).then(() => alert('클립보드에 복사되었습니다.'))" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-sm font-bold transition-colors">
+                            <i class="fa-regular fa-copy mr-1"></i> 문제 복사하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 관리자 도구 목록 하단 -->
             <div class="border-t border-gray-100 pt-8 mt-10">
                 <h3 class="text-lg font-bold text-gray-600 mb-4"><i class="fa-solid fa-gear mr-2"></i>안전자료 관리</h3>
@@ -93,10 +133,53 @@
                      class="w-64 h-64 lg:w-96 lg:h-96 object-contain">
             </div>
             
-            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 font-mono text-xl lg:text-3xl text-gray-600 select-all max-w-[90%] mx-auto overflow-hidden whitespace-nowrap overflow-ellipsis">
-                {{ student_url }}
+            <div class="flex flex-col md:flex-row gap-4 justify-center items-center mb-10">
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 font-mono text-xl text-gray-600 select-all max-w-md w-full overflow-hidden whitespace-nowrap overflow-ellipsis">
+                    {{ student_url }}
+                </div>
+                <!-- 인쇄용 위젯 복사 버튼 -->
+                <button type="button" @click="copyPrintWidget()" class="px-6 py-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-2xl font-bold transition-colors border border-indigo-200 flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-regular fa-clipboard"></i> 한글/PPT용 위젯 복사
+                </button>
             </div>
         </div>
+        
+        <!-- 보이지 않는 위젯 (복사용) -->
+        <div id="print-widget" style="position: absolute; left: -9999px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; width: 300px; font-family: sans-serif; text-align: center;">
+            <div style="font-weight: bold; font-size: 16px; color: #1f2937; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ material.title }}
+            </div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ student_url|urlencode }}" width="150" height="150" style="margin: 0 auto; display: block;" />
+            <div style="margin-top: 12px; font-size: 11px; color: #6b7280; font-family: monospace;">
+                스마트폰 카메라로 스캔하세요
+            </div>
+        </div>
+        
+        <script>
+            function copyPrintWidget() {
+                const widget = document.getElementById('print-widget');
+                // Create a generic HTML string
+                const htmlString = widget.outerHTML;
+                
+                try {
+                    const blobHtml = new Blob([htmlString], { type: 'text/html' });
+                    const blobText = new Blob([window.location.href], { type: 'text/plain' });
+                    const clipboardItem = new ClipboardItem({
+                        'text/html': blobHtml,
+                        'text/plain': blobText
+                    });
+                    
+                    navigator.clipboard.write([clipboardItem]).then(() => {
+                        alert('학습지용 QR 위젯이 클립보드에 복사되었습니다. 한글(HWP)이나 PPT에 붙여넣기 해보세요!');
+                    }).catch(err => {
+                        console.error(err);
+                        alert('복사에 실패했습니다. 브라우저 설정을 확인해주세요.');
+                    });
+                } catch (e) {
+                    alert('현재 브라우저에서는 이 복사 기능이 지원되지 않을 수 있습니다.');
+                }
+            }
+        </script>
     </div>
 </div>
 {% endif %}

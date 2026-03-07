@@ -142,3 +142,43 @@ def generate_prompt(request):
     except Exception as e:
         logger.error(f"[Textbooks] DeepSeek prompt config failed: {e}")
         return JsonResponse({'success': False, 'error': 'AI 서버 통신에 실패했습니다.'}, status=500)
+
+
+@login_required
+@require_POST
+def generate_quiz(request, pk):
+    """
+    지정된 자료 내용을 바탕으로 초/중학생 수준의 O/X 혹은 객관식 미니 퀴즈 3문제를 생성합니다. (분류 카운트 공유)
+    """
+    from .models import TextbookMaterial
+    material = TextbookMaterial.objects.filter(pk=pk).first()
+    if not material or not material.content:
+        return JsonResponse({'success': False, 'error': '자료가 유효하지 않습니다.'}, status=400)
+
+    usage = AiUsage.get_todays_usage(request.user)
+    if usage.categorize_count >= 20:
+        return JsonResponse({'success': False, 'error': '일일 AI 사용 한도를 모두 소진하셨습니다.'}, status=403)
+
+    prompt = f"""
+다음은 내가 만든 수업 자료의 내용입니다:
+---
+{material.content[:2000]}
+---
+이 내용을 바탕으로 초/중학생들이 재미있게 풀 수 있는 O/X 퀴즈 3문제를 만들어주세요.
+각 문제 아래에 정답과 간단한 해설을 적어주세요.
+마크다운 포맷(### 등)이나 특수문자를 최소화하고, 읽기 편한 평문 위주로 작성해주세요.
+"""
+
+    try:
+        quiz_text = call_deepseek_api(prompt, system_prompt="당신은 아이들 눈높이에 맞춘 친절한 퀴즈 출제 교사입니다.")
+        usage.categorize_count += 1
+        usage.save()
+        
+        return JsonResponse({
+            'success': True,
+            'quiz_text': quiz_text.strip()
+        })
+        
+    except Exception as e:
+        logger.error(f"[Textbooks] DeepSeek quiz generation failed: {e}")
+        return JsonResponse({'success': False, 'error': 'AI 퀴즈 생성에 실패했습니다.'}, status=500)

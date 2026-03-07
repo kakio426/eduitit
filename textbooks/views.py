@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
 from products.models import Product
@@ -172,4 +173,25 @@ def toggle_like(request, pk):
         material.likes.add(request.user)
         
     return render(request, 'textbooks/partials/like_button.html', {'material': material})
+
+
+@login_required
+@require_POST
+def fork_material(request, pk):
+    """지정된 공유 자료를 내 자료실로 복사해옵니다."""
+    original_m = get_object_or_404(TextbookMaterial, id=pk)
+    
+    # 내 자료로 새로 복사 (pk 날리고 save하면 새로 생성됨)
+    forked_m = TextbookMaterial.objects.create(
+        teacher=request.user,
+        subject=original_m.subject,
+        grade=original_m.grade,
+        unit_title=original_m.unit_title,
+        title=f"[복사본] {original_m.title}",
+        content=original_m.content,
+        is_published=False,  # 일단 비공개(미배포) 상태로 복구
+        is_shared=True       # 자동 공유 정책에 따름
+    )
+    
+    return redirect('textbooks:detail', pk=forked_m.id)
 
