@@ -2,6 +2,7 @@ const pdfModuleUrl = new URL("./vendor/pdfjs/pdf.min.mjs", import.meta.url).href
 const pdfWorkerUrl = new URL("./vendor/pdfjs/pdf.worker.min.mjs", import.meta.url).href;
 
 let pdfjsPromise = null;
+const previewStates = new WeakMap();
 
 function formatBytes(size) {
   const value = Number(size || 0);
@@ -24,7 +25,26 @@ function getElements(root) {
     image: root.querySelector("[data-preview-image]"),
     status: root.querySelector("[data-preview-status]"),
     meta: root.querySelector("[data-preview-meta]"),
+    pagination: root.querySelector("[data-preview-pagination]"),
+    prevButton: root.querySelector("[data-preview-prev]"),
+    nextButton: root.querySelector("[data-preview-next]"),
+    pageIndicator: root.querySelector("[data-preview-page]"),
   };
+}
+
+function getPreviewState(root) {
+  let state = previewStates.get(root);
+  if (!state) {
+    state = {
+      pdf: null,
+      kind: "remote",
+      currentPage: 1,
+      totalPages: 1,
+      renderToken: 0,
+    };
+    previewStates.set(root, state);
+  }
+  return state;
 }
 
 function setStatus(root, text) {
@@ -41,8 +61,41 @@ function setMeta(root, text) {
   }
 }
 
+function setPagination(root, { visible, currentPage = 1, totalPages = 1, disabled = false }) {
+  const { pagination, prevButton, nextButton, pageIndicator } = getElements(root);
+  if (!pagination) {
+    return;
+  }
+
+  if (!visible) {
+    pagination.classList.add("hidden");
+    return;
+  }
+
+  pagination.classList.remove("hidden");
+  if (pageIndicator) {
+    pageIndicator.textContent = `${currentPage} / ${totalPages}쪽`;
+  }
+  if (prevButton) {
+    prevButton.disabled = disabled || currentPage <= 1;
+  }
+  if (nextButton) {
+    nextButton.disabled = disabled || currentPage >= totalPages;
+  }
+}
+
+function resetPdfState(root) {
+  const state = getPreviewState(root);
+  state.pdf = null;
+  state.currentPage = 1;
+  state.totalPages = 1;
+  state.renderToken = 0;
+  setPagination(root, { visible: false });
+}
+
 function showPlaceholder(root, text) {
   const { placeholder, canvas, image } = getElements(root);
+  resetPdfState(root);
   if (placeholder) {
     placeholder.textContent = text;
     placeholder.classList.remove("hidden");
@@ -74,14 +127,74 @@ async function loadPdfJs() {
   return pdfjsPromise;
 }
 
-async function renderPdf(root, sourceUrl) {
+function buildReadyStatus(kind, currentPage, totalPages) {
+  if (kind === "upload") {
+    return `업로드 전 확인 완료 · ${currentPage} / ${totalPages}쪽`;
+  }
+  return `${currentPage} / ${totalPages}쪽 미리보기`;
+}
+
+function buildLoadingStatus(kind, currentPage, totalPages) {
+  if (kind === "upload") {
+    return `업로드 전 ${currentPage} / ${totalPages}쪽을 불러오는 중입니다.`;
+  }
+  return `${currentPage} / ${totalPages}쪽을 불러오는 중입니다.`;
+}
+
+function bindPagination(root) {
+  if (root.dataset.previewPaginationBound === "1") {
+    return;
+  }
+  const { prevButton, nextButton } = getElements(root);
+  if (!prevButton || !nextButton) {
+    return;
+  }
+
+  prevButton.addEventListener("click", () => {
+    const state = getPreviewState(root);
+    if (!state.pdf || state.currentPage <= 1) {
+      return;
+    }
+    renderPdfPage(root, state.currentPage - 1).catch((error) => {
+      console.warn("consent-preview-prev-page-failed", error);
+      setStatus(root, "이전 페이지를 불러오지 못했습니다.");
+    });
+  });
+
+  nextButton.addEventListener("click", () => {
+    const state = getPreviewState(root);
+    if (!state.pdf || state.currentPage >= state.totalPages) {
+      return;
+    }
+    renderPdfPage(root, state.currentPage + 1).catch((error) => {
+      console.warn("consent-preview-next-page-failed", error);
+      setStatus(root, "다음 페이지를 불러오지 못했습니다.");
+    });
+  });
+
+  root.dataset.previewPaginationBound = "1";
+}
+
+async function renderPdfPage(root, pageNumber) {
+  const state = getPreviewState(root);
   const { placeholder, canvas, image } = getElements(root);
-  if (!canvas) {
+  if (!canvas || !state.pdf) {
     return null;
   }
-  const pdfjsLib = await loadPdfJs();
-  const pdf = await pdfjsLib.getDocument(sourceUrl).promise;
-  const page = await pdf.getPage(1);
+
+  const safePage = Math.max(1, Math.min(pageNumber, state.totalPages || 1));
+  state.renderToken += 1;
+  const renderToken = state.renderToken;
+
+  setPagination(root, {
+    visible: state.totalPages > 1,
+    currentPage: safePage,
+    totalPages: state.totalPages,
+    disabled: true,
+  });
+  setStatus(root, buildLoadingStatus(state.kind, safePage, state.totalPages));
+
+  const page = await state.pdf.getPage(safePage);
   const container = canvas.parentElement;
   const maxWidth = Number(root.dataset.maxWidth || 920);
   const availableWidth = Math.min(container?.clientWidth || maxWidth, maxWidth);
@@ -94,6 +207,11 @@ async function renderPdf(root, sourceUrl) {
     canvasContext: canvas.getContext("2d"),
     viewport,
   }).promise;
+
+  if (renderToken !== state.renderToken) {
+    return state.totalPages;
+  }
+
   if (placeholder) {
     placeholder.classList.add("hidden");
   }
@@ -101,11 +219,32 @@ async function renderPdf(root, sourceUrl) {
     image.classList.add("hidden");
   }
   canvas.classList.remove("hidden");
-  return pdf.numPages;
+
+  state.currentPage = safePage;
+  setPagination(root, {
+    visible: state.totalPages > 1,
+    currentPage: safePage,
+    totalPages: state.totalPages,
+    disabled: false,
+  });
+  setStatus(root, buildReadyStatus(state.kind, safePage, state.totalPages));
+  return state.totalPages;
+}
+
+async function loadPdfPreview(root, sourceUrl, kind) {
+  const state = getPreviewState(root);
+  state.kind = kind;
+  const pdfjsLib = await loadPdfJs();
+  state.pdf = await pdfjsLib.getDocument(sourceUrl).promise;
+  state.totalPages = state.pdf.numPages;
+  state.currentPage = 1;
+  bindPagination(root);
+  return renderPdfPage(root, 1);
 }
 
 async function renderImage(root, sourceUrl, altText) {
   const { placeholder, canvas, image } = getElements(root);
+  resetPdfState(root);
   if (!image) {
     return;
   }
@@ -135,13 +274,12 @@ async function renderRemotePreview(root) {
   }
 
   showPlaceholder(root, "문서를 불러오는 중입니다.");
-  setStatus(root, "same-origin으로 첫 페이지를 불러오는 중입니다.");
+  setStatus(root, "same-origin으로 문서를 불러오는 중입니다.");
   setMeta(root, [fileName, formatBytes(root.dataset.fileSize)].filter(Boolean).join(" · "));
 
   try {
     if (isPdf(fileType, fileName)) {
-      const totalPages = await renderPdf(root, sourceUrl);
-      setStatus(root, `1 / ${totalPages}쪽 미리보기`);
+      await loadPdfPreview(root, sourceUrl, "remote");
       return;
     }
 
@@ -168,9 +306,9 @@ function bindUploadPreview(root) {
     }
   };
 
-  const emptyLabel = root.dataset.emptyLabel || "파일을 고르면 첫 페이지를 여기서 바로 확인합니다.";
+  const emptyLabel = root.dataset.emptyLabel || "파일을 고르면 업로드 전 문서를 여기서 바로 확인합니다.";
   showPlaceholder(root, emptyLabel);
-  setStatus(root, "PDF는 첫 페이지, 이미지는 원본 비율로 미리보기 합니다.");
+  setStatus(root, "PDF는 페이지 이동, 이미지는 원본 비율로 미리보기 합니다.");
   setMeta(root, "");
 
   input.addEventListener("change", async () => {
@@ -186,13 +324,12 @@ function bindUploadPreview(root) {
 
     activeUrl = URL.createObjectURL(file);
     showPlaceholder(root, "선택한 파일을 준비하는 중입니다.");
-    setStatus(root, "업로드 전 로컬 파일 미리보기");
+    setStatus(root, "업로드 전 문서를 불러오는 중입니다.");
     setMeta(root, [file.name, formatBytes(file.size)].filter(Boolean).join(" · "));
 
     try {
       if (isPdf(file.type, file.name)) {
-        const totalPages = await renderPdf(root, activeUrl);
-        setStatus(root, `업로드 전 확인 완료 · 1 / ${totalPages}쪽`);
+        await loadPdfPreview(root, activeUrl, "upload");
       } else {
         await renderImage(root, activeUrl, file.name);
         setStatus(root, "업로드 전 이미지 확인 완료");
