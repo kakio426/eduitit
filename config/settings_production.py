@@ -8,6 +8,7 @@ This settings module extends the base settings and configures:
 """
 
 import os
+import sys
 import dj_database_url
 from pathlib import Path
 from importlib.util import find_spec
