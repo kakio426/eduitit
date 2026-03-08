@@ -68,60 +68,51 @@
                 <div class="mt-8 border-t border-purple-100 pt-6">
                     <div class="rounded-2xl bg-indigo-50/70 border border-indigo-100 p-5 md:p-6 space-y-4">
                         <h3 class="text-lg font-heavy text-indigo-900 flex items-center gap-2">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Gemini 빠른 복사-붙여넣기
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 제미나이로 단계 자동 채우기
                         </h3>
-                        <p class="text-[11px] text-indigo-700/80">
-                            ※ 유튜브 영상 정리는 지금 <b>Gemini</b>에서만 됩니다.
-                            ChatGPT/Perplexity에서 만든 답변은 여기서 바로 적용되지 않습니다.
-                        </p>
                         <p class="text-sm text-indigo-900/80 leading-relaxed">
-                            교사가 헷갈리지 않도록 흐름을 최소 클릭으로 줄였습니다.
-                            아래 순서대로 하면 붙여넣는 즉시 단계가 자동 반영됩니다.
+                            제미나이에서 만든 답변을 붙여넣으면 수업 단계가 자동으로 채워집니다.
                         </p>
                         <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900/85">
-                            <li>유튜브 주소를 먼저 입력합니다.</li>
-                            <li><b>제미나이 열기 + 프롬프트 자동 복사</b> 버튼을 누릅니다.</li>
-                            <li>Gemini 답변(JSON 권장)을 아래 결과 칸에 붙여넣으면 자동 반영됩니다.</li>
+                            <li>버튼을 눌러 제미나이를 엽니다.</li>
+                            <li>제미나이에 붙여넣고 답변을 받습니다.</li>
+                            <li>나온 답변을 아래 칸에 붙여넣습니다.</li>
                         </ol>
-                        <p class="text-xs text-indigo-800">
-                            권장 출력 형식: JSON 객체 + <code>steps</code> 배열. 각 step은
-                            <code>summary</code> 필수, <code>start/end</code> 선택입니다.
-                        </p>
                     </div>
 
                     <div class="mt-5 p-4 rounded-xl bg-white border border-indigo-100">
-                        <p class="text-xs text-indigo-800/90">
-                            프롬프트와 결과 검증은 위 <b>수업용 유튜브 영상 주소</b>를 그대로 사용합니다.
-                            단계는 6~12개를 권장하며, 24개 초과 시 앞 24개만 자동 반영됩니다.
-                        </p>
+                        <p class="text-xs text-indigo-800/90">붙여넣으면 바로 단계가 채워지고, 필요하면 직접 고칠 수 있습니다.</p>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label for="geminiPromptBox" class="text-sm font-heavy text-gray-700">1) 제미나이 열기 (프롬프트 자동 복사)</label>
+                                <label for="geminiPromptBox" class="text-sm font-heavy text-gray-700">1) 제미나이 열기</label>
                                 <button type="button" id="btnLaunchGeminiFlow"
                                     class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-heavy hover:bg-indigo-700 transition-all">
-                                    제미나이 열기 + 프롬프트 자동 복사
+                                    제미나이 열고 자동 복사
                                 </button>
                             </div>
-                            <textarea id="geminiPromptBox" readonly
-                                class="w-full h-56 p-3 rounded-xl bg-gray-900 text-gray-100 text-xs leading-relaxed shadow-inner border border-gray-800">{{ manual_prompt_template }}</textarea>
-                            <p class="text-[11px] text-gray-500">복사가 차단된 브라우저에서는 프롬프트를 직접 선택해 복사해 주세요.</p>
+                            <details class="rounded-xl bg-gray-50 border border-gray-200 p-3">
+                                <summary class="cursor-pointer text-sm font-bold text-gray-700">자동 복사가 안 될 때만 직접 복사하기</summary>
+                                <p class="mt-2 text-[11px] text-gray-500">버튼이 잘 되면 이 칸은 안 봐도 됩니다.</p>
+                                <textarea id="geminiPromptBox" readonly
+                                    class="mt-3 w-full h-56 p-3 rounded-xl bg-gray-900 text-gray-100 text-xs leading-relaxed shadow-inner border border-gray-800">{{ manual_prompt_template }}</textarea>
+                            </details>
                         </div>
 
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label for="geminiResultInput" class="text-sm font-heavy text-gray-700">2) Gemini 결과 붙여넣기 (자동 적용)</label>
+                                <label for="geminiResultInput" class="text-sm font-heavy text-gray-700">2) 답변 붙여넣기</label>
                                 <button type="button" id="btnApplyGeminiResult"
                                     class="px-3 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 text-xs font-heavy hover:bg-emerald-50 transition-all">
-                                    수동 적용
+                                    지금 반영
                                 </button>
                             </div>
                             <textarea id="geminiResultInput"
                                 class="w-full h-56 p-3 rounded-xl bg-white border-2 border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
-                                placeholder='예: {"steps":[{"start":"00:35","summary":"..."}]}'></textarea>
-                            <p class="text-[11px] text-gray-500">붙여넣기(Ctrl+V)하면 즉시 검증 후 단계 목록에 반영됩니다.</p>
+                                placeholder="여기에 제미나이 답변을 붙여넣으세요"></textarea>
+                            <p class="text-[11px] text-gray-500">붙여넣으면 바로 단계가 채워집니다.</p>
                             <p id="geminiManualStatus" class="text-sm font-bold text-indigo-700 hidden"></p>
                             <ul id="geminiWarningList" class="space-y-1 text-xs text-amber-700 hidden"></ul>
                         </div>
@@ -161,7 +152,7 @@
                         <div id="emptyState"
                             class="text-center py-24 bg-white/30 rounded-[2rem] border-2 border-dashed border-gray-300">
                             <i class="fa-solid fa-magic text-4xl text-gray-300 mb-4 block"></i>
-                            <p class="text-gray-400 font-bold">유튜브 주소를 넣고 Gemini 결과를 붙여넣거나,<br>직접 단계를 추가해 주세요.</p>
+                            <p class="text-gray-400 font-bold">유튜브 주소를 넣고 답변을 붙여넣거나,<br>직접 단계를 추가해 주세요.</p>
                         </div>
                     </div>
                 </div>
@@ -419,7 +410,7 @@ JSON 스키마 예시:
         const rawText = (geminiResultInputEl?.value || '').trim();
         if (!rawText) {
             if (!options.silentNoInput) {
-                setGeminiStatus('Gemini 결과를 붙여넣어 주세요.', 'error');
+                setGeminiStatus('답변을 붙여넣어 주세요.', 'error');
             }
             return;
         }
@@ -429,11 +420,11 @@ JSON 스키마 예시:
         geminiApplyInProgress = true;
         if (btnApplyGeminiResultEl) {
             btnApplyGeminiResultEl.disabled = true;
-            btnApplyGeminiResultEl.textContent = '검증 중...';
+            btnApplyGeminiResultEl.textContent = '읽는 중...';
         }
         setGeminiStatus(source === 'paste'
-            ? '붙여넣기를 감지했습니다. 형식을 점검하고 단계로 변환하고 있습니다...'
-            : '형식을 점검하고 단계로 변환하고 있습니다...', 'indigo');
+            ? '붙여넣은 내용을 읽고 있습니다...'
+            : '내용을 읽고 있습니다...', 'indigo');
         renderGeminiWarnings([]);
 
         try {
@@ -464,14 +455,14 @@ JSON 스키마 예시:
 
             lastAppliedGeminiText = rawText;
             const parsedCount = data?.meta?.step_count || steps.length;
-            setGeminiStatus(`검증 완료: ${parsedCount}개 단계를 반영했습니다.`, 'success');
+            setGeminiStatus(`${parsedCount}단계가 채워졌습니다.`, 'success');
         } catch (err) {
-            setGeminiStatus(err.message || '결과 처리 중 오류가 발생했습니다.', 'error');
+            setGeminiStatus(err.message || '내용을 읽지 못했어요. 답변 전체를 다시 붙여넣어 주세요.', 'error');
         } finally {
             geminiApplyInProgress = false;
             if (btnApplyGeminiResultEl) {
                 btnApplyGeminiResultEl.disabled = false;
-                btnApplyGeminiResultEl.textContent = '수동 적용';
+                btnApplyGeminiResultEl.textContent = '지금 반영';
             }
         }
     }
@@ -481,14 +472,14 @@ JSON 스키마 예시:
             const copied = await copyGeminiPrompt();
             const popup = window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
             if (!popup) {
-                setGeminiStatus('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.', 'error');
+                setGeminiStatus('팝업이 막혀 있어요. 팝업을 허용한 뒤 다시 눌러 주세요.', 'error');
                 return;
             }
             if (copied) {
-                setGeminiStatus('Gemini를 열고 프롬프트를 자동 복사했습니다. Gemini 입력창에 바로 붙여넣어 주세요.', 'success');
+                setGeminiStatus('제미나이를 열고 글을 복사했어요. 제미나이에 바로 붙여넣어 주세요.', 'success');
                 return;
             }
-            setGeminiStatus('Gemini를 열었습니다. 프롬프트 자동 복사가 차단되어 아래 박스에서 직접 복사해 주세요.', 'error');
+            setGeminiStatus('제미나이는 열렸지만 자동 복사는 안 됐어요. 아래 상자를 열어 직접 복사해 주세요.', 'error');
         });
     }
 
