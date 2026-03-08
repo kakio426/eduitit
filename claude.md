@@ -1048,6 +1048,9 @@ logger.info(f"[StudentMBTI] Action: SESSION_CREATE, Status: SUCCESS, SessionID: 
 - Keep ASGI-first production runtime (`uvicorn`); verify command parity across `Procfile` and `nixpacks.toml`.
 - Keep `DISABLE_SERVER_SIDE_CURSORS = True` in production (Neon = PgBouncer).
 - Startup commands must be idempotent.
+- In `config/asgi.py` and `config/routing.py`, call `get_asgi_application()` before importing app-level websocket routing, consumers, or any module that can import models.
+- Treat `routing -> consumers -> models` as startup-sensitive: top-level imports in that chain must never run before Django app registry is ready.
+- If startup touches ASGI/routing, verify one direct import path with production settings (for example `import config.asgi`) in addition to `manage.py check`, so `AppRegistryNotReady` is caught before deploy.
 
 ### B. Queue and Async Policy (DB Queue Standard)
 - Default queue backend is DB queue. Do not assume Redis exists.
