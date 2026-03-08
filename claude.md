@@ -813,6 +813,13 @@ if not product.is_active:
 
 **유효한 service_type 값:** `classroom`, `work`, `game`, `counsel`, `edutech`, `etc`
 
+**문자열/이모지 안전 규칙:**
+- `ensure_*`, migration, bootstrap seed 문자열에는 UTF-16 surrogate escape(`\uD83D...`)를 넣지 않는다.
+- 이모지는 실제 문자 또는 full code point escape(`\U0001F4DA`)만 사용한다.
+- 배포 전 최소 1회 `python manage.py bootstrap_runtime --settings=config.settings_production` 또는 동등한 경로로 startup seed를 재실행해 DB write 단계까지 확인한다.
+- seed 데이터에서 `UnicodeEncodeError: surrogates not allowed`가 보이면 문자열 리터럴부터 의심하고, 모델/DB 문제로 오진하지 않는다.
+
+
 **현재 Procfile 실행 순서:**
 ```
 bootstrap_runtime → uvicorn
