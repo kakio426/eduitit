@@ -31,7 +31,7 @@
                 <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight truncate">
                     <span class="mr-1.5">{{ service.icon|default:'📅' }}</span>{{ title }}
                 </h1>
-                <p class="mt-1 text-xs sm:text-sm font-medium text-slate-600">캘린더에서 일정을 바로 확인하고 관리하세요.</p>
+                <p class="mt-1 text-xs sm:text-sm font-medium text-slate-600">달력에서 일정을 바로 확인하고 관리하세요.</p>
             </div>
             <div class="flex items-center gap-2">
                 {% if message_capture_enabled %}
@@ -52,6 +52,18 @@
                 </button>
             </div>
         </div>
+
+        {% if embedded_sheetbook_context %}
+        <div class="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50/70 px-4 py-3">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">현재 수첩 문맥</p>
+            <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                <span class="font-semibold">{{ embedded_sheetbook_context.sheetbook_title }}</span>
+                <span class="text-slate-400">/</span>
+                <span>{{ embedded_sheetbook_context.tab_name }}</span>
+                <a href="{{ embedded_sheetbook_context.detail_url }}" target="_top" class="inline-flex items-center rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 transition">수첩 탭으로 돌아가기</a>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4">
@@ -312,7 +324,7 @@
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <div>
                         <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">공유 링크</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">링크를 아는 사람은 로그인 없이 읽기 전용으로 캘린더를 볼 수 있습니다.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">링크를 아는 사람은 로그인 없이 읽기 전용으로 달력을 볼 수 있습니다.</p>
                     </div>
                     {% if share_enabled %}
                     <span class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
@@ -409,7 +421,7 @@
 
                 <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내 캘린더 협업자</p>
+                        <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내 달력 협업자</p>
                         {% if owner_collaborators %}
                         <div class="space-y-2">
                             {% for collaborator in owner_collaborators %}
@@ -438,7 +450,7 @@
                         {% endif %}
                     </div>
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내가 공유받은 캘린더</p>
+                        <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내가 공유받은 달력</p>
                         {% if incoming_calendars %}
                         <div class="space-y-2">
                             {% for incoming in incoming_calendars %}
@@ -451,7 +463,7 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-sm font-medium text-slate-500">공유받은 캘린더가 없습니다.</p>
+                        <p class="text-sm font-medium text-slate-500">공유받은 달력이 없습니다.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -461,7 +473,7 @@
                 <div class="flex items-center justify-between gap-3 mb-3">
                     <div>
                         <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">연동 설정</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">서비스별 캘린더 자동 연동을 켜거나 끌 수 있습니다.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">서비스별 달력 자동 연동을 켜거나 끌 수 있습니다.</p>
                     </div>
                     <button
                         type="button"
@@ -536,7 +548,7 @@
                     <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
                 </div>
                 <div x-show="calendarOwnerOptions.length > 1">
-                    <label class="block text-sm font-bold text-slate-700 mb-1.5">저장 캘린더</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">저장 달력</label>
                     <select x-model="createForm.calendar_owner_id" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
                         <template x-for="option in calendarOwnerOptions" :key="`owner-option-${option.id}`">
                             <option :value="option.id" x-text="option.label"></option>
@@ -972,16 +984,27 @@
                     </template>
                 </div>
             </div>
+            <div
+                x-show="selectedEvent && selectedEvent.source_sheetbook_title"
+                class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+            >
+                <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
+                <p class="mt-1 text-sm text-slate-700">
+                    <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
+                    <span class="mx-1 text-slate-400">/</span>
+                    <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
+                </p>
+            </div>
             <a
                 x-show="selectedEvent && selectedEvent.source_url"
                 :href="selectedEvent ? selectedEvent.source_url : '#'"
-                target="_blank"
-                rel="noopener noreferrer"
+                :target="embeddedSheetbookContext ? '_top' : '_blank'"
+                :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'"
                 class="mb-4 inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100 transition"
             >
                 <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                 <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
-                <span class="ml-1">(새 탭)</span>
+                <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
             </a>
             <div class="flex flex-wrap justify-end gap-2">
                 <button
@@ -1017,12 +1040,55 @@
     </div>
 </section>
 
+<div id="calendar-toast-root" class="pointer-events-none fixed bottom-4 right-4 z-[80] flex max-w-sm flex-col gap-2"></div>
+
 {{ integration_settings_json|json_script:"integration-settings-data" }}
 {{ events_json|json_script:"events-data" }}
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 {{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
+{{ embedded_sheetbook_context_json|json_script:"calendar-embed-context-data" }}
 
 <script>
+const CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
+
+function ensureCalendarToastBridge() {
+    if (typeof window.showToast === 'function') return;
+    const rootId = 'calendar-toast-root';
+    const toneClassMap = {
+        success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+        error: 'border-red-200 bg-red-50 text-red-900',
+        info: 'border-slate-200 bg-slate-900 text-white',
+    };
+    window.showToast = function(message, tone = 'info') {
+        const root = document.getElementById(rootId);
+        if (!root || !message) return;
+        const toast = document.createElement('div');
+        const toneClasses = toneClassMap[tone] || toneClassMap.info;
+        toast.setAttribute('role', 'status');
+        toast.className = `pointer-events-auto rounded-2xl border px-4 py-3 text-sm font-semibold shadow-xl transition duration-200 opacity-0 translate-y-2 ${toneClasses}`;
+        toast.textContent = String(message);
+        root.appendChild(toast);
+        window.requestAnimationFrame(() => {
+            toast.classList.remove('opacity-0', 'translate-y-2');
+        });
+        window.setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            window.setTimeout(() => toast.remove(), 220);
+        }, 2800);
+    };
+}
+
+ensureCalendarToastBridge();
+
+function notifyEmbeddedCalendarHeight() {
+    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK || window.parent === window) return;
+    const height = Math.max(
+        document.documentElement.scrollHeight || 0,
+        document.body ? document.body.scrollHeight : 0
+    );
+    window.parent.postMessage({ type: 'classcalendar:embed-height', height }, window.location.origin);
+}
+
 function copyCalendarShareUrl() {
     const input = document.getElementById('calendarShareUrl');
     if (!input) return;
@@ -1065,6 +1131,7 @@ function calendarApp() {
             signatures_training_enabled: true,
         },
         messageCaptureEnabled: {{ message_capture_enabled|yesno:"true,false" }},
+        embeddedSheetbookContext: null,
         calendarOwnerOptions: [],
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', color: 'indigo' },
@@ -1114,11 +1181,14 @@ function calendarApp() {
 
         init() {
             this.loadCalendarOwnerOptions();
+            this.loadEmbeddedSheetbookContext();
             this.loadIntegrationSettingsFromScript();
             this.loadMessageCaptureLimitsFromScript();
             this.loadEventsFromScript();
             this.selectedDateKey = this.dateKey(new Date());
             this.registerReturnSync();
+            this.registerEmbeddedActionBridge();
+            this.$nextTick(() => notifyEmbeddedCalendarHeight());
         },
 
         loadCalendarOwnerOptions() {
@@ -1132,6 +1202,15 @@ function calendarApp() {
             } catch (e) {
                 this.calendarOwnerOptions = [];
                 this.defaultCalendarOwnerId = '';
+            }
+        },
+
+        loadEmbeddedSheetbookContext() {
+            try {
+                const raw = JSON.parse(document.getElementById('calendar-embed-context-data').textContent || '{}');
+                this.embeddedSheetbookContext = raw && raw.sheetbook_id ? raw : null;
+            } catch (e) {
+                this.embeddedSheetbookContext = null;
             }
         },
 
@@ -1186,6 +1265,37 @@ function calendarApp() {
             } catch (e) {
                 window.showToast('일정 데이터를 읽는 중 오류가 발생했습니다.', 'error');
             }
+        },
+
+        notifyEmbeddedHost(type, payload = {}) {
+            if (!CALENDAR_EMBEDDED_IN_SHEETBOOK || window.parent === window) return;
+            window.parent.postMessage({ type, ...payload }, window.location.origin);
+        },
+
+        registerEmbeddedActionBridge() {
+            if (!CALENDAR_EMBEDDED_IN_SHEETBOOK || window.parent === window) return;
+            window.addEventListener('message', (event) => {
+                if (event.origin !== window.location.origin) return;
+                const data = event.data || {};
+                if (data.type === 'sheetbook:open-message-capture') {
+                    if (!this.messageCaptureEnabled) {
+                        this.notifyEmbeddedHost('classcalendar:action-blocked', {
+                            action: 'message-capture',
+                            message: '메시지 바로 등록 기능이 아직 열리지 않았습니다.',
+                        });
+                        return;
+                    }
+                    this.openMessageCaptureModal({ currentTarget: document.activeElement });
+                    this.$nextTick(() => notifyEmbeddedCalendarHeight());
+                    this.notifyEmbeddedHost('classcalendar:action-opened', { action: 'message-capture' });
+                    return;
+                }
+                if (data.type === 'sheetbook:open-create-event') {
+                    this.openCreateModalForSelectedDate();
+                    this.$nextTick(() => notifyEmbeddedCalendarHeight());
+                    this.notifyEmbeddedHost('classcalendar:action-opened', { action: 'create-event' });
+                }
+            });
         },
 
         getCsrfToken() {
@@ -1569,6 +1679,10 @@ function calendarApp() {
                 selected_attachment_ids: selectedAttachmentIds,
                 confirm_low_confidence: this.messageCaptureLowConfidenceConfirmed,
             };
+            if (this.embeddedSheetbookContext) {
+                body.source_sheetbook_id = this.embeddedSheetbookContext.sheetbook_id;
+                body.source_tab_id = this.embeddedSheetbookContext.tab_id;
+            }
 
             try {
                 const payload = await this.requestJson(this.buildMessageCaptureCommitUrl(this.messageCaptureCaptureId), {
@@ -1581,6 +1695,7 @@ function calendarApp() {
                 });
                 await this.refreshEvents();
                 this.closeMessageCaptureModal();
+                this.notifyEmbeddedHost('classcalendar:event-saved', { source: 'message-capture' });
                 const warningCount = Array.isArray(payload.warnings) ? payload.warnings.length : 0;
                 if (warningCount > 0) {
                     window.showToast(`일정은 저장됐지만 첨부 ${warningCount}개는 제외되었습니다.`, 'info');
@@ -1599,6 +1714,7 @@ function calendarApp() {
             const forceSync = !!options.forceSync;
             const payload = await this.requestJson(this.buildEventsUrl(forceSync));
             this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
+            this.$nextTick(() => notifyEmbeddedCalendarHeight());
         },
 
         registerReturnSync() {
@@ -1708,6 +1824,10 @@ function calendarApp() {
             body.set('title', this.createForm.title);
             body.set('note', this.createForm.note || '');
             if (this.createForm.calendar_owner_id) body.set('calendar_owner_id', this.createForm.calendar_owner_id);
+            if (this.embeddedSheetbookContext) {
+                body.set('source_sheetbook_id', String(this.embeddedSheetbookContext.sheetbook_id || ''));
+                body.set('source_tab_id', String(this.embeddedSheetbookContext.tab_id || ''));
+            }
             body.set('start_time', eventTimes.start_time);
             body.set('end_time', eventTimes.end_time);
             body.set('color', this.createForm.color);
@@ -1720,6 +1840,7 @@ function calendarApp() {
                 });
                 this.createModalOpen = false;
                 await this.refreshEvents();
+                this.notifyEmbeddedHost('classcalendar:event-saved', { source: 'create-event' });
                 window.showToast('일정을 저장했습니다.', 'success');
             } catch (err) {
                 const isValidationError = err.payload && err.payload.code === 'validation_error';
@@ -2053,5 +2174,14 @@ function calendarApp() {
         },
     };
 }
+window.addEventListener('load', () => {
+    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
+    notifyEmbeddedCalendarHeight();
+    if (window.ResizeObserver && document.body) {
+        const observer = new ResizeObserver(() => notifyEmbeddedCalendarHeight());
+        observer.observe(document.body);
+    }
+    window.addEventListener('resize', notifyEmbeddedCalendarHeight);
+});
 </script>
 {% endblock %}

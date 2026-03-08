@@ -8,7 +8,7 @@ urlpatterns = [
     # Teacher views
     path("", views.main_view, name="main"),
     path("entry/", views.main_entry, name="sheetbook_entry"),
-    path("legacy/", views.main_view, name="legacy_main"),
+    path("legacy/", views.legacy_main_redirect, name="legacy_main"),
     path("collaborators/add/", views.collaborator_add, name="collaborator_add"),
     path("collaborators/<int:collaborator_id>/remove/", views.collaborator_remove, name="collaborator_remove"),
     path("share/enable/", views.share_enable, name="share_enable"),

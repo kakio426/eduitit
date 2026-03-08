@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Min, Q
+from django.db.models import Count, F, Min, Q
 from django.db.models.functions import TruncDate
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -44,6 +44,19 @@ CONSENT_REVIEW_PREVIEW_LIMIT = 10
 CONSENT_REVIEW_ISSUE_SAMPLE_LIMIT = 5
 CONSENT_REVIEW_ISSUE_LINE_LIMIT = 20
 SHEETBOOK_IMPORT_MAX_ROWS = 5000
+DEFAULT_GRID_SEED_ROWS = 30
+GRID_AUTO_APPEND_THRESHOLD = 5
+GRID_AUTO_APPEND_ROWS = 20
+SHEETBOOK_MOBILE_COMPACT_ALLOWED_ACTIONS = {
+    "update_cell",
+    "create_grid_row",
+    "create_grid_column",
+    "update_grid_column",
+    "delete_grid_row",
+    "restore_grid_row",
+    "delete_grid_column",
+    "restore_grid_column",
+}
 logger = logging.getLogger(__name__)
 
 
@@ -419,6 +432,144 @@ def _next_column_order(tab):
     return (last_column.sort_order + 1) if last_column else 1
 
 
+def _shift_row_orders_from(tab, start_order, delta):
+    if not start_order or not delta:
+        return
+    if delta > 0:
+        SheetRow.objects.filter(tab=tab, sort_order__gte=start_order).update(sort_order=F("sort_order") + delta)
+        return
+    SheetRow.objects.filter(tab=tab, sort_order__gt=start_order).update(sort_order=F("sort_order") + delta)
+
+
+def _shift_column_orders_from(tab, start_order, delta):
+    if not start_order or not delta:
+        return
+    if delta > 0:
+        SheetColumn.objects.filter(tab=tab, sort_order__gte=start_order).update(sort_order=F("sort_order") + delta)
+        return
+    SheetColumn.objects.filter(tab=tab, sort_order__gt=start_order).update(sort_order=F("sort_order") + delta)
+
+
+def _normalize_row_sort_orders(tab):
+    for index, row in enumerate(tab.rows.order_by("sort_order", "id"), start=1):
+        if row.sort_order != index:
+            row.sort_order = index
+            row.save(update_fields=["sort_order", "updated_at"])
+
+
+def _normalize_column_sort_orders(tab):
+    for index, column in enumerate(tab.columns.order_by("sort_order", "id"), start=1):
+        if column.sort_order != index:
+            column.sort_order = index
+            column.save(update_fields=["sort_order", "updated_at"])
+
+
+def _seed_default_rows(tab, *, count=DEFAULT_GRID_SEED_ROWS, actor=None):
+    current_count = tab.rows.count()
+    if current_count >= count:
+        return 0
+
+    last_sort_order = tab.rows.order_by("-sort_order", "-id").values_list("sort_order", flat=True).first() or 0
+    rows = []
+    now_ts = timezone.now()
+    for offset in range(1, count - current_count + 1):
+        rows.append(
+            SheetRow(
+                tab=tab,
+                sort_order=last_sort_order + offset,
+                created_by=actor,
+                updated_by=actor,
+                created_at=now_ts,
+                updated_at=now_ts,
+            )
+        )
+    SheetRow.objects.bulk_create(rows)
+    return len(rows)
+
+
+def _row_has_nonempty_cells(row):
+    for cell in row.cells.only("value_text", "value_number", "value_bool", "value_date", "value_json"):
+        if (cell.value_text or "").strip():
+            return True
+        if cell.value_number is not None:
+            return True
+        if cell.value_bool is not None:
+            return True
+        if cell.value_date is not None:
+            return True
+        if cell.value_json not in (None, "", [], {}):
+            return True
+    return False
+
+
+def _column_nonempty_cell_count(column):
+    count = 0
+    for cell in column.cells.only("value_text", "value_number", "value_bool", "value_date", "value_json"):
+        if (cell.value_text or "").strip():
+            count += 1
+            continue
+        if cell.value_number is not None:
+            count += 1
+            continue
+        if cell.value_bool is not None:
+            count += 1
+            continue
+        if cell.value_date is not None:
+            count += 1
+            continue
+        if cell.value_json not in (None, "", [], {}):
+            count += 1
+    return count
+
+
+def _create_grid_row_at_position(tab, *, actor, after_row_id=0, sort_order=0):
+    if sort_order:
+        target_order = max(1, int(sort_order))
+        _shift_row_orders_from(tab, target_order, 1)
+    elif after_row_id:
+        after_row = get_object_or_404(SheetRow, id=after_row_id, tab=tab)
+        target_order = after_row.sort_order + 1
+        _shift_row_orders_from(tab, target_order, 1)
+    else:
+        target_order = _next_row_order(tab)
+
+    return SheetRow.objects.create(
+        tab=tab,
+        sort_order=target_order,
+        created_by=actor,
+        updated_by=actor,
+    )
+
+
+def _create_grid_column_at_position(tab, *, actor, label, column_type, after_column_id=0, sort_order=0):
+    if sort_order:
+        target_order = max(1, int(sort_order))
+        _shift_column_orders_from(tab, target_order, 1)
+    elif after_column_id:
+        after_column = get_object_or_404(SheetColumn, id=after_column_id, tab=tab)
+        target_order = after_column.sort_order + 1
+        _shift_column_orders_from(tab, target_order, 1)
+    else:
+        target_order = _next_column_order(tab)
+
+    return SheetColumn.objects.create(
+        tab=tab,
+        key=_build_unique_column_key(tab, label),
+        label=label,
+        column_type=column_type,
+        sort_order=target_order,
+    )
+
+
+def _maybe_auto_extend_grid_rows(tab, *, touched_row_sort_order=0, actor=None):
+    total_rows = tab.rows.count()
+    if not total_rows:
+        return _seed_default_rows(tab, count=DEFAULT_GRID_SEED_ROWS, actor=actor)
+    if touched_row_sort_order and (total_rows - touched_row_sort_order) >= GRID_AUTO_APPEND_THRESHOLD:
+        return 0
+    return _seed_default_rows(tab, count=total_rows + GRID_AUTO_APPEND_ROWS, actor=actor)
+
+
 def _get_sheetbook_grid_bulk_batch_size():
     raw = getattr(settings, "SHEETBOOK_GRID_BULK_BATCH_SIZE", 400)
     try:
@@ -471,10 +622,7 @@ def _seed_default_columns(tab):
             },
         )
     if not tab.rows.exists():
-        SheetRow.objects.create(
-            tab=tab,
-            sort_order=1,
-        )
+        _seed_default_rows(tab, count=DEFAULT_GRID_SEED_ROWS)
 
 
 def _normalize_tab_sort_orders(sheetbook):
@@ -501,7 +649,14 @@ def _render_grid_editor_partial(request, sheetbook, selected_tab):
     saved_views = []
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_GRID:
         saved_views = _list_saved_views_for_tab(selected_tab)
-    sheetbook_mobile_read_only = _is_sheetbook_mobile_read_only_request(request)
+    mobile_read_only_requested = _is_sheetbook_mobile_read_only_request(request)
+    sheetbook_mobile_compact_mode = mobile_read_only_requested and not bool(getattr(sheetbook, "is_archived", False))
+    sheetbook_mobile_read_only = bool(getattr(sheetbook, "is_archived", False))
+    sheetbook_mobile_message = (
+        _sheetbook_archive_read_only_message()
+        if sheetbook_mobile_read_only
+        else _sheetbook_mobile_compact_message()
+    )
     return render(
         request,
         "sheetbook/_grid_editor.html",
@@ -514,7 +669,9 @@ def _render_grid_editor_partial(request, sheetbook, selected_tab):
             "grid_view_sort_column_id": 0,
             "grid_view_sort_direction": SavedView.SORT_ASC,
             "sheetbook_mobile_read_only": sheetbook_mobile_read_only,
-            "sheetbook_mobile_read_only_message": _sheetbook_mobile_read_only_message(),
+            "sheetbook_mobile_compact_mode": sheetbook_mobile_compact_mode,
+            "sheetbook_mobile_read_only_message": sheetbook_mobile_message,
+            "sheetbook_archived_read_only": sheetbook_mobile_read_only,
         },
     )
 
@@ -634,11 +791,15 @@ def _is_sheetbook_mobile_read_only_request(request):
     return _is_sheetbook_phone_user_agent(request.META.get("HTTP_USER_AGENT", ""))
 
 
-def _sheetbook_mobile_read_only_message():
+def _sheetbook_mobile_compact_message():
     return (
-        "휴대폰에서는 표를 확인하고 찾을 수 있어요. "
-        "표 수정, 붙여넣기, 줄/항목 추가, 달력 연결 변경은 태블릿이나 PC에서 진행해 주세요."
+        "휴대폰에서는 한 칸 수정, 줄 추가/삭제, 항목 이름 바꾸기 같은 간단 편집은 할 수 있어요. "
+        "대량 붙여넣기, 여러 칸 선택 작업, 파일 가져오기 같은 작업은 태블릿이나 PC에서 진행해 주세요."
     )
+
+
+def _sheetbook_mobile_read_only_message():
+    return _sheetbook_mobile_compact_message()
 
 
 def _sheetbook_archive_read_only_message():
@@ -678,6 +839,8 @@ def _maybe_block_mobile_read_only_edit(
             owner=request.user,
             is_archived=True,
         ).exists()
+    if is_mobile_read_only and blocked_action in SHEETBOOK_MOBILE_COMPACT_ALLOWED_ACTIONS:
+        is_mobile_read_only = False
     if not is_mobile_read_only and not is_archived_read_only:
         return None
 
@@ -698,7 +861,7 @@ def _maybe_block_mobile_read_only_edit(
             tab_id=tab_id or None,
             blocked_action=str(blocked_action or "")[:80],
         )
-        message = _sheetbook_mobile_read_only_message()
+        message = _sheetbook_mobile_compact_message()
     if wants_json:
         return JsonResponse(
             {
@@ -3135,8 +3298,9 @@ def detail(request, pk):
     if index_back_params:
         index_back_url = f"{index_back_url}?{urlencode(index_back_params)}"
     mobile_read_only_requested = _is_sheetbook_mobile_read_only_request(request)
-    sheetbook_mobile_read_only = mobile_read_only_requested
-    sheetbook_mobile_read_only_message = _sheetbook_mobile_read_only_message()
+    sheetbook_mobile_compact_mode = mobile_read_only_requested
+    sheetbook_mobile_read_only = False
+    sheetbook_mobile_read_only_message = _sheetbook_mobile_compact_message()
     grid_limit = _parse_grid_limit(request.GET.get("grid_limit"), default=50)
     search_query = str(request.GET.get("q") or "").strip()[:80]
     focus_row_id = _parse_positive_int(request.GET.get("focus_row_id"), default=0)
@@ -3157,6 +3321,7 @@ def detail(request, pk):
     sheetbook = _get_owner_sheetbook_or_404(request.user, pk)
     sheetbook_archived_read_only = bool(sheetbook.is_archived)
     if sheetbook_archived_read_only:
+        sheetbook_mobile_compact_mode = False
         sheetbook_mobile_read_only = True
         sheetbook_mobile_read_only_message = _sheetbook_archive_read_only_message()
     _remember_sheetbook_entry_source(request, sheetbook.id, entry_source)
@@ -3179,6 +3344,7 @@ def detail(request, pk):
     preferred_calendar_tab = _get_valid_preferred_calendar_tab(sheetbook, tabs)
     selected_tab = tabs[0] if tabs else None
     schedule_source_tab = None
+    sheetbook_calendar_message_capture_enabled = False
     action_invocations = []
     action_history_has_more = False
     action_history_next_cursor = None
@@ -3190,6 +3356,15 @@ def detail(request, pk):
                 break
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_CALENDAR:
         schedule_source_tab = _resolve_schedule_source_tab(sheetbook, tabs)
+        try:
+            from classcalendar.views import _is_message_capture_enabled_for_user
+        except Exception:
+            sheetbook_calendar_message_capture_enabled = False
+        else:
+            try:
+                sheetbook_calendar_message_capture_enabled = bool(_is_message_capture_enabled_for_user(request.user))
+            except Exception:
+                sheetbook_calendar_message_capture_enabled = False
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_GRID:
         saved_views = _list_saved_views_for_tab(selected_tab)
         if selected_saved_view_id:
@@ -3249,7 +3424,7 @@ def detail(request, pk):
         tab_type=selected_tab.tab_type if selected_tab else "",
         entry_source=entry_source,
     )
-    if mobile_read_only_requested:
+    if mobile_read_only_requested and not sheetbook_archived_read_only:
         _log_sheetbook_metric(
             "sheetbook_mobile_read_mode_opened",
             user_id=request.user.id,
@@ -3297,6 +3472,7 @@ def detail(request, pk):
             "calendar_bridge_is_explicit": bool(
                 selected_tab and preferred_calendar_tab and selected_tab.id == preferred_calendar_tab.id
             ),
+            "sheetbook_calendar_message_capture_enabled": sheetbook_calendar_message_capture_enabled,
             "action_invocations": action_invocations,
             "action_history_has_more": action_history_has_more,
             "action_history_next_cursor": action_history_next_cursor,
@@ -3315,6 +3491,7 @@ def detail(request, pk):
             "show_sample_onboarding": show_sample_onboarding,
             "onboarding_dismiss_url": onboarding_dismiss_url,
             "sheetbook_mobile_read_only": sheetbook_mobile_read_only,
+            "sheetbook_mobile_compact_mode": sheetbook_mobile_compact_mode,
             "sheetbook_mobile_read_only_message": sheetbook_mobile_read_only_message,
             "sheetbook_archived_read_only": sheetbook_archived_read_only,
             "index_back_url": index_back_url,
@@ -3673,17 +3850,14 @@ def create_grid_row(request, pk, tab_pk):
     if blocked:
         return blocked
     if tab.tab_type != SheetTab.TYPE_GRID:
-        return JsonResponse({"ok": False, "error": "그리드 탭에서만 행을 추가할 수 있습니다."}, status=400)
+        return JsonResponse({"ok": False, "error": "표 탭에서만 줄을 추가할 수 있습니다."}, status=400)
 
-    row = SheetRow.objects.create(
-        tab=tab,
-        sort_order=_next_row_order(tab),
-        created_by=request.user,
-        updated_by=request.user,
-    )
+    payload = _parse_request_payload(request)
+    after_row_id = _parse_positive_int(payload.get("after_row_id"), default=0)
+    row = _create_grid_row_at_position(tab, actor=request.user, after_row_id=after_row_id)
     if _is_htmx_request(request):
         return _render_grid_editor_partial(request, tab.sheetbook, tab)
-    return JsonResponse({"ok": True, "row_id": row.id})
+    return JsonResponse({"ok": True, "row_id": row.id, "sort_order": row.sort_order})
 
 
 @login_required
@@ -3701,25 +3875,220 @@ def create_grid_column(request, pk, tab_pk):
     if blocked:
         return blocked
     if tab.tab_type != SheetTab.TYPE_GRID:
-        return JsonResponse({"ok": False, "error": "그리드 탭에서만 열을 추가할 수 있습니다."}, status=400)
+        return JsonResponse({"ok": False, "error": "표 탭에서만 항목을 추가할 수 있습니다."}, status=400)
 
     payload = _parse_request_payload(request)
-    label = (payload.get("label") or "").strip() or "새 열"
+    label = (payload.get("label") or "").strip() or "새 항목"
     column_type = payload.get("column_type") or SheetColumn.TYPE_TEXT
     valid_types = {choice[0] for choice in SheetColumn.TYPE_CHOICES}
     if column_type not in valid_types:
         column_type = SheetColumn.TYPE_TEXT
+    after_column_id = _parse_positive_int(payload.get("after_column_id"), default=0)
 
-    column = SheetColumn.objects.create(
-        tab=tab,
-        key=_build_unique_column_key(tab, label),
+    column = _create_grid_column_at_position(
+        tab,
+        actor=request.user,
         label=label,
         column_type=column_type,
-        sort_order=_next_column_order(tab),
+        after_column_id=after_column_id,
     )
     if _is_htmx_request(request):
         return _render_grid_editor_partial(request, tab.sheetbook, tab)
-    return JsonResponse({"ok": True, "column_id": column.id})
+    return JsonResponse({"ok": True, "column_id": column.id, "sort_order": column.sort_order})
+
+
+@login_required
+@require_POST
+def update_grid_column(request, pk, tab_pk, column_pk):
+    _ensure_sheetbook_enabled(request.user)
+    tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        wants_json=True,
+        sheetbook_id=tab.sheetbook_id,
+        tab_id=tab.id,
+        blocked_action="update_grid_column",
+    )
+    if blocked:
+        return blocked
+    if tab.tab_type != SheetTab.TYPE_GRID:
+        return JsonResponse({"ok": False, "error": "표 탭에서만 항목 이름을 바꿀 수 있습니다."}, status=400)
+
+    column = get_object_or_404(SheetColumn, id=column_pk, tab=tab)
+    payload = _parse_request_payload(request)
+    label = str(payload.get("label") or "").strip()[:120]
+    if not label:
+        return JsonResponse({"ok": False, "error": "항목 이름을 입력해 주세요."}, status=400)
+
+    if column.label != label:
+        column.label = label
+        column.save(update_fields=["label", "updated_at"])
+    return JsonResponse({"ok": True, "column_id": column.id, "label": column.label})
+
+
+@login_required
+@require_POST
+def delete_grid_row(request, pk, tab_pk, row_pk):
+    _ensure_sheetbook_enabled(request.user)
+    tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        wants_json=True,
+        sheetbook_id=tab.sheetbook_id,
+        tab_id=tab.id,
+        blocked_action="delete_grid_row",
+    )
+    if blocked:
+        return blocked
+    if tab.tab_type != SheetTab.TYPE_GRID:
+        return JsonResponse({"ok": False, "error": "표 탭에서만 줄을 삭제할 수 있습니다."}, status=400)
+
+    row = get_object_or_404(SheetRow.objects.prefetch_related("cells__column"), id=row_pk, tab=tab)
+    payload = _parse_request_payload(request)
+    confirm = _parse_bool_or_none(payload.get("confirm")) is True
+    has_values = _row_has_nonempty_cells(row)
+    if has_values and not confirm:
+        return JsonResponse(
+            {
+                "ok": False,
+                "requires_confirmation": True,
+                "error": "값이 있는 줄입니다. 정말 삭제할까요?",
+                "row_id": row.id,
+            },
+            status=409,
+        )
+
+    deleted_row = {
+        "sort_order": row.sort_order,
+        "cells": [
+            {"column_id": cell.column_id, "value": _serialize_cell_value(cell, cell.column)}
+            for cell in row.cells.all().order_by("column__sort_order", "column__id")
+        ],
+    }
+    row.delete()
+    _normalize_row_sort_orders(tab)
+    return JsonResponse({"ok": True, "row_id": row_pk, "deleted_row": deleted_row})
+
+
+@login_required
+@require_POST
+def restore_grid_row(request, pk, tab_pk):
+    _ensure_sheetbook_enabled(request.user)
+    tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        wants_json=True,
+        sheetbook_id=tab.sheetbook_id,
+        tab_id=tab.id,
+        blocked_action="restore_grid_row",
+    )
+    if blocked:
+        return blocked
+    payload = _parse_request_payload(request)
+    deleted_row = payload.get("deleted_row") or {}
+    sort_order = _parse_positive_int(deleted_row.get("sort_order"), default=_next_row_order(tab))
+    row = _create_grid_row_at_position(tab, actor=request.user, sort_order=sort_order)
+    for cell_payload in deleted_row.get("cells") or []:
+        column_id = _parse_positive_int(cell_payload.get("column_id"), default=0)
+        if not column_id:
+            continue
+        column = tab.columns.filter(id=column_id).first()
+        if not column:
+            continue
+        cell = SheetCell(row=row, column=column)
+        ok, _ = _apply_cell_value(cell, column, cell_payload.get("value"))
+        if ok:
+            cell.save()
+    _normalize_row_sort_orders(tab)
+    return JsonResponse({"ok": True, "row_id": row.id, "sort_order": row.sort_order})
+
+
+@login_required
+@require_POST
+def delete_grid_column(request, pk, tab_pk, column_pk):
+    _ensure_sheetbook_enabled(request.user)
+    tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        wants_json=True,
+        sheetbook_id=tab.sheetbook_id,
+        tab_id=tab.id,
+        blocked_action="delete_grid_column",
+    )
+    if blocked:
+        return blocked
+    if tab.tab_type != SheetTab.TYPE_GRID:
+        return JsonResponse({"ok": False, "error": "표 탭에서만 항목을 삭제할 수 있습니다."}, status=400)
+
+    column = get_object_or_404(SheetColumn.objects.prefetch_related("cells"), id=column_pk, tab=tab)
+    payload = _parse_request_payload(request)
+    confirm = _parse_bool_or_none(payload.get("confirm")) is True
+    non_empty_cell_count = _column_nonempty_cell_count(column)
+    if non_empty_cell_count and not confirm:
+        return JsonResponse(
+            {
+                "ok": False,
+                "requires_confirmation": True,
+                "error": "값이 있는 항목입니다. 정말 삭제할까요?",
+                "column_id": column.id,
+                "non_empty_cell_count": non_empty_cell_count,
+            },
+            status=409,
+        )
+
+    deleted_column = {
+        "label": column.label,
+        "column_type": column.column_type,
+        "sort_order": column.sort_order,
+        "cells": [
+            {"row_id": cell.row_id, "value": _serialize_cell_value(cell, column)}
+            for cell in column.cells.all().order_by("row__sort_order", "row__id")
+        ],
+    }
+    column.delete()
+    _normalize_column_sort_orders(tab)
+    return JsonResponse({"ok": True, "column_id": column_pk, "deleted_column": deleted_column})
+
+
+@login_required
+@require_POST
+def restore_grid_column(request, pk, tab_pk):
+    _ensure_sheetbook_enabled(request.user)
+    tab = _get_owner_tab_or_404(request.user, pk, tab_pk)
+    blocked = _maybe_block_mobile_read_only_edit(
+        request,
+        wants_json=True,
+        sheetbook_id=tab.sheetbook_id,
+        tab_id=tab.id,
+        blocked_action="restore_grid_column",
+    )
+    if blocked:
+        return blocked
+    payload = _parse_request_payload(request)
+    deleted_column = payload.get("deleted_column") or {}
+    label = str(deleted_column.get("label") or "").strip() or "새 항목"
+    column_type = deleted_column.get("column_type") or SheetColumn.TYPE_TEXT
+    sort_order = _parse_positive_int(deleted_column.get("sort_order"), default=_next_column_order(tab))
+    column = _create_grid_column_at_position(
+        tab,
+        actor=request.user,
+        label=label,
+        column_type=column_type,
+        sort_order=sort_order,
+    )
+    for cell_payload in deleted_column.get("cells") or []:
+        row_id = _parse_positive_int(cell_payload.get("row_id"), default=0)
+        if not row_id:
+            continue
+        row = tab.rows.filter(id=row_id).first()
+        if not row:
+            continue
+        cell = SheetCell(row=row, column=column)
+        ok, _ = _apply_cell_value(cell, column, cell_payload.get("value"))
+        if ok:
+            cell.save()
+    _normalize_column_sort_orders(tab)
+    return JsonResponse({"ok": True, "column_id": column.id, "label": column.label})
 
 
 def _saved_view_redirect(request, tab, *, view_id=0, view_filter="", sort_col=0, sort_dir=SavedView.SORT_ASC):
@@ -4213,6 +4582,7 @@ def update_cell(request, pk, tab_pk):
     cell.save()
     row.updated_by = request.user
     row.save(update_fields=["updated_by", "updated_at"])
+    _maybe_auto_extend_grid_rows(tab, touched_row_sort_order=row.sort_order, actor=request.user)
 
     return JsonResponse(
         {
@@ -4393,6 +4763,8 @@ def paste_cells(request, pk, tab_pk):
         start_col_index=start_col_index,
         actor=request.user,
     )
+    touched_row_sort_order = start_row_index + len(matrix)
+    _maybe_auto_extend_grid_rows(tab, touched_row_sort_order=touched_row_sort_order, actor=request.user)
 
     return JsonResponse(
         {
@@ -4986,9 +5358,9 @@ def update_calendar_link_settings(request, pk, tab_pk):
             preferred_calendar_tab_id=sheetbook.preferred_calendar_tab_id or None,
             prefer_calendar_entry=prefer_calendar_entry,
         )
-        messages.success(request, "학급 달력 연결을 저장했어요.")
+        messages.success(request, "달력 연결을 저장했어요.")
     else:
-        messages.success(request, "학급 달력 연결이 이미 지금 설정으로 저장돼 있어요.")
+        messages.success(request, "달력 연결이 이미 지금 설정으로 저장돼 있어요.")
 
     return _redirect_sheetbook_tab_detail(sheetbook.id, calendar_tab.id, entry_source=entry_source)
 
@@ -5494,8 +5866,8 @@ def metrics_dashboard(request):
         "sheetbook_archived": "교무수첩 아카이브",
         "sheetbook_unarchived": "교무수첩 아카이브 해제",
         "sheetbook_archive_bulk_updated": "교무수첩 다건 아카이브/복구",
-        "sheetbook_mobile_read_mode_opened": "휴대폰 읽기 모드 진입",
-        "sheetbook_mobile_read_mode_blocked": "휴대폰 읽기 모드 편집 차단",
+        "sheetbook_mobile_read_mode_opened": "휴대폰 간단 편집 진입",
+        "sheetbook_mobile_read_mode_blocked": "휴대폰 제한 편집에서 후속 작업 차단",
         "sheetbook_archive_read_mode_opened": "아카이브 읽기 모드 진입",
         "sheetbook_archive_read_mode_blocked": "아카이브 읽기 모드 편집 차단",
         "action_execute_requested": "기능 실행 시작",

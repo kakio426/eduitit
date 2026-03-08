@@ -22,7 +22,12 @@ urlpatterns = [
     path("<int:pk>/tabs/<int:tab_pk>/move-up/", views.move_tab_up, name="move_tab_up"),
     path("<int:pk>/tabs/<int:tab_pk>/move-down/", views.move_tab_down, name="move_tab_down"),
     path("<int:pk>/tabs/<int:tab_pk>/rows/create/", views.create_grid_row, name="create_grid_row"),
+    path("<int:pk>/tabs/<int:tab_pk>/rows/<int:row_pk>/delete/", views.delete_grid_row, name="delete_grid_row"),
+    path("<int:pk>/tabs/<int:tab_pk>/rows/restore/", views.restore_grid_row, name="restore_grid_row"),
     path("<int:pk>/tabs/<int:tab_pk>/columns/create/", views.create_grid_column, name="create_grid_column"),
+    path("<int:pk>/tabs/<int:tab_pk>/columns/<int:column_pk>/update/", views.update_grid_column, name="update_grid_column"),
+    path("<int:pk>/tabs/<int:tab_pk>/columns/<int:column_pk>/delete/", views.delete_grid_column, name="delete_grid_column"),
+    path("<int:pk>/tabs/<int:tab_pk>/columns/restore/", views.restore_grid_column, name="restore_grid_column"),
     path("<int:pk>/tabs/<int:tab_pk>/views/create/", views.create_saved_view, name="create_saved_view"),
     path(
         "<int:pk>/tabs/<int:tab_pk>/views/<int:view_pk>/delete/",

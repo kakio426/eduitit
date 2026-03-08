@@ -87,6 +87,7 @@ def _build_command_plan(
         ["python", "scripts/run_sheetbook_allowlist_smoke.py"],
         ["python", "scripts/run_sheetbook_consent_smoke.py"],
         ["python", "scripts/run_sheetbook_grid_smoke.py", "--port", str(int(grid_port))],
+        ["python", "scripts/run_sheetbook_calendar_embed_smoke.py", "--port", str(int(grid_port))],
         _build_bundle_command(
             days=int(days),
             due_date=str(due_date),
@@ -110,6 +111,7 @@ def _build_snapshot_summary(root: Path) -> dict[str, Any]:
     allowlist = _load_json(root / "docs/handoff/smoke_sheetbook_allowlist_latest.json")
     consent = _load_json(root / "docs/handoff/smoke_sheetbook_consent_recipients_latest.json")
     grid = _load_json(root / "docs/handoff/smoke_sheetbook_grid_1000_latest.json")
+    calendar_embed = _load_json(root / "docs/handoff/smoke_sheetbook_calendar_embed_latest.json")
     daily = _load_json(root / "docs/handoff/sheetbook_daily_start_bundle_latest.json")
     gap = _load_json(root / "docs/handoff/sheetbook_sample_gap_summary_latest.json")
     readiness = _load_json(root / "docs/handoff/sheetbook_release_readiness_latest.json")
@@ -118,6 +120,7 @@ def _build_snapshot_summary(root: Path) -> dict[str, Any]:
     allowlist_pass = bool((allowlist.get("evaluation") or {}).get("pass"))
     consent_pass = bool((consent.get("evaluation") or {}).get("pass"))
     grid_pass = bool((grid.get("evaluation") or {}).get("pass"))
+    calendar_embed_pass = bool((calendar_embed.get("evaluation") or {}).get("pass"))
     daily_overall = str(daily.get("overall") or "").upper()
     daily_decision = str(daily.get("decision") or "").upper()
     daily_readiness = str(daily.get("readiness_status") or "").upper()
@@ -141,6 +144,10 @@ def _build_snapshot_summary(root: Path) -> dict[str, Any]:
             "desktop_warnings": list((grid.get("evaluation") or {}).get("desktop_warnings") or []),
             "tablet_warnings": list((grid.get("evaluation") or {}).get("tablet_warnings") or []),
         },
+        "calendar_embed": {
+            "started_at": str(calendar_embed.get("started_at") or ""),
+            "pass": calendar_embed_pass,
+        },
         "daily": {
             "overall": daily_overall,
             "decision": daily_decision,
@@ -159,7 +166,7 @@ def _build_snapshot_summary(root: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run sheetbook smoke sync cycle (allowlist/consent/grid + bundle/gap/check)."
+        description="Run sheetbook smoke sync cycle (allowlist/consent/grid/calendar + bundle/gap/check)."
     )
     parser.add_argument("--days", type=int, default=14, help="집계 기간(일). 기본 14")
     parser.add_argument(
@@ -216,6 +223,7 @@ def main() -> int:
         bool((snapshot.get("allowlist") or {}).get("pass")),
         bool((snapshot.get("consent") or {}).get("pass")),
         bool((snapshot.get("grid") or {}).get("pass")),
+        bool((snapshot.get("calendar_embed") or {}).get("pass")),
         str((snapshot.get("daily") or {}).get("overall") or "").upper() == "GO",
         str((snapshot.get("daily") or {}).get("decision") or "").upper() == "GO",
         str((snapshot.get("daily") or {}).get("readiness_status") or "").upper() == "PASS",

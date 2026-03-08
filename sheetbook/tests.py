@@ -1297,6 +1297,82 @@ class SheetbookGridApiTests(TestCase):
         self.assertTrue(self.tab.columns.filter(label="비고").exists())
 
     @override_settings(SHEETBOOK_ENABLED=True)
+    def test_create_tab_seeds_thirty_rows_for_grid_tab(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("sheetbook:create_tab", kwargs={"pk": self.sheetbook.pk}),
+            data={"name": "학생 명단", "tab_type": SheetTab.TYPE_GRID},
+        )
+        self.assertEqual(response.status_code, 302)
+        created_tab = SheetTab.objects.get(sheetbook=self.sheetbook, name="학생 명단")
+        self.assertEqual(created_tab.rows.count(), 30)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_update_cell_near_tail_auto_appends_twenty_rows(self):
+        self.client.force_login(self.user)
+        auto_tab = SheetTab.objects.create(sheetbook=self.sheetbook, name="자동 확장", tab_type=SheetTab.TYPE_GRID, sort_order=3)
+        auto_col = SheetColumn.objects.create(tab=auto_tab, key="memo", label="메모", column_type=SheetColumn.TYPE_TEXT, sort_order=1)
+        for index in range(1, 31):
+            SheetRow.objects.create(tab=auto_tab, sort_order=index, created_by=self.user, updated_by=self.user)
+        target_row = auto_tab.rows.order_by("sort_order")[27]
+        response = self.client.post(
+            reverse("sheetbook:update_cell", kwargs={"pk": self.sheetbook.pk, "tab_pk": auto_tab.pk}),
+            data={"row_id": target_row.id, "column_id": auto_col.id, "value": "마감 임박"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(auto_tab.rows.count(), 50)
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_update_delete_and_restore_grid_structure_endpoints(self):
+        self.client.force_login(self.user)
+        rename_response = self.client.post(
+            reverse("sheetbook:update_grid_column", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk, "column_pk": self.col_title.pk}),
+            data=json.dumps({"label": "학생 이름"}),
+            content_type="application/json",
+        )
+        self.assertEqual(rename_response.status_code, 200)
+        self.col_title.refresh_from_db()
+        self.assertEqual(self.col_title.label, "학생 이름")
+
+        delete_row_response = self.client.post(
+            reverse("sheetbook:delete_grid_row", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk, "row_pk": self.row.pk}),
+            data=json.dumps({"confirm": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(delete_row_response.status_code, 200)
+        deleted_row = delete_row_response.json()["deleted_row"]
+        self.assertFalse(self.tab.rows.filter(pk=self.row.pk).exists())
+
+        restore_row_response = self.client.post(
+            reverse("sheetbook:restore_grid_row", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
+            data=json.dumps({"deleted_row": deleted_row}),
+            content_type="application/json",
+        )
+        self.assertEqual(restore_row_response.status_code, 200)
+        restored_row_id = restore_row_response.json()["row_id"]
+        restored_row = SheetRow.objects.get(pk=restored_row_id)
+        self.assertEqual(SheetCell.objects.get(row=restored_row, column=self.col_title).value_text, "생태체험")
+
+        delete_col_response = self.client.post(
+            reverse("sheetbook:delete_grid_column", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk, "column_pk": self.col_cost.pk}),
+            data=json.dumps({"confirm": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(delete_col_response.status_code, 200)
+        deleted_column = delete_col_response.json()["deleted_column"]
+        self.assertFalse(self.tab.columns.filter(pk=self.col_cost.pk).exists())
+
+        restore_col_response = self.client.post(
+            reverse("sheetbook:restore_grid_column", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
+            data=json.dumps({"deleted_column": deleted_column}),
+            content_type="application/json",
+        )
+        self.assertEqual(restore_col_response.status_code, 200)
+        restored_column_id = restore_col_response.json()["column_id"]
+        restored_column = SheetColumn.objects.get(pk=restored_column_id)
+        self.assertEqual(restored_column.label, "비용")
+
+    @override_settings(SHEETBOOK_ENABLED=True)
     def test_paste_cells_bulk_updates_and_creates_rows(self):
         self.client.force_login(self.user)
         # Ensure we start with one row.
@@ -1744,7 +1820,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertContains(response, "touchmove")
 
     @override_settings(SHEETBOOK_ENABLED=True)
-    def test_detail_shows_mobile_read_only_banner_for_phone_user_agent(self):
+    def test_detail_shows_mobile_compact_banner_for_phone_user_agent(self):
         self.client.force_login(self.user)
         response = self.client.get(
             reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),
@@ -1755,12 +1831,12 @@ class SheetbookGridApiTests(TestCase):
             ),
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["sheetbook_mobile_read_only"])
-        self.assertContains(response, "휴대폰 읽기 모드")
-        self.assertContains(response, "지금 할 수 있는 일")
-        self.assertContains(response, "태블릿이나 PC에서 이어서 할 일")
-        self.assertContains(response, "선택한 칸 범위 확인")
-        self.assertContains(response, 'data-mobile-read-only="1"')
+        self.assertFalse(response.context["sheetbook_mobile_read_only"])
+        self.assertTrue(response.context["sheetbook_mobile_compact_mode"])
+        self.assertContains(response, "휴대폰 간단 편집")
+        self.assertContains(response, "칸 1개씩 수정하고 바로 저장하기")
+        self.assertContains(response, 'data-mobile-read-only="0"')
+        self.assertContains(response, 'data-mobile-compact-mode="1"')
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_calendar_tab_shows_mobile_next_step_guidance_and_disables_sync_for_phone_user_agent(self):
@@ -1775,10 +1851,12 @@ class SheetbookGridApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["sheetbook_mobile_read_only"])
-        self.assertContains(response, "휴대폰에서는 일정 확인과 직접 일정 넣기는 가능해요.")
-        self.assertContains(response, "연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.")
+        self.assertFalse(response.context["sheetbook_mobile_read_only"])
+        self.assertTrue(response.context["sheetbook_mobile_compact_mode"])
+        self.assertContains(response, "휴대폰에서는 달력 확인과 일정 1건 추가는 가능해요.")
+        self.assertContains(response, "표 반영과 연결 설정 변경은 태블릿이나 PC에서 진행해 주세요.")
         self.assertContains(response, 'id="sheetbook-calendar-sync-btn"')
+        self.assertContains(response, 'id="sheetbook-calendar-create-btn"')
         self.assertContains(response, "disabled aria-disabled=\"true\"")
 
     @override_settings(SHEETBOOK_ENABLED=True)
@@ -1796,6 +1874,36 @@ class SheetbookGridApiTests(TestCase):
         self.assertFalse(response.context["sheetbook_mobile_read_only"])
         self.assertContains(response, 'data-mobile-read-only="0"')
 
+    @override_settings(
+        SHEETBOOK_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="sheetbook_api_owner",
+    )
+    def test_calendar_tab_surfaces_message_capture_button_for_allowlisted_teacher(self):
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),
+            data={"tab": self.calendar_tab.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["sheetbook_calendar_message_capture_enabled"])
+        self.assertContains(response, 'id="sheetbook-calendar-message-btn"')
+        self.assertContains(response, "메시지 붙여넣어 일정 만들기")
+        self.assertContains(response, "돌아올 탭")
+
+    @override_settings(SHEETBOOK_ENABLED=True)
+    def test_calendar_tab_hides_message_capture_button_for_non_allowlisted_teacher(self):
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),
+            data={"tab": self.calendar_tab.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["sheetbook_calendar_message_capture_enabled"])
+        self.assertNotContains(response, 'id="sheetbook-calendar-message-btn"')
+
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_detail_includes_selection_recommendation_parser_script(self):
         self.client.force_login(self.user)
@@ -1808,7 +1916,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertContains(response, "recommendation_primary")
 
     @override_settings(SHEETBOOK_ENABLED=True)
-    def test_update_cell_blocks_phone_user_agent_with_403(self):
+    def test_update_cell_allows_phone_user_agent_in_compact_mode(self):
         self.client.force_login(self.user)
         response = self.client.post(
             reverse("sheetbook:update_cell", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
@@ -1822,17 +1930,12 @@ class SheetbookGridApiTests(TestCase):
                 "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
             ),
         )
-        self.assertEqual(response.status_code, 403)
-        payload = response.json()
-        self.assertFalse(payload["ok"])
-        self.assertTrue(payload["mobile_read_only"])
-        self.assertIn("휴대폰", payload["error"])
-        self.assertIn("태블릿이나 PC", payload["error"])
+        self.assertEqual(response.status_code, 200)
         title_cell = SheetCell.objects.get(row=self.row, column=self.col_title)
-        self.assertEqual(title_cell.value_text, "생태체험")
+        self.assertEqual(title_cell.value_text, "휴대폰 수정 시도")
 
     @override_settings(SHEETBOOK_ENABLED=True)
-    def test_create_grid_row_blocks_phone_and_allows_tablet(self):
+    def test_create_grid_row_allows_phone_and_tablet(self):
         self.client.force_login(self.user)
         phone_response = self.client.post(
             reverse("sheetbook:create_grid_row", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
@@ -1841,8 +1944,9 @@ class SheetbookGridApiTests(TestCase):
                 "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
             ),
         )
-        self.assertEqual(phone_response.status_code, 403)
-        self.assertEqual(self.tab.rows.count(), 1)
+        self.assertEqual(phone_response.status_code, 200)
+        self.assertTrue(phone_response.json()["ok"])
+        self.assertEqual(self.tab.rows.count(), 2)
 
         tablet_response = self.client.post(
             reverse("sheetbook:create_grid_row", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
@@ -1853,7 +1957,7 @@ class SheetbookGridApiTests(TestCase):
         )
         self.assertEqual(tablet_response.status_code, 200)
         self.assertTrue(tablet_response.json()["ok"])
-        self.assertEqual(self.tab.rows.count(), 2)
+        self.assertEqual(self.tab.rows.count(), 3)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_saved_view_endpoints_create_and_manage(self):
@@ -5789,7 +5893,7 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
             clear_output="docs/handoff/clear.json",
         )
 
-        self.assertEqual(len(plan), 6)
+        self.assertEqual(len(plan), 7)
         self.assertEqual(plan[0][0:2], ["python", "scripts/run_sheetbook_collect_pilot_samples.py"])
         self.assertIn("--clear-before", plan[0])
         self.assertIn("--strict-inputs", plan[0])
@@ -5857,19 +5961,23 @@ class SheetbookSmokeSyncCycleScriptTests(SimpleTestCase):
             with_check=True,
         )
 
-        self.assertEqual(len(plan), 6)
+        self.assertEqual(len(plan), 7)
         self.assertEqual(plan[0], ["python", "scripts/run_sheetbook_allowlist_smoke.py"])
         self.assertEqual(plan[1], ["python", "scripts/run_sheetbook_consent_smoke.py"])
         self.assertEqual(
             plan[2],
             ["python", "scripts/run_sheetbook_grid_smoke.py", "--port", "8015"],
         )
-        self.assertEqual(plan[3][0:2], ["python", "scripts/run_sheetbook_daily_start_bundle.py"])
-        self.assertIn("--allow-pilot-hold-for-beta", plan[3])
-        self.assertIn("--due-date", plan[3])
-        self.assertIn("2026-03-05", plan[3])
         self.assertEqual(
-            plan[4],
+            plan[3],
+            ["python", "scripts/run_sheetbook_calendar_embed_smoke.py", "--port", "8015"],
+        )
+        self.assertEqual(plan[4][0:2], ["python", "scripts/run_sheetbook_daily_start_bundle.py"])
+        self.assertIn("--allow-pilot-hold-for-beta", plan[4])
+        self.assertIn("--due-date", plan[4])
+        self.assertIn("2026-03-05", plan[4])
+        self.assertEqual(
+            plan[5],
             [
                 "python",
                 "scripts/run_sheetbook_sample_gap_summary.py",
@@ -5879,7 +5987,7 @@ class SheetbookSmokeSyncCycleScriptTests(SimpleTestCase):
                 "2026-03-05",
             ],
         )
-        self.assertEqual(plan[5], ["python", "manage.py", "check"])
+        self.assertEqual(plan[6], ["python", "manage.py", "check"])
 
     def test_build_smoke_sync_cycle_plan_can_skip_manage_check(self):
         plan = _build_smoke_sync_cycle_command_plan(
@@ -5890,8 +5998,12 @@ class SheetbookSmokeSyncCycleScriptTests(SimpleTestCase):
             with_check=False,
         )
 
-        self.assertEqual(len(plan), 5)
-        self.assertNotIn("--allow-pilot-hold-for-beta", plan[3])
+        self.assertEqual(len(plan), 6)
+        self.assertEqual(
+            plan[3],
+            ["python", "scripts/run_sheetbook_calendar_embed_smoke.py", "--port", "8014"],
+        )
+        self.assertNotIn("--allow-pilot-hold-for-beta", plan[4])
         self.assertEqual(plan[2], ["python", "scripts/run_sheetbook_grid_smoke.py", "--port", "8014"])
         self.assertEqual(plan[-1][0:2], ["python", "scripts/run_sheetbook_sample_gap_summary.py"])
 

@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from classcalendar.models import CalendarEvent, CalendarEventAttachment, CalendarMessageCapture
 from core.models import UserProfile
+from sheetbook.models import SheetTab, Sheetbook
 
 User = get_user_model()
 
@@ -260,6 +261,52 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(attachments[0].get("original_name"), "memo.txt")
         self.assertTrue(attachments[0].get("url"))
 
+    def test_api_events_expose_sheetbook_source_metadata_for_message_capture_commit(self):
+        sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")
+        calendar_tab = SheetTab.objects.create(
+            sheetbook=sheetbook,
+            name="달력",
+            tab_type=SheetTab.TYPE_CALENDAR,
+            sort_order=1,
+        )
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "2026-03-18 09:00-10:00 학급 회의",
+                "idempotency_key": "capture-test-key-source-meta",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        capture_id = parse_response.json()["capture_id"]
+
+        commit_response = self._commit(
+            capture_id,
+            {
+                "title": "학급 회의",
+                "todo_summary": "회의 준비",
+                "start_time": "2026-03-18T09:00",
+                "end_time": "2026-03-18T10:00",
+                "is_all_day": False,
+                "color": "indigo",
+                "selected_attachment_ids": [],
+                "confirm_low_confidence": True,
+                "source_sheetbook_id": sheetbook.id,
+                "source_tab_id": calendar_tab.id,
+            },
+        )
+        self.assertEqual(commit_response.status_code, 201)
+        event_id = commit_response.json()["event"]["id"]
+
+        events_response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(events_response.status_code, 200)
+        events = events_response.json().get("events", [])
+        event_payload = next(item for item in events if item.get("id") == event_id)
+        self.assertEqual(event_payload.get("source_sheetbook_id"), sheetbook.id)
+        self.assertEqual(event_payload.get("source_sheetbook_title"), sheetbook.title)
+        self.assertEqual(event_payload.get("source_tab_id"), calendar_tab.id)
+        self.assertEqual(event_payload.get("source_tab_name"), calendar_tab.name)
+        self.assertIn(reverse("sheetbook:detail", kwargs={"pk": sheetbook.pk}), event_payload.get("source_detail_url") or "")
+
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)
     def test_parse_returns_feature_disabled_when_flag_off(self):
         response = self.client.post(
@@ -269,13 +316,13 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json().get("code"), "feature_disabled")
 
-    def test_legacy_main_shows_message_capture_entry_for_allowlist_user(self):
-        response = self.client.get(reverse("classcalendar:legacy_main"))
-        self.assertEqual(response.status_code, 200)
+    def test_legacy_main_redirects_and_main_shows_message_capture_entry_for_allowlist_user(self):
+        response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
+        self.assertRedirects(response, reverse("classcalendar:main"))
         self.assertContains(response, '@click.prevent="openMessageCaptureModal($event)"')
         self.assertContains(response, "메시지 바로 등록")
 
-    def test_legacy_main_hides_message_capture_entry_for_non_allowlist_user(self):
+    def test_legacy_main_redirects_and_main_hides_message_capture_entry_for_non_allowlist_user(self):
         non_allowlist_user = User.objects.create_user(
             username="non_allowlist_teacher",
             password="pw12345",
@@ -288,6 +335,6 @@ class MessageCaptureApiTests(TestCase):
 
         client = Client()
         client.force_login(non_allowlist_user)
-        response = client.get(reverse("classcalendar:legacy_main"))
-        self.assertEqual(response.status_code, 200)
+        response = client.get(reverse("classcalendar:legacy_main"), follow=True)
+        self.assertRedirects(response, reverse("classcalendar:main"))
         self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
