@@ -949,6 +949,17 @@ def consent_detail(request, request_id):
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
             "source_file_available": source_file_available,
+            "document_preview_url": (
+                reverse("consent:document_source", kwargs={"request_id": consent_request.request_id})
+                if source_file_available
+                else ""
+            ),
+            "document_file_type": consent_request.document.file_type,
+            "document_file_name": (
+                consent_request.document_name_snapshot
+                or (consent_request.document.original_file.name or "").split("/")[-1]
+            ),
+            "document_file_size": consent_request.document_size_snapshot or "",
             "recipient_stats": recipient_stats,
             "links_released": links_released,
             "evidence_warning_counts": {
@@ -1352,6 +1363,10 @@ def consent_sign(request, token):
             "is_expired": False,
             "document_evidence": evidence,
             "file_type": recipient.request.document.file_type,
+            "document_preview_url": reverse("consent:public_document_inline", kwargs={"token": recipient.access_token}),
+            "document_download_url": reverse("consent:public_document", kwargs={"token": recipient.access_token}),
+            "document_file_name": evidence.get("document_name") or recipient.request.document.title,
+            "document_file_size": evidence.get("document_size") or "",
             "requires_phone_last4": bool(recipient.phone_last4),
         },
     )

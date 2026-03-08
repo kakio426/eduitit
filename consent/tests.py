@@ -431,6 +431,14 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "안내문+링크 복사")
         self.assertContains(response, "data:image/png;base64,")
 
+    def test_detail_shows_inline_document_preview_panel(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-consent-document-preview")
+        self.assertContains(response, reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id}))
+
     def test_detail_hides_links_before_send_start(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
@@ -582,6 +590,13 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "교무수첩 동의서")
         self.assertContains(response, "교무수첩에서 가져온 안내문입니다.")
         self.assertContains(response, 'name="sheetbook_seed_token"')
+
+    def test_create_step1_shows_upload_preview_shell(self):
+        self.client.login(username="teacher", password="pw123456")
+        response = self.client.get(reverse("consent:create_step1"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-consent-upload-preview")
+        self.assertContains(response, "consent/pdf_preview.js")
 
     def test_create_step1_seed_auto_adds_recipients(self):
         self.client.login(username="teacher", password="pw123456")
@@ -825,6 +840,8 @@ class ConsentEvidenceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SHA-256")
         self.assertContains(response, "abc123")
+        self.assertContains(response, "data-consent-document-preview")
+        self.assertContains(response, "consent/pdf_preview.js")
 
     def test_sign_audit_log_contains_document_evidence(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT

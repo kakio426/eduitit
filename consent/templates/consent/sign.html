@@ -18,7 +18,6 @@
 <main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-2xl mx-auto">
 
-    <!-- 헤더 카드 -->
     <div class="clay-card p-5 mb-4">
       <div class="flex items-start justify-between gap-2">
         <div>
@@ -28,7 +27,7 @@
           <p class="text-xs text-gray-500 mt-1">링크 만료: {{ expires_at|date:"Y-m-d H:i" }}</p>
           {% endif %}
         </div>
-        <a href="{% url 'consent:public_document' token=recipient.access_token %}" target="_blank" rel="noopener noreferrer"
+        <a href="{{ document_download_url }}" target="_blank" rel="noopener noreferrer"
            class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg shadow-clay-inner bg-bg-soft text-gray-600">
           ↓ 다운로드
         </a>
@@ -49,13 +48,12 @@
       {% endif %}
     </div>
 
-    <!-- 뷰어 카드 -->
     {% if file_type == "pdf" or file_type == "image" %}
     <div class="clay-card p-4 mb-4" x-data="{ open: true }">
-      <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center justify-between mb-2 gap-2">
         <span class="text-sm font-semibold text-gray-700">첨부 문서 미리보기</span>
         <div class="flex items-center gap-2">
-          <a href="{% url 'consent:public_document' token=recipient.access_token %}"
+          <a href="{{ document_download_url }}"
              target="_blank" rel="noopener noreferrer"
              class="text-xs px-2 py-1 rounded-lg shadow-clay-inner bg-bg-soft text-gray-600">
             ↓ 다운로드
@@ -67,32 +65,34 @@
         </div>
       </div>
       <div x-show="open" x-transition>
-        {% if file_type == "pdf" %}
-        <div id="pdfViewerContainer"
-             class="w-full overflow-auto rounded-xl bg-white border border-gray-200"
-             style="max-height: 480px;">
-          <canvas id="pdfViewerCanvas" class="block mx-auto"></canvas>
+        <div
+          class="w-full"
+          data-consent-document-preview
+          data-source-url="{{ document_preview_url }}"
+          data-file-type="{{ file_type }}"
+          data-file-name="{{ document_file_name }}"
+          data-file-size="{{ document_file_size }}"
+          data-max-width="760"
+        >
+          <div class="w-full overflow-auto rounded-xl bg-white border border-gray-200 min-h-[240px] p-3 flex items-center justify-center">
+            <p data-preview-placeholder class="text-sm text-gray-400 text-center leading-6">문서를 준비하는 중입니다.</p>
+            <canvas data-preview-canvas class="hidden mx-auto"></canvas>
+            <img data-preview-image class="hidden mx-auto max-w-full rounded-xl" alt="첨부 문서 미리보기">
+          </div>
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <p data-preview-status class="text-xs text-gray-500">same-origin으로 첫 페이지를 불러오는 중입니다.</p>
+            <p data-preview-meta class="text-[11px] text-gray-400"></p>
+          </div>
         </div>
-        <p id="pdfViewerStatus" class="text-xs text-gray-500 mt-1 text-center"></p>
-        {% elif file_type == "image" %}
-        <div class="w-full overflow-auto rounded-xl bg-white border border-gray-200"
-             style="max-height: 480px;">
-          <img src="{% url 'consent:public_document_inline' token=recipient.access_token %}"
-               alt="{{ document_evidence.document_name|default:'첨부 문서' }}"
-               class="block mx-auto max-w-full" loading="lazy">
-        </div>
-        {% endif %}
       </div>
     </div>
     {% endif %}
 
-    <!-- 법적 고지 -->
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">
       <p class="font-semibold mb-1">법적 고지</p>
       <p class="whitespace-pre-line">{{ consent_request.legal_notice }}</p>
     </div>
 
-    <!-- 서명 폼 -->
     <form method="post" id="signForm" class="clay-card p-5 space-y-4">
       {% csrf_token %}
       <div>
@@ -145,77 +145,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
 <script>
-{% if file_type == "pdf" %}
-// PDF.js 동적 로드 (local static 우선, 실패 시 CDN fallback)
-(function() {
-  const inlineUrl = "{% url 'consent:public_document_inline' token=recipient.access_token %}";
-  const statusEl = document.getElementById("pdfViewerStatus");
-  const pdfCanvas = document.getElementById("pdfViewerCanvas");
-  if (!pdfCanvas) return;
-
-  const providers = [
-    {
-      moduleUrl: "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}",
-      workerUrl: "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}",
-    },
-    {
-      moduleUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs",
-      workerUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
-    },
-    {
-      moduleUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs",
-      workerUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
-    },
-  ];
-
-  async function renderFirstPage(pdfjsLib) {
-    const pdf = await pdfjsLib.getDocument(inlineUrl).promise;
-    const page = await pdf.getPage(1);
-    const container = pdfCanvas.parentElement;
-    const maxWidth = Math.min(container.clientWidth || 600, 800);
-    const base = page.getViewport({ scale: 1 });
-    const scale = Math.max(0.6, maxWidth / base.width);
-    const viewport = page.getViewport({ scale });
-    pdfCanvas.width = viewport.width;
-    pdfCanvas.height = viewport.height;
-    await page.render({
-      canvasContext: pdfCanvas.getContext("2d"),
-      viewport,
-    }).promise;
-    if (statusEl) statusEl.textContent = "1페이지 표시 중 (전체는 다운로드 버튼 이용)";
-  }
-
-  async function loadAndRender() {
-    for (const provider of providers) {
-      try {
-        const mod = await import(provider.moduleUrl);
-        mod.GlobalWorkerOptions.workerSrc = provider.workerUrl;
-        await renderFirstPage(mod);
-        return true;
-      } catch (error) {
-        console.warn("sign-pdf-provider-failed", provider.moduleUrl, error);
-      }
-    }
-    return false;
-  }
-
-  loadAndRender()
-    .then(function(ok) {
-      if (!ok && statusEl) {
-        statusEl.textContent = "미리보기를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
-      }
-    })
-    .catch(function(error) {
-      console.warn("sign-pdf-render-failed", error);
-      if (statusEl) {
-        statusEl.textContent = "뷰어를 불러오지 못했습니다. 다운로드 버튼을 이용해 주세요.";
-      }
-    });
-})();
-{% endif %}
-
-// 캔버스 서명 JS
 const canvas = document.getElementById("signaturePad");
 const clearBtn = document.getElementById("clearBtn");
 const hidden = document.getElementById("id_signature_data");
@@ -275,7 +206,6 @@ window.addEventListener("touchend", end);
 window.addEventListener("resize", fitCanvas);
 fitCanvas();
 
-// 폼 제출 전 서명 체크
 document.getElementById("signForm").addEventListener("submit", function(e) {
   const val = (hidden.value || "").trim();
   if (!val.startsWith("data:image")) {
