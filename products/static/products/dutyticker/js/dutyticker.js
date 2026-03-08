@@ -12,6 +12,7 @@ class DutyTickerManager {
         this.todaySchedule = [];
         this.rotationMode = 'manual_sequential';
         this.roleViewMode = 'compact';
+        this.theme = window.__DT_INITIAL_THEME__ || 'deep_space';
         this.roleRotateInFlight = false;
         this.isBroadcasting = false;
         this.broadcastMessage = '';
@@ -78,6 +79,7 @@ class DutyTickerManager {
 
     init() {
         console.log("DutyTicker: Initializing...");
+        this.applyThemeToDom(this.theme);
         this.startHeaderClock();
         this.loadData();
         this.setupEventListeners();
@@ -330,6 +332,14 @@ class DutyTickerManager {
         return this.api[key] || fallback;
     }
 
+    applyThemeToDom(theme = this.theme) {
+        const nextTheme = String(theme || 'deep_space');
+        this.theme = nextTheme;
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        document.documentElement.style.colorScheme = nextTheme === 'deep_space' ? 'dark' : 'light';
+        window.__DT_INITIAL_THEME__ = nextTheme;
+    }
+
     buildFreshUrl(url) {
         const token = `dt=${Date.now()}`;
         return String(url || '').includes('?') ? `${url}&${token}` : `${url}?${token}`;
@@ -519,7 +529,7 @@ class DutyTickerManager {
             this.theme = data.settings.theme || 'deep_space';
 
             // Apply Theme to DOM
-            document.documentElement.setAttribute('data-theme', this.theme);
+            this.applyThemeToDom(this.theme);
             this.applyRoleViewMode();
 
             const today = new Date().getDay();
@@ -912,19 +922,59 @@ class DutyTickerManager {
         return Array.from(container.querySelectorAll('.dt-role-row'));
     }
 
-    paintRoleTickerFocus({ force = false } = {}) {
+    clearRoleTickerClasses(rows = this.getRoleRows()) {
+        rows.forEach((row) => {
+            row.classList.remove('dt-role-cycle-focus');
+            row.classList.remove('dt-role-cycle-enter');
+        });
+    }
+
+    triggerRoleTickerEntry(row) {
+        if (!row) return;
+        row.classList.remove('dt-role-cycle-enter');
+        void row.offsetWidth;
+        row.classList.add('dt-role-cycle-enter');
+        window.setTimeout(() => row.classList.remove('dt-role-cycle-enter'), 820);
+    }
+
+    isRoleRowFullyVisible(row) {
+        if (!row) return false;
+        const container = document.getElementById('mainRoleList');
+        if (!container) return true;
+
+        const rowRect = row.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return rowRect.top >= (containerRect.top + 8) && rowRect.bottom <= (containerRect.bottom - 8);
+    }
+
+    scrollRoleRowIntoViewIfNeeded(row) {
+        if (!row || this.isRoleRowFullyVisible(row)) return;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        row.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+
+    paintRoleTickerFocus({ force = false, animateEntry = false } = {}) {
         const rows = this.getRoleRows();
-        if (!rows.length) return;
+        if (!rows.length) return null;
         if (!this.roleTickerEnabled) {
-            rows.forEach((row) => row.classList.remove('dt-role-cycle-focus'));
-            return;
+            this.clearRoleTickerClasses(rows);
+            return null;
         }
 
         if (this.roleTickerIndex < 0 || this.roleTickerIndex >= rows.length || force) {
             this.roleTickerIndex = Math.max(0, Math.min(rows.length - 1, this.roleTickerIndex));
         }
 
-        rows.forEach((row, index) => row.classList.toggle('dt-role-cycle-focus', index === this.roleTickerIndex));
+        let activeRow = null;
+        rows.forEach((row, index) => {
+            const isActive = index === this.roleTickerIndex;
+            row.classList.toggle('dt-role-cycle-focus', isActive);
+            if (isActive) activeRow = row;
+            else row.classList.remove('dt-role-cycle-enter');
+        });
+
+        if (animateEntry) this.triggerRoleTickerEntry(activeRow);
+        return activeRow;
     }
 
     stepRoleTicker() {
@@ -932,11 +982,8 @@ class DutyTickerManager {
         if (rows.length <= 1) return;
 
         this.roleTickerIndex = (this.roleTickerIndex + 1) % rows.length;
-        this.paintRoleTickerFocus();
-
-        const activeRow = rows[this.roleTickerIndex];
-        if (!activeRow) return;
-        activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        const activeRow = this.paintRoleTickerFocus({ animateEntry: true });
+        this.scrollRoleRowIntoViewIfNeeded(activeRow);
     }
 
     toggleRoleTicker() {
@@ -946,8 +993,7 @@ class DutyTickerManager {
 
         if (!this.roleTickerEnabled) {
             this.stopRoleTicker();
-            const rows = this.getRoleRows();
-            rows.forEach((row) => row.classList.remove('dt-role-cycle-focus'));
+            this.clearRoleTickerClasses();
             return;
         }
 

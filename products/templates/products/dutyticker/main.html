@@ -4,6 +4,11 @@
 {% block title %}ClassBoard{% endblock %}
 
 {% block extra_css %}
+<script>
+    window.__DT_INITIAL_THEME__ = "{{ initial_theme|default:'deep_space'|escapejs }}";
+    document.documentElement.setAttribute('data-theme', window.__DT_INITIAL_THEME__);
+    document.documentElement.style.colorScheme = window.__DT_INITIAL_THEME__ === 'deep_space' ? 'dark' : 'light';
+</script>
 <style>
     :root {
         --dt-bg: #0f172a;
@@ -83,6 +88,14 @@
         --dt-bgm-chip-current-bg: rgba(99, 102, 241, 0.24);
         --dt-bgm-chip-current-border: rgba(129, 140, 248, 0.6);
         --dt-bgm-chip-current-text: #e0e7ff;
+        --dt-cycle-focus-bg: rgba(79, 70, 229, 0.18);
+        --dt-cycle-focus-border: rgba(165, 180, 252, 0.92);
+        --dt-cycle-focus-shadow: rgba(79, 70, 229, 0.22);
+        --dt-cycle-focus-pill-bg: rgba(99, 102, 241, 0.72);
+        --dt-cycle-focus-pill-border: rgba(199, 210, 254, 0.94);
+        --dt-cycle-focus-pill-text: #f8fafc;
+        --dt-cycle-focus-label: #e0e7ff;
+        --dt-cycle-focus-flash: rgba(224, 231, 255, 0.42);
     }
 
     body {
@@ -293,6 +306,14 @@
         --dt-bgm-chip-current-bg: #ffedd5;
         --dt-bgm-chip-current-border: #fb923c;
         --dt-bgm-chip-current-text: #9a3412;
+        --dt-cycle-focus-bg: rgba(251, 191, 36, 0.16);
+        --dt-cycle-focus-border: rgba(217, 119, 6, 0.72);
+        --dt-cycle-focus-shadow: rgba(217, 119, 6, 0.18);
+        --dt-cycle-focus-pill-bg: #fed7aa;
+        --dt-cycle-focus-pill-border: #fb923c;
+        --dt-cycle-focus-pill-text: #7c2d12;
+        --dt-cycle-focus-label: #9a3412;
+        --dt-cycle-focus-flash: rgba(254, 240, 138, 0.34);
     }
 
     html[data-theme="pastel"] {
@@ -366,6 +387,14 @@
         --dt-bgm-chip-current-bg: #ccfbf1;
         --dt-bgm-chip-current-border: #14b8a6;
         --dt-bgm-chip-current-text: #115e59;
+        --dt-cycle-focus-bg: rgba(20, 184, 166, 0.14);
+        --dt-cycle-focus-border: rgba(13, 148, 136, 0.62);
+        --dt-cycle-focus-shadow: rgba(15, 118, 110, 0.16);
+        --dt-cycle-focus-pill-bg: #ccfbf1;
+        --dt-cycle-focus-pill-border: #14b8a6;
+        --dt-cycle-focus-pill-text: #115e59;
+        --dt-cycle-focus-label: #0f766e;
+        --dt-cycle-focus-flash: rgba(153, 246, 228, 0.32);
     }
 
     html[data-theme="vivid"] {
@@ -439,6 +468,14 @@
         --dt-bgm-chip-current-bg: #ffe4e6;
         --dt-bgm-chip-current-border: #fb7185;
         --dt-bgm-chip-current-text: #881337;
+        --dt-cycle-focus-bg: rgba(244, 63, 94, 0.14);
+        --dt-cycle-focus-border: rgba(225, 29, 72, 0.58);
+        --dt-cycle-focus-shadow: rgba(225, 29, 72, 0.16);
+        --dt-cycle-focus-pill-bg: #ffe4e6;
+        --dt-cycle-focus-pill-border: #fb7185;
+        --dt-cycle-focus-pill-text: #881337;
+        --dt-cycle-focus-label: #9d174d;
+        --dt-cycle-focus-flash: rgba(254, 205, 211, 0.34);
     }
 
     html[data-theme="sunny"] #mainAppContainer,
@@ -759,6 +796,7 @@
         padding: 0.12rem 0.44rem 0.2rem;
         text-align: right;
         font-family: "Noto Sans KR", "Malgun Gothic", var(--dt-font-ui);
+        transform-origin: center right;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee.is-pending {
@@ -766,9 +804,40 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-focus {
-        border-color: rgba(129, 140, 248, 0.8) !important;
-        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.38), 0 14px 30px rgba(2, 6, 23, 0.2) !important;
-        transform: translateY(-1px);
+        border-color: var(--dt-cycle-focus-border) !important;
+        background: linear-gradient(135deg, var(--dt-cycle-focus-bg), var(--dt-role-row-bg)) !important;
+        box-shadow: 0 0 0 2px var(--dt-cycle-focus-border), 0 18px 36px var(--dt-cycle-focus-shadow) !important;
+        transform: translateY(-2px);
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-focus .dt-role-assignee-label {
+        color: var(--dt-cycle-focus-label) !important;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-focus .dt-role-assignee {
+        background: var(--dt-cycle-focus-pill-bg) !important;
+        border-color: var(--dt-cycle-focus-pill-border) !important;
+        color: var(--dt-cycle-focus-pill-text) !important;
+        box-shadow: 0 12px 24px var(--dt-cycle-focus-shadow) !important;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-current-spotlight.dt-role-cycle-focus {
+        background: linear-gradient(135deg, var(--dt-spotlight-bg), var(--dt-cycle-focus-bg)) !important;
+        box-shadow: 0 0 0 3px var(--dt-spotlight-border), 0 20px 38px var(--dt-cycle-focus-shadow) !important;
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-enter::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(circle at 18% 50%, var(--dt-cycle-focus-flash), transparent 60%);
+        pointer-events: none;
+        animation: dt-role-cycle-flash 760ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-enter .dt-role-assignee {
+        animation: dt-role-assignee-pop 180ms cubic-bezier(0.2, 0.9, 0.2, 1.18);
     }
 
     .dt-role-card-head {
@@ -996,6 +1065,30 @@
         }
         100% {
             background-position: 100% 50%;
+        }
+    }
+
+    @keyframes dt-role-cycle-flash {
+        0% {
+            opacity: 0;
+        }
+        28% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
+    }
+
+    @keyframes dt-role-assignee-pop {
+        0% {
+            transform: scale(1);
+        }
+        45% {
+            transform: scale(1.045);
+        }
+        100% {
+            transform: scale(1);
         }
     }
 
@@ -2271,14 +2364,22 @@
         }
 
         #mainTimerDisplay,
-        #timerControls {
+        #timerControls,
+        #mainAppContainer #mainRoleList .dt-role-row,
+        #mainAppContainer #mainRoleList .dt-role-assignee {
             transition: none !important;
         }
 
         #mainTimerDisplay.scale-105,
         #mainTimerDisplay:hover,
-        #mainTimerDisplay:active {
+        #mainTimerDisplay:active,
+        #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-focus {
             transform: none !important;
+        }
+
+        #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-enter::after,
+        #mainAppContainer #mainRoleList .dt-role-row.dt-role-cycle-enter .dt-role-assignee {
+            animation: none !important;
         }
     }
 </style>
@@ -2984,7 +3085,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260306e"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260308a"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {
@@ -3038,4 +3139,3 @@
     }
 </script>
 {% endblock %}
-

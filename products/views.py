@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
 from .models import Product
 
 logger = logging.getLogger(__name__)
@@ -249,8 +250,13 @@ def dutyticker_view(request):
             'continue_url': f'{request.path}?force_desktop=1',
         })
 
-    context = {'hide_navbar': True}
+    context = {
+        'hide_navbar': True,
+        'initial_theme': 'deep_space',
+    }
     if request.user.is_authenticated:
+        classroom = get_active_classroom_for_request(request)
+        dt_settings, _ = get_or_create_settings_for_scope(request.user, classroom)
         token = _create_student_games_token(request)
         launch_url = _build_student_games_launch_url(request, token)
         context.update(
@@ -258,6 +264,7 @@ def dutyticker_view(request):
                 "student_games_launch_url": launch_url,
                 "student_games_qr_data_url": _build_qr_data_url(launch_url),
                 "student_games_expires_hours": max(1, _student_games_max_age_seconds() // 3600),
+                "initial_theme": dt_settings.theme or "deep_space",
             }
         )
 

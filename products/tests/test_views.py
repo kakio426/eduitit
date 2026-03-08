@@ -1,6 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
-from products.models import Product
+from core.models import UserProfile
+from products.models import DTSettings, Product
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -55,7 +57,7 @@ class ProductViewTests(TestCase):
         
         # Count active products in database
         active_count = Product.objects.filter(is_active=True).count()
-        self.assertEqual(products.count(), active_count)
+        self.assertEqual(len(products), active_count)
         
         # Verify our test products are included
         product_titles = [p.title for p in products]
@@ -171,3 +173,21 @@ class ProductDevicePolicyTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'products/mobile_not_supported.html')
+
+class DutyTickerThemeBootstrapTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = get_user_model().objects.create_user(username='dt-theme', password='pw123456', email='dt-theme@example.com')
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.nickname = '담임교사'
+        profile.save(update_fields=['nickname'])
+
+    def test_dutyticker_view_bootstraps_saved_theme_before_app_init(self):
+        self.client.force_login(self.user)
+        DTSettings.objects.create(user=self.user, theme='sunny')
+
+        response = self.client.get(reverse('dutyticker'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'window.__DT_INITIAL_THEME__ = "sunny";')
+        self.assertContains(response, "document.documentElement.setAttribute('data-theme', window.__DT_INITIAL_THEME__);")
