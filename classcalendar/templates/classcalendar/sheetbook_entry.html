@@ -1,43 +1,16 @@
-{% extends "base.html" %}
-
-{% block title %}달력 열기{% endblock %}
+{% block title %}달력{% endblock %}
 
 {% block content %}
 <section class="pt-28 pb-16 px-4 min-h-screen">
-  <div class="max-w-3xl mx-auto">
-    <div class="rounded-3xl border border-indigo-200 bg-white shadow-sm p-6 md:p-8">
-      <p class="text-xs font-black text-indigo-600 tracking-[0.08em]">달력</p>
-      <h1 class="text-2xl md:text-3xl font-black text-slate-900 mt-2">달력은 수첩 안에서도 같은 화면으로 이어져요.</h1>
-      <p class="mt-3 text-sm md:text-base text-slate-600">
-        달력은 하나만 사용합니다. 수첩 안에서 열어도 같은 일정과 같은 상세 화면으로 이어집니다.
-      </p>
-
-      <div class="mt-6 space-y-3">
-        {% if sheetbook_exists %}
-        <a
-          href="{{ sheetbook_entry_url }}"
-          class="w-full inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-700 transition"
-        >
-          연결된 수첩에서 달력 열기
-        </a>
-        <p class="text-xs text-slate-500">{{ sheetbook_context_label|default:"추천 수첩" }}: {{ sheetbook_title }}</p>
-        {% else %}
-        <a
-          href="{{ sheetbook_index_url }}"
-          class="w-full inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-700 transition"
-        >
-          수첩 만들기
-        </a>
-        <p class="text-xs text-slate-500">수첩이 아직 없습니다.</p>
-        {% endif %}
-
-        <a
-          href="{{ calendar_url }}"
-          class="w-full inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:border-slate-400 transition"
-        >
-          달력 바로 열기
-        </a>
-      </div>
+  <div class="max-w-xl mx-auto">
+    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm p-6 text-center">
+      <p class="text-sm font-semibold text-slate-700">달력으로 이동하고 있습니다.</p>
+      <a
+        href="{{ calendar_url }}"
+        class="mt-4 inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 transition"
+      >
+        계속하기
+      </a>
     </div>
   </div>
 </section>

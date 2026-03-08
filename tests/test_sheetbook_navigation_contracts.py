@@ -85,6 +85,7 @@ class SheetbookUiContractTests(SimpleTestCase):
         self.assertIn('"result_url": reverse("classcalendar:main")', sheetbook_views)
         self.assertIn("이 표를 달력에 반영", calendar_tab)
         self.assertIn("설정", calendar_tab)
+        self.assertIn('data-sheetbook-calendar-settings="1"', calendar_tab)
         self.assertNotIn("달력 단독 화면", calendar_tab)
         self.assertNotIn("달력 전체 화면 열기", calendar_tab)
         self.assertIn("sheetbook-calendar-surface", calendar_tab)
@@ -92,6 +93,8 @@ class SheetbookUiContractTests(SimpleTestCase):
         self.assertNotIn("달력 연결 설정", calendar_tab)
         self.assertIn("저장", calendar_tab)
         self.assertNotIn("수첩으로 돌아올 때", calendar_tab)
+        self.assertNotIn("직접 선택", calendar_tab)
+        self.assertNotIn("자동 선택", calendar_tab)
         self.assertIn("sheetbook-calendar-message-btn", calendar_tab)
         self.assertIn("메시지 붙여넣기", calendar_tab)
         self.assertIn("sheetbook-calendar-create-btn", calendar_tab)
@@ -106,6 +109,10 @@ class SheetbookUiContractTests(SimpleTestCase):
 
         self.assertIn('data-calendar-admin-tools="1"', calendar_app)
         self.assertIn("공유·협업·연동", calendar_app)
+        self.assertIn('data-calendar-admin-share="1"', calendar_app)
+        self.assertIn('data-calendar-admin-collaboration="1"', calendar_app)
+        self.assertIn('data-calendar-admin-integrations="1"', calendar_app)
+        self.assertIn('data-calendar-admin-reservations="1"', calendar_app)
         self.assertNotIn("링크를 아는 사람은 로그인 없이 읽기 전용으로 달력을 볼 수 있습니다.", calendar_app)
         self.assertNotIn("협업자는 가입시 적었던 이메일로만 추가할 수 있습니다.", calendar_app)
         self.assertIn("가입 이메일", calendar_app)
@@ -121,6 +128,17 @@ class SheetbookUiContractTests(SimpleTestCase):
         self.assertIn('role="dialog"', grid_editor)
         self.assertIn('aria-modal="true"', grid_editor)
         self.assertIn('aria-live="polite"', grid_editor)
+
+    def test_sheetbook_bridge_template_is_not_a_teacher_guidance_screen(self):
+        bridge_template = self._read("classcalendar/templates/classcalendar/sheetbook_entry.html")
+        detail_template = self._read("sheetbook/templates/sheetbook/detail.html")
+
+        self.assertNotIn("달력 바로 열기", bridge_template)
+        self.assertNotIn("연결된 수첩에서 달력 열기", bridge_template)
+        self.assertIn("달력으로 이동하고 있습니다.", bridge_template)
+        self.assertIn('data-tab-management-drawer="1"', detail_template)
+        self.assertNotIn('href="#sheetbook-tab-manage"', detail_template)
+        self.assertIn("탭 관리", detail_template)
 
     def test_grid_editor_prioritizes_compact_toolbar_and_removes_button_legend(self):
         grid_editor = self._read("sheetbook/templates/sheetbook/_grid_editor.html")
@@ -138,6 +156,10 @@ class SheetbookUiContractTests(SimpleTestCase):
         self.assertIn("PC/태블릿에서 실행할 수 있어요.", grid_editor)
         self.assertNotIn("엑셀이나 표 파일을 한 번에 불러오거나 내려받을 수 있어요.", grid_editor)
         self.assertIn("grid-mobile-column-panel", grid_editor)
+        self.assertIn('data-grid-secondary-tools="1"', grid_editor)
+        self.assertIn('data-grid-view-tools="1"', grid_editor)
+        self.assertIn('data-grid-file-tools="1"', grid_editor)
+        self.assertIn("더보기", grid_editor)
         self.assertIn("보기 저장", grid_editor)
         self.assertIn("현재 보기 적용", grid_editor)
         self.assertIn("전체 보기", grid_editor)

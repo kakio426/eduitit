@@ -5,20 +5,7 @@
   class="space-y-4"
 >
   <section class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-      <div class="min-w-0">
-        <p class="text-sm font-semibold text-slate-800">일정 표</p>
-        {% if schedule_source_tab %}
-        <p class="mt-1 text-sm text-slate-700">
-          <span class="font-semibold">{{ schedule_source_tab.name }}</span>
-          <span class="ml-2 text-[11px] {% if schedule_source_tab_is_explicit %}text-indigo-700{% else %}text-slate-500{% endif %}">
-            {% if schedule_source_tab_is_explicit %}직접 선택{% else %}자동 선택{% endif %}
-          </span>
-        </p>
-        {% else %}
-        <p class="mt-1 text-sm font-semibold text-amber-700">일정 표가 없어요.</p>
-        {% endif %}
-      </div>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex flex-wrap items-center gap-2">
         <button
           id="sheetbook-calendar-sync-btn"
@@ -46,49 +33,53 @@
         >
           새 일정
         </button>
-      </div>
-    </div>
-
-    <details class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700">설정</summary>
-      <div class="mt-3 space-y-3">
-        {% if not sheetbook_mobile_compact_mode and not sheetbook_mobile_read_only %}
-        <form method="post" action="{% url 'sheetbook:update_calendar_link_settings' pk=sheetbook.pk tab_pk=selected_tab.pk %}" class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          {% csrf_token %}
-          <input type="hidden" name="source" value="{{ entry_source|default:'direct' }}">
-          <div class="flex-1 grid gap-3 md:grid-cols-[minmax(0,240px)_1fr]">
-            <label class="space-y-1 text-xs text-slate-600">
-              <span class="font-semibold text-slate-700">반영할 일정 표</span>
-              <select name="schedule_source_tab_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">자동으로 고르기</option>
-                {% for option in schedule_tab_options %}
-                  <option value="{{ option.id }}" {% if schedule_source_tab and schedule_source_tab.id == option.id and schedule_source_tab_is_explicit %}selected{% endif %}>{{ option.name }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
-              <input type="hidden" name="prefer_calendar_entry" value="0">
-              <span class="inline-flex items-start gap-2">
+        <details class="relative" data-sheetbook-calendar-settings="1">
+          <summary class="cursor-pointer list-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:bg-white">
+            설정
+          </summary>
+          <div class="mt-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:absolute lg:right-0 lg:z-10 lg:w-[28rem]">
+            {% if not sheetbook_mobile_compact_mode and not sheetbook_mobile_read_only %}
+            <form method="post" action="{% url 'sheetbook:update_calendar_link_settings' pk=sheetbook.pk tab_pk=selected_tab.pk %}" class="space-y-3">
+              {% csrf_token %}
+              <input type="hidden" name="source" value="{{ entry_source|default:'direct' }}">
+              <label class="block space-y-1 text-xs text-slate-600">
+                <span class="font-semibold text-slate-700">반영할 일정 표</span>
+                <select name="schedule_source_tab_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                  <option value="">자동으로 고르기</option>
+                  {% for option in schedule_tab_options %}
+                    <option value="{{ option.id }}" {% if schedule_source_tab and schedule_source_tab.id == option.id and schedule_source_tab_is_explicit %}selected{% endif %}>{{ option.name }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                <input type="hidden" name="prefer_calendar_entry" value="0">
                 <input type="checkbox" name="prefer_calendar_entry" value="1" class="mt-0.5 rounded border-slate-300" {% if calendar_bridge_is_explicit %}checked{% endif %}>
                 <span>
                   <span class="block font-semibold text-slate-700">돌아오면 이 탭 열기</span>
                 </span>
-              </span>
-            </label>
+              </label>
+              <div class="flex justify-end">
+                <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                  저장
+                </button>
+              </div>
+            </form>
+            {% elif not schedule_source_tab %}
+            <p class="text-xs text-amber-700">일정 표가 아직 없어요.</p>
+            {% else %}
+            <p class="text-xs text-slate-500">설정 변경은 태블릿이나 PC에서 할 수 있어요.</p>
+            {% endif %}
           </div>
-          <div class="flex items-center gap-2">
-            <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-              저장
-            </button>
-          </div>
-        </form>
-        {% elif not schedule_source_tab %}
-        <p class="text-xs text-amber-700">
-          일정 표가 아직 없어요.
-        </p>
+        </details>
+      </div>
+      <div class="min-w-0 text-xs text-slate-500 lg:text-right">
+        {% if schedule_source_tab %}
+        <p>일정 표: <span class="font-semibold text-slate-700">{{ schedule_source_tab.name }}</span></p>
+        {% else %}
+        <p class="font-semibold text-amber-700">일정 표가 없어요.</p>
         {% endif %}
       </div>
-    </details>
+    </div>
   </section>
 
   <p
