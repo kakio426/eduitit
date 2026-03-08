@@ -42,6 +42,9 @@ from scripts.run_sheetbook_grid_smoke import (
     _should_ignore_console_error as _should_ignore_grid_console_error,
     _wait_until_saved as _wait_until_grid_saved,
 )
+from scripts.run_sheetbook_calendar_embed_smoke import (
+    _evaluate as _evaluate_calendar_embed_smoke_summary,
+)
 from scripts.run_sheetbook_pilot_log_snapshot import (
     _build_markdown as _build_pilot_log_markdown,
     _collect_snapshot as _collect_pilot_log_snapshot,
@@ -1375,7 +1378,7 @@ class SheetbookGridApiTests(TestCase):
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_paste_cells_bulk_updates_and_creates_rows(self):
         self.client.force_login(self.user)
-        # Ensure we start with one row.
+        # Start with a single populated row and let the tail auto-growth policy expand the rest.
         self.assertEqual(self.tab.rows.count(), 1)
         response = self.client.post(
             reverse("sheetbook:paste_cells", kwargs={"pk": self.sheetbook.pk, "tab_pk": self.tab.pk}),
@@ -1393,7 +1396,11 @@ class SheetbookGridApiTests(TestCase):
         self.assertTrue(payload["ok"])
         self.assertGreaterEqual(payload["updated"], 6)
         self.assertEqual(payload["invalid_rows"], [])
-        self.assertEqual(self.tab.rows.count(), 2)
+        self.assertEqual(self.tab.rows.count(), 22)
+
+        rows = list(self.tab.rows.order_by("sort_order", "id"))
+        self.assertEqual(SheetCell.objects.get(row=rows[0], column=self.col_title).value_text, "체험학습")
+        self.assertEqual(SheetCell.objects.get(row=rows[1], column=self.col_title).value_text, "보건수업")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_paste_cells_reports_invalid_rows_on_column_overflow(self):
@@ -1433,7 +1440,11 @@ class SheetbookGridApiTests(TestCase):
         payload = response.json()
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["invalid_rows"], [])
-        self.assertEqual(self.tab.rows.count(), 2)
+        self.assertEqual(self.tab.rows.count(), 22)
+
+        rows = list(self.tab.rows.order_by("sort_order", "id"))
+        self.assertEqual(SheetCell.objects.get(row=rows[0], column=self.col_title).value_text, "체험학습")
+        self.assertEqual(SheetCell.objects.get(row=rows[1], column=self.col_title).value_text, "보건수업")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_paste_cells_skips_invalid_number_cell(self):
@@ -1853,8 +1864,8 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["sheetbook_mobile_read_only"])
         self.assertTrue(response.context["sheetbook_mobile_compact_mode"])
-        self.assertContains(response, "휴대폰에서는 달력 확인과 일정 1건 추가는 가능해요.")
-        self.assertContains(response, "표 반영과 연결 설정 변경은 태블릿이나 PC에서 진행해 주세요.")
+        self.assertContains(response, "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.")
+        self.assertContains(response, "연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.")
         self.assertContains(response, 'id="sheetbook-calendar-sync-btn"')
         self.assertContains(response, 'id="sheetbook-calendar-create-btn"')
         self.assertContains(response, "disabled aria-disabled=\"true\"")
@@ -1889,8 +1900,8 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["sheetbook_calendar_message_capture_enabled"])
         self.assertContains(response, 'id="sheetbook-calendar-message-btn"')
-        self.assertContains(response, "메시지 붙여넣어 일정 만들기")
-        self.assertContains(response, "돌아올 탭")
+        self.assertContains(response, "메시지 붙여넣기")
+        self.assertContains(response, "수첩으로 돌아올 때")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_calendar_tab_hides_message_capture_button_for_non_allowlisted_teacher(self):
@@ -5949,6 +5960,55 @@ class SheetbookLocalRehearsalCycleScriptTests(SimpleTestCase):
         collect_cmd = plan[0]
         self.assertIn("--action-count", collect_cmd)
         self.assertIn("-1", collect_cmd)
+
+
+class SheetbookCalendarEmbedSmokeScriptTests(SimpleTestCase):
+    def test_evaluate_embed_smoke_passes_mobile_compact_contract(self):
+        base_item = {
+            "sheetbook_id": 42,
+            "create_open_status": "일정 1건 추가 창을 열었어요.",
+            "create_save_status": "일정을 저장했어요.",
+            "create_source": {"href": "/sheetbook/42/?tab=2&source=calendar", "target": "_top"},
+            "message_open_status": "메시지 붙여넣기 창을 열었어요.",
+            "message_save_status": "메시지를 일정으로 저장했어요.",
+            "message_source": {"href": "/sheetbook/42/?tab=2&source=calendar", "target": "_top"},
+            "console_error_count": 0,
+            "fatal_console_warning_count": 0,
+            "message_disabled": False,
+            "create_disabled": False,
+        }
+        summary = {
+            "desktop": {
+                **base_item,
+                "scenario": "desktop",
+                "sync_status": "반영 완료: 새 일정 1건, 바뀐 일정 0건, 지운 일정 0건",
+                "sync_summary": "일정 원본 일정 원본 · 새 일정 1건 · 바뀐 일정 0건",
+                "sync_disabled": False,
+                "mobile_guidance": "",
+            },
+            "tablet": {
+                **base_item,
+                "scenario": "tablet",
+                "sync_status": "반영 완료: 새 일정 0건, 바뀐 일정 0건, 지운 일정 0건",
+                "sync_summary": "일정 원본 일정 원본 · 새 일정 0건 · 바뀐 일정 0건",
+                "sync_disabled": False,
+                "mobile_guidance": "",
+            },
+            "mobile": {
+                **base_item,
+                "scenario": "mobile",
+                "sync_status": "연결된 달력을 열었어요.",
+                "sync_summary": "",
+                "sync_disabled": True,
+                "mobile_guidance": "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요. 연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.",
+            },
+        }
+
+        evaluation = _evaluate_calendar_embed_smoke_summary(summary)
+
+        self.assertTrue(evaluation["pass"])
+        self.assertTrue(evaluation["mobile_pass"])
+        self.assertEqual(evaluation["mobile_reasons"], [])
 
 
 class SheetbookSmokeSyncCycleScriptTests(SimpleTestCase):

@@ -3345,6 +3345,7 @@ def detail(request, pk):
     selected_tab = tabs[0] if tabs else None
     schedule_source_tab = None
     sheetbook_calendar_message_capture_enabled = False
+    calendar_view_context = {}
     action_invocations = []
     action_history_has_more = False
     action_history_next_cursor = None
@@ -3357,14 +3358,28 @@ def detail(request, pk):
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_CALENDAR:
         schedule_source_tab = _resolve_schedule_source_tab(sheetbook, tabs)
         try:
-            from classcalendar.views import _is_message_capture_enabled_for_user
+            from classcalendar.views import (
+                _build_main_view_context,
+                _is_message_capture_enabled_for_user,
+                _resolve_sheetbook_context,
+            )
         except Exception:
             sheetbook_calendar_message_capture_enabled = False
+            calendar_view_context = {}
         else:
             try:
                 sheetbook_calendar_message_capture_enabled = bool(_is_message_capture_enabled_for_user(request.user))
+                calendar_view_context = _build_main_view_context(
+                    request,
+                    embedded_sheetbook_context=_resolve_sheetbook_context(
+                        request.user,
+                        sheetbook.id,
+                        selected_tab.id,
+                    ),
+                )
             except Exception:
                 sheetbook_calendar_message_capture_enabled = False
+                calendar_view_context = {}
     if selected_tab and selected_tab.tab_type == SheetTab.TYPE_GRID:
         saved_views = _list_saved_views_for_tab(selected_tab)
         if selected_saved_view_id:
@@ -3495,6 +3510,7 @@ def detail(request, pk):
             "sheetbook_mobile_read_only_message": sheetbook_mobile_read_only_message,
             "sheetbook_archived_read_only": sheetbook_archived_read_only,
             "index_back_url": index_back_url,
+            **calendar_view_context,
         },
     )
 

@@ -2457,7 +2457,6 @@
     const root = document.getElementById("sheetbook-calendar-embed");
     if (!root) return;
 
-    const iframe = root.querySelector("#sheetbook-calendar-iframe");
     const syncBtn = root.querySelector("#sheetbook-calendar-sync-btn");
     const messageBtn = root.querySelector("#sheetbook-calendar-message-btn");
     const createBtn = root.querySelector("#sheetbook-calendar-create-btn");
@@ -2465,6 +2464,14 @@
     const syncSummaryEl = root.querySelector("#sheetbook-calendar-sync-summary");
     const syncSummaryTextEl = root.querySelector("#sheetbook-calendar-sync-summary-text");
     const csrfToken = resolveCsrfToken(root);
+
+    function getCalendarBridge() {
+      const bridge = window.sheetbookCalendarBridge;
+      if (!bridge || typeof bridge !== "object") {
+        return null;
+      }
+      return bridge;
+    }
 
     function setStatus(text, isError) {
       if (!statusEl) return;
@@ -2489,68 +2496,52 @@
       syncSummaryEl.classList.remove("hidden");
     }
 
-    function sendEmbedCommand(type, waitingText) {
-      if (!iframe || !iframe.contentWindow) {
-        setStatus("달력이 아직 준비되지 않았어요. 잠시 후 다시 눌러 주세요.", true);
-        return false;
-      }
-      if (waitingText) {
-        setStatus(waitingText, false);
-      }
-      iframe.contentWindow.postMessage({ type }, window.location.origin);
-      return true;
-    }
-
-    function reloadEmbed() {
-      if (!iframe) return;
-      if (iframe.contentWindow && iframe.contentWindow.location) {
-        iframe.contentWindow.location.reload();
-        return;
-      }
-      iframe.src = root.dataset.embedSrc || iframe.src;
-    }
-
-    function applyEmbedHeight(nextHeight) {
-      if (!iframe) return;
-      const parsed = Number(nextHeight || 0);
-      if (!Number.isFinite(parsed) || parsed <= 0) return;
-      iframe.style.height = `${Math.max(820, Math.ceil(parsed) + 12)}px`;
-    }
-
-    function setEmbedReadyStatus() {
+    function setReadyStatus() {
       const currentStatus = statusEl ? String(statusEl.textContent || "").trim() : "";
-      if (currentStatus && !currentStatus.includes("불러오는 중")) {
+      if (currentStatus && !currentStatus.includes("준비하는 중")) {
         return;
       }
       setStatus("연결된 달력을 열었어요.", false);
     }
 
-    function handleEmbedMessage(event) {
-      if (!iframe || event.origin !== window.location.origin) return;
-      if (iframe.contentWindow && event.source !== iframe.contentWindow) return;
-      const data = event.data || {};
-      if (data.type === "classcalendar:embed-height") {
-        applyEmbedHeight(data.height);
-        setEmbedReadyStatus();
+    function handleBridgeAction(actionName, waitingText) {
+      const bridge = getCalendarBridge();
+      if (!bridge || typeof bridge[actionName] !== "function") {
+        setStatus("달력이 아직 준비되지 않았어요. 잠시 후 다시 눌러 주세요.", true);
         return;
       }
-      if (data.type === "classcalendar:action-opened") {
-        if (data.action === "message-capture") {
+      if (waitingText) {
+        setStatus(waitingText, false);
+      }
+      const result = bridge[actionName]();
+      if (result && result.ok === false) {
+        setStatus(String(result.message || "지금 이 기능을 열 수 없어요."), true);
+      }
+    }
+
+    function handleCalendarHostEvent(event) {
+      const detail = event.detail || {};
+      if (event.type === "classcalendar:ready") {
+        setReadyStatus();
+        return;
+      }
+      if (event.type === "classcalendar:action-opened") {
+        if (detail.action === "message-capture") {
           setStatus("메시지 붙여넣기 창을 열었어요.", false);
           return;
         }
-        if (data.action === "create-event") {
+        if (detail.action === "create-event") {
           setStatus("일정 1건 추가 창을 열었어요.", false);
           return;
         }
       }
-      if (data.type === "classcalendar:action-blocked") {
-        setStatus(String(data.message || "지금 이 기능을 열 수 없어요."), true);
+      if (event.type === "classcalendar:action-blocked") {
+        setStatus(String(detail.message || "지금 이 기능을 열 수 없어요."), true);
         return;
       }
-      if (data.type === "classcalendar:event-saved") {
+      if (event.type === "classcalendar:event-saved") {
         setStatus(
-          data.source === "message-capture"
+          detail.source === "message-capture"
             ? "메시지를 일정으로 저장했어요."
             : "일정을 저장했어요.",
           false
@@ -2558,23 +2549,24 @@
       }
     }
 
-    window.addEventListener("message", handleEmbedMessage);
+    document.addEventListener("classcalendar:ready", handleCalendarHostEvent);
+    document.addEventListener("classcalendar:action-opened", handleCalendarHostEvent);
+    document.addEventListener("classcalendar:action-blocked", handleCalendarHostEvent);
+    document.addEventListener("classcalendar:event-saved", handleCalendarHostEvent);
 
-    if (iframe) {
-      iframe.addEventListener("load", () => {
-        setEmbedReadyStatus();
-      });
+    if (getCalendarBridge()) {
+      setReadyStatus();
     }
 
     if (messageBtn) {
       messageBtn.addEventListener("click", () => {
-        sendEmbedCommand("sheetbook:open-message-capture", "메시지 붙여넣기 창을 여는 중...");
+        handleBridgeAction("openMessageCapture", "메시지 붙여넣기 창을 여는 중...");
       });
     }
 
     if (createBtn) {
       createBtn.addEventListener("click", () => {
-        sendEmbedCommand("sheetbook:open-create-event", "일정 1건 추가 창을 여는 중...");
+        handleBridgeAction("openCreateEvent", "일정 1건 추가 창을 여는 중...");
       });
     }
 
@@ -2604,7 +2596,10 @@
             false
           );
           setSyncSummary(payload);
-          reloadEmbed();
+          const bridge = getCalendarBridge();
+          if (bridge && typeof bridge.refreshEvents === "function") {
+            await bridge.refreshEvents({ forceSync: true });
+          }
         } catch (error) {
           setStatus("네트워크 오류로 달력 반영에 실패했어요.", true);
         }

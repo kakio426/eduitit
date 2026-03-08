@@ -147,6 +147,9 @@ def _build_snapshot_summary(root: Path) -> dict[str, Any]:
         "calendar_embed": {
             "started_at": str(calendar_embed.get("started_at") or ""),
             "pass": calendar_embed_pass,
+            "desktop_pass": bool((calendar_embed.get("evaluation") or {}).get("desktop_pass")),
+            "tablet_pass": bool((calendar_embed.get("evaluation") or {}).get("tablet_pass")),
+            "mobile_pass": bool((calendar_embed.get("evaluation") or {}).get("mobile_pass")),
         },
         "daily": {
             "overall": daily_overall,

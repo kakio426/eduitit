@@ -1013,22 +1013,13 @@ def legacy_main_redirect(request):
     return redirect("classcalendar:main")
 
 
-@login_required
-@xframe_options_sameorigin
-def main_view(request):
+def _build_main_view_context(request, *, embedded_sheetbook_context=None):
     _sync_integrations_if_needed(request)
-    embedded_sheetbook_context = None
-    if request.GET.get("embedded") == "sheetbook":
-        embedded_sheetbook_context = _resolve_sheetbook_context(
-            request.user,
-            request.GET.get("sheetbook_id"),
-            request.GET.get("tab_id"),
-        )
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
-    context = {
+    return {
         "service": service,
         "title": service.title if service else "달력 (Eduitit Calendar)",
         "events_json": [
@@ -1052,7 +1043,24 @@ def main_view(request):
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),
+        "hide_navbar": bool(embedded_sheetbook_context),
     }
+
+
+@login_required
+@xframe_options_sameorigin
+def main_view(request):
+    embedded_sheetbook_context = None
+    if request.GET.get("embedded") == "sheetbook":
+        embedded_sheetbook_context = _resolve_sheetbook_context(
+            request.user,
+            request.GET.get("sheetbook_id"),
+            request.GET.get("tab_id"),
+        )
+    context = _build_main_view_context(
+        request,
+        embedded_sheetbook_context=embedded_sheetbook_context,
+    )
     return render(request, "classcalendar/main.html", context)
 
 

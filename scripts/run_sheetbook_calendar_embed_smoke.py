@@ -207,11 +207,12 @@ def _click_host_button(page, selector: str, timeout_ms: int = 15000) -> None:
     _click_locator(page.locator(selector), timeout_ms=timeout_ms)
 
 
-def _open_event_and_collect_source(frame, event_title: str) -> dict[str, Any]:
-    event_button = frame.get_by_role("button", name=re.compile(re.escape(event_title))).first
+def _open_event_and_collect_source(page, event_title: str) -> dict[str, Any]:
+    surface = page.locator("#sheetbook-calendar-surface")
+    event_button = surface.get_by_role("button", name=re.compile(re.escape(event_title))).first
     event_button.wait_for(state="visible", timeout=20000)
     _click_locator(event_button, timeout_ms=10000)
-    detail_modal = frame.locator("div[x-show='detailModalOpen']")
+    detail_modal = surface.locator("div[x-show='detailModalOpen']")
     detail_modal.wait_for(state="visible", timeout=20000)
     source_link = detail_modal.locator("a[href*='/sheetbook/']").first
     source_link.wait_for(state="visible", timeout=10000)
@@ -235,6 +236,8 @@ def _run_scenario(
     session_cookie_name: str,
     session_cookie_value: str,
     device_name: str | None = None,
+    expect_sync_enabled: bool = True,
+    expect_mobile_compact: bool = False,
 ) -> dict[str, Any]:
     browser = playwright.chromium.launch(headless=True)
     if device_name:
@@ -277,46 +280,63 @@ def _run_scenario(
     )
 
     page.goto(f"{base_url}{detail_path}", wait_until="domcontentloaded", timeout=60000)
-    page.wait_for_selector("#sheetbook-calendar-iframe", timeout=60000)
+    page.wait_for_selector("#sheetbook-calendar-surface", timeout=60000)
+    page.locator("#sheetbook-calendar-surface").get_by_role("button", name="이전 달").wait_for(state="visible", timeout=60000)
     _wait_for_status(page, "열었어요.")
 
-    frame = page.frame_locator("#sheetbook-calendar-iframe")
-    frame.get_by_role("button", name="새 일정").wait_for(state="visible", timeout=60000)
+    sync_button = page.locator("#sheetbook-calendar-sync-btn")
+    message_button = page.locator("#sheetbook-calendar-message-btn")
+    create_button = page.locator("#sheetbook-calendar-create-btn")
+    sync_button.wait_for(state="visible", timeout=15000)
+    create_button.wait_for(state="visible", timeout=15000)
 
-    _click_host_button(page, "#sheetbook-calendar-sync-btn")
-    sync_status = _wait_for_status(page, "반영 완료:")
-    sync_summary = page.locator("#sheetbook-calendar-sync-summary-text").inner_text(timeout=10000).strip()
-    frame.get_by_role("button", name="새 일정").wait_for(state="visible", timeout=60000)
-    page.wait_for_timeout(1200)
+    sync_disabled = sync_button.is_disabled()
+    create_disabled = create_button.is_disabled()
+    message_disabled = False
+    if message_button.count():
+        message_disabled = message_button.is_disabled()
+
+    sync_status = ""
+    sync_summary = ""
+    mobile_guidance = ""
+    if expect_sync_enabled:
+        _click_host_button(page, "#sheetbook-calendar-sync-btn")
+        sync_status = _wait_for_status(page, "반영 완료:")
+        sync_summary = page.locator("#sheetbook-calendar-sync-summary-text").inner_text(timeout=10000).strip()
+        page.locator("#sheetbook-calendar-surface").get_by_role("button", name="이전 달").wait_for(state="visible", timeout=60000)
+        page.wait_for_timeout(1200)
+    else:
+        sync_status = _wait_for_status(page, "열었어요.")
+        mobile_guidance = page.locator("#sheetbook-calendar-embed p").filter(has_text="휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.").inner_text(timeout=10000).strip()
 
     create_title = f"{label} create smoke"
     _click_host_button(page, "#sheetbook-calendar-create-btn")
     create_open_status = _wait_for_status(page, "일정 1건 추가 창을 열었어요.")
-    create_modal = frame.locator("div[x-show='createModalOpen']")
+    create_modal = page.locator("#sheetbook-calendar-surface div[x-show='createModalOpen']")
     create_modal.wait_for(state="visible", timeout=20000)
     create_modal.locator("input[x-model='createForm.title']").fill(create_title, timeout=10000)
     _click_locator(create_modal.get_by_role("button", name="저장"), timeout_ms=10000)
     create_save_status = _wait_for_status(page, "일정을 저장했어요.")
-    create_source = _open_event_and_collect_source(frame, create_title)
+    create_source = _open_event_and_collect_source(page, create_title)
 
     message_title = f"{label} message smoke"
     _click_host_button(page, "#sheetbook-calendar-message-btn")
     message_open_status = _wait_for_status(page, "메시지 붙여넣기 창을 열었어요.")
-    message_modal = frame.locator("div[x-show='messageCaptureModalOpen']")
+    message_modal = page.locator("#sheetbook-calendar-surface div[x-show='messageCaptureModalOpen']")
     message_modal.wait_for(state="visible", timeout=20000)
     message_modal.locator("textarea[x-model='messageCaptureInputText']").fill(
         "2026-03-22 09:00-10:00 학급 회의",
         timeout=10000,
     )
     _click_locator(message_modal.get_by_role("button", name="자동으로 읽기"), timeout_ms=10000)
-    message_confirm = frame.locator("input[x-model='messageCaptureDraft.title']")
+    message_confirm = page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.title']")
     message_confirm.wait_for(state="visible", timeout=20000)
     message_confirm.fill(message_title, timeout=10000)
-    frame.locator("input[x-model='messageCaptureDraft.start_date']").fill(today, timeout=10000)
-    frame.locator("input[x-model='messageCaptureDraft.end_date']").fill(today, timeout=10000)
-    _click_locator(frame.get_by_role("button", name="이대로 저장"), timeout_ms=10000)
+    page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.start_date']").fill(today, timeout=10000)
+    page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.end_date']").fill(today, timeout=10000)
+    _click_locator(page.locator("#sheetbook-calendar-surface").get_by_role("button", name="이대로 저장"), timeout_ms=10000)
     message_save_status = _wait_for_status(page, "메시지를 일정으로 저장했어요.")
-    message_source = _open_event_and_collect_source(frame, message_title)
+    message_source = _open_event_and_collect_source(page, message_title)
 
     result = {
         "scenario": label,
@@ -325,6 +345,10 @@ def _run_scenario(
         "sheetbook_id": sheetbook_id,
         "sync_status": sync_status,
         "sync_summary": sync_summary,
+        "sync_disabled": sync_disabled,
+        "message_disabled": message_disabled,
+        "create_disabled": create_disabled,
+        "mobile_guidance": mobile_guidance,
         "create_open_status": create_open_status,
         "create_save_status": create_save_status,
         "create_source": create_source,
@@ -348,10 +372,23 @@ def _run_scenario(
 def _evaluate(summary: dict[str, Any]) -> dict[str, Any]:
     def scenario_eval(item: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons: list[str] = []
-        if "반영 완료:" not in str(item.get("sync_status") or ""):
-            reasons.append("sync_status_missing")
-        if "일정 원본" not in str(item.get("sync_summary") or ""):
-            reasons.append("sync_summary_missing")
+        is_mobile_compact = bool(item.get("scenario") == "mobile")
+        if is_mobile_compact:
+            if not bool(item.get("sync_disabled")):
+                reasons.append("mobile_sync_not_disabled")
+            if "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요." not in str(item.get("mobile_guidance") or ""):
+                reasons.append("mobile_guidance_missing")
+        else:
+            if bool(item.get("sync_disabled")):
+                reasons.append("sync_unexpectedly_disabled")
+            if "반영 완료:" not in str(item.get("sync_status") or ""):
+                reasons.append("sync_status_missing")
+            if "일정 원본" not in str(item.get("sync_summary") or ""):
+                reasons.append("sync_summary_missing")
+        if bool(item.get("create_disabled")):
+            reasons.append("create_disabled")
+        if bool(item.get("message_disabled")):
+            reasons.append("message_disabled")
         if "일정 1건 추가 창" not in str(item.get("create_open_status") or ""):
             reasons.append("create_open_status_missing")
         if "일정을 저장했어요." not in str(item.get("create_save_status") or ""):
@@ -376,12 +413,15 @@ def _evaluate(summary: dict[str, Any]) -> dict[str, Any]:
 
     desktop_ok, desktop_reasons = scenario_eval(summary["desktop"])
     tablet_ok, tablet_reasons = scenario_eval(summary["tablet"])
+    mobile_ok, mobile_reasons = scenario_eval(summary["mobile"])
     return {
-        "pass": desktop_ok and tablet_ok,
+        "pass": desktop_ok and tablet_ok and mobile_ok,
         "desktop_pass": desktop_ok,
         "tablet_pass": tablet_ok,
+        "mobile_pass": mobile_ok,
         "desktop_reasons": desktop_reasons,
         "tablet_reasons": tablet_reasons,
+        "mobile_reasons": mobile_reasons,
     }
 
 
@@ -444,6 +484,19 @@ def main() -> int:
                 session_cookie_value=data["session_cookie_value"],
                 device_name="iPad Pro 11",
             )
+            mobile = _run_scenario(
+                playwright,
+                label="mobile",
+                base_url=base_url,
+                detail_path=data["detail_path"],
+                today=data["today"],
+                sheetbook_id=data["sheetbook_id"],
+                session_cookie_name=data["session_cookie_name"],
+                session_cookie_value=data["session_cookie_value"],
+                device_name="iPhone 13",
+                expect_sync_enabled=False,
+                expect_mobile_compact=True,
+            )
 
         summary = {
             "started_at": started_at,
@@ -451,6 +504,7 @@ def main() -> int:
             "dataset": data,
             "desktop": desktop,
             "tablet": tablet,
+            "mobile": mobile,
         }
         summary["evaluation"] = _evaluate(summary)
         output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
