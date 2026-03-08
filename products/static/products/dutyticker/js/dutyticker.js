@@ -26,6 +26,8 @@ class DutyTickerManager {
         this.boundGlobalKeydown = null;
         this.boundWindowResize = null;
         this.resizeRaf = null;
+        this.layoutRaf = null;
+        this.layoutObserver = null;
         this.roleTickerEnabled = true;
         this.roleTickerIntervalMs = 4200;
         this.roleTickerTimer = null;
@@ -48,13 +50,19 @@ class DutyTickerManager {
         this.bgmTrackPanelOpen = false;
         this.boundBgmPanelOutsideClick = null;
         this.boundBgmPanelEscape = null;
-        this.missionFontSizeOrder = ['sm', 'md', 'lg'];
+        this.missionFontSizeOrder = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
         this.missionSaveRequestId = 0;
         this.missionSaving = false;
+        this.missionResetInFlight = false;
         this.missionPanelCollapsed = true;
         this.missionPanelStorageKey = 'dt-mission-panel-collapsed-v1';
+        this.missionQuickPhraseStorageKey = 'dt-mission-quick-phrase-v1';
+        this.missionQuickPhrases = [];
+        this.missionQuickPhraseLimit = 20;
+        this.missionQuickPhrase = null;
+        this.missionQuickSelectedId = null;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -63,14 +71,21 @@ class DutyTickerManager {
         this.timerEndAt = null;
         this.timerStorageKey = 'dt-focus-timer-state-v1';
         this.audioCtx = null;
+        this.headerClockTimer = null;
+        this.headerClockMinuteKey = '';
+        this.hasLoadedData = false;
     }
 
     init() {
         console.log("DutyTicker: Initializing...");
+        this.startHeaderClock();
         this.loadData();
         this.setupEventListeners();
+        this.setupAdaptiveLayoutObserver();
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
+        this.restoreMissionQuickPhrase();
+        this.updateMissionQuickPhraseUI();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
         this.applyRoleViewMode();
@@ -114,6 +129,15 @@ class DutyTickerManager {
         this.bindButtonAction('timerCustomApplyBtn', () => this.applyCustomTimerMinutes());
         this.bindButtonAction('timerResetBtn', () => this.resetTimer());
         this.bindButtonAction('missionPanelToggleBtn', () => this.toggleMissionPanel());
+        this.bindButtonAction('missionQuickSaveBtn', () => this.saveMissionQuickPhraseFromCurrent());
+        this.bindButtonAction('missionQuickApplyBtn', () => this.openMissionQuickPhraseModal());
+        this.bindButtonAction('missionQuickModalCloseBtn', () => this.closeMissionQuickPhraseModal());
+        this.bindButtonAction('missionQuickLoadCurrentBtn', () => this.loadCurrentMissionIntoQuickPhraseForm());
+        this.bindButtonAction('missionQuickCreateBtn', () => this.createMissionQuickPhraseFromModal());
+        this.bindButtonAction('missionQuickUpdateBtn', () => this.updateSelectedMissionQuickPhrase());
+        this.bindButtonAction('missionQuickApplySelectedBtn', () => this.applyMissionQuickPhrase());
+        this.bindButtonAction('missionQuickDeleteBtn', () => this.deleteSelectedMissionQuickPhrase());
+        this.bindButtonAction('missionQuickDeleteAllBtn', () => this.clearMissionQuickPhrases());
 
         this.setupInlineMissionEditor();
 
@@ -123,10 +147,99 @@ class DutyTickerManager {
         if (!this.boundWindowResize) {
             this.boundWindowResize = () => {
                 if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
-                this.resizeRaf = requestAnimationFrame(() => this.applyStudentGridLayoutMode());
+                this.resizeRaf = requestAnimationFrame(() => {
+                    this.applyStudentGridLayoutMode();
+                    this.requestAdaptiveLayoutRefresh();
+                });
             };
             window.addEventListener('resize', this.boundWindowResize, { passive: true });
         }
+    }
+
+    startHeaderClock() {
+        this.updateHeaderClock();
+        if (this.headerClockTimer) clearInterval(this.headerClockTimer);
+        this.headerClockTimer = setInterval(() => this.updateHeaderClock(), 1000);
+    }
+
+    updateHeaderClock() {
+        const now = new Date();
+        const dateStr = now
+            .toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+            .replace(/\s/g, '\u00A0');
+        const timeStr = now
+            .toLocaleTimeString('ko-KR', { hour12: true, hour: 'numeric', minute: '2-digit' })
+            .replace(/\s/g, '\u00A0');
+
+        const dateEl = document.getElementById('headerDate');
+        const timeEl = document.getElementById('headerTime');
+        if (dateEl) dateEl.textContent = dateStr;
+        if (timeEl) timeEl.textContent = timeStr;
+
+        if (!this.hasLoadedData) return;
+
+        const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+        if (minuteKey !== this.headerClockMinuteKey) {
+            this.headerClockMinuteKey = minuteKey;
+            this.renderSchedule();
+        }
+    }
+
+    setupAdaptiveLayoutObserver() {
+        if (this.layoutObserver || typeof ResizeObserver !== 'function') return;
+
+        const targets = [
+            document.getElementById('mainAppContainer'),
+            document.querySelector('.dt-left-column'),
+            document.querySelector('.dt-timer-card'),
+            document.getElementById('mainStudentCard'),
+            document.getElementById('mainStudentGridWrap'),
+        ].filter(Boolean);
+
+        if (!targets.length) return;
+
+        this.layoutObserver = new ResizeObserver(() => this.requestAdaptiveLayoutRefresh());
+        targets.forEach((target) => this.layoutObserver.observe(target));
+    }
+
+    requestAdaptiveLayoutRefresh() {
+        if (this.layoutRaf) cancelAnimationFrame(this.layoutRaf);
+        this.layoutRaf = requestAnimationFrame(() => {
+            this.layoutRaf = null;
+            this.applyAdaptiveLayoutState();
+        });
+    }
+
+    applyAdaptiveLayoutState() {
+        const app = document.getElementById('mainAppContainer');
+        const leftColumn = document.querySelector('.dt-left-column');
+        const timerCard = document.querySelector('.dt-timer-card');
+        const studentCard = document.getElementById('mainStudentCard');
+        if (!app || !leftColumn || !timerCard) return;
+
+        const leftHeight = leftColumn.getBoundingClientRect().height;
+        const timerHeight = timerCard.getBoundingClientRect().height;
+        const studentHeight = studentCard ? studentCard.getBoundingClientRect().height : 0;
+        const isStudentPanelExpanded = !this.missionPanelCollapsed;
+
+        let density = 'hero';
+        if (
+            leftHeight < 920
+            || timerHeight < 560
+            || (isStudentPanelExpanded && studentHeight > 320)
+        ) {
+            density = 'balanced';
+        }
+        if (
+            leftHeight < 820
+            || timerHeight < 470
+            || (isStudentPanelExpanded && studentHeight > 360)
+        ) {
+            density = 'compact';
+        }
+
+        app.setAttribute('data-layout-density', density);
+        this.applyStudentGridLayoutMode();
     }
 
     bindButtonAction(id, handler) {
@@ -222,7 +335,6 @@ class DutyTickerManager {
         return String(url || '').includes('?') ? `${url}&${token}` : `${url}?${token}`;
     }
 
-
     buildTemplateUrl(templateValue, idValue) {
         const template = String(templateValue || '');
         if (!template) return '';
@@ -278,7 +390,10 @@ class DutyTickerManager {
     saveTimerState() {
         try {
             const safeMax = this.normalizeTimerSeconds(this.timerMaxSeconds, 300);
-            const safeSeconds = Math.min(this.normalizeTimerSeconds(this.timerSeconds, safeMax), safeMax);
+            const numericSeconds = Number(this.timerSeconds);
+            const safeSeconds = Number.isFinite(numericSeconds)
+                ? Math.max(0, Math.min(Math.floor(numericSeconds), safeMax))
+                : safeMax;
             const timerEndAt = this.isTimerRunning
                 ? (Number.isFinite(this.timerEndAt) ? this.timerEndAt : Date.now() + (safeSeconds * 1000))
                 : null;
@@ -301,7 +416,10 @@ class DutyTickerManager {
 
             const parsed = JSON.parse(raw);
             const restoredMax = this.normalizeTimerSeconds(parsed.timerMaxSeconds, 300);
-            const restoredSeconds = Math.min(this.normalizeTimerSeconds(parsed.timerSeconds, restoredMax), restoredMax);
+            const rawSeconds = Number(parsed.timerSeconds);
+            const restoredSeconds = Number.isFinite(rawSeconds)
+                ? Math.max(0, Math.min(Math.floor(rawSeconds), restoredMax))
+                : restoredMax;
             const now = Date.now();
             const restoredEndAt = Number(parsed.timerEndAt);
             const shouldResume = parsed.isTimerRunning === true && Number.isFinite(restoredEndAt) && restoredEndAt > now;
@@ -309,9 +427,9 @@ class DutyTickerManager {
             this.timerMaxSeconds = restoredMax;
 
             if (shouldResume) {
-                this.timerEndAt = restoredEndAt;
-                this.timerSeconds = Math.max(1, Math.ceil((restoredEndAt - now) / 1000));
                 this.isTimerRunning = true;
+                this.timerEndAt = restoredEndAt;
+                this.timerSeconds = this.getRemainingTimerSeconds(now);
                 this.startTimerTicker();
             } else {
                 this.timerSeconds = restoredSeconds;
@@ -325,7 +443,29 @@ class DutyTickerManager {
         }
     }
 
+    getRemainingTimerSeconds(referenceNow = Date.now()) {
+        if (!this.isTimerRunning || !Number.isFinite(this.timerEndAt)) {
+            const safeMax = this.normalizeTimerSeconds(this.timerMaxSeconds, 300);
+            const current = Number(this.timerSeconds);
+            return Number.isFinite(current)
+                ? Math.max(0, Math.min(Math.floor(current), safeMax))
+                : safeMax;
+        }
+        return Math.max(0, Math.ceil((this.timerEndAt - referenceNow) / 1000));
+    }
+
+    finishTimer() {
+        this.timerSeconds = 0;
+        this.isTimerRunning = false;
+        this.stopTimerTicker();
+        this.timerEndAt = null;
+        this.updateTimerDisplay();
+        this.saveTimerState();
+        this.playAlert();
+    }
+
     startTimerTicker() {
+
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => this.handleTimerTick(), 250);
     }
@@ -384,9 +524,11 @@ class DutyTickerManager {
 
             const today = new Date().getDay();
             this.todaySchedule = data.schedule[today] || [];
+            this.hasLoadedData = true;
 
             this.renderAll();
         } catch (error) {
+            this.hasLoadedData = false;
             console.error("Fetch Error:", error);
             this.renderLoadFailure();
         }
@@ -425,6 +567,7 @@ class DutyTickerManager {
         this.renderStudentGrid();
         this.renderNotices();
         this.renderRandomPicker();
+        this.requestAdaptiveLayoutRefresh();
         const callModal = document.getElementById('callModeModal');
         const isCallModeOpen = !!callModal && !callModal.classList.contains('hidden');
         if (isCallModeOpen) this.renderCallMode();
@@ -445,12 +588,13 @@ class DutyTickerManager {
 
         const now = new Date();
         const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const showAllMorningSlots = nowMinutes >= (8 * 60) && nowMinutes <= ((8 * 60) + 50);
 
-        container.innerHTML = periodSchedule.map((slot) => {
+        const normalizedSlots = periodSchedule.map((slot) => {
             const periodNumber = Number(slot.period);
             const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
                 ? `${periodNumber}교시`
-                : String(slot.slot_label || '');
+                : String(slot.slot_label || '').trim() || '교시';
             const rawSubject = String(slot.name || '').trim();
             const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
             const startTime = String(slot.startTime || '').trim();
@@ -459,19 +603,60 @@ class DutyTickerManager {
             const endMinutes = this.timeStringToMinutes(endTime);
             const hasTimeRange = Number.isFinite(startMinutes) && Number.isFinite(endMinutes);
             const isCurrent = hasTimeRange && nowMinutes >= startMinutes && nowMinutes < endMinutes;
-            const chipClass = `dt-header-schedule-item${isCurrent ? ' is-current' : ''}`;
-            const titleText = hasTimeRange
-                ? `${periodLabel} · ${subjectName} (${startTime}-${endTime})`
-                : `${periodLabel} · ${subjectName}`;
+            const isUpcoming = hasTimeRange && nowMinutes >= (startMinutes - 10) && nowMinutes < startMinutes;
 
-            return `
-                <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
-                    <span class="dt-header-schedule-period">${this.escapeHtml(periodLabel)}</span>
-                    <span class="dt-header-schedule-sep">·</span>
-                    <span class="dt-header-schedule-subject">${this.escapeHtml(subjectName)}</span>
-                </span>
-            `;
-        }).join('');
+            return {
+                periodLabel,
+                subjectName,
+                startTime,
+                endTime,
+                startMinutes,
+                hasTimeRange,
+                isCurrent,
+                isUpcoming,
+            };
+        });
+
+        if (showAllMorningSlots) {
+            container.innerHTML = normalizedSlots.map((slot) => {
+                const titleText = slot.hasTimeRange
+                    ? `${slot.periodLabel} · ${slot.subjectName} (${slot.startTime}-${slot.endTime})`
+                    : `${slot.periodLabel} · ${slot.subjectName}`;
+                const chipClass = slot.isCurrent
+                    ? 'dt-header-schedule-item is-current'
+                    : (slot.isUpcoming ? 'dt-header-schedule-item is-upcoming' : 'dt-header-schedule-item');
+                return `
+                    <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
+                        <span class="dt-header-schedule-period">${this.escapeHtml(slot.periodLabel)}</span>
+                        <span class="dt-header-schedule-sep">·</span>
+                        <span class="dt-header-schedule-subject">${this.escapeHtml(slot.subjectName)}</span>
+                    </span>
+                `;
+            }).join('');
+            return;
+        }
+
+        const candidateSlots = normalizedSlots.filter((slot) => slot.hasTimeRange && (slot.isCurrent || slot.isUpcoming));
+
+        if (!candidateSlots.length) {
+            container.innerHTML = '<span class="dt-header-schedule-empty">다음 교시 10분 전부터 표시됩니다</span>';
+            return;
+        }
+
+        const focusSlot = candidateSlots.find((slot) => slot.isCurrent)
+            || [...candidateSlots].sort((a, b) => a.startMinutes - b.startMinutes)[0];
+
+        const chipClass = `dt-header-schedule-item ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
+        const periodText = focusSlot.isUpcoming ? `곧 ${focusSlot.periodLabel}` : focusSlot.periodLabel;
+        const titleText = `${focusSlot.periodLabel} · ${focusSlot.subjectName} (${focusSlot.startTime}-${focusSlot.endTime})`;
+
+        container.innerHTML = `
+            <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
+                <span class="dt-header-schedule-period">${this.escapeHtml(periodText)}</span>
+                <span class="dt-header-schedule-sep">·</span>
+                <span class="dt-header-schedule-subject">${this.escapeHtml(focusSlot.subjectName)}</span>
+            </span>
+        `;
     }
 
     renderMission() {
@@ -479,27 +664,6 @@ class DutyTickerManager {
         const descEl = document.getElementById('mainMissionDesc');
         if (titleEl && document.activeElement !== titleEl) titleEl.textContent = this.missionTitle;
         if (descEl && document.activeElement !== descEl) descEl.textContent = this.missionDesc;
-    }
-
-    clearRoleAssignmentsLocally() {
-        this.roles = this.roles.map((role) => ({
-            ...role,
-            assignee: '미배정',
-            assigneeId: null,
-            status: 'pending',
-        }));
-        this.renderRoleList();
-    }
-
-    clearMissionProgressLocally() {
-        this.students = this.students.map((student) => ({
-            ...student,
-            status: 'pending',
-        }));
-        this.spotlightStudentId = null;
-        this.renderMission();
-        this.renderStudentGrid();
-        this.renderRoleList();
     }
 
     restoreMissionPanelState() {
@@ -541,6 +705,7 @@ class DutyTickerManager {
         if (toggleText) toggleText.textContent = expanded ? '접기' : '펼치기';
 
         this.applyStudentGridLayoutMode();
+        this.requestAdaptiveLayoutRefresh();
     }
 
     toggleMissionPanel() {
@@ -583,7 +748,15 @@ class DutyTickerManager {
             return;
         }
 
+        const spotlightStudentId = Number(this.spotlightStudentId);
+        const spotlightRoleIds = this.roles
+            .filter((role) => Number(role.assigneeId) === spotlightStudentId)
+            .map((role) => Number(role.id));
+
         const orderedRoles = [...this.roles].sort((a, b) => {
+            const aSpot = spotlightRoleIds.includes(Number(a.id)) ? 0 : 1;
+            const bSpot = spotlightRoleIds.includes(Number(b.id)) ? 0 : 1;
+            if (aSpot !== bSpot) return aSpot - bSpot;
             if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
             return Number(a.id) - Number(b.id);
         });
@@ -594,12 +767,19 @@ class DutyTickerManager {
             const safeTimeSlot = this.escapeHtml(role.timeSlot || 'TASK');
             const safeRoleName = this.escapeHtml(role.name);
             const safeAssignee = this.escapeHtml(role.assignee || '미배정');
+            const numericRoleId = Number(role.id);
+            const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
+            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
+            const spotlightBadge = isSpotlightRole
+                ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>집중</span>'
+                : '';
             const statusBadge = isCompleted
                 ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
                 : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
+            const assigneeLabel = isCompleted ? '완료 담당' : '담당';
             return `
-                <div class="dt-role-row border cursor-pointer"
+                <div class="dt-role-row border cursor-pointer ${spotlightClass}"
                     role="button"
                     tabindex="0"
                     onclick="window.dtApp.openStudentModal(${roleId})"
@@ -609,10 +789,12 @@ class DutyTickerManager {
                             <p class="dt-role-name ${isCompleted ? 'is-completed' : ''}">${safeRoleName}</p>
                             <div class="dt-role-meta">
                                 <p class="dt-role-slot">${safeTimeSlot}</p>
+                                ${spotlightBadge}
                                 ${statusBadge}
                             </div>
                         </div>
                         <div class="dt-role-assignee-wrap">
+                            <span class="dt-role-assignee-label">${assigneeLabel}</span>
                             <div class="dt-role-assignee ${assigneeToneClass}" title="${safeAssignee}">${safeAssignee}</div>
                         </div>
                     </div>
@@ -740,13 +922,32 @@ class DutyTickerManager {
     applyStudentGridLayoutMode() {
         const grid = document.getElementById('mainStudentGrid');
         const card = document.getElementById('mainStudentCard');
+        const app = document.getElementById('mainAppContainer');
+        const gridWrap = document.getElementById('mainStudentGridWrap');
         if (!grid || !card) return;
 
         const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         const studentCount = this.students.length;
-        const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 30;
+        const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 36;
+        const layoutDensity = app ? String(app.getAttribute('data-layout-density') || 'hero') : 'hero';
+        const gridWrapHeight = gridWrap ? gridWrap.getBoundingClientRect().height : 0;
+        let gridColumns = '5';
+
+        if (
+            shouldUseComfortFit
+            && !this.missionPanelCollapsed
+            && (
+                layoutDensity === 'compact'
+                || gridWrapHeight < 210
+                || studentCount >= 21
+            )
+        ) {
+            gridColumns = '6';
+        }
 
         grid.classList.toggle('dt-student-grid-fit-25', shouldUseComfortFit);
+        if (shouldUseComfortFit) grid.dataset.gridColumns = gridColumns;
+        else delete grid.dataset.gridColumns;
         grid.classList.remove('dt-student-density-low', 'dt-student-density-mid', 'dt-student-density-high');
         if (shouldUseComfortFit) {
             if (studentCount <= 10) grid.classList.add('dt-student-density-low');
@@ -1029,17 +1230,17 @@ class DutyTickerManager {
 
     handleTimerTick() {
         if (!this.isTimerRunning || !this.timerEndAt) return;
-        const remaining = Math.max(0, Math.floor((this.timerEndAt - Date.now()) / 1000));
+        const remaining = this.getRemainingTimerSeconds();
+
+        if (remaining <= 0) {
+            this.finishTimer();
+            return;
+        }
 
         if (remaining !== this.timerSeconds) {
             this.timerSeconds = remaining;
             this.updateTimerDisplay();
             this.saveTimerState();
-        }
-
-        if (remaining === 0) {
-            this.pauseTimer();
-            this.playAlert();
         }
     }
 
@@ -1062,7 +1263,7 @@ class DutyTickerManager {
 
     pauseTimer() {
         if (this.isTimerRunning && this.timerEndAt) {
-            this.timerSeconds = Math.max(0, Math.ceil((this.timerEndAt - Date.now()) / 1000));
+            this.timerSeconds = this.getRemainingTimerSeconds();
         }
 
         this.isTimerRunning = false;
@@ -1085,7 +1286,8 @@ class DutyTickerManager {
         const minuteValue = Number(minutes);
         if (!Number.isFinite(minuteValue) || minuteValue <= 0) return;
 
-        const nextSeconds = this.timerSeconds + (Math.floor(minuteValue) * 60);
+        const baseSeconds = this.isTimerRunning ? this.getRemainingTimerSeconds() : this.timerSeconds;
+        const nextSeconds = baseSeconds + (Math.floor(minuteValue) * 60);
         const clampedSeconds = Math.min(nextSeconds, 59940);
 
         this.timerSeconds = clampedSeconds;
@@ -1135,8 +1337,9 @@ class DutyTickerManager {
     }
 
     updateTimerDisplay() {
-        const m = Math.floor(this.timerSeconds / 60);
-        const s = this.timerSeconds % 60;
+        const safeSeconds = Math.max(0, Math.floor(Number(this.timerSeconds) || 0));
+        const m = Math.floor(safeSeconds / 60);
+        const s = safeSeconds % 60;
         const text = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         const display = document.getElementById('mainTimerDisplay');
         if (display) {
@@ -1205,9 +1408,9 @@ class DutyTickerManager {
         const titleEl = document.getElementById('resetConfirmTitle');
         const messageEl = document.getElementById('resetConfirmMessage');
         const actionBtn = document.getElementById('resetConfirmActionBtn');
-        if (titleEl) titleEl.textContent = title || '초기화 확인';
+        if (titleEl) titleEl.textContent = title || '확인';
         if (messageEl) messageEl.textContent = message || '이 작업을 진행할까요?';
-        if (actionBtn) actionBtn.textContent = confirmLabel || '초기화';
+        if (actionBtn) actionBtn.textContent = confirmLabel || '확인';
         this.openModal('resetConfirmModal');
     }
 
@@ -1544,10 +1747,27 @@ class DutyTickerManager {
         const descEl = document.getElementById('mainMissionDesc');
         if (!titleEl || !descEl) return;
 
+        const insertPlainText = (text) => {
+            const selection = window.getSelection();
+            if (!selection || !selection.rangeCount) return;
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            const node = document.createTextNode(text);
+            range.insertNode(node);
+            range.setStartAfter(node);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        };
+
         const stripPasteFormatting = (event) => {
             event.preventDefault();
             const text = event.clipboardData?.getData('text/plain') || '';
-            document.execCommand('insertText', false, text);
+            if (typeof document.execCommand === 'function') {
+                document.execCommand('insertText', false, text);
+                return;
+            }
+            insertPlainText(text);
         };
 
         titleEl.addEventListener('keydown', (event) => {
@@ -1555,6 +1775,16 @@ class DutyTickerManager {
                 event.preventDefault();
                 titleEl.blur();
             }
+        });
+        descEl.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            if (event.shiftKey) {
+                event.preventDefault();
+                insertPlainText('\n');
+                return;
+            }
+            event.preventDefault();
+            descEl.blur();
         });
         titleEl.addEventListener('paste', stripPasteFormatting);
         descEl.addEventListener('paste', stripPasteFormatting);
@@ -1609,6 +1839,388 @@ class DutyTickerManager {
         }
     }
 
+    restoreMissionQuickPhrase() {
+        try {
+            const raw = localStorage.getItem(this.missionQuickPhraseStorageKey);
+            if (!raw) {
+                this.missionQuickPhrases = [];
+                this.missionQuickPhrase = null;
+                this.missionQuickSelectedId = null;
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const rawList = Array.isArray(parsed)
+                ? parsed
+                : (parsed && typeof parsed === 'object' ? [parsed] : []);
+            const normalizedList = rawList
+                .map((item, index) => {
+                    const title = this.sanitizeMissionText(item?.title || '', 'title');
+                    const desc = this.sanitizeMissionText(item?.desc || '', 'desc');
+                    if (!title && !desc) return null;
+                    const label = this.buildMissionQuickPhraseLabel(title, desc, String(item?.label || ''));
+                    return {
+                        id: String(item?.id || `legacy-${index + 1}`),
+                        label,
+                        title,
+                        desc,
+                        savedAt: Number(item?.savedAt) || Date.now(),
+                    };
+                })
+                .filter((item) => !!item)
+                .slice(0, this.missionQuickPhraseLimit);
+
+            this.missionQuickPhrases = normalizedList;
+            this.missionQuickPhrase = normalizedList[0] || null;
+            this.missionQuickSelectedId = normalizedList[0]?.id || null;
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore mission quick phrase', error);
+            this.missionQuickPhrases = [];
+            this.missionQuickPhrase = null;
+            this.missionQuickSelectedId = null;
+        }
+    }
+
+    saveMissionQuickPhraseToStorage() {
+        try {
+            if (!this.missionQuickPhrases.length) {
+                localStorage.removeItem(this.missionQuickPhraseStorageKey);
+                return;
+            }
+            localStorage.setItem(this.missionQuickPhraseStorageKey, JSON.stringify(this.missionQuickPhrases));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save mission quick phrase', error);
+        }
+    }
+
+    buildMissionQuickPhraseLabel(title, desc, preferredLabel = '') {
+        const cleanPreferred = String(preferredLabel || '').trim();
+        if (cleanPreferred) return cleanPreferred.slice(0, 14);
+
+        const source = String(title || desc || '문구').trim();
+        if (!source) return '문구';
+        return source.length > 14 ? `${source.slice(0, 14)}…` : source;
+    }
+
+    formatMissionQuickPhraseSavedAt(savedAt) {
+        const date = new Date(Number(savedAt) || Date.now());
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    getCurrentMissionQuickPhraseDraft() {
+        const titleEl = document.getElementById('mainMissionTitle');
+        const descEl = document.getElementById('mainMissionDesc');
+        return {
+            title: this.sanitizeMissionText(titleEl ? titleEl.innerText : this.missionTitle, 'title'),
+            desc: this.sanitizeMissionText(descEl ? descEl.innerText : this.missionDesc, 'desc'),
+        };
+    }
+
+    getMissionQuickPhraseFormValues() {
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        const descInput = document.getElementById('missionQuickDescInput');
+        return {
+            title: this.sanitizeMissionText(titleInput ? titleInput.value : '', 'title'),
+            desc: this.sanitizeMissionText(descInput ? descInput.value : '', 'desc'),
+        };
+    }
+
+    setMissionQuickPhraseFormValues({ title = '', desc = '' } = {}) {
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        const descInput = document.getElementById('missionQuickDescInput');
+        if (titleInput) titleInput.value = title;
+        if (descInput) descInput.value = desc;
+    }
+
+    getMissionQuickPhraseById(phraseId) {
+        if (!phraseId) return null;
+        return this.missionQuickPhrases.find((item) => item.id === String(phraseId)) || null;
+    }
+
+    syncMissionQuickPhraseSelection(selectedId = null) {
+        const targetId = String(selectedId || this.missionQuickSelectedId || '').trim();
+        const selected = this.getMissionQuickPhraseById(targetId) || this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = selected ? selected.id : null;
+        return selected;
+    }
+
+    createMissionQuickPhraseEntry(title, desc) {
+        const now = Date.now();
+        const duplicateCount = this.missionQuickPhrases.filter(
+            (item) => item.title === title && item.desc === desc
+        ).length;
+        const baseLabel = this.buildMissionQuickPhraseLabel(title, desc);
+        const label = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
+        return {
+            id: `phrase-${now}-${Math.random().toString(36).slice(2, 8)}`,
+            label,
+            title,
+            desc,
+            savedAt: now,
+        };
+    }
+
+    setMissionQuickPhraseModalHint(message) {
+        const hintEl = document.getElementById('missionQuickModalHint');
+        if (hintEl) hintEl.textContent = message;
+    }
+
+    updateMissionQuickPhraseUI() {
+        const applyBtn = document.getElementById('missionQuickApplyBtn');
+        const saveBtn = document.getElementById('missionQuickSaveBtn');
+        if (!applyBtn) return;
+
+        const count = this.missionQuickPhrases.length;
+        applyBtn.disabled = false;
+        applyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        applyBtn.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+        applyBtn.setAttribute('title', count > 0 ? '저장한 문구를 불러오고 수정하거나 삭제합니다.' : '저장한 문구를 관리합니다.');
+        if (saveBtn) saveBtn.setAttribute('title', count > 0 ? `현재 문구를 새 항목으로 저장 (저장 ${count}개)` : '현재 문구를 새 항목으로 저장');
+    }
+
+    renderMissionQuickPhraseModal() {
+        const listEl = document.getElementById('missionQuickPhraseList');
+        if (!listEl) return;
+
+        const countEl = document.getElementById('missionQuickModalCount');
+        const updateBtn = document.getElementById('missionQuickUpdateBtn');
+        const applyBtn = document.getElementById('missionQuickApplySelectedBtn');
+        const deleteBtn = document.getElementById('missionQuickDeleteBtn');
+        const deleteAllBtn = document.getElementById('missionQuickDeleteAllBtn');
+        const count = this.missionQuickPhrases.length;
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+
+        if (countEl) countEl.textContent = `저장 ${count}개`;
+        if (updateBtn) updateBtn.disabled = !selected;
+        if (applyBtn) applyBtn.disabled = !selected;
+        if (deleteBtn) deleteBtn.disabled = !selected;
+        if (deleteAllBtn) deleteAllBtn.disabled = count === 0;
+
+        if (!count) {
+            listEl.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/45 p-5 text-center">
+                    <p class="text-sm font-black text-slate-200">저장된 문구가 없습니다.</p>
+                    <p class="mt-1 text-xs text-slate-400">아래 편집칸에서 새 문구를 저장하거나 현재 문구를 먼저 가져오세요.</p>
+                </div>
+            `;
+            this.setMissionQuickPhraseModalHint('현재 문구를 불러오거나 새 문구를 입력해 저장하세요.');
+            return;
+        }
+
+        listEl.innerHTML = this.missionQuickPhrases.map((item) => {
+            const isSelected = selected && item.id === selected.id;
+            const previewText = item.desc || item.title || '저장 문구';
+            return `
+                <button type="button"
+                    onclick="window.dtApp.selectMissionQuickPhrase('${item.id}')"
+                    class="dt-phrase-list-item ${isSelected ? 'is-selected' : ''} w-full rounded-2xl border border-slate-700 bg-slate-900/55 px-4 py-3 text-left transition hover:bg-slate-800/80">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-white break-keep">${this.escapeHtml(item.label)}</p>
+                            <p class="mt-1 text-xs leading-relaxed text-slate-400 break-words">${this.escapeHtml(previewText)}</p>
+                        </div>
+                        <span class="shrink-0 text-[10px] font-black text-slate-500">${this.escapeHtml(this.formatMissionQuickPhraseSavedAt(item.savedAt))}</span>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        this.setMissionQuickPhraseModalHint(selected
+            ? '선택한 문구를 적용하거나 수정, 삭제할 수 있습니다.'
+            : '목록에서 문구를 하나 선택하세요.');
+    }
+
+    openMissionQuickPhraseModal() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (selected) this.setMissionQuickPhraseFormValues(selected);
+        else this.loadCurrentMissionIntoQuickPhraseForm();
+        this.renderMissionQuickPhraseModal();
+        this.openModal('missionQuickPhraseModal');
+        const titleInput = document.getElementById('missionQuickTitleInput');
+        if (titleInput) setTimeout(() => titleInput.focus(), 30);
+    }
+
+    closeMissionQuickPhraseModal() {
+        this.closeModal('missionQuickPhraseModal');
+    }
+
+    selectMissionQuickPhrase(phraseId) {
+        const selected = this.syncMissionQuickPhraseSelection(phraseId);
+        if (!selected) return;
+        this.setMissionQuickPhraseFormValues(selected);
+        this.renderMissionQuickPhraseModal();
+    }
+
+    loadCurrentMissionIntoQuickPhraseForm() {
+        const draft = this.getCurrentMissionQuickPhraseDraft();
+        this.setMissionQuickPhraseFormValues(draft);
+        this.setMissionQuickPhraseModalHint('현재 화면 문구를 편집칸으로 가져왔습니다. 새 항목 저장 또는 선택 항목 수정이 가능합니다.');
+    }
+
+    saveMissionQuickPhraseFromCurrent() {
+        const { title, desc } = this.getCurrentMissionQuickPhraseDraft();
+        if (!title && !desc) {
+            this.showToast('저장할 문구가 없습니다.', 'error');
+            return;
+        }
+
+        const entry = this.createMissionQuickPhraseEntry(title, desc);
+        this.missionQuickPhrases.unshift(entry);
+        if (this.missionQuickPhrases.length > this.missionQuickPhraseLimit) {
+            this.missionQuickPhrases = this.missionQuickPhrases.slice(0, this.missionQuickPhraseLimit);
+        }
+
+        this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = entry.id;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(entry);
+        this.renderMissionQuickPhraseModal();
+        this.showToast(`반복 문구를 저장했습니다. (총 ${this.missionQuickPhrases.length}개)`, 'success');
+    }
+
+    createMissionQuickPhraseFromModal() {
+        const { title, desc } = this.getMissionQuickPhraseFormValues();
+        if (!title && !desc) {
+            this.showToast('저장할 문구를 입력해 주세요.', 'error');
+            return;
+        }
+
+        const entry = this.createMissionQuickPhraseEntry(title, desc);
+        this.missionQuickPhrases.unshift(entry);
+        if (this.missionQuickPhrases.length > this.missionQuickPhraseLimit) {
+            this.missionQuickPhrases = this.missionQuickPhrases.slice(0, this.missionQuickPhraseLimit);
+        }
+
+        this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+        this.missionQuickSelectedId = entry.id;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(entry);
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('새 문구를 저장했습니다.');
+        this.showToast('새 문구를 저장했습니다.', 'success');
+    }
+
+    updateSelectedMissionQuickPhrase() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            this.showToast('수정할 문구를 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        const { title, desc } = this.getMissionQuickPhraseFormValues();
+        if (!title && !desc) {
+            this.showToast('저장할 문구를 입력해 주세요.', 'error');
+            return;
+        }
+
+        const currentIndex = this.missionQuickPhrases.findIndex((item) => item.id === selected.id);
+        if (currentIndex < 0) {
+            this.showToast('선택한 문구를 찾지 못했습니다.', 'error');
+            return;
+        }
+
+        const updated = {
+            ...selected,
+            label: this.buildMissionQuickPhraseLabel(title, desc),
+            title,
+            desc,
+            savedAt: Date.now(),
+        };
+
+        this.missionQuickPhrases.splice(currentIndex, 1);
+        this.missionQuickPhrases.unshift(updated);
+        this.missionQuickPhrase = updated;
+        this.missionQuickSelectedId = updated.id;
+        this.saveMissionQuickPhraseToStorage();
+        this.updateMissionQuickPhraseUI();
+        this.setMissionQuickPhraseFormValues(updated);
+        this.renderMissionQuickPhraseModal();
+        this.setMissionQuickPhraseModalHint('선택한 문구를 수정했습니다.');
+        this.showToast('선택한 문구를 수정했습니다.', 'success');
+    }
+
+    async applyMissionQuickPhrase(phraseId = null) {
+        const selected = phraseId
+            ? this.getMissionQuickPhraseById(phraseId)
+            : this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            this.showToast('적용할 문구를 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        const selectedIndex = this.missionQuickPhrases.findIndex((item) => item.id === selected.id);
+        this.missionQuickPhrase = selected;
+        this.missionQuickSelectedId = selected.id;
+
+        if (selectedIndex > 0) {
+            this.missionQuickPhrases.splice(selectedIndex, 1);
+            this.missionQuickPhrases.unshift(selected);
+            this.saveMissionQuickPhraseToStorage();
+            this.updateMissionQuickPhraseUI();
+        }
+
+        await this.handleUpdateMission({
+            title: selected.title,
+            desc: selected.desc,
+        });
+        this.setMissionQuickPhraseFormValues(selected);
+        this.renderMissionQuickPhraseModal();
+        this.closeMissionQuickPhraseModal();
+        this.showToast(`'${selected.label}' 문구를 적용했습니다.`, 'success');
+    }
+
+    deleteSelectedMissionQuickPhrase() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            this.showToast('삭제할 문구를 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        this.requestResetConfirmation({
+            title: '문구 삭제',
+            message: `'${selected.label}' 문구를 삭제할까요?`,
+            confirmLabel: '선택 삭제',
+            onConfirm: async () => {
+                this.missionQuickPhrases = this.missionQuickPhrases.filter((item) => item.id !== selected.id);
+                this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
+                this.missionQuickSelectedId = this.missionQuickPhrases[0]?.id || null;
+                this.saveMissionQuickPhraseToStorage();
+                this.updateMissionQuickPhraseUI();
+
+                const nextSelected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+                if (nextSelected) this.setMissionQuickPhraseFormValues(nextSelected);
+                else this.loadCurrentMissionIntoQuickPhraseForm();
+                this.renderMissionQuickPhraseModal();
+                this.setMissionQuickPhraseModalHint('선택한 문구를 삭제했습니다.');
+                this.showToast('선택한 문구를 삭제했습니다.', 'success');
+            },
+        });
+    }
+
+    clearMissionQuickPhrases() {
+        if (!this.missionQuickPhrases.length) return;
+        this.requestResetConfirmation({
+            title: '문구 전체 삭제',
+            message: '저장한 문구를 모두 삭제할까요?',
+            confirmLabel: '전체 삭제',
+            onConfirm: async () => {
+                this.missionQuickPhrases = [];
+                this.missionQuickPhrase = null;
+                this.missionQuickSelectedId = null;
+                this.saveMissionQuickPhraseToStorage();
+                this.updateMissionQuickPhraseUI();
+                this.loadCurrentMissionIntoQuickPhraseForm();
+                this.renderMissionQuickPhraseModal();
+                this.setMissionQuickPhraseModalHint('저장 문구를 모두 비웠습니다.');
+                this.showToast('저장 문구를 모두 비웠습니다.', 'success');
+            },
+        });
+    }
+
     restoreMissionFontSize() {
         try {
             const saved = localStorage.getItem(this.missionFontStorageKey);
@@ -1634,11 +2246,16 @@ class DutyTickerManager {
 
         const label = document.getElementById('missionFontSizeLabel');
         if (label) {
-            label.textContent = this.missionFontSize === 'sm'
-                ? '작게'
-                : this.missionFontSize === 'lg'
-                    ? '크게'
-                    : '보통';
+            const sizeLabelMap = {
+                xxs: '최소',
+                xs: '아주작게',
+                sm: '작게',
+                md: '보통',
+                lg: '크게',
+                xl: '아주크게',
+                xxl: '최대',
+            };
+            label.textContent = sizeLabelMap[this.missionFontSize] || '보통';
         }
     }
 
@@ -1646,7 +2263,8 @@ class DutyTickerManager {
         const step = Number(direction);
         if (!Number.isFinite(step) || step === 0) return;
         const currentIndex = this.missionFontSizeOrder.indexOf(this.missionFontSize);
-        const safeIndex = currentIndex >= 0 ? currentIndex : 1;
+        const defaultIndex = this.missionFontSizeOrder.indexOf('md');
+        const safeIndex = currentIndex >= 0 ? currentIndex : (defaultIndex >= 0 ? defaultIndex : 0);
         const nextIndex = Math.max(0, Math.min(this.missionFontSizeOrder.length - 1, safeIndex + (step > 0 ? 1 : -1)));
         this.missionFontSize = this.missionFontSizeOrder[nextIndex];
         this.applyMissionFontSize();
@@ -1680,7 +2298,6 @@ class DutyTickerManager {
                 { method: 'POST' }
             );
             await this.parseJsonResponse(response, '학생 배정 초기화에 실패했습니다.');
-            this.clearRoleAssignmentsLocally();
             await this.loadData();
             this.showToast('오늘의 역할 배정을 비웠습니다.', 'success');
         } catch (error) {
@@ -1715,7 +2332,6 @@ class DutyTickerManager {
                 { method: 'POST' }
             );
             await this.parseJsonResponse(response, '학생 미션 상태 초기화에 실패했습니다.');
-            this.clearMissionProgressLocally();
             await this.loadData();
             this.showToast('미션현황 체크를 모두 해제했습니다.', 'success');
         } catch (error) {
@@ -1728,23 +2344,28 @@ class DutyTickerManager {
     }
 
     async resetToMockup() {
-        const shouldReset = confirm('정말로 기본 데이터로 초기화할까요? 현재 학급 상태가 초기화됩니다.');
-        if (!shouldReset) return;
-
-        try {
-            const response = await this.secureFetch(this.getApiUrl('resetUrl', '/products/dutyticker/api/reset/'), { method: 'POST' });
-            await this.parseJsonResponse(response, '데이터 초기화에 실패했습니다.');
-            this.pauseTimer();
-            this.timerMaxSeconds = 300;
-            this.timerSeconds = 300;
-            this.syncCustomTimerInput();
-            this.updateTimerDisplay();
-            this.saveTimerState();
-            this.loadData();
-        } catch (error) {
-            console.error(error);
-            alert(error?.message || '데이터 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-        }
+        this.requestResetConfirmation({
+            title: '기본 데이터로 초기화',
+            message: '현재 학급 상태를 기본 데이터로 되돌립니다.',
+            confirmLabel: '기본값으로 되돌리기',
+            onConfirm: async () => {
+                try {
+                    const response = await this.secureFetch(this.getApiUrl('resetUrl', '/products/dutyticker/api/reset/'), { method: 'POST' });
+                    await this.parseJsonResponse(response, '데이터 초기화에 실패했습니다.');
+                    this.pauseTimer();
+                    this.timerMaxSeconds = 300;
+                    this.timerSeconds = 300;
+                    this.syncCustomTimerInput();
+                    this.updateTimerDisplay();
+                    this.saveTimerState();
+                    await this.loadData();
+                    this.showToast('기본 데이터로 초기화했습니다.', 'success');
+                } catch (error) {
+                    console.error(error);
+                    this.showToast(error?.message || '데이터 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+                }
+            },
+        });
     }
 
     // --- BGM ---
@@ -2294,5 +2915,4 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
-
 

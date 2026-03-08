@@ -135,9 +135,9 @@ class DTSettings(models.Model):
     ]
     THEME_CHOICES = [
         ("deep_space", "딥 스페이스 (기본, 다크)"),
-        ("sunny", "햇살 가득 교실 (라이트)"),
-        ("pastel", "차분한 파스텔"),
-        ("vivid", "비비드 팝 (캐주얼)"),
+        ("sunny", "살구빛 햇살 (밝음)"),
+        ("pastel", "민트 파스텔 (부드러움)"),
+        ("vivid", "코랄 팝 (선명함)"),
     ]
     ROLE_VIEW_MODE_CHOICES = [
         ("compact", "밀도형 (기본)"),
