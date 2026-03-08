@@ -307,7 +307,6 @@ def _run_scenario(
         page.wait_for_timeout(1200)
     else:
         sync_status = _wait_for_status(page, "열었어요.")
-        mobile_guidance = page.locator("#sheetbook-calendar-embed p").filter(has_text="휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.").inner_text(timeout=10000).strip()
 
     create_title = f"{label} create smoke"
     _click_host_button(page, "#sheetbook-calendar-create-btn")
@@ -376,8 +375,6 @@ def _evaluate(summary: dict[str, Any]) -> dict[str, Any]:
         if is_mobile_compact:
             if not bool(item.get("sync_disabled")):
                 reasons.append("mobile_sync_not_disabled")
-            if "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요." not in str(item.get("mobile_guidance") or ""):
-                reasons.append("mobile_guidance_missing")
         else:
             if bool(item.get("sync_disabled")):
                 reasons.append("sync_unexpectedly_disabled")

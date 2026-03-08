@@ -27,48 +27,6 @@
   data-mobile-read-only-message="{{ sheetbook_mobile_read_only_message|default:''|escape }}"
   class="flex flex-col gap-4"
 >
-  {% if sheetbook_mobile_read_only or sheetbook_mobile_compact_mode %}
-    <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-      <p class="text-sm font-semibold text-amber-800">
-        {% if sheetbook_archived_read_only %}아카이브 읽기 모드{% else %}휴대폰 간단 편집{% endif %}
-      </p>
-      <p class="mt-1 text-xs text-amber-700">{{ sheetbook_mobile_read_only_message }}</p>
-      <div class="mt-3 grid gap-3 md:grid-cols-2">
-        <section class="rounded-xl border border-amber-200 bg-white/80 px-3 py-3">
-          <p class="text-[11px] font-semibold text-amber-800">지금 할 수 있는 일</p>
-          <ul class="mt-2 space-y-1 text-[11px] text-slate-600">
-            {% if sheetbook_archived_read_only %}
-              <li>표 내용과 달력 일정을 확인하기</li>
-              <li>찾기와 방금 만든 결과 다시 보기</li>
-              <li>복제 전에 필요한 내용을 다시 점검하기</li>
-            {% else %}
-              <li>칸 1개씩 수정하고 바로 저장하기</li>
-              <li>줄 추가/삭제와 항목 이름 바꾸기</li>
-              <li>간단한 항목 추가/삭제와 달력 확인</li>
-            {% endif %}
-          </ul>
-        </section>
-        <section class="rounded-xl border border-amber-200 bg-white/80 px-3 py-3">
-          <p class="text-[11px] font-semibold text-amber-800">
-            {% if sheetbook_archived_read_only %}수정하려면{% else %}태블릿이나 PC에서 이어서 할 일{% endif %}
-          </p>
-          <ul class="mt-2 space-y-1 text-[11px] text-slate-600">
-            {% if sheetbook_archived_read_only %}
-              <li>이 수첩을 이어쓰기(복제)로 새로 열기</li>
-              <li>복제된 수첩에서 내용 수정과 추가 진행하기</li>
-              <li>새 수첩에서 달력 반영과 후속 작업 실행하기</li>
-            {% else %}
-              <li>표 대량 붙여넣기와 파일 가져오기</li>
-              <li>여러 칸 선택 후 달력/동의서/안내문으로 이어가기</li>
-              <li>일정 표를 달력에 한 번에 반영하기</li>
-            {% endif %}
-          </ul>
-        </section>
-      </div>
-    </section>
-  {% endif %}
-
-
   <section class="order-1 rounded-xl border border-slate-200 bg-white px-4 py-3">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <form method="get" action="{% url 'sheetbook:detail' pk=sheetbook.pk %}" class="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
@@ -123,7 +81,6 @@
       <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p class="text-sm font-semibold text-slate-800">통합 검색</p>
-          <p class="mt-1 text-[11px] text-slate-500">현재 수첩 안에서 탭, 칸 내용, 방금 만든 결과를 함께 찾아 보여줍니다.</p>
         </div>
         <p class="text-xs text-slate-500">검색어: <span class="font-semibold text-slate-700">{{ search_query }}</span></p>
       </div>
@@ -211,9 +168,6 @@
           {% else %}
             <span class="ml-1 text-slate-500">전체 보기</span>
           {% endif %}
-        </p>
-        <p class="text-[11px] text-slate-500 mt-1">
-          찾을 말과 보여줄 순서를 저장해 두고 한 번에 바꿔 볼 수 있어요.
         </p>
       </div>
 
@@ -327,7 +281,7 @@
           </form>
         </div>
       {% empty %}
-        <p class="text-[11px] text-slate-500">저장한 보기가 아직 없어요. 위 조건을 저장해 두면 한 번에 바꿔 볼 수 있어요.</p>
+        <p class="text-[11px] text-slate-500">저장한 보기가 아직 없어요.</p>
       {% endfor %}
     </div>
   </section>
@@ -335,7 +289,6 @@
   <section class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
     <div class="mb-2">
       <p class="text-sm font-semibold text-slate-800">표 파일 가져오기 / 내려받기</p>
-      <p class="mt-1 text-[11px] text-slate-500">엑셀이나 표 파일을 한 번에 불러오거나 내려받을 수 있어요.</p>
     </div>
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <form
@@ -385,22 +338,10 @@
         </a>
       </div>
     </div>
-    <p class="mt-2 text-[11px] text-slate-500">
-      맞지 않는 칸이 있으면 줄 번호와 함께 안내돼서 바로 다시 확인할 수 있어요.
-    </p>
   </section>
     </div>
   </details>
 
-  {% if sheetbook_archived_read_only or sheetbook_mobile_compact_mode %}
-  <p class="order-2 text-xs text-gray-500">
-    {% if sheetbook_archived_read_only %}
-      이 수첩은 보관본이라 확인만 할 수 있어요. 수정은 이어쓰기한 수첩에서 진행해 주세요.
-    {% else %}
-      휴대폰에서는 칸 수정과 줄/항목 정리 같은 간단 편집은 가능해요. 대량 붙여넣기와 범위 작업은 태블릿이나 PC에서 이어서 진행해 주세요.
-    {% endif %}
-  </p>
-  {% endif %}
   {% if not sheetbook_mobile_read_only and not sheetbook_mobile_compact_mode %}
   <noscript>
     <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
@@ -436,14 +377,14 @@
       aria-live="polite"
       aria-atomic="true"
     >
-      저장 상태: 바로 적을 수 있어요.
+      준비됨
     </p>
     <button
       type="button"
       id="grid-mobile-row-open-btn"
       class="hidden rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:border-indigo-400 md:hidden"
     >
-      휴대폰 한 줄 수정
+      줄 수정
     </button>
     <button
       type="button"
@@ -477,8 +418,8 @@
   <div id="grid-mobile-row-panel" class="hidden fixed inset-x-3 bottom-3 z-[85] rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur md:hidden">
     <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
       <div>
-        <p class="text-[11px] font-semibold text-indigo-700">휴대폰에서 한 줄씩 수정</p>
-        <p id="grid-mobile-row-title" class="text-xs text-slate-700">줄을 선택해 주세요.</p>
+        <p class="text-[11px] font-semibold text-indigo-700">줄 수정</p>
+        <p id="grid-mobile-row-title" class="text-xs text-slate-700">줄 선택</p>
       </div>
       <button type="button" id="grid-mobile-row-close-btn" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
         닫기
@@ -508,8 +449,8 @@
   <div id="grid-mobile-column-panel" class="hidden fixed inset-x-3 bottom-3 z-[86] rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur md:hidden">
     <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
       <div>
-        <p class="text-[11px] font-semibold text-indigo-700">휴대폰에서 항목 정리</p>
-        <p id="grid-mobile-column-title" class="text-xs text-slate-700">항목을 선택해 주세요.</p>
+        <p class="text-[11px] font-semibold text-indigo-700">항목 정리</p>
+        <p id="grid-mobile-column-title" class="text-xs text-slate-700">항목 선택</p>
       </div>
       <button type="button" id="grid-mobile-column-close-btn" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
         닫기
@@ -530,7 +471,6 @@
       </div>
     </div>
     <div class="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-2">
-      <p class="text-[11px] text-slate-500">이름은 바로 저장되고, 삭제는 필요할 때만 한 번 더 확인해요.</p>
       <button type="button" id="grid-mobile-column-delete-btn" class="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">
         항목 삭제
       </button>
@@ -544,9 +484,9 @@
         <p id="grid-selection-summary" class="text-sm font-semibold text-slate-800">1줄 1칸 · 1칸 선택</p>
         <p id="grid-selection-recommendation" class="hidden mt-1 text-xs font-medium text-slate-500"></p>
         {% if sheetbook_mobile_read_only %}
-          <p class="mt-2 text-[11px] font-medium text-amber-700">보관된 수첩이라 실행은 할 수 없어요. 이어쓰기한 수첩에서 진행해 주세요.</p>
+          <p class="mt-2 text-[11px] font-medium text-amber-700">읽기 전용 수첩에서는 실행할 수 없어요.</p>
         {% elif sheetbook_mobile_compact_mode %}
-          <p class="mt-2 text-[11px] font-medium text-amber-700">휴대폰에서는 범위 실행 대신 칸 수정과 줄/항목 정리까지만 할 수 있어요. 이어지는 작업은 태블릿이나 PC에서 진행해 주세요.</p>
+          <p class="mt-2 text-[11px] font-medium text-amber-700">PC/태블릿에서 실행할 수 있어요.</p>
         {% endif %}
       </div>
       <div class="grid gap-3 md:min-w-[420px] md:grid-cols-2">

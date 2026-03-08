@@ -182,6 +182,16 @@ Keep all existing content above unchanged; apply these requirements in addition.
 - CI gate: lint + test + migration safety check before merge.
 - Feature flags for staged rollout when risk is non-trivial.
 
-### 7) Definition of Done for New Service
+### 7) Teacher-First UX Baseline (MUST for teacher-facing services)
+- Primary user assumption: the default user is a teacher who wants fast help, not a power user of Notion, Google Sheets, or complex workflow tools.
+- The first screen must prioritize only "what the teacher does right now". Sharing, collaboration, integration toggles, admin utilities, and advanced setup must be collapsed or moved to a secondary location by default.
+- Rare or exceptional actions must never appear larger, earlier, or more visually dominant than the main classroom task.
+- If a feature needs long explanation text to be understood, treat the feature structure as failed and simplify the structure before adding more copy.
+- Avoid duplicate CTA exposure for the same goal. Keep one primary action visible and move secondary actions into details, menus, or follow-up screens.
+- Do not use embedded full-page shells, duplicated headers, nested scrolling regions, or iframe-style bridges as a final teacher-facing UX.
+- Mobile teacher UX should expose only the safe, common actions and must clearly hide or disable advanced actions instead of surrounding them with large warning blocks.
+- Success criteria for a teacher-facing integration are not "it works" but "a first-time teacher can use it without reading instructions".
+
+### 8) Definition of Done for New Service
 A service integration is not complete unless all MUST items above are satisfied and documented.
 

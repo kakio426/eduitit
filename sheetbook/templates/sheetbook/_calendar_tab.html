@@ -7,7 +7,7 @@
   <section class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
     <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
       <div class="min-w-0">
-        <p class="text-sm font-semibold text-slate-800">연결된 일정 표</p>
+        <p class="text-sm font-semibold text-slate-800">일정 표</p>
         {% if schedule_source_tab %}
         <p class="mt-1 text-sm text-slate-700">
           <span class="font-semibold">{{ schedule_source_tab.name }}</span>
@@ -16,12 +16,7 @@
           </span>
         </p>
         {% else %}
-        <p class="mt-1 text-sm font-semibold text-amber-700">아직 연결된 일정 표가 없어요.</p>
-        {% endif %}
-        {% if sheetbook_mobile_compact_mode %}
-        <p class="mt-2 text-xs text-slate-500">
-          휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.
-        </p>
+        <p class="mt-1 text-sm font-semibold text-amber-700">일정 표가 없어요.</p>
         {% endif %}
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -55,34 +50,15 @@
     </div>
 
     <details class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700">연결 설정</summary>
+      <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700">설정</summary>
       <div class="mt-3 space-y-3">
-        <div class="space-y-1 text-[11px] text-slate-600">
-          <p>
-            일정 표:
-            {% if schedule_source_tab %}
-              <span class="font-semibold text-slate-700">{{ schedule_source_tab.name }}</span>
-            {% else %}
-              <span class="font-semibold text-amber-700">아직 없음</span>
-            {% endif %}
-          </p>
-          <p>
-            수첩으로 돌아올 때:
-            {% if calendar_bridge_is_explicit %}
-              <span class="font-semibold text-indigo-700">이 탭 먼저 열기</span>
-            {% else %}
-              <span class="text-slate-500">최근 사용 흐름 기준</span>
-            {% endif %}
-          </p>
-        </div>
-
         {% if not sheetbook_mobile_compact_mode and not sheetbook_mobile_read_only %}
         <form method="post" action="{% url 'sheetbook:update_calendar_link_settings' pk=sheetbook.pk tab_pk=selected_tab.pk %}" class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           {% csrf_token %}
           <input type="hidden" name="source" value="{{ entry_source|default:'direct' }}">
           <div class="flex-1 grid gap-3 md:grid-cols-[minmax(0,240px)_1fr]">
             <label class="space-y-1 text-xs text-slate-600">
-              <span class="font-semibold text-slate-700">달력으로 옮길 일정 표</span>
+              <span class="font-semibold text-slate-700">반영할 일정 표</span>
               <select name="schedule_source_tab_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                 <option value="">자동으로 고르기</option>
                 {% for option in schedule_tab_options %}
@@ -95,8 +71,7 @@
               <span class="inline-flex items-start gap-2">
                 <input type="checkbox" name="prefer_calendar_entry" value="1" class="mt-0.5 rounded border-slate-300" {% if calendar_bridge_is_explicit %}checked{% endif %}>
                 <span>
-                  <span class="block font-semibold text-slate-700">달력에서 수첩으로 돌아오면 이 탭 먼저 열기</span>
-                  <span class="mt-1 block text-[11px] text-slate-500">매번 쓰지 않으면 그대로 두고 필요할 때만 바꾸면 됩니다.</span>
+                  <span class="block font-semibold text-slate-700">돌아오면 이 탭 열기</span>
                 </span>
               </span>
             </label>
@@ -105,23 +80,11 @@
             <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
               저장
             </button>
-            <a
-              href="{% url 'classcalendar:main' %}"
-              class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              달력 단독 화면
-            </a>
           </div>
         </form>
         {% elif not schedule_source_tab %}
-        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          먼저 일정이 들어 있는 표를 만들어 주세요.
-        </p>
-        {% else %}
-        <p class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-          연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.
+        <p class="text-xs text-amber-700">
+          일정 표가 아직 없어요.
         </p>
         {% endif %}
       </div>
@@ -135,7 +98,7 @@
     aria-live="polite"
     aria-atomic="true"
   >
-    연결된 달력을 준비하는 중...
+    달력 불러오는 중...
   </p>
 
   <div
@@ -145,7 +108,7 @@
     aria-live="polite"
     aria-atomic="true"
   >
-    <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">방금 달력 반영 결과</p>
+    <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">반영 결과</p>
     <p id="sheetbook-calendar-sync-summary-text" class="mt-1 font-medium text-emerald-900"></p>
   </div>
 

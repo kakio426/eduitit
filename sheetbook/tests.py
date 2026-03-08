@@ -786,9 +786,9 @@ class SheetbookOwnershipTests(TestCase):
         self.assertEqual(response.status_code, 302)
         detail_response = self.client.get(response.headers.get("Location", ""))
         self.assertEqual(detail_response.status_code, 200)
-        self.assertContains(detail_response, "샘플 수첩 60초 시작 가이드")
-        self.assertContains(detail_response, "가이드 닫기")
-        self.assertContains(detail_response, "서명 요청")
+        self.assertContains(detail_response, "샘플 수첩")
+        self.assertContains(detail_response, "닫기")
+        self.assertNotContains(detail_response, "일정 탭과 학생명부 탭만 눌러보면 흐름을 볼 수 있어요.")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_quick_copy_sheetbook_clones_tab_structure(self):
@@ -1826,7 +1826,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="grid-mobile-row-open-btn"')
         self.assertContains(response, 'id="grid-mobile-row-panel"')
-        self.assertContains(response, "휴대폰 한 줄 수정")
+        self.assertContains(response, "줄 수정")
         self.assertContains(response, "touchstart")
         self.assertContains(response, "touchmove")
 
@@ -1844,8 +1844,8 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["sheetbook_mobile_read_only"])
         self.assertTrue(response.context["sheetbook_mobile_compact_mode"])
-        self.assertContains(response, "휴대폰 간단 편집")
-        self.assertContains(response, "칸 1개씩 수정하고 바로 저장하기")
+        self.assertNotContains(response, "휴대폰 간단 편집")
+        self.assertNotContains(response, "칸 1개씩 수정하고 바로 저장하기")
         self.assertContains(response, 'data-mobile-read-only="0"')
         self.assertContains(response, 'data-mobile-compact-mode="1"')
 
@@ -1864,8 +1864,8 @@ class SheetbookGridApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["sheetbook_mobile_read_only"])
         self.assertTrue(response.context["sheetbook_mobile_compact_mode"])
-        self.assertContains(response, "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.")
-        self.assertContains(response, "연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.")
+        self.assertNotContains(response, "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요.")
+        self.assertNotContains(response, "연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.")
         self.assertContains(response, 'id="sheetbook-calendar-sync-btn"')
         self.assertContains(response, 'id="sheetbook-calendar-create-btn"')
         self.assertContains(response, "disabled aria-disabled=\"true\"")
@@ -1901,7 +1901,7 @@ class SheetbookGridApiTests(TestCase):
         self.assertTrue(response.context["sheetbook_calendar_message_capture_enabled"])
         self.assertContains(response, 'id="sheetbook-calendar-message-btn"')
         self.assertContains(response, "메시지 붙여넣기")
-        self.assertContains(response, "수첩으로 돌아올 때")
+        self.assertContains(response, "돌아오면 이 탭 열기")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_calendar_tab_hides_message_capture_button_for_non_allowlisted_teacher(self):
@@ -6000,7 +6000,7 @@ class SheetbookCalendarEmbedSmokeScriptTests(SimpleTestCase):
                 "sync_status": "연결된 달력을 열었어요.",
                 "sync_summary": "",
                 "sync_disabled": True,
-                "mobile_guidance": "휴대폰에서는 일정 확인과 일정 1건 추가만 할 수 있어요. 연결 설정 변경은 태블릿이나 PC에서 할 수 있어요.",
+                "mobile_guidance": "",
             },
         }
 
