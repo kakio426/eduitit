@@ -1,10 +1,10 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth.models import User
 
 from core.models import UserProfile
 from happy_seed.models import HSClassroom, HSStudent
-from products.models import DTStudent
+from products.models import DTRole, DTRoleAssignment, DTStudent
 
 
 class PpobgiViewTest(TestCase):
@@ -14,10 +14,10 @@ class PpobgiViewTest(TestCase):
             password="password123",
             email="teacher@example.com",
         )
-        profile, _ = UserProfile.objects.get_or_create(user=self.user)
-        profile.nickname = "담임교사"
-        profile.role = "school"
-        profile.save()
+        self.profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        self.profile.nickname = "담임교사"
+        self.profile.role = "school"
+        self.profile.save()
 
     def test_main_requires_login(self):
         response = self.client.get(reverse("ppobgi:main"))
@@ -34,8 +34,19 @@ class PpobgiViewTest(TestCase):
         self.assertContains(response, 'id="ppb-result-modal"', html=False)
         self.assertContains(response, 'id="ppb-result-name"', html=False)
         self.assertContains(response, "사다리 뽑기")
+        self.assertContains(response, "순서 뽑기")
+        self.assertContains(response, "팀 나누기")
+        self.assertContains(response, "유성우 뽑기")
+        self.assertContains(response, "역할 카드")
+        self.assertContains(response, "희망 포춘쿠키")
+        self.assertContains(response, 'id="pps-name-input"', html=False)
+        self.assertContains(response, 'id="ppt-name-input"', html=False)
+        self.assertContains(response, 'id="ppm-name-input"', html=False)
+        self.assertContains(response, "다음 순서 공개")
+        self.assertContains(response, "다음 팀 배치 공개")
+        self.assertContains(response, "무작위 유성 공개")
         self.assertContains(response, reverse("dutyticker"))
-        self.assertContains(response, "title=\"반짝반짝 우리반 알림판\"")
+        self.assertContains(response, 'title="반짝반짝 우리반 알림판"')
 
     def test_roster_names_returns_active_students(self):
         self.client.force_login(self.user)
@@ -84,3 +95,69 @@ class PpobgiViewTest(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["error"], "classroom not found")
+
+    def test_role_cards_requires_login(self):
+        response = self.client.get(reverse("ppobgi:role_cards"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_role_cards_returns_active_classroom_roles(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
+        self.profile.default_classroom = classroom
+        self.profile.save(update_fields=["default_classroom"])
+
+        student = DTStudent.objects.create(
+            user=self.user,
+            classroom=classroom,
+            name="1번 학생",
+            number=1,
+            is_active=True,
+        )
+        role = DTRole.objects.create(
+            user=self.user,
+            classroom=classroom,
+            name="칠판 정리",
+            description="수업 뒤 칠판을 정리합니다.",
+            time_slot="종례",
+            icon="🧽",
+        )
+        DTRoleAssignment.objects.create(
+            user=self.user,
+            classroom=classroom,
+            role=role,
+            student=student,
+            is_completed=True,
+        )
+        DTRole.objects.create(
+            user=self.user,
+            name="전역 역할",
+            description="보이면 안 됨",
+        )
+
+        response = self.client.get(reverse("ppobgi:role_cards"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["classroom_name"], "3학년 4반")
+        self.assertEqual(len(payload["roles"]), 1)
+        self.assertEqual(payload["roles"][0]["role_name"], "칠판 정리")
+        self.assertEqual(payload["roles"][0]["assignee_name"], "1번 학생")
+        self.assertTrue(payload["roles"][0]["is_completed"])
+
+    def test_role_cards_returns_unassigned_when_assignment_missing(self):
+        self.client.force_login(self.user)
+        role = DTRole.objects.create(
+            user=self.user,
+            name="자료 배부",
+            description="학습지를 나눠줍니다.",
+            time_slot="1교시 전",
+            icon="📚",
+        )
+
+        response = self.client.get(reverse("ppobgi:role_cards"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["roles"][0]["role_name"], role.name)
+        self.assertEqual(payload["roles"][0]["assignee_name"], "미배정")
+        self.assertTrue(payload["roles"][0]["is_unassigned"])

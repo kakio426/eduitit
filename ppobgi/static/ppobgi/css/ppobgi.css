@@ -517,33 +517,40 @@
 
 .ppb-orb-grid {
     margin-top: 0.6rem;
-    min-height: 58vh;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.95rem;
-    align-content: center;
-    justify-content: center;
-    padding: 0.5rem;
+    min-height: clamp(420px, 58vh, 760px);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 0.85rem;
+    border-radius: 1.45rem;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background:
+        radial-gradient(circle at 18% 16%, rgba(125, 211, 252, 0.18), transparent 30%),
+        radial-gradient(circle at 78% 22%, rgba(251, 191, 36, 0.14), transparent 26%),
+        radial-gradient(circle at 52% 74%, rgba(167, 139, 250, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.04));
 }
 
 .ppb-orb {
+    position: absolute;
+    left: var(--orb-left);
+    top: var(--orb-top);
     width: var(--orb-size);
     height: var(--orb-size);
-    margin-top: var(--orb-offset-y);
-    margin-left: var(--orb-offset-x);
-    transform: rotate(var(--orb-rotation));
+    transform: translate(-50%, -50%) rotate(var(--orb-rotation)) scale(var(--orb-scale));
+    transform-origin: center;
     border: 0;
     border-radius: 0;
     cursor: pointer;
-    position: relative;
     z-index: 2;
     background: transparent;
     box-shadow:
         0 0 18px 2px var(--orb-glow),
         0 0 34px 5px var(--orb-glow);
     transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
-    animation: var(--orb-float) 4s ease-in-out infinite;
+    animation: var(--orb-float) var(--orb-duration, 4.6s) ease-in-out infinite;
     animation-delay: var(--orb-delay);
+    will-change: transform, opacity;
     clip-path: polygon(
         50% 3%,
         61% 33%,
@@ -559,7 +566,7 @@
 }
 
 .ppb-orb:hover {
-    transform: rotate(var(--orb-rotation)) translateY(-9px) scale(1.14);
+    transform: translate(-50%, calc(-50% - 9px)) rotate(var(--orb-rotation)) scale(var(--orb-hover-scale));
 }
 
 .ppb-orb:focus-visible {
@@ -606,6 +613,10 @@
 }
 
 .ppb-orb-empty {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(520px, calc(100% - 2rem));
     max-width: 520px;
     text-align: center;
     padding: 1rem 1.2rem;
@@ -615,8 +626,8 @@
     color: rgba(226, 232, 240, 0.92);
     font-size: 1rem;
     line-height: 1.45;
+    transform: translate(-50%, -50%);
 }
-
 .ppb-bottom-actions {
     margin-top: auto;
     display: flex;
@@ -1485,20 +1496,20 @@
 @keyframes ppb-float {
     0%,
     100% {
-        transform: rotate(var(--orb-rotation)) translateY(0) scale(1);
+        transform: translate(-50%, -50%) rotate(var(--orb-rotation)) scale(var(--orb-scale));
     }
     50% {
-        transform: rotate(var(--orb-rotation)) translateY(-13px) scale(1.02);
+        transform: translate(-50%, calc(-50% - 13px)) rotate(var(--orb-rotation)) scale(var(--orb-float-scale));
     }
 }
 
 @keyframes ppb-float-reverse {
     0%,
     100% {
-        transform: rotate(var(--orb-rotation)) translateY(0) scale(1);
+        transform: translate(-50%, -50%) rotate(var(--orb-rotation)) scale(var(--orb-scale));
     }
     50% {
-        transform: rotate(var(--orb-rotation)) translateY(13px) scale(1.02);
+        transform: translate(-50%, calc(-50% + 13px)) rotate(var(--orb-rotation)) scale(var(--orb-float-scale));
     }
 }
 
@@ -1522,10 +1533,1384 @@
 @keyframes ppb-picked {
     0% {
         opacity: 1;
-        transform: rotate(var(--orb-rotation)) scale(1);
+        transform: translate(-50%, -50%) rotate(var(--orb-rotation)) scale(var(--orb-scale));
     }
     100% {
         opacity: 0;
-        transform: rotate(var(--orb-rotation)) scale(0.12);
+        transform: translate(-50%, -50%) rotate(var(--orb-rotation)) scale(0.12);
+    }
+}
+@media (max-width: 1200px) {
+    .ppr-shell {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 860px) {
+    .ppb-result-actions,
+    .ppb-fortune-actions,
+    .ppr-bottom-actions {
+        flex-direction: column;
+    }
+
+    .ppb-result-actions .ppb-primary-btn,
+    .ppb-result-actions .ppb-soft-btn,
+    .ppb-fortune-actions .ppb-primary-btn,
+    .ppb-fortune-actions .ppb-soft-btn,
+    .ppr-bottom-actions .ppb-soft-btn,
+    .ppr-bottom-actions .ppb-ghost-btn {
+        width: 100%;
+    }
+
+    .ppr-head {
+        flex-direction: column;
+    }
+
+    .ppr-classroom-badge {
+        align-self: flex-start;
+    }
+
+    .ppr-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ppb-result-next-btn {
+    margin: 0;
+    min-width: min(320px, 100%);
+}
+
+.ppb-result-actions {
+    margin-top: 1.1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.ppb-result-fortune-btn {
+    min-width: min(280px, 100%);
+    font-size: 0.98rem;
+}
+
+.ppb-fortune-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 240;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.1rem;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(5px);
+}
+
+.ppb-fortune-modal.is-hidden {
+    display: none;
+}
+
+.ppb-fortune-panel {
+    width: min(760px, 100%);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(147, 197, 253, 0.45);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.18), transparent 58%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88));
+    box-shadow: 0 0 42px rgba(96, 165, 250, 0.18);
+    padding: clamp(1rem, 2.4vw, 1.7rem);
+}
+
+.ppb-fortune-label {
+    margin: 0;
+    color: #bfdbfe;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ppb-fortune-target {
+    margin: 0.45rem 0 0;
+    font-size: clamp(1.7rem, 4vw, 2.7rem);
+    line-height: 1.08;
+    font-weight: 900;
+    color: #f8fafc;
+}
+
+.ppb-fortune-category {
+    margin: 0.4rem 0 0;
+    color: #fde68a;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.ppb-fortune-line {
+    margin: 1rem 0 0;
+    padding: 1rem 1.05rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(191, 219, 254, 0.28);
+    background: rgba(30, 41, 59, 0.7);
+    color: #eff6ff;
+    font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+    font-weight: 900;
+    line-height: 1.4;
+}
+
+.ppb-fortune-meaning {
+    margin: 0.85rem 0 0;
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.ppb-fortune-step-card {
+    margin-top: 0.95rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(253, 224, 71, 0.25);
+    background: rgba(234, 179, 8, 0.08);
+}
+
+.ppb-fortune-step-label {
+    margin: 0;
+    color: #fde68a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.ppb-fortune-step {
+    margin: 0.35rem 0 0;
+    color: #f8fafc;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.ppb-fortune-note-wrap {
+    margin-top: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.ppb-fortune-note {
+    width: 100%;
+    min-height: 96px;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(191, 219, 254, 0.26);
+    background: rgba(15, 23, 42, 0.78);
+    color: #fff;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    padding: 0.85rem 0.95rem;
+    resize: vertical;
+}
+
+.ppb-fortune-note:focus {
+    outline: none;
+    border-color: rgba(147, 197, 253, 0.75);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+}
+
+.ppb-fortune-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+}
+
+.ppb-fortune-actions .ppb-soft-btn,
+.ppb-fortune-close-btn {
+    flex: 1 1 180px;
+}
+
+.ppr-shell {
+    width: min(1780px, 100%);
+    min-height: 78vh;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+}
+
+.ppr-main,
+.ppr-side-panel {
+    border-radius: 1.15rem;
+    background: rgba(8, 12, 30, 0.72);
+    border: 1px solid var(--ppb-white-14);
+    backdrop-filter: blur(12px);
+}
+
+.ppr-main {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.ppr-head {
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ppr-title {
+    margin-bottom: 0.3rem;
+}
+
+.ppr-guide {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.95rem;
+}
+
+.ppr-classroom-badge {
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    background: rgba(96, 165, 250, 0.18);
+    border: 1px solid rgba(147, 197, 253, 0.38);
+    color: #dbeafe;
+    font-size: 0.82rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ppr-card-grid {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.85rem;
+}
+
+.ppr-empty {
+    padding: 1.2rem;
+    border-radius: 1rem;
+    border: 1px dashed rgba(191, 219, 254, 0.35);
+    background: rgba(15, 23, 42, 0.52);
+    color: rgba(226, 232, 240, 0.92);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.ppr-card {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    perspective: 1200px;
+}
+
+.ppr-card:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.94);
+    outline-offset: 4px;
+}
+
+.ppr-card.is-static {
+    cursor: default;
+}
+
+.ppr-card-inner {
+    position: relative;
+    min-height: 220px;
+    transform-style: preserve-3d;
+    transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ppr-card.is-revealed .ppr-card-inner {
+    transform: rotateY(180deg);
+}
+
+.ppr-card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.8rem;
+    backface-visibility: hidden;
+    box-shadow: 0 20px 40px rgba(2, 6, 23, 0.28);
+}
+
+.ppr-card-front {
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.18), transparent 55%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.84));
+}
+
+.ppr-card-back {
+    transform: rotateY(180deg);
+    border: 1px solid rgba(253, 224, 71, 0.34);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(250, 204, 21, 0.18), transparent 58%),
+        linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.9));
+}
+
+.ppr-card.is-completed .ppr-card-back {
+    border-color: rgba(74, 222, 128, 0.45);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.18), transparent 58%),
+        linear-gradient(180deg, rgba(22, 101, 52, 0.92), rgba(15, 23, 42, 0.9));
+}
+
+.ppr-card.is-unassigned .ppr-card-back {
+    border-color: rgba(251, 191, 36, 0.4);
+}
+
+.ppr-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.8rem;
+}
+
+.ppr-card-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 1.2rem;
+}
+
+.ppr-card-slot {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.94);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.ppr-card-title {
+    margin: 0.3rem 0 0;
+    color: #f8fafc;
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.ppr-card-hint {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.8);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.ppr-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ppr-card-number {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.ppr-card-cta {
+    color: #fde68a;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.ppr-card-back-label {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+}
+
+.ppr-card-assignee {
+    margin: 0.35rem 0 0;
+    color: #fef3c7;
+    font-size: 1.6rem;
+    font-weight: 900;
+    line-height: 1.2;
+    word-break: keep-all;
+}
+
+.ppr-card-desc {
+    margin: 0.55rem 0 0;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
+.ppr-card-status {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.96);
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.ppr-side-panel {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.ppr-live-card,
+.ppr-history-box {
+    border-radius: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    background: rgba(4, 10, 28, 0.86);
+    padding: 0.95rem;
+}
+
+.ppr-live-label {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.88);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ppr-live-role-name {
+    margin: 0.4rem 0 0;
+    color: #f8fafc;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.18;
+}
+
+.ppr-live-assignee {
+    margin: 0.5rem 0 0;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.ppr-fortune-btn {
+    width: 100%;
+    margin-top: 0.95rem;
+}
+
+.ppr-history-box h3 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.ppr-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    max-height: 52vh;
+    overflow: auto;
+}
+
+.ppr-history-list li {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.66);
+    padding: 0.7rem 0.8rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.ppr-history-step {
+    color: rgba(191, 219, 254, 0.78);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.ppr-history-main {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.ppr-history-role {
+    color: #fde68a;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ppb-root.ppb-reduce-motion .ppr-card-inner {
+    transition-duration: 90ms !important;
+}
+
+
+.pps-textarea {
+    min-height: 340px;
+}
+
+.pps-stage-shell {
+    width: min(1780px, 100%);
+    min-height: 78vh;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+}
+
+.pps-stage-main,
+.pps-side-panel {
+    border-radius: 1.15rem;
+    background: rgba(8, 12, 30, 0.72);
+    border: 1px solid var(--ppb-white-14);
+    backdrop-filter: blur(12px);
+}
+
+.pps-stage-main {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.pps-head {
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.pps-stage-title {
+    margin-bottom: 0.3rem;
+}
+
+.pps-stage-guide {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.95rem;
+}
+
+.pps-stage-message {
+    margin-top: 0.85rem;
+}
+
+.pps-order-grid {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem;
+}
+
+.pps-empty {
+    padding: 1.2rem;
+    border-radius: 1rem;
+    border: 1px dashed rgba(191, 219, 254, 0.35);
+    background: rgba(15, 23, 42, 0.52);
+    color: rgba(226, 232, 240, 0.92);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.pps-order-card {
+    min-height: 164px;
+    border-radius: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.2);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 54%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.72));
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.75rem;
+    box-shadow: 0 18px 36px rgba(2, 6, 23, 0.24);
+    transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+
+.pps-order-card.is-next {
+    transform: translateY(-4px);
+    border-color: rgba(250, 204, 21, 0.45);
+    box-shadow: 0 20px 44px rgba(250, 204, 21, 0.12);
+}
+
+.pps-order-card.is-revealed {
+    border-color: rgba(125, 211, 252, 0.4);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.16), transparent 56%),
+        linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.84));
+}
+
+.pps-order-card.is-current {
+    border-color: rgba(253, 224, 71, 0.58);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(250, 204, 21, 0.18), transparent 58%),
+        linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.9));
+}
+
+.pps-order-index {
+    color: rgba(191, 219, 254, 0.84);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.pps-order-name {
+    color: #f8fafc;
+    font-size: 1.34rem;
+    font-weight: 900;
+    line-height: 1.22;
+    word-break: keep-all;
+}
+
+.pps-order-card:not(.is-revealed) .pps-order-name {
+    color: rgba(226, 232, 240, 0.72);
+}
+
+.pps-order-meta {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.pps-side-panel {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.pps-live-card,
+.pps-history-box {
+    border-radius: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    background: rgba(4, 10, 28, 0.86);
+    padding: 0.95rem;
+}
+
+.pps-live-label {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.88);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.pps-live-index {
+    margin: 0.45rem 0 0;
+    color: #fde68a;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.pps-live-name {
+    margin: 0.25rem 0 0;
+    color: #f8fafc;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.18;
+}
+
+.pps-live-meta {
+    margin: 0.5rem 0 0;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.pps-fortune-btn {
+    width: 100%;
+    margin-top: 0.95rem;
+}
+
+.pps-history-box h3 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.pps-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    max-height: 52vh;
+    overflow: auto;
+}
+
+.pps-history-list li {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.66);
+    padding: 0.7rem 0.8rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.pps-history-step {
+    color: rgba(191, 219, 254, 0.78);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.pps-history-main {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.pps-history-order {
+    color: #fde68a;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ppb-root.ppb-reduce-motion .pps-order-card {
+    transition-duration: 90ms !important;
+}
+
+@media (max-width: 1200px) {
+    .pps-stage-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .pps-history-list {
+        max-height: 240px;
+    }
+}
+
+@media (max-width: 860px) {
+    .pps-bottom-actions {
+        flex-direction: column;
+    }
+
+    .pps-bottom-actions .ppb-primary-btn,
+    .pps-bottom-actions .ppb-soft-btn,
+    .pps-bottom-actions .ppb-ghost-btn {
+        width: 100%;
+    }
+
+    .pps-order-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ppt-textarea {
+    min-height: 340px;
+}
+
+.ppt-option-card {
+    margin-top: 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(15, 23, 42, 0.42);
+    padding: 0.9rem 1rem;
+}
+
+.ppt-option-card label {
+    display: block;
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+.ppt-team-select {
+    width: 100%;
+    margin-top: 0.6rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: rgba(8, 12, 30, 0.92);
+    color: #f8fafc;
+    padding: 0.8rem 0.9rem;
+    font: inherit;
+}
+
+.ppt-balance-note {
+    margin: 0.7rem 0 0;
+    color: rgba(191, 219, 254, 0.88);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.ppt-stage-shell {
+    width: min(1780px, 100%);
+    min-height: 78vh;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+}
+
+.ppt-stage-main,
+.ppt-side-panel {
+    border-radius: 1.15rem;
+    background: rgba(8, 12, 30, 0.72);
+    border: 1px solid var(--ppb-white-14);
+    backdrop-filter: blur(12px);
+}
+
+.ppt-stage-main {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.ppt-head {
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ppt-stage-title {
+    margin-bottom: 0.3rem;
+}
+
+.ppt-stage-guide {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.95rem;
+}
+
+.ppt-stage-message {
+    margin-top: 0.85rem;
+}
+
+.ppt-team-grid {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.85rem;
+}
+
+.ppt-empty {
+    padding: 1.2rem;
+    border-radius: 1rem;
+    border: 1px dashed rgba(191, 219, 254, 0.35);
+    background: rgba(15, 23, 42, 0.52);
+    color: rgba(226, 232, 240, 0.92);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.ppt-team-card {
+    border-radius: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.22);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1), transparent 54%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.72));
+    padding: 1rem;
+    display: grid;
+    gap: 0.85rem;
+    box-shadow: 0 18px 36px rgba(2, 6, 23, 0.24);
+}
+
+.ppt-team-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.ppt-team-title {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.24rem;
+    font-weight: 900;
+}
+
+.ppt-team-size {
+    margin: 0.25rem 0 0;
+    color: rgba(191, 219, 254, 0.84);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.ppt-member-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.ppt-member-chip {
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 999px;
+    background: rgba(30, 41, 59, 0.88);
+    color: #e2e8f0;
+    padding: 0.5rem 0.85rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.ppt-member-chip:hover,
+.ppt-member-chip:focus-visible {
+    border-color: rgba(125, 211, 252, 0.58);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.ppt-member-chip.is-recent {
+    border-color: rgba(253, 224, 71, 0.52);
+    background: rgba(120, 53, 15, 0.9);
+    color: #fef3c7;
+}
+
+.ppt-member-chip.is-selected {
+    border-color: rgba(125, 211, 252, 0.62);
+    background: rgba(12, 74, 110, 0.92);
+    color: #e0f2fe;
+}
+
+.ppt-member-empty {
+    color: rgba(148, 163, 184, 0.92);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.ppt-side-panel {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.ppt-live-card,
+.ppt-history-box {
+    border-radius: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    background: rgba(4, 10, 28, 0.86);
+    padding: 0.95rem;
+}
+
+.ppt-live-label {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.88);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ppt-live-team {
+    margin: 0.45rem 0 0;
+    color: #fde68a;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.ppt-live-name {
+    margin: 0.25rem 0 0;
+    color: #f8fafc;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.18;
+}
+
+.ppt-live-meta {
+    margin: 0.5rem 0 0;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.ppt-fortune-btn {
+    width: 100%;
+    margin-top: 0.95rem;
+}
+
+.ppt-history-box h3 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.ppt-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    max-height: 52vh;
+    overflow: auto;
+}
+
+.ppt-history-list li {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.66);
+    padding: 0.7rem 0.8rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.ppt-history-step {
+    color: rgba(191, 219, 254, 0.78);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.ppt-history-main {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.ppt-history-team {
+    color: #fde68a;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ppb-root.ppb-reduce-motion .ppt-member-chip {
+    transition-duration: 90ms !important;
+}
+
+@media (max-width: 1200px) {
+    .ppt-stage-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .ppt-history-list {
+        max-height: 240px;
+    }
+}
+
+@media (max-width: 860px) {
+    .ppt-bottom-actions {
+        flex-direction: column;
+    }
+
+    .ppt-bottom-actions .ppb-primary-btn,
+    .ppt-bottom-actions .ppb-soft-btn,
+    .ppt-bottom-actions .ppb-ghost-btn {
+        width: 100%;
+    }
+
+    .ppt-team-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ppm-textarea {
+    min-height: 22rem;
+}
+
+.ppm-stage-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.95fr) 320px;
+    gap: 1rem;
+    align-items: start;
+}
+
+.ppm-stage-main {
+    padding: 1rem;
+    border-radius: 1.18rem;
+    border: 1px solid rgba(125, 211, 252, 0.18);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.78));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 20px 44px rgba(2, 6, 23, 0.26);
+}
+
+.ppm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.ppm-stage-title {
+    margin: 0;
+}
+
+.ppm-stage-guide {
+    margin: 0.35rem 0 0;
+    color: rgba(191, 219, 254, 0.86);
+    font-size: 0.96rem;
+    line-height: 1.6;
+}
+
+.ppm-stage-message {
+    margin-top: 0.85rem;
+}
+
+.ppm-sky {
+    position: relative;
+    margin-top: 0.8rem;
+    min-height: 460px;
+    overflow: hidden;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(125, 211, 252, 0.18);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.16), transparent 38%),
+        radial-gradient(circle at 14% 20%, rgba(250, 204, 21, 0.1), transparent 24%),
+        linear-gradient(180deg, rgba(3, 7, 18, 0.96), rgba(15, 23, 42, 0.84));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 36px rgba(2, 6, 23, 0.28);
+    isolation: isolate;
+}
+
+.ppm-sky::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1.1px, transparent 1.2px),
+        radial-gradient(circle, rgba(191, 219, 254, 0.78) 0 1px, transparent 1.2px),
+        radial-gradient(circle, rgba(253, 230, 138, 0.74) 0 1px, transparent 1.2px);
+    background-size: 140px 140px, 184px 184px, 228px 228px;
+    background-position: 0 0, 38px 56px, 104px 20px;
+    opacity: 0.58;
+}
+
+.ppm-sky::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(251, 191, 36, 0.26), transparent 44%);
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.ppm-sky.is-burst::after {
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+.ppm-empty {
+    margin: 1.1rem;
+    min-height: 360px;
+    border-radius: 1rem;
+    border: 1px dashed rgba(125, 211, 252, 0.24);
+    background: rgba(15, 23, 42, 0.48);
+    color: rgba(226, 232, 240, 0.92);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    line-height: 1.7;
+    padding: 1.35rem;
+}
+
+.ppm-empty.is-complete {
+    border-color: rgba(250, 204, 21, 0.28);
+    background: rgba(120, 53, 15, 0.22);
+    color: #fef3c7;
+}
+
+.ppm-meteor {
+    --ppm-left: 50%;
+    --ppm-top: 50%;
+    --ppm-scale: 1;
+    --ppm-tilt: -24deg;
+    --ppm-duration: 5.4s;
+    --ppm-delay: 0s;
+    position: absolute;
+    left: var(--ppm-left);
+    top: var(--ppm-top);
+    width: 148px;
+    height: 46px;
+    transform: translate(-50%, -50%) scale(var(--ppm-scale)) rotate(var(--ppm-tilt));
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    filter: drop-shadow(0 0 12px rgba(125, 211, 252, 0.22));
+    transition: transform 180ms ease, filter 180ms ease;
+}
+
+.ppm-meteor:hover,
+.ppm-meteor:focus-visible {
+    transform: translate(-50%, -50%) scale(calc(var(--ppm-scale) + 0.08)) rotate(var(--ppm-tilt));
+    filter: drop-shadow(0 0 18px rgba(125, 211, 252, 0.42));
+    outline: none;
+}
+
+.ppm-meteor-core,
+.ppm-meteor-tail,
+.ppm-meteor-hint {
+    pointer-events: none;
+}
+
+.ppm-meteor-core {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    background: radial-gradient(circle at 28% 30%, #fff, #fef08a 36%, #38bdf8 76%, rgba(56, 189, 248, 0.12) 100%);
+    box-shadow: 0 0 20px rgba(125, 211, 252, 0.86), 0 0 42px rgba(56, 189, 248, 0.38);
+    animation: ppmMeteorPulse var(--ppm-duration) ease-in-out var(--ppm-delay) infinite;
+}
+
+.ppm-meteor-tail {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    width: 108px;
+    height: 4px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.42) 30%, rgba(253, 224, 71, 0.88) 100%);
+    box-shadow: 0 0 18px rgba(125, 211, 252, 0.34);
+    animation: ppmMeteorPulse var(--ppm-duration) ease-in-out var(--ppm-delay) infinite;
+}
+
+.ppm-meteor-hint {
+    position: absolute;
+    left: 4px;
+    bottom: -2px;
+    color: rgba(226, 232, 240, 0.82);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+@keyframes ppmMeteorPulse {
+    0% {
+        opacity: 0.68;
+        filter: saturate(0.94);
+    }
+
+    100% {
+        opacity: 1;
+        filter: saturate(1.12);
+    }
+}
+
+.ppm-side-panel {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.ppm-live-card,
+.ppm-history-box {
+    border-radius: 1rem;
+    border: 1px solid rgba(125, 211, 252, 0.22);
+    background: rgba(4, 10, 28, 0.88);
+    padding: 0.95rem;
+}
+
+.ppm-live-label {
+    margin: 0;
+    color: rgba(191, 219, 254, 0.88);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ppm-live-order {
+    margin: 0.45rem 0 0;
+    color: #93c5fd;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.ppm-live-name {
+    margin: 0.25rem 0 0;
+    color: #f8fafc;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.18;
+}
+
+.ppm-live-meta {
+    margin: 0.5rem 0 0;
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.ppm-fortune-btn {
+    width: 100%;
+    margin-top: 0.95rem;
+}
+
+.ppm-history-box h3 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.ppm-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    max-height: 52vh;
+    overflow: auto;
+}
+
+.ppm-history-list li {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.66);
+    padding: 0.7rem 0.8rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.ppm-history-step {
+    color: rgba(191, 219, 254, 0.78);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.ppm-history-main {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.ppm-history-order {
+    color: #fde68a;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ppb-root.ppb-reduce-motion .ppm-meteor-core,
+.ppb-root.ppb-reduce-motion .ppm-meteor-tail,
+.ppb-root.ppb-reduce-motion .ppm-sky::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 90ms !important;
+}
+
+@media (max-width: 1200px) {
+    .ppm-stage-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .ppm-history-list {
+        max-height: 240px;
+    }
+}
+
+@media (max-width: 860px) {
+    .ppm-bottom-actions {
+        flex-direction: column;
+    }
+
+    .ppm-bottom-actions .ppb-primary-btn,
+    .ppm-bottom-actions .ppb-soft-btn,
+    .ppm-bottom-actions .ppb-ghost-btn {
+        width: 100%;
+    }
+
+    .ppm-sky {
+        min-height: 380px;
+    }
+
+    .ppm-meteor {
+        width: 132px;
+    }
+
+    .ppm-live-card,
+    .ppm-history-box {
+        padding: 0.9rem;
     }
 }

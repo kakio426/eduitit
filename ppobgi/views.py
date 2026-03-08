@@ -3,7 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 
-from products.models import DTStudent
+from core.active_classroom import get_active_classroom_for_request
+from products.dutyticker_scope import apply_classroom_scope
+from products.models import DTRole, DTRoleAssignment, DTStudent
 
 
 DEFAULT_NAMES = "\n".join(
@@ -76,6 +78,7 @@ def _should_block_for_large_screen_service(request):
 
 @login_required
 def main(request):
+    active_classroom = get_active_classroom_for_request(request)
     if _should_block_for_large_screen_service(request):
         return render(
             request,
@@ -93,6 +96,7 @@ def main(request):
         request,
         "ppobgi/main.html",
         {
+            "active_classroom": active_classroom,
             "default_names": DEFAULT_NAMES,
             "hide_navbar": True,
         },
@@ -123,3 +127,64 @@ def classroom_students(request, pk):
         .values_list("name", flat=True)
     )
     return JsonResponse({"names": names, "classroom_name": classroom.name})
+
+def _serialize_role_cards(user, classroom):
+    roles = list(
+        apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
+        .order_by("time_slot", "id")
+    )
+    assignments_qs = (
+        apply_classroom_scope(
+            DTRoleAssignment.objects.filter(user=user, role__in=roles),
+            classroom,
+        )
+        .select_related("role", "student")
+        .order_by("role_id", "-date", "-id")
+    )
+
+    assignment_by_role_id = {}
+    for assignment in assignments_qs:
+        if assignment.role_id not in assignment_by_role_id:
+            assignment_by_role_id[assignment.role_id] = assignment
+
+    cards = []
+    for role in roles:
+        assignment = assignment_by_role_id.get(role.id)
+        student = assignment.student if assignment and assignment.student and assignment.student.is_active else None
+        cards.append(
+            {
+                "role_id": role.id,
+                "role_name": role.name,
+                "icon": role.icon or "📋",
+                "description": role.description or "",
+                "time_slot": role.time_slot or "오늘",
+                "assignee_name": student.name if student else "미배정",
+                "is_completed": bool(assignment and assignment.is_completed and student),
+                "is_unassigned": student is None,
+            }
+        )
+
+    return cards
+
+
+@login_required
+def role_cards(request):
+    classroom = get_active_classroom_for_request(request)
+    cards = _serialize_role_cards(request.user, classroom)
+    classroom_name = classroom.name if classroom else "기본 명단"
+    if cards:
+        message = f"{classroom_name}의 오늘 역할 {len(cards)}개를 불러왔습니다."
+    else:
+        message = f"{classroom_name}의 1인 1역이 아직 없습니다. 알림판에서 먼저 설정해 주세요."
+
+    return JsonResponse(
+        {
+            "classroom_name": classroom_name,
+            "roles": cards,
+            "message": message,
+        }
+    )
+
+
+
+

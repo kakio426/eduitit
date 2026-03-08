@@ -47,6 +47,7 @@
         resultName: document.getElementById("ppb-result-name"),
         resultMeta: document.getElementById("ppb-result-meta"),
         resultNextBtn: document.getElementById("ppb-result-next-btn"),
+        resultFortuneBtn: document.getElementById("ppb-result-fortune-btn"),
         editorOverlay: document.getElementById("ppb-editor-overlay"),
         editorDrawer: document.getElementById("ppb-editor-drawer"),
         editorInput: document.getElementById("ppb-editor-input"),
@@ -83,6 +84,7 @@
         reduceMotion: false,
         resultModalOpen: false,
         editorOpen: false,
+        orbLayout: new Map(),
     };
 
     function decodeDefaultNames(raw) {
@@ -222,29 +224,115 @@
         return copied;
     }
 
-    function buildOrbs(names) {
+    function orbFieldSize() {
+        const rect = els.orbGrid?.getBoundingClientRect();
+        const rawWidth = Math.max(rect?.width || 0, els.orbGrid?.clientWidth || 0, 0);
+        const rawHeight = Math.max(rect?.height || 0, els.orbGrid?.clientHeight || 0, 0);
+        return {
+            width: Math.max(rawWidth, 420),
+            height: Math.max(rawHeight, 400),
+        };
+    }
+
+    function fallbackOrbPosition(index, total, width, height, padding) {
+        const safeX = Math.max(width / 2 - padding, 24);
+        const safeY = Math.max(height / 2 - padding, 24);
+        const ratio = total <= 1 ? 0.2 : 0.2 + (index / Math.max(total - 1, 1)) * 0.72;
+        const angle = index * 2.399963229728653;
+        const x = width / 2 + Math.cos(angle) * safeX * ratio;
+        const y = height / 2 + Math.sin(angle) * safeY * ratio;
+        return {
+            x: Math.min(width - padding, Math.max(padding, x)),
+            y: Math.min(height - padding, Math.max(padding, y)),
+        };
+    }
+
+    function buildOrbLayout(names) {
+        if (!els.orbGrid || !names.length) {
+            return new Map();
+        }
+        const { width, height } = orbFieldSize();
+        const padding = Math.max(24, Math.min(width, height) * 0.06);
         const shuffled = shuffle(names);
-        return shuffled.map((name) => {
+        const descriptors = shuffled.map((name, index) => {
             const color = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)];
+            const size = Math.max(46, Math.min(84, 88 - shuffled.length * 0.7 + Math.random() * 8));
+            const scale = Number((0.92 + Math.random() * 0.18).toFixed(3));
             return {
                 name,
                 core: color.core,
                 glow: color.glow,
-                size: Math.max(54, Math.min(90, 96 - shuffled.length * 0.75 + Math.random() * 10)),
+                size,
+                scale,
+                hoverScale: Number((scale * 1.14).toFixed(3)),
+                floatScale: Number((scale * 1.025).toFixed(3)),
                 delay: Math.random() * 2.4,
+                duration: Number((4.2 + Math.random() * 1.6).toFixed(2)),
                 floatKey: Math.random() > 0.5 ? "ppb-float" : "ppb-float-reverse",
-                offsetY: Math.random() * 16 - 8,
-                offsetX: Math.random() * 14 - 7,
                 rotation: Math.random() * 18 - 9,
+                zIndex: 2 + (index % 6),
             };
         });
+        const sorted = [...descriptors].sort((a, b) => b.size - a.size);
+        const placed = [];
+
+        sorted.forEach((orb, index) => {
+            const radius = orb.size * 0.55;
+            let coords = null;
+            for (let attempt = 0; attempt < 180; attempt += 1) {
+                const x = padding + radius + Math.random() * Math.max(width - (padding + radius) * 2, 1);
+                const y = padding + radius + Math.random() * Math.max(height - (padding + radius) * 2, 1);
+                const blocked = placed.some((item) => {
+                    const dx = x - item.x;
+                    const dy = y - item.y;
+                    const minDist = (radius + item.radius) * 0.78 + 8;
+                    return (dx * dx) + (dy * dy) < minDist * minDist;
+                });
+                if (!blocked) {
+                    coords = { x, y };
+                    break;
+                }
+            }
+            if (!coords) {
+                coords = fallbackOrbPosition(index, sorted.length, width, height, padding + radius);
+            }
+            placed.push({
+                ...orb,
+                x: coords.x,
+                y: coords.y,
+                radius,
+            });
+        });
+
+        return new Map(placed.map((orb) => [orb.name, orb]));
+    }
+
+    function ensureOrbLayout(forceRebuild) {
+        if (!state.totalNames.length) {
+            state.orbLayout = new Map();
+            return;
+        }
+        const hasAllNames =
+            state.orbLayout.size === state.totalNames.length
+            && state.totalNames.every((name) => state.orbLayout.has(name));
+        if (forceRebuild || !hasAllNames) {
+            state.orbLayout = buildOrbLayout(state.totalNames);
+        }
     }
 
     function renderOrbs() {
         if (!els.orbGrid) {
             return;
         }
-        const orbs = buildOrbs(state.remainingNames);
+        ensureOrbLayout(false);
+        const missingOrb = state.remainingNames.some((name) => !state.orbLayout.has(name));
+        if (missingOrb) {
+            state.orbLayout = buildOrbLayout(state.totalNames);
+        }
+        const orbs = state.remainingNames
+            .map((name) => state.orbLayout.get(name))
+            .filter(Boolean)
+            .sort((a, b) => a.zIndex - b.zIndex);
         if (!orbs.length) {
             const done = document.createElement("div");
             done.className = "ppb-orb-empty";
@@ -258,21 +346,25 @@
             btn.type = "button";
             btn.className = "ppb-orb";
             btn.setAttribute("aria-label", `${orb.name} 선택`);
+            btn.style.setProperty("--orb-left", `${orb.x}px`);
+            btn.style.setProperty("--orb-top", `${orb.y}px`);
             btn.style.setProperty("--orb-size", `${orb.size}px`);
+            btn.style.setProperty("--orb-scale", String(orb.scale));
+            btn.style.setProperty("--orb-hover-scale", String(orb.hoverScale));
+            btn.style.setProperty("--orb-float-scale", String(orb.floatScale));
             btn.style.setProperty("--orb-core", orb.core);
             btn.style.setProperty("--orb-glow", orb.glow);
             btn.style.setProperty("--orb-delay", `${orb.delay}s`);
+            btn.style.setProperty("--orb-duration", `${orb.duration}s`);
             btn.style.setProperty("--orb-float", orb.floatKey);
-            btn.style.setProperty("--orb-offset-y", `${orb.offsetY}px`);
-            btn.style.setProperty("--orb-offset-x", `${orb.offsetX}px`);
             btn.style.setProperty("--orb-rotation", `${orb.rotation}deg`);
+            btn.style.zIndex = String(orb.zIndex);
             btn.innerHTML = '<span class="ppb-orb-core" aria-hidden="true"></span>';
             btn.addEventListener("click", () => handleOrbClick(orb.name, btn));
             fragment.appendChild(btn);
         });
         els.orbGrid.replaceChildren(fragment);
     }
-
     function renderHistory() {
         if (!els.historyUniverse) {
             return;
@@ -453,9 +545,12 @@
         state.history = [];
         state.selectedName = "";
         state.transitionLock = false;
+        state.orbLayout = new Map();
         if (els.input) {
             els.input.value = names.join("\n");
         }
+        setScreen("universe");
+        state.orbLayout = buildOrbLayout(names);
         updateSetupStats();
         updateCounterUI();
         renderHistory();
@@ -467,9 +562,7 @@
             setSetupMessage(message, "info");
         }
         persistRoster(names);
-        setScreen("universe");
     }
-
     function startDraw() {
         if (!els.input) {
             return;
@@ -539,6 +632,7 @@
         state.history = [];
         state.selectedName = "";
         state.transitionLock = false;
+        state.orbLayout = buildOrbLayout(state.totalNames);
         updateCounterUI();
         renderHistory();
         renderOrbs();
@@ -546,7 +640,6 @@
         setPickedPanel("");
         closeResultModal(false);
     }
-
     function undoLastDraw() {
         if (state.transitionLock || state.history.length === 0) {
             return;
@@ -718,6 +811,34 @@
         target.click();
     }
 
+    let orbLayoutFrame = 0;
+
+    function scheduleOrbLayoutRefresh() {
+        if (orbLayoutFrame) {
+            window.cancelAnimationFrame(orbLayoutFrame);
+        }
+        orbLayoutFrame = window.requestAnimationFrame(() => {
+            orbLayoutFrame = 0;
+            if (state.appState !== "universe" || !isStarsModeActive() || !state.totalNames.length) {
+                return;
+            }
+            state.orbLayout = buildOrbLayout(state.totalNames);
+            renderOrbs();
+        });
+    }
+
+    function openFortuneFromSelected() {
+        if (!state.selectedName) {
+            return;
+        }
+        root.dispatchEvent(new CustomEvent("ppobgi:open-fortune", {
+            detail: {
+                targetName: state.selectedName,
+                sourceLabel: "별빛 추첨 결과",
+            },
+        }));
+    }
+
     function handleKeydown(event) {
         if (!isStarsModeActive()) {
             return;
@@ -727,6 +848,9 @@
                 event.preventDefault();
                 closeEditor();
             }
+            return;
+        }
+        if (root.classList.contains("ppb-fortune-open")) {
             return;
         }
         if (state.resultModalOpen) {
@@ -776,6 +900,7 @@
         els.undoBtn?.addEventListener("click", undoLastDraw);
         els.editRosterBtn?.addEventListener("click", openEditor);
         els.resultNextBtn?.addEventListener("click", () => closeResultModal());
+        els.resultFortuneBtn?.addEventListener("click", openFortuneFromSelected);
         els.resultModal?.addEventListener("click", (event) => {
             if (event.target === els.resultModal) {
                 closeResultModal();
@@ -803,9 +928,15 @@
         });
         els.fullscreenBtn?.addEventListener("click", toggleFullscreen);
         document.addEventListener("fullscreenchange", syncFullscreenBtn);
+        document.addEventListener("fullscreenchange", scheduleOrbLayoutRefresh);
         document.addEventListener("keydown", handleKeydown);
+        window.addEventListener("resize", scheduleOrbLayoutRefresh);
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            if (event.detail?.mode === "stars") {
+                scheduleOrbLayoutRefresh();
+            }
+        });
     }
-
     function bootstrap() {
         if (els.input) {
             els.input.value = "";
@@ -846,8 +977,16 @@
 
     const modeStarsBtn = document.getElementById("ppb-mode-stars-btn");
     const modeLadderBtn = document.getElementById("ppb-mode-ladder-btn");
+    const modeSequenceBtn = document.getElementById("ppb-mode-sequence-btn");
+    const modeTeamsBtn = document.getElementById("ppb-mode-teams-btn");
+    const modeMeteorBtn = document.getElementById("ppb-mode-meteor-btn");
+    const modeRolesBtn = document.getElementById("ppb-mode-roles-btn");
     const modeStars = document.getElementById("ppb-mode-stars");
     const modeLadder = document.getElementById("ppb-mode-ladder");
+    const modeSequence = document.getElementById("ppb-mode-sequence");
+    const modeTeams = document.getElementById("ppb-mode-teams");
+    const modeMeteor = document.getElementById("ppb-mode-meteor");
+    const modeRoles = document.getElementById("ppb-mode-roles");
 
     const els = {
         setupScreen: document.getElementById("pbl-setup"),
@@ -882,7 +1021,7 @@
         revealList: document.getElementById("pbl-reveal-list"),
     };
 
-    if (!modeStarsBtn || !modeLadderBtn || !modeStars || !modeLadder || !els.setupScreen || !els.stageScreen) {
+    if (!modeStarsBtn || !modeLadderBtn || !modeSequenceBtn || !modeTeamsBtn || !modeMeteorBtn || !modeRolesBtn || !modeStars || !modeLadder || !modeSequence || !modeTeams || !modeMeteor || !modeRoles || !els.setupScreen || !els.stageScreen) {
         return;
     }
 
@@ -918,13 +1057,22 @@
     }
 
     function setMode(mode) {
-        const isStar = mode === "stars";
-        modeStars.classList.toggle("is-hidden", !isStar);
-        modeLadder.classList.toggle("is-hidden", isStar);
-        modeStarsBtn.classList.toggle("is-active", isStar);
-        modeLadderBtn.classList.toggle("is-active", !isStar);
-        modeStarsBtn.setAttribute("aria-selected", isStar ? "true" : "false");
-        modeLadderBtn.setAttribute("aria-selected", isStar ? "false" : "true");
+        const tabs = [
+            { mode: "stars", button: modeStarsBtn, view: modeStars },
+            { mode: "ladder", button: modeLadderBtn, view: modeLadder },
+            { mode: "sequence", button: modeSequenceBtn, view: modeSequence },
+            { mode: "teams", button: modeTeamsBtn, view: modeTeams },
+            { mode: "meteor", button: modeMeteorBtn, view: modeMeteor },
+            { mode: "roles", button: modeRolesBtn, view: modeRoles },
+        ];
+        const activeMode = tabs.some((tab) => tab.mode === mode) ? mode : "stars";
+        tabs.forEach((tab) => {
+            const active = tab.mode === activeMode;
+            tab.view.classList.toggle("is-hidden", !active);
+            tab.button.classList.toggle("is-active", active);
+            tab.button.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        root.dispatchEvent(new CustomEvent("ppobgi:mode-change", { detail: { mode: activeMode } }));
     }
 
     function setLadderScreen(next) {
@@ -1408,6 +1556,10 @@
     function bindEvents() {
         modeStarsBtn.addEventListener("click", () => setMode("stars"));
         modeLadderBtn.addEventListener("click", () => setMode("ladder"));
+        modeSequenceBtn.addEventListener("click", () => setMode("sequence"));
+        modeTeamsBtn.addEventListener("click", () => setMode("teams"));
+        modeMeteorBtn.addEventListener("click", () => setMode("meteor"));
+        modeRolesBtn.addEventListener("click", () => setMode("roles"));
         els.modeRadios.forEach((radio) => radio.addEventListener("change", () => {
             syncRoleWrap();
             updateSetupStats();
@@ -1445,6 +1597,12 @@
             if (Number.isNaN(index)) return;
             await reveal(index, "manual");
         });
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            if (event.detail?.mode !== "ladder" && state.autoRun) {
+                state.autoRun = false;
+                updateAutoButton();
+            }
+        });
     }
 
     function bootstrap() {
@@ -1461,5 +1619,2357 @@
 
     bootstrap();
 })();
+
+(function () {
+    const root = document.getElementById("ppobgi-app");
+    if (!root) {
+        return;
+    }
+
+    const modeSequence = document.getElementById("ppb-mode-sequence");
+    const els = {
+        setupScreen: document.getElementById("pps-setup"),
+        stageScreen: document.getElementById("pps-stage"),
+        input: document.getElementById("pps-name-input"),
+        loadSampleBtn: document.getElementById("pps-load-sample-btn"),
+        loadRosterBtn: document.getElementById("pps-load-roster-btn"),
+        clearInputBtn: document.getElementById("pps-clear-input-btn"),
+        startBtn: document.getElementById("pps-start-btn"),
+        statValid: document.getElementById("pps-stat-valid"),
+        statDup: document.getElementById("pps-stat-dup"),
+        statCut: document.getElementById("pps-stat-cut"),
+        setupMessage: document.getElementById("pps-setup-message"),
+        chipTotal: document.getElementById("pps-chip-total"),
+        chipRevealed: document.getElementById("pps-chip-revealed"),
+        chipLeft: document.getElementById("pps-chip-left"),
+        stageTitle: document.getElementById("pps-stage-title"),
+        stageMessage: document.getElementById("pps-stage-message"),
+        orderGrid: document.getElementById("pps-order-grid"),
+        nextBtn: document.getElementById("pps-next-btn"),
+        autoBtn: document.getElementById("pps-auto-btn"),
+        rerollBtn: document.getElementById("pps-reroll-btn"),
+        resetBtn: document.getElementById("pps-reset-btn"),
+        liveIndex: document.getElementById("pps-live-index"),
+        liveName: document.getElementById("pps-live-name"),
+        liveMeta: document.getElementById("pps-live-meta"),
+        fortuneBtn: document.getElementById("pps-fortune-btn"),
+        historyList: document.getElementById("pps-history-list"),
+    };
+
+    if (!modeSequence || !els.setupScreen || !els.stageScreen || !els.input) {
+        return;
+    }
+
+    const MAX_SEQUENCE_NAMES = 40;
+
+    const state = {
+        sourceNames: [],
+        order: [],
+        revealedCount: 0,
+        history: [],
+        autoRun: false,
+        currentName: "",
+    };
+
+    function decodeDefaultNames(raw) {
+        if (!raw) {
+            return "";
+        }
+        return raw
+            .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\\r\\n/g, "\n")
+            .replace(/\\n/g, "\n")
+            .replace(/\\r/g, "\n");
+    }
+
+    function normalizeName(name) {
+        return String(name || "").replace(/\s+/g, " ").trim();
+    }
+
+    function parseNameInput(rawText) {
+        const rows = String(rawText || "").split(/\r?\n/);
+        const valid = [];
+        const dupSet = new Set();
+        const seen = new Set();
+
+        rows.forEach((line) => {
+            const name = normalizeName(line);
+            if (!name) {
+                return;
+            }
+            if (seen.has(name)) {
+                dupSet.add(name);
+                return;
+            }
+            seen.add(name);
+            valid.push(name);
+        });
+
+        const cutCount = Math.max(0, valid.length - MAX_SEQUENCE_NAMES);
+        return {
+            valid: valid.slice(0, MAX_SEQUENCE_NAMES),
+            duplicateNames: Array.from(dupSet),
+            cutCount,
+        };
+    }
+
+    function shuffle(list) {
+        const copied = [...list];
+        for (let i = copied.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copied[i], copied[j]] = [copied[j], copied[i]];
+        }
+        return copied;
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function isReducedMotion() {
+        return root.classList.contains("ppb-reduce-motion");
+    }
+
+    function applyMessage(target, text, kind) {
+        if (!target) {
+            return;
+        }
+        target.textContent = text || "";
+        target.classList.remove("warn", "info");
+        if (kind) {
+            target.classList.add(kind);
+        }
+    }
+
+    function setSetupMessage(text, kind) {
+        applyMessage(els.setupMessage, text, kind);
+    }
+
+    function setStageMessage(text, kind) {
+        applyMessage(els.stageMessage, text, kind);
+    }
+
+    function setSequenceScreen(next) {
+        els.setupScreen.classList.toggle("is-hidden", next !== "setup");
+        els.stageScreen.classList.toggle("is-hidden", next !== "stage");
+    }
+
+    function updateSetupStats() {
+        const parsed = parseNameInput(els.input?.value || "");
+        if (els.statValid) {
+            els.statValid.textContent = String(parsed.valid.length);
+        }
+        if (els.statDup) {
+            els.statDup.textContent = String(parsed.duplicateNames.length);
+        }
+        if (els.statCut) {
+            els.statCut.textContent = String(parsed.cutCount);
+        }
+        if (els.startBtn) {
+            els.startBtn.disabled = parsed.valid.length === 0;
+        }
+
+        if (parsed.valid.length === 0) {
+            setSetupMessage("최소 1명 이상의 이름을 입력해 주세요.", "warn");
+            return;
+        }
+
+        const messages = [];
+        if (parsed.duplicateNames.length > 0) {
+            const preview = parsed.duplicateNames.slice(0, 5).join(", ");
+            messages.push(`중복 제외: ${preview}${parsed.duplicateNames.length > 5 ? " 외" : ""}`);
+        }
+        if (parsed.cutCount > 0) {
+            messages.push(`최대 ${MAX_SEQUENCE_NAMES}명 초과로 ${parsed.cutCount}명은 제외됩니다.`);
+        }
+        if (messages.length) {
+            setSetupMessage(messages.join(" "), "warn");
+            return;
+        }
+        setSetupMessage("순서를 만들 준비가 되었습니다.", "info");
+    }
+
+    function updateStageTitle() {
+        if (!els.stageTitle) {
+            return;
+        }
+        els.stageTitle.textContent = state.order.length
+            ? `${state.order.length}명의 순서를 준비했어요`
+            : "오늘의 순서를 준비했어요";
+    }
+
+    function updateCounters() {
+        const total = state.order.length;
+        const revealed = state.revealedCount;
+        if (els.chipTotal) els.chipTotal.textContent = String(total);
+        if (els.chipRevealed) els.chipRevealed.textContent = String(revealed);
+        if (els.chipLeft) els.chipLeft.textContent = String(Math.max(total - revealed, 0));
+    }
+
+    function renderHistory() {
+        if (!els.historyList) {
+            return;
+        }
+        if (!state.history.length) {
+            els.historyList.innerHTML = '<li><span class="pps-history-main">아직 공개된 순서가 없습니다.</span></li>';
+            return;
+        }
+        els.historyList.innerHTML = state.history.map((item) => `
+            <li>
+                <span class="pps-history-step">${item.order}번째 공개</span>
+                <span class="pps-history-main">${escapeHtml(item.name)}</span>
+                <span class="pps-history-order">전체 ${state.order.length}명 중 ${item.order}번째</span>
+            </li>
+        `).join("");
+    }
+
+    function renderLiveCard() {
+        if (!state.currentName) {
+            if (els.liveIndex) els.liveIndex.textContent = "대기 중";
+            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
+            if (els.liveMeta) els.liveMeta.textContent = "순서를 만들고 한 명씩 공개해 보세요.";
+            if (els.fortuneBtn) els.fortuneBtn.disabled = true;
+            return;
+        }
+        const total = state.order.length;
+        if (els.liveIndex) {
+            els.liveIndex.textContent = `${state.revealedCount}번째 순서`;
+        }
+        if (els.liveName) {
+            els.liveName.textContent = state.currentName;
+        }
+        if (els.liveMeta) {
+            els.liveMeta.textContent = state.revealedCount >= total
+                ? `전체 ${total}명의 순서를 모두 공개했습니다.`
+                : `전체 ${total}명 중 ${state.revealedCount}번째 순서입니다.`;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = false;
+        }
+    }
+
+    function renderOrderGrid() {
+        if (!els.orderGrid) {
+            return;
+        }
+        if (!state.order.length) {
+            els.orderGrid.innerHTML = '<div class="pps-empty">순서를 만들면 차례 카드가 여기에 펼쳐집니다.</div>';
+            return;
+        }
+        els.orderGrid.innerHTML = state.order.map((name, index) => {
+            const revealed = index < state.revealedCount;
+            const current = revealed && index === state.revealedCount - 1;
+            const next = index === state.revealedCount;
+            const classes = ["pps-order-card"];
+            if (revealed) classes.push("is-revealed");
+            if (current) classes.push("is-current");
+            if (!revealed && next) classes.push("is-next");
+            const label = revealed ? escapeHtml(name) : (next ? "곧 공개" : "비밀 순서");
+            const meta = current
+                ? "방금 공개"
+                : (revealed ? "공개 완료" : (next ? "다음 차례" : "대기 중"));
+            return `
+                <article class="${classes.join(" ")}">
+                    <span class="pps-order-index">${index + 1}번째</span>
+                    <strong class="pps-order-name">${label}</strong>
+                    <span class="pps-order-meta">${meta}</span>
+                </article>
+            `;
+        }).join("");
+    }
+
+    function updateActionButtons() {
+        const total = state.order.length;
+        const left = Math.max(total - state.revealedCount, 0);
+        if (els.nextBtn) {
+            els.nextBtn.disabled = total === 0 || left === 0;
+            els.nextBtn.textContent = left === 0 && total > 0 ? "모든 순서 공개 완료" : "다음 순서 공개";
+        }
+        if (els.autoBtn) {
+            if (!total) {
+                els.autoBtn.disabled = true;
+                els.autoBtn.textContent = "순서가 필요합니다";
+            } else if (state.autoRun) {
+                els.autoBtn.disabled = false;
+                els.autoBtn.textContent = "자동 발표 중지";
+            } else {
+                els.autoBtn.disabled = left === 0;
+                els.autoBtn.textContent = left === 0 ? "모든 순서 공개 완료" : "자동 발표 쇼 시작";
+            }
+        }
+        if (els.rerollBtn) {
+            els.rerollBtn.disabled = state.sourceNames.length === 0;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = !state.currentName;
+        }
+    }
+
+    function syncStage() {
+        updateStageTitle();
+        updateCounters();
+        renderOrderGrid();
+        renderHistory();
+        renderLiveCard();
+        updateActionButtons();
+    }
+
+    function buildSequence(names, message) {
+        state.sourceNames = [...names];
+        state.order = shuffle(names);
+        state.revealedCount = 0;
+        state.history = [];
+        state.autoRun = false;
+        state.currentName = "";
+        if (els.input) {
+            els.input.value = names.join("\n");
+        }
+        setSequenceScreen("stage");
+        syncStage();
+        setStageMessage(message || `총 ${names.length}명의 순서를 만들었습니다.`, "info");
+    }
+
+    function startSequence() {
+        const parsed = parseNameInput(els.input?.value || "");
+        if (!parsed.valid.length) {
+            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            els.input?.focus();
+            return;
+        }
+        buildSequence(parsed.valid, `총 ${parsed.valid.length}명의 순서를 만들었습니다.`);
+    }
+
+    function revealNext(source) {
+        if (!state.order.length) {
+            setStageMessage("먼저 순서를 만들어 주세요.", "warn");
+            return false;
+        }
+        if (state.revealedCount >= state.order.length) {
+            if (source === "manual") {
+                setStageMessage("이미 모든 순서가 공개되었습니다.", "info");
+            }
+            state.autoRun = false;
+            updateActionButtons();
+            return false;
+        }
+        const order = state.revealedCount + 1;
+        const name = state.order[state.revealedCount];
+        state.revealedCount = order;
+        state.currentName = name;
+        state.history.unshift({ order, name });
+        if (state.history.length > state.order.length) {
+            state.history = state.history.slice(0, state.order.length);
+        }
+        syncStage();
+        setStageMessage(`${order}번째 순서로 ${name} 학생을 공개했습니다.`, "info");
+        if (state.revealedCount >= state.order.length) {
+            state.autoRun = false;
+            updateActionButtons();
+        }
+        return true;
+    }
+
+    async function runAuto() {
+        if (!state.order.length) {
+            setStageMessage("먼저 순서를 만들어 주세요.", "warn");
+            updateActionButtons();
+            return;
+        }
+        if (state.autoRun) {
+            state.autoRun = false;
+            updateActionButtons();
+            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            return;
+        }
+        if (state.revealedCount >= state.order.length) {
+            setStageMessage("이미 모든 순서가 공개되었습니다.", "info");
+            updateActionButtons();
+            return;
+        }
+        state.autoRun = true;
+        updateActionButtons();
+        setStageMessage("순서 자동 발표를 시작합니다.", "info");
+        while (state.autoRun && state.revealedCount < state.order.length) {
+            revealNext("auto");
+            if (!state.autoRun || state.revealedCount >= state.order.length) {
+                break;
+            }
+            await sleep(isReducedMotion() ? 120 : 520);
+        }
+        state.autoRun = false;
+        updateActionButtons();
+        if (state.revealedCount >= state.order.length) {
+            setStageMessage("오늘 순서 공개가 모두 끝났습니다.", "info");
+        }
+    }
+
+    function rerollSequence() {
+        if (!state.sourceNames.length) {
+            return;
+        }
+        state.order = shuffle(state.sourceNames);
+        state.revealedCount = 0;
+        state.history = [];
+        state.autoRun = false;
+        state.currentName = "";
+        setSequenceScreen("stage");
+        syncStage();
+        setStageMessage("순서를 다시 섞었습니다.", "info");
+    }
+
+    function resetToSetup() {
+        state.autoRun = false;
+        state.currentName = "";
+        setSequenceScreen("setup");
+        updateActionButtons();
+        updateSetupStats();
+        setSetupMessage("이름을 수정한 뒤 다시 순서를 만들어 주세요.", "info");
+    }
+
+    async function loadRosterNames() {
+        if (!els.input || !els.loadRosterBtn) {
+            return;
+        }
+        const rosterUrl = root.dataset.rosterUrl || "";
+        if (!rosterUrl) {
+            setSetupMessage("명단을 불러올 주소를 찾지 못했습니다.", "warn");
+            return;
+        }
+        els.loadRosterBtn.disabled = true;
+        els.loadRosterBtn.textContent = "명단 불러오는 중...";
+        try {
+            const response = await window.fetch(rosterUrl, {
+                credentials: "same-origin",
+                cache: "no-store",
+            });
+            if (!response.ok) {
+                throw new Error("sequence roster fetch failed");
+            }
+            const payload = await response.json();
+            const names = Array.isArray(payload.names) ? payload.names : [];
+            if (!names.length) {
+                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                return;
+            }
+            els.input.value = names.join("\n");
+            updateSetupStats();
+            setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+        } catch (error) {
+            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+        } finally {
+            els.loadRosterBtn.disabled = false;
+            els.loadRosterBtn.textContent = "당번 명단 불러오기";
+        }
+    }
+
+    function openFortuneForCurrent() {
+        if (!state.currentName) {
+            return;
+        }
+        root.dispatchEvent(new CustomEvent("ppobgi:open-fortune", {
+            detail: {
+                targetName: state.currentName,
+                sourceLabel: `${state.revealedCount}번째 순서 공개`,
+            },
+        }));
+    }
+
+    function bindEvents() {
+        els.input?.addEventListener("input", updateSetupStats);
+        els.loadSampleBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            updateSetupStats();
+            setSetupMessage("예시 명단을 불러왔습니다.", "info");
+        });
+        els.loadRosterBtn?.addEventListener("click", loadRosterNames);
+        els.clearInputBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = "";
+            updateSetupStats();
+        });
+        els.startBtn?.addEventListener("click", startSequence);
+        els.nextBtn?.addEventListener("click", () => revealNext("manual"));
+        els.autoBtn?.addEventListener("click", runAuto);
+        els.rerollBtn?.addEventListener("click", rerollSequence);
+        els.resetBtn?.addEventListener("click", resetToSetup);
+        els.fortuneBtn?.addEventListener("click", openFortuneForCurrent);
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            if (event.detail?.mode !== "sequence" && state.autoRun) {
+                state.autoRun = false;
+                updateActionButtons();
+            }
+        });
+    }
+
+    function bootstrap() {
+        if (els.input) {
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+        }
+        updateSetupStats();
+        renderOrderGrid();
+        renderHistory();
+        renderLiveCard();
+        updateCounters();
+        updateActionButtons();
+        setSequenceScreen("setup");
+        bindEvents();
+    }
+
+    bootstrap();
+})();
+
+(function () {
+    const root = document.getElementById("ppobgi-app");
+    if (!root) {
+        return;
+    }
+
+    const modeTeams = document.getElementById("ppb-mode-teams");
+    const els = {
+        setupScreen: document.getElementById("ppt-setup"),
+        stageScreen: document.getElementById("ppt-stage"),
+        input: document.getElementById("ppt-name-input"),
+        teamCount: document.getElementById("ppt-team-count"),
+        balanceNote: document.getElementById("ppt-balance-note"),
+        loadSampleBtn: document.getElementById("ppt-load-sample-btn"),
+        loadRosterBtn: document.getElementById("ppt-load-roster-btn"),
+        clearInputBtn: document.getElementById("ppt-clear-input-btn"),
+        startBtn: document.getElementById("ppt-start-btn"),
+        statValid: document.getElementById("ppt-stat-valid"),
+        statDup: document.getElementById("ppt-stat-dup"),
+        statCut: document.getElementById("ppt-stat-cut"),
+        setupMessage: document.getElementById("ppt-setup-message"),
+        chipTotal: document.getElementById("ppt-chip-total"),
+        chipTeams: document.getElementById("ppt-chip-teams"),
+        chipLeft: document.getElementById("ppt-chip-left"),
+        stageTitle: document.getElementById("ppt-stage-title"),
+        stageMessage: document.getElementById("ppt-stage-message"),
+        teamGrid: document.getElementById("ppt-team-grid"),
+        nextBtn: document.getElementById("ppt-next-btn"),
+        autoBtn: document.getElementById("ppt-auto-btn"),
+        rerollBtn: document.getElementById("ppt-reroll-btn"),
+        resetBtn: document.getElementById("ppt-reset-btn"),
+        liveTeam: document.getElementById("ppt-live-team"),
+        liveName: document.getElementById("ppt-live-name"),
+        liveMeta: document.getElementById("ppt-live-meta"),
+        fortuneBtn: document.getElementById("ppt-fortune-btn"),
+        historyList: document.getElementById("ppt-history-list"),
+    };
+
+    if (!modeTeams || !els.setupScreen || !els.stageScreen || !els.input || !els.teamCount) {
+        return;
+    }
+
+    const MAX_TEAM_NAMES = 40;
+
+    const state = {
+        sourceNames: [],
+        plan: [],
+        teamCount: 4,
+        assignedCount: 0,
+        history: [],
+        autoRun: false,
+        currentAssignment: null,
+    };
+
+    function decodeDefaultNames(raw) {
+        if (!raw) {
+            return "";
+        }
+        return raw
+            .replace(/\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\r\n/g, "\n")
+            .replace(/\n/g, "\n")
+            .replace(/\r/g, "\n");
+    }
+
+    function normalizeName(name) {
+        return String(name || "").replace(/\s+/g, " ").trim();
+    }
+
+    function parseNameInput(rawText) {
+        const rows = String(rawText || "").split(/\r?\n/);
+        const valid = [];
+        const dupSet = new Set();
+        const seen = new Set();
+
+        rows.forEach((line) => {
+            const name = normalizeName(line);
+            if (!name) {
+                return;
+            }
+            if (seen.has(name)) {
+                dupSet.add(name);
+                return;
+            }
+            seen.add(name);
+            valid.push(name);
+        });
+
+        const cutCount = Math.max(0, valid.length - MAX_TEAM_NAMES);
+        return {
+            valid: valid.slice(0, MAX_TEAM_NAMES),
+            duplicateNames: Array.from(dupSet),
+            cutCount,
+        };
+    }
+
+    function shuffle(list) {
+        const copied = [...list];
+        for (let i = copied.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copied[i], copied[j]] = [copied[j], copied[i]];
+        }
+        return copied;
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function isReducedMotion() {
+        return root.classList.contains("ppb-reduce-motion");
+    }
+
+    function applyMessage(target, text, kind) {
+        if (!target) {
+            return;
+        }
+        target.textContent = text || "";
+        target.classList.remove("warn", "info");
+        if (kind) {
+            target.classList.add(kind);
+        }
+    }
+
+    function setSetupMessage(text, kind) {
+        applyMessage(els.setupMessage, text, kind);
+    }
+
+    function setStageMessage(text, kind) {
+        applyMessage(els.stageMessage, text, kind);
+    }
+
+    function setTeamScreen(next) {
+        els.setupScreen.classList.toggle("is-hidden", next !== "setup");
+        els.stageScreen.classList.toggle("is-hidden", next !== "stage");
+    }
+
+    function readTeamCount() {
+        const parsed = Number.parseInt(String(els.teamCount?.value || state.teamCount || 4), 10);
+        if (Number.isNaN(parsed)) {
+            return 4;
+        }
+        return Math.min(6, Math.max(2, parsed));
+    }
+
+    function describeBalance(total, teamCount) {
+        if (total <= 0) {
+            return `${teamCount}팀으로 나누면 인원이 최대한 고르게 배치됩니다.`;
+        }
+        const base = Math.floor(total / teamCount);
+        const extra = total % teamCount;
+        if (extra === 0) {
+            return `${teamCount}팀으로 나누면 각 팀 ${base}명입니다.`;
+        }
+        return `${teamCount}팀으로 나누면 ${extra}팀은 ${base + 1}명, 나머지는 ${base}명입니다.`;
+    }
+
+    function buildTeamPlan(names, teamCount) {
+        const shuffledNames = shuffle(names);
+        return shuffledNames.map((name, index) => {
+            const teamIndex = index % teamCount;
+            return {
+                name,
+                teamIndex,
+                teamLabel: `${teamIndex + 1}팀`,
+                order: index + 1,
+            };
+        });
+    }
+
+    function buildTeamsSnapshot() {
+        const teams = Array.from({ length: state.teamCount }, (_, index) => ({
+            index,
+            label: `${index + 1}팀`,
+            targetSize: 0,
+            members: [],
+        }));
+        state.plan.forEach((assignment) => {
+            teams[assignment.teamIndex].targetSize += 1;
+        });
+        for (let index = 0; index < state.assignedCount; index += 1) {
+            const assignment = state.plan[index];
+            if (!assignment) {
+                continue;
+            }
+            teams[assignment.teamIndex].members.push(assignment);
+        }
+        return teams;
+    }
+
+    function updateSetupStats() {
+        const parsed = parseNameInput(els.input?.value || "");
+        state.teamCount = readTeamCount();
+        if (els.statValid) {
+            els.statValid.textContent = String(parsed.valid.length);
+        }
+        if (els.statDup) {
+            els.statDup.textContent = String(parsed.duplicateNames.length);
+        }
+        if (els.statCut) {
+            els.statCut.textContent = String(parsed.cutCount);
+        }
+        if (els.balanceNote) {
+            els.balanceNote.textContent = describeBalance(parsed.valid.length, state.teamCount);
+        }
+        if (els.startBtn) {
+            els.startBtn.disabled = parsed.valid.length === 0;
+        }
+
+        if (parsed.valid.length === 0) {
+            setSetupMessage("최소 1명 이상의 이름을 입력해 주세요.", "warn");
+            return;
+        }
+
+        const messages = [];
+        if (parsed.duplicateNames.length > 0) {
+            const preview = parsed.duplicateNames.slice(0, 5).join(", ");
+            messages.push(`중복 제외: ${preview}${parsed.duplicateNames.length > 5 ? " 외" : ""}`);
+        }
+        if (parsed.cutCount > 0) {
+            messages.push(`최대 ${MAX_TEAM_NAMES}명 초과로 ${parsed.cutCount}명은 제외됩니다.`);
+        }
+        if (messages.length) {
+            setSetupMessage(messages.join(" "), "warn");
+            return;
+        }
+        setSetupMessage(`${state.teamCount}팀 편성을 만들 준비가 되었습니다.`, "info");
+    }
+
+    function updateStageTitle() {
+        if (!els.stageTitle) {
+            return;
+        }
+        els.stageTitle.textContent = state.plan.length
+            ? `${state.teamCount}팀 편성을 준비했어요`
+            : "팀 편성을 준비했어요";
+    }
+
+    function updateCounters() {
+        const total = state.plan.length;
+        if (els.chipTotal) els.chipTotal.textContent = String(total);
+        if (els.chipTeams) els.chipTeams.textContent = String(state.teamCount);
+        if (els.chipLeft) els.chipLeft.textContent = String(Math.max(total - state.assignedCount, 0));
+    }
+
+    function renderHistory() {
+        if (!els.historyList) {
+            return;
+        }
+        if (!state.history.length) {
+            els.historyList.innerHTML = '<li><span class="ppt-history-main">아직 공개된 팀 배치가 없습니다.</span></li>';
+            return;
+        }
+        els.historyList.innerHTML = state.history.map((item) => `
+            <li>
+                <span class="ppt-history-step">${item.step}번째 배치</span>
+                <span class="ppt-history-main">${escapeHtml(item.name)}</span>
+                <span class="ppt-history-team">${escapeHtml(item.teamLabel)}</span>
+            </li>
+        `).join("");
+    }
+
+    function renderLiveCard() {
+        if (!state.currentAssignment) {
+            if (els.liveTeam) els.liveTeam.textContent = "대기 중";
+            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
+            if (els.liveMeta) els.liveMeta.textContent = "팀 편성을 만들고 한 명씩 공개해 보세요.";
+            if (els.fortuneBtn) els.fortuneBtn.disabled = true;
+            return;
+        }
+        if (els.liveTeam) {
+            els.liveTeam.textContent = state.currentAssignment.teamLabel;
+        }
+        if (els.liveName) {
+            els.liveName.textContent = state.currentAssignment.name;
+        }
+        if (els.liveMeta) {
+            els.liveMeta.textContent = `${state.currentAssignment.order}번째 배치로 ${state.currentAssignment.teamLabel}에 들어갔습니다.`;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = false;
+        }
+    }
+
+    function renderTeamGrid() {
+        if (!els.teamGrid) {
+            return;
+        }
+        if (!state.plan.length) {
+            els.teamGrid.innerHTML = '<div class="ppt-empty">팀 편성을 만들면 팀 카드가 여기에 펼쳐집니다.</div>';
+            return;
+        }
+        const latest = state.assignedCount > 0 ? state.plan[state.assignedCount - 1] : null;
+        const teams = buildTeamsSnapshot();
+        els.teamGrid.innerHTML = teams.map((team) => {
+            const members = team.members.length
+                ? team.members.map((member) => {
+                    const classes = ["ppt-member-chip"];
+                    if (latest === member) {
+                        classes.push("is-recent");
+                    }
+                    if (state.currentAssignment === member) {
+                        classes.push("is-selected");
+                    }
+                    return `<button type="button" class="${classes.join(" ")}" data-name="${escapeHtml(member.name)}" data-team-label="${escapeHtml(member.teamLabel)}">${escapeHtml(member.name)}</button>`;
+                }).join("")
+                : '<span class="ppt-member-empty">아직 배치된 학생이 없습니다.</span>';
+            return `
+                <article class="ppt-team-card">
+                    <div class="ppt-team-head">
+                        <div>
+                            <h3 class="ppt-team-title">${team.label}</h3>
+                            <p class="ppt-team-size">현재 ${team.members.length}명 / 예정 ${team.targetSize}명</p>
+                        </div>
+                    </div>
+                    <div class="ppt-member-list">${members}</div>
+                </article>
+            `;
+        }).join("");
+    }
+
+    function updateActionButtons() {
+        const total = state.plan.length;
+        const left = Math.max(total - state.assignedCount, 0);
+        if (els.nextBtn) {
+            els.nextBtn.disabled = total === 0 || left === 0;
+            els.nextBtn.textContent = left === 0 && total > 0 ? "모든 팀 배치 완료" : "다음 팀 배치 공개";
+        }
+        if (els.autoBtn) {
+            if (!total) {
+                els.autoBtn.disabled = true;
+                els.autoBtn.textContent = "팀 편성이 필요합니다";
+            } else if (state.autoRun) {
+                els.autoBtn.disabled = false;
+                els.autoBtn.textContent = "자동 발표 중지";
+            } else {
+                els.autoBtn.disabled = left === 0;
+                els.autoBtn.textContent = left === 0 ? "모든 팀 배치 완료" : "자동 발표 쇼 시작";
+            }
+        }
+        if (els.rerollBtn) {
+            els.rerollBtn.disabled = state.sourceNames.length === 0;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = !state.currentAssignment;
+        }
+    }
+
+    function syncStage() {
+        updateStageTitle();
+        updateCounters();
+        renderTeamGrid();
+        renderHistory();
+        renderLiveCard();
+        updateActionButtons();
+    }
+
+    function buildTeams(names, message) {
+        state.sourceNames = [...names];
+        state.teamCount = readTeamCount();
+        state.plan = buildTeamPlan(names, state.teamCount);
+        state.assignedCount = 0;
+        state.history = [];
+        state.autoRun = false;
+        state.currentAssignment = null;
+        if (els.input) {
+            els.input.value = names.join("\n");
+        }
+        setTeamScreen("stage");
+        syncStage();
+        setStageMessage(message || `${state.teamCount}팀 편성을 만들었습니다.`, "info");
+    }
+
+    function startTeamBuild() {
+        const parsed = parseNameInput(els.input?.value || "");
+        if (!parsed.valid.length) {
+            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            els.input?.focus();
+            return;
+        }
+        buildTeams(parsed.valid, `${state.teamCount}팀 편성을 만들었습니다.`);
+    }
+
+    function revealNextAssignment(source) {
+        if (!state.plan.length) {
+            setStageMessage("먼저 팀 편성을 만들어 주세요.", "warn");
+            return false;
+        }
+        if (state.assignedCount >= state.plan.length) {
+            if (source === "manual") {
+                setStageMessage("이미 모든 팀 배치가 공개되었습니다.", "info");
+            }
+            state.autoRun = false;
+            updateActionButtons();
+            return false;
+        }
+        const assignment = state.plan[state.assignedCount];
+        state.assignedCount += 1;
+        state.currentAssignment = assignment;
+        state.history.unshift({
+            step: state.assignedCount,
+            name: assignment.name,
+            teamLabel: assignment.teamLabel,
+        });
+        if (state.history.length > state.plan.length) {
+            state.history = state.history.slice(0, state.plan.length);
+        }
+        syncStage();
+        setStageMessage(`${assignment.name} 학생을 ${assignment.teamLabel}에 배치했습니다.`, "info");
+        if (state.assignedCount >= state.plan.length) {
+            state.autoRun = false;
+            updateActionButtons();
+        }
+        return true;
+    }
+
+    async function runAuto() {
+        if (!state.plan.length) {
+            setStageMessage("먼저 팀 편성을 만들어 주세요.", "warn");
+            updateActionButtons();
+            return;
+        }
+        if (state.autoRun) {
+            state.autoRun = false;
+            updateActionButtons();
+            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            return;
+        }
+        if (state.assignedCount >= state.plan.length) {
+            setStageMessage("이미 모든 팀 배치가 공개되었습니다.", "info");
+            updateActionButtons();
+            return;
+        }
+        state.autoRun = true;
+        updateActionButtons();
+        setStageMessage("팀 배치 자동 발표를 시작합니다.", "info");
+        while (state.autoRun && state.assignedCount < state.plan.length) {
+            revealNextAssignment("auto");
+            if (!state.autoRun || state.assignedCount >= state.plan.length) {
+                break;
+            }
+            await sleep(isReducedMotion() ? 120 : 520);
+        }
+        state.autoRun = false;
+        updateActionButtons();
+        if (state.assignedCount >= state.plan.length) {
+            setStageMessage("오늘 팀 배치 공개가 모두 끝났습니다.", "info");
+        }
+    }
+
+    function rerollTeams() {
+        if (!state.sourceNames.length) {
+            return;
+        }
+        state.plan = buildTeamPlan(state.sourceNames, state.teamCount);
+        state.assignedCount = 0;
+        state.history = [];
+        state.autoRun = false;
+        state.currentAssignment = null;
+        setTeamScreen("stage");
+        syncStage();
+        setStageMessage("팀을 다시 섞었습니다.", "info");
+    }
+
+    function resetToSetup() {
+        state.autoRun = false;
+        state.currentAssignment = null;
+        setTeamScreen("setup");
+        updateActionButtons();
+        updateSetupStats();
+        setSetupMessage("이름이나 팀 수를 조정한 뒤 다시 팀 편성을 만들어 주세요.", "info");
+    }
+
+    async function loadRosterNames() {
+        if (!els.input || !els.loadRosterBtn) {
+            return;
+        }
+        const rosterUrl = root.dataset.rosterUrl || "";
+        if (!rosterUrl) {
+            setSetupMessage("명단을 불러올 주소를 찾지 못했습니다.", "warn");
+            return;
+        }
+        els.loadRosterBtn.disabled = true;
+        els.loadRosterBtn.textContent = "명단 불러오는 중...";
+        try {
+            const response = await window.fetch(rosterUrl, {
+                credentials: "same-origin",
+                cache: "no-store",
+            });
+            if (!response.ok) {
+                throw new Error("team roster fetch failed");
+            }
+            const payload = await response.json();
+            const names = Array.isArray(payload.names) ? payload.names : [];
+            if (!names.length) {
+                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                return;
+            }
+            els.input.value = names.join("\n");
+            updateSetupStats();
+            setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+        } catch (error) {
+            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+        } finally {
+            els.loadRosterBtn.disabled = false;
+            els.loadRosterBtn.textContent = "당번 명단 불러오기";
+        }
+    }
+
+    function selectAssignedMember(name, teamLabel) {
+        const assignment = state.plan.find((item, index) => index < state.assignedCount && item.name === name && item.teamLabel === teamLabel);
+        if (!assignment) {
+            return;
+        }
+        state.currentAssignment = assignment;
+        renderTeamGrid();
+        renderLiveCard();
+        updateActionButtons();
+        setStageMessage(`${teamLabel}의 ${name} 학생을 선택했습니다.`, "info");
+    }
+
+    function openFortuneForCurrent() {
+        if (!state.currentAssignment) {
+            return;
+        }
+        root.dispatchEvent(new CustomEvent("ppobgi:open-fortune", {
+            detail: {
+                targetName: state.currentAssignment.name,
+                sourceLabel: `${state.currentAssignment.teamLabel} 배치 공개`,
+            },
+        }));
+    }
+
+    function bindEvents() {
+        els.input?.addEventListener("input", updateSetupStats);
+        els.teamCount?.addEventListener("change", updateSetupStats);
+        els.loadSampleBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            updateSetupStats();
+            setSetupMessage("예시 명단을 불러왔습니다.", "info");
+        });
+        els.loadRosterBtn?.addEventListener("click", loadRosterNames);
+        els.clearInputBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = "";
+            updateSetupStats();
+        });
+        els.startBtn?.addEventListener("click", startTeamBuild);
+        els.nextBtn?.addEventListener("click", () => revealNextAssignment("manual"));
+        els.autoBtn?.addEventListener("click", runAuto);
+        els.rerollBtn?.addEventListener("click", rerollTeams);
+        els.resetBtn?.addEventListener("click", resetToSetup);
+        els.fortuneBtn?.addEventListener("click", openFortuneForCurrent);
+        els.teamGrid?.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-name][data-team-label]");
+            if (!button) {
+                return;
+            }
+            selectAssignedMember(button.dataset.name || "", button.dataset.teamLabel || "");
+        });
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            if (event.detail?.mode !== "teams" && state.autoRun) {
+                state.autoRun = false;
+                updateActionButtons();
+            }
+        });
+    }
+
+    function bootstrap() {
+        if (els.input) {
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+        }
+        updateSetupStats();
+        renderTeamGrid();
+        renderHistory();
+        renderLiveCard();
+        updateCounters();
+        updateActionButtons();
+        setTeamScreen("setup");
+        bindEvents();
+    }
+
+    bootstrap();
+})();
+
+(function () {
+    const root = document.getElementById("ppobgi-app");
+    if (!root) {
+        return;
+    }
+
+    const modeMeteor = document.getElementById("ppb-mode-meteor");
+    const els = {
+        setupScreen: document.getElementById("ppm-setup"),
+        stageScreen: document.getElementById("ppm-stage"),
+        input: document.getElementById("ppm-name-input"),
+        loadSampleBtn: document.getElementById("ppm-load-sample-btn"),
+        loadRosterBtn: document.getElementById("ppm-load-roster-btn"),
+        clearInputBtn: document.getElementById("ppm-clear-input-btn"),
+        startBtn: document.getElementById("ppm-start-btn"),
+        statValid: document.getElementById("ppm-stat-valid"),
+        statDup: document.getElementById("ppm-stat-dup"),
+        statCut: document.getElementById("ppm-stat-cut"),
+        setupMessage: document.getElementById("ppm-setup-message"),
+        chipTotal: document.getElementById("ppm-chip-total"),
+        chipRevealed: document.getElementById("ppm-chip-revealed"),
+        chipLeft: document.getElementById("ppm-chip-left"),
+        stageTitle: document.getElementById("ppm-stage-title"),
+        stageMessage: document.getElementById("ppm-stage-message"),
+        sky: document.getElementById("ppm-sky"),
+        autoRandomBtn: document.getElementById("ppm-auto-random-btn"),
+        autoBtn: document.getElementById("ppm-auto-btn"),
+        rerollBtn: document.getElementById("ppm-reroll-btn"),
+        resetBtn: document.getElementById("ppm-reset-btn"),
+        liveOrder: document.getElementById("ppm-live-order"),
+        liveName: document.getElementById("ppm-live-name"),
+        liveMeta: document.getElementById("ppm-live-meta"),
+        fortuneBtn: document.getElementById("ppm-fortune-btn"),
+        historyList: document.getElementById("ppm-history-list"),
+    };
+
+    if (!modeMeteor || !els.setupScreen || !els.stageScreen || !els.input || !els.sky) {
+        return;
+    }
+
+    const MAX_METEOR_NAMES = 40;
+
+    const state = {
+        sourceNames: [],
+        remainingNames: [],
+        history: [],
+        autoRun: false,
+        currentName: "",
+        meteorLayout: new Map(),
+        resizeTimer: 0,
+        burstTimer: 0,
+    };
+
+    function decodeDefaultNames(raw) {
+        if (!raw) {
+            return "";
+        }
+        return raw
+            .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\\r\\n/g, "\n")
+            .replace(/\\n/g, "\n")
+            .replace(/\\r/g, "\n");
+    }
+
+    function normalizeName(name) {
+        return String(name || "").replace(/\s+/g, " ").trim();
+    }
+
+    function parseNameInput(rawText) {
+        const rows = String(rawText || "").split(/\r?\n/);
+        const valid = [];
+        const dupSet = new Set();
+        const seen = new Set();
+
+        rows.forEach((line) => {
+            const name = normalizeName(line);
+            if (!name) {
+                return;
+            }
+            if (seen.has(name)) {
+                dupSet.add(name);
+                return;
+            }
+            seen.add(name);
+            valid.push(name);
+        });
+
+        const cutCount = Math.max(0, valid.length - MAX_METEOR_NAMES);
+        return {
+            valid: valid.slice(0, MAX_METEOR_NAMES),
+            duplicateNames: Array.from(dupSet),
+            cutCount,
+        };
+    }
+
+    function shuffle(list) {
+        const copied = [...list];
+        for (let i = copied.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copied[i], copied[j]] = [copied[j], copied[i]];
+        }
+        return copied;
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function isReducedMotion() {
+        return root.classList.contains("ppb-reduce-motion");
+    }
+
+    function applyMessage(target, text, kind) {
+        if (!target) {
+            return;
+        }
+        target.textContent = text || "";
+        target.classList.remove("warn", "info");
+        if (kind) {
+            target.classList.add(kind);
+        }
+    }
+
+    function setSetupMessage(text, kind) {
+        applyMessage(els.setupMessage, text, kind);
+    }
+
+    function setStageMessage(text, kind) {
+        applyMessage(els.stageMessage, text, kind);
+    }
+
+    function setMeteorScreen(next) {
+        els.setupScreen.classList.toggle("is-hidden", next !== "setup");
+        els.stageScreen.classList.toggle("is-hidden", next !== "stage");
+    }
+
+    function meteorFieldSize() {
+        const rect = els.sky?.getBoundingClientRect();
+        const rawWidth = Math.max(rect?.width || 0, els.sky?.clientWidth || 0, 0);
+        const rawHeight = Math.max(rect?.height || 0, els.sky?.clientHeight || 0, 0);
+        return {
+            width: Math.max(rawWidth, 520),
+            height: Math.max(rawHeight, 420),
+        };
+    }
+
+    function fallbackMeteorPosition(index, total, width, height) {
+        const safeWidth = Math.max(width - 160, 120);
+        const safeHeight = Math.max(height - 120, 120);
+        const ratio = total <= 1 ? 0.24 : 0.18 + (index / Math.max(total - 1, 1)) * 0.68;
+        const angle = index * 2.399963229728653;
+        const x = 52 + safeWidth * (0.5 + Math.cos(angle) * 0.42 * ratio);
+        const y = 36 + safeHeight * (0.5 + Math.sin(angle) * 0.36 * ratio);
+        return {
+            x: Math.min(width - 84, Math.max(36, x)),
+            y: Math.min(height - 72, Math.max(28, y)),
+        };
+    }
+
+    function buildMeteorLayout(names) {
+        if (!els.sky || !names.length) {
+            return new Map();
+        }
+        const { width, height } = meteorFieldSize();
+        const layout = new Map();
+        const placed = [];
+        const minDistance = Math.max(58, Math.min(width, height) * 0.12);
+        const descriptors = shuffle(names).map((name) => ({
+            name,
+            scale: Number((0.82 + Math.random() * 0.44).toFixed(3)),
+            tilt: Number((-18 - Math.random() * 16).toFixed(3)),
+            duration: Number((4.4 + Math.random() * 3.4).toFixed(2)),
+            delay: Number((Math.random() * 2.4).toFixed(2)),
+        }));
+
+        descriptors.forEach((item, index) => {
+            let point = null;
+            for (let attempt = 0; attempt < 90; attempt += 1) {
+                const x = 44 + Math.random() * Math.max(width - 164, 120);
+                const y = 34 + Math.random() * Math.max(height - 132, 120);
+                const conflict = placed.some((placedPoint) => {
+                    const dx = placedPoint.x - x;
+                    const dy = placedPoint.y - y;
+                    return Math.hypot(dx, dy) < minDistance;
+                });
+                if (!conflict) {
+                    point = { x, y };
+                    break;
+                }
+            }
+            if (!point) {
+                point = fallbackMeteorPosition(index, descriptors.length, width, height);
+            }
+            placed.push(point);
+            layout.set(item.name, {
+                left: Number(((point.x / width) * 100).toFixed(3)),
+                top: Number(((point.y / height) * 100).toFixed(3)),
+                scale: item.scale,
+                tilt: item.tilt,
+                duration: item.duration,
+                delay: item.delay,
+            });
+        });
+        return layout;
+    }
+
+    function updateSetupStats() {
+        const parsed = parseNameInput(els.input?.value || "");
+        if (els.statValid) {
+            els.statValid.textContent = String(parsed.valid.length);
+        }
+        if (els.statDup) {
+            els.statDup.textContent = String(parsed.duplicateNames.length);
+        }
+        if (els.statCut) {
+            els.statCut.textContent = String(parsed.cutCount);
+        }
+        if (els.startBtn) {
+            els.startBtn.disabled = parsed.valid.length === 0;
+        }
+
+        if (parsed.valid.length === 0) {
+            setSetupMessage("최소 1명 이상의 이름을 입력해 주세요.", "warn");
+            return;
+        }
+
+        const messages = [];
+        if (parsed.duplicateNames.length > 0) {
+            const preview = parsed.duplicateNames.slice(0, 5).join(", ");
+            messages.push(`중복 제외: ${preview}${parsed.duplicateNames.length > 5 ? " 외" : ""}`);
+        }
+        if (parsed.cutCount > 0) {
+            messages.push(`최대 ${MAX_METEOR_NAMES}명 초과로 ${parsed.cutCount}명은 제외됩니다.`);
+        }
+        if (messages.length) {
+            setSetupMessage(messages.join(" "), "warn");
+            return;
+        }
+        setSetupMessage("유성우를 펼칠 준비가 되었습니다.", "info");
+    }
+
+    function updateStageTitle() {
+        if (!els.stageTitle) {
+            return;
+        }
+        els.stageTitle.textContent = state.remainingNames.length
+            ? `밤하늘에 ${state.remainingNames.length}개의 유성이 남아 있어요`
+            : "오늘 유성우 공개가 모두 끝났어요";
+    }
+
+    function updateCounters() {
+        const total = state.sourceNames.length;
+        const revealed = state.history.length;
+        const left = state.remainingNames.length;
+        if (els.chipTotal) els.chipTotal.textContent = String(total);
+        if (els.chipRevealed) els.chipRevealed.textContent = String(revealed);
+        if (els.chipLeft) els.chipLeft.textContent = String(left);
+    }
+
+    function renderHistory() {
+        if (!els.historyList) {
+            return;
+        }
+        if (!state.history.length) {
+            els.historyList.innerHTML = '<li><span class="ppm-history-main">아직 공개된 유성이 없습니다.</span></li>';
+            return;
+        }
+        els.historyList.innerHTML = state.history.map((item) => `
+            <li>
+                <span class="ppm-history-step">${item.order}번째 공개</span>
+                <span class="ppm-history-main">${escapeHtml(item.name)}</span>
+                <span class="ppm-history-order">전체 ${state.sourceNames.length}명 중 ${item.order}번째</span>
+            </li>
+        `).join("");
+    }
+
+    function renderLiveCard() {
+        if (!state.currentName) {
+            if (els.liveOrder) els.liveOrder.textContent = "대기 중";
+            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
+            if (els.liveMeta) els.liveMeta.textContent = "유성을 누르거나 자동 발표 쇼를 시작해 보세요.";
+            if (els.fortuneBtn) els.fortuneBtn.disabled = true;
+            return;
+        }
+        const order = state.history.length;
+        if (els.liveOrder) {
+            els.liveOrder.textContent = `${order}번째 유성`;
+        }
+        if (els.liveName) {
+            els.liveName.textContent = state.currentName;
+        }
+        if (els.liveMeta) {
+            els.liveMeta.textContent = state.remainingNames.length
+                ? `전체 ${state.sourceNames.length}명 중 ${order}번째로 공개되었습니다.`
+                : `전체 ${state.sourceNames.length}명의 유성우 공개를 모두 마쳤습니다.`;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = false;
+        }
+    }
+
+    function updateActionButtons() {
+        const total = state.sourceNames.length;
+        const left = state.remainingNames.length;
+        if (els.autoRandomBtn) {
+            els.autoRandomBtn.disabled = total === 0 || left === 0;
+            els.autoRandomBtn.textContent = left === 0 && total > 0 ? "모든 유성 공개 완료" : "무작위 유성 공개";
+        }
+        if (els.autoBtn) {
+            if (!total) {
+                els.autoBtn.disabled = true;
+                els.autoBtn.textContent = "유성우가 필요합니다";
+            } else if (state.autoRun) {
+                els.autoBtn.disabled = false;
+                els.autoBtn.textContent = "자동 발표 중지";
+            } else {
+                els.autoBtn.disabled = left === 0;
+                els.autoBtn.textContent = left === 0 ? "모든 유성 공개 완료" : "자동 발표 쇼 시작";
+            }
+        }
+        if (els.rerollBtn) {
+            els.rerollBtn.disabled = state.sourceNames.length === 0;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = !state.currentName;
+        }
+    }
+
+    function triggerBurst() {
+        if (!els.sky) {
+            return;
+        }
+        window.clearTimeout(state.burstTimer);
+        els.sky.classList.remove("is-burst");
+        void els.sky.offsetWidth;
+        els.sky.classList.add("is-burst");
+        state.burstTimer = window.setTimeout(() => {
+            els.sky?.classList.remove("is-burst");
+        }, isReducedMotion() ? 140 : 360);
+    }
+
+    function renderSky() {
+        if (!els.sky) {
+            return;
+        }
+        if (!state.sourceNames.length) {
+            els.sky.innerHTML = '<div class="ppm-empty">유성우를 펼치면 숨은 유성들이 여기 흩뿌려집니다.</div>';
+            return;
+        }
+        if (!state.remainingNames.length) {
+            els.sky.innerHTML = '<div class="ppm-empty is-complete">모든 유성이 공개되었습니다. 다시 펼치거나 포춘쿠키로 이어가 보세요.</div>';
+            return;
+        }
+        els.sky.innerHTML = state.remainingNames.map((name, index) => {
+            const layout = state.meteorLayout.get(name) || (() => {
+                const { width, height } = meteorFieldSize();
+                const fallback = fallbackMeteorPosition(index, state.remainingNames.length, width, height);
+                return {
+                    left: Number(((fallback.x / width) * 100).toFixed(3)),
+                    top: Number(((fallback.y / height) * 100).toFixed(3)),
+                    scale: 1,
+                    tilt: -24,
+                    duration: 5.4,
+                    delay: 0,
+                };
+            })();
+            return `
+                <button
+                    type="button"
+                    class="ppm-meteor"
+                    data-name="${escapeHtml(name)}"
+                    style="--ppm-left:${layout.left}%; --ppm-top:${layout.top}%; --ppm-scale:${layout.scale}; --ppm-tilt:${layout.tilt}deg; --ppm-duration:${layout.duration}s; --ppm-delay:${layout.delay}s;"
+                >
+                    <span class="ppm-meteor-core" aria-hidden="true"></span>
+                    <span class="ppm-meteor-tail" aria-hidden="true"></span>
+                    <span class="ppm-meteor-hint">비밀 유성</span>
+                </button>
+            `;
+        }).join("");
+    }
+
+    function syncStage() {
+        updateStageTitle();
+        updateCounters();
+        renderSky();
+        renderHistory();
+        renderLiveCard();
+        updateActionButtons();
+    }
+
+    function buildMeteorShow(names, message) {
+        state.sourceNames = [...names];
+        state.remainingNames = [...names];
+        state.history = [];
+        state.autoRun = false;
+        state.currentName = "";
+        state.meteorLayout = buildMeteorLayout(state.sourceNames);
+        if (els.input) {
+            els.input.value = names.join("\n");
+        }
+        setMeteorScreen("stage");
+        syncStage();
+        setStageMessage(message || `총 ${names.length}명의 유성을 펼쳤습니다.`, "info");
+    }
+
+    function startMeteorShow() {
+        const parsed = parseNameInput(els.input?.value || "");
+        if (!parsed.valid.length) {
+            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            els.input?.focus();
+            return;
+        }
+        buildMeteorShow(parsed.valid, `총 ${parsed.valid.length}명의 유성을 펼쳤습니다.`);
+    }
+
+    function revealMeteorByName(name, source) {
+        if (!name) {
+            return false;
+        }
+        const index = state.remainingNames.indexOf(name);
+        if (index === -1) {
+            if (source === "manual") {
+                setStageMessage("이미 공개된 유성입니다.", "warn");
+            }
+            return false;
+        }
+        state.remainingNames.splice(index, 1);
+        state.currentName = name;
+        const order = state.history.length + 1;
+        state.history.unshift({ order, name });
+        if (state.history.length > state.sourceNames.length) {
+            state.history = state.history.slice(0, state.sourceNames.length);
+        }
+        syncStage();
+        triggerBurst();
+        setStageMessage(`${order}번째 유성으로 ${name} 학생을 공개했습니다.`, "info");
+        if (!state.remainingNames.length) {
+            state.autoRun = false;
+            updateActionButtons();
+        }
+        return true;
+    }
+
+    function revealRandomMeteor(source) {
+        if (!state.remainingNames.length) {
+            if (source !== "auto") {
+                setStageMessage("이미 모든 유성이 공개되었습니다.", "info");
+            }
+            state.autoRun = false;
+            updateActionButtons();
+            return false;
+        }
+        const name = state.remainingNames[Math.floor(Math.random() * state.remainingNames.length)];
+        return revealMeteorByName(name, source);
+    }
+
+    async function runAuto() {
+        if (!state.sourceNames.length) {
+            setStageMessage("먼저 유성우를 펼쳐 주세요.", "warn");
+            updateActionButtons();
+            return;
+        }
+        if (state.autoRun) {
+            state.autoRun = false;
+            updateActionButtons();
+            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            return;
+        }
+        if (!state.remainingNames.length) {
+            setStageMessage("이미 모든 유성이 공개되었습니다.", "info");
+            updateActionButtons();
+            return;
+        }
+        state.autoRun = true;
+        updateActionButtons();
+        setStageMessage("유성우 자동 발표를 시작합니다.", "info");
+        while (state.autoRun && state.remainingNames.length) {
+            revealRandomMeteor("auto");
+            if (!state.autoRun || !state.remainingNames.length) {
+                break;
+            }
+            await sleep(isReducedMotion() ? 140 : 560);
+        }
+        state.autoRun = false;
+        updateActionButtons();
+        if (!state.remainingNames.length) {
+            setStageMessage("오늘 유성우 공개가 모두 끝났습니다.", "info");
+        }
+    }
+
+    function rerollMeteors() {
+        if (!state.sourceNames.length) {
+            return;
+        }
+        state.remainingNames = [...state.sourceNames];
+        state.history = [];
+        state.autoRun = false;
+        state.currentName = "";
+        state.meteorLayout = buildMeteorLayout(state.sourceNames);
+        setMeteorScreen("stage");
+        syncStage();
+        setStageMessage("유성우를 다시 펼쳤습니다.", "info");
+    }
+
+    function resetToSetup() {
+        state.autoRun = false;
+        state.currentName = "";
+        setMeteorScreen("setup");
+        updateActionButtons();
+        updateSetupStats();
+        setSetupMessage("이름을 고친 뒤 다시 유성우를 펼쳐 보세요.", "info");
+    }
+
+    async function loadRosterNames() {
+        if (!els.input || !els.loadRosterBtn) {
+            return;
+        }
+        const rosterUrl = root.dataset.rosterUrl || "";
+        if (!rosterUrl) {
+            setSetupMessage("명단을 불러올 주소를 찾지 못했습니다.", "warn");
+            return;
+        }
+        els.loadRosterBtn.disabled = true;
+        els.loadRosterBtn.textContent = "명단 불러오는 중...";
+        try {
+            const response = await window.fetch(rosterUrl, {
+                credentials: "same-origin",
+                cache: "no-store",
+            });
+            if (!response.ok) {
+                throw new Error("meteor roster fetch failed");
+            }
+            const payload = await response.json();
+            const names = Array.isArray(payload.names) ? payload.names : [];
+            if (!names.length) {
+                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                return;
+            }
+            els.input.value = names.join("\n");
+            updateSetupStats();
+            setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
+        } catch (error) {
+            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+        } finally {
+            els.loadRosterBtn.disabled = false;
+            els.loadRosterBtn.textContent = "당번 명단 불러오기";
+        }
+    }
+
+    function openFortuneForCurrent() {
+        if (!state.currentName) {
+            return;
+        }
+        root.dispatchEvent(new CustomEvent("ppobgi:open-fortune", {
+            detail: {
+                targetName: state.currentName,
+                sourceLabel: `${state.history.length}번째 유성 공개`,
+            },
+        }));
+    }
+
+    function handleSkyClick(event) {
+        const button = event.target.closest("button[data-name]");
+        if (!button) {
+            return;
+        }
+        revealMeteorByName(button.dataset.name || "", "manual");
+    }
+
+    function handleResize() {
+        if (!state.sourceNames.length) {
+            return;
+        }
+        window.clearTimeout(state.resizeTimer);
+        state.resizeTimer = window.setTimeout(() => {
+            state.meteorLayout = buildMeteorLayout(state.sourceNames);
+            renderSky();
+        }, 120);
+    }
+
+    function bindEvents() {
+        els.input?.addEventListener("input", updateSetupStats);
+        els.loadSampleBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            updateSetupStats();
+            setSetupMessage("예시 명단을 불러왔습니다.", "info");
+        });
+        els.loadRosterBtn?.addEventListener("click", loadRosterNames);
+        els.clearInputBtn?.addEventListener("click", () => {
+            if (!els.input) {
+                return;
+            }
+            els.input.value = "";
+            updateSetupStats();
+        });
+        els.startBtn?.addEventListener("click", startMeteorShow);
+        els.autoRandomBtn?.addEventListener("click", () => revealRandomMeteor("manual"));
+        els.autoBtn?.addEventListener("click", runAuto);
+        els.rerollBtn?.addEventListener("click", rerollMeteors);
+        els.resetBtn?.addEventListener("click", resetToSetup);
+        els.fortuneBtn?.addEventListener("click", openFortuneForCurrent);
+        els.sky?.addEventListener("click", handleSkyClick);
+        window.addEventListener("resize", handleResize);
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            if (event.detail?.mode !== "meteor" && state.autoRun) {
+                state.autoRun = false;
+                updateActionButtons();
+            }
+        });
+    }
+
+    function bootstrap() {
+        if (els.input) {
+            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+        }
+        updateSetupStats();
+        renderSky();
+        renderHistory();
+        renderLiveCard();
+        updateCounters();
+        updateActionButtons();
+        setMeteorScreen("setup");
+        bindEvents();
+    }
+
+    bootstrap();
+})();
+(function () {
+    const root = document.getElementById("ppobgi-app");
+    if (!root) {
+        return;
+    }
+
+    const modeRoles = document.getElementById("ppb-mode-roles");
+    const els = {
+        cardGrid: document.getElementById("ppr-card-grid"),
+        message: document.getElementById("ppr-message"),
+        classroomBadge: document.getElementById("ppr-classroom-badge"),
+        chipTotal: document.getElementById("ppr-chip-total"),
+        chipRevealed: document.getElementById("ppr-chip-revealed"),
+        chipLeft: document.getElementById("ppr-chip-left"),
+        refreshBtn: document.getElementById("ppr-refresh-btn"),
+        autoBtn: document.getElementById("ppr-auto-btn"),
+        liveRoleName: document.getElementById("ppr-live-role-name"),
+        liveAssignee: document.getElementById("ppr-live-assignee"),
+        fortuneBtn: document.getElementById("ppr-fortune-btn"),
+        historyList: document.getElementById("ppr-history-list"),
+    };
+
+    if (!modeRoles || !els.cardGrid || !els.message) {
+        return;
+    }
+
+    const state = {
+        roles: [],
+        revealed: new Set(),
+        history: [],
+        autoRun: false,
+        loading: false,
+        loadedOnce: false,
+        lastFortuneTarget: null,
+    };
+
+    function isReducedMotion() {
+        return root.classList.contains("ppb-reduce-motion");
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function setMessage(text, kind) {
+        els.message.textContent = text || "";
+        els.message.classList.remove("warn", "info");
+        if (kind) {
+            els.message.classList.add(kind);
+        }
+    }
+
+    function unrevealedIndexes() {
+        const indexes = [];
+        for (let i = 0; i < state.roles.length; i += 1) {
+            if (!state.revealed.has(i)) {
+                indexes.push(i);
+            }
+        }
+        return indexes;
+    }
+
+    function updateCounters() {
+        const total = state.roles.length;
+        const revealed = state.revealed.size;
+        if (els.chipTotal) els.chipTotal.textContent = String(total);
+        if (els.chipRevealed) els.chipRevealed.textContent = String(revealed);
+        if (els.chipLeft) els.chipLeft.textContent = String(Math.max(total - revealed, 0));
+    }
+
+    function renderHistory() {
+        if (!els.historyList) {
+            return;
+        }
+        if (!state.history.length) {
+            const empty = document.createElement("li");
+            empty.innerHTML = '<span class="ppr-history-main">아직 공개된 역할이 없습니다.</span>';
+            els.historyList.replaceChildren(empty);
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        state.history.forEach((item) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="ppr-history-step">${item.step}번째 공개</span><span class="ppr-history-main">${escapeHtml(item.roleName)}</span><span class="ppr-history-role">→ ${escapeHtml(item.assigneeName)}</span>`;
+            fragment.appendChild(li);
+        });
+        els.historyList.replaceChildren(fragment);
+    }
+
+    function renderLiveCard(role) {
+        if (!role) {
+            if (els.liveRoleName) els.liveRoleName.textContent = "준비 중";
+            if (els.liveAssignee) els.liveAssignee.textContent = "오늘의 1인 1역을 불러오면 여기에 표시됩니다.";
+            if (els.fortuneBtn) els.fortuneBtn.disabled = true;
+            return;
+        }
+        const roleName = role.role_name || "이름 없는 역할";
+        const assigneeName = role.assignee_name || "미배정";
+        const slot = role.time_slot || "오늘";
+        if (els.liveRoleName) els.liveRoleName.textContent = roleName;
+        if (els.liveAssignee) {
+            els.liveAssignee.textContent = role.is_unassigned
+                ? "아직 담당 학생이 정해지지 않았습니다. 알림판에서 먼저 배정해 주세요."
+                : `${assigneeName} 학생이 ${slot}에 맡습니다.`;
+        }
+        if (els.fortuneBtn) {
+            els.fortuneBtn.disabled = role.is_unassigned;
+        }
+        state.lastFortuneTarget = role.is_unassigned
+            ? null
+            : {
+                targetName: assigneeName,
+                sourceLabel: `${roleName} 역할 공개`,
+            };
+    }
+
+    function cardMarkup(role, index) {
+        const revealed = state.revealed.has(index);
+        const classes = ["ppr-card"];
+        if (revealed) classes.push("is-revealed");
+        if (role.is_completed) classes.push("is-completed");
+        if (role.is_unassigned) classes.push("is-unassigned");
+        const description = escapeHtml(role.description || "오늘 맡은 역할을 차분히 완수해 보면 좋겠어요.");
+        const safeRoleName = escapeHtml(role.role_name || "이름 없는 역할");
+        const safeAssignee = escapeHtml(role.assignee_name || "미배정");
+        const safeSlot = escapeHtml(role.time_slot || "오늘");
+        const safeIcon = escapeHtml(role.icon || "📋");
+        const status = role.is_unassigned
+            ? "미배정 역할"
+            : (role.is_completed ? "이미 완료된 역할" : "오늘 맡은 역할");
+        const hint = role.is_unassigned
+            ? "아직 담당 학생이 정해지지 않았습니다. 먼저 알림판에서 배정해 주세요."
+            : "카드를 열어 담당 학생을 확인하세요.";
+        return `
+            <button type="button" class="${classes.join(" ")}" data-index="${index}" aria-label="${safeRoleName} 카드 열기">
+                <span class="ppr-card-inner">
+                    <span class="ppr-card-face ppr-card-front">
+                        <span>
+                            <span class="ppr-card-head">
+                                <span class="ppr-card-icon" aria-hidden="true">${safeIcon}</span>
+                                <span class="ppr-card-slot">${safeSlot}</span>
+                            </span>
+                            <span class="ppr-card-title">${safeRoleName}</span>
+                        </span>
+                        <span class="ppr-card-hint">${hint}</span>
+                        <span class="ppr-card-foot">
+                            <span class="ppr-card-number">${index + 1}번째 카드</span>
+                            <span class="ppr-card-cta">눌러서 공개</span>
+                        </span>
+                    </span>
+                    <span class="ppr-card-face ppr-card-back">
+                        <span>
+                            <span class="ppr-card-back-label">${status}</span>
+                            <span class="ppr-card-assignee">${safeAssignee}</span>
+                            <span class="ppr-card-desc">${description}</span>
+                        </span>
+                        <span class="ppr-card-status">${safeSlot}</span>
+                    </span>
+                </span>
+            </button>
+        `;
+    }
+
+    function renderCards() {
+        if (state.loading) {
+            els.cardGrid.innerHTML = '<div class="ppr-empty">오늘의 역할을 불러오는 중입니다.</div>';
+            return;
+        }
+        if (!state.roles.length) {
+            els.cardGrid.innerHTML = '<div class="ppr-empty">표시할 역할이 없습니다. 알림판에서 1인 1역을 먼저 설정해 주세요.</div>';
+            return;
+        }
+        els.cardGrid.innerHTML = state.roles.map((role, index) => cardMarkup(role, index)).join("");
+    }
+
+    function updateAutoButton() {
+        if (!els.autoBtn) {
+            return;
+        }
+        if (state.loading) {
+            els.autoBtn.disabled = true;
+            els.autoBtn.textContent = "불러오는 중...";
+            return;
+        }
+        if (!state.roles.length) {
+            els.autoBtn.disabled = true;
+            els.autoBtn.textContent = "역할이 필요합니다";
+            return;
+        }
+        if (state.autoRun) {
+            els.autoBtn.disabled = false;
+            els.autoBtn.textContent = "자동 발표 중지";
+            return;
+        }
+        const left = unrevealedIndexes().length;
+        els.autoBtn.disabled = left === 0;
+        els.autoBtn.textContent = left === 0 ? "모든 역할 공개 완료" : "자동 발표 쇼 시작";
+    }
+
+    function hydrate(payload) {
+        state.roles = Array.isArray(payload.roles) ? payload.roles : [];
+        state.revealed = new Set();
+        state.history = [];
+        state.autoRun = false;
+        state.lastFortuneTarget = null;
+        state.loadedOnce = true;
+        if (els.classroomBadge) {
+            els.classroomBadge.textContent = payload.classroom_name || "기본 명단";
+        }
+        renderCards();
+        renderHistory();
+        renderLiveCard(null);
+        updateCounters();
+        updateAutoButton();
+        setMessage(payload.message || "오늘 역할을 준비했습니다.", state.roles.length ? "info" : "warn");
+    }
+
+    async function loadRoleCards() {
+        if (state.loading) {
+            return;
+        }
+        if (!root.dataset.roleCardsUrl) {
+            setMessage("역할 데이터를 불러올 주소를 찾지 못했습니다.", "warn");
+            return;
+        }
+        state.loading = true;
+        state.autoRun = false;
+        renderCards();
+        updateAutoButton();
+        setMessage("오늘 역할을 불러오는 중입니다.", "info");
+        if (els.refreshBtn) {
+            els.refreshBtn.disabled = true;
+            els.refreshBtn.textContent = "불러오는 중...";
+        }
+        try {
+            const response = await fetch(root.dataset.roleCardsUrl, {
+                credentials: "same-origin",
+                cache: "no-store",
+            });
+            if (!response.ok) {
+                throw new Error("role cards fetch failed");
+            }
+            const payload = await response.json();
+            hydrate(payload);
+        } catch (error) {
+            state.roles = [];
+            state.revealed = new Set();
+            state.history = [];
+            state.lastFortuneTarget = null;
+            renderCards();
+            renderHistory();
+            renderLiveCard(null);
+            updateCounters();
+            setMessage("오늘 역할을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", "warn");
+        } finally {
+            state.loading = false;
+            updateAutoButton();
+            if (els.refreshBtn) {
+                els.refreshBtn.disabled = false;
+                els.refreshBtn.textContent = "오늘 역할 불러오기";
+            }
+            renderCards();
+        }
+    }
+
+    async function revealRole(index, source) {
+        if (state.loading) {
+            return;
+        }
+        if (index < 0 || index >= state.roles.length) {
+            return;
+        }
+        if (state.revealed.has(index)) {
+            if (source === "manual") {
+                setMessage("이미 공개된 역할 카드입니다.", "warn");
+            }
+            return;
+        }
+        const role = state.roles[index];
+        const roleName = role.role_name || "이름 없는 역할";
+        const assigneeName = role.assignee_name || "미배정";
+        state.revealed.add(index);
+        state.history.unshift({
+            step: state.revealed.size,
+            roleName,
+            assigneeName,
+        });
+        if (state.history.length > state.roles.length) {
+            state.history = state.history.slice(0, state.roles.length);
+        }
+        renderCards();
+        renderHistory();
+        renderLiveCard(role);
+        updateCounters();
+        updateAutoButton();
+        setMessage(
+            role.is_unassigned
+                ? `${roleName} 역할은 아직 미배정 상태입니다.`
+                : `${roleName} 역할 담당은 ${assigneeName} 학생입니다.`,
+            "info",
+        );
+        if (!unrevealedIndexes().length) {
+            state.autoRun = false;
+            updateAutoButton();
+        }
+    }
+
+    function shuffle(list) {
+        const copied = [...list];
+        for (let i = copied.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copied[i], copied[j]] = [copied[j], copied[i]];
+        }
+        return copied;
+    }
+
+    async function runAuto() {
+        if (!state.roles.length || state.loading) {
+            return;
+        }
+        if (state.autoRun) {
+            state.autoRun = false;
+            updateAutoButton();
+            setMessage("자동 발표를 중지했습니다.", "warn");
+            return;
+        }
+        const queue = shuffle(unrevealedIndexes());
+        if (!queue.length) {
+            setMessage("이미 모든 역할이 공개되었습니다.", "info");
+            updateAutoButton();
+            return;
+        }
+        state.autoRun = true;
+        updateAutoButton();
+        setMessage("역할 카드 자동 발표를 시작합니다.", "info");
+        for (const index of queue) {
+            if (!state.autoRun) {
+                break;
+            }
+            await revealRole(index, "auto");
+            if (!state.autoRun) {
+                break;
+            }
+            await sleep(isReducedMotion() ? 120 : 520);
+        }
+        state.autoRun = false;
+        updateAutoButton();
+        if (!unrevealedIndexes().length) {
+            setMessage("오늘 역할 공개가 모두 끝났습니다.", "info");
+        }
+    }
+
+    function openFortuneForRole() {
+        if (!state.lastFortuneTarget) {
+            return;
+        }
+        root.dispatchEvent(new CustomEvent("ppobgi:open-fortune", { detail: state.lastFortuneTarget }));
+    }
+
+    function bindEvents() {
+        els.refreshBtn?.addEventListener("click", loadRoleCards);
+        els.autoBtn?.addEventListener("click", runAuto);
+        els.fortuneBtn?.addEventListener("click", openFortuneForRole);
+        els.cardGrid?.addEventListener("click", async (event) => {
+            const button = event.target.closest("button[data-index]");
+            if (!button) {
+                return;
+            }
+            const index = Number(button.dataset.index);
+            if (Number.isNaN(index)) {
+                return;
+            }
+            await revealRole(index, "manual");
+        });
+        root.addEventListener("ppobgi:mode-change", (event) => {
+            const mode = event.detail?.mode;
+            if (mode === "roles") {
+                if (!state.loadedOnce) {
+                    loadRoleCards();
+                }
+                return;
+            }
+            if (state.autoRun) {
+                state.autoRun = false;
+                updateAutoButton();
+            }
+        });
+    }
+
+    function bootstrap() {
+        renderCards();
+        renderHistory();
+        renderLiveCard(null);
+        updateCounters();
+        updateAutoButton();
+        bindEvents();
+    }
+
+    bootstrap();
+})();
+
+(function () {
+    const root = document.getElementById("ppobgi-app");
+    if (!root) {
+        return;
+    }
+
+    const els = {
+        modal: document.getElementById("ppb-fortune-modal"),
+        panel: document.getElementById("ppb-fortune-panel"),
+        target: document.getElementById("ppb-fortune-target"),
+        category: document.getElementById("ppb-fortune-category"),
+        line: document.getElementById("ppb-fortune-line"),
+        meaning: document.getElementById("ppb-fortune-meaning"),
+        step: document.getElementById("ppb-fortune-step"),
+        note: document.getElementById("ppb-fortune-note"),
+        feedback: document.getElementById("ppb-fortune-feedback"),
+        rerollBtn: document.getElementById("ppb-fortune-reroll-btn"),
+        copyBtn: document.getElementById("ppb-fortune-copy-btn"),
+        closeBtn: document.getElementById("ppb-fortune-close-btn"),
+    };
+
+    if (!els.modal || !els.panel || !els.line) {
+        return;
+    }
+
+    const FORTUNE_COOKIES = [
+        { category: "용기", line: "지금의 떨림은 네가 자라고 있다는 신호야.", meaning: "불안이 있다고 해서 뒤로 가는 건 아니야. 중요한 건 그 마음을 안고도 한 걸음 내딛는 거야.", step: "오늘 한 번은 스스로 먼저 말해 보기" },
+        { category: "용기", line: "작은 시도 하나가 오늘을 바꿀 수 있어.", meaning: "완벽한 시작보다 가벼운 시도가 더 큰 문을 열어줄 때가 많아.", step: "망설이던 활동에 5분만 먼저 참여해 보기" },
+        { category: "용기", line: "너는 생각보다 훨씬 단단한 사람일 수 있어.", meaning: "힘들 때도 자리를 지키는 마음은 이미 큰 힘이야.", step: "오늘 힘들었던 일을 한 가지 적어 보고 버틴 나를 인정해 보기" },
+        { category: "용기", line: "실수는 멈춤이 아니라 다시 해보라는 초대야.", meaning: "실수한 순간에도 배우는 힘은 계속 자라고 있어.", step: "실수한 일에서 다음에 바꿀 점 한 가지만 정해 보기" },
+        { category: "회복", line: "조금 쉬어도 너의 가치가 줄어들지 않아.", meaning: "지친 날에는 속도를 낮추는 것도 중요한 선택이야.", step: "숨을 천천히 세 번 쉬고 어깨 힘을 풀어 보기" },
+        { category: "회복", line: "오늘 마음이 무거워도 내일의 빛까지 사라진 건 아니야.", meaning: "지금 힘든 기분은 지나가는 구름처럼 머물다 흘러갈 수 있어.", step: "지금 내 마음을 한 단어로 적어 보기" },
+        { category: "회복", line: "괜찮지 않은 날에도 괜찮아질 길은 남아 있어.", meaning: "마음이 흔들리는 날일수록 누군가의 도움을 받는 것이 더 중요해.", step: "믿는 어른 한 명 떠올려 보기" },
+        { category: "회복", line: "너는 쉬는 동안에도 다시 힘을 모으고 있어.", meaning: "멈춤은 뒤처짐이 아니라 회복의 시간일 수 있어.", step: "오늘 나를 편하게 해주는 행동 하나 해 보기" },
+        { category: "관계", line: "부드러운 한마디가 생각보다 큰 다리가 돼.", meaning: "관계는 거창한 말보다 작은 인사와 표정에서 시작될 때가 많아.", step: "오늘 먼저 인사 한 번 건네 보기" },
+        { category: "관계", line: "오해가 생겨도 다시 가까워질 기회는 남아 있어.", meaning: "서로의 마음을 다 알 수 없기 때문에 천천히 풀어 가면 돼.", step: "섭섭했던 일을 차분한 말로 바꿔 생각해 보기" },
+        { category: "관계", line: "네 진심은 천천히라도 전해질 수 있어.", meaning: "말이 서툴러도 진심이 사라지는 건 아니야.", step: "고마운 사람에게 짧게라도 표현해 보기" },
+        { category: "관계", line: "친절은 너를 약하게 만들지 않아.", meaning: "따뜻하게 말하는 사람은 오히려 관계를 더 오래 지키는 힘이 있어.", step: "오늘 누군가에게 배려 한 가지 실천해 보기" },
+        { category: "시작", line: "새롭게 해보려는 마음만으로도 이미 출발한 거야.", meaning: "시작은 준비가 완벽해질 때가 아니라 마음이 움직일 때 열리기도 해.", step: "미뤄 둔 일을 3분만 시작해 보기" },
+        { category: "시작", line: "천천히 시작해도 충분히 시작한 거야.", meaning: "빠른 사람만 잘하는 것이 아니라 꾸준한 사람이 끝까지 가는 경우도 많아.", step: "오늘 해야 할 일의 첫 줄만 해 보기" },
+        { category: "시작", line: "어제보다 조금만 다르게 해도 큰 변화가 될 수 있어.", meaning: "작은 변화가 쌓이면 스스로도 놀랄 만큼 달라질 수 있어.", step: "평소와 다른 좋은 습관 하나 골라 보기" },
+        { category: "시작", line: "새로운 장면은 늘 낯설지만 그 안에서 네 힘도 자라.", meaning: "낯섦은 실패의 신호가 아니라 배우는 중이라는 증거일 수 있어.", step: "처음 해보는 일에 질문 하나 해 보기" },
+        { category: "노력", line: "보이지 않는 노력도 너를 조용히 키우고 있어.", meaning: "바로 티 나지 않아도 쌓이는 힘은 분명히 있어.", step: "오늘 내가 해낸 노력 한 가지 적어 보기" },
+        { category: "노력", line: "끝까지 해보려는 태도는 큰 재능이야.", meaning: "포기하지 않으려는 마음은 어떤 성적표보다 오래 남는 힘이 돼.", step: "하던 일을 마지막 5분만 더 이어 가기" },
+        { category: "노력", line: "조금 늦어도 너만의 속도로 가면 돼.", meaning: "남과 비교하지 않을 때 내 진짜 성장이 더 잘 보여.", step: "비교 대신 오늘의 내 변화 한 가지 찾기" },
+        { category: "노력", line: "네가 애쓴 시간은 헛되지 않아.", meaning: "결과가 아쉬워도 노력한 과정은 다음 기회를 위한 바탕이 돼.", step: "오늘 애쓴 순간을 스스로 칭찬해 보기" },
+        { category: "감사", line: "고마움을 떠올리면 마음이 조금 더 따뜻해질 수 있어.", meaning: "감사는 문제를 없애지는 못해도 마음을 버티게 하는 힘이 돼.", step: "오늘 고마운 사람이나 장면 한 가지 떠올리기" },
+        { category: "감사", line: "도움을 받았던 기억은 다시 친절을 낳아.", meaning: "받은 따뜻함을 다른 사람에게 건네면 교실도 더 편안해질 수 있어.", step: "도와준 사람에게 짧게 고맙다고 말해 보기" },
+        { category: "감사", line: "네가 가진 좋은 점은 이미 누군가에게 힘이 되고 있어.", meaning: "밝은 표정, 기다려 주는 마음, 작은 친절도 모두 소중한 힘이야.", step: "내 장점 하나를 조용히 떠올려 보기" },
+        { category: "감사", line: "평범한 하루에도 반짝이는 순간은 숨어 있어.", meaning: "작은 즐거움을 찾는 눈이 있으면 하루가 덜 버겁게 느껴질 수 있어.", step: "오늘 좋았던 순간 하나를 기억해 두기" },
+    ];
+
+    const state = {
+        open: false,
+        current: null,
+        context: null,
+    };
+
+    function setFeedback(text, kind) {
+        if (!els.feedback) {
+            return;
+        }
+        els.feedback.textContent = text || "";
+        els.feedback.classList.remove("warn", "info");
+        if (kind) {
+            els.feedback.classList.add(kind);
+        }
+    }
+
+    function pickFortune(excludeLine) {
+        const pool = FORTUNE_COOKIES.filter((item) => item.line !== excludeLine);
+        const source = pool.length ? pool : FORTUNE_COOKIES;
+        return source[Math.floor(Math.random() * source.length)];
+    }
+
+    function renderFortune() {
+        if (!state.current) {
+            return;
+        }
+        const targetName = String(state.context?.targetName || "오늘의 응원").trim();
+        if (els.target) {
+            els.target.textContent = targetName ? `${targetName}에게 건네는 말` : "오늘의 응원";
+        }
+        if (els.category) {
+            els.category.textContent = `${state.current.category} 메시지`;
+        }
+        if (els.line) {
+            els.line.textContent = state.current.line;
+        }
+        if (els.meaning) {
+            els.meaning.textContent = state.current.meaning;
+        }
+        if (els.step) {
+            els.step.textContent = state.current.step;
+        }
+        const sourceLabel = state.context?.sourceLabel;
+        setFeedback(sourceLabel ? `${sourceLabel} 뒤에 건네기 좋은 문장입니다.` : "아이에게 힘이 되는 짧은 문장을 골랐습니다.", "info");
+    }
+
+    function closeFortune() {
+        if (!state.open) {
+            return;
+        }
+        els.modal.classList.add("is-hidden");
+        els.modal.setAttribute("aria-hidden", "true");
+        root.classList.remove("ppb-fortune-open");
+        state.open = false;
+    }
+
+    function openFortune(detail) {
+        state.context = detail || {};
+        state.current = pickFortune();
+        if (els.note) {
+            els.note.value = "";
+        }
+        renderFortune();
+        els.modal.classList.remove("is-hidden");
+        els.modal.setAttribute("aria-hidden", "false");
+        root.classList.add("ppb-fortune-open");
+        state.open = true;
+        els.rerollBtn?.focus();
+    }
+
+    function rerollFortune() {
+        if (!state.current) {
+            return;
+        }
+        state.current = pickFortune(state.current.line);
+        renderFortune();
+    }
+
+    function buildCopyText() {
+        const lines = [];
+        const targetName = String(state.context?.targetName || "오늘의 응원").trim();
+        if (targetName) {
+            lines.push(`${targetName}에게 건네는 말`);
+        }
+        lines.push(state.current.line);
+        lines.push(state.current.meaning);
+        lines.push(`오늘 해볼 한 걸음: ${state.current.step}`);
+        const note = String(els.note?.value || "").trim();
+        if (note) {
+            lines.push(`선생님 한마디: ${note}`);
+        }
+        return lines.join("\n");
+    }
+
+    async function copyFortune() {
+        if (!state.current) {
+            return;
+        }
+        try {
+            if (!navigator.clipboard?.writeText) {
+                throw new Error("clipboard unavailable");
+            }
+            await navigator.clipboard.writeText(buildCopyText());
+            setFeedback("문장을 복사했습니다. 상담 메모나 전달 문구로 바로 쓸 수 있습니다.", "info");
+        } catch (error) {
+            setFeedback("복사에 실패했습니다. 직접 선택해 복사해 주세요.", "warn");
+        }
+    }
+
+    function handleKeydown(event) {
+        if (!state.open) {
+            return;
+        }
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeFortune();
+        }
+    }
+
+    function bindEvents() {
+        root.addEventListener("ppobgi:open-fortune", (event) => openFortune(event.detail || {}));
+        els.rerollBtn?.addEventListener("click", rerollFortune);
+        els.copyBtn?.addEventListener("click", copyFortune);
+        els.closeBtn?.addEventListener("click", closeFortune);
+        els.modal?.addEventListener("click", (event) => {
+            if (event.target === els.modal) {
+                closeFortune();
+            }
+        });
+        els.panel?.addEventListener("click", (event) => event.stopPropagation());
+        document.addEventListener("keydown", handleKeydown);
+    }
+
+    bindEvents();
+})();
+
+
+
 
 

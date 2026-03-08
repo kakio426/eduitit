@@ -13,6 +13,7 @@
     class="ppb-root"
     data-default-names="{{ default_names|escapejs }}"
     data-roster-url="{% url 'ppobgi:roster_names' %}"
+    data-role-cards-url="{% url 'ppobgi:role_cards' %}"
     {% if active_classroom %}data-classroom-url="{% url 'ppobgi:classroom_students' active_classroom.pk %}" data-classroom-name="{{ active_classroom.name|escapejs }}"{% endif %}
 >
     <div class="ppb-bg-gradient" aria-hidden="true"></div>
@@ -57,6 +58,46 @@
                 aria-selected="false"
             >
                 사다리 뽑기
+            </button>
+            <button
+                id="ppb-mode-sequence-btn"
+                type="button"
+                class="ppb-mode-tab"
+                data-mode="sequence"
+                role="tab"
+                aria-selected="false"
+            >
+                순서 뽑기
+            </button>
+            <button
+                id="ppb-mode-teams-btn"
+                type="button"
+                class="ppb-mode-tab"
+                data-mode="teams"
+                role="tab"
+                aria-selected="false"
+            >
+                팀 나누기
+            </button>
+            <button
+                id="ppb-mode-meteor-btn"
+                type="button"
+                class="ppb-mode-tab"
+                data-mode="meteor"
+                role="tab"
+                aria-selected="false"
+            >
+                유성우 뽑기
+            </button>
+            <button
+                id="ppb-mode-roles-btn"
+                type="button"
+                class="ppb-mode-tab"
+                data-mode="roles"
+                role="tab"
+                aria-selected="false"
+            >
+                역할 카드
             </button>
         </div>
     </header>
@@ -162,7 +203,34 @@
             <p class="ppb-result-label">방금 뽑힌 학생</p>
             <h2 id="ppb-result-name" class="ppb-result-name">-</h2>
             <p id="ppb-result-meta" class="ppb-result-meta">결과를 준비 중입니다.</p>
-            <button id="ppb-result-next-btn" type="button" class="ppb-primary-btn ppb-result-next-btn">다음 추첨 계속</button>
+                        <div class="ppb-result-actions">
+                <button id="ppb-result-next-btn" type="button" class="ppb-primary-btn ppb-result-next-btn">다음 추첨 계속</button>
+                <button id="ppb-result-fortune-btn" type="button" class="ppb-soft-btn ppb-result-fortune-btn">희망 포춘쿠키</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ppb-fortune-modal" class="ppb-fortune-modal is-hidden" aria-hidden="true">
+        <div id="ppb-fortune-panel" class="ppb-fortune-panel" role="dialog" aria-modal="true" aria-label="희망 포춘쿠키">
+            <p class="ppb-fortune-label">희망 포춘쿠키</p>
+            <h2 id="ppb-fortune-target" class="ppb-fortune-target">오늘의 응원</h2>
+            <p id="ppb-fortune-category" class="ppb-fortune-category">용기 메시지</p>
+            <blockquote id="ppb-fortune-line" class="ppb-fortune-line">지금의 너를 믿어도 괜찮아.</blockquote>
+            <p id="ppb-fortune-meaning" class="ppb-fortune-meaning">작은 떨림이 있어도 네가 걸어가는 방향은 충분히 의미 있어.</p>
+            <div class="ppb-fortune-step-card">
+                <p class="ppb-fortune-step-label">오늘 해볼 한 걸음</p>
+                <p id="ppb-fortune-step" class="ppb-fortune-step">수업에서 한 번 손들어 보기</p>
+            </div>
+            <label class="ppb-fortune-note-wrap" for="ppb-fortune-note">
+                <span>선생님 한마디 덧붙이기</span>
+                <textarea id="ppb-fortune-note" class="ppb-fortune-note" placeholder="예) 선생님은 네가 끝까지 해내는 힘을 믿어."></textarea>
+            </label>
+            <div id="ppb-fortune-feedback" class="ppb-message" aria-live="polite"></div>
+            <div class="ppb-fortune-actions">
+                <button id="ppb-fortune-reroll-btn" type="button" class="ppb-soft-btn">다른 문장</button>
+                <button id="ppb-fortune-copy-btn" type="button" class="ppb-soft-btn">문장 복사</button>
+                <button id="ppb-fortune-close-btn" type="button" class="ppb-primary-btn ppb-fortune-close-btn">닫기</button>
+            </div>
         </div>
     </div>
 
@@ -303,6 +371,339 @@
             </div>
         </section>
     </div>
+    <div id="ppb-mode-sequence" class="ppb-mode-view is-hidden">
+        <section id="pps-setup" class="ppb-screen">
+            <div class="ppb-setup-shell">
+                <article class="ppb-panel ppb-panel-info">
+                    <h2>순서 뽑기 준비</h2>
+                    <p class="ppb-muted">
+                        발표 순서, 활동 차례, 줄 서는 순서를 한 번에 만들고 한 명씩 공개하세요.
+                        순서를 다시 섞거나 자동 발표 쇼로 차례를 이어갈 수 있습니다.
+                    </p>
+
+                    <div class="ppb-btn-row">
+                        <button id="pps-load-sample-btn" type="button" class="ppb-soft-btn">예시 명단 불러오기</button>
+                        <button id="pps-load-roster-btn" type="button" class="ppb-soft-btn">당번 명단 불러오기</button>
+                        <button id="pps-clear-input-btn" type="button" class="ppb-soft-btn">입력 비우기</button>
+                    </div>
+
+                    <div class="ppb-stats-grid">
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">유효 인원</span>
+                            <strong id="pps-stat-valid">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">중복 제외</span>
+                            <strong id="pps-stat-dup">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">최대 40명 초과</span>
+                            <strong id="pps-stat-cut">0</strong>
+                        </div>
+                    </div>
+
+                    <div id="pps-setup-message" class="ppb-message" aria-live="polite"></div>
+
+                    <button id="pps-start-btn" type="button" class="ppb-primary-btn">
+                        순서 만들기
+                    </button>
+                </article>
+
+                <article class="ppb-panel ppb-panel-input">
+                    <label for="pps-name-input">순서를 정할 이름 명단</label>
+                    <textarea
+                        id="pps-name-input"
+                        class="ppb-textarea pps-textarea"
+                        placeholder="예)&#10;김별빛&#10;이은하&#10;박우주"
+                    ></textarea>
+                    <p class="ppb-input-hint">한 줄에 한 명, 최대 40명까지 진행됩니다.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="pps-stage" class="ppb-screen is-hidden">
+            <div class="pps-stage-shell">
+                <div class="pps-stage-main">
+                    <div class="ppb-chip-row">
+                        <span class="ppb-chip">총 <strong id="pps-chip-total">0</strong>명</span>
+                        <span class="ppb-chip">공개 <strong id="pps-chip-revealed">0</strong>명</span>
+                        <span class="ppb-chip">남은 <strong id="pps-chip-left">0</strong>명</span>
+                    </div>
+
+                    <div class="pps-head">
+                        <div>
+                            <h2 id="pps-stage-title" class="ppb-universe-title pps-stage-title">오늘의 순서를 준비했어요</h2>
+                            <p class="pps-stage-guide">다음 순서를 한 명씩 공개하며 수업 흐름을 이어가세요.</p>
+                        </div>
+                    </div>
+
+                    <div id="pps-stage-message" class="ppb-message pps-stage-message" aria-live="polite"></div>
+                    <div id="pps-order-grid" class="pps-order-grid"></div>
+
+                    <div class="ppb-bottom-actions pps-bottom-actions">
+                        <button id="pps-next-btn" type="button" class="ppb-primary-btn">다음 순서 공개</button>
+                        <button id="pps-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
+                        <button id="pps-reroll-btn" type="button" class="ppb-soft-btn">순서 다시 섞기</button>
+                        <button id="pps-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                    </div>
+                </div>
+
+                <aside class="pps-side-panel">
+                    <div class="pps-live-card">
+                        <p class="pps-live-label">지금 공개</p>
+                        <p id="pps-live-index" class="pps-live-index">대기 중</p>
+                        <h3 id="pps-live-name" class="pps-live-name">아직 시작하지 않았어요</h3>
+                        <p id="pps-live-meta" class="pps-live-meta">순서를 만들고 한 명씩 공개해 보세요.</p>
+                        <button id="pps-fortune-btn" type="button" class="ppb-soft-btn pps-fortune-btn" disabled>희망 포춘쿠키</button>
+                    </div>
+
+                    <div class="pps-history-box">
+                        <h3>공개 기록</h3>
+                        <ol id="pps-history-list" class="pps-history-list"></ol>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </div>
+    <div id="ppb-mode-teams" class="ppb-mode-view is-hidden">
+        <section id="ppt-setup" class="ppb-screen">
+            <div class="ppb-setup-shell">
+                <article class="ppb-panel ppb-panel-info">
+                    <h2>팀 나누기 준비</h2>
+                    <p class="ppb-muted">
+                        이름 명단과 팀 수를 정하면 균형 있게 팀을 나누고,
+                        한 명씩 배치 공개하거나 자동 발표 쇼로 전체 팀 편성을 보여줄 수 있습니다.
+                    </p>
+
+                    <div class="ppb-btn-row">
+                        <button id="ppt-load-sample-btn" type="button" class="ppb-soft-btn">예시 명단 불러오기</button>
+                        <button id="ppt-load-roster-btn" type="button" class="ppb-soft-btn">당번 명단 불러오기</button>
+                        <button id="ppt-clear-input-btn" type="button" class="ppb-soft-btn">입력 비우기</button>
+                    </div>
+
+                    <div class="ppt-option-card">
+                        <label for="ppt-team-count">몇 팀으로 나눌까요?</label>
+                        <select id="ppt-team-count" class="ppt-team-select">
+                            <option value="2">2팀</option>
+                            <option value="3">3팀</option>
+                            <option value="4" selected>4팀</option>
+                            <option value="5">5팀</option>
+                            <option value="6">6팀</option>
+                        </select>
+                        <p id="ppt-balance-note" class="ppt-balance-note">4팀으로 나누면 인원이 최대한 고르게 배치됩니다.</p>
+                    </div>
+
+                    <div class="ppb-stats-grid">
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">유효 인원</span>
+                            <strong id="ppt-stat-valid">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">중복 제외</span>
+                            <strong id="ppt-stat-dup">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">최대 40명 초과</span>
+                            <strong id="ppt-stat-cut">0</strong>
+                        </div>
+                    </div>
+
+                    <div id="ppt-setup-message" class="ppb-message" aria-live="polite"></div>
+
+                    <button id="ppt-start-btn" type="button" class="ppb-primary-btn">
+                        팀 편성 만들기
+                    </button>
+                </article>
+
+                <article class="ppb-panel ppb-panel-input">
+                    <label for="ppt-name-input">팀을 나눌 이름 명단</label>
+                    <textarea
+                        id="ppt-name-input"
+                        class="ppb-textarea ppt-textarea"
+                        placeholder="예)&#10;김별빛&#10;이은하&#10;박우주"
+                    ></textarea>
+                    <p class="ppb-input-hint">한 줄에 한 명, 최대 40명까지 진행됩니다.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="ppt-stage" class="ppb-screen is-hidden">
+            <div class="ppt-stage-shell">
+                <div class="ppt-stage-main">
+                    <div class="ppb-chip-row">
+                        <span class="ppb-chip">총 <strong id="ppt-chip-total">0</strong>명</span>
+                        <span class="ppb-chip">팀 수 <strong id="ppt-chip-teams">0</strong>팀</span>
+                        <span class="ppb-chip">남은 <strong id="ppt-chip-left">0</strong>명</span>
+                    </div>
+
+                    <div class="ppt-head">
+                        <div>
+                            <h2 id="ppt-stage-title" class="ppb-universe-title ppt-stage-title">팀 편성을 준비했어요</h2>
+                            <p class="ppt-stage-guide">다음 학생을 한 명씩 배치하며 팀 구성을 공개하세요.</p>
+                        </div>
+                    </div>
+
+                    <div id="ppt-stage-message" class="ppb-message ppt-stage-message" aria-live="polite"></div>
+                    <div id="ppt-team-grid" class="ppt-team-grid"></div>
+
+                    <div class="ppb-bottom-actions ppt-bottom-actions">
+                        <button id="ppt-next-btn" type="button" class="ppb-primary-btn">다음 팀 배치 공개</button>
+                        <button id="ppt-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
+                        <button id="ppt-reroll-btn" type="button" class="ppb-soft-btn">팀 다시 섞기</button>
+                        <button id="ppt-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                    </div>
+                </div>
+
+                <aside class="ppt-side-panel">
+                    <div class="ppt-live-card">
+                        <p class="ppt-live-label">방금 배치</p>
+                        <p id="ppt-live-team" class="ppt-live-team">대기 중</p>
+                        <h3 id="ppt-live-name" class="ppt-live-name">아직 시작하지 않았어요</h3>
+                        <p id="ppt-live-meta" class="ppt-live-meta">팀 편성을 만들고 한 명씩 공개해 보세요.</p>
+                        <button id="ppt-fortune-btn" type="button" class="ppb-soft-btn ppt-fortune-btn" disabled>희망 포춘쿠키</button>
+                    </div>
+
+                    <div class="ppt-history-box">
+                        <h3>배치 기록</h3>
+                        <ol id="ppt-history-list" class="ppt-history-list"></ol>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </div>
+    <div id="ppb-mode-meteor" class="ppb-mode-view is-hidden">
+        <section id="ppm-setup" class="ppb-screen">
+            <div class="ppb-setup-shell">
+                <article class="ppb-panel ppb-panel-info">
+                    <h2>유성우 뽑기 준비</h2>
+                    <p class="ppb-muted">
+                        이름 명단을 넣으면 밤하늘에 유성이 흩뿌려집니다.
+                        유성을 누르거나 자동 발표 쇼로 한 명씩 공개해 보세요.
+                    </p>
+
+                    <div class="ppb-btn-row">
+                        <button id="ppm-load-sample-btn" type="button" class="ppb-soft-btn">예시 명단 불러오기</button>
+                        <button id="ppm-load-roster-btn" type="button" class="ppb-soft-btn">당번 명단 불러오기</button>
+                        <button id="ppm-clear-input-btn" type="button" class="ppb-soft-btn">입력 비우기</button>
+                    </div>
+
+                    <div class="ppb-stats-grid">
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">유효 인원</span>
+                            <strong id="ppm-stat-valid">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">중복 제외</span>
+                            <strong id="ppm-stat-dup">0</strong>
+                        </div>
+                        <div class="ppb-stat-card">
+                            <span class="ppb-stat-label">최대 40명 초과</span>
+                            <strong id="ppm-stat-cut">0</strong>
+                        </div>
+                    </div>
+
+                    <div id="ppm-setup-message" class="ppb-message" aria-live="polite"></div>
+
+                    <button id="ppm-start-btn" type="button" class="ppb-primary-btn">
+                        유성우 펼치기
+                    </button>
+                </article>
+
+                <article class="ppb-panel ppb-panel-input">
+                    <label for="ppm-name-input">유성우에 숨길 이름 명단</label>
+                    <textarea
+                        id="ppm-name-input"
+                        class="ppb-textarea ppm-textarea"
+                        placeholder="예)&#10;김별빛&#10;이은하&#10;박우주"
+                    ></textarea>
+                    <p class="ppb-input-hint">한 줄에 한 명, 최대 40명까지 진행됩니다.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="ppm-stage" class="ppb-screen is-hidden">
+            <div class="ppm-stage-shell">
+                <div class="ppm-stage-main">
+                    <div class="ppb-chip-row">
+                        <span class="ppb-chip">총 <strong id="ppm-chip-total">0</strong>명</span>
+                        <span class="ppb-chip">공개 <strong id="ppm-chip-revealed">0</strong>명</span>
+                        <span class="ppb-chip">남은 <strong id="ppm-chip-left">0</strong>명</span>
+                    </div>
+
+                    <div class="ppm-head">
+                        <div>
+                            <h2 id="ppm-stage-title" class="ppb-universe-title ppm-stage-title">밤하늘에 유성이 준비됐어요</h2>
+                            <p class="ppm-stage-guide">유성을 누르면 그 안에 숨은 학생이 반짝이며 공개됩니다.</p>
+                        </div>
+                    </div>
+
+                    <div id="ppm-stage-message" class="ppb-message ppm-stage-message" aria-live="polite"></div>
+                    <div id="ppm-sky" class="ppm-sky" aria-live="polite"></div>
+
+                    <div class="ppb-bottom-actions ppm-bottom-actions">
+                        <button id="ppm-auto-random-btn" type="button" class="ppb-primary-btn">무작위 유성 공개</button>
+                        <button id="ppm-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
+                        <button id="ppm-reroll-btn" type="button" class="ppb-soft-btn">유성우 다시 펼치기</button>
+                        <button id="ppm-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                    </div>
+                </div>
+
+                <aside class="ppm-side-panel">
+                    <div class="ppm-live-card">
+                        <p class="ppm-live-label">방금 공개된 유성</p>
+                        <p id="ppm-live-order" class="ppm-live-order">대기 중</p>
+                        <h3 id="ppm-live-name" class="ppm-live-name">아직 시작하지 않았어요</h3>
+                        <p id="ppm-live-meta" class="ppm-live-meta">유성을 누르거나 자동 발표 쇼를 시작해 보세요.</p>
+                        <button id="ppm-fortune-btn" type="button" class="ppb-soft-btn ppm-fortune-btn" disabled>희망 포춘쿠키</button>
+                    </div>
+
+                    <div class="ppm-history-box">
+                        <h3>유성우 기록</h3>
+                        <ol id="ppm-history-list" class="ppm-history-list"></ol>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </div>
+    <div id="ppb-mode-roles" class="ppb-mode-view is-hidden">
+        <section class="ppb-screen">
+            <div class="ppr-shell">
+                <div class="ppr-main">
+                    <div class="ppb-chip-row">
+                        <span class="ppb-chip">총 역할 <strong id="ppr-chip-total">0</strong>개</span>
+                        <span class="ppb-chip">공개 <strong id="ppr-chip-revealed">0</strong>개</span>
+                        <span class="ppb-chip">남은 <strong id="ppr-chip-left">0</strong>개</span>
+                    </div>
+                    <div class="ppr-head">
+                        <div>
+                            <h2 class="ppb-universe-title ppr-title">오늘의 역할 카드</h2>
+                            <p class="ppr-guide">알림판의 1인 1역을 카드 쇼로 공개합니다.</p>
+                        </div>
+                        <span id="ppr-classroom-badge" class="ppr-classroom-badge">기본 명단</span>
+                    </div>
+                    <div id="ppr-message" class="ppb-message" aria-live="polite"></div>
+                    <div id="ppr-card-grid" class="ppr-card-grid"></div>
+                    <div class="ppb-bottom-actions ppr-bottom-actions">
+                        <button id="ppr-refresh-btn" type="button" class="ppb-soft-btn">오늘 역할 불러오기</button>
+                        <button id="ppr-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
+                        <a href="{% url 'dutyticker' %}" class="ppb-ghost-btn">알림판에서 역할 편집</a>
+                    </div>
+                </div>
+                <aside class="ppr-side-panel">
+                    <div class="ppr-live-card">
+                        <p class="ppr-live-label">방금 공개된 역할</p>
+                        <h3 id="ppr-live-role-name" class="ppr-live-role-name">준비 중</h3>
+                        <p id="ppr-live-assignee" class="ppr-live-assignee">오늘의 1인 1역을 불러오면 여기에 표시됩니다.</p>
+                        <button id="ppr-fortune-btn" type="button" class="ppb-soft-btn ppr-fortune-btn" disabled>희망 포춘쿠키</button>
+                    </div>
+                    <div class="ppr-history-box">
+                        <h3>공개 기록</h3>
+                        <ol id="ppr-history-list" class="ppr-history-list"></ol>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </div>
 </main>
 {% endblock %}
 
@@ -319,6 +720,9 @@
     // 세션 학급이 설정된 경우 자동으로 학생 명단 로드
     var textarea = document.getElementById('ppb-name-input');
     var ladderTextarea = document.getElementById('pbl-name-input');
+    var sequenceTextarea = document.getElementById('pps-name-input');
+    var teamTextarea = document.getElementById('ppt-name-input');
+    var meteorTextarea = document.getElementById('ppm-name-input');
     var startBtn = document.getElementById('ppb-start-btn');
     var msgEl = document.getElementById('ppb-setup-message');
     if (!textarea) return;
@@ -332,8 +736,14 @@
             if (!names.length) return;
             textarea.value = names.join('\n');
             if (ladderTextarea) ladderTextarea.value = names.join('\n');
+            if (sequenceTextarea) sequenceTextarea.value = names.join('\n');
+            if (teamTextarea) teamTextarea.value = names.join('\n');
+            if (meteorTextarea) meteorTextarea.value = names.join('\n');
             textarea.dispatchEvent(new Event('input'));
             if (ladderTextarea) ladderTextarea.dispatchEvent(new Event('input'));
+            if (sequenceTextarea) sequenceTextarea.dispatchEvent(new Event('input'));
+            if (teamTextarea) teamTextarea.dispatchEvent(new Event('input'));
+            if (meteorTextarea) meteorTextarea.dispatchEvent(new Event('input'));
             if (msgEl) {
                 msgEl.textContent = '현재 학급 [' + classroomName + '] 명단 ' + names.length + '명이 자동으로 불러와졌습니다.';
                 msgEl.className = 'ppb-message info';
@@ -352,3 +762,7 @@
 </script>
 {% endif %}
 {% endblock %}
+
+
+
+

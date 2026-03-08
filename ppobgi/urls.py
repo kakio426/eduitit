@@ -8,4 +8,5 @@ urlpatterns = [
     path("", views.main, name="main"),
     path("api/roster-names/", views.roster_names, name="roster_names"),
     path("api/classroom/<uuid:pk>/students/", views.classroom_students, name="classroom_students"),
+    path("api/role-cards/", views.role_cards, name="role_cards"),
 ]
