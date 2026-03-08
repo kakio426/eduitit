@@ -80,7 +80,7 @@
               <label class="block text-sm font-semibold mb-1">학부모에게 보여줄 안내문(PDF/이미지)</label>
               {{ document_form.original_file }}
               {{ document_form.original_file.errors }}
-              <p class="text-xs text-gray-500 mt-2">PDF는 첫 페이지를, 이미지는 원본 비율로 오른쪽 패널에서 바로 확인합니다.</p>
+              <p class="text-xs text-gray-500 mt-2">PDF는 페이지 이동으로, 이미지는 원본 비율로 오른쪽 패널에서 바로 확인합니다.</p>
             </div>
           </div>
 
@@ -88,7 +88,7 @@
             class="rounded-2xl border border-slate-200 bg-white/80 p-4"
             data-consent-upload-preview
             data-file-input-id="id_original_file"
-            data-empty-label="파일을 고르면 업로드 전 첫 페이지를 여기서 바로 확인합니다."
+            data-empty-label="파일을 고르면 업로드 전 문서를 여기서 바로 확인합니다."
             data-max-width="680"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
@@ -99,12 +99,17 @@
               <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">교사용 체크</span>
             </div>
             <div class="min-h-[260px] rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-auto flex items-center justify-center">
-              <p data-preview-placeholder class="text-sm text-slate-400 text-center leading-6">파일을 고르면 업로드 전 첫 페이지를 여기서 바로 확인합니다.</p>
+              <p data-preview-placeholder class="text-sm text-slate-400 text-center leading-6">파일을 고르면 업로드 전 문서를 여기서 바로 확인합니다.</p>
               <canvas data-preview-canvas class="hidden mx-auto"></canvas>
               <img data-preview-image class="hidden mx-auto max-w-full rounded-xl" alt="업로드 안내문 미리보기">
             </div>
-            <p data-preview-status class="text-xs text-slate-500 mt-3">PDF는 첫 페이지, 이미지는 원본 비율로 미리보기 합니다.</p>
+            <p data-preview-status class="text-xs text-slate-500 mt-3">PDF는 페이지 이동, 이미지는 원본 비율로 미리보기 합니다.</p>
             <p data-preview-meta class="text-[11px] text-slate-400 mt-1"></p>
+            <div data-preview-pagination class="mt-3 hidden flex items-center justify-center gap-2">
+              <button type="button" data-preview-prev class="min-h-10 px-3 py-1.5 rounded-lg shadow-clay-inner bg-bg-soft text-xs font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">이전</button>
+              <span data-preview-page class="min-w-[72px] text-center text-xs font-semibold text-slate-600">1 / 1쪽</span>
+              <button type="button" data-preview-next class="min-h-10 px-3 py-1.5 rounded-lg shadow-clay-inner bg-bg-soft text-xs font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">다음</button>
+            </div>
           </aside>
         </div>
       </section>

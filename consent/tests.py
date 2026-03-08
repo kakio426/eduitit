@@ -277,6 +277,56 @@ class ConsentFlowTests(TestCase):
         reader = PdfReader(io.BytesIO(response.content))
         self.assertGreaterEqual(len(reader.pages), 2)
 
+    def test_summary_pdf_download_limits_source_pdf_to_first_page(self):
+        try:
+            from pypdf import PdfReader
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            self.skipTest("pypdf/reportlab unavailable")
+
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet)
+        for label in ("source-page-1", "source-page-2", "source-page-3"):
+            c.drawString(72, 720, label)
+            c.showPage()
+        c.save()
+        packet.seek(0)
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="multi-source-doc",
+            original_file=SimpleUploadedFile(
+                "multi_source.pdf",
+                packet.getvalue(),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="multi-summary-test",
+            consent_text_version="v1",
+        )
+        SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="학생B",
+            parent_name="보호자B",
+            phone_number="",
+        )
+
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_summary_pdf", kwargs={"request_id": request_obj.request_id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        reader = PdfReader(io.BytesIO(response.content))
+        self.assertGreaterEqual(len(reader.pages), 2)
+        combined_text = "\n".join((page.extract_text() or "") for page in reader.pages)
+        self.assertIn("source-page-1", combined_text)
+        self.assertNotIn("source-page-2", combined_text)
+        self.assertNotIn("source-page-3", combined_text)
+
     @patch("consent.views.generate_summary_pdf")
     @patch("django.db.models.fields.files.FieldFile.save", side_effect=RuntimeError("storage down"))
     def test_summary_pdf_download_falls_back_when_storage_save_fails(self, mocked_save, mocked_generate_summary_pdf):
@@ -437,7 +487,21 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data-consent-document-preview")
+        self.assertContains(response, "data-preview-pagination")
         self.assertContains(response, reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id}))
+
+    def test_sign_page_shows_document_preview_pagination_controls(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-preview-pagination")
+        self.assertContains(response, "data-preview-prev")
+        self.assertContains(response, "data-preview-next")
 
     def test_detail_hides_links_before_send_start(self):
         self.client.login(username="teacher", password="pw123456")
@@ -975,6 +1039,62 @@ class ConsentEvidenceTests(TestCase):
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
         reader = PdfReader(io.BytesIO(pdf_bytes))
         self.assertGreaterEqual(len(reader.pages), 2)
+
+    def test_recipient_evidence_pdf_limits_source_pdf_to_first_page(self):
+        try:
+            from pypdf import PdfReader
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            self.skipTest("pypdf/reportlab unavailable")
+
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet)
+        for label in ("evidence-source-page-1", "evidence-source-page-2"):
+            c.drawString(72, 720, label)
+            c.showPage()
+        c.save()
+        packet.seek(0)
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="evidence-preview-source",
+            original_file=SimpleUploadedFile(
+                "evidence_preview_source.pdf",
+                packet.getvalue(),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="preview-evidence-test",
+            consent_text_version="v1",
+        )
+        recipient = SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="학생A",
+            parent_name="보호자A",
+            phone_number="010-3333-4444",
+            status=SignatureRecipient.STATUS_SIGNED,
+            decision=SignatureRecipient.DECISION_AGREE,
+            signature_data="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+G14J3QAAAABJRU5ErkJggg==",
+            signed_at=timezone.now(),
+            identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
+            verified_at=timezone.now(),
+            verified_ip_address="203.0.113.50",
+            ip_address="203.0.113.51",
+            user_agent="EvidencePreviewAgent/1.0",
+        )
+
+        evidence_file = generate_recipient_evidence_pdf(recipient)
+        pdf_bytes = evidence_file.read()
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertGreaterEqual(len(reader.pages), 2)
+        combined_text = "\n".join((page.extract_text() or "") for page in reader.pages)
+        self.assertIn("evidence-source-page-1", combined_text)
+        self.assertNotIn("evidence-source-page-2", combined_text)
 
 
 class ConsentSharedRosterTests(TestCase):

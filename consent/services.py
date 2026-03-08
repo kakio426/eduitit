@@ -1,5 +1,4 @@
 import base64
-import base64
 import hashlib
 import io
 import logging
@@ -212,27 +211,37 @@ def _draw_signature_preview(
     c.drawCentredString(box_x + (box_w / 2), box_y + (box_h / 2) - 3, fallback_text)
 
 
-def _merge_pdf_bytes(source_pdf_bytes: bytes, summary_pdf_bytes: bytes, *, pdf_title: str = "") -> bytes:
+def _merge_pdf_bytes(
+    source_pdf_bytes: bytes,
+    summary_pdf_bytes: bytes,
+    *,
+    pdf_title: str = "",
+    source_page_limit: int | None = None,
+) -> bytes:
     from pypdf import PdfReader, PdfWriter
 
     writer = PdfWriter()
     added_pages = 0
     source_failed = False
 
-    for label, payload in (("source", source_pdf_bytes), ("summary", summary_pdf_bytes)):
-        if not payload:
-            continue
+    def add_pages(payload: bytes, *, limit: int | None = None):
+        nonlocal added_pages
+        reader = PdfReader(io.BytesIO(payload))
+        for index, page in enumerate(reader.pages):
+            if limit is not None and index >= limit:
+                break
+            writer.add_page(page)
+            added_pages += 1
+
+    if source_pdf_bytes:
         try:
-            reader = PdfReader(io.BytesIO(payload))
-            for page in reader.pages:
-                writer.add_page(page)
-                added_pages += 1
+            add_pages(source_pdf_bytes, limit=source_page_limit)
         except Exception:
-            if label == "source":
-                source_failed = True
-                logger.exception("[consent] source pdf merge skipped")
-                continue
-            raise
+            source_failed = True
+            logger.exception("[consent] source pdf merge skipped")
+
+    if summary_pdf_bytes:
+        add_pages(summary_pdf_bytes)
 
     if added_pages == 0:
         raise ValueError("merged pdf has no pages")
@@ -535,6 +544,7 @@ def generate_summary_pdf(request: SignatureRequest) -> ContentFile:
             source_pdf_bytes,
             summary_section_bytes,
             pdf_title=f"{summary_title_seed} - 동의서 수합 요약",
+            source_page_limit=1,
         )
 
         filename = f"summary_{request.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
@@ -678,6 +688,7 @@ def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFil
             source_pdf_bytes,
             evidence_section_bytes,
             pdf_title=f"{title_seed} - {recipient.student_name} 증빙",
+            source_page_limit=1,
         )
         filename = f"recipient_{request.id}_{recipient.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         return ContentFile(merged_bytes, name=filename)
