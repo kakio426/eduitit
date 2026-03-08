@@ -88,6 +88,8 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
+    'textbooks.apps.TextbooksConfig',
+    'channels',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -152,6 +154,22 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+REDIS_URL = os.environ.get('REDIS_URL', '').strip()
+if TESTING or not REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        }
+    }
 
 
 # Database

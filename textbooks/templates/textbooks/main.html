@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}교과서 라이브 수업{% endblock %}
+
+{% block extra_css %}
+<style>
+    .textbooks-shell {
+        background: linear-gradient(180deg, #eef6ff 0%, #f8fbff 50%, #eef2ff 100%);
+    }
+    .textbooks-panel {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .textbooks-pill.is-active {
+        background: #0f172a;
+        color: #fff;
+    }
+    .textbooks-input {
+        border: 1px solid #cbd5e1;
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        width: 100%;
+        background: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="textbooks-shell min-h-screen pt-28 pb-20 px-4">
+    <div class="max-w-7xl mx-auto space-y-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[0.32em] text-sky-600">PDF Live Classroom</p>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">교과서 PDF를 수업용 라이브 화면으로 엽니다</h1>
+                <p class="text-slate-600 mt-4 max-w-3xl text-lg">교사용 PDF 업로드, TV 발표 화면, 학생 태블릿 동기화, 기본 필기까지 한 흐름으로 연결하는 수업 자료실입니다.</p>
+            </div>
+            <div class="text-right text-sm text-slate-500">
+                <div>활성 학급: {% if active_classroom %}<strong class="text-slate-800">{{ active_classroom.name }}</strong>{% else %}선택 안 됨{% endif %}</div>
+                <div>학생은 QR + 입장코드로 접속합니다.</div>
+            </div>
+        </div>
+
+        <div class="grid gap-8 lg:grid-cols-[380px_1fr]">
+            <div class="textbooks-panel rounded-[32px] p-6 md:p-8" x-data="textbooksCreateForm()">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">새 자료 만들기</h2>
+                        <p class="text-sm text-slate-500 mt-1">텍스트 자료와 PDF 교과서를 같은 앱에서 관리합니다.</p>
+                    </div>
+                    <div class="inline-flex gap-2 rounded-full bg-slate-100 p-1">
+                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" :class="mode === 'pdf' ? 'is-active' : 'text-slate-600'" @click="mode = 'pdf'">PDF 교과서</button>
+                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" :class="mode === 'markdown' ? 'is-active' : 'text-slate-600'" @click="mode = 'markdown'">텍스트 자료</button>
+                    </div>
+                </div>
+
+                <form action="{% url 'textbooks:create' %}" method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="source_type" :value="mode">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
+                        <select name="subject" class="textbooks-input" required>
+                            <option value="">과목을 선택하세요</option>
+                            {% for value, label in subject_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">학년/학기</label>
+                            <input name="grade" class="textbooks-input" placeholder="예: 5학년 1학기">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">단원명</label>
+                            <input name="unit_title" class="textbooks-input" placeholder="예: 분수의 나눗셈" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
+                        <input name="title" class="textbooks-input" placeholder="수업 화면에 표시될 제목">
+                    </div>
+                    <div x-show="mode === 'pdf'" x-cloak>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">PDF 파일</label>
+                        <input type="file" name="pdf_file" accept="application/pdf,.pdf" class="textbooks-input" :required="mode === 'pdf'">
+                        <p class="text-xs text-slate-500 mt-2">비밀번호 없는 PDF만 지원합니다. 최대 150MB, 600페이지.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2" x-text="mode === 'pdf' ? '수업 메모 (선택)' : '자료 내용'"></label>
+                        <textarea name="content" class="textbooks-input min-h-[180px]" placeholder="핵심 설명, 교사 메모, 텍스트 자료 본문을 입력하세요."></textarea>
+                    </div>
+                    <button type="submit" class="w-full rounded-2xl bg-slate-900 py-4 text-white text-lg font-black shadow-lg shadow-slate-900/15 hover:-translate-y-0.5 transition">자료 저장하기</button>
+                </form>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">내 자료실</h2>
+                        <p class="text-sm text-slate-500 mt-1">최근 수정한 자료부터 표시됩니다.</p>
+                    </div>
+                    <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
+                        총 {{ materials|length }}개
+                    </div>
+                </div>
+
+                {% if materials %}
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {% for material in materials %}
+                    <a href="{% url 'textbooks:detail' material.id %}" class="textbooks-panel rounded-[28px] p-5 group hover:-translate-y-1 transition block">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-[0.28em] text-sky-600">{{ material.get_subject_display }}</div>
+                                <h3 class="text-xl font-black text-slate-900 mt-2 group-hover:text-sky-700 transition">{{ material.title }}</h3>
+                            </div>
+                            <span class="rounded-full px-3 py-1 text-xs font-bold {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">{{ material.get_source_type_display }}</span>
+                        </div>
+                        <p class="text-slate-500 mt-3 line-clamp-2 min-h-[3rem]">{{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+                        <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                            <span>{% if material.is_published %}학생 공개 중{% else %}비공개{% endif %}</span>
+                            <span>{% if material.page_count %}{{ material.page_count }}쪽{% else %}텍스트{% endif %}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="textbooks-panel rounded-[28px] p-10 text-center text-slate-500">
+                    <div class="text-5xl mb-3">📘</div>
+                    <p class="text-lg font-bold text-slate-700">아직 만든 자료가 없습니다.</p>
+                    <p class="mt-2">왼쪽 패널에서 첫 PDF 교과서나 텍스트 자료를 만들어 보세요.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function textbooksCreateForm() {
+    return { mode: 'pdf' };
+}
+</script>
+{% endblock %}

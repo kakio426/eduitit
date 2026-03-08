@@ -56,6 +56,7 @@ urlpatterns = [
     path('docviewer/', include('docviewer.urls', namespace='docviewer')),
     path('slidesmith/', include('slidesmith.urls', namespace='slidesmith')),
     path('blockclass/', include('blockclass.urls', namespace='blockclass')),
+    path('textbooks/', include('textbooks.urls', namespace='textbooks')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 

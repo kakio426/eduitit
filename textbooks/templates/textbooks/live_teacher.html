@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ material.title }} 교사 수업 화면{% endblock %}
+{% block footer_class %}hidden{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .live-shell { background: linear-gradient(180deg, #06111f 0%, #0f172a 55%, #111827 100%); }
+    .live-panel { background: rgba(15, 23, 42, 0.78); border: 1px solid rgba(148, 163, 184, 0.18); backdrop-filter: blur(16px); }
+    .live-tool.is-active { background: #38bdf8; color: #082f49; }
+    .live-toast { animation: live-toast-in .2s ease; }
+    @keyframes live-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    #spotlight-layer, #blackout-layer, #laser-pointer { pointer-events: none; }
+    #blackout-layer { background: rgba(0, 0, 0, 0.88); }
+    #laser-pointer { width: 18px; height: 18px; border-radius: 999px; background: rgba(248, 113, 113, 0.95); box-shadow: 0 0 0 8px rgba(248, 113, 113, 0.18); transform: translate(-50%, -50%); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="live-shell min-h-screen px-4 pt-24 pb-8 text-white">
+    <div class="max-w-[1800px] mx-auto space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <div class="text-xs uppercase tracking-[0.34em] text-sky-300">Teacher Live Board</div>
+                <h1 class="text-3xl md:text-4xl font-black mt-2">{{ material.title }}</h1>
+                <p class="text-slate-300 mt-2">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+            </div>
+            <div class="flex gap-3 flex-wrap items-center">
+                <div class="live-panel rounded-2xl px-4 py-3 text-sm text-slate-200">입장코드 <strong class="text-white text-xl ml-2">{{ session.join_code }}</strong></div>
+                <a href="{{ display_url }}" target="_blank" class="rounded-2xl bg-white text-slate-900 px-5 py-3 font-black">TV 화면 열기</a>
+                <a href="{{ join_url }}" target="_blank" class="rounded-2xl bg-sky-500 text-slate-950 px-5 py-3 font-black">학생 링크 열기</a>
+                <button type="button" id="end-session-btn" class="rounded-2xl bg-rose-500 px-5 py-3 font-black text-white">수업 종료</button>
+            </div>
+        </div>
+
+        <div class="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]">
+            <aside class="live-panel rounded-[28px] p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-black text-lg">페이지</h2>
+                    <button type="button" id="bookmark-current-btn" class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">북마크</button>
+                </div>
+                <div id="thumb-strip" class="space-y-3 max-h-[72vh] overflow-y-auto pr-2"></div>
+            </aside>
+
+            <main class="space-y-4 min-w-0">
+                <div class="live-panel rounded-[28px] px-4 py-3 flex flex-wrap gap-2 items-center justify-between">
+                    <div class="flex gap-2 flex-wrap" id="tool-group">
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="select">선택</button>
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="pen">펜</button>
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="highlighter">형광펜</button>
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="rect">네모</button>
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="ellipse">동그라미</button>
+                        <button type="button" class="live-tool rounded-2xl px-4 py-2 text-sm font-black bg-white/10" data-tool="laser">레이저</button>
+                    </div>
+                    <div class="flex gap-2 flex-wrap items-center">
+                        <label class="text-xs font-bold text-slate-300">색상
+                            <input id="color-input" type="color" value="#ef4444" class="ml-2 h-9 w-12 rounded-xl border-0 bg-transparent p-0 align-middle">
+                        </label>
+                        <select id="width-input" class="rounded-2xl bg-white/10 px-3 py-2 text-sm">
+                            <option value="2">얇게</option>
+                            <option value="4" selected>보통</option>
+                            <option value="7">굵게</option>
+                        </select>
+                        <button type="button" id="erase-object-btn" class="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black">선택 지우기</button>
+                        <button type="button" id="undo-btn" class="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black">실행취소</button>
+                        <button type="button" id="redo-btn" class="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black">다시실행</button>
+                        <button type="button" id="clear-page-btn" class="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black">현재 페이지 지우기</button>
+                        <button type="button" id="fullscreen-btn" class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-black text-slate-950">전체화면</button>
+                    </div>
+                </div>
+
+                <div class="live-panel rounded-[32px] p-4 md:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <button type="button" id="prev-page-btn" class="rounded-2xl bg-white/10 px-4 py-2 font-black">이전</button>
+                            <button type="button" id="next-page-btn" class="rounded-2xl bg-white/10 px-4 py-2 font-black">다음</button>
+                            <div id="page-indicator" class="text-lg font-black">1 / {{ material.page_count }}</div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
+                                <input type="checkbox" id="follow-mode-input" checked>
+                                따라오기 잠금
+                            </label>
+                            <button type="button" id="blackout-btn" class="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black">검은 가리개</button>
+                            <button type="button" id="spotlight-btn" class="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black">스포트라이트</button>
+                            <div id="participant-count" class="rounded-full bg-emerald-400/15 px-4 py-2 text-sm font-bold text-emerald-200">참여 0명</div>
+                        </div>
+                    </div>
+                    <div id="viewer-shell" class="relative rounded-[28px] overflow-hidden bg-slate-950 border border-white/10 min-h-[70vh]">
+                        <div id="viewer-scroll" class="relative overflow-auto p-4">
+                            <div id="page-stage" class="relative mx-auto">
+                                <canvas id="pdf-canvas" class="block"></canvas>
+                                <canvas id="overlay-canvas" class="absolute left-0 top-0"></canvas>
+                                <div id="blackout-layer" class="absolute inset-0 hidden"></div>
+                                <div id="spotlight-layer" class="absolute inset-0 hidden"></div>
+                                <div id="laser-pointer" class="absolute hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <aside class="live-panel rounded-[28px] p-4 space-y-4">
+                <div class="rounded-[24px] border border-white/10 p-4 bg-white/5">
+                    <div class="text-xs uppercase tracking-[0.28em] text-sky-300">학생 접속</div>
+                    <img src="{{ join_qr_data_url }}" alt="학생 접속 QR" class="w-44 h-44 mx-auto mt-4 rounded-2xl border border-white/10 bg-white p-2">
+                    <div class="text-xs text-slate-300 break-all mt-4">{{ join_url }}</div>
+                </div>
+                <div class="rounded-[24px] border border-white/10 p-4 bg-white/5">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-black">참여자</h2>
+                        <span id="follow-badge" class="text-xs rounded-full bg-sky-400/15 px-3 py-1 font-bold text-sky-200">학생 따라오는 중</span>
+                    </div>
+                    <div id="participant-list" class="mt-3 space-y-2 text-sm text-slate-200"></div>
+                </div>
+                <div class="rounded-[24px] border border-white/10 p-4 bg-white/5">
+                    <h2 class="font-black">북마크</h2>
+                    <div id="bookmark-list" class="mt-3 space-y-2 text-sm text-slate-200"></div>
+                </div>
+                <div class="rounded-[24px] border border-white/10 p-4 bg-white/5">
+                    <h2 class="font-black">교사용 비공개 메모</h2>
+                    <textarea id="teacher-note" class="mt-3 w-full min-h-[200px] rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-white" placeholder="수업 진행 메모를 적어두세요. 학생 화면에는 보이지 않습니다."></textarea>
+                    <p class="text-xs text-slate-400 mt-2">1초 후 자동 저장됩니다.</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <div id="toast-stack" class="fixed right-5 top-24 z-[80] space-y-2"></div>
+</section>
+{{ session.id|json_script:"textbooks-session-id" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="{% static 'textbooks/live_session.js' %}"></script>
+<script>
+window.TextbookLiveSessionApp.init({
+    role: 'teacher',
+    sessionId: '{{ session.id }}',
+    wsUrl: '{{ ws_url }}',
+    bootstrapUrl: '{% url "textbooks:bootstrap_session" session.id %}?role=teacher',
+    pdfUrl: '{{ pdf_url|escapejs }}',
+    endUrl: '{% url "textbooks:end_live" session.id %}',
+    materialTitle: '{{ material.title|escapejs }}',
+    pageCount: {{ material.page_count|default:0 }},
+    csrfToken: '{{ csrf_token }}'
+});
+</script>
+{% endblock %}
+

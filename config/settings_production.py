@@ -24,6 +24,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
+TESTING = 'test' in sys.argv
 
 # Allowed hosts
 env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',')
@@ -90,6 +91,8 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
+    'textbooks.apps.TextbooksConfig',
+    'channels',
     'django_htmx',
     'django.contrib.humanize',
     'reservations.apps.ReservationsConfig',
@@ -156,6 +159,22 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+REDIS_URL = os.environ.get('REDIS_URL', '').strip()
+if TESTING or not REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        }
+    }
 
 # =============================================================================
 # DATABASE - PostgreSQL via Neon (DATABASE_URL)
@@ -457,6 +476,8 @@ CSP_IMG_SRC = (
 )
 CSP_CONNECT_SRC = (
     "'self'",
+    "ws:",
+    "wss:",
     "https://api.padlet.com",
     "https://generativelanguage.googleapis.com",
     "https://assetsconfigcdn.org",      # Statsig (Loom extension)

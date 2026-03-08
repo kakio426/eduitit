@@ -9,7 +9,8 @@ services:
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
-    startCommand: gunicorn config.wsgi:application
+    startCommand: uvicorn config.asgi:application --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings_production
@@ -19,12 +20,22 @@ services:
         fromDatabase:
           name: eduitit-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: eduitit-redis
+          type: keyvalue
+          property: connectionString
       - key: ALLOWED_HOSTS
         value: .onrender.com
       - key: DEBUG
         value: "false"
       - key: PYTHON_VERSION
         value: "3.12.0"
+
+  - type: keyvalue
+    name: eduitit-redis
+    plan: free
+    region: oregon
 
 databases:
   - name: eduitit-db

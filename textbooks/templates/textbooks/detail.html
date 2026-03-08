@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ material.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .textbooks-panel {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="min-h-screen pt-28 pb-20 px-4 bg-[radial-gradient(circle_at_top,#e0f2fe,transparent_42%),linear-gradient(180deg,#f8fbff,#eef2ff)]">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+                <a href="{% url 'textbooks:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 자료실로 돌아가기</a>
+                <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
+                <p class="text-slate-600 mt-2">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+            </div>
+            <div class="flex gap-3 flex-wrap">
+                <form method="post" action="{% url 'textbooks:toggle_publish' material.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="{% if material.is_published %}unpublish{% else %}publish{% endif %}">
+                    <button class="rounded-2xl px-5 py-3 font-black {% if material.is_published %}bg-amber-100 text-amber-800{% else %}bg-emerald-600 text-white{% endif %}">
+                        {% if material.is_published %}학생 공개 끄기{% else %}학생 공개 켜기{% endif %}
+                    </button>
+                </form>
+                {% if material.source_type == 'pdf' %}
+                <form method="post" action="{% url 'textbooks:start_live' material.id %}">
+                    {% csrf_token %}
+                    <button class="rounded-2xl px-5 py-3 font-black bg-slate-900 text-white">{% if active_session and active_session.status != 'ended' %}라이브 수업 재개{% else %}라이브 수업 시작{% endif %}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[1.1fr_420px]">
+            <div class="textbooks-panel rounded-[32px] p-6 md:p-8">
+                <div class="flex items-center justify-between gap-4 flex-wrap mb-6">
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">자료 정보</div>
+                        <h2 class="text-2xl font-black text-slate-900 mt-2">{% if material.source_type == 'pdf' %}PDF 교과서 자료{% else %}텍스트 자료{% endif %}</h2>
+                    </div>
+                    <div class="rounded-full px-4 py-2 text-sm font-bold {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                        {{ material.get_source_type_display }}
+                    </div>
+                </div>
+
+                {% if material.source_type == 'pdf' %}
+                <div class="grid gap-4 md:grid-cols-3 mb-6">
+                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
+                        <div class="text-sm text-slate-500">페이지 수</div>
+                        <div class="text-3xl font-black text-slate-900 mt-2">{{ material.page_count }}</div>
+                    </div>
+                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
+                        <div class="text-sm text-slate-500">파일명</div>
+                        <div class="text-lg font-black text-slate-900 mt-2 break-all">{{ material.original_filename }}</div>
+                    </div>
+                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
+                        <div class="text-sm text-slate-500">자료 상태</div>
+                        <div class="text-lg font-black text-slate-900 mt-2">{% if material.is_published %}학생 접속 허용{% else %}비공개{% endif %}</div>
+                    </div>
+                </div>
+                <div class="rounded-[28px] overflow-hidden border border-slate-200 bg-slate-950/95">
+                    <div class="flex items-center justify-between px-5 py-4 text-white border-b border-white/10">
+                        <div>
+                            <div class="text-xs uppercase tracking-[0.28em] text-sky-300">PDF Preview</div>
+                            <div class="font-black mt-1">라이브 화면 시작 전 정보 확인</div>
+                        </div>
+                        {% if active_session %}
+                        <a href="{% url 'textbooks:teacher_session' active_session.id %}" class="rounded-full bg-white text-slate-900 px-4 py-2 text-sm font-black">교사 화면 열기</a>
+                        {% endif %}
+                    </div>
+                    <div class="p-8 text-slate-200 text-sm leading-7">
+                        라이브 수업에서는 PDF.js로 현재 페이지를 렌더링하고, 그 위에 필기 오버레이가 동기화됩니다. 학생은 PDF 파일 직접 주소가 아니라 세션 검증을 통과한 뒤에만 같은 페이지를 볼 수 있습니다.
+                    </div>
+                </div>
+                {% else %}
+                <div class="rounded-[28px] border border-slate-200 bg-white p-6 prose max-w-none">
+                    {{ material.content|linebreaks }}
+                </div>
+                {% endif %}
+
+                {% if material.content %}
+                <div class="mt-6 rounded-[28px] bg-slate-50 border border-slate-200 p-6">
+                    <h3 class="text-lg font-black text-slate-900 mb-3">교사용 메모</h3>
+                    <div class="text-slate-600 whitespace-pre-wrap leading-7">{{ material.content }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <aside class="space-y-6">
+                <div class="textbooks-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">Live Session</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">수업 세션</h2>
+                    {% if active_session %}
+                    <div class="mt-5 space-y-4">
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
+                            <div class="text-sm text-slate-500">세션 상태</div>
+                            <div class="mt-2 text-xl font-black text-slate-900">{{ active_session.get_status_display }}</div>
+                            <div class="mt-1 text-sm text-slate-500">입장코드 {{ active_session.join_code }}</div>
+                        </div>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <a href="{% url 'textbooks:teacher_session' active_session.id %}" class="rounded-2xl bg-slate-900 text-white text-center py-3 font-black">교사 화면</a>
+                            <a href="{% url 'textbooks:display_session' active_session.id %}" class="rounded-2xl bg-sky-100 text-sky-800 text-center py-3 font-black">TV 화면</a>
+                        </div>
+                        <div class="rounded-[28px] border border-slate-200 bg-white p-5 text-center">
+                            <div class="text-sm text-slate-500 mb-4">학생 접속 QR</div>
+                            {% if join_url %}
+                            <img src="{{ join_qr_data_url }}" alt="학생 접속 QR" class="w-48 h-48 mx-auto rounded-2xl border border-slate-200 bg-white p-2">
+                            <div class="mt-4 text-xs text-slate-500 break-all">{{ join_url }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="mt-4 text-slate-500 leading-7">아직 라이브 수업 세션이 없습니다. PDF 자료라면 위 버튼으로 수업을 시작하세요.</p>
+                    {% endif %}
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+{% endblock %}
