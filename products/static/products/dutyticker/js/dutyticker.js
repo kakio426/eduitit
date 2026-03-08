@@ -720,15 +720,43 @@ class DutyTickerManager {
 
     applyRoleViewMode() {
         const app = document.getElementById('mainAppContainer');
-        const subtitle = document.getElementById('roleCardSubtitle');
         this.roleViewMode = this.normalizeRoleViewMode(this.roleViewMode);
 
         if (app) app.setAttribute('data-role-view-mode', this.roleViewMode);
-        if (subtitle) {
-            subtitle.textContent = this.roleViewMode === 'readable'
-                ? '멀리서도 보이도록 역할과 이름을 크게 보여줍니다.'
-                : '핵심 역할과 담당 학생만 크게 보여줍니다.';
+        this.updateRoleCardSubtitle();
+    }
+
+    normalizeSpotlightStudentId(rawStudentId = this.spotlightStudentId) {
+        const numericId = Number(rawStudentId);
+        return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
+    }
+
+    getSpotlightStudentName() {
+        const spotlightStudentId = this.normalizeSpotlightStudentId();
+        if (spotlightStudentId === null) return '';
+
+        const spotlightStudent = this.students.find((student) => Number(student.id) === spotlightStudentId);
+        return spotlightStudent ? spotlightStudent.name : '';
+    }
+
+    updateRoleCardSubtitle(spotlightRoleCount = 0) {
+        const subtitle = document.getElementById('roleCardSubtitle');
+        if (!subtitle) return;
+
+        const spotlightStudentName = this.getSpotlightStudentName();
+        if (spotlightStudentName && spotlightRoleCount > 0) {
+            subtitle.textContent = `${spotlightStudentName} 학생 역할 ${spotlightRoleCount}개를 지금 강조해서 보여줍니다.`;
+            return;
         }
+
+        if (spotlightStudentName) {
+            subtitle.textContent = `${spotlightStudentName} 학생은 아직 배정된 역할이 없습니다.`;
+            return;
+        }
+
+        subtitle.textContent = this.roleViewMode === 'readable'
+            ? '멀리서도 보이도록 역할과 이름을 크게 보여줍니다.'
+            : '핵심 역할과 담당 학생만 크게 보여줍니다.';
     }
 
     renderRoleList() {
@@ -745,17 +773,23 @@ class DutyTickerManager {
                 </div>
             `;
             this.stopRoleTicker();
+            this.updateRoleCardSubtitle();
             return;
         }
 
-        const spotlightStudentId = Number(this.spotlightStudentId);
-        const spotlightRoleIds = this.roles
-            .filter((role) => Number(role.assigneeId) === spotlightStudentId)
-            .map((role) => Number(role.id));
+        const spotlightStudentId = this.normalizeSpotlightStudentId();
+        const spotlightRoleIdSet = new Set(
+            spotlightStudentId === null
+                ? []
+                : this.roles
+                    .filter((role) => Number(role.assigneeId) === spotlightStudentId)
+                    .map((role) => Number(role.id))
+        );
+        const hasSpotlightRole = spotlightRoleIdSet.size > 0;
 
         const orderedRoles = [...this.roles].sort((a, b) => {
-            const aSpot = spotlightRoleIds.includes(Number(a.id)) ? 0 : 1;
-            const bSpot = spotlightRoleIds.includes(Number(b.id)) ? 0 : 1;
+            const aSpot = spotlightRoleIdSet.has(Number(a.id)) ? 0 : 1;
+            const bSpot = spotlightRoleIdSet.has(Number(b.id)) ? 0 : 1;
             if (aSpot !== bSpot) return aSpot - bSpot;
             if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
             return Number(a.id) - Number(b.id);
@@ -768,16 +802,18 @@ class DutyTickerManager {
             const safeRoleName = this.escapeHtml(role.name);
             const safeAssignee = this.escapeHtml(role.assignee || '미배정');
             const numericRoleId = Number(role.id);
-            const isSpotlightRole = spotlightRoleIds.includes(numericRoleId);
-            const spotlightClass = isSpotlightRole ? 'dt-role-current-spotlight' : '';
+            const isSpotlightRole = spotlightRoleIdSet.has(numericRoleId);
+            const spotlightClass = isSpotlightRole
+                ? 'dt-role-current-spotlight'
+                : (hasSpotlightRole ? 'dt-role-current-muted' : '');
             const spotlightBadge = isSpotlightRole
-                ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>집중</span>'
+                ? '<span class="dt-role-spotlight-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border"><i class="fa-solid fa-bolt text-[9px]"></i>현재 강조</span>'
                 : '';
             const statusBadge = isCompleted
                 ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
                 : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
-            const assigneeLabel = isCompleted ? '완료 담당' : '담당';
+            const assigneeLabel = isCompleted ? '완료 담당' : (isSpotlightRole ? '핵심 담당' : '담당');
             return `
                 <div class="dt-role-row border cursor-pointer ${spotlightClass}"
                     role="button"
@@ -802,6 +838,7 @@ class DutyTickerManager {
             `;
         }).join('');
 
+        this.updateRoleCardSubtitle(spotlightRoleIdSet.size);
         this.ensureRoleTickerRunning();
         this.paintRoleTickerFocus({ force: true });
     }
@@ -989,12 +1026,14 @@ class DutyTickerManager {
             return;
         }
 
+        const spotlightStudentId = this.normalizeSpotlightStudentId();
+
         container.innerHTML = this.students.map(student => {
             const isDone = student.status === 'done';
             const studentId = Number.isFinite(Number(student.id)) ? Number(student.id) : 0;
             const safeStudentNumber = this.escapeHtml(student.number);
             const safeStudentName = this.escapeHtml(student.name);
-            const isSpotlight = Number(this.spotlightStudentId) === Number(student.id);
+            const isSpotlight = spotlightStudentId !== null && spotlightStudentId === Number(student.id);
             const nameSizeClass = this.getStudentNameSizeClass(student.name);
             const tileStateClass = `${isDone ? 'is-done' : ''} ${isSpotlight ? 'is-spotlight' : ''}`.trim();
             const studentTitle = `${safeStudentNumber}번 ${safeStudentName}`;
@@ -1192,7 +1231,8 @@ class DutyTickerManager {
     }
 
     async toggleSpotlightStudent(studentId) {
-        const nextStudentId = Number(this.spotlightStudentId) === Number(studentId) ? null : Number(studentId);
+        const currentSpotlightStudentId = this.normalizeSpotlightStudentId();
+        const nextStudentId = currentSpotlightStudentId === Number(studentId) ? null : Number(studentId);
         const prevStudentId = this.spotlightStudentId;
 
         this.spotlightStudentId = nextStudentId;
@@ -1593,8 +1633,10 @@ class DutyTickerManager {
 
     openCallMode() {
         this.syncCallModeRoles();
-        const spotlightStudentId = Number(this.spotlightStudentId);
-        const spotlightIndex = this.callModeRoles.findIndex((role) => Number(role.assigneeId) === spotlightStudentId);
+        const spotlightStudentId = this.normalizeSpotlightStudentId();
+        const spotlightIndex = spotlightStudentId === null
+            ? -1
+            : this.callModeRoles.findIndex((role) => Number(role.assigneeId) === spotlightStudentId);
 
         if (spotlightIndex >= 0) this.callModeIndex = spotlightIndex;
 
