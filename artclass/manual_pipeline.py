@@ -54,7 +54,7 @@ class ParsedStep:
 
 def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
     if not raw_text or not str(raw_text).strip():
-        raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 결과가 비어 있습니다.")
+        raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 답변이 비어 있습니다.")
 
     clean_input = _unwrap_fenced_block(str(raw_text).strip())
     warnings: list[str] = []
@@ -75,13 +75,12 @@ def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
     steps = _sanitize_steps(steps, warnings)
     if len(steps) > MAX_STEPS:
         warnings.append(
-            f"단계가 {len(steps)}개로 많아 앞 {MAX_STEPS}개만 반영했습니다. "
-            "단계를 합쳐 다시 생성하면 더 안정적입니다."
+            f"단계가 많아 앞 {MAX_STEPS}개만 반영했습니다."
         )
         steps = steps[:MAX_STEPS]
 
     if not steps:
-        raise ManualPipelineError("NO_STEPS", "유효한 단계가 없습니다. JSON 또는 줄바꿈 형식을 확인해 주세요.")
+        raise ManualPipelineError("NO_STEPS", "단계를 읽지 못했어요. 답변 전체를 다시 붙여넣어 주세요.")
 
     return {
         "steps": [
@@ -140,14 +139,14 @@ def _extract_json_payload(raw_text: str, warnings: list[str]) -> Any | None:
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            warnings.append("JSON 형식이 조금 깨져 있어 줄 단위로 다시 해석했습니다.")
+            warnings.append("답변 형식이 조금 달랐지만 읽을 수 있는 내용만 반영했습니다.")
             return None
 
     if text.startswith("[") and text.endswith("]"):
         try:
             return {"steps": json.loads(text)}
         except json.JSONDecodeError:
-            warnings.append("JSON 배열 형식이 조금 깨져 있어 줄 단위로 다시 해석했습니다.")
+            warnings.append("답변 형식이 조금 달랐지만 읽을 수 있는 내용만 반영했습니다.")
             return None
 
     return None
@@ -155,11 +154,11 @@ def _extract_json_payload(raw_text: str, warnings: list[str]) -> Any | None:
 
 def _parse_steps_from_json(payload: Any, warnings: list[str]) -> list[ParsedStep]:
     if not isinstance(payload, dict):
-        raise ManualPipelineError("INVALID_SHAPE", "JSON 최상위는 객체 형태여야 합니다.")
+        raise ManualPipelineError("INVALID_SHAPE", "답변에서 단계를 찾지 못했어요.")
 
     raw_steps = payload.get("steps")
     if not isinstance(raw_steps, list):
-        raise ManualPipelineError("MISSING_STEPS", "`steps` 배열이 필요합니다.")
+        raise ManualPipelineError("MISSING_STEPS", "답변에서 단계를 찾지 못했어요.")
 
     parsed_steps: list[ParsedStep] = []
     for idx, item in enumerate(raw_steps, start=1):
@@ -173,25 +172,25 @@ def _parse_single_step_json(item: Any, step_index: int, warnings: list[str]) -> 
     if isinstance(item, str):
         text = _normalize_spaces(item)
         if not text:
-            warnings.append(f"{step_index}단계 텍스트가 비어 있어 제외했습니다.")
+            warnings.append(f"{step_index}단계 내용이 비어 있어 제외했습니다.")
             return None
         return ParsedStep(text=text)
 
     if not isinstance(item, dict):
-        warnings.append(f"{step_index}단계 형식이 올바르지 않아 제외했습니다.")
+        warnings.append(f"{step_index}단계는 읽기 어려워 제외했습니다.")
         return None
 
     summary = _pick_first_value(item, TEXT_KEYS)
     summary = _normalize_spaces(summary)
     if not summary:
-        warnings.append(f"{step_index}단계에 설명(summary/text)이 없어 제외했습니다.")
+        warnings.append(f"{step_index}단계 설명이 없어 제외했습니다.")
         return None
 
     start_sec = _parse_time_fields(item, START_KEYS, TIME_KEYS, warnings, step_index, field_name="start")
     end_sec = _parse_time_fields(item, END_KEYS, (), warnings, step_index, field_name="end")
 
     if start_sec is not None and end_sec is not None and end_sec < start_sec:
-        warnings.append(f"{step_index}단계 end가 start보다 빨라 시간 정보를 무시했습니다.")
+        warnings.append(f"{step_index}단계 시간 정보가 맞지 않아 시간 표시는 뺐습니다.")
         start_sec = None
         end_sec = None
 
@@ -216,7 +215,7 @@ def _parse_steps_from_text(raw_text: str, warnings: list[str]) -> list[ParsedSte
     lines = [line.strip() for line in text.split("\n") if line.strip()]
 
     if not lines:
-        raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 결과에서 유효한 줄을 찾지 못했습니다.")
+        raise ManualPipelineError("EMPTY_INPUT", "붙여넣은 답변에서 읽을 내용을 찾지 못했어요.")
 
     parsed_steps: list[ParsedStep] = []
     for idx, line in enumerate(lines, start=1):
@@ -242,7 +241,7 @@ def _parse_steps_from_text(raw_text: str, warnings: list[str]) -> list[ParsedSte
             parsed_steps[-1].text = _append_meta_line(parsed_steps[-1].text, f"교사 팁: {value}")
 
     if not parsed_steps:
-        raise ManualPipelineError("NO_STEPS", "단계 문장을 찾지 못했습니다.")
+        raise ManualPipelineError("NO_STEPS", "단계를 읽지 못했어요. 답변 전체를 다시 붙여넣어 주세요.")
 
     return parsed_steps
 

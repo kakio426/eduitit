@@ -467,7 +467,7 @@ def parse_gemini_steps_api(request):
 
     raw_text = (data.get('rawText') or '').strip()
     if not raw_text:
-        return JsonResponse({'error': 'EMPTY_INPUT', 'message': '붙여넣은 결과를 입력해 주세요.'}, status=400)
+        return JsonResponse({'error': 'EMPTY_INPUT', 'message': '답변을 붙여넣어 주세요.'}, status=400)
 
     try:
         parsed = parse_manual_pipeline_result(raw_text)

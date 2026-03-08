@@ -89,7 +89,7 @@ class ManualPipelineParserTest(TestCase):
 
         self.assertEqual(result["meta"]["mode"], "plain_text")
         self.assertEqual(result["meta"]["step_count"], 2)
-        self.assertTrue(any("줄 단위" in warning for warning in result["warnings"]))
+        self.assertTrue(any("읽을 수 있는 내용만 반영" in warning for warning in result["warnings"]))
         self.assertIn("준비물:", result["steps"][0]["text"])
         self.assertIn("교사 팁:", result["steps"][1]["text"])
 
@@ -212,6 +212,7 @@ class ManualPipelineApiTest(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "EMPTY_INPUT")
+        self.assertEqual(response.json()["message"], "답변을 붙여넣어 주세요.")
 
     def test_parse_gemini_steps_api_method_not_allowed(self):
         url = reverse("artclass:parse_gemini_steps_api")
@@ -590,6 +591,14 @@ class ArtClassSetupEditTest(TestCase):
         body = response.content.decode("utf-8")
         self.assertIn('id="artclassInitialSteps"', body)
         self.assertIn(r'\u003C/script\u003E\u003Cscript\u003Ealert(1)\u003C/script\u003E', body)
+
+    def test_setup_page_uses_beginner_friendly_gemini_copy(self):
+        response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "제미나이에서 만든 답변을 붙여넣으면 수업 단계가 자동으로 채워집니다.")
+        self.assertContains(response, "여기에 제미나이 답변을 붙여넣으세요")
+        self.assertNotContains(response, "JSON 권장")
 
     def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
         self.client.force_login(self.owner)
