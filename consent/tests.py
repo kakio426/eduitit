@@ -661,8 +661,8 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data-consent-upload-preview")
         self.assertContains(response, "consent/pdf_preview.js")
-        self.assertContains(response, "업무 기준")
-        self.assertNotContains(response, "업무 담당자 안내")
+        self.assertContains(response, "선택한 안내문 미리보기")
+        self.assertContains(response, "교사용 체크")
 
     def test_create_step1_seed_auto_adds_recipients(self):
         self.client.login(username="teacher", password="pw123456")
@@ -716,7 +716,7 @@ class ConsentFlowTests(TestCase):
         get_response = self.client.get(f"{reverse('consent:create_step1')}?sb_seed=seed-token-3")
         self.assertEqual(get_response.status_code, 200)
         self.assertContains(get_response, "미리보기")
-        self.assertContains(get_response, "다음 단계에서 수신자 후보 자동 넣기")
+        self.assertContains(get_response, "다음 단계에 이 수신자 후보 넣기")
 
         file_obj = SimpleUploadedFile("seed_skip.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
         post_response = self.client.post(
@@ -908,8 +908,8 @@ class ConsentEvidenceTests(TestCase):
         self.assertContains(response, "abc123")
         self.assertContains(response, "data-consent-document-preview")
         self.assertContains(response, "consent/pdf_preview.js")
-        self.assertContains(response, "업무 기준")
-        self.assertNotContains(response, "업무 담당자 안내")
+        self.assertContains(response, "첨부 문서 미리보기")
+        self.assertContains(response, "법적 고지")
 
     def test_sign_audit_log_contains_document_evidence(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
