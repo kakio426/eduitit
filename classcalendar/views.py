@@ -725,6 +725,18 @@ def _resolve_integration_source_meta(event):
                 "수업 자료실로 이동",
             )
 
+    if source == "hwpxchat_workitem":
+        document_id = key.split(":", 1)[0].strip()
+        if document_id:
+            try:
+                return (
+                    reverse("hwpxchat:document_detail", kwargs={"document_id": document_id}),
+                    "원본 문서로 이동",
+                )
+            except Exception:
+                logger.exception("[ClassCalendar] hwpxchat source link resolve failed event_id=%s", event.id)
+        return reverse("hwpxchat:main"), "원본 문서로 이동"
+
     return "", ""
 
 

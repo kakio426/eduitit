@@ -47,6 +47,19 @@ SHEETBOOK_IMPORT_MAX_ROWS = 5000
 DEFAULT_GRID_SEED_ROWS = 30
 GRID_AUTO_APPEND_THRESHOLD = 5
 GRID_AUTO_APPEND_ROWS = 20
+EXECUTION_TAB_NAME = "실행업무"
+EXECUTION_TAB_COLUMNS = [
+    ("title", "업무명", SheetColumn.TYPE_TEXT, 220, {}),
+    ("action_text", "해야 할 일", SheetColumn.TYPE_TEXT, 320, {}),
+    ("due_date", "기한", SheetColumn.TYPE_DATE, 150, {}),
+    ("assignee", "담당", SheetColumn.TYPE_TEXT, 160, {}),
+    ("target", "대상", SheetColumn.TYPE_TEXT, 180, {}),
+    ("materials", "준비물", SheetColumn.TYPE_TEXT, 220, {}),
+    ("delivery_required", "전달 필요", SheetColumn.TYPE_CHECKBOX, 120, {}),
+    ("status", "상태", SheetColumn.TYPE_SELECT, 140, {"choices": ["할 일", "진행중", "완료"]}),
+    ("evidence", "근거 문장", SheetColumn.TYPE_TEXT, 320, {}),
+    ("source_document", "원본 문서", SheetColumn.TYPE_TEXT, 220, {}),
+]
 SHEETBOOK_MOBILE_COMPACT_ALLOWED_ACTIONS = {
     "update_cell",
     "create_grid_row",
@@ -187,6 +200,63 @@ def _create_default_tabs(sheetbook):
         )
         if tab_type == SheetTab.TYPE_GRID:
             _seed_default_columns(tab)
+
+
+def _ensure_execution_columns(tab):
+    for sort_order, (key, label, column_type, width, options) in enumerate(EXECUTION_TAB_COLUMNS, start=1):
+        column, created = SheetColumn.objects.get_or_create(
+            tab=tab,
+            key=key,
+            defaults={
+                "label": label,
+                "column_type": column_type,
+                "sort_order": sort_order,
+                "width": width,
+                "options": options,
+            },
+        )
+        changed_fields = []
+        if not created:
+            if column.label != label:
+                column.label = label
+                changed_fields.append("label")
+            if column.column_type != column_type:
+                column.column_type = column_type
+                changed_fields.append("column_type")
+            if column.sort_order != sort_order:
+                column.sort_order = sort_order
+                changed_fields.append("sort_order")
+            if column.width != width:
+                column.width = width
+                changed_fields.append("width")
+            if (column.options or {}) != options:
+                column.options = options
+                changed_fields.append("options")
+        if changed_fields:
+            changed_fields.append("updated_at")
+            column.save(update_fields=changed_fields)
+
+
+def ensure_execution_tab(sheetbook):
+    existing_tab = sheetbook.tabs.filter(name=EXECUTION_TAB_NAME, tab_type=SheetTab.TYPE_GRID).order_by("sort_order", "id").first()
+    if existing_tab is not None:
+        _ensure_execution_columns(existing_tab)
+        return existing_tab
+
+    with transaction.atomic():
+        locked_sheetbook = Sheetbook.objects.select_for_update().get(id=sheetbook.id)
+        execution_tab = locked_sheetbook.tabs.filter(name=EXECUTION_TAB_NAME, tab_type=SheetTab.TYPE_GRID).order_by("sort_order", "id").first()
+        if execution_tab is None:
+            target_sort_order = 2 if locked_sheetbook.tabs.filter(tab_type=SheetTab.TYPE_CALENDAR).exists() else 1
+            SheetTab.objects.filter(sheetbook=locked_sheetbook, sort_order__gte=target_sort_order).update(sort_order=F("sort_order") + 1)
+            execution_tab = SheetTab.objects.create(
+                sheetbook=locked_sheetbook,
+                name=EXECUTION_TAB_NAME,
+                tab_type=SheetTab.TYPE_GRID,
+                sort_order=target_sort_order,
+            )
+        _ensure_execution_columns(execution_tab)
+    return execution_tab
 
 
 def _upsert_grid_cell_value(row, column, raw_value):

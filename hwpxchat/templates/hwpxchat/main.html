@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}HWP 문서를 HWPX로 바꿔 AI에 붙여넣기{% endblock %}
+{% block title %}공문을 교무수첩 실행업무로 정리하기{% endblock %}
 
 {% block content %}
 <style>
@@ -23,7 +23,7 @@
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-medium">서비스 목록으로 돌아가기</span>
             </a>
-
+            {% if current_document %}
             <form
                 method="post"
                 action="{% url 'hwpxchat:chat_reset' %}"
@@ -35,35 +35,36 @@
             >
                 {% csrf_token %}
                 <button type="submit" class="px-3 py-2 bg-white text-gray-600 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                    변환 결과 초기화
+                    최근 문서 숨기기
                 </button>
             </form>
+            {% endif %}
         </div>
 
         <div class="text-center mb-8" data-aos="fade-up">
             <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📄" }}</div>
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">HWP 문서를 HWPX로 바꿔 AI에 붙여넣기</h1>
-            <p class="text-lg md:text-xl text-gray-500">HWPX를 LLM 친화 Markdown으로 변환해서, 원하는 AI 사이트에 복붙해 쓰는 도구입니다.</p>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">공문을 교무수첩 실행업무로 정리하기</h1>
+            <p class="text-lg md:text-xl text-gray-500">문서를 올리면 지금 해야 할 일을 카드로 정리하고, 바로 교무수첩에 담을 수 있어요.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div class="lg:col-span-2">
                 <div class="clay-card p-6 md:p-7" data-aos="fade-up">
                     <p class="text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 leading-relaxed">
-                        AI가 문서를 완벽하게 이해할 수 있도록, HWP 문서는 <strong>'다른 이름으로 저장 ➡️ HWPX'</strong>로 바꾼 뒤 업로드해 주세요.
+                        한글 문서는 <strong>다른 이름으로 저장 → HWPX</strong>로 바꾼 뒤 올려 주세요. HWP 파일은 바로 읽지 못합니다.
                     </p>
 
                     <p class="text-sm md:text-base text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 leading-relaxed">
-                        <strong>왜 이 도구를 쓰나요?</strong><br>
-                        HWP 문서를 HWPX로 바꾼 뒤 AI가 읽기 쉬운 Markdown으로 변환해, 수업 자료/가정통신문/회의 문서를 더 정확하고 빠르게 정리하려고 씁니다.
+                        <strong>권장 범위</strong><br>
+                        30쪽 이하 문서가 가장 안정적입니다. 너무 긴 문서는 나눠 올리면 더 정확하게 정리돼요.
                     </p>
 
                     <div class="text-sm md:text-base text-gray-700 bg-white border border-gray-200 rounded-xl p-4 mb-5 leading-relaxed">
-                        <p class="font-bold text-gray-800 mb-2">사용 방법</p>
-                        <p>1. HWP 문서를 <strong>다른 이름으로 저장</strong>에서 <strong>HWPX</strong>로 바꿉니다.</p>
-                        <p>2. 이 화면에서 HWPX 파일을 업로드해 변환합니다.</p>
-                        <p>3. 생성된 Markdown을 복사하거나 다운로드합니다.</p>
-                        <p>4. ChatGPT/Gemini/Claude 등에 붙여 넣고 원하는 질문을 입력합니다.</p>
+                        <p class="font-bold text-gray-800 mb-2">올리는 순서</p>
+                        <p>1. 공문을 HWPX로 저장합니다.</p>
+                        <p>2. 여기서 파일을 올립니다.</p>
+                        <p>3. 정리된 업무 카드를 확인합니다.</p>
+                        <p>4. 교무수첩에 담기를 누릅니다.</p>
                     </div>
 
                     <form
@@ -89,9 +90,7 @@
                                 class="w-full rounded-xl border-2 border-dashed p-4 transition"
                                 :class="isDragActive ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-white'"
                             >
-                                <p class="text-sm text-gray-500 mb-3">
-                                    파일을 여기로 끌어다 놓거나 아래에서 선택해 주세요.
-                                </p>
+                                <p class="text-sm text-gray-500 mb-3">파일을 여기로 끌어다 놓거나 아래에서 선택해 주세요.</p>
                                 <input
                                     type="file"
                                     name="hwpx_file"
@@ -108,7 +107,7 @@
                         </div>
 
                         <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
-                            <i class="fa-solid fa-file-code mr-1"></i>HWPX를 Markdown으로 변환하기
+                            <i class="fa-solid fa-file-arrow-up mr-1"></i>문서 올리기
                         </button>
                     </form>
                 </div>
@@ -126,7 +125,7 @@
 <div id="hwpx-chat-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
     <div class="clay-card px-6 py-5 flex items-center gap-3">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
-        <span class="text-gray-700 font-bold">HWPX를 분석하고 Markdown으로 변환 중...</span>
+        <span class="text-gray-700 font-bold">문서를 읽고 해야 할 일을 정리하고 있어요...</span>
     </div>
 </div>
 
@@ -150,7 +149,22 @@
                     Swal.fire({
                         icon: "warning",
                         title: "HWP 파일은 업로드할 수 없습니다",
-                        html: "HWP 문서를 <b>다른 이름으로 저장 ➡️ HWPX</b>로 바꾼 뒤 업로드해 주세요.",
+                        html: "HWP 문서를 <b>다른 이름으로 저장 → HWPX</b>로 바꾼 뒤 업로드해 주세요.",
+                        confirmButtonText: "확인",
+                        confirmButtonColor: "#10b981"
+                    });
+                    return false;
+                }
+
+                if ((file.size || 0) > 15 * 1024 * 1024) {
+                    if (input) {
+                        input.value = "";
+                    }
+                    this.selectedFileName = "";
+                    Swal.fire({
+                        icon: "warning",
+                        title: "파일이 너무 큽니다",
+                        text: "15MB 이하 HWPX만 올릴 수 있어요.",
                         confirmButtonText: "확인",
                         confirmButtonColor: "#10b981"
                     });
@@ -255,8 +269,7 @@
         navigator.clipboard.writeText(text).then(() => {
             Swal.fire({
                 icon: "success",
-                title: "Markdown을 복사했습니다",
-                text: "원하는 LLM 사이트에 붙여 넣고 질문해 보세요.",
+                title: "원문을 복사했습니다",
                 confirmButtonText: "확인",
                 confirmButtonColor: "#10b981"
             });
@@ -270,6 +283,108 @@
             });
         });
     }
+
+    async function submitHwpxQuestion(form) {
+        if (!form) {
+            return false;
+        }
+
+        const resultBox = document.getElementById("hwpx-ask-result");
+        const button = form.querySelector("button[type='submit']");
+        const formData = new FormData(form);
+        const question = (formData.get("question") || "").toString().trim();
+        if (!question) {
+            window.alert("질문을 입력해 주세요.");
+            return false;
+        }
+
+        if (button) {
+            button.disabled = true;
+        }
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">문서에서 근거를 찾는 중입니다...</div>';
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: formData,
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) {
+                window.alert((payload && payload.message) || "질문 처리 중 오류가 발생했습니다.");
+                if (resultBox) {
+                    resultBox.innerHTML = '';
+                }
+                return false;
+            }
+            if (resultBox) {
+                renderHwpxQuestionResult(resultBox, payload || {});
+            }
+        } catch (error) {
+            window.alert("질문 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            if (resultBox) {
+                resultBox.innerHTML = '';
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+            }
+        }
+        return false;
+    }
+
+    function renderHwpxQuestionResult(container, payload) {
+        if (!container) {
+            return;
+        }
+        const citations = Array.isArray(payload.citations) ? payload.citations : [];
+        const citationHtml = citations.length ? citations.map((citation) => {
+            const quote = citation && citation.quote ? citation.quote : "";
+            return `<li class="text-xs text-gray-500">${quote}</li>`;
+        }).join("") : '<li class="text-xs text-gray-500">확인된 근거가 없습니다.</li>';
+        const answer = payload && payload.answer ? payload.answer : "문서 근거를 찾지 못했습니다.";
+        const badge = payload && payload.reused
+            ? '<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-1">저장된 답변</span>'
+            : '';
+        container.innerHTML = `
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <p class="text-sm font-bold text-gray-700">문서 답변</p>
+                    ${badge}
+                </div>
+                <p class="text-sm text-gray-700 leading-relaxed">${answer}</p>
+                <div>
+                    <p class="text-xs font-bold text-gray-500 mb-2">근거</p>
+                    <ul class="space-y-1">${citationHtml}</ul>
+                </div>
+            </div>
+        `;
+    }
+
+    function applyMobileCardEditingState() {
+        const isMobile = window.innerWidth < 768;
+        const cards = document.querySelectorAll(".hwpx-work-card[data-mobile-extra-card='true']");
+        cards.forEach((card) => {
+            card.querySelectorAll("[data-edit-field='true']").forEach((field) => {
+                field.disabled = isMobile;
+            });
+        });
+        const note = document.getElementById("hwpx-mobile-edit-note");
+        if (note) {
+            note.classList.toggle("hidden", !isMobile);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", applyMobileCardEditingState);
+    window.addEventListener("resize", applyMobileCardEditingState);
+    document.body.addEventListener("htmx:afterSwap", function (event) {
+        if (event.target && event.target.id === "hwpx-chat-result") {
+            applyMobileCardEditingState();
+        }
+    });
 </script>
 {% endblock %}
-
