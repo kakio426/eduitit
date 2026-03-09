@@ -510,19 +510,43 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(collect_product.id, collect_ids)
 
     def test_v2_sections_are_preview_capped(self):
-        Product.objects.create(
-            title="Classroom Extra 1",
-            description="extra",
+        for index in range(1, 4):
+            Product.objects.create(
+                title=f"Classroom Extra {index}",
+                description="extra",
+                price=0,
+                is_active=True,
+                service_type='classroom',
+                display_order=index,
+            )
+
+        response = self.client.get(reverse('home'))
+        sections = response.context.get('sections', [])
+        class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
+
+        self.assertIsNotNone(class_ops)
+        self.assertLessEqual(len(class_ops['products']), 3)
+        self.assertTrue(class_ops['has_more'])
+        self.assertGreaterEqual(class_ops['remaining_count'], 1)
+
+    def test_v2_class_ops_preview_keeps_textbooks_and_edu_materials_visible(self):
+        textbook_product = Product.objects.create(
+            title="교과서 라이브 수업",
+            description="PDF 수업",
             price=0,
             is_active=True,
             service_type='classroom',
+            launch_route_name='textbooks:main',
+            display_order=15,
         )
-        Product.objects.create(
-            title="Classroom Extra 2",
-            description="extra",
+        edu_materials_product = Product.objects.create(
+            title="교육 자료실",
+            description="HTML 수업 자료",
             price=0,
             is_active=True,
             service_type='classroom',
+            launch_route_name='edu_materials:main',
+            display_order=16,
         )
 
         response = self.client.get(reverse('home'))
@@ -530,25 +554,20 @@ class HomeV2ViewTest(TestCase):
         class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
 
         self.assertIsNotNone(class_ops)
-        self.assertLessEqual(len(class_ops['products']), 2)
-        self.assertTrue(class_ops['has_more'])
-        self.assertGreaterEqual(class_ops['remaining_count'], 1)
+        preview_ids = [product.id for product in class_ops['products']]
+        self.assertIn(textbook_product.id, preview_ids)
+        self.assertIn(edu_materials_product.id, preview_ids)
 
     def test_v2_section_more_toggle_renders_when_overflow_exists(self):
-        Product.objects.create(
-            title="Classroom Extra 1",
-            description="extra",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-        )
-        Product.objects.create(
-            title="Classroom Extra 2",
-            description="extra",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-        )
+        for index in range(1, 4):
+            Product.objects.create(
+                title=f"Classroom Extra {index}",
+                description="extra",
+                price=0,
+                is_active=True,
+                service_type='classroom',
+                display_order=index,
+            )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -556,25 +575,25 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('더보기', content)
 
     def test_v2_section_overflow_items_are_rendered_in_markup(self):
-        Product.objects.create(
-            title="Classroom Overflow A",
-            description="extra",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-        )
-        Product.objects.create(
-            title="Classroom Overflow B",
-            description="extra",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-        )
+        for index, title in enumerate([
+            "Classroom Overflow A",
+            "Classroom Overflow B",
+            "Classroom Overflow C",
+            "Classroom Overflow D",
+        ], start=1):
+            Product.objects.create(
+                title=title,
+                description="extra",
+                price=0,
+                is_active=True,
+                service_type='classroom',
+                display_order=index,
+            )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('Classroom Overflow A', content)
-        self.assertIn('Classroom Overflow B', content)
+        self.assertIn('Classroom Overflow C', content)
+        self.assertIn('Classroom Overflow D', content)
 
     def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
         response = self.client.get(reverse('home'))
@@ -643,22 +662,26 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('학급 운영 수첩(달력 포함)', content)
-        self.assertIn('내 교무수첩', content)
+        self.assertIn('교무수첩 워크스페이스', content)
+        self.assertIn('최근 수첩', content)
         self.assertIn('빠른 실행', content)
         self.assertIn('2026 2-3반 교무수첩', content)
         self.assertIn('source=workspace_home_', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_uses_quick_cta_flows(self):
-        self._login('sheetbookcta')
+        from sheetbook.models import Sheetbook
+
+        user = self._login('sheetbookcta')
+        sheetbook = Sheetbook.objects.create(owner=user, title='CTA 테스트 수첩')
+
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn(f'action="{reverse("sheetbook:quick_create")}"', content)
-        self.assertIn(f'action="{reverse("sheetbook:quick_copy")}"', content)
         self.assertIn('name="source" value="workspace_home_create"', content)
-        self.assertIn('name="source" value="workspace_home_copy"', content)
+        self.assertIn('최근 수첩 열기', content)
+        self.assertIn(reverse('sheetbook:detail', args=[sheetbook.pk]), content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_shows_first_run_onboarding(self):
@@ -666,8 +689,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('교무수첩 시작하기', content)
-        self.assertIn('첫 수첩을 1분 안에 시작해 보세요', content)
+        self.assertIn('교무수첩 워크스페이스', content)
+        self.assertIn('첫 수첩을 만들면 오늘 일정과 최근 작업이 여기에 함께 정리됩니다.', content)
         self.assertIn('시작 체크리스트', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
@@ -849,3 +872,11 @@ class ProductFavoriteAPITest(TestCase):
         self.assertEqual(payload['status'], 'ok')
         self.assertEqual(payload['favorites'][0]['product_id'], self.product.id)
         self.assertEqual(payload['favorites'][1]['product_id'], second.id)
+
+
+
+
+
+
+
+

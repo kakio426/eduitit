@@ -50,7 +50,6 @@ class TextbookViewTests(TestCase):
                 "grade": "5학년 1학기",
                 "unit_title": "지층과 화석",
                 "title": "지층과 화석 PDF",
-                "source_type": "pdf",
                 "content": "교사용 메모",
                 "pdf_file": upload,
             },
@@ -64,6 +63,39 @@ class TextbookViewTests(TestCase):
         self.assertEqual(material.page_count, 2)
         self.assertTrue(material.pdf_sha256)
         self.assertEqual(material.original_filename, "science.pdf")
+
+    def test_non_pdf_upload_is_rejected(self):
+        upload = SimpleUploadedFile("lesson.html", b"<html></html>", content_type="text/html")
+        response = self.client.post(
+            reverse("textbooks:create"),
+            {
+                "subject": "SCIENCE",
+                "grade": "5학년 1학기",
+                "unit_title": "지층과 화석",
+                "title": "잘못된 업로드",
+                "pdf_file": upload,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(TextbookMaterial.objects.filter(title="잘못된 업로드").exists())
+
+    def test_main_view_hides_non_pdf_legacy_material(self):
+        TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject="SCIENCE",
+            grade="5학년 1학기",
+            unit_title="텍스트 수업",
+            title="숨겨져야 할 텍스트 자료",
+            source_type=TextbookMaterial.SOURCE_MARKDOWN,
+            content="# markdown",
+        )
+        material = self._create_pdf_material()
+
+        response = self.client.get(reverse("textbooks:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, material.title)
+        self.assertNotContains(response, "숨겨져야 할 텍스트 자료")
 
     def test_start_live_session_uses_active_classroom_and_publishes_material(self):
         material = self._create_pdf_material()
@@ -133,4 +165,3 @@ class TextbookViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data:image/png;base64,")
         self.assertContains(response, str(session.id))
-

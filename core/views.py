@@ -275,6 +275,8 @@ HOME_SECTION_BY_ROUTE = {
     "happy_seed:landing": "class_ops",
     "reservations:dashboard_landing": "class_ops",
     "reservations:landing": "class_ops",
+    "textbooks:main": "class_ops",
+    "edu_materials:main": "class_ops",
     "qrgen:landing": "class_ops",
     "seed_quiz:landing": "class_ops",
     "ppobgi:main": "class_ops",
@@ -335,9 +337,19 @@ HOME_SECTION_FALLBACK_BY_TYPE = {
 }
 
 
+def _resolve_section_preview_limit(section_key, preview_limit):
+    if isinstance(preview_limit, dict):
+        value = preview_limit.get(section_key)
+        if value is None:
+            value = preview_limit.get("default")
+        return value
+    return preview_limit
+
+
 def _build_section_payload(section, items, preview_limit=None):
-    if preview_limit and preview_limit > 0:
-        preview_items = items[:preview_limit]
+    resolved_preview_limit = _resolve_section_preview_limit(section["key"], preview_limit)
+    if resolved_preview_limit and resolved_preview_limit > 0:
+        preview_items = items[:resolved_preview_limit]
     else:
         preview_items = items
     overflow_items = items[len(preview_items):]
@@ -794,7 +806,13 @@ def _build_sheetbook_workspace_context(request):
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
-    sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=2)
+    sections, aux_sections, games = get_purpose_sections(
+        product_list,
+        preview_limit={
+            "default": 2,
+            "class_ops": 3,
+        },
+    )
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
@@ -1895,3 +1913,5 @@ def health_check(request):
     except Exception as e:
         logger.exception("Health check DB connection failed: %s", e)
         return JsonResponse({'status': 'error', 'db': 'unavailable'}, status=503)
+
+

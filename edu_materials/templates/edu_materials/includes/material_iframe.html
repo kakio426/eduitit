@@ -1,0 +1,17 @@
+<div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10">
+    <div class="flex items-center justify-between px-5 py-4 text-white border-b border-white/10">
+        <div>
+            <div class="text-xs uppercase tracking-[0.28em] text-emerald-300">Sandbox Preview</div>
+            <div class="font-black mt-1">{{ frame_title|default:material.title }}</div>
+        </div>
+        <div class="text-xs text-slate-300">호스트 화면과 분리된 iframe 실행</div>
+    </div>
+    <iframe
+        title="{{ frame_title|default:material.title }}"
+        class="block w-full min-h-[720px] bg-white"
+        sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts"
+        loading="eager"
+        referrerpolicy="no-referrer"
+        srcdoc="{{ material.html_content|escape }}"
+    ></iframe>
+</div>

@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
     'textbooks.apps.TextbooksConfig',
+    'edu_materials.apps.EduMaterialsConfig',
     'channels',
     'django_htmx',
     'django.contrib.humanize',
@@ -762,3 +763,4 @@ if SENTRY_DSN and not DEBUG:
         pass
 else:
     pass  # Sentry disabled (no DSN or DEBUG mode)
+

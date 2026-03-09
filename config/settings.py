@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
     'textbooks.apps.TextbooksConfig',
+    'edu_materials.apps.EduMaterialsConfig',
     'channels',
     'django_htmx',
     'django.contrib.humanize',
@@ -588,3 +589,4 @@ if SENTRY_DSN and not DEBUG:
         print(f"[SENTRY] ERROR: Init failed - {e}")
 else:
     print(f"[SENTRY] SKIPPED (DSN={'SET' if SENTRY_DSN else 'EMPTY'}, DEBUG={DEBUG})")
+

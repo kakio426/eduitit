@@ -1,13 +1,12 @@
 from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
-from channels.layers import get_channel_layer
 
 from core.active_classroom import get_active_classroom_for_request
 
@@ -27,14 +26,16 @@ from .services import (
 
 @login_required
 def main_view(request):
-    materials = TextbookMaterial.objects.filter(teacher=request.user).order_by("-updated_at")
+    materials = TextbookMaterial.objects.filter(
+        teacher=request.user,
+        source_type=TextbookMaterial.SOURCE_PDF,
+    ).order_by("-updated_at")
     return render(
         request,
         "textbooks/main.html",
         {
             "service": get_service(),
             "materials": materials,
-            "source_choices": TextbookMaterial.SOURCE_CHOICES,
             "subject_choices": TextbookMaterial.SUBJECT_CHOICES,
             "active_classroom": get_active_classroom_for_request(request),
         },
@@ -47,13 +48,18 @@ def create_material(request):
     subject = (request.POST.get("subject") or "").strip()
     grade = (request.POST.get("grade") or "").strip()
     unit_title = (request.POST.get("unit_title") or "").strip()
-    title = (request.POST.get("title") or "").strip() or f"{unit_title or '새'} 수업 자료"
-    source_type = (request.POST.get("source_type") or TextbookMaterial.SOURCE_MARKDOWN).strip()
+    title = (request.POST.get("title") or "").strip() or f"{unit_title or '새'} 교과서 PDF"
     content = request.POST.get("content", "")
     uploaded_pdf = request.FILES.get("pdf_file")
 
     if not subject or not unit_title:
         messages.error(request, "과목과 단원명은 필수입니다.")
+        return redirect("textbooks:main")
+
+    try:
+        metadata = validate_pdf_upload(uploaded_pdf)
+    except Exception as exc:
+        messages.error(request, " ".join(getattr(exc, "messages", [str(exc)])))
         return redirect("textbooks:main")
 
     material = TextbookMaterial(
@@ -62,29 +68,15 @@ def create_material(request):
         grade=grade,
         unit_title=unit_title,
         title=title,
-        source_type=source_type,
+        source_type=TextbookMaterial.SOURCE_PDF,
         content=content,
+        page_count=metadata["page_count"],
+        pdf_sha256=metadata["sha256"],
+        original_filename=metadata["original_filename"],
+        pdf_file=uploaded_pdf,
     )
-
-    if source_type == TextbookMaterial.SOURCE_PDF:
-        try:
-            metadata = validate_pdf_upload(uploaded_pdf)
-        except ValidationError as exc:
-            messages.error(request, " ".join(exc.messages))
-            return redirect("textbooks:main")
-        material.page_count = metadata["page_count"]
-        material.pdf_sha256 = metadata["sha256"]
-        material.original_filename = metadata["original_filename"]
-        material.pdf_file = uploaded_pdf
-    else:
-        material.page_count = 0
-
-    try:
-        material.full_clean()
-        material.save()
-    except ValidationError as exc:
-        messages.error(request, " ".join(exc.messages))
-        return redirect("textbooks:main")
+    material.full_clean()
+    material.save()
 
     messages.success(request, f'"{material.title}" 자료를 만들었습니다.')
     return redirect("textbooks:detail", pk=material.id)
@@ -92,7 +84,12 @@ def create_material(request):
 
 @login_required
 def material_detail(request, pk):
-    material = get_object_or_404(TextbookMaterial, id=pk, teacher=request.user)
+    material = get_object_or_404(
+        TextbookMaterial,
+        id=pk,
+        teacher=request.user,
+        source_type=TextbookMaterial.SOURCE_PDF,
+    )
     active_session = material.live_sessions.filter(
         status__in=[TextbookLiveSession.STATUS_DRAFT, TextbookLiveSession.STATUS_LIVE]
     ).order_by("-created_at").first()
@@ -115,7 +112,12 @@ def material_detail(request, pk):
 @login_required
 @require_POST
 def toggle_material_publish(request, material_id):
-    material = get_object_or_404(TextbookMaterial, id=material_id, teacher=request.user)
+    material = get_object_or_404(
+        TextbookMaterial,
+        id=material_id,
+        teacher=request.user,
+        source_type=TextbookMaterial.SOURCE_PDF,
+    )
     action = request.POST.get("action", "toggle")
     if action == "publish":
         material.is_published = True
@@ -130,8 +132,12 @@ def toggle_material_publish(request, material_id):
 
 @require_GET
 def material_pdf(request, material_id):
-    material = get_object_or_404(TextbookMaterial, id=material_id)
-    if not material.is_pdf or not material.pdf_file:
+    material = get_object_or_404(
+        TextbookMaterial,
+        id=material_id,
+        source_type=TextbookMaterial.SOURCE_PDF,
+    )
+    if not material.pdf_file:
         return HttpResponseBadRequest("PDF 자료가 아닙니다.")
     if not get_pdf_access(request, material):
         return HttpResponseForbidden("이 PDF에 접근할 권한이 없습니다.")
@@ -143,11 +149,12 @@ def material_pdf(request, material_id):
 @login_required
 @require_POST
 def start_live_session(request, material_id):
-    material = get_object_or_404(TextbookMaterial, id=material_id, teacher=request.user)
-    if material.source_type != TextbookMaterial.SOURCE_PDF:
-        messages.error(request, "라이브 수업은 PDF 자료에서만 시작할 수 있습니다.")
-        return redirect("textbooks:detail", pk=material.id)
-
+    material = get_object_or_404(
+        TextbookMaterial,
+        id=material_id,
+        teacher=request.user,
+        source_type=TextbookMaterial.SOURCE_PDF,
+    )
     session, created = get_or_create_teacher_session(material, request)
     if created and not material.is_published:
         material.is_published = True
@@ -159,7 +166,7 @@ def start_live_session(request, material_id):
 @login_required
 def teacher_session_view(request, session_id):
     session = get_object_or_404(TextbookLiveSession.objects.select_related("material"), id=session_id, teacher=request.user)
-    if session.material.source_type != TextbookMaterial.SOURCE_PDF:
+    if not session.material.is_pdf:
         raise Http404()
     touch_participant(
         session,
@@ -189,6 +196,8 @@ def teacher_session_view(request, session_id):
 @login_required
 def display_session_view(request, session_id):
     session = get_object_or_404(TextbookLiveSession.objects.select_related("material"), id=session_id, teacher=request.user)
+    if not session.material.is_pdf:
+        raise Http404()
     return render(
         request,
         "textbooks/live_display.html",
@@ -203,6 +212,8 @@ def display_session_view(request, session_id):
 
 def join_session_view(request, session_id):
     session = get_object_or_404(TextbookLiveSession.objects.select_related("material"), id=session_id)
+    if not session.material.is_pdf:
+        raise Http404()
     access = get_session_access(request, session)
     if session.status == TextbookLiveSession.STATUS_ENDED:
         return render(request, "textbooks/live_join.html", {"session": session, "ended": True})
@@ -233,7 +244,9 @@ def join_session_view(request, session_id):
 
 @require_POST
 def verify_join_code(request, session_id):
-    session = get_object_or_404(TextbookLiveSession, id=session_id)
+    session = get_object_or_404(TextbookLiveSession.objects.select_related("material"), id=session_id)
+    if not session.material.is_pdf:
+        raise Http404()
     submitted_code = (request.POST.get("join_code") or "").strip()
     display_name = (request.POST.get("display_name") or "학생").strip()[:80] or "학생"
 
@@ -267,6 +280,8 @@ def verify_join_code(request, session_id):
 @require_GET
 def bootstrap_session(request, session_id):
     session = get_object_or_404(TextbookLiveSession.objects.select_related("material", "teacher"), id=session_id)
+    if not session.material.is_pdf:
+        raise Http404()
     access = get_session_access(request, session)
     role = request.GET.get("role") or (access or {}).get("role")
     if not access and role != TextbookLiveParticipant.ROLE_DISPLAY:
@@ -284,7 +299,9 @@ def bootstrap_session(request, session_id):
 @login_required
 @require_POST
 def end_live_session(request, session_id):
-    session = get_object_or_404(TextbookLiveSession, id=session_id, teacher=request.user)
+    session = get_object_or_404(TextbookLiveSession.objects.select_related("material"), id=session_id, teacher=request.user)
+    if not session.material.is_pdf:
+        raise Http404()
     if session.status != TextbookLiveSession.STATUS_ENDED:
         session.status = TextbookLiveSession.STATUS_ENDED
         session.ended_at = timezone.now()

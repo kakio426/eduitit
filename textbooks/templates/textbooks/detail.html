@@ -19,7 +19,7 @@
     <div class="max-w-6xl mx-auto space-y-6">
         <div class="flex items-center justify-between gap-4 flex-wrap">
             <div>
-                <a href="{% url 'textbooks:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 자료실로 돌아가기</a>
+                <a href="{% url 'textbooks:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교과서 라이브 수업으로 돌아가기</a>
                 <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
                 <p class="text-slate-600 mt-2">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
             </div>
@@ -31,12 +31,10 @@
                         {% if material.is_published %}학생 공개 끄기{% else %}학생 공개 켜기{% endif %}
                     </button>
                 </form>
-                {% if material.source_type == 'pdf' %}
                 <form method="post" action="{% url 'textbooks:start_live' material.id %}">
                     {% csrf_token %}
                     <button class="rounded-2xl px-5 py-3 font-black bg-slate-900 text-white">{% if active_session and active_session.status != 'ended' %}라이브 수업 재개{% else %}라이브 수업 시작{% endif %}</button>
                 </form>
-                {% endif %}
             </div>
         </div>
 
@@ -45,14 +43,13 @@
                 <div class="flex items-center justify-between gap-4 flex-wrap mb-6">
                     <div>
                         <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">자료 정보</div>
-                        <h2 class="text-2xl font-black text-slate-900 mt-2">{% if material.source_type == 'pdf' %}PDF 교과서 자료{% else %}텍스트 자료{% endif %}</h2>
+                        <h2 class="text-2xl font-black text-slate-900 mt-2">PDF 교과서 자료</h2>
                     </div>
-                    <div class="rounded-full px-4 py-2 text-sm font-bold {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
-                        {{ material.get_source_type_display }}
+                    <div class="rounded-full px-4 py-2 text-sm font-bold bg-rose-100 text-rose-700">
+                        PDF
                     </div>
                 </div>
 
-                {% if material.source_type == 'pdf' %}
                 <div class="grid gap-4 md:grid-cols-3 mb-6">
                     <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
                         <div class="text-sm text-slate-500">페이지 수</div>
@@ -81,11 +78,6 @@
                         라이브 수업에서는 PDF.js로 현재 페이지를 렌더링하고, 그 위에 필기 오버레이가 동기화됩니다. 학생은 PDF 파일 직접 주소가 아니라 세션 검증을 통과한 뒤에만 같은 페이지를 볼 수 있습니다.
                     </div>
                 </div>
-                {% else %}
-                <div class="rounded-[28px] border border-slate-200 bg-white p-6 prose max-w-none">
-                    {{ material.content|linebreaks }}
-                </div>
-                {% endif %}
 
                 {% if material.content %}
                 <div class="mt-6 rounded-[28px] bg-slate-50 border border-slate-200 p-6">
@@ -119,7 +111,7 @@
                         </div>
                     </div>
                     {% else %}
-                    <p class="mt-4 text-slate-500 leading-7">아직 라이브 수업 세션이 없습니다. PDF 자료라면 위 버튼으로 수업을 시작하세요.</p>
+                    <p class="mt-4 text-slate-500 leading-7">아직 라이브 수업 세션이 없습니다. 위 버튼으로 수업을 시작하세요.</p>
                     {% endif %}
                 </div>
             </aside>

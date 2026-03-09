@@ -59,3 +59,14 @@ class BootstrapRuntimeCommandTests(SimpleTestCase):
                 call("recommend_sheetbook_thresholds", "--days", "14"),
             ]
         )
+
+    @patch.object(Command, "_create_cache_table_if_needed")
+    @patch.object(Command, "_check_sheetbook_rollout")
+    @patch.object(Command, "_run_optional_command")
+    @patch("core.management.commands.bootstrap_runtime.call_command")
+    def test_handle_runs_ensure_edu_materials(self, mocked_call_command, mocked_optional, mocked_rollout, mocked_cache):
+        command = Command()
+
+        command.handle()
+
+        self.assertIn(call("ensure_edu_materials"), mocked_call_command.call_args_list)

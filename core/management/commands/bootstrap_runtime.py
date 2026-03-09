@@ -45,6 +45,7 @@ class Command(BaseCommand):
             ("ensure_slidesmith", lambda: call_command("ensure_slidesmith")),
             ("ensure_blockclass", lambda: call_command("ensure_blockclass")),
             ("ensure_textbooks", lambda: call_command("ensure_textbooks")),
+            ("ensure_edu_materials", lambda: call_command("ensure_edu_materials")),
         ]
 
         for name, fn in steps:
@@ -96,3 +97,4 @@ class Command(BaseCommand):
     @staticmethod
     def _command_exists(command_name):
         return command_name in get_commands()
+
