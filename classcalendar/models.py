@@ -1,6 +1,6 @@
-from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db import models
 import uuid
 
 
@@ -24,11 +24,11 @@ class CalendarEvent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     classroom = models.ForeignKey(
-        'happy_seed.HSClassroom',
+        "happy_seed.HSClassroom",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='calendar_events'
+        related_name="calendar_events",
     )
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
@@ -41,7 +41,6 @@ class CalendarEvent(models.Model):
         default=VISIBILITY_TEACHER,
     )
 
-    # Reserved for source classification (currently local-only).
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_LOCAL)
     color = models.CharField(max_length=20, blank=True, null=True)
     integration_source = models.CharField(max_length=40, blank=True, default="")
@@ -124,16 +123,75 @@ class CalendarCollaborator(models.Model):
 
 
 class EventPageBlock(models.Model):
-    event = models.ForeignKey(CalendarEvent, on_delete=models.CASCADE, related_name='blocks')
-    block_type = models.CharField(max_length=20)  # 'text', 'checklist', 'link', 'file'
+    event = models.ForeignKey(CalendarEvent, on_delete=models.CASCADE, related_name="blocks")
+    block_type = models.CharField(max_length=20)
     content = models.JSONField(default=dict)
     order = models.IntegerField(default=0)
 
     class Meta:
-        ordering = ['order']
+        ordering = ["order"]
 
     def __str__(self):
         return f"{self.event.title} - {self.block_type} block"
+
+
+class CalendarTask(models.Model):
+    class Priority(models.TextChoices):
+        LOW = "low", "Low"
+        NORMAL = "normal", "Normal"
+        HIGH = "high", "High"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        DONE = "done", "Done"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    note = models.TextField(blank=True, default="")
+    classroom = models.ForeignKey(
+        "happy_seed.HSClassroom",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="calendar_tasks",
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="calendar_tasks",
+    )
+    due_at = models.DateTimeField(null=True, blank=True)
+    has_time = models.BooleanField(default=False)
+    priority = models.CharField(
+        max_length=10,
+        choices=Priority.choices,
+        default=Priority.NORMAL,
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.OPEN,
+    )
+    integration_source = models.CharField(max_length=40, blank=True, default="")
+    integration_key = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["due_at", "created_at", "id"]
+        indexes = [
+            models.Index(fields=["author", "due_at"]),
+            models.Index(fields=["author", "status", "due_at"]),
+            models.Index(fields=["classroom", "due_at"]),
+            models.Index(fields=["author", "integration_source"]),
+            models.Index(fields=["author", "integration_source", "integration_key"]),
+        ]
+
+    def __str__(self):
+        if self.due_at:
+            return f"{self.title} ({self.due_at.date()})"
+        return self.title
 
 
 class CalendarMessageCapture(models.Model):
@@ -146,6 +204,22 @@ class CalendarMessageCapture(models.Model):
         LOW = "low", "Low"
         NORMAL = "normal", "Normal"
         HIGH = "high", "High"
+
+    class ItemType(models.TextChoices):
+        EVENT = "event", "Event"
+        TASK = "task", "Task"
+        IGNORE = "ignore", "Ignore"
+        UNKNOWN = "unknown", "Unknown"
+
+    class ConfirmedItemType(models.TextChoices):
+        EVENT = "event", "Event"
+        TASK = "task", "Task"
+        MANUAL_SKIP = "manual_skip", "Manual Skip"
+
+    class DecisionSource(models.TextChoices):
+        RULE = "rule", "Rule"
+        RULE_ML = "rule_ml", "Rule + ML"
+        MANUAL = "manual", "Manual"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(
@@ -162,6 +236,22 @@ class CalendarMessageCapture(models.Model):
         default=ParseStatus.NEEDS_REVIEW,
     )
     confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    predicted_item_type = models.CharField(
+        max_length=20,
+        choices=ItemType.choices,
+        default=ItemType.UNKNOWN,
+    )
+    confirmed_item_type = models.CharField(
+        max_length=20,
+        choices=ConfirmedItemType.choices,
+        blank=True,
+        default="",
+    )
+    decision_source = models.CharField(
+        max_length=20,
+        choices=DecisionSource.choices,
+        default=DecisionSource.RULE,
+    )
     extracted_title = models.CharField(max_length=200, blank=True, default="")
     extracted_start_time = models.DateTimeField(null=True, blank=True)
     extracted_end_time = models.DateTimeField(null=True, blank=True)
@@ -174,9 +264,22 @@ class CalendarMessageCapture(models.Model):
     )
     extracted_todo_summary = models.TextField(blank=True, default="")
     parse_payload = models.JSONField(default=dict, blank=True)
+    initial_extract_payload = models.JSONField(default=dict, blank=True)
+    final_commit_payload = models.JSONField(default=dict, blank=True)
+    edit_diff_payload = models.JSONField(default=dict, blank=True)
+    rule_version = models.CharField(max_length=30, blank=True, default="")
+    ml_scores = models.JSONField(default=dict, blank=True)
+    llm_used = models.BooleanField(default=False)
     idempotency_key = models.CharField(max_length=64, default=_default_idempotency_key)
     committed_event = models.ForeignKey(
         CalendarEvent,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="message_captures",
+    )
+    committed_task = models.ForeignKey(
+        CalendarTask,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -191,6 +294,7 @@ class CalendarMessageCapture(models.Model):
         indexes = [
             models.Index(fields=["author", "created_at"]),
             models.Index(fields=["author", "parse_status", "created_at"]),
+            models.Index(fields=["author", "predicted_item_type", "created_at"]),
         ]
         constraints = [
             models.UniqueConstraint(

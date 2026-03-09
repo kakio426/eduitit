@@ -5,7 +5,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from classcalendar.models import CalendarCollaborator, CalendarEvent
+from classcalendar.models import CalendarCollaborator, CalendarEvent, CalendarTask
 from core.models import UserProfile
 
 User = get_user_model()
@@ -148,6 +148,20 @@ class CalendarCollaborationTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 404)
+
+
+    def test_collaborator_does_not_see_owner_tasks(self):
+        CalendarTask.objects.create(
+            title="개인 할 일",
+            author=self.owner,
+            due_at=timezone.now() + timedelta(days=1),
+            has_time=False,
+            priority=CalendarTask.Priority.NORMAL,
+        )
+        response = self.editor_client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        task_titles = [item.get("title") for item in response.json().get("tasks", [])]
+        self.assertNotIn("개인 할 일", task_titles)
 
     def test_owner_can_add_collaborator_by_email(self):
         response = self.owner_client.post(

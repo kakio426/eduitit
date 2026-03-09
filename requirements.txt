@@ -55,6 +55,7 @@ pytz>=2024.1
 # HTMX
 django-htmx==1.19.0
 qrcode>=8.0
+scikit-learn>=1.5,<2.0
 
 # Error Tracking
 sentry-sdk>=2.0.0

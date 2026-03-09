@@ -531,6 +531,24 @@ FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS = _rollout_env_csv(
     'FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS',
     aliases=('feature_message_capture_allowlist_user_ids',),
 )
+FEATURE_MESSAGE_CAPTURE_ITEM_TYPES = _rollout_env_bool(
+    'FEATURE_MESSAGE_CAPTURE_ITEM_TYPES',
+    default='False',
+    aliases=('feature_message_capture_item_types',),
+)
+FEATURE_MESSAGE_CAPTURE_CLASSIFIER_SHADOW = _rollout_env_bool(
+    'FEATURE_MESSAGE_CAPTURE_CLASSIFIER_SHADOW',
+    default='False',
+    aliases=('feature_message_capture_classifier_shadow',),
+)
+FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST = _rollout_env_bool(
+    'FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST',
+    default='False',
+    aliases=('feature_message_capture_classifier_assist',),
+)
+FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
+    _rollout_env('FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD', default='0.80', aliases=('feature_message_capture_classifier_assist_threshold',))
+)
 ONBOARDING_EXEMPT_PATH_PREFIXES = []
 if TESTING:
     ONBOARDING_EXEMPT_PATH_PREFIXES.append('/autoarticle/')

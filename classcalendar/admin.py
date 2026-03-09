@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import CalendarCollaborator, CalendarEvent, CalendarIntegrationSetting, EventPageBlock
+from .models import (
+    CalendarCollaborator,
+    CalendarEvent,
+    CalendarIntegrationSetting,
+    CalendarTask,
+    EventPageBlock,
+)
 
 
 @admin.register(CalendarEvent)
@@ -19,6 +25,22 @@ class CalendarEventAdmin(admin.ModelAdmin):
     list_filter = ("source", "integration_source", "is_locked", "visibility", "is_all_day")
     search_fields = ("title", "author__username", "classroom__name")
     ordering = ("-start_time",)
+
+
+@admin.register(CalendarTask)
+class CalendarTaskAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "author",
+        "classroom",
+        "due_at",
+        "has_time",
+        "priority",
+        "status",
+    )
+    list_filter = ("priority", "status", "has_time")
+    search_fields = ("title", "author__username", "classroom__name", "note")
+    ordering = ("due_at", "-created_at")
 
 
 @admin.register(EventPageBlock)

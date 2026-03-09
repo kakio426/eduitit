@@ -36,6 +36,10 @@ from .integrations import (
     sync_user_calendar_integrations,
 )
 from .message_capture import parse_message_capture_draft
+from .message_capture_classifier import (
+    DEFAULT_ASSIST_THRESHOLD,
+    predict_item_type as predict_message_capture_item_type,
+)
 from .models import (
     CalendarCollaborator,
     CalendarEvent,
@@ -43,6 +47,7 @@ from .models import (
     CalendarIntegrationSetting,
     CalendarMessageCapture,
     CalendarMessageCaptureAttachment,
+    CalendarTask,
     EventPageBlock,
 )
 
@@ -95,6 +100,10 @@ MESSAGE_CAPTURE_ALLOWED_MIME_TYPES = {
 }
 MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES = (
     "image/",
+)
+MESSAGE_CAPTURE_RULE_VERSION = "mvp-v2"
+MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
+    getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD", DEFAULT_ASSIST_THRESHOLD)
 )
 
 
@@ -187,12 +196,221 @@ def _is_message_capture_enabled_for_user(user):
     return False
 
 
+def _is_message_capture_item_types_enabled_for_user(user):
+    return _is_message_capture_enabled_for_user(user) and bool(
+        getattr(settings, "FEATURE_MESSAGE_CAPTURE_ITEM_TYPES", False)
+    )
+
+
+
+def _is_message_capture_classifier_shadow_enabled_for_user(user):
+    return _is_message_capture_item_types_enabled_for_user(user) and bool(
+        getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_SHADOW", False)
+    )
+
+
+
+def _is_message_capture_classifier_assist_enabled_for_user(user):
+    return _is_message_capture_item_types_enabled_for_user(user) and bool(
+        getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST", False)
+    )
+
+
+
 def _build_message_capture_limits_payload():
     return {
         "max_files": MESSAGE_CAPTURE_MAX_FILES,
         "max_file_bytes": MESSAGE_CAPTURE_MAX_FILE_BYTES,
         "allowed_extensions": sorted(MESSAGE_CAPTURE_ALLOWED_EXTENSIONS),
     }
+
+
+def _serialize_temporal_value(value):
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+
+def _serialize_json_safe(value):
+    if isinstance(value, dict):
+        return {str(key): _serialize_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_serialize_json_safe(item) for item in value]
+    return _serialize_temporal_value(value)
+
+
+
+def _build_message_capture_initial_extract_payload(parsed):
+    return {
+        "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
+        "predicted_item_type": parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN,
+        "confidence_label": parsed.get("confidence_label") or "low",
+        "warnings": list(parsed.get("warnings") or []),
+        "evidence": parsed.get("evidence") or {},
+        "deadline_only": bool(parsed.get("deadline_only")),
+        "location": parsed.get("location") or "",
+        "materials": parsed.get("materials") or "",
+        "audience": parsed.get("audience") or "",
+        "category": parsed.get("category") or "",
+        "recurrence_hint": parsed.get("recurrence_hint") or "",
+        "draft_event": {
+            "title": (parsed.get("extracted_title") or "메시지에서 만든 일정")[:200],
+            "start_time": _serialize_temporal_value(parsed.get("extracted_start_time")),
+            "end_time": _serialize_temporal_value(parsed.get("extracted_end_time")),
+            "is_all_day": bool(parsed.get("extracted_is_all_day")),
+            "todo_summary": parsed.get("extracted_todo_summary") or "",
+            "priority": parsed.get("extracted_priority") or CalendarMessageCapture.Priority.NORMAL,
+            "parse_evidence": parsed.get("evidence") or {},
+        },
+        "draft_task": {
+            "title": (parsed.get("extracted_title") or "메시지에서 만든 할 일")[:200],
+            "due_at": _serialize_temporal_value(parsed.get("task_due_at")),
+            "has_time": bool(parsed.get("task_has_time")),
+            "note": parsed.get("task_note") or parsed.get("extracted_todo_summary") or "",
+            "priority": parsed.get("extracted_priority") or CalendarTask.Priority.NORMAL,
+            "parse_evidence": parsed.get("evidence") or {},
+        },
+    }
+
+
+
+def _build_message_capture_final_payload(cleaned_data, *, selected_attachment_ids=None, source_context=None):
+    item_type = cleaned_data.get("confirmed_item_type") or CalendarMessageCapture.ItemType.EVENT
+    payload = {
+        "item_type": item_type,
+        "title": cleaned_data.get("title") or "",
+        "selected_attachment_ids": list(selected_attachment_ids or []),
+    }
+    if source_context:
+        payload["source_sheetbook_id"] = source_context.get("sheetbook_id")
+        payload["source_tab_id"] = source_context.get("tab_id")
+
+    if item_type == CalendarMessageCapture.ItemType.TASK:
+        payload.update(
+            {
+                "note": cleaned_data.get("note") or "",
+                "due_at": _serialize_temporal_value(cleaned_data.get("due_at")),
+                "has_time": bool(cleaned_data.get("has_time", False)),
+                "priority": cleaned_data.get("priority") or CalendarTask.Priority.NORMAL,
+            }
+        )
+        return payload
+
+    payload.update(
+        {
+            "todo_summary": cleaned_data.get("todo_summary") or "",
+            "start_time": _serialize_temporal_value(cleaned_data.get("start_time")),
+            "end_time": _serialize_temporal_value(cleaned_data.get("end_time")),
+            "is_all_day": bool(cleaned_data.get("is_all_day", False)),
+            "color": cleaned_data.get("color") or "indigo",
+        }
+    )
+    return payload
+
+
+
+def _build_message_capture_edit_diff(capture, final_payload):
+    initial_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
+    initial_item_type = initial_payload.get("predicted_item_type") or capture.predicted_item_type or CalendarMessageCapture.ItemType.UNKNOWN
+    final_item_type = final_payload.get("item_type") or CalendarMessageCapture.ItemType.EVENT
+    field_changes = {}
+
+    def record(field_name, initial_value, final_value):
+        changed = _serialize_json_safe(initial_value) != _serialize_json_safe(final_value)
+        field_changes[field_name] = {
+            "initial": _serialize_json_safe(initial_value),
+            "final": _serialize_json_safe(final_value),
+            "changed": changed,
+        }
+
+    record("item_type", initial_item_type, final_item_type)
+    if final_item_type == CalendarMessageCapture.ItemType.TASK:
+        initial_task = initial_payload.get("draft_task") or {}
+        record("title", initial_task.get("title") or capture.extracted_title, final_payload.get("title") or "")
+        record("due_at", initial_task.get("due_at") or "", final_payload.get("due_at") or "")
+        record("has_time", bool(initial_task.get("has_time")), bool(final_payload.get("has_time")))
+        record("note", initial_task.get("note") or "", final_payload.get("note") or "")
+        record("priority", initial_task.get("priority") or CalendarTask.Priority.NORMAL, final_payload.get("priority") or CalendarTask.Priority.NORMAL)
+    else:
+        initial_event = initial_payload.get("draft_event") or {}
+        record("title", initial_event.get("title") or capture.extracted_title, final_payload.get("title") or "")
+        record("start_time", initial_event.get("start_time") or _serialize_temporal_value(capture.extracted_start_time), final_payload.get("start_time") or "")
+        record("end_time", initial_event.get("end_time") or _serialize_temporal_value(capture.extracted_end_time), final_payload.get("end_time") or "")
+        record("is_all_day", bool(initial_event.get("is_all_day", capture.extracted_is_all_day)), bool(final_payload.get("is_all_day")))
+        record("todo_summary", initial_event.get("todo_summary") or capture.extracted_todo_summary or "", final_payload.get("todo_summary") or "")
+        record("color", initial_event.get("color") or "indigo", final_payload.get("color") or "indigo")
+
+    changed_fields = [name for name, value in field_changes.items() if value.get("changed")]
+    return {
+        "changed_fields": changed_fields,
+        "field_changes": field_changes,
+    }
+
+
+
+def _count_message_capture_manual_edits_from_diff(diff_payload):
+    if not isinstance(diff_payload, dict):
+        return 0
+    return len(diff_payload.get("changed_fields") or [])
+
+
+
+def _extract_attachment_extensions(uploaded_files):
+    extensions = []
+    for uploaded_file in uploaded_files or []:
+        extension = _extract_upload_extension(uploaded_file)
+        if extension:
+            extensions.append(extension)
+    return sorted(set(extensions))
+
+
+
+def _run_message_capture_classifier(*, user, raw_text, normalized_text, source_hint, uploaded_files, parsed):
+    shadow_enabled = _is_message_capture_classifier_shadow_enabled_for_user(user)
+    assist_enabled = _is_message_capture_classifier_assist_enabled_for_user(user)
+    if not shadow_enabled and not assist_enabled:
+        return None
+    try:
+        return predict_message_capture_item_type(
+            raw_text=raw_text,
+            normalized_text=normalized_text,
+            source_hint=source_hint,
+            attachment_extensions=_extract_attachment_extensions(uploaded_files),
+            parser_result=parsed,
+        )
+    except Exception:
+        logger.exception(
+            "[ClassCalendar][MessageCapture] classifier_failed user_id=%s",
+            getattr(user, "id", None),
+        )
+        return None
+
+
+
+def _build_message_capture_duplicate_payload(capture):
+    payload = {
+        "status": "error",
+        "code": "duplicate_request",
+        "message": "이미 저장이 완료된 메시지입니다.",
+    }
+    if capture.committed_event_id:
+        payload.update(
+            {
+                "item_type": CalendarMessageCapture.ItemType.EVENT,
+                "event_id": str(capture.committed_event_id),
+            }
+        )
+    elif capture.committed_task_id:
+        payload.update(
+            {
+                "item_type": CalendarMessageCapture.ItemType.TASK,
+                "task_id": str(capture.committed_task_id),
+            }
+        )
+    return payload
 
 
 def _serialize_message_capture_attachment(attachment):
@@ -207,12 +425,33 @@ def _serialize_message_capture_attachment(attachment):
 
 def _serialize_message_capture(capture, *, warnings=None, reused=False):
     parse_payload = capture.parse_payload if isinstance(capture.parse_payload, dict) else {}
-    warning_list = warnings if warnings is not None else parse_payload.get("warnings") or []
-    confidence_label = parse_payload.get("confidence_label") or "low"
+    extract_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
+    warning_list = warnings if warnings is not None else extract_payload.get("warnings") or parse_payload.get("warnings") or []
+    confidence_label = extract_payload.get("confidence_label") or parse_payload.get("confidence_label") or "low"
     needs_confirmation = (
         confidence_label == "low"
         or capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED
     )
+
+    draft_event = extract_payload.get("draft_event") or {
+        "title": capture.extracted_title or "메시지에서 만든 일정",
+        "start_time": capture.extracted_start_time.isoformat() if capture.extracted_start_time else "",
+        "end_time": capture.extracted_end_time.isoformat() if capture.extracted_end_time else "",
+        "is_all_day": bool(capture.extracted_is_all_day),
+        "todo_summary": capture.extracted_todo_summary or "",
+        "priority": capture.extracted_priority or "normal",
+        "parse_evidence": parse_payload.get("evidence") or {},
+    }
+    draft_task = extract_payload.get("draft_task") or {
+        "title": capture.extracted_title or "메시지에서 만든 할 일",
+        "due_at": capture.extracted_end_time.isoformat() if capture.extracted_end_time else "",
+        "has_time": False,
+        "note": capture.extracted_todo_summary or "",
+        "priority": capture.extracted_priority or CalendarTask.Priority.NORMAL,
+        "parse_evidence": parse_payload.get("evidence") or {},
+    }
+    draft_event["needs_confirmation"] = bool(draft_event.get("needs_confirmation") or needs_confirmation)
+    draft_task["needs_confirmation"] = bool(draft_task.get("needs_confirmation") or needs_confirmation)
 
     return {
         "status": "success",
@@ -220,22 +459,16 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
         "parse_status": capture.parse_status,
         "confidence_score": float(capture.confidence_score or 0),
         "confidence_label": confidence_label,
-        "draft_event": {
-            "title": capture.extracted_title or "메시지에서 만든 일정",
-            "start_time": capture.extracted_start_time.isoformat() if capture.extracted_start_time else "",
-            "end_time": capture.extracted_end_time.isoformat() if capture.extracted_end_time else "",
-            "is_all_day": bool(capture.extracted_is_all_day),
-            "todo_summary": capture.extracted_todo_summary or "",
-            "priority": capture.extracted_priority or "normal",
-            "needs_confirmation": needs_confirmation,
-            "parse_evidence": parse_payload.get("evidence") or {},
-        },
+        "predicted_item_type": extract_payload.get("predicted_item_type") or capture.predicted_item_type or CalendarMessageCapture.ItemType.UNKNOWN,
+        "draft_event": draft_event,
+        "draft_task": draft_task,
         "attachments": [
             _serialize_message_capture_attachment(attachment)
             for attachment in capture.attachments.all().order_by("created_at", "id")
         ],
         "warnings": warning_list,
         "reused": bool(reused),
+        "ml_scores": capture.ml_scores if isinstance(capture.ml_scores, dict) else {},
     }
 
 
@@ -562,6 +795,7 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
     attachments = list(event.attachments.all())
     attachments.sort(key=lambda attachment: (attachment.sort_order, attachment.id))
     return {
+        "item_type": CalendarMessageCapture.ItemType.EVENT,
         "id": str(event.id),
         "title": event.title,
         "note": _extract_primary_note(event),
@@ -589,6 +823,30 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
             _serialize_event_attachment(attachment)
             for attachment in attachments
         ],
+    }
+
+
+
+def _serialize_task(task, *, current_user_id):
+    return {
+        "item_type": CalendarMessageCapture.ItemType.TASK,
+        "id": str(task.id),
+        "title": task.title,
+        "note": task.note or "",
+        "due_at": task.due_at.isoformat() if task.due_at else "",
+        "has_time": bool(task.has_time),
+        "priority": task.priority or CalendarTask.Priority.NORMAL,
+        "status": task.status or CalendarTask.Status.OPEN,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else "",
+        "integration_source": task.integration_source or "",
+        "source_url": "",
+        "source_label": "",
+        "is_locked": False,
+        "calendar_owner_id": str(task.author_id),
+        "calendar_owner_name": _display_user_name(task.author),
+        "is_shared_calendar": False,
+        "can_edit": task.author_id == current_user_id,
+        "attachments": [],
     }
 
 
@@ -705,6 +963,15 @@ def _get_teacher_visible_events(request, visible_owner_ids):
         .prefetch_related("blocks", "attachments")
         .distinct()
         .order_by("start_time", "id")
+    )
+
+
+
+def _get_teacher_visible_tasks(request):
+    return (
+        CalendarTask.objects.filter(author=request.user)
+        .select_related("author", "classroom")
+        .order_by("due_at", "created_at", "id")
     )
 
 
@@ -1030,6 +1297,10 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
             )
             for event in _get_teacher_visible_events(request, visible_owner_ids)
         ],
+        "tasks_json": [
+            _serialize_task(task, current_user_id=request.user.id)
+            for task in _get_teacher_visible_tasks(request)
+        ],
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
         "share_enabled": bool(integration_setting.share_enabled),
@@ -1039,6 +1310,7 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
         "incoming_calendars": incoming_calendars,
         "show_retention_notice_banner": integration_setting.retention_notice_banner_dismissed_at is None,
         "message_capture_enabled": _is_message_capture_enabled_for_user(request.user),
+        "message_capture_item_types_enabled": _is_message_capture_item_types_enabled_for_user(request.user),
         "message_capture_limits_json": _build_message_capture_limits_payload(),
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
@@ -1190,7 +1462,11 @@ def api_events(request):
         )
         for event in _get_teacher_visible_events(request, visible_owner_ids)
     ]
-    return JsonResponse({"status": "success", "events": events_data})
+    tasks_data = [
+        _serialize_task(task, current_user_id=request.user.id)
+        for task in _get_teacher_visible_tasks(request)
+    ]
+    return JsonResponse({"status": "success", "events": events_data, "tasks": tasks_data})
 
 
 @login_required
@@ -1483,11 +1759,39 @@ def api_message_capture_parse(request):
         now=timezone.now(),
         has_files=bool(uploaded_files),
     )
+    item_types_enabled = _is_message_capture_item_types_enabled_for_user(request.user)
+    predicted_item_type = parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN
+    if not item_types_enabled:
+        predicted_item_type = CalendarMessageCapture.ItemType.EVENT
+
+    classifier_result = _run_message_capture_classifier(
+        user=request.user,
+        raw_text=raw_text,
+        normalized_text=parsed.get("normalized_text") or raw_text,
+        source_hint=source_hint,
+        uploaded_files=uploaded_files,
+        parsed=parsed,
+    )
+    decision_source = CalendarMessageCapture.DecisionSource.RULE
+    ml_scores = classifier_result.get("scores") if classifier_result else {}
+    if (
+        item_types_enabled
+        and classifier_result
+        and _is_message_capture_classifier_assist_enabled_for_user(request.user)
+        and float(classifier_result.get("confidence") or 0.0) >= MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD
+    ):
+        predicted_item_type = classifier_result.get("label") or predicted_item_type
+        decision_source = CalendarMessageCapture.DecisionSource.RULE_ML
+
+    parsed["predicted_item_type"] = predicted_item_type
+    initial_extract_payload = _build_message_capture_initial_extract_payload(parsed)
     parse_payload = {
-        "parser_version": "mvp-v1",
+        "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
         "confidence_label": parsed["confidence_label"],
         "warnings": parsed["warnings"],
         "evidence": parsed["evidence"],
+        "predicted_item_type": predicted_item_type,
+        "classifier": classifier_result or {},
     }
 
     with transaction.atomic():
@@ -1499,6 +1803,8 @@ def api_message_capture_parse(request):
                 source_hint=source_hint,
                 parse_status=parsed["parse_status"],
                 confidence_score=parsed["confidence_score"],
+                predicted_item_type=predicted_item_type,
+                decision_source=decision_source,
                 extracted_title=(parsed["extracted_title"] or "")[:200],
                 extracted_start_time=parsed["extracted_start_time"],
                 extracted_end_time=parsed["extracted_end_time"],
@@ -1506,6 +1812,9 @@ def api_message_capture_parse(request):
                 extracted_priority=parsed["extracted_priority"] or CalendarMessageCapture.Priority.NORMAL,
                 extracted_todo_summary=parsed["extracted_todo_summary"] or "",
                 parse_payload=parse_payload,
+                initial_extract_payload=initial_extract_payload,
+                rule_version=MESSAGE_CAPTURE_RULE_VERSION,
+                ml_scores=ml_scores or {},
                 idempotency_key=idempotency_key,
             )
         except IntegrityError:
@@ -1534,11 +1843,12 @@ def api_message_capture_parse(request):
     capture = CalendarMessageCapture.objects.prefetch_related("attachments").get(id=capture.id)
     parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
     logger.info(
-        "[ClassCalendar][MessageCapture] parse_result user_id=%s capture_id=%s parse_status=%s confidence=%.2f files=%s warnings=%s elapsed_ms=%s",
+        "[ClassCalendar][MessageCapture] parse_result user_id=%s capture_id=%s parse_status=%s confidence=%.2f predicted_item_type=%s files=%s warnings=%s elapsed_ms=%s",
         request.user.id,
         capture.id,
         capture.parse_status,
         float(capture.confidence_score or 0),
+        capture.predicted_item_type,
         capture.attachments.count(),
         len((capture.parse_payload or {}).get("warnings") or []),
         parse_elapsed_ms,
@@ -1572,26 +1882,18 @@ def api_message_capture_commit(request, capture_id):
         )
 
     capture = get_object_or_404(
-        CalendarMessageCapture.objects.select_related("author", "committed_event").prefetch_related("attachments"),
+        CalendarMessageCapture.objects.select_related("author", "committed_event", "committed_task").prefetch_related("attachments"),
         id=capture_id,
         author=request.user,
     )
 
-    if capture.committed_event_id:
+    if capture.committed_event_id or capture.committed_task_id:
         logger.warning(
             "[ClassCalendar][MessageCapture] commit_failed user_id=%s capture_id=%s reason=duplicate",
             request.user.id,
             capture.id,
         )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "duplicate_request",
-                "message": "이미 저장이 완료된 메시지입니다.",
-                "event_id": str(capture.committed_event_id),
-            },
-            status=409,
-        )
+        return JsonResponse(_build_message_capture_duplicate_payload(capture), status=409)
 
     confidence_label = ""
     if isinstance(capture.parse_payload, dict):
@@ -1612,6 +1914,21 @@ def api_message_capture_commit(request, capture_id):
             status=422,
         )
 
+    item_types_enabled = _is_message_capture_item_types_enabled_for_user(request.user)
+    confirmed_item_type = form.cleaned_data.get("confirmed_item_type") or CalendarMessageCapture.ItemType.EVENT
+    if not item_types_enabled:
+        confirmed_item_type = CalendarMessageCapture.ItemType.EVENT
+    if confirmed_item_type == CalendarMessageCapture.ItemType.IGNORE:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "message": "무시 항목은 저장할 수 없습니다.",
+            },
+            status=400,
+        )
+    form.cleaned_data["confirmed_item_type"] = confirmed_item_type
+
     selected_attachment_ids = set(_extract_selected_attachment_ids(payload))
     capture_attachments = list(capture.attachments.all().order_by("created_at", "id"))
     if selected_attachment_ids:
@@ -1631,97 +1948,143 @@ def api_message_capture_commit(request, capture_id):
         attachment.save(update_fields=["is_selected"])
 
     _, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
-    manual_edit_count = 0
     selected_attachment_count = len(capture_attachments)
     attachment_warnings = []
     processing_ms = 0
+    manual_edit_count = 0
+
     with transaction.atomic():
         capture_for_update = CalendarMessageCapture.objects.select_for_update().get(id=capture.id, author=request.user)
-        if capture_for_update.committed_event_id:
+        if capture_for_update.committed_event_id or capture_for_update.committed_task_id:
             logger.warning(
                 "[ClassCalendar][MessageCapture] commit_failed user_id=%s capture_id=%s reason=duplicate_locked",
                 request.user.id,
                 capture_for_update.id,
             )
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "code": "duplicate_request",
-                    "message": "이미 저장이 완료된 메시지입니다.",
-                    "event_id": str(capture_for_update.committed_event_id),
-                },
-                status=409,
-            )
-        manual_edit_count = _count_message_capture_manual_edits(capture_for_update, form.cleaned_data)
-        processing_ms = int((timezone.now() - capture_for_update.created_at).total_seconds() * 1000)
+            return JsonResponse(_build_message_capture_duplicate_payload(capture_for_update), status=409)
 
+        processing_ms = int((timezone.now() - capture_for_update.created_at).total_seconds() * 1000)
         classroom = _get_active_classroom_for_user(request)
         source_context = _resolve_sheetbook_context(
             request.user,
             payload.get("source_sheetbook_id"),
             payload.get("source_tab_id"),
         )
-        create_kwargs = {
-            "title": form.cleaned_data["title"],
-            "start_time": form.cleaned_data["start_time"],
-            "end_time": form.cleaned_data["end_time"],
-            "is_all_day": form.cleaned_data.get("is_all_day", False),
-            "color": form.cleaned_data.get("color") or "indigo",
-            "visibility": CalendarEvent.VISIBILITY_TEACHER,
-            "author": request.user,
-            "classroom": classroom,
-            "source": CalendarEvent.SOURCE_LOCAL,
-        }
-        if source_context:
-            create_kwargs["integration_source"] = "sheetbook_message_capture"
-            create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
-        event = CalendarEvent.objects.create(**create_kwargs)
-        _persist_primary_note(event, form.cleaned_data.get("todo_summary", ""))
-        copied_attachments, attachment_warnings = _copy_capture_attachments_to_event(
-            event,
-            capture_attachments,
-            uploaded_by=request.user,
+        final_payload = _build_message_capture_final_payload(
+            form.cleaned_data,
+            selected_attachment_ids=[str(attachment.id) for attachment in capture_attachments],
+            source_context=source_context,
         )
+        edit_diff_payload = _build_message_capture_edit_diff(capture_for_update, final_payload)
+        manual_edit_count = _count_message_capture_manual_edits_from_diff(edit_diff_payload)
+        decision_source = capture_for_update.decision_source
+        if manual_edit_count > 0 or confirmed_item_type != capture_for_update.predicted_item_type:
+            decision_source = CalendarMessageCapture.DecisionSource.MANUAL
+
+        event = None
+        task = None
+        copied_attachments = []
+        if confirmed_item_type == CalendarMessageCapture.ItemType.EVENT:
+            create_kwargs = {
+                "title": form.cleaned_data["title"],
+                "start_time": form.cleaned_data["start_time"],
+                "end_time": form.cleaned_data["end_time"],
+                "is_all_day": form.cleaned_data.get("is_all_day", False),
+                "color": form.cleaned_data.get("color") or "indigo",
+                "visibility": CalendarEvent.VISIBILITY_TEACHER,
+                "author": request.user,
+                "classroom": classroom,
+                "source": CalendarEvent.SOURCE_LOCAL,
+            }
+            if source_context:
+                create_kwargs["integration_source"] = "sheetbook_message_capture"
+                create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
+            event = CalendarEvent.objects.create(**create_kwargs)
+            _persist_primary_note(event, form.cleaned_data.get("todo_summary", ""))
+            copied_attachments, attachment_warnings = _copy_capture_attachments_to_event(
+                event,
+                capture_attachments,
+                uploaded_by=request.user,
+            )
+        else:
+            task_kwargs = {
+                "title": form.cleaned_data["title"],
+                "note": form.cleaned_data.get("note") or "",
+                "author": request.user,
+                "classroom": classroom,
+                "due_at": form.cleaned_data.get("due_at"),
+                "has_time": bool(form.cleaned_data.get("has_time", False)),
+                "priority": form.cleaned_data.get("priority") or CalendarTask.Priority.NORMAL,
+                "status": CalendarTask.Status.OPEN,
+            }
+            if source_context:
+                task_kwargs["integration_source"] = "sheetbook_message_capture"
+                task_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
+            task = CalendarTask.objects.create(**task_kwargs)
+            if capture_attachments:
+                attachment_warnings.append("첨부파일은 할 일에 저장되지 않아 제외했습니다.")
 
         capture_for_update.committed_event = event
+        capture_for_update.committed_task = task
         capture_for_update.committed_at = timezone.now()
-        capture_for_update.extracted_title = form.cleaned_data["title"]
-        capture_for_update.extracted_start_time = form.cleaned_data["start_time"]
-        capture_for_update.extracted_end_time = form.cleaned_data["end_time"]
-        capture_for_update.extracted_is_all_day = form.cleaned_data.get("is_all_day", False)
-        capture_for_update.extracted_todo_summary = form.cleaned_data.get("todo_summary", "")
+        capture_for_update.confirmed_item_type = (
+            CalendarMessageCapture.ConfirmedItemType.EVENT
+            if confirmed_item_type == CalendarMessageCapture.ItemType.EVENT
+            else CalendarMessageCapture.ConfirmedItemType.TASK
+        )
+        capture_for_update.decision_source = decision_source
+        capture_for_update.final_commit_payload = final_payload
+        capture_for_update.edit_diff_payload = edit_diff_payload
         capture_for_update.parse_status = CalendarMessageCapture.ParseStatus.PARSED
         capture_for_update.save(
             update_fields=[
                 "committed_event",
+                "committed_task",
                 "committed_at",
-                "extracted_title",
-                "extracted_start_time",
-                "extracted_end_time",
-                "extracted_is_all_day",
-                "extracted_todo_summary",
+                "confirmed_item_type",
+                "decision_source",
+                "final_commit_payload",
+                "edit_diff_payload",
                 "parse_status",
                 "updated_at",
             ]
         )
 
-    event = CalendarEvent.objects.select_related("author").prefetch_related("blocks").get(id=event.id)
     commit_elapsed_ms = int((timezone.now() - commit_started_at).total_seconds() * 1000)
     logger.info(
-        "[ClassCalendar][MessageCapture] commit_result user_id=%s capture_id=%s event_id=%s manual_edits=%s manual_edit_rate=%.2f selected_attachments=%s attachment_warnings=%s processing_ms=%s elapsed_ms=%s",
+        "[ClassCalendar][MessageCapture] commit_result user_id=%s capture_id=%s item_type=%s manual_edits=%s selected_attachments=%s attachment_warnings=%s processing_ms=%s elapsed_ms=%s",
         request.user.id,
         capture.id,
-        event.id,
+        confirmed_item_type,
         manual_edit_count,
-        (manual_edit_count / 5.0),
         selected_attachment_count,
         len(attachment_warnings),
         processing_ms,
         commit_elapsed_ms,
     )
+
+    if confirmed_item_type == CalendarMessageCapture.ItemType.TASK:
+        task = CalendarTask.objects.select_related("author", "classroom").get(id=task.id)
+        return JsonResponse(
+            {
+                "status": "success",
+                "item_type": CalendarMessageCapture.ItemType.TASK,
+                "task": _serialize_task(task, current_user_id=request.user.id),
+                "attachments": [],
+                "warnings": attachment_warnings,
+                "sheetbook_sync": {
+                    "status": "not_applicable",
+                    "enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+                },
+            },
+            status=201,
+        )
+
+    event = CalendarEvent.objects.select_related("author").prefetch_related("blocks", "attachments").get(id=event.id)
     return JsonResponse(
         {
             "status": "success",
+            "item_type": CalendarMessageCapture.ItemType.EVENT,
             "event": _serialize_event(
                 event,
                 current_user_id=request.user.id,

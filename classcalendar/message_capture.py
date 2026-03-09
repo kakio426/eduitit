@@ -25,6 +25,10 @@ TIME_SINGLE_COLON_PATTERN = re.compile(
 TIME_SINGLE_HOUR_PATTERN = re.compile(
     r"(?P<meridiem>오전|오후)?\s*(?P<hour>\d{1,2})\s*시(?:\s*(?P<minute>\d{1,2})\s*분?)?"
 )
+MATERIALS_PATTERN = re.compile(r"준비물\s*[:：]?\s*(?P<value>.+)")
+AUDIENCE_PATTERN = re.compile(r"(?P<value>\d+학년(?:\s*\d+반)?|학부모|전교생|교직원|학생회|학생)")
+RECURRENCE_PATTERN = re.compile(r"(?P<value>매주|매월|격주|매일|매 학기|매 학년)")
+LOCATION_POSTFIX_PATTERN = re.compile(r"(?P<value>[가-힣A-Za-z0-9\s]{1,24}(?:실|관|장|센터|교실|강당|도서관|회의실))(?:에서|으로|로)")
 
 RELATIVE_DATE_OFFSETS = {
     "오늘": 0,
@@ -64,11 +68,56 @@ TODO_HINT_KEYWORDS = (
     "완료",
 )
 
+TASK_HINT_KEYWORDS = (
+    "제출",
+    "준비",
+    "챙기기",
+    "마감",
+    "신청",
+    "확인",
+    "완료",
+    "까지",
+)
+
+EVENT_HINT_KEYWORDS = (
+    "회의",
+    "상담",
+    "수업",
+    "설명회",
+    "연수",
+    "행사",
+    "체험학습",
+    "모임",
+    "발표",
+)
+
+CATEGORY_KEYWORDS = {
+    "meeting": ("회의", "협의", "모임"),
+    "consulting": ("상담",),
+    "class": ("수업", "강의"),
+    "training": ("연수",),
+    "event": ("행사", "체험학습", "설명회", "발표"),
+    "submission": ("제출", "마감", "신청"),
+}
+
 AMBIGUOUS_HINT_KEYWORDS = (
     "미정",
     "추후",
     "가능하면",
     "예정",
+)
+
+KNOWN_LOCATIONS = (
+    "과학실",
+    "교무실",
+    "상담실",
+    "체육관",
+    "운동장",
+    "강당",
+    "도서관",
+    "시청각실",
+    "회의실",
+    "방송실",
 )
 
 
@@ -106,7 +155,6 @@ def _normalize_hour_with_meridiem(hour, meridiem):
             return hour_value + 12, False
         return hour_value, False
 
-    # 오전/오후 미기재: 학교 공지 맥락에서 1~7시는 오후로 추정하고 낮은 신뢰도로 표시.
     if 1 <= hour_value <= 7:
         return hour_value + 12, True
     if 0 <= hour_value <= 23:
@@ -285,6 +333,48 @@ def _build_todo_summary(lines, title):
     return joined[:5000]
 
 
+def _extract_materials(lines):
+    for line in lines:
+        match = MATERIALS_PATTERN.search(line)
+        if match:
+            return match.group("value").strip()[:500]
+    return ""
+
+
+def _extract_location(text, lines):
+    match = LOCATION_POSTFIX_PATTERN.search(text)
+    if match:
+        return match.group("value").strip()[:120]
+    for location in KNOWN_LOCATIONS:
+        if location in text:
+            return location
+    for line in lines:
+        if "장소" in line or "위치" in line:
+            return line.replace("장소", "").replace("위치", "").replace(":", "").strip()[:120]
+    return ""
+
+
+def _extract_audience(text):
+    match = AUDIENCE_PATTERN.search(text)
+    if not match:
+        return ""
+    return match.group("value").strip()[:120]
+
+
+def _extract_category(text):
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            return category
+    return ""
+
+
+def _extract_recurrence_hint(text):
+    match = RECURRENCE_PATTERN.search(text)
+    if not match:
+        return ""
+    return match.group("value")
+
+
 def _calculate_confidence(
     *,
     has_title,
@@ -339,8 +429,42 @@ def _confidence_label(score):
     return "low"
 
 
+def _count_keyword_hits(text, keywords):
+    return sum(1 for keyword in keywords if keyword in text)
+
+
+def _predict_item_type(*, text, has_date, has_time, has_task_keywords, has_event_keywords, deadline_only, has_files):
+    if not text.strip() and not has_files:
+        return "ignore"
+    if has_date and has_time:
+        if has_event_keywords or not deadline_only:
+            return "event"
+    if deadline_only:
+        return "task"
+    if has_task_keywords and not has_event_keywords:
+        return "task"
+    if has_date and (has_time or has_event_keywords or has_files):
+        return "event"
+    if has_event_keywords and (has_date or has_time):
+        return "event"
+    if has_task_keywords:
+        return "task"
+    return "ignore"
+
+
+def _build_task_due_at(parsed_date, parsed_time, local_tz):
+    if not parsed_date:
+        return None, False
+    if parsed_time:
+        due_naive = datetime.combine(parsed_date["value"], parsed_time["end"])
+        return timezone.make_aware(due_naive, local_tz), not parsed_time["is_all_day"]
+    due_naive = datetime.combine(parsed_date["value"], time(hour=23, minute=59))
+    return timezone.make_aware(due_naive, local_tz), False
+
+
 def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
     now = now or timezone.now()
+    local_tz = timezone.get_current_timezone()
     normalized_text, lines = _normalize_text(raw_text)
     parsed_date = _extract_date(normalized_text, timezone.localtime(now).date())
     parsed_time = _extract_time(normalized_text)
@@ -349,6 +473,19 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
     extracted_priority, priority_evidence = _extract_priority(normalized_text)
     has_ambiguous_hint = any(keyword in normalized_text for keyword in AMBIGUOUS_HINT_KEYWORDS)
 
+    has_task_keywords = _count_keyword_hits(normalized_text, TASK_HINT_KEYWORDS) > 0
+    has_event_keywords = _count_keyword_hits(normalized_text, EVENT_HINT_KEYWORDS) > 0
+    deadline_only = bool(parsed_date and ("까지" in normalized_text or "마감" in normalized_text) and not has_event_keywords)
+    predicted_item_type = _predict_item_type(
+        text=normalized_text,
+        has_date=bool(parsed_date),
+        has_time=bool(parsed_time),
+        has_task_keywords=has_task_keywords,
+        has_event_keywords=has_event_keywords,
+        deadline_only=deadline_only,
+        has_files=has_files,
+    )
+
     start_at = None
     end_at = None
     is_all_day = False
@@ -356,9 +493,15 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
         is_all_day = bool(parsed_time["is_all_day"])
         start_naive = datetime.combine(parsed_date["value"], parsed_time["start"])
         end_naive = datetime.combine(parsed_date["value"], parsed_time["end"])
-        local_tz = timezone.get_current_timezone()
         start_at = timezone.make_aware(start_naive, local_tz)
         end_at = timezone.make_aware(end_naive, local_tz)
+
+    task_due_at, task_has_time = _build_task_due_at(parsed_date, parsed_time, local_tz)
+    materials = _extract_materials(lines)
+    location = _extract_location(normalized_text, lines)
+    audience = _extract_audience(normalized_text)
+    category = _extract_category(normalized_text)
+    recurrence_hint = _extract_recurrence_hint(normalized_text)
 
     has_title = bool(title)
     has_date = bool(parsed_date)
@@ -375,6 +518,8 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
         ambiguous_time=bool(parsed_time and parsed_time["ambiguous"]),
         ambiguous_hint=has_ambiguous_hint,
     )
+    if predicted_item_type == "ignore":
+        confidence_score = min(confidence_score, Decimal("49.00"))
     confidence_label = _confidence_label(confidence_score)
 
     has_ambiguity = bool(
@@ -382,7 +527,9 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
         or (parsed_time and parsed_time["ambiguous"])
         or has_ambiguous_hint
     )
-    if has_title and has_date and has_time and not has_ambiguity:
+    if predicted_item_type == "event" and has_title and has_date and has_time and not has_ambiguity:
+        parse_status = "parsed"
+    elif predicted_item_type == "task" and has_title and task_due_at and not has_ambiguity:
         parse_status = "parsed"
     elif has_title or has_date or has_time or has_todo or has_files:
         parse_status = "needs_review"
@@ -392,10 +539,14 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
     warnings = []
     if not has_title:
         warnings.append("제목을 자동으로 찾지 못해 직접 확인이 필요합니다.")
-    if not has_date:
+    if predicted_item_type == "event" and not has_date:
         warnings.append("날짜를 자동으로 찾지 못해 직접 선택이 필요합니다.")
-    if not has_time:
+    if predicted_item_type == "event" and not has_time:
         warnings.append("시간을 자동으로 찾지 못해 직접 입력이 필요합니다.")
+    if predicted_item_type == "task" and not task_due_at:
+        warnings.append("할 일 마감일을 자동으로 찾지 못해 직접 선택이 필요합니다.")
+    if predicted_item_type == "ignore":
+        warnings.append("안내성 메시지로 보여 직접 저장 여부를 확인해 주세요.")
     if parsed_date and parsed_date["is_relative"]:
         warnings.append("상대 날짜 표현을 사용해 날짜 확인이 필요합니다.")
     if parsed_date and parsed_date["year_inferred"]:
@@ -404,6 +555,8 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
         warnings.append("오전/오후 표현이 없어 시간 확인이 필요합니다.")
     if has_ambiguous_hint:
         warnings.append("미정/추후 표현이 있어 일정 확정 여부를 확인해 주세요.")
+    if recurrence_hint:
+        warnings.append("반복 일정 표현이 있어 반복 여부를 확인해 주세요.")
     if parse_status == "failed":
         warnings = ["일정 정보를 자동으로 읽지 못했습니다. 제목과 날짜를 직접 입력해 주세요."]
 
@@ -412,12 +565,22 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False):
         "parse_status": parse_status,
         "confidence_score": confidence_score,
         "confidence_label": confidence_label,
+        "predicted_item_type": predicted_item_type,
         "extracted_title": title or "메시지에서 만든 일정",
         "extracted_start_time": start_at,
         "extracted_end_time": end_at,
         "extracted_is_all_day": is_all_day,
         "extracted_priority": extracted_priority,
         "extracted_todo_summary": todo_summary,
+        "deadline_only": deadline_only,
+        "location": location,
+        "materials": materials,
+        "audience": audience,
+        "category": category,
+        "recurrence_hint": recurrence_hint,
+        "task_due_at": task_due_at,
+        "task_has_time": task_has_time,
+        "task_note": todo_summary,
         "warnings": warnings,
         "evidence": {
             "date": parsed_date["evidence"] if parsed_date else "",
