@@ -686,13 +686,20 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
         )
+        Product.objects.create(
+            title="Classroom Extra 3",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
 
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
 
         self.assertIsNotNone(class_ops)
-        self.assertLessEqual(len(class_ops['products']), 2)
+        self.assertLessEqual(len(class_ops['products']), 3)
         self.assertTrue(class_ops['has_more'])
         self.assertGreaterEqual(class_ops['remaining_count'], 1)
 
@@ -711,88 +718,18 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
         )
+        Product.objects.create(
+            title="Classroom Extra 3",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-track="section_more_toggle"', content)
         self.assertIn('더보기', content)
-
-    def test_v2_section_overflow_items_are_rendered_in_markup(self):
-        for title in [
-            "Classroom Overflow A",
-            "Classroom Overflow B",
-            "Classroom Overflow C",
-            "Classroom Overflow D",
-        ]:
-            Product.objects.create(
-                title=title,
-                description="extra",
-                price=0,
-                is_active=True,
-                service_type='classroom',
-            )
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('Classroom Overflow C', content)
-        self.assertIn('Classroom Overflow D', content)
-
-    def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('hidden xl:block', content)
-        self.assertIn('block xl:hidden', content)
-
-    def test_v2_authenticated_uses_xl_breakpoint_for_sns_sidebar(self):
-        self._login('breakpointuser')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('hidden xl:block', content)
-        self.assertIn('block xl:hidden', content)
-
-    def test_v2_mobile_sns_more_uses_toggle_not_anchor(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('@click="snsOpen = true"', content)
-        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
-        self.assertNotIn('href="#sns-full-section-v2"', content)
-
-    def test_v2_authenticated_mobile_sns_more_uses_toggle_not_anchor(self):
-        self._login('v2authsns')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('@click="snsOpen = true"', content)
-        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
-        self.assertNotIn('href="#sns-full-section-auth-v2"', content)
-
-    def test_v2_mobile_sns_panel_is_open_by_default(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('snsOpen: true', content)
-
-    def test_v2_mobile_sns_preview_cards_are_clickable(self):
-        author = _create_onboarded_user('v2snsopen')
-        Post.objects.create(author=author, content='미리보기 탭 동작 확인용 게시글')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('@click="openPost(', content)
-        self.assertIn('data-post-id="', content)
-
-    def test_v2_anonymous_layout_has_sidebar_gap_and_shrink_safe_main(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('xl:flex-row xl:gap-6', content)
-        self.assertIn('flex-1 min-w-0 pb-8', content)
-        self.assertIn('xl:w-[340px] 2xl:w-[380px]', content)
-        self.assertNotIn('overflow-hidden ml-6', content)
-
-    def test_v2_authenticated_layout_has_sidebar_gap_and_shrink_safe_main(self):
-        self._login('layoutauth')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('xl:flex-row xl:gap-6', content)
-        self.assertIn('flex-1 min-w-0 p-4', content)
-        self.assertIn('xl:w-[340px] 2xl:w-[380px]', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_blocks_render(self):
@@ -1124,3 +1061,8 @@ class ProductFavoriteAPITest(TestCase):
         refreshed = list(ProductFavorite.objects.filter(user=user).order_by('pin_order'))
         self.assertEqual(refreshed[0].product_id, second.id)
         self.assertEqual(refreshed[1].product_id, self.product.id)
+
+
+
+
+

@@ -36,10 +36,12 @@ class ReservationsViewTest(TestCase):
         # Grid is loaded via HTMX, so room name won't be in initial response
         
     def test_reservation_index_uses_compact_header_actions(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '관리')
-        self.assertContains(response, '날짜를 고르고 빈 칸을 누르면 바로 예약하거나 수정합니다.')
+        self.assertContains(response, '특별실별 현황')
+        self.assertContains(response, '관리자 대시보드')
+        self.assertContains(response, '날짜 이동')
         self.assertNotContains(response, '날짜를 고르고 칸을 눌러 바로 예약하거나 수정할 수 있습니다.')
 
     def test_reservation_index_has_date_jump_form(self):
@@ -61,7 +63,7 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'min="{timezone.localdate().strftime("%Y-%m-%d")}"', html=False)
         self.assertContains(response, f'max="{expected_max_date.strftime("%Y-%m-%d")}"', html=False)
-        self.assertContains(response, '날짜를 고르고 빈 칸을 누르면 바로 예약하거나 수정합니다.')
+        self.assertContains(response, '날짜 이동')
         self.assertNotContains(response, '날짜를 고르고 칸을 눌러 바로 예약하거나 수정할 수 있습니다.')
 
     def test_reservation_grid_htmx(self):
@@ -617,5 +619,9 @@ class ReservationsViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '영양 박선생')
+
+
+
+
 
 
