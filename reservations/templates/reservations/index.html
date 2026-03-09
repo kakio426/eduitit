@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+{% now 'Y-m-d' as today_iso %}
 <div class="pb-20 min-h-screen bg-[#E0E5EC]"
     style="padding-top: calc(var(--main-nav-height, 88px) + 1.25rem);"
     x-data="{ 
@@ -229,37 +230,55 @@
                 {% endif %}
             </div>
 
-            <div class="flex items-center gap-4 bg-white/50 rounded-xl p-2 shadow-inner">
-                <a href="?date={{ prev_date|date:'Y-m-d' }}"
-                    class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
+            <div class="flex flex-col md:flex-row items-center gap-3 bg-white/50 rounded-xl p-3 shadow-inner">
+                <div class="flex items-center gap-4">
+                    <a href="?date={{ prev_date|date:'Y-m-d' }}"
+                        class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
 
-                <div class="text-center px-4">
-                    <div class="text-base md:text-lg font-bold text-gray-800">{{ target_date|date:"Y.m.d" }} ({{ weekday_name }})</div>
-                    {% if is_blackout %}
-                    <div class="text-[10px] md:text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded-full mt-1">
-                        {{ is_blackout.reason }}
+                    <div class="text-center px-2 md:px-4">
+                        <div class="text-base md:text-lg font-bold text-gray-800">{{ target_date|date:"Y.m.d" }} ({{ weekday_name }})</div>
+                        {% if is_blackout %}
+                        <div class="text-[10px] md:text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded-full mt-1">
+                            {{ is_blackout.reason }}
+                        </div>
+                        {% endif %}
+                        {% if max_date %}
+                        <div class="text-[10px] text-purple-500 font-bold mt-1">
+                            예약 가능: {{ max_date|date:"m/d" }}까지
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
-                    {% if max_date %}
-                    <div class="text-[10px] text-purple-500 font-bold mt-1">
-                        예약 가능: {{ max_date|date:"m/d" }}까지
-                    </div>
+
+                    {% if max_date and target_date >= max_date %}
+                    <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:"Y-m-d" }}까지)')"
+                        class="w-8 h-8 md:w-10 md:h-10 text-gray-300 bg-gray-100 flex items-center justify-center rounded-full cursor-not-allowed">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    {% else %}
+                    <a href="?date={{ next_date|date:'Y-m-d' }}"
+                        class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
                     {% endif %}
                 </div>
 
-                {% if max_date and target_date >= max_date %}
-                <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:"Y-m-d" }}까지)')"
-                    class="w-8 h-8 md:w-10 md:h-10 text-gray-300 bg-gray-100 flex items-center justify-center rounded-full cursor-not-allowed">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-                {% else %}
-                <a href="?date={{ next_date|date:'Y-m-d' }}"
-                    class="w-8 h-8 md:w-10 md:h-10 text-gray-400 bg-white flex items-center justify-center rounded-full shadow-sm hover:text-purple-600 hover:shadow-md transition-all">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
-                {% endif %}
+                <form method="get"
+                    action="{% url 'reservations:reservation_index' school.slug %}"
+                    class="flex w-full md:w-auto items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm">
+                    <label for="jump-date" class="text-[11px] font-bold text-gray-500 whitespace-nowrap">날짜 이동</label>
+                    <input id="jump-date"
+                        type="date"
+                        name="date"
+                        value="{{ target_date|date:'Y-m-d' }}"
+                        {% if not user.is_authenticated or user != school.owner %}min="{{ today_iso }}"{% if max_date %} max="{{ max_date|date:'Y-m-d' }}"{% endif %}{% endif %}
+                        class="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-100">
+                    <button type="submit"
+                        class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-700 transition-colors whitespace-nowrap">
+                        이동
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -289,3 +308,4 @@
     });
 </script>
 {% endblock %}
+

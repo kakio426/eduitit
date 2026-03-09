@@ -1,8 +1,10 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
 from core.models import UserProfile
 from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
+from .utils import get_max_booking_date
 from datetime import date, timedelta
 
 class ReservationsViewTest(TestCase):
@@ -33,6 +35,26 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, 'Test School')
         # Grid is loaded via HTMX, so room name won't be in initial response
         
+    def test_reservation_index_has_date_jump_form(self):
+        response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="jump-date"', html=False)
+        self.assertContains(response, 'type="date"', html=False)
+        self.assertContains(response, f'value="{self.target_date.strftime("%Y-%m-%d")}"', html=False)
+        self.assertContains(response, '날짜 이동')
+
+    def test_reservation_index_date_jump_respects_teacher_limits(self):
+        self.config.weekly_opening_mode = True
+        self.config.save(update_fields=['weekly_opening_mode'])
+        expected_max_date = get_max_booking_date(self.school)
+
+        response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'min="{timezone.localdate().strftime("%Y-%m-%d")}"', html=False)
+        self.assertContains(response, f'max="{expected_max_date.strftime("%Y-%m-%d")}"', html=False)
+
     def test_reservation_grid_htmx(self):
         # HTMX check
         url = reverse('reservations:reservation_index', args=[self.school.slug])
