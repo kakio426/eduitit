@@ -28,10 +28,24 @@
 
         <style>
             #blockclass-workspace {
+                position: relative;
+                height: clamp(460px, 62vh, 640px);
                 min-height: 560px;
                 border-radius: 28px;
                 overflow: hidden;
                 background: linear-gradient(160deg, rgba(255,255,255,0.86) 0%, rgba(241,245,249,0.96) 100%);
+            }
+
+            @media (min-width: 1024px) {
+                #blockclass-workspace {
+                    height: clamp(560px, 72vh, 760px);
+                }
+            }
+
+            #blockclass-workspace .injectionDiv,
+            #blockclass-workspace .blocklySvg {
+                width: 100% !important;
+                height: 100% !important;
             }
 
             .blocklyToolboxDiv,
@@ -211,7 +225,7 @@
 </xml>
 
 <script>
-    window.BLOCKCLASS_MEDIA_URL = "{% static 'blockclass/vendor/blockly/media/' %}";
+    window.BLOCKCLASS_MEDIA_URL = "{% static 'blockclass/vendor/blockly-assets/' %}";
 </script>
 <script src="{% static 'blockclass/vendor/blockly/blockly_compressed.js' %}"></script>
 <script src="{% static 'blockclass/vendor/blockly/blocks_compressed.js' %}"></script>

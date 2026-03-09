@@ -87,6 +87,35 @@ function safeStatus(message) {
   }
 }
 
+function resizeWorkspace(workspace) {
+  const workspaceElement = document.getElementById("blockclass-workspace");
+  if (!workspaceElement || !workspace || typeof Blockly === "undefined") {
+    return;
+  }
+
+  const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+  const minHeight = isDesktop ? 560 : 460;
+  const maxHeight = isDesktop ? 760 : 640;
+  const viewportHeight = window.innerHeight || minHeight;
+  const ratio = isDesktop ? 0.72 : 0.62;
+  const desiredHeight = Math.max(minHeight, Math.min(Math.round(viewportHeight * ratio), maxHeight));
+
+  workspaceElement.style.height = `${desiredHeight}px`;
+  Blockly.svgResize(workspace);
+  if (typeof workspace.resize === "function") {
+    workspace.resize();
+  }
+}
+
+function scheduleWorkspaceResize(workspace) {
+  window.requestAnimationFrame(() => {
+    resizeWorkspace(workspace);
+    window.requestAnimationFrame(() => {
+      resizeWorkspace(workspace);
+    });
+  });
+}
+
 function renderCode(workspace) {
   const codeOutput = document.getElementById("blockclass-code-output");
   const codeSummary = document.getElementById("blockclass-code-summary");
@@ -151,7 +180,7 @@ function loadTemplate(workspace, key) {
   workspace.clear();
   const xml = Blockly.utils.xml.textToDom(xmlText);
   Blockly.Xml.domToWorkspace(xml, workspace);
-  Blockly.svgResize(workspace);
+  scheduleWorkspaceResize(workspace);
   updateSummary(workspace);
   const labels = {
     sequence: "순서",
@@ -180,7 +209,7 @@ function restoreWorkspaceJson(workspace, rawText) {
 
   workspace.clear();
   Blockly.serialization.workspaces.load(data, workspace);
-  Blockly.svgResize(workspace);
+  scheduleWorkspaceResize(workspace);
   updateSummary(workspace);
   safeStatus("JSON 파일에서 워크스페이스를 불러왔습니다.");
 }
@@ -209,11 +238,12 @@ function initBlockclass() {
   const workspace = Blockly.inject(workspaceElement, {
     toolbox,
     media: window.BLOCKCLASS_MEDIA_URL,
-    trashcan: true,
+    trashcan: false,
+    sounds: false,
     scrollbars: true,
     renderer: "zelos",
     zoom: {
-      controls: true,
+      controls: false,
       wheel: true,
       startScale: 0.95,
       maxScale: 1.8,
@@ -274,9 +304,10 @@ function initBlockclass() {
   });
 
   window.addEventListener("resize", () => {
-    Blockly.svgResize(workspace);
+    resizeWorkspace(workspace);
   });
 
+  scheduleWorkspaceResize(workspace);
   loadTemplate(workspace, "sequence");
 }
 
