@@ -57,6 +57,7 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
     "관리자에게 `python manage.py migrate` 실행을 요청해 주세요."
 )
 
+WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
@@ -89,33 +90,40 @@ def _peek_sheetbook_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        return None
-    seed = seeds.get(token)
-    if not isinstance(seed, dict):
-        return None
-    if expected_action and seed.get("action") != expected_action:
-        return None
-    return seed
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get("action") != expected_action:
+            continue
+        return seed
+    return None
 
 
 def _pop_sheetbook_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        return None
-    seed = seeds.get(token)
-    if not isinstance(seed, dict):
-        return None
-    if expected_action and seed.get("action") != expected_action:
-        return None
-    seeds.pop(token, None)
-    request.session[SHEETBOOK_ACTION_SEED_SESSION_KEY] = seeds
-    request.session.modified = True
-    return seed
+    found_seed = None
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get("action") != expected_action:
+            continue
+        if found_seed is None:
+            found_seed = seed
+        seeds.pop(token, None)
+        request.session[session_key] = seeds
+    if found_seed is not None:
+        request.session.modified = True
+    return found_seed
 
 
 def _request_document_evidence(consent_request: SignatureRequest):
@@ -692,6 +700,9 @@ def consent_create_step1(request):
     )
     seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
     seed_recipients = _parse_recipients(seed_data.get("recipients_text", "")) if seed_data else []
+    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
+    prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
+    prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
     prefill_recipients_count = len(seed_recipients)
     prefill_recipients_preview = [
         f"{recipient['student_name']} - {recipient['parent_name']}"
@@ -793,6 +804,9 @@ def consent_create_step1(request):
             "request_form": request_form,
             "sheetbook_seed_token": sheetbook_seed_token,
             "sheetbook_prefill_active": bool(seed_data),
+            "prefill_source_label": prefill_source_label if seed_data else "",
+            "prefill_origin_label": prefill_origin_label,
+            "prefill_origin_url": prefill_origin_url,
             "prefill_recipients_count": prefill_recipients_count,
             "prefill_recipients_preview": prefill_recipients_preview,
             **_policy_panel_context(),

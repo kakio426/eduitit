@@ -34,5 +34,10 @@ urlpatterns = [
     path('api/track-usage/', views.track_product_usage, name='track_product_usage'),
     path('api/favorites/toggle/', views.toggle_product_favorite, name='toggle_product_favorite'),
     path('api/favorites/', views.list_product_favorites, name='list_product_favorites'),
+    path('api/favorites/reorder/', views.reorder_product_favorites, name='reorder_product_favorites'),
+    path('api/workbench-bundles/', views.list_workbench_bundles, name='list_workbench_bundles'),
+    path('api/workbench-bundles/save/', views.save_workbench_bundle, name='save_workbench_bundle'),
+    path('api/workbench-bundles/<int:bundle_id>/apply/', views.apply_workbench_bundle, name='apply_workbench_bundle'),
+    path('api/workbench-bundles/<int:bundle_id>/delete/', views.delete_workbench_bundle, name='delete_workbench_bundle'),
     path('api/set-classroom/', views.set_active_classroom, name='set_active_classroom'),
 ]

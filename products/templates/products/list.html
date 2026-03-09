@@ -1,130 +1,98 @@
 {% extends "base.html" %}
 
-{% block title %}Our Services - Eduitit{% endblock %}
-
-{% block extra_css %}
-.grid {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-gap: 2.5rem;
-}
-
-.card {
-background: var(--glass);
-border: 1px solid var(--glass-border);
-border-radius: 28px;
-overflow: hidden;
-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-display: flex;
-flex-direction: column;
-height: 100%;
-}
-
-.card:hover {
-transform: translateY(-8px);
-border-color: var(--primary);
-box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.4);
-}
-
-.card-image {
-width: 100%;
-aspect-ratio: 16/10;
-overflow: hidden;
-background: #1e293b;
-position: relative;
-}
-
-.card-image img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-transition: transform 0.5s ease;
-}
-
-.card:hover .card-image img {
-transform: scale(1.05);
-}
-
-.card-content {
-padding: 1.5rem;
-display: flex;
-flex-direction: column;
-flex-grow: 1;
-}
-
-.card h3 {
-margin: 0 0 0.75rem;
-font-size: 1.5rem;
-font-weight: 700;
-color: white;
-}
-
-.card p {
-color: #94a3b8;
-line-height: 1.6;
-margin: 0 0 1.5rem;
-font-size: 0.95rem;
-flex-grow: 1;
-}
-
-.card-footer {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-top: auto;
-}
-
-.price {
-font-size: 1.25rem;
-font-weight: 800;
-color: white;
-}
-{% endblock %}
+{% block title %}전체 서비스 - Eduitit{% endblock %}
 
 {% block content %}
-<div class="pt-32 pb-20 px-4">
-    <div style="text-align: center; margin-bottom: 4rem;">
-        <h1 style="font-size: 3.5rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.02em;">Digital Solutions
-        </h1>
-        <p style="color: #94a3b8; font-size: 1.25rem;">Hand-crafted tools and high-performance services for your
-            workflow.
-        </p>
-    </div>
+<section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
+    <div class="max-w-7xl mx-auto space-y-8">
+        <header class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-3xl">
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">교사용 서비스 카탈로그</p>
+                    <h1 class="mt-2 text-3xl md:text-4xl font-black text-slate-900">해야 하는 일을 먼저 찾으세요</h1>
+                    <p class="mt-3 text-sm md:text-base text-slate-600 leading-relaxed">지금 바로 쓰는 업무를 먼저 두고, 필요할 때만 활동 도구와 참고 서비스를 열어보도록 정리했습니다.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 lg:justify-end">
+                    <a href="{% url 'home' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                        <i class="fa-solid fa-house"></i>
+                        홈으로
+                    </a>
+                    <a href="{% url 'service_guide_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
+                        <i class="fa-solid fa-book-open"></i>
+                        이용방법
+                    </a>
+                </div>
+            </div>
 
-    <div class="grid">
-        {% for product in products %}
-        <div class="card">
-            <div class="card-image">
-                {% if product.image %}
-                {% load cloudinary_extras %}
-                <img src="{{ product.image.url|thumbnail:'600' }}" alt="{{ product.title }}" loading="lazy">
-                {% else %}
-                <div
-                    style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #1e293b, #0f172a); color: #475569;">
-                    <span style="font-weight: 600;">No Preview Available</span>
-                </div>
-                {% endif %}
+            <div class="mt-5 flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">활성 서비스 {{ total_count }}개</span>
+                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">핵심 업무 먼저</span>
+                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">주요 작업 먼저</span>
             </div>
-            <div class="card-content">
-                <h3>{{ product.title }}</h3>
-                <p>{{ product.description|truncatewords:15 }}</p>
-                <div class="card-footer">
-                    <div class="price">₩{{ product.price|floatformat:0 }}</div>
-                    {% if product.launch_route_name == "yut_game" %}
-                    <a href="{% url 'yut_game' %}" class="btn btn-primary"
-                        style="background: #10b981; border-color: #10b981;">Play Now</a>
-                    {% else %}
-                    <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary">Details</a>
-                    {% endif %}
+        </header>
+
+        {% if sections %}
+        <section class="space-y-4">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">핵심 업무</h2>
+                    <p class="text-sm text-slate-500 mt-1">가장 자주 하는 업무부터 바로 찾습니다.</p>
                 </div>
             </div>
-        </div>
-        {% empty %}
-        <div
-            style="grid-column: 1/-1; text-align: center; padding: 4rem; background: var(--glass); border-radius: 24px;">
-            <p style="color: #94a3b8;">No services are currently available. Check back soon!</p>
-        </div>
-        {% endfor %}
+            {% include 'core/includes/purpose_sections.html' with sections=sections %}
+        </section>
+        {% endif %}
+
+        {% if games %}
+        <section class="space-y-4">
+            <div>
+                <h2 class="text-2xl font-black text-slate-900">교실 활동</h2>
+                <p class="text-sm text-slate-500 mt-1">교실에서 바로 열 수 있는 활동만 따로 모았습니다.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {% for game in games %}
+                <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center text-xl shrink-0">
+                            {% if "fa-" in game.icon %}<i class="{{ game.icon }}"></i>{% else %}{{ game.icon }}{% endif %}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-lg font-black text-slate-900 leading-tight">{{ game.teacher_first_task_label|default:game.title }}</h3>
+                            {% if game.teacher_first_service_label %}
+                            <p class="mt-1 text-[11px] font-bold text-slate-500 truncate">{{ game.teacher_first_service_label }}</p>
+                            {% endif %}
+                            {% if game.teacher_first_support_label %}
+                            <p class="mt-1 text-sm text-slate-500 line-clamp-2">{{ game.teacher_first_support_label|truncatechars:72 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-slate-400">교실 활동</span>
+                        <a href="{{ game.launch_href|default:'#' }}" {% if game.launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white hover:bg-slate-800 transition">
+                            열기
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if aux_sections %}
+        <details class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <summary class="cursor-pointer list-none px-6 py-5 flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">도움말 · 외부 서비스</h2>
+                    <p class="text-sm text-slate-500 mt-1">자주 쓰는 핵심 업무가 아니라면 여기서 찾습니다.</p>
+                </div>
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">필요할 때만 열기</span>
+            </summary>
+            <div class="px-6 pb-6">
+                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+            </div>
+        </details>
+        {% endif %}
     </div>
-</div>
+</section>
 {% endblock %}

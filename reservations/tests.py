@@ -3,8 +3,8 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 from core.models import UserProfile
-from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
 from .utils import get_max_booking_date
+from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
 from datetime import date, timedelta
 
 class ReservationsViewTest(TestCase):
@@ -35,6 +35,13 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, 'Test School')
         # Grid is loaded via HTMX, so room name won't be in initial response
         
+    def test_reservation_index_uses_compact_header_actions(self):
+        response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '관리')
+        self.assertContains(response, '날짜를 고르고 빈 칸을 누르면 바로 예약하거나 수정합니다.')
+        self.assertNotContains(response, '날짜를 고르고 칸을 눌러 바로 예약하거나 수정할 수 있습니다.')
+
     def test_reservation_index_has_date_jump_form(self):
         response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
 
@@ -54,6 +61,8 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'min="{timezone.localdate().strftime("%Y-%m-%d")}"', html=False)
         self.assertContains(response, f'max="{expected_max_date.strftime("%Y-%m-%d")}"', html=False)
+        self.assertContains(response, '날짜를 고르고 빈 칸을 누르면 바로 예약하거나 수정합니다.')
+        self.assertNotContains(response, '날짜를 고르고 칸을 눌러 바로 예약하거나 수정할 수 있습니다.')
 
     def test_reservation_grid_htmx(self):
         # HTMX check
@@ -284,6 +293,86 @@ class ReservationsViewTest(TestCase):
 
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_authenticated_create_surfaces_followup_actions_on_next_page(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 1,
+                'grade': 4,
+                'class_no': 2,
+                'name': '김선생',
+                'memo': '실험 수업',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('HX-Refresh'), 'true')
+
+        page = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertContains(page, '방금 예약한 내용')
+        self.assertContains(page, '안내문으로 이어서 만들기')
+        self.assertContains(page, '학부모 연락으로 이어서 하기')
+        self.assertContains(page, '실험 수업')
+
+    def test_start_notice_followup_stores_seed_and_redirects(self):
+        self.client.force_login(self.user)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=2,
+            grade=5,
+            class_no=1,
+            name='홍교사',
+            memo='준비물 확인',
+        )
+
+        response = self.client.post(reverse('reservations:start_notice_followup', args=[self.school.slug, reservation.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('noticegen:main'), response['Location'])
+        seed_token = response['Location'].split('sb_seed=')[-1]
+        session = self.client.session
+        workflow_seed = session['workflow_action_seeds'][seed_token]
+        self.assertEqual(workflow_seed['action'], 'notice')
+        self.assertEqual(workflow_seed['data']['origin_service'], 'reservations')
+        self.assertIn('Science Room', workflow_seed['data']['keywords'])
+
+    def test_start_parentcomm_followup_stores_seed_and_redirects(self):
+        self.client.force_login(self.user)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=3,
+            grade=6,
+            class_no=4,
+            name='박교사',
+            memo='보호자 준비물 안내',
+        )
+
+        response = self.client.post(reverse('reservations:start_parentcomm_followup', args=[self.school.slug, reservation.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('parentcomm:main'), response['Location'])
+        seed_token = response['Location'].split('sb_seed=')[-1]
+        session = self.client.session
+        workflow_seed = session['workflow_action_seeds'][seed_token]
+        self.assertEqual(workflow_seed['action'], 'parentcomm_notice')
+        self.assertEqual(workflow_seed['data']['origin_service'], 'reservations')
+        self.assertIn('Science Room', workflow_seed['data']['title'])
+
+    def test_admin_dashboard_share_copy_has_failure_feedback(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "copyError: '',", html=False)
+        self.assertContains(response, 'navigator.clipboard.writeText(text).then(() => {', html=False)
+        self.assertContains(response, '복사에 실패했습니다. 다시 시도해 주세요.')
 
     def test_admin_delete_reservation(self):
         reservation = Reservation.objects.create(
@@ -528,3 +617,5 @@ class ReservationsViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '영양 박선생')
+
+

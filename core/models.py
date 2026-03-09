@@ -347,6 +347,31 @@ class ProductFavorite(models.Model):
         return f"{self.user.username} ★ {self.product.title}"
 
 
+class ProductWorkbenchBundle(models.Model):
+    """교사가 자주 쓰는 서비스 조합을 작업대 묶음으로 저장한다."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_workbench_bundles')
+    name = models.CharField(max_length=80)
+    product_ids = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-last_used_at', '-updated_at', 'name']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='core_workbenchbundle_user_name_unique'),
+        ]
+        indexes = [
+            models.Index(fields=['user', '-updated_at']),
+            models.Index(fields=['user', '-last_used_at']),
+        ]
+        verbose_name = "작업대 조합"
+        verbose_name_plural = "작업대 조합"
+
+    def __str__(self):
+        return f"{self.user.username} 작업대 조합 - {self.name}"
+
+
 class VisitorLog(models.Model):
     ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
     user_agent = models.TextField(blank=True, null=True, verbose_name="User Agent")

@@ -29,6 +29,7 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 CALENDAR_INTEGRATION_SOURCE = "signatures_training"
+WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 DEFAULT_AFFILIATION_SUGGESTIONS = [
     "교사",
@@ -282,33 +283,40 @@ def _peek_sheetbook_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        return None
-    seed = seeds.get(token)
-    if not isinstance(seed, dict):
-        return None
-    if expected_action and seed.get("action") != expected_action:
-        return None
-    return seed
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get("action") != expected_action:
+            continue
+        return seed
+    return None
 
 
 def _pop_sheetbook_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        return None
-    seed = seeds.get(token)
-    if not isinstance(seed, dict):
-        return None
-    if expected_action and seed.get("action") != expected_action:
-        return None
-    seeds.pop(token, None)
-    request.session[SHEETBOOK_ACTION_SEED_SESSION_KEY] = seeds
-    request.session.modified = True
-    return seed
+    found_seed = None
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get("action") != expected_action:
+            continue
+        if found_seed is None:
+            found_seed = seed
+        seeds.pop(token, None)
+        request.session[session_key] = seeds
+    if found_seed is not None:
+        request.session.modified = True
+    return found_seed
 
 
 def _parse_sheetbook_signature_participants(text, max_count=300):
@@ -365,6 +373,9 @@ def session_create(request):
     seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
     seed_data = seed_data if isinstance(seed_data, dict) else {}
     seed_participants = _parse_sheetbook_signature_participants(seed_data.get("participants_text", ""))
+    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
+    prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
+    prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
 
     prefill_initial = {}
     if seed_data:
@@ -424,9 +435,9 @@ def session_create(request):
             else:
                 message_parts.append("연수가 생성되었습니다.")
             if seed_created_count > 0:
-                message_parts.append(f"교무수첩에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
+                message_parts.append(f"연결된 서비스에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
             elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
-                message_parts.append("교무수첩 참석자 후보는 이미 모두 포함되어 있었어요.")
+                message_parts.append("연결된 서비스 참석자 후보는 이미 모두 포함되어 있었어요.")
             messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
@@ -446,7 +457,9 @@ def session_create(request):
             'form': form,
             'sheetbook_seed_token': sheetbook_seed_token if seed_data else "",
             'sheetbook_prefill_active': bool(seed_data),
-            'sheetbook_prefill_source_label': "교무수첩에서 가져온 내용을 넣어두었어요.",
+            'sheetbook_prefill_source_label': prefill_source_label if seed_data else "",
+            'sheetbook_prefill_origin_label': prefill_origin_label,
+            'sheetbook_prefill_origin_url': prefill_origin_url,
             'sheetbook_prefill_participants_count': len(seed_participants),
             'sheetbook_prefill_participants_preview': participant_preview,
             'apply_sheetbook_participants': apply_sheetbook_participants,

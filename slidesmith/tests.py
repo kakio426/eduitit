@@ -45,14 +45,17 @@ class SlidesmithViewTests(TestCase):
         response = self.client.get(reverse("slidesmith:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "서비스 목록으로 돌아가기")
-        self.assertContains(response, "교사 발표 흐름")
+        self.assertContains(response, "홈으로 돌아가기")
+        self.assertContains(response, "발표 자료 만들기")
         self.assertContains(response, 'id="slidesmith-form"', html=False)
         self.assertContains(response, 'id="slidesmith-title-input"', html=False)
         self.assertContains(response, 'id="slidesmith-text-input"', html=False)
         self.assertContains(response, 'id="slidesmith-present-button"', html=False)
         self.assertContains(response, "발표 시작 (새 탭)")
         self.assertContains(response, "slidesmith/slidesmith.js")
+        self.assertNotContains(response, "슬라이드 구분선")
+        self.assertNotContains(response, "교사 발표 흐름")
+        self.assertNotContains(response, "PDF 저장 안내")
 
     def test_present_renders_posted_slides(self):
         response = self.client.post(

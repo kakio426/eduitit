@@ -5,40 +5,46 @@
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-slate-50">
     <div class="max-w-6xl mx-auto space-y-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-            <div class="flex items-start gap-4">
-                <div class="w-14 h-14 rounded-xl bg-indigo-100 text-indigo-600 text-2xl flex items-center justify-center shrink-0">
-                    📘
-                </div>
-                <div class="space-y-2">
-                    <h1 class="text-2xl md:text-3xl font-black text-slate-800">전담 시간표·특별실 배치 도우미</h1>
-                    <p class="text-slate-600 leading-relaxed">
-                        전담 선생님 시간표를 먼저 만들고, 겹침 여부를 점검한 뒤 특별실 운영 방식까지 연결합니다.
-                        먼저 입력 양식을 내려받아 작성한 후 업로드 점검을 진행해 주세요.
-                    </p>
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        {% if service %}
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
-                            {{ service.get_service_type_display }}
-                        </span>
-                        {% endif %}
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
-                            교사용 쉬운 용어 적용
-                        </span>
+        <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 rounded-xl bg-indigo-100 text-indigo-600 text-2xl flex items-center justify-center shrink-0">
+                        📘
+                    </div>
+                    <div class="space-y-2">
+                        <h1 class="text-2xl md:text-3xl font-black text-slate-800">전담 시간표·특별실 배치 도우미</h1>
+                        <p class="text-slate-600">양식을 내려받아 작성한 뒤 올리면 점검과 자동 배치를 바로 진행합니다.</p>
                     </div>
                 </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'timetable:download_template' %}"
+                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors">
+                        <i class="fa-solid fa-download mr-2"></i>
+                        양식 받기
+                    </a>
+                    {% if request.user.is_authenticated %}
+                    <a href="#sync-history"
+                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors">
+                        최근 반영 내역
+                    </a>
+                    {% endif %}
+                </div>
             </div>
-        </div>
+        </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h2 class="text-lg font-black text-slate-800 mb-4">1단계: 입력 양식 내려받기</h2>
-                <p class="text-sm text-slate-600 mb-4">아래 버튼으로 표준 양식을 받아 그대로 작성해 주세요.</p>
-                <a href="{% url 'timetable:download_template' %}"
-                    class="inline-flex items-center justify-center w-full md:w-auto px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors">
-                    <i class="fa-solid fa-download mr-2"></i>
-                    엑셀 양식 다운로드
-                </a>
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-800">양식 받기</h2>
+                        <p class="mt-1 text-sm text-slate-600">필수 시트만 채우면 바로 점검할 수 있습니다.</p>
+                    </div>
+                    <a href="{% url 'timetable:download_template' %}"
+                        class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors">
+                        <i class="fa-solid fa-download mr-2"></i>
+                        엑셀 양식 다운로드
+                    </a>
+                </div>
 
                 <div class="mt-5">
                     <h3 class="text-sm font-bold text-slate-700 mb-2">필수 시트</h3>
@@ -47,56 +53,42 @@
                         <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">{{ sheet_name }}</span>
                         {% endfor %}
                     </div>
-                    {% if optional_sheet_names %}
-                    <h3 class="text-sm font-bold text-slate-700 mt-4 mb-2">선택 시트 (고급)</h3>
-                    <p class="text-xs text-slate-500 mb-2">없어도 자동 배치는 가능합니다. 세밀 조정이 필요할 때만 작성하세요.</p>
-                    <div class="flex flex-wrap gap-2">
-                        {% for sheet_name in optional_sheet_names %}
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{{ sheet_name }}</span>
-                        {% endfor %}
+                </div>
+
+                {% if optional_sheet_names %}
+                <details class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <summary class="cursor-pointer text-sm font-bold text-slate-800">세부 조정용 시트 보기</summary>
+                    <div class="mt-3">
+                        <p class="text-xs text-slate-500 mb-2">없어도 자동 배치는 가능합니다. 세밀 조정이 필요할 때만 작성하세요.</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for sheet_name in optional_sheet_names %}
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{{ sheet_name }}</span>
+                            {% endfor %}
+                        </div>
                     </div>
-                    {% endif %}
+                </details>
+                {% endif %}
+
+                <details class="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                    <summary class="cursor-pointer text-sm font-bold text-indigo-900">배치 조건 메모</summary>
+                    <ul class="mt-3 space-y-2 text-xs text-indigo-900 leading-relaxed">
+                        <li>기본은 같은 학급·교과 하루 1회입니다.</li>
+                        <li>2시간 이상은 <span class="font-bold">나눠배치(예: 2+1)</span>를 넣어야 허용됩니다.</li>
+                        <li>순환배치는 기본으로 켜져 있고, 필요하면 배치조건에서 끌 수 있습니다.</li>
+                    </ul>
+                </details>
+            </section>
+
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="mb-4">
+                    <h2 class="text-lg font-black text-slate-800">파일 올리기</h2>
+                    <p class="mt-1 text-sm text-slate-600">작성한 파일을 올리면 점검과 자동 배치를 바로 실행합니다.</p>
                 </div>
 
-                <div class="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
-                    <p class="text-xs font-bold text-indigo-900">배치조건 입력 핵심</p>
-                    <p class="text-xs text-indigo-900">기본은 같은 학급·교과 하루 1회입니다. 2시간 이상은 `나눠배치(예: 2+1)`를 넣어야 허용됩니다.</p>
-                    <p class="text-xs text-indigo-900">순환배치는 기본 ON이며, 필요하면 배치조건에서 `순환배치 / OFF`로 해제할 수 있습니다.</p>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h2 class="text-lg font-black text-slate-800 mb-4">2단계: 작성 파일 점검하기</h2>
                 <form method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate">
-                    <div>
-                        <label for="{{ form.reservation_school_slug.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">예약 반영 학교 (선택)</label>
-                        {{ form.reservation_school_slug }}
-                        {% if form.reservation_school_slug.help_text %}
-                        <p class="text-xs text-slate-500 mt-2">{{ form.reservation_school_slug.help_text }}</p>
-                        {% endif %}
-                        {% if form.reservation_school_slug.errors %}
-                        <div class="mt-2 text-sm text-red-600">
-                            {% for error in form.reservation_school_slug.errors %}
-                            <p>{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% if can_use_overwrite_option %}
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                        <label class="inline-flex items-start gap-2 text-sm text-slate-700">
-                            {{ form.overwrite_existing }}
-                            <span>
-                                <span class="font-bold text-slate-800">{{ form.overwrite_existing.label }}</span>
-                                {% if form.overwrite_existing.help_text %}
-                                <span class="block text-xs text-slate-500 mt-1">{{ form.overwrite_existing.help_text }}</span>
-                                {% endif %}
-                            </span>
-                        </label>
-                    </div>
-                    {% endif %}
+
                     <div>
                         <label for="{{ form.excel_file.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">시간표 엑셀 파일</label>
                         {{ form.excel_file }}
@@ -112,16 +104,49 @@
                         {% endif %}
                     </div>
 
+                    <details class="rounded-xl border border-slate-200 bg-slate-50 p-4" {% if form.reservation_school_slug.value or form.reservation_school_slug.errors or form.overwrite_existing.errors %}open{% endif %}>
+                        <summary class="cursor-pointer text-sm font-bold text-slate-800">예약 반영 설정</summary>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label for="{{ form.reservation_school_slug.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">예약 반영 학교 (선택)</label>
+                                {{ form.reservation_school_slug }}
+                                {% if form.reservation_school_slug.help_text %}
+                                <p class="text-xs text-slate-500 mt-2">{{ form.reservation_school_slug.help_text }}</p>
+                                {% endif %}
+                                {% if form.reservation_school_slug.errors %}
+                                <div class="mt-2 text-sm text-red-600">
+                                    {% for error in form.reservation_school_slug.errors %}
+                                    <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if can_use_overwrite_option %}
+                            <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                <label class="inline-flex items-start gap-2 text-sm text-slate-700">
+                                    {{ form.overwrite_existing }}
+                                    <span>
+                                        <span class="font-bold text-slate-800">{{ form.overwrite_existing.label }}</span>
+                                        {% if form.overwrite_existing.help_text %}
+                                        <span class="block text-xs text-slate-500 mt-1">{{ form.overwrite_existing.help_text }}</span>
+                                        {% endif %}
+                                    </span>
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </details>
+
                     <button type="submit"
                         class="inline-flex items-center justify-center w-full md:w-auto px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors">
                         <i class="fa-solid fa-check mr-2"></i>
                         업로드하고 점검하기
                     </button>
                 </form>
-            </div>
+            </section>
         </div>
-
-        {% if check_result %}
+{% if check_result %}
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-5">
             <div class="flex items-center gap-3">
                 {% if check_result.is_valid %}
@@ -531,7 +556,7 @@
         {% endif %}
 
         {% if request.user.is_authenticated %}
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-3">
+        <div id="sync-history" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-lg font-black text-slate-800">최근 예약 반영 내역</h2>
                 <a href="{% url 'timetable:download_sync_logs_csv' %}{% if csv_download_query %}?{{ csv_download_query }}{% endif %}"
@@ -540,32 +565,17 @@
                     CSV 다운로드
                 </a>
             </div>
-            <div class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 space-y-2">
-                <h3 class="text-sm font-black text-indigo-900">사용 방법 (처음 쓰는 선생님용)</h3>
-                <p class="text-sm text-indigo-900">아래 순서대로 하면 원하는 반영 내역만 빠르게 찾고, 같은 조건으로 CSV를 내려받을 수 있습니다.</p>
-                {% if request.user.is_superuser %}
-                <p class="text-xs text-indigo-800">관리자 계정은 전체 학교/전체 사용자 반영 내역을 볼 수 있습니다.</p>
-                {% else %}
-                <p class="text-xs text-indigo-800">일반 계정은 내 계정으로 실행한 반영 내역만 보입니다. 다른 선생님/다른 학교 내역은 표시되지 않습니다.</p>
-                {% endif %}
-                <ol class="list-decimal pl-5 space-y-1 text-sm text-indigo-900">
-                    <li><span class="font-bold">학교 선택</span>:
-                        {% if request.user.is_superuser %}
-                        한 학교만 보고 싶으면 학교를 고르고, 전체를 보고 싶으면 그대로 둡니다.
-                        {% else %}
-                        내가 반영한 학교 중 한 학교만 보고 싶으면 학교를 고르고, 여러 학교를 보려면 <span class="font-bold">내 학교 전체</span>로 둡니다.
-                        {% endif %}
-                    </li>
-                    <li><span class="font-bold">날짜 입력</span>: 시작 날짜와 끝 날짜를 넣고 <span class="font-bold">조회하기</span>를 누릅니다.</li>
-                    <li><span class="font-bold">CSV 다운로드</span>: 지금 보이는 조건 그대로 내려받습니다.</li>
-                </ol>
-                <p class="text-xs text-indigo-800">
-                    예시: 2026-03-01부터 2026-03-31까지 한 학교만 확인하고 싶다면, 학교를 고른 뒤 시작 날짜/끝 날짜를 입력하고 조회하면 됩니다.
-                </p>
-                <p class="text-xs text-indigo-800">
-                    조건을 다시 처음으로 돌리고 싶으면 <span class="font-bold">조건 초기화</span>를 누르세요.
-                </p>
-            </div>
+            <details class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <summary class="cursor-pointer text-sm font-bold text-slate-800">조회 방법 보기</summary>
+                <div class="mt-3 space-y-2 text-sm text-slate-600">
+                    <p>학교와 날짜를 고른 뒤 조회하면 같은 조건으로 CSV를 내려받을 수 있습니다.</p>
+                    {% if request.user.is_superuser %}
+                    <p class="text-xs text-slate-500">관리자는 전체 학교와 전체 사용자 반영 내역을 볼 수 있습니다.</p>
+                    {% else %}
+                    <p class="text-xs text-slate-500">일반 계정은 내 계정으로 실행한 반영 내역만 보입니다.</p>
+                    {% endif %}
+                </div>
+            </details>
             <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-600 mb-1">학교 선택</label>

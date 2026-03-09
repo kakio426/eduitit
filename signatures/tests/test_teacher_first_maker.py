@@ -1,0 +1,38 @@
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+
+
+User = get_user_model()
+
+
+class SignatureMakerTeacherFirstTests(TestCase):
+    def test_guest_view_promotes_work_first_actions_without_old_hero_copy(self):
+        response = self.client.get(reverse("signatures:maker"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이름만 넣고 서명 이미지를 만듭니다")
+        self.assertContains(response, "이미지 저장")
+        self.assertContains(response, "보관함 쓰려면 계정 만들기")
+        self.assertContains(response, "서명 목록으로")
+        self.assertContains(response, "보관함은 나중에 켜기")
+        self.assertNotContains(response, "연수 서명으로 돌아가기")
+        self.assertNotContains(response, "선생님만의 멋진 전자 서명을 1초 만에 만들어보세요.")
+
+    def test_authenticated_view_checks_response_ok_before_success_message(self):
+        user = User.objects.create_user(
+            username="sign_teacher",
+            password="pw123456",
+            email="sign_teacher@example.com",
+        )
+        user.userprofile.nickname = "서명교사"
+        user.userprofile.role = "school"
+        user.userprofile.save(update_fields=["nickname", "role"])
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("signatures:maker"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이 스타일 저장")
+        self.assertContains(response, "서명 스타일을 저장했습니다.", html=False)
+        self.assertContains(response, "response.ok", html=False)

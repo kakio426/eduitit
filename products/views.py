@@ -188,8 +188,22 @@ def _should_block_for_large_screen_service(request):
 
 
 def product_list(request):
-    products = Product.objects.filter(is_active=True)
-    return render(request, 'products/list.html', {'products': products})
+    from core.views import _attach_product_launch_meta, get_purpose_sections
+
+    products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    product_list = _attach_product_launch_meta(list(products))
+    sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=None)
+    return render(
+        request,
+        'products/list.html',
+        {
+            'products': product_list,
+            'sections': sections,
+            'aux_sections': aux_sections,
+            'games': games,
+            'total_count': len(product_list),
+        },
+    )
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)

@@ -195,3 +195,7 @@ Keep all existing content above unchanged; apply these requirements in addition.
 ### 8) Definition of Done for New Service
 A service integration is not complete unless all MUST items above are satisfied and documented.
 
+### 9) Canonical Teacher-First Reference
+- Teacher-facing UX와 전역 정보구조의 canonical reference는 `docs/plans/CONTRACT_teacher_first_product_2026-03-08.md`를 따른다.
+- 서비스 간 이어쓰기 seed 계약은 `docs/plans/CONTRACT_workflow_bundle_2026-03-08.md`를 따른다.
+- 홈, 카탈로그, 가이드, 서비스 첫 화면은 위 계약 문서를 우선 기준으로 리뷰한다.`r`n- 단계별 실행 현황과 다음 우선순위는 `docs/plans/CHECKLIST_eduitit_teacher_first_execution_v2_2026-03-08.md`를 따른다.

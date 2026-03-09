@@ -1,58 +1,97 @@
-<div class="clay-card p-5 md:p-6">
+<div class="clay-card p-5 md:p-6 space-y-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <h2 class="text-xl font-bold text-gray-700">생성 결과</h2>
+            <p class="mt-1 text-sm text-slate-500">결과를 확인하고 바로 복사하면 됩니다.</p>
+        </div>
+        {% if daily_limit %}
+        <div class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-clay-inner">
+            오늘 남은 생성 횟수 <span class="text-gray-700">{{ remaining_count }}</span> / {{ daily_limit }}
+        </div>
+        {% endif %}
+    </div>
+
     {% if limit_message %}
-    <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm">
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
         <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ limit_message }}
     </div>
     {% endif %}
 
     {% if error_message %}
-    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
         <i class="fa-solid fa-circle-exclamation mr-1"></i>{{ error_message }}
     </div>
     {% endif %}
 
     {% if info_message %}
-    <div class="mb-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-4 py-3 text-sm">
+    <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
         <i class="fa-solid fa-circle-info mr-1"></i>{{ info_message }}
-    </div>
-    {% endif %}
-
-    {% if daily_limit %}
-    <div class="mb-4 text-sm text-gray-500">
-        <i class="fa-solid fa-gauge-high mr-1"></i>
-        오늘 남은 생성 횟수: <span class="font-bold text-gray-700">{{ remaining_count }}</span> / {{ daily_limit }}
     </div>
     {% endif %}
 
     {% if result_text %}
     <div class="space-y-3">
-        <div x-data="{ copied: false }" class="flex items-center justify-end">
+        <div x-data="{ copied: false, copyError: '', async copyText(text) { try { await navigator.clipboard.writeText(text); this.copyError = ''; this.copied = true; setTimeout(() => this.copied = false, 2000); } catch (error) { this.copied = false; this.copyError = '복사에 실패했습니다. 직접 선택해 복사해 주세요.'; } } }" class="flex flex-col items-end gap-2">
             <button
                 type="button"
-                @click="navigator.clipboard.writeText($refs.output.value); copied = true; setTimeout(() => copied = false, 2000)"
+                @click="copyText($refs.output.value)"
                 class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition"
             >
                 <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
                 <span x-show="!copied">복사하기</span>
                 <span x-show="copied">복사됨!</span>
             </button>
+            <p x-show="copyError" x-cloak class="text-xs font-semibold text-red-600" x-text="copyError"></p>
             <textarea x-ref="output" class="hidden">{{ result_text }}</textarea>
         </div>
 
-        <div class="w-full min-h-40 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed">
+        <div class="w-full min-h-40 px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 leading-relaxed whitespace-pre-line">
             {{ result_text }}
         </div>
     </div>
+
+    <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-sm font-bold text-indigo-900">다음 작업</p>
+                <p class="text-xs text-indigo-700 mt-1">방금 만든 문장을 이어서 씁니다.</p>
+            </div>
+        </div>
+        {% if request.user.is_authenticated %}
+        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+            <form method="post" action="{% url 'noticegen:start_consent_followup' %}">
+                {% csrf_token %}
+                <input type="hidden" name="target" value="{{ followup_target }}">
+                <input type="hidden" name="topic" value="{{ followup_topic }}">
+                <input type="hidden" name="length_style" value="{{ followup_length_style }}">
+                <input type="hidden" name="keywords" value="{{ followup_keywords }}">
+                <textarea name="result_text" class="hidden">{{ followup_result_text }}</textarea>
+                <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition">동의서로 이어서 만들기</button>
+            </form>
+            <form method="post" action="{% url 'noticegen:start_signature_followup' %}">
+                {% csrf_token %}
+                <input type="hidden" name="target" value="{{ followup_target }}">
+                <input type="hidden" name="topic" value="{{ followup_topic }}">
+                <input type="hidden" name="length_style" value="{{ followup_length_style }}">
+                <input type="hidden" name="keywords" value="{{ followup_keywords }}">
+                <textarea name="result_text" class="hidden">{{ followup_result_text }}</textarea>
+                <button type="submit" class="w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">서명으로 이어서 만들기</button>
+            </form>
+        </div>
+        {% else %}
+        <p class="mt-3 text-sm text-indigo-800">로그인하면 동의서나 서명으로 바로 이어갈 수 있습니다.</p>
+        {% endif %}
+    </div>
     {% else %}
     <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">
-        대상, 주제, 전달 사항을 입력하면 이 영역에 멘트가 표시됩니다.
+        왼쪽에서 내용을 넣고 <span class="font-semibold text-gray-700">문장 만들기</span>를 누르세요.
     </div>
     {% endif %}
 
     {% if similar_items %}
-    <div class="mt-5 rounded-xl border border-gray-200 bg-white p-4">
-        <p class="text-sm font-bold text-gray-700 mb-3">유사 행사 참고 멘트</p>
-        <div class="space-y-3">
+    <details class="rounded-xl border border-gray-200 bg-white p-4">
+        <summary class="cursor-pointer text-sm font-bold text-gray-700">필요할 때 참고 문장 보기 <span class="text-slate-400">{{ similar_items|length }}개</span></summary>
+        <div class="mt-3 space-y-3">
             {% for item in similar_items %}
             <div class="rounded-lg bg-gray-50 border border-gray-200 p-3">
                 <p class="text-xs text-gray-500 mb-1">유사도 {{ item.score }}%</p>
@@ -60,7 +99,7 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </details>
     {% endif %}
 </div>
 

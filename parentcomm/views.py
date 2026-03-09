@@ -49,6 +49,8 @@ CONTACT_HEADER_ALIASES = {
     "student_classroom": {"studentclassroom", "classroom", "반", "학급"},
     "relationship": {"relationship", "관계"},
 }
+WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
+SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
 
 
 def _get_service():
@@ -56,6 +58,46 @@ def _get_service():
     if service:
         return service
     return Product.objects.filter(title=SERVICE_TITLE).first()
+
+
+def _peek_action_seed(request, token, *, expected_action=''):
+    token = (token or '').strip()
+    if not token:
+        return None
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get('action') != expected_action:
+            continue
+        return seed
+    return None
+
+
+def _pop_action_seed(request, token, *, expected_action=''):
+    token = (token or '').strip()
+    if not token:
+        return None
+    found_seed = None
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get('action') != expected_action:
+            continue
+        if found_seed is None:
+            found_seed = seed
+        seeds.pop(token, None)
+        request.session[session_key] = seeds
+    if found_seed is not None:
+        request.session.modified = True
+    return found_seed
 
 
 @login_required
@@ -66,10 +108,29 @@ def main(request):
     if active_tab not in ALLOWED_TABS:
         active_tab = TAB_TODAY
 
+    workflow_seed_token = (request.GET.get('sb_seed') or request.POST.get('workflow_seed_token') or '').strip()
+    workflow_seed = _peek_action_seed(request, workflow_seed_token, expected_action='parentcomm_notice')
+    workflow_seed_data = workflow_seed.get('data', {}) if isinstance(workflow_seed, dict) and isinstance(workflow_seed.get('data'), dict) else {}
+    notice_prefill_active = bool(workflow_seed_data)
+    if notice_prefill_active:
+        seeded_tab = (workflow_seed_data.get('target_tab') or TAB_NOTICES).strip()
+        if seeded_tab in ALLOWED_TABS and active_tab == TAB_TODAY:
+            active_tab = seeded_tab
+    notice_prefill_source_label = (str(workflow_seed_data.get('source_label') or '').strip() if notice_prefill_active else '') or '연결된 서비스에서 가져온 내용을 먼저 채워두었어요.'
+    notice_prefill_origin_label = str(workflow_seed_data.get('origin_label') or '').strip() if notice_prefill_active else ''
+    notice_prefill_origin_url = str(workflow_seed_data.get('origin_url') or '').strip() if notice_prefill_active else ''
+    notice_initial = {}
+    if notice_prefill_active:
+        notice_initial = {
+            'classroom_label': str(workflow_seed_data.get('classroom_label') or '').strip()[:60],
+            'title': str(workflow_seed_data.get('title') or '').strip()[:200],
+            'content': str(workflow_seed_data.get('content') or '').strip()[:2000],
+        }
+
     contact_form = ParentContactForm()
     contact_csv_form = ParentContactCsvImportForm()
     contact_bulk_form = ParentContactBulkTextForm()
-    notice_form = ParentNoticeForm()
+    notice_form = ParentNoticeForm(initial=notice_initial)
     thread_form = ParentThreadCreateForm(teacher=teacher)
     consultation_request_form = ConsultationRequestForm(teacher=teacher)
     invalid_request_forms = {}
@@ -136,6 +197,8 @@ def main(request):
                 notice = notice_form.save(commit=False)
                 notice.teacher = teacher
                 notice.save()
+                if workflow_seed_token:
+                    _pop_action_seed(request, workflow_seed_token, expected_action='parentcomm_notice')
                 messages.success(request, "알림장을 등록했습니다.")
                 return _redirect_to(TAB_NOTICES)
             messages.error(request, "알림장을 저장하지 못했습니다.")
@@ -267,6 +330,11 @@ def main(request):
         "consultation_request_form": consultation_request_form,
         "request_proposal_forms": request_proposal_forms,
         "proposal_slot_forms": proposal_slot_forms,
+        "workflow_seed_token": workflow_seed_token if notice_prefill_active else "",
+        "notice_prefill_active": notice_prefill_active,
+        "notice_prefill_source_label": notice_prefill_source_label if notice_prefill_active else "",
+        "notice_prefill_origin_label": notice_prefill_origin_label if notice_prefill_active else "",
+        "notice_prefill_origin_url": notice_prefill_origin_url if notice_prefill_active else "",
     }
     return render(request, "parentcomm/main.html", context)
 

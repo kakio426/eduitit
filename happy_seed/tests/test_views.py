@@ -38,6 +38,26 @@ class HappySeedViewTests(TestCase):
         res = self.client.get(reverse("happy_seed:dashboard"))
         self.assertEqual(res.status_code, 302)
 
+    def test_dashboard_teacher_first_shell_prioritizes_classrooms(self):
+        self.client.login(username="teacher2", password="pw12345")
+        res = self.client.get(reverse("happy_seed:dashboard"))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "내 교실 1개")
+        self.assertContains(res, "새 교실 만들기")
+        self.assertContains(res, "교실 열기")
+        self.assertContains(res, "처음이면 사용 안내 보기")
+        self.assertNotContains(res, "빠른 시작:")
+        self.assertNotContains(res, "꽃밭 대시보드:")
+
+    def test_classroom_detail_demotes_manual_and_keeps_class_actions_first(self):
+        self.client.login(username="teacher2", password="pw12345")
+        res = self.client.get(reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "처음이면 사용 안내 보기")
+        self.assertContains(res, "학생 관리 열기")
+        self.assertContains(res, "꽃밭 보기")
+        self.assertNotContains(res, "교사용 설명서")
+
     def test_celebration_requires_valid_token(self):
         draw = HSBloomDraw.objects.create(
             student=self.student,

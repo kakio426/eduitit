@@ -597,6 +597,8 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data-consent-upload-preview")
         self.assertContains(response, "consent/pdf_preview.js")
+        self.assertContains(response, "업무 기준")
+        self.assertNotContains(response, "업무 담당자 안내")
 
     def test_create_step1_seed_auto_adds_recipients(self):
         self.client.login(username="teacher", password="pw123456")
@@ -842,6 +844,8 @@ class ConsentEvidenceTests(TestCase):
         self.assertContains(response, "abc123")
         self.assertContains(response, "data-consent-document-preview")
         self.assertContains(response, "consent/pdf_preview.js")
+        self.assertContains(response, "업무 기준")
+        self.assertNotContains(response, "업무 담당자 안내")
 
     def test_sign_audit_log_contains_document_evidence(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT

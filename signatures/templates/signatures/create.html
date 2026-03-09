@@ -4,86 +4,111 @@
 
 {% block content %}
 <main class="pt-28 pb-16 px-4 min-h-screen">
-    <div class="max-w-2xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <a href="{% url 'signatures:list' %}" class="text-xl text-gray-500 hover:text-purple-600 transition">
-                <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
+    <div class="max-w-3xl mx-auto space-y-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <a href="{% url 'signatures:list' %}" class="text-sm text-gray-500 hover:text-purple-600 transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
+                </a>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-700 mt-2">새 연수 만들기</h1>
+                <p class="text-sm md:text-base text-gray-500 mt-2">기본 정보만 적고 바로 서명을 받을 수 있게 준비합니다.</p>
+            </div>
+            {% if sheetbook_prefill_origin_url %}
+            <a href="{{ sheetbook_prefill_origin_url }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-bold text-purple-700 hover:bg-purple-50 transition">
+                <i class="fa-solid fa-arrow-left"></i>{{ sheetbook_prefill_origin_label|default:"원래 작성 화면으로 돌아가기" }}
             </a>
-            <h1 class="text-5xl font-bold text-gray-700 mt-4">
-                <i class="fa-solid fa-plus-circle text-purple-500 mr-2"></i>새 연수 만들기
-            </h1>
+            {% endif %}
         </div>
 
-        <!-- Form -->
-        <form method="post" class="clay-card p-8 space-y-6">
+        {% if sheetbook_prefill_active %}
+        <div class="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-700">
+            <p class="font-semibold">{{ sheetbook_prefill_source_label|default:"연결된 서비스에서 가져온 내용을 먼저 채워두었어요." }}</p>
+            {% if sheetbook_prefill_participants_count %}
+            <p class="mt-1 text-xs text-blue-600">참석자 후보 {{ sheetbook_prefill_participants_count }}명도 같이 준비했습니다.</p>
+            {% endif %}
+            {% if sheetbook_prefill_participants_preview %}
+            <details class="mt-3 rounded-xl border border-blue-100 bg-white/80 px-3 py-3 text-xs text-blue-700">
+                <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
+                    <span class="font-semibold">참석자 후보 보기</span>
+                    <span class="text-[11px] text-blue-600">필요할 때만 펼치기</span>
+                </summary>
+                <ul class="mt-2 space-y-1">
+                    {% for item in sheetbook_prefill_participants_preview %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                    {% if sheetbook_prefill_participants_count > sheetbook_prefill_participants_preview|length %}
+                    <li>외 {{ sheetbook_prefill_participants_count|add:"-5" }}명</li>
+                    {% endif %}
+                </ul>
+            </details>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="clay-card p-6 md:p-8 space-y-6">
             {% csrf_token %}
+            {% if sheetbook_seed_token %}
+            <input type="hidden" name="sheetbook_seed_token" value="{{ sheetbook_seed_token }}">
+            <input type="hidden" name="apply_sheetbook_participants" value="1">
+            {% endif %}
 
             <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-heading mr-1"></i> 연수 제목
-                </label>
+                <label class="block text-sm font-bold text-gray-600 mb-2">연수 제목</label>
                 {{ form.title }}
             </div>
 
             <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-file-lines mr-1"></i> 인쇄 상단 제목 (선택)
-                </label>
+                <label class="block text-sm font-bold text-gray-600 mb-2">인쇄 상단 제목 (선택)</label>
                 {{ form.print_title }}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-solid fa-user-tie mr-1"></i> 강사명
-                    </label>
+                    <label class="block text-sm font-bold text-gray-600 mb-2">강사명</label>
                     {{ form.instructor }}
                 </div>
                 <div>
-                    <label class="block text-2xl font-bold text-gray-600 mb-2">
-                        <i class="fa-solid fa-location-dot mr-1"></i> 장소
-                    </label>
+                    <label class="block text-sm font-bold text-gray-600 mb-2">장소</label>
                     {{ form.location }}
                 </div>
             </div>
 
             <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-calendar mr-1"></i> 연수 일시
-                </label>
+                <label class="block text-sm font-bold text-gray-600 mb-2">연수 일시</label>
                 {{ form.datetime }}
             </div>
 
             <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-align-left mr-1"></i> 설명 (선택)
-                </label>
+                <label class="block text-sm font-bold text-gray-600 mb-2">설명 (선택)</label>
                 {{ form.description }}
             </div>
 
-            <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-2">
-                    <i class="fa-solid fa-share-nodes mr-1"></i> 공유 명단 (선택)
-                </label>
-                {{ form.shared_roster_group }}
-                <p class="text-sm text-gray-500 mt-2">배부 체크 명단을 연결하면 생성 시 참석자 명단으로 자동 가져옵니다.</p>
-            </div>
+            <details class="rounded-2xl border border-gray-200 bg-white p-4">
+                <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
+                    <span class="font-semibold text-gray-800">공유 명단과 시작 설정</span>
+                    <span class="text-xs text-gray-500">보기</span>
+                </summary>
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">공유 명단 (선택)</label>
+                        {{ form.shared_roster_group }}
+                        <p class="text-xs text-gray-500 mt-2">배부 체크 명단을 연결하면 생성 시 참석자 명단으로 자동 가져옵니다.</p>
+                    </div>
 
-            <div class="flex items-center gap-3">
-                {{ form.is_active }}
-                <label class="text-2xl font-bold text-gray-600">
-                    생성 즉시 서명 받기 활성화
-                </label>
-            </div>
+                    <div class="flex items-center gap-3">
+                        {{ form.is_active }}
+                        <label class="text-sm font-bold text-gray-600">생성 즉시 서명 받기 활성화</label>
+                    </div>
+                </div>
+            </details>
 
-            <div class="flex gap-4 pt-4">
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="submit"
-                    class="flex-1 clay-card py-4 text-2xl font-bold text-white bg-purple-500 hover:bg-purple-600 transition rounded-2xl">
-                    <i class="fa-solid fa-check mr-2"></i>연수 생성하기
+                    class="flex-1 rounded-2xl bg-purple-600 py-4 text-lg font-bold text-white hover:bg-purple-700 transition">
+                    연수 생성하기
                 </button>
                 <a href="{% url 'signatures:list' %}"
-                    class="px-8 py-4 text-2xl font-bold text-gray-500 hover:text-gray-700 transition">
+                    class="rounded-2xl border border-gray-200 bg-white px-6 py-4 text-center text-lg font-bold text-gray-600 hover:text-gray-800 transition">
                     취소
                 </a>
             </div>

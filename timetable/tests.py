@@ -27,6 +27,15 @@ class TimetablePhaseOneTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "전담 시간표·특별실 배치 도우미")
 
+    def test_main_page_uses_teacher_first_sections(self):
+        response = self.client.get("/timetable/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "양식 받기")
+        self.assertContains(response, "파일 올리기")
+        self.assertContains(response, "배치 조건 메모")
+        self.assertNotContains(response, "1단계: 입력 양식 내려받기")
+        self.assertNotContains(response, "2단계: 작성 파일 점검하기")
+
     def test_template_download_has_required_sheets(self):
         response = self.client.get("/timetable/template/")
         self.assertEqual(response.status_code, 200)

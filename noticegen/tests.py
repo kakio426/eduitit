@@ -199,6 +199,29 @@ class NoticeGenViewTests(TestCase):
 
         self.assertNotEqual(base["key_hash"], short["key_hash"])
 
+    def test_main_uses_teacher_first_sections(self):
+        response = self.client.get(reverse("noticegen:main"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "바로 쓰는 안내문 문장")
+        self.assertContains(response, "바로 만들기")
+        self.assertContains(response, "생성 결과")
+        self.assertContains(response, "문장 만들기")
+        self.assertNotContains(response, "결과 복사")
+        self.assertNotContains(response, "길게 설명하지 않아도 됩니다. 핵심만 적어 주세요.")
+
+    @patch("noticegen.views._call_deepseek")
+    def test_result_panel_copy_button_has_failure_feedback(self, mock_call):
+        mock_call.return_value = "준비물을 챙겨 주세요."
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            self._payload(),
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "copyError: '', async copyText(text)", html=False)
+        self.assertContains(response, '@click="copyText($refs.output.value)"', html=False)
+        self.assertContains(response, "복사에 실패했습니다. 직접 선택해 복사해 주세요.")
+
     def test_main_prefills_from_sheetbook_seed(self):
         session = self.client.session
         session["sheetbook_action_seeds"] = {

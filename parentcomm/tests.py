@@ -111,6 +111,78 @@ class ParentCommViewTests(TestCase):
         response = self.client.get(reverse("parentcomm:main"))
         self.assertEqual(response.status_code, 200)
 
+    def test_main_page_uses_teacher_first_sections(self):
+        response = self.client.get(reverse("parentcomm:main"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "오늘 할 일")
+        self.assertContains(response, "긴급 확인")
+        self.assertContains(response, "한 번에 등록")
+        self.assertContains(response, "더보기")
+        self.assertContains(response, "알림장과 연락처")
+        self.assertNotContains(response, "오늘 확인할 일부터 보고, 필요한 소통만 바로 이어서 처리하세요.")
+        self.assertNotContains(response, "1) 한 명씩 등록")
+
+    def test_contact_link_copy_has_failure_feedback(self):
+        response = self.client.get(reverse("parentcomm:main"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "copyError: '', async copyLink(link)", html=False)
+        self.assertContains(response, '@click="copyLink($el.dataset.link)"', html=False)
+        self.assertContains(response, "복사에 실패했습니다. 링크를 눌러 직접 열어 주세요.")
+
+    def test_main_reads_workflow_seed_and_prefills_notice_form(self):
+        session = self.client.session
+        session['workflow_action_seeds'] = {
+            'workflow-seed': {
+                'action': 'parentcomm_notice',
+                'data': {
+                    'classroom_label': '5-1',
+                    'title': '03월 08일 Science Room 이용 안내',
+                    'content': '03월 08일 2교시에 Science Room 이용이 예정되어 있습니다.',
+                    'target_tab': 'notices',
+                    'source_label': '예약한 내용을 바탕으로 학부모 안내 초안을 채워두었어요.',
+                    'origin_url': '/reservations/test-school/?date=2026-03-08',
+                    'origin_label': '예약 화면으로 돌아가기',
+                },
+            }
+        }
+        session.save()
+
+        response = self.client.get(f"{reverse('parentcomm:main')}?sb_seed=workflow-seed")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '예약한 내용을 바탕으로 학부모 안내 초안을 채워두었어요.')
+        self.assertContains(response, '예약 화면으로 돌아가기')
+        self.assertContains(response, 'name="workflow_seed_token" value="workflow-seed"', html=False)
+        self.assertContains(response, '03월 08일 Science Room 이용 안내')
+
+    def test_create_notice_consumes_workflow_seed(self):
+        session = self.client.session
+        session['workflow_action_seeds'] = {
+            'workflow-seed': {
+                'action': 'parentcomm_notice',
+                'data': {
+                    'title': '예약 안내',
+                    'content': '예약 내용 안내',
+                    'target_tab': 'notices',
+                },
+            }
+        }
+        session.save()
+
+        response = self.client.post(
+            reverse('parentcomm:main'),
+            {
+                'action': 'create_notice',
+                'workflow_seed_token': 'workflow-seed',
+                'classroom_label': '3-2',
+                'title': '예약 안내',
+                'content': '예약 내용 안내',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ParentNotice.objects.filter(title='예약 안내').exists())
+        self.assertNotIn('workflow-seed', self.client.session.get('workflow_action_seeds', {}))
     def test_teacher_can_add_contact_without_email_field(self):
         response = self.client.post(
             reverse("parentcomm:main"),

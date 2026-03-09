@@ -1,47 +1,40 @@
 {% extends 'base.html' %}
 
-{% block title %}모바일 미지원 - Eduitit{% endblock %}
+{% block title %}모바일 제한 안내 - Eduitit{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-20 px-4 min-h-screen flex items-center justify-center">
-    <div class="max-w-2xl mx-auto text-center clay-card p-12 bg-[#E0E5EC]">
-        <!-- Icon -->
-        <div class="w-32 h-32 mx-auto mb-8 rounded-full shadow-clay-inner flex items-center justify-center bg-[#E0E5EC]">
-            <i class="fa-solid fa-mobile-screen text-7xl text-gray-400"></i>
+<main class="min-h-screen px-4 pb-20 pt-32 flex items-center justify-center bg-[#E0E5EC]">
+    <section class="w-full max-w-xl rounded-[2rem] border border-white/70 bg-white/90 p-8 text-center shadow-sm md:p-10">
+        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-3xl text-slate-400">
+            <i class="fa-solid fa-mobile-screen-button"></i>
         </div>
 
-        <!-- Title -->
-        <h1 class="text-5xl md:text-6xl font-bold text-gray-700 font-hand mb-4 leading-tight">
-            {{ service_name }}
-        </h1>
-
-        <!-- Reason -->
-        <p class="text-2xl md:text-3xl text-gray-500 font-hand mb-8 leading-relaxed">
-            {{ reason }}
-        </p>
-
-        <!-- Suggestion -->
-        <div class="p-6 rounded-3xl bg-blue-50 shadow-clay-inner mb-8">
-            <p class="text-xl md:text-2xl text-blue-700 font-bold font-hand">
-                <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>
-                {{ suggestion }}
-            </p>
+        <div class="mt-6 space-y-3">
+            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">큰 화면에서 먼저 쓰는 기능</span>
+            <h1 class="text-3xl font-black text-slate-900 md:text-4xl">{{ service_name }}</h1>
+            <p class="text-base leading-7 text-slate-600">{{ reason }}</p>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-bold text-slate-700">
+            {{ suggestion }}
+        </div>
+
+        <div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <a href="/" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:text-slate-900">
+                <i class="fa-solid fa-house"></i>
+                홈으로
+            </a>
             {% if continue_url %}
-            <a href="{{ continue_url }}" class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-gray-700 text-lg font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all">
-                <i class="fa-solid fa-triangle-exclamation mr-2 text-amber-500"></i>그래도 계속 진행
+            <a href="{{ continue_url }}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                그래도 열기
             </a>
             {% endif %}
-            <a href="/" class="inline-flex items-center justify-center px-8 py-3 rounded-full bg-purple-500 text-white text-lg font-bold shadow-clay hover:bg-purple-600 hover:scale-105 transition-all">
-                <i class="fa-solid fa-home mr-2"></i>홈으로 돌아가기
-            </a>
         </div>
+
         {% if continue_url %}
-        <p class="mt-4 text-sm text-gray-500">작은 화면에서는 일부 기능이 불안정할 수 있습니다.</p>
+        <p class="mt-4 text-xs text-slate-500">작은 화면에서는 일부 기능이 불안정할 수 있습니다.</p>
         {% endif %}
-    </div>
+    </section>
 </main>
 {% endblock %}

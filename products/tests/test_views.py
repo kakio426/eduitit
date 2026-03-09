@@ -149,6 +149,16 @@ class ProductDevicePolicyTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'products/mobile_not_supported.html')
 
+    def test_mobile_block_template_uses_short_teacher_first_actions(self):
+        response = self.client.get(
+            reverse('yut_game'),
+            HTTP_USER_AGENT=self.iphone_ua,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '그래도 열기')
+        self.assertContains(response, '홈으로')
+        self.assertNotContains(response, '그래도 계속 진행')
+
     def test_yut_force_desktop_bypasses_phone_block(self):
         response = self.client.get(
             f"{reverse('yut_game')}?force_desktop=1",

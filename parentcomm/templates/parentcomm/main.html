@@ -3,42 +3,46 @@
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
-    <div class="max-w-7xl mx-auto space-y-6" x-data="{ tab: '{{ active_tab|default:'today' }}' }">
-        <header class="clay-card p-6 md:p-8">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="max-w-7xl mx-auto space-y-6" x-data="{ tab: '{{ active_tab|default:'today' }}', utilityOpen: false }">
+        <header class="clay-card p-5 md:p-6">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                 <div class="flex items-start gap-4">
                     <div class="w-14 h-14 rounded-2xl bg-white shadow-clay-inner flex items-center justify-center text-3xl">📨</div>
                     <div>
                         <h1 class="text-3xl font-bold text-gray-700">{{ service.title|default:"학부모 소통 허브" }}</h1>
-                        <p class="text-gray-600 mt-2">오늘 처리할 일부터 확인하고, 쪽지/상담/알림장을 단계별로 관리하세요.</p>
+                        <p class="text-gray-600 mt-2">먼저 확인할 일을 보고, 필요한 소통만 바로 이어서 처리하세요.</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="px-3 py-2 rounded-xl bg-red-50 border border-red-200">
-                        <p class="text-xs text-red-600 font-semibold">미확인 긴급</p>
-                        <p class="text-xl font-bold text-red-700">{{ urgent_unchecked|length }}</p>
-                    </div>
-                    <div class="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
-                        <p class="text-xs text-amber-700 font-semibold">답장 필요</p>
-                        <p class="text-xl font-bold text-amber-700">{{ reply_waiting_messages|length }}</p>
-                    </div>
-                    <div class="px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200">
-                        <p class="text-xs text-indigo-700 font-semibold">상담 조율</p>
-                        <p class="text-xl font-bold text-indigo-700">{{ consult_waiting_items|length }}</p>
+                <div class="flex flex-wrap gap-2 text-xs font-semibold">
+                    <span class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-red-700">긴급 확인 {{ urgent_unchecked|length }}</span>
+                    <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">답장 필요 {{ reply_waiting_messages|length }}</span>
+                    <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-indigo-700">상담 조율 {{ consult_waiting_items|length }}</span>
+                </div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+                <button type="button" @click="tab='today'" :class="tab==='today' ? 'bg-slate-700 text-white' : 'bg-white text-gray-700'" class="rounded-xl px-4 py-2.5 text-sm font-semibold transition shadow-sm">오늘 할 일</button>
+                <button type="button" @click="tab='messages'" :class="tab==='messages' ? 'bg-slate-700 text-white' : 'bg-white text-gray-700'" class="rounded-xl px-4 py-2.5 text-sm font-semibold transition shadow-sm">쪽지</button>
+                <button type="button" @click="tab='consult'" :class="tab==='consult' ? 'bg-slate-700 text-white' : 'bg-white text-gray-700'" class="rounded-xl px-4 py-2.5 text-sm font-semibold transition shadow-sm">상담</button>
+                <div class="relative" @keydown.escape.window="utilityOpen = false">
+                    <button type="button" @click="utilityOpen = !utilityOpen" :class="(tab==='notices' || tab==='contacts') ? 'bg-slate-700 text-white' : 'bg-white text-gray-700'" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition shadow-sm">
+                        더보기
+                        <i class="fa-solid fa-chevron-down text-[11px]" :class="utilityOpen ? 'rotate-180' : ''"></i>
+                        <span class="sr-only">알림장과 연락처</span>
+                    </button>
+                    <div x-show="utilityOpen" x-cloak @click.outside="utilityOpen = false" class="absolute left-0 z-20 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                        <button type="button" @click="tab='notices'; utilityOpen=false" :class="tab==='notices' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'" class="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition">
+                            <span>알림장</span>
+                            <span class="text-[11px] text-slate-400">보조</span>
+                        </button>
+                        <button type="button" @click="tab='contacts'; utilityOpen=false" :class="tab==='contacts' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'" class="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition">
+                            <span>연락처</span>
+                            <span class="text-[11px] text-slate-400">보조</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </header>
-
-        <nav class="clay-card p-3">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <button type="button" @click="tab='today'" :class="tab==='today' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">오늘 할 일</button>
-                <button type="button" @click="tab='messages'" :class="tab==='messages' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">학부모 쪽지</button>
-                <button type="button" @click="tab='consult'" :class="tab==='consult' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">상담 조율</button>
-                <button type="button" @click="tab='notices'" :class="tab==='notices' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">알림장</button>
-                <button type="button" @click="tab='contacts'" :class="tab==='contacts' ? 'bg-purple-600 text-white' : 'bg-[#E0E5EC] text-gray-700'" class="rounded-xl py-2 font-semibold transition">학부모 연락처</button>
-            </div>
-        </nav>
 
         <div x-show="tab==='today'" x-cloak class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <section class="clay-card p-5">
@@ -246,10 +250,19 @@
 
         <div x-show="tab==='notices'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <section class="clay-card p-6 space-y-3">
+                {% if notice_prefill_active %}
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <p class="font-semibold">{{ notice_prefill_source_label|default:'연결된 서비스에서 가져온 내용을 먼저 채워두었어요.' }}</p>
+                    {% if notice_prefill_origin_url %}
+                    <a href="{{ notice_prefill_origin_url }}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 underline underline-offset-2">{{ notice_prefill_origin_label|default:'원래 화면으로 돌아가기' }}</a>
+                    {% endif %}
+                </div>
+                {% endif %}
                 <h2 class="text-2xl font-bold text-gray-700">알림장 보내기</h2>
                 <form method="post" enctype="multipart/form-data" class="space-y-3">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="create_notice">
+                    {% if workflow_seed_token %}<input type="hidden" name="workflow_seed_token" value="{{ workflow_seed_token }}">{% endif %}
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ notice_form.classroom_label.label }}</label>
                         {{ notice_form.classroom_label }}
@@ -291,15 +304,12 @@
 
         <div x-show="tab==='contacts'" x-cloak class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <section class="space-y-4">
-                <article class="clay-card p-6">
-                    <h2 class="text-2xl font-bold text-gray-700">학부모 연락처 등록</h2>
-                    <p class="text-sm text-gray-600 mt-2">
-                        학부모는 가입하지 않아도 됩니다. 교사가 만든 전용 링크로 바로 이용할 수 있습니다.
-                    </p>
-                </article>
+                <article class="clay-card p-6 space-y-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-700">학부모 연락처</h2>
+                        <p class="text-sm text-gray-600 mt-1">연락처는 바로 추가하고, 여러 명 등록은 필요할 때만 펼쳐서 진행하세요.</p>
+                    </div>
 
-                <article class="clay-card p-6 space-y-3">
-                    <h3 class="text-xl font-bold text-gray-700">1) 한 명씩 등록</h3>
                     <form method="post" class="space-y-3">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add_contact">
@@ -330,39 +340,48 @@
                                 <label class="block text-sm text-gray-600 mb-1">{{ contact_form.contact_phone.label }}</label>
                                 {{ contact_form.contact_phone }}
                             </div>
+                        </div>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
+                    </form>
+                </article>
+
+                <details class="clay-card p-6" {% if contact_csv_form.csv_file.errors or contact_bulk_form.bulk_text.errors %}open{% endif %}>
+                    <summary class="cursor-pointer text-lg font-bold text-gray-700">한 번에 등록</summary>
+                    <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div class="space-y-3">
+                            <div>
+                                <h3 class="text-base font-bold text-gray-700">CSV 파일 가져오기</h3>
+                                <p class="text-xs text-gray-500 mt-1">헤더 예시: <code>student_name,parent_name,contact_phone,student_grade,student_classroom,relationship</code></p>
+                            </div>
+                            <form method="post" enctype="multipart/form-data" class="space-y-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_contact_csv">
+                                {{ contact_csv_form.csv_file }}
+                                {% if contact_csv_form.csv_file.errors %}<p class="text-red-600 text-sm">{{ contact_csv_form.csv_file.errors|join:", " }}</p>{% endif %}
+                                <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold">CSV 등록</button>
+                            </form>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <h3 class="text-base font-bold text-gray-700">여러 줄 붙여넣기</h3>
+                                <p class="text-xs text-gray-500 mt-1">한 줄 예시: 학생이름,학부모이름,연락처,학년,반,관계</p>
+                            </div>
+                            <form method="post" class="space-y-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_contact_bulk_text">
+                                {{ contact_bulk_form.bulk_text }}
+                                {% if contact_bulk_form.bulk_text.errors %}<p class="text-red-600 text-sm">{{ contact_bulk_form.bulk_text.errors|join:", " }}</p>{% endif %}
+                                <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 text-white font-semibold">빠른 등록</button>
+                            </form>
+                        </div>
                     </div>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold">연락처 추가</button>
-                </form>
-            </article>
-
-            <article class="clay-card p-6 space-y-3">
-                <h3 class="text-xl font-bold text-gray-700">2) CSV로 한 번에 등록</h3>
-                    <p class="text-xs text-gray-500">헤더 예시: <code>student_name,parent_name,contact_phone,student_grade,student_classroom,relationship</code></p>
-                <form method="post" enctype="multipart/form-data" class="space-y-2">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_contact_csv">
-                        {{ contact_csv_form.csv_file }}
-                        {% if contact_csv_form.csv_file.errors %}<p class="text-red-600 text-sm">{{ contact_csv_form.csv_file.errors|join:", " }}</p>{% endif %}
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold">CSV 등록</button>
-                    </form>
-                </article>
-
-            <article class="clay-card p-6 space-y-3">
-                <h3 class="text-xl font-bold text-gray-700">3) 여러 줄 붙여넣기</h3>
-                    <p class="text-xs text-gray-500">한 줄: 학생이름,학부모이름,연락처,학년(선택),반(선택),관계(선택)</p>
-                <form method="post" class="space-y-2">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_contact_bulk_text">
-                        {{ contact_bulk_form.bulk_text }}
-                        {% if contact_bulk_form.bulk_text.errors %}<p class="text-red-600 text-sm">{{ contact_bulk_form.bulk_text.errors|join:", " }}</p>{% endif %}
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 text-white font-semibold">빠른 등록</button>
-                    </form>
-                </article>
+                </details>
             </section>
 
             <section class="space-y-3">
                 {% for contact in contacts %}
-                <article class="clay-card p-5" x-data="{ copied: false }">
+                <article class="clay-card p-5" x-data="{ copied: false, copyError: '', async copyLink(link) { try { await navigator.clipboard.writeText(link); this.copyError = ''; this.copied = true; setTimeout(() => this.copied = false, 1500); } catch (error) { this.copied = false; this.copyError = '복사에 실패했습니다. 링크를 눌러 직접 열어 주세요.'; } } }">
                     <p class="font-semibold text-gray-800">{{ contact.student_name }} / {{ contact.parent_name }}</p>
                     <p class="text-sm text-gray-600 mt-1">
                         연락처: {{ contact.contact_phone|default:"-" }}
@@ -372,10 +391,11 @@
                         <button type="button"
                                 class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm"
                                 data-link="{{ request.scheme }}://{{ request.get_host }}{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}"
-                                @click="navigator.clipboard.writeText($el.dataset.link); copied=true; setTimeout(()=>copied=false, 1500)">
+                                @click="copyLink($el.dataset.link)">
                             링크 복사
                         </button>
                         <span x-show="copied" x-cloak class="text-xs text-emerald-700 font-semibold">복사됨</span>
+                        <span x-show="copyError" x-cloak class="text-xs font-semibold text-red-600" x-text="copyError"></span>
                     </div>
                 </article>
                 {% empty %}

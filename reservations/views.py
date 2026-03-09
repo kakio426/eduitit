@@ -7,6 +7,7 @@ from django.utils.text import slugify
 from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta, date
+import uuid
 
 from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
 from .utils import get_max_booking_date
@@ -14,6 +15,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
+WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
+SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
+RESERVATION_FOLLOWUP_SESSION_KEY = 'reservation_followup_context'
 
 
 def _can_edit_reservation(request, reservation):
@@ -53,6 +57,114 @@ def _reservation_party_display(reservation):
     if reservation.grade > 0:
         return f"{reservation.grade}학년 {reservation.name}"
     return reservation.name
+
+
+def _period_display_label(school, period):
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+    for slot in config.get_period_slots():
+        if slot['id'] == period:
+            return slot['display_label']
+    return f"{period}교시"
+
+
+def _build_reservation_origin(request, school, reservation):
+    origin_path = f"{reverse('reservations:reservation_index', args=[school.slug])}?date={reservation.date.strftime('%Y-%m-%d')}"
+    return {
+        'origin_service': 'reservations',
+        'origin_url': request.build_absolute_uri(origin_path),
+        'origin_label': '예약 화면으로 돌아가기',
+    }
+
+
+def _build_reservation_notice_seed(request, school, reservation):
+    date_label = reservation.date.strftime('%m월 %d일')
+    period_label = _period_display_label(school, reservation.period)
+    party = _reservation_party_display(reservation)
+    memo = (reservation.memo or '').strip()
+    keywords = f"{date_label} {period_label} {reservation.room.name} 이용 안내, 대상 {party}"
+    if memo:
+        keywords = f"{keywords}, 메모 {memo}"
+    data = {
+        'target': 'parent',
+        'topic': 'notice',
+        'length_style': 'medium',
+        'keywords': keywords[:1000],
+        'source_label': '예약한 내용을 바탕으로 안내문 초안을 채워두었어요.',
+    }
+    data.update(_build_reservation_origin(request, school, reservation))
+    return data
+
+
+def _build_reservation_parentcomm_seed(request, school, reservation):
+    date_label = reservation.date.strftime('%m월 %d일')
+    period_label = _period_display_label(school, reservation.period)
+    party = _reservation_party_display(reservation)
+    memo = (reservation.memo or '').strip()
+    classroom_label = ''
+    if reservation.grade > 0 and reservation.class_no > 0:
+        classroom_label = f"{reservation.grade}-{reservation.class_no}"
+    title = f"{date_label} {reservation.room.name} 이용 안내"
+    content = f"{date_label} {period_label}에 {reservation.room.name} 이용이 예정되어 있습니다. {party} 활동 준비를 부탁드립니다."
+    if memo:
+        content = f"{content} 참고: {memo}"
+    data = {
+        'classroom_label': classroom_label[:60],
+        'title': title[:200],
+        'content': content[:2000],
+        'target_tab': 'notices',
+        'source_label': '예약한 내용을 바탕으로 학부모 안내 초안을 채워두었어요.',
+    }
+    data.update(_build_reservation_origin(request, school, reservation))
+    return data
+
+
+def _store_action_seed(request, *, action, data):
+    token = uuid.uuid4().hex
+    seed = {
+        'action': action,
+        'data': data,
+        'created_at': timezone.now().isoformat(),
+    }
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            seeds = {}
+        seeds[token] = seed
+        if len(seeds) > 20:
+            overflow = len(seeds) - 20
+            for old_key in list(seeds.keys())[:overflow]:
+                seeds.pop(old_key, None)
+        request.session[session_key] = seeds
+    request.session.modified = True
+    return token
+
+
+def _build_reservation_followup_context(school, reservation):
+    return {
+        'school_slug': school.slug,
+        'reservation_id': reservation.id,
+        'summary': _reservation_party_display(reservation),
+        'room_name': reservation.room.name,
+        'period_label': _period_display_label(school, reservation.period),
+        'date_label': reservation.date.strftime('%Y년 %m월 %d일'),
+        'memo': (reservation.memo or '').strip(),
+    }
+
+
+def _set_reservation_followup_context(request, school, reservation):
+    request.session[RESERVATION_FOLLOWUP_SESSION_KEY] = _build_reservation_followup_context(school, reservation)
+    request.session.modified = True
+
+
+def _pop_reservation_followup_context(request, school_slug):
+    context = request.session.get(RESERVATION_FOLLOWUP_SESSION_KEY)
+    if not isinstance(context, dict):
+        return None
+    if context.get('school_slug') != school_slug:
+        return None
+    request.session.pop(RESERVATION_FOLLOWUP_SESSION_KEY, None)
+    request.session.modified = True
+    return context
 
 @login_required
 def dashboard_landing(request):
@@ -451,6 +563,10 @@ def reservation_index(request, school_slug):
             'slots': slots
         })
 
+    reservation_followup = None
+    if not request.headers.get('HX-Request'):
+        reservation_followup = _pop_reservation_followup_context(request, school.slug)
+
     context = {
         'school': school,
         'target_date': target_date,
@@ -462,6 +578,7 @@ def reservation_index(request, school_slug):
         'weekday_name': ['월', '화', '수', '목', '금', '토', '일'][target_date.weekday()],
         'period_labels': [p['label'] for p in periods_data],
         'max_date': max_date, # 템플릿에 전달하여 '다음' 버튼 비활성화에 사용
+        'reservation_followup': reservation_followup,
     }
     
     # HTMX 요청이면 부분 렌더링 (Polling 등)
@@ -548,6 +665,36 @@ def room_overview(request, school_slug):
     }
     return render(request, 'reservations/room_overview.html', context)
 
+
+@login_required
+@require_POST
+def start_notice_followup(request, school_slug, reservation_id):
+    school = get_object_or_404(School, slug=school_slug)
+    reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
+    if request.user != school.owner and not _can_edit_reservation(request, reservation):
+        return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
+    seed_token = _store_action_seed(
+        request,
+        action='notice',
+        data=_build_reservation_notice_seed(request, school, reservation),
+    )
+    return redirect(f"{reverse('noticegen:main')}?sb_seed={seed_token}")
+
+
+@login_required
+@require_POST
+def start_parentcomm_followup(request, school_slug, reservation_id):
+    school = get_object_or_404(School, slug=school_slug)
+    reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
+    if request.user != school.owner and not _can_edit_reservation(request, reservation):
+        return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
+    seed_token = _store_action_seed(
+        request,
+        action='parentcomm_notice',
+        data=_build_reservation_parentcomm_seed(request, school, reservation),
+    )
+    return redirect(f"{reverse('parentcomm:main')}?sb_seed={seed_token}")
+
 @require_POST
 def create_reservation(request, school_slug):
     school = get_object_or_404(School, slug=school_slug)
@@ -622,6 +769,8 @@ def create_reservation(request, school_slug):
             request.session.modified = True
         
         messages.success(request, f"{period}교시 예약이 완료되었습니다.")
+        if request.user.is_authenticated:
+            _set_reservation_followup_context(request, school, reservation)
         
         # HTMX Redirect to refresh grid
         response = HttpResponse()
@@ -701,6 +850,8 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo'])
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
+        if request.user.is_authenticated:
+            _set_reservation_followup_context(request, school, reservation)
 
         response = HttpResponse()
         response['HX-Refresh'] = "true"
@@ -731,6 +882,8 @@ def delete_reservation(request, school_slug, reservation_id):
         )
         return HttpResponseForbidden("삭제 권한이 없습니다.")
 
+    if request.session.get(RESERVATION_FOLLOWUP_SESSION_KEY, {}).get('reservation_id') == reservation.id:
+        request.session.pop(RESERVATION_FOLLOWUP_SESSION_KEY, None)
     reservation.delete()
     request.session[OWNED_RESERVATIONS_SESSION_KEY] = [rid for rid in owned_ids if rid != reservation.id]
     request.session.modified = True

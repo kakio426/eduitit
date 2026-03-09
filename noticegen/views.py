@@ -2,10 +2,13 @@ import hashlib
 import logging
 import os
 import re
+import secrets
 from difflib import SequenceMatcher
 
+from django.contrib.auth.decorators import login_required
 from django.db.models import F
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from openai import OpenAI
@@ -47,6 +50,7 @@ CACHE_REUSE_THRESHOLD = 0.88
 CACHE_SIMILAR_HINT_THRESHOLD = 0.55
 SIMILAR_CANDIDATE_LIMIT = 60
 FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
@@ -66,15 +70,94 @@ def _peek_sheetbook_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    seeds = request.session.get(SHEETBOOK_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        return None
-    seed = seeds.get(token)
-    if not isinstance(seed, dict):
-        return None
-    if expected_action and seed.get("action") != expected_action:
-        return None
-    return seed
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            continue
+        seed = seeds.get(token)
+        if not isinstance(seed, dict):
+            continue
+        if expected_action and seed.get("action") != expected_action:
+            continue
+        return seed
+    return None
+
+
+def _store_action_seed(request, *, action, data):
+    token = secrets.token_urlsafe(16)
+    seed = {
+        "action": action,
+        "data": data,
+        "created_at": timezone.now().isoformat(),
+    }
+    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
+        seeds = request.session.get(session_key, {})
+        if not isinstance(seeds, dict):
+            seeds = {}
+        seeds[token] = seed
+        if len(seeds) > 20:
+            overflow = len(seeds) - 20
+            for old_key in list(seeds.keys())[:overflow]:
+                seeds.pop(old_key, None)
+        request.session[session_key] = seeds
+    request.session.modified = True
+    return token
+
+
+def _build_workflow_origin(request):
+    return {
+        "origin_service": "noticegen",
+        "origin_url": request.build_absolute_uri(reverse("noticegen:main")),
+        "origin_label": "안내문 멘트 생성기로 돌아가기",
+    }
+
+
+def _build_followup_title(target, topic):
+    return f"{TARGET_LABELS.get(target, '학급')} {TOPIC_LABELS.get(topic, '안내')}".strip()
+
+
+def _build_followup_context(target, topic, length_style, keywords, result_text):
+    return {
+        "followup_target": target,
+        "followup_topic": topic,
+        "followup_length_style": length_style,
+        "followup_keywords": keywords,
+        "followup_result_text": result_text,
+    }
+
+
+def _build_consent_followup_seed_data(request, *, target, topic, keywords, result_text, length_style):
+    base_title = _build_followup_title(target, topic)
+    data = {
+        "document_title": f"{base_title} 안내문"[:200],
+        "title": f"{base_title} 동의서"[:200],
+        "message": (result_text or keywords).strip()[:4000],
+        "keywords": keywords[:1000],
+        "length_style": length_style,
+        "source_label": "안내문 멘트에서 가져온 내용을 먼저 채워두었어요.",
+    }
+    data.update(_build_workflow_origin(request))
+    return data
+
+
+def _build_signature_followup_seed_data(request, *, target, topic, keywords, result_text, length_style):
+    base_title = _build_followup_title(target, topic)
+    instructor = ""
+    if request.user.is_authenticated:
+        profile = getattr(request.user, "userprofile", None)
+        instructor = (getattr(profile, "nickname", "") or request.user.get_full_name() or request.user.username or "").strip()[:100]
+    data = {
+        "title": f"{base_title} 확인 서명"[:200],
+        "print_title": f"{base_title} 확인"[:200],
+        "instructor": instructor,
+        "location": "",
+        "description": (result_text or keywords).strip()[:2000],
+        "datetime": "",
+        "length_style": length_style,
+        "source_label": "안내문 멘트에서 가져온 내용을 먼저 채워두었어요.",
+    }
+    data.update(_build_workflow_origin(request))
+    return data
 
 
 def _get_service():
@@ -110,6 +193,8 @@ def _build_page_context(*, prefill=None):
         "initial_length_style": length_style,
         "initial_keywords": keywords,
         "prefill_source_label": source_label,
+        "prefill_origin_url": (prefill.get("origin_url") or "").strip(),
+        "prefill_origin_label": (prefill.get("origin_label") or "").strip(),
     }
 
 
@@ -297,7 +382,9 @@ def main(request):
             "topic": seed_data.get("topic"),
             "length_style": seed_data.get("length_style"),
             "keywords": seed_data.get("keywords"),
-            "source_label": "교무수첩에서 가져온 내용을 넣어두었어요.",
+            "source_label": (seed_data.get("source_label") or "교무수첩에서 가져온 내용을 넣어두었어요."),
+            "origin_url": seed_data.get("origin_url"),
+            "origin_label": seed_data.get("origin_label"),
         }
     else:
         prefill = {
@@ -306,6 +393,8 @@ def main(request):
             "length_style": request.GET.get("length_style"),
             "keywords": request.GET.get("keywords"),
             "source_label": "미리 입력된 내용을 확인해 주세요." if request.GET.get("keywords") else "",
+            "origin_url": request.GET.get("origin_url"),
+            "origin_label": request.GET.get("origin_label"),
         }
 
     context = _build_page_context(prefill=prefill)
@@ -365,6 +454,7 @@ def generate_notice(request):
                 "result_text": exact_cache.result_text,
                 "remaining_count": _remaining_count(request),
                 "daily_limit": _daily_limit(request),
+                **_build_followup_context(target, topic, key_data["length_style"], keywords, exact_cache.result_text),
             },
         )
 
@@ -419,6 +509,7 @@ def generate_notice(request):
                 "remaining_count": _remaining_count(request),
                 "daily_limit": _daily_limit(request),
                 "similar_items": similar_items,
+                **_build_followup_context(target, topic, key_data["length_style"], keywords, reused_cache.result_text),
             },
         )
 
@@ -495,5 +586,52 @@ def generate_notice(request):
             "remaining_count": _remaining_count(request),
             "daily_limit": _daily_limit(request),
             "similar_items": similar_items,
+            **_build_followup_context(target, topic, key_data["length_style"], keywords, result_text),
         },
     )
+
+
+@login_required
+@require_POST
+def start_consent_followup(request):
+    target = (request.POST.get("target") or "").strip()
+    topic = (request.POST.get("topic") or "").strip()
+    keywords = (request.POST.get("keywords") or "").strip()
+    result_text = (request.POST.get("result_text") or "").strip()
+    length_style = (request.POST.get("length_style") or LENGTH_MEDIUM).strip()
+    seed_token = _store_action_seed(
+        request,
+        action="consent",
+        data=_build_consent_followup_seed_data(
+            request,
+            target=target,
+            topic=topic,
+            keywords=keywords,
+            result_text=result_text,
+            length_style=length_style,
+        ),
+    )
+    return redirect(f"{reverse('consent:create_step1')}?sb_seed={seed_token}")
+
+
+@login_required
+@require_POST
+def start_signature_followup(request):
+    target = (request.POST.get("target") or "").strip()
+    topic = (request.POST.get("topic") or "").strip()
+    keywords = (request.POST.get("keywords") or "").strip()
+    result_text = (request.POST.get("result_text") or "").strip()
+    length_style = (request.POST.get("length_style") or LENGTH_MEDIUM).strip()
+    seed_token = _store_action_seed(
+        request,
+        action="signature",
+        data=_build_signature_followup_seed_data(
+            request,
+            target=target,
+            topic=topic,
+            keywords=keywords,
+            result_text=result_text,
+            length_style=length_style,
+        ),
+    )
+    return redirect(f"{reverse('signatures:create')}?sb_seed={seed_token}")

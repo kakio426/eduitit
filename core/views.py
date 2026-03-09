@@ -17,6 +17,7 @@ from .models import (
     SiteConfig,
     ProductUsageLog,
     ProductFavorite,
+    ProductWorkbenchBundle,
     UserModeration,
 )
 from .active_classroom import (
@@ -25,6 +26,7 @@ from .active_classroom import (
     set_default_classroom_for_user,
 )
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -49,6 +51,12 @@ POST_FEED_NOTICE_TYPES = (
     'news_link',
     'notice',
 )
+
+
+WORKBENCH_BUNDLE_LIMIT = 6
+WORKBENCH_BUNDLE_PRODUCT_LIMIT = 8
+WORKBENCH_SLOT_COUNT = 4
+WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
 
 
 def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
@@ -336,6 +344,19 @@ HOME_SECTION_FALLBACK_BY_TYPE = {
     "etc": "external",
 }
 
+HOME_SECTION_META_BY_KEY = {
+    section["key"]: section
+    for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]
+}
+
+HOME_COMPANION_SECTION_MAP = {
+    'collect_sign': ['doc_write', 'class_ops'],
+    'doc_write': ['collect_sign', 'class_ops'],
+    'class_ops': ['doc_write', 'collect_sign'],
+    'class_activity': ['class_ops'],
+    'refresh': ['doc_write'],
+}
+
 
 def _resolve_section_preview_limit(section_key, preview_limit):
     if isinstance(preview_limit, dict):
@@ -434,6 +455,34 @@ def _resolve_product_launch_url(product):
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
+def _build_teacher_first_product_labels(product):
+    task_label = str(getattr(product, 'solve_text', '') or '').strip()
+    service_label = str(getattr(product, 'title', '') or '').strip()
+    support_label = ''
+
+    if task_label and task_label != service_label:
+        support_label = service_label
+    else:
+        task_label = service_label
+        service_label = ''
+        for candidate in (
+            getattr(product, 'result_text', ''),
+            getattr(product, 'lead_text', ''),
+            getattr(product, 'description', ''),
+        ):
+            support_label = str(candidate or '').strip()
+            if support_label and support_label != task_label:
+                break
+        else:
+            support_label = ''
+
+    return {
+        'teacher_first_task_label': task_label,
+        'teacher_first_service_label': service_label,
+        'teacher_first_support_label': support_label,
+    }
+
+
 def _attach_product_launch_meta(products):
     """Attach launch target metadata so templates can navigate directly without modal."""
     prepared = []
@@ -441,9 +490,10 @@ def _attach_product_launch_meta(products):
         launch_href, launch_is_external = _resolve_product_launch_url(product)
         product.launch_href = launch_href
         product.launch_is_external = launch_is_external
+        for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
+            setattr(product, attr_name, attr_value)
         prepared.append(product)
     return prepared
-
 
 def _get_user_favorite_products(user, product_list, limit=None):
     """홈에서 사용할 사용자 즐겨찾기 서비스 목록 반환."""
@@ -466,16 +516,131 @@ def _get_user_favorite_products(user, product_list, limit=None):
     return favorites
 
 
-def _build_product_link_items(products):
+def _get_user_workbench_bundles(user, product_list, *, limit=WORKBENCH_BUNDLE_LIMIT):
+    product_map = {p.id: p for p in product_list}
+    bundles_qs = (
+        ProductWorkbenchBundle.objects
+        .filter(user=user)
+        .order_by('-last_used_at', '-updated_at', 'name')[:limit]
+    )
+
+    bundles = []
+    for bundle in bundles_qs:
+        raw_ids = bundle.product_ids if isinstance(bundle.product_ids, list) else []
+        normalized_ids = []
+        for raw_id in raw_ids:
+            try:
+                pid = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if pid in normalized_ids:
+                continue
+            if pid not in product_map:
+                continue
+            normalized_ids.append(pid)
+        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:3]]
+        bundles.append({
+            'id': bundle.id,
+            'name': bundle.name,
+            'product_ids': normalized_ids,
+            'product_count': len(normalized_ids),
+            'preview_titles': preview_titles,
+            'last_used_at': bundle.last_used_at,
+        })
+    return bundles
+
+
+
+def _build_workbench_slots(favorite_items, *, slot_count=WORKBENCH_SLOT_COUNT):
+    total_slots = max(slot_count, len(favorite_items))
+    slots = []
+    for index in range(total_slots):
+        if index < len(favorite_items):
+            slots.append({'kind': 'item', 'index': index + 1, 'item': favorite_items[index]})
+        else:
+            slots.append({'kind': 'empty', 'index': index + 1})
+    return slots
+
+
+
+def _get_weekly_workbench_bundle_highlights(user, product_list, *, limit=WORKBENCH_WEEKLY_BUNDLE_LIMIT):
+    from datetime import timedelta
+
+    product_map = {p.id: p for p in product_list}
+    since = timezone.now() - timedelta(days=7)
+    bundles_qs = (
+        ProductWorkbenchBundle.objects
+        .filter(user=user)
+        .filter(Q(last_used_at__gte=since) | Q(updated_at__gte=since))
+        .order_by('-last_used_at', '-updated_at', 'name')[:limit]
+    )
+
+    items = []
+    for bundle in bundles_qs:
+        raw_ids = bundle.product_ids if isinstance(bundle.product_ids, list) else []
+        normalized_ids = []
+        for raw_id in raw_ids:
+            try:
+                pid = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if pid in normalized_ids or pid not in product_map:
+                continue
+            normalized_ids.append(pid)
+        if len(normalized_ids) < 2:
+            continue
+        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:2]]
+        summary_text = ' + '.join(preview_titles)
+        if len(normalized_ids) > 2:
+            summary_text = f"{summary_text} 외 {len(normalized_ids) - 2}"
+        items.append({
+            'id': bundle.id,
+            'name': bundle.name,
+            'product_count': len(normalized_ids),
+            'summary_text': summary_text,
+            'reason_label': '이번 주 자주 쓴 흐름',
+        })
+    return items
+
+
+def _normalize_workbench_product_ids(raw_ids, *, require_non_empty=True, limit=WORKBENCH_BUNDLE_PRODUCT_LIMIT):
+    if not isinstance(raw_ids, list):
+        return None
+    normalized_ids = []
+    seen = set()
+    for raw_id in raw_ids:
+        try:
+            pid = int(raw_id)
+        except (TypeError, ValueError):
+            return None
+        if pid in seen:
+            continue
+        normalized_ids.append(pid)
+        seen.add(pid)
+        if len(normalized_ids) >= limit:
+            break
+    if require_non_empty and not normalized_ids:
+        return None
+    return normalized_ids
+
+
+def _build_product_link_items(products, include_section_meta=False):
     """템플릿에서 공통으로 쓰는 서비스 링크 아이템 구성."""
     items = []
     for product in products:
         href, is_external = _resolve_product_launch_url(product)
-        items.append({
+        item = {
             'product': product,
             'href': href,
             'is_external': is_external,
-        })
+        }
+        if include_section_meta:
+            section_key = _resolve_home_section_key(product)
+            section_meta = HOME_SECTION_META_BY_KEY.get(section_key, {})
+            item['section_key'] = section_key
+            item['section_title'] = section_meta.get('title', '추천 도구')
+            item['section_subtitle'] = section_meta.get('subtitle', '')
+        items.append(item)
     return items
 
 
@@ -534,6 +699,126 @@ def _get_usage_based_quick_actions(user, product_list, limit=5):
                     break
 
     return quick_actions
+
+
+def _get_recently_used_products(user, product_list, *, exclude_ids=None, limit=4):
+    """홈에서 최근 이어서 볼 서비스를 고른다. 즐겨찾기와는 별도 섹션으로 유지한다."""
+    exclude_ids = set(exclude_ids or [])
+    product_map = {p.id: p for p in product_list}
+    recent_products = []
+    seen = set(exclude_ids)
+
+    usage_ids = (
+        ProductUsageLog.objects
+        .filter(user=user, product__is_active=True)
+        .order_by('-created_at')
+        .values_list('product_id', flat=True)
+    )
+
+    for product_id in usage_ids:
+        if product_id in seen:
+            continue
+        product = product_map.get(product_id)
+        if not product:
+            continue
+        recent_products.append(product)
+        seen.add(product_id)
+        if len(recent_products) >= limit:
+            break
+
+    return recent_products
+
+
+def _get_home_discovery_products(user, product_list, *, exclude_ids=None, limit=4):
+    """홈에서 새로 써보기 영역에 노출할 서비스 후보를 고른다."""
+    exclude_ids = set(exclude_ids or [])
+    featured_by_section = {}
+    fallback = []
+
+    for product in product_list:
+        if product.id in exclude_ids:
+            continue
+        section_key = _resolve_home_section_key(product)
+        if section_key == 'external':
+            continue
+        if product.is_featured and section_key not in featured_by_section:
+            featured_by_section[section_key] = product
+            continue
+        fallback.append((0 if product.is_featured else 1, product.display_order, product.id, product))
+
+    selected = list(featured_by_section.values())
+    seen_ids = {product.id for product in selected}
+    for _, _, _, product in sorted(fallback, key=lambda row: (row[0], row[1], row[2])):
+        if product.id in seen_ids:
+            continue
+        selected.append(product)
+        seen_ids.add(product.id)
+        if len(selected) >= limit:
+            break
+
+    return selected[:limit]
+
+
+
+def _get_home_companion_items(seed_products, product_list, *, exclude_ids=None, limit=3):
+    """현재 흐름과 자주 이어지는 도구를 홈에 짧게 추천한다."""
+    exclude_ids = set(exclude_ids or [])
+    seed_section_keys = []
+    for product in seed_products:
+        section_key = _resolve_home_section_key(product)
+        if section_key == 'external' or section_key in seed_section_keys:
+            continue
+        seed_section_keys.append(section_key)
+
+    if not seed_section_keys:
+        return []
+
+    products_by_section = {}
+    for product in product_list:
+        if product.id in exclude_ids:
+            continue
+        section_key = _resolve_home_section_key(product)
+        if section_key == 'external':
+            continue
+        products_by_section.setdefault(section_key, []).append(product)
+
+    for section_key, section_products in products_by_section.items():
+        products_by_section[section_key] = sorted(
+            section_products,
+            key=lambda item: (0 if item.is_featured else 1, item.display_order, item.id),
+        )
+
+    items = []
+    seen_ids = set(exclude_ids)
+    picked_sections = set()
+    for source_section in seed_section_keys:
+        for target_section in HOME_COMPANION_SECTION_MAP.get(source_section, []):
+            if len(items) >= limit:
+                break
+            if target_section in picked_sections:
+                continue
+            candidates = products_by_section.get(target_section, [])
+            product = next((candidate for candidate in candidates if candidate.id not in seen_ids), None)
+            if not product:
+                continue
+            source_meta = HOME_SECTION_META_BY_KEY.get(source_section, {})
+            target_meta = HOME_SECTION_META_BY_KEY.get(target_section, {})
+            href, is_external = _resolve_product_launch_url(product)
+            items.append({
+                'product': product,
+                'href': href,
+                'is_external': is_external,
+                'section_key': target_section,
+                'section_title': target_meta.get('title', '추천 도구'),
+                'reason_label': f"{source_meta.get('title', '지금 하는 일')}과 같이 쓰기",
+                'action_label': '작업대에 추가',
+            })
+            seen_ids.add(product.id)
+            picked_sections.add(target_section)
+        if len(items) >= limit:
+            break
+
+    return items
 
 
 def _build_home_student_games_qr_context(request):
@@ -816,12 +1101,55 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
-        favorite_products = _get_user_favorite_products(request.user, product_list, limit=8)
+        favorite_products = _get_user_favorite_products(request.user, product_list, limit=12)
+        recent_products = _get_recently_used_products(
+            request.user,
+            product_list,
+            exclude_ids={p.id for p in favorite_products},
+            limit=4,
+        )
 
         # 퀵 액션: 즐겨찾기 우선 + 사용 빈도 기반 (폴백: featured → display_order)
         quick_actions = _get_usage_based_quick_actions(request.user, product_list)
-        quick_action_items = _build_product_link_items(quick_actions)
-        favorite_items = _build_product_link_items(favorite_products)
+        workflow_seed_products = []
+        seen_seed_ids = set()
+        for seed_product in [*favorite_products, *recent_products, *quick_actions]:
+            if seed_product.id in seen_seed_ids:
+                continue
+            workflow_seed_products.append(seed_product)
+            seen_seed_ids.add(seed_product.id)
+
+        companion_items = _get_home_companion_items(
+            workflow_seed_products,
+            product_list,
+            exclude_ids={p.id for p in [*favorite_products, *recent_products]},
+            limit=3,
+        )
+        discovery_products = _get_home_discovery_products(
+            request.user,
+            product_list,
+            exclude_ids={
+                p.id for p in [*favorite_products, *recent_products, *quick_actions]
+            } | {item['product'].id for item in companion_items},
+            limit=4,
+        )
+        if not discovery_products:
+            discovery_products = _get_home_discovery_products(
+                request.user,
+                product_list,
+                exclude_ids={
+                    p.id for p in [*favorite_products, *recent_products]
+                },
+                limit=4,
+            )
+
+        quick_action_items = _build_product_link_items(quick_actions, include_section_meta=True)
+        favorite_items = _build_product_link_items(favorite_products, include_section_meta=True)
+        workbench_slots = _build_workbench_slots(favorite_items)
+        recent_items = _build_product_link_items(recent_products, include_section_meta=True)
+        discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
+        workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
+        weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
@@ -830,7 +1158,13 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'games': games,
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
+            'workbench_slots': workbench_slots,
             'favorite_product_ids': [p.id for p in favorite_products],
+            'recent_items': recent_items,
+            'companion_items': companion_items,
+            'discovery_items': discovery_items,
+            'workbench_bundles': workbench_bundles,
+            'weekly_bundle_items': weekly_bundle_items,
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
@@ -1400,28 +1734,179 @@ def insight_sns_action(request, pk):
 def prompt_lab(request):
     return render(request, 'core/prompt_lab.html')
 
+TEACHER_FIRST_PRODUCT_CONTRACT_PATH = 'docs/plans/CONTRACT_teacher_first_product_2026-03-08.md'
+
+TEACHER_FIRST_ENTRY_POINT_META = [
+    {
+        'key': 'home',
+        'title': '홈',
+        'description': '지금 해야 할 일부터 시작',
+        'route_name': 'home',
+    },
+    {
+        'key': 'catalog',
+        'title': '전체 서비스',
+        'description': '업무 기준으로 전체 보기',
+        'route_name': 'product_list',
+    },
+    {
+        'key': 'manuals',
+        'title': '빠른 사용 안내',
+        'description': '막히는 순간만 짧게 확인',
+        'route_name': 'service_guide_list',
+    },
+    {
+        'key': 'tools',
+        'title': '외부 AI 도구 참고',
+        'description': '외부 도구 비교는 여기서',
+        'route_name': 'tool_guide',
+    },
+]
+
+TEACHER_FIRST_SERVICE_GUIDE_SECTIONS = [
+    {
+        'key': 'collect_sign',
+        'title': '수합·서명',
+        'description': '동의, 서명, 회수처럼 학부모 응답을 빠르게 모아야 할 때 확인합니다.',
+    },
+    {
+        'key': 'work',
+        'title': '문서·작성',
+        'description': '가정통신문, 문서 작성, 정리형 도구를 사용할 때 필요한 안내를 모았습니다.',
+    },
+    {
+        'key': 'classroom',
+        'title': '학급 운영',
+        'description': '교무수첩, 달력, 학급 운영 도구처럼 매일 쓰는 흐름을 먼저 보여줍니다.',
+    },
+    {
+        'key': 'counsel',
+        'title': '학부모 소통·상담',
+        'description': '연락, 상담 조율, 보호자 안내처럼 사람과 연결되는 흐름을 담았습니다.',
+    },
+    {
+        'key': 'edutech',
+        'title': '가이드·인사이트',
+        'description': '도구 사용법이나 인사이트처럼 참고 성격이 강한 콘텐츠입니다.',
+    },
+    {
+        'key': 'game',
+        'title': '교실 활동',
+        'description': '수업 몰입과 분위기 전환을 돕는 활동형 도구를 모았습니다.',
+    },
+    {
+        'key': 'etc',
+        'title': '외부 서비스',
+        'description': '외부 연동 또는 별도 서비스로 이어지는 도구입니다.',
+    },
+]
+
+TEACHER_FIRST_TOOL_GUIDE_SECTIONS = [
+    {
+        'key': 'writing',
+        'title': '글쓰기·정리 도움',
+        'description': '통신문 초안, 글 정리, 번역, 수업 자료 정리에 도움이 되는 외부 도구입니다.',
+        'tool_ids': ['chatgpt', 'claude', 'gemini', 'deepl', 'wrtn', 'notion'],
+    },
+    {
+        'key': 'research',
+        'title': '자료 찾기·분석',
+        'description': '출처 확인, 자료 조사, 문서 기반 요약이 필요할 때 참고합니다.',
+        'tool_ids': ['perplexity', 'copilot'],
+    },
+    {
+        'key': 'design',
+        'title': '디자인·발표',
+        'description': '수업 자료, 발표 자료, 이미지·영상·음성 제작에 쓰는 도구입니다.',
+        'tool_ids': ['figma', 'canva', 'midjourney', 'runway', 'elevenlabs'],
+    },
+    {
+        'key': 'build',
+        'title': '개발·운영 참고',
+        'description': '서비스 제작이나 운영 점검이 필요한 고급 참고 도구입니다.',
+        'tool_ids': ['cursor', 'v0', 'supabase', 'railway', 'sentry'],
+    },
+]
+
+
+def _build_teacher_first_entry_points(current_key):
+    entry_points = []
+    for item in TEACHER_FIRST_ENTRY_POINT_META:
+        entry_points.append({
+            'key': item['key'],
+            'title': item['title'],
+            'description': item['description'],
+            'href': reverse(item['route_name']),
+            'is_current': item['key'] == current_key,
+        })
+    return entry_points
+
+
+def _build_service_guide_sections(manuals, products_without_manual):
+    manual_buckets = {section['key']: [] for section in TEACHER_FIRST_SERVICE_GUIDE_SECTIONS}
+    for manual in manuals:
+        manual_buckets.setdefault(manual.product.service_type, []).append(manual)
+
+    pending_buckets = {section['key']: [] for section in TEACHER_FIRST_SERVICE_GUIDE_SECTIONS}
+    for product in products_without_manual:
+        pending_buckets.setdefault(product.service_type, []).append(product)
+
+    sections = []
+    for section in TEACHER_FIRST_SERVICE_GUIDE_SECTIONS:
+        section_manuals = manual_buckets.get(section['key'], [])
+        pending_products = pending_buckets.get(section['key'], [])
+        if not section_manuals and not pending_products:
+            continue
+        sections.append({
+            **section,
+            'manuals': section_manuals,
+            'pending_products': pending_products,
+            'pending_count': len(pending_products),
+        })
+    return sections
+
+
+def _build_tool_guide_sections(tools):
+    tools_by_id = {tool['id']: tool for tool in tools}
+    sections = []
+    for section in TEACHER_FIRST_TOOL_GUIDE_SECTIONS:
+        section_tools = []
+        for tool_id in section['tool_ids']:
+            tool = tools_by_id.get(tool_id)
+            if tool:
+                section_tools.append(tool)
+        if not section_tools:
+            continue
+        sections.append({
+            **section,
+            'tools': section_tools,
+        })
+    return sections
+
+
 def tool_guide(request):
     from core.data import TOOLS_DATA
     from datetime import datetime, timedelta
-    
-    # Calculate is_new flag for each tool (updated within 30 days)
+
     today = datetime.now().date()
     threshold = today - timedelta(days=30)
-    
+
     tools = []
     for tool in TOOLS_DATA:
         tool_copy = tool.copy()
-        # Parse last_updated date (format: YYYY-MM-DD)
         try:
             updated_date = datetime.strptime(tool['last_updated'], '%Y-%m-%d').date()
             tool_copy['is_new'] = updated_date >= threshold
         except (KeyError, ValueError):
             tool_copy['is_new'] = False
         tools.append(tool_copy)
-    
+
     return render(request, 'core/tool_guide.html', {
-        'tools': tools,
-        'tools_json': tools,
+        'entry_points': _build_teacher_first_entry_points('tools'),
+        'tool_sections': _build_tool_guide_sections(tools),
+        'all_tools_count': len(tools),
+        'new_tools_count': sum(1 for tool in tools if tool['is_new']),
+        'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
     })
 
 
@@ -1692,35 +2177,57 @@ def feedback_view(request):
     return redirect('home')
 
 def service_guide_list(request):
-    """List of all available service manuals"""
+    """Teacher-first list of available service manuals."""
     active_products_qs = Product.objects.filter(is_active=True).order_by('display_order')
-    active_products_count = active_products_qs.count()
     manuals_all_qs = ServiceManual.objects.filter(product__is_active=True).select_related('product')
     manuals_qs = ServiceManual.objects.filter(
         is_published=True,
         product__is_active=True
-    ).select_related('product').order_by('product__display_order')
+    ).select_related('product').order_by('product__display_order', 'product__title')
 
     site_config = SiteConfig.load()
-    featured_manuals = site_config.featured_manuals.filter(
+    featured_manuals_qs = site_config.featured_manuals.filter(
         is_published=True,
         product__is_active=True
-    ).select_related('product').order_by('product__display_order')
+    ).select_related('product').order_by('product__display_order', 'product__title')
 
-    featured_manual_ids = featured_manuals.values_list('id', flat=True)
-    manuals = manuals_qs.exclude(id__in=featured_manual_ids)
+    active_products = _attach_product_launch_meta(list(active_products_qs))
+    active_products_count = len(active_products)
+    product_map = {product.id: product for product in active_products}
+
+    featured_manual_ids = featured_manuals_qs.values_list('id', flat=True)
+    manuals = list(manuals_qs.exclude(id__in=featured_manual_ids))
+    featured_manuals = list(featured_manuals_qs)
+    for manual in featured_manuals + manuals:
+        prepared_product = product_map.get(manual.product_id)
+        if not prepared_product:
+            continue
+        for attr_name in (
+            'launch_href',
+            'launch_is_external',
+            'teacher_first_task_label',
+            'teacher_first_service_label',
+            'teacher_first_support_label',
+        ):
+            setattr(manual.product, attr_name, getattr(prepared_product, attr_name, ''))
     manual_count = manuals_qs.count()
-    product_ids_with_any_manual = manuals_all_qs.values_list('product_id', flat=True)
-    products_without_manual = active_products_qs.exclude(id__in=product_ids_with_any_manual)
-    missing_manual_count = products_without_manual.count()
+    product_ids_with_any_manual = set(manuals_all_qs.values_list('product_id', flat=True))
+    products_without_manual = [
+        product for product in active_products
+        if product.id not in product_ids_with_any_manual
+    ]
+    missing_manual_count = len(products_without_manual)
 
     return render(request, 'core/service_guide_list.html', {
+        'entry_points': _build_teacher_first_entry_points('manuals'),
+        'guide_sections': _build_service_guide_sections(manuals, products_without_manual),
         'manuals': manuals,
         'featured_manuals': featured_manuals,
         'products_without_manual': products_without_manual,
         'active_products_count': active_products_count,
         'manual_count': manual_count,
         'missing_manual_count': missing_manual_count,
+        'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
     })
 
 def service_guide_detail(request, pk):
@@ -1856,6 +2363,181 @@ def list_product_favorites(request):
     return JsonResponse({
         'status': 'ok',
         'favorites': favorites,
+    })
+
+
+@require_GET
+@login_required
+def list_workbench_bundles(request):
+    bundles = _get_user_workbench_bundles(request.user, _attach_product_launch_meta(list(Product.objects.filter(is_active=True).order_by('display_order', '-created_at'))))
+    return JsonResponse({'status': 'ok', 'bundles': bundles})
+
+
+@require_POST
+@login_required
+def save_workbench_bundle(request):
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'invalid json'}, status=400)
+
+    name = str(data.get('name') or '').strip()
+    if not name:
+        return JsonResponse({'error': 'name required'}, status=400)
+
+    normalized_ids = _normalize_workbench_product_ids(data.get('product_ids'), require_non_empty=True)
+    if not normalized_ids:
+        return JsonResponse({'error': 'product_ids required'}, status=400)
+
+    valid_ids = set(Product.objects.filter(is_active=True, id__in=normalized_ids).values_list('id', flat=True))
+    if len(valid_ids) != len(normalized_ids):
+        return JsonResponse({'error': 'invalid product id'}, status=400)
+
+    bundle, created = ProductWorkbenchBundle.objects.update_or_create(
+        user=request.user,
+        name=name,
+        defaults={'product_ids': normalized_ids},
+    )
+    if not created:
+        bundle.updated_at = timezone.now()
+        bundle.save(update_fields=['product_ids', 'updated_at'])
+
+    return JsonResponse({
+        'status': 'ok',
+        'bundle': {
+            'id': bundle.id,
+            'name': bundle.name,
+            'product_ids': normalized_ids,
+            'product_count': len(normalized_ids),
+        },
+        'created': created,
+    })
+
+
+@require_POST
+@login_required
+def apply_workbench_bundle(request, bundle_id):
+    bundle = get_object_or_404(ProductWorkbenchBundle, id=bundle_id, user=request.user)
+    product_ids = _normalize_workbench_product_ids(bundle.product_ids, require_non_empty=True)
+    if not product_ids:
+        return JsonResponse({'error': 'bundle is empty'}, status=400)
+
+    active_id_set = set(
+        Product.objects
+        .filter(is_active=True, id__in=product_ids)
+        .values_list('id', flat=True)
+    )
+    active_ids = [product_id for product_id in product_ids if product_id in active_id_set]
+    if not active_ids:
+        return JsonResponse({'error': 'bundle has no active products'}, status=400)
+
+    favorites = list(
+        ProductFavorite.objects
+        .filter(user=request.user, product__is_active=True)
+        .order_by('pin_order', '-created_at')
+    )
+    favorite_map = {favorite.product_id: favorite for favorite in favorites}
+
+    with transaction.atomic():
+        for product_id in active_ids:
+            if product_id not in favorite_map:
+                favorite_map[product_id] = ProductFavorite.objects.create(
+                    user=request.user,
+                    product_id=product_id,
+                    pin_order=0,
+                )
+        ordered_ids = []
+        seen = set()
+        for product_id in active_ids:
+            if product_id in seen:
+                continue
+            ordered_ids.append(product_id)
+            seen.add(product_id)
+        for favorite in favorites:
+            if favorite.product_id in seen:
+                continue
+            ordered_ids.append(favorite.product_id)
+            seen.add(favorite.product_id)
+        for order, product_id in enumerate(ordered_ids, start=1):
+            favorite = favorite_map[product_id]
+            if favorite.pin_order != order:
+                ProductFavorite.objects.filter(pk=favorite.pk).update(pin_order=order)
+        ProductWorkbenchBundle.objects.filter(pk=bundle.pk).update(last_used_at=timezone.now())
+
+    return JsonResponse({
+        'status': 'ok',
+        'bundle_id': bundle.id,
+        'bundle_name': bundle.name,
+        'product_ids': ordered_ids,
+    })
+
+
+@require_POST
+@login_required
+def delete_workbench_bundle(request, bundle_id):
+    bundle = get_object_or_404(ProductWorkbenchBundle, id=bundle_id, user=request.user)
+    bundle_name = bundle.name
+    bundle.delete()
+    return JsonResponse({
+        'status': 'ok',
+        'bundle_id': bundle_id,
+        'bundle_name': bundle_name,
+    })
+
+
+@require_POST
+@login_required
+def reorder_product_favorites(request):
+    """즐겨찾기 작업대 순서를 저장한다."""
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'invalid json'}, status=400)
+
+    product_ids = data.get('product_ids')
+    if not isinstance(product_ids, list) or not product_ids:
+        return JsonResponse({'error': 'product_ids required'}, status=400)
+
+    normalized_ids = []
+    seen = set()
+    for raw_id in product_ids:
+        try:
+            pid = int(raw_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'invalid product id'}, status=400)
+        if pid in seen:
+            return JsonResponse({'error': 'duplicate product id'}, status=400)
+        normalized_ids.append(pid)
+        seen.add(pid)
+
+    favorites = list(
+        ProductFavorite.objects
+        .filter(user=request.user, product__is_active=True)
+        .order_by('pin_order', '-created_at')
+    )
+    if not favorites:
+        return JsonResponse({'error': 'favorites not found'}, status=404)
+
+    favorite_map = {favorite.product_id: favorite for favorite in favorites}
+    if not set(normalized_ids).issubset(favorite_map.keys()):
+        return JsonResponse({'error': 'favorite mismatch'}, status=400)
+
+    ordered_ids = list(normalized_ids)
+    for favorite in favorites:
+        if favorite.product_id not in seen:
+            ordered_ids.append(favorite.product_id)
+
+    with transaction.atomic():
+        for order, product_id in enumerate(ordered_ids, start=1):
+            favorite = favorite_map[product_id]
+            if favorite.pin_order != order:
+                ProductFavorite.objects.filter(pk=favorite.pk).update(pin_order=order)
+
+    return JsonResponse({
+        'status': 'ok',
+        'product_ids': ordered_ids,
     })
 
 

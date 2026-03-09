@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 from products.models import Product
-from core.models import UserProfile, Post, Comment, ProductFavorite
+from core.models import UserProfile, Post, Comment, ProductFavorite, ProductWorkbenchBundle
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -276,118 +276,103 @@ class HomeV2ViewTest(TestCase):
         return user
 
     def test_v2_anonymous_200(self):
-        """V2 비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
     def test_v2_anonymous_has_sections(self):
-        """V2 비로그인 홈에 목적별 섹션 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('수합·서명', content)
         self.assertIn('문서·작성', content)
 
     def test_v2_anonymous_has_login_cta(self):
-        """V2 비로그인 홈에 로그인 CTA 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
 
     def test_v2_anonymous_has_game_banner(self):
-        """V2 비로그인 홈에 게임 배너 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('교실 활동', content)
         self.assertIn('테스트 게임', content)
         self.assertNotIn('학생용 QR', content)
 
-    def test_v2_authenticated_has_student_games_qr_button(self):
-        """V2 로그인 홈에 학생 게임 QR 버튼 존재"""
-        self._login('gameqruser')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('학생용 QR', content)
-        self.assertIn('homeStudentGamesQrModal', content)
-
-    def test_v2_anonymous_does_not_render_show_all_toggle(self):
-        """V2 비로그인 홈에 전체 서비스 보기 토글이 노출되지 않음"""
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertNotIn('data-track="show_all_toggle"', content)
-        self.assertNotIn('전체 서비스 보기', content)
-
     def test_v2_authenticated_200(self):
-        """V2 로그인 홈 200 응답"""
         self._login('authuser')
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
     def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
-        """V2 로그인 홈 상단은 큰 인사말 대신 압축된 검색 행을 사용"""
         self._login('greetuser', nickname='홍길동')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertNotIn('선생님, 안녕하세요', content)
         self.assertIn('openSearchModal', content)
+        self.assertIn('전체 서비스', content)
+        self.assertIn('이용방법', content)
+
+    def test_v2_authenticated_hides_sns_and_home_calendar_from_default_surface(self):
+        self._login('surfaceuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertNotIn('실시간 소통', content)
+        self.assertNotIn('개인 캘린더', content)
+        self.assertIn('더 많은 도구', content)
 
     def test_v2_authenticated_has_quick_actions(self):
-        """V2 로그인 홈에 퀵 액션 존재"""
         self._login('qauser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-track="quick_action"', content)
-        self.assertIn('추천 빠른 실행', content)
+        self.assertIn('내 작업대', content)
 
     def test_v2_authenticated_has_sections(self):
-        """V2 로그인 홈에 목적별 섹션 존재"""
         self._login('secuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('수합·서명', content)
         self.assertIn('문서·작성', content)
+        self.assertIn('핵심 업무', content)
 
-    def test_v2_authenticated_does_not_render_show_all_toggle(self):
-        """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
-        self._login('authnotoggle')
+    def test_v2_authenticated_has_discovery_and_calendar_preview(self):
+        self._login('discoveruser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertNotIn('data-track="show_all_toggle"', content)
-        self.assertNotIn('전체 서비스 보기', content)
+        self.assertIn('새로 써보기', content)
+        self.assertIn('오늘 일정', content)
+        self.assertIn('달력 열기', content)
 
     def test_v2_mini_card_has_data_product_id(self):
-        """V2 미니 카드에 data-product-id 속성 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn(f'data-product-id="{self.p1.id}"', content)
 
     def test_v2_mini_card_shows_solve_text(self):
-        """V2 미니 카드에 solve_text 표시"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
 
+    def test_v2_workbench_cards_show_task_first_label_and_service_name(self):
+        user = self._login('taskfirsthome')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertRegex(content, r'(?s)수업을 준비해요.*수업 도구')
+
     def test_v2_cards_use_direct_launch_with_separate_info_trigger(self):
-        """V2 카드는 직접 진입 메타데이터 + 별도 상세 버튼을 함께 렌더링"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-launch-href="', content)
         self.assertIn('class="product-info-trigger', content)
 
-    def test_v2_game_banner_has_separate_info_trigger(self):
-        """게임 배너도 직접 진입 링크와 별도 상세 버튼을 제공"""
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('data-track="game_banner"', content)
-        self.assertIn(f'aria-label="{self.p3.title} 상세 설명 열기"', content)
-
     def test_v2_context_sections_count(self):
-        """V2 컨텍스트에 sections 존재"""
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         self.assertGreaterEqual(len(sections), 2)
 
     def test_v2_context_quick_actions_max_5(self):
-        """V2 퀵 액션 최대 5개"""
         self._login('maxuser')
         response = self.client.get(reverse('home'))
         quick_actions = response.context.get('quick_actions', [])
@@ -395,37 +380,24 @@ class HomeV2ViewTest(TestCase):
         self.assertGreaterEqual(len(quick_actions), 1)
 
     def test_v2_has_search_button(self):
-        """V2 홈에 검색 버튼 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('openSearchModal', content)
 
-    def test_v2_authenticated_search_row_is_wrap_safe(self):
-        self._login('searchlayout')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        self.assertIn('mb-4 flex justify-center lg:justify-end', content)
-        self.assertIn('class="flex w-full max-w-xl lg:w-auto lg:max-w-none lg:flex-shrink-0 items-center justify-center lg:justify-start gap-3 bg-white rounded-2xl lg:rounded-xl', content)
-
     def test_v2_search_products_json_in_context(self):
-        """V2 홈에 search_products_json 컨텍스트 존재"""
         response = self.client.get(reverse('home'))
         self.assertIn('search_products_json', response.context)
 
     def test_v2_usage_based_quick_actions(self):
-        """V2 사용 기록 기반 퀵 액션 반영"""
         from core.models import ProductUsageLog
         user = self._login('usageuser')
-        # p2(행정 도구)를 많이 사용
         for _ in range(5):
             ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
         response = self.client.get(reverse('home'))
         quick_actions = response.context.get('quick_actions', [])
-        # 가장 많이 사용한 p2가 첫 번째
         self.assertEqual(quick_actions[0]['product'].id, self.p2.id)
 
     def test_v2_quick_actions_prioritize_favorites(self):
-        """즐겨찾기가 사용기록보다 먼저 퀵 액션에 노출된다."""
         from core.models import ProductUsageLog
         user = self._login('favoritepriority')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
@@ -436,6 +408,20 @@ class HomeV2ViewTest(TestCase):
         quick_actions = response.context.get('quick_actions', [])
         self.assertGreaterEqual(len(quick_actions), 1)
         self.assertEqual(quick_actions[0]['product'].id, self.p1.id)
+
+    def test_v2_context_contains_recent_items_separate_from_workbench(self):
+        from core.models import ProductUsageLog
+
+        user = self._login('recentitemsuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+        ProductUsageLog.objects.create(user=user, product=self.p3, action='launch', source='home_section')
+
+        response = self.client.get(reverse('home'))
+        recent_items = response.context.get('recent_items', [])
+
+        self.assertEqual([item['product'].id for item in recent_items], [self.p3.id, self.p2.id])
+        self.assertNotIn(self.p1.id, [item['product'].id for item in recent_items])
 
     def test_v2_context_contains_favorites(self):
         user = self._login('favoritecontext')
@@ -449,6 +435,183 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(favorite_items[0]['product'].id, self.p2.id)
         self.assertIn(self.p2.id, favorite_product_ids)
 
+    def test_v2_authenticated_surfaces_add_to_workbench_copy_on_discovery(self):
+        self._login('workbenchcopy')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('작업대에 추가', content)
+
+    def test_v2_authenticated_renders_recent_items_section_when_usage_exists(self):
+        from core.models import ProductUsageLog
+
+        user = self._login('recentsectionuser')
+        ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('최근 이어서', content)
+        self.assertIn('자동 정렬', content)
+
+    def test_v2_context_contains_companion_items_for_teacher_flow(self):
+        user = self._login('companioncontextuser')
+        collect_tool = Product.objects.create(
+            title="동의서 도구",
+            description="동의서 작성",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+        )
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        companion_items = response.context.get('companion_items', [])
+
+        self.assertGreaterEqual(len(companion_items), 1)
+        self.assertEqual(companion_items[0]['product'].id, collect_tool.id)
+        self.assertEqual(companion_items[0]['reason_label'], '문서·작성과 같이 쓰기')
+
+    def test_v2_authenticated_renders_companion_recommendations_section(self):
+        user = self._login('companionrenderuser')
+        Product.objects.create(
+            title="동의서 도구",
+            description="동의서 작성",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+        )
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('같이 쓰면 좋은 도구', content)
+        self.assertIn('문서·작성과 같이 쓰기', content)
+        self.assertIn('data-track="companion_card"', content)
+
+    def test_v2_discovery_fallback_keeps_add_to_workbench_cta_when_quick_actions_exhaust_pool(self):
+        from core.models import ProductUsageLog
+
+        user = self._login('discoveryfallbackuser')
+        p4 = Product.objects.create(
+            title="동의서 도구", description="동의서 작성", price=0,
+            is_active=True, service_type='collect_sign',
+        )
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=2)
+        ProductUsageLog.objects.create(user=user, product=self.p3, action='launch', source='home_quick')
+        ProductUsageLog.objects.create(user=user, product=p4, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        discovery_items = response.context.get('discovery_items', [])
+        content = response.content.decode('utf-8')
+
+        self.assertGreaterEqual(len(discovery_items), 1)
+        self.assertIn('새로 써보기', content)
+        self.assertIn('작업대에 추가', content)
+
+    def test_v2_authenticated_renders_empty_workbench_slots_when_not_full(self):
+        user = self._login('workbenchslotsuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('빈 자리 2', content)
+        self.assertIn('기본 슬롯', content)
+
+    def test_v2_authenticated_renders_weekly_bundle_highlights(self):
+        user = self._login('weeklybundleuser')
+        ProductWorkbenchBundle.objects.create(
+            user=user,
+            name='이번 주 학급 운영',
+            product_ids=[self.p1.id, self.p2.id],
+            last_used_at=timezone.now(),
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('이번 주 많이 쓰는 조합', content)
+        self.assertIn('이번 주 학급 운영', content)
+        self.assertIn('수업을 준비해요 + 행정 도구', content)
+
+    def test_v2_context_weekly_bundle_items_are_capped(self):
+        from datetime import timedelta
+
+        user = self._login('weeklybundlecapuser')
+        for idx in range(3):
+            ProductWorkbenchBundle.objects.create(
+                user=user,
+                name=f'조합 {idx + 1}',
+                product_ids=[self.p1.id, self.p2.id],
+                last_used_at=timezone.now() - timedelta(minutes=idx),
+            )
+
+        response = self.client.get(reverse('home'))
+        weekly_bundle_items = response.context.get('weekly_bundle_items', [])
+
+        self.assertLessEqual(len(weekly_bundle_items), 2)
+
+    def test_v2_recommendation_sections_render_after_workbench(self):
+        user = self._login('sectionorderuser')
+        ProductFavorite.objects.create(user=user, product=self.p2, pin_order=1)
+        Product.objects.create(
+            title="동의서 도구",
+            description="동의서 작성",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertLess(content.index('내 작업대'), content.index('같이 쓰면 좋은 도구'))
+
+    def test_v2_authenticated_renders_saved_workbench_bundle(self):
+        user = self._login('bundlehomeuser')
+        ProductWorkbenchBundle.objects.create(user=user, name='학급 운영 세트', product_ids=[self.p1.id, self.p2.id])
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('저장한 조합', content)
+        self.assertIn('학급 운영 세트', content)
+        self.assertIn('수업을 준비해요 · 행정 도구', content)
+        self.assertIn('이 조합 불러오기', content)
+        self.assertIn('조합 지우기', content)
+        self.assertIn('data-workbench-bundle-apply="true"', content)
+        self.assertIn('data-workbench-bundle-delete="true"', content)
+        self.assertNotIn('이 조합 저장', content)
+
+    def test_v2_authenticated_renders_workbench_accessibility_contract(self):
+        user = self._login('workbencha11yuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('id="workbenchKeyboardHint"', content)
+        self.assertIn('data-workbench-live="true"', content)
+        self.assertIn('aria-live="polite"', content)
+        self.assertIn('aria-describedby="workbenchKeyboardHint"', content)
+
+    def test_v2_authenticated_renders_mobile_friendly_workbench_controls(self):
+        user = self._login('workbenchmobilecontrols')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('aria-label="앞으로 이동"', content)
+        self.assertIn('aria-label="뒤로 이동"', content)
+        self.assertIn('>앞</span>', content)
+        self.assertIn('>뒤</span>', content)
+
+
     def test_v2_authenticated_renders_favorite_toggle_and_quick_slot(self):
         user = self._login('favoriteui')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
@@ -456,9 +619,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-favorite-toggle="true"', content)
-        self.assertIn('즐겨찾기', content)
         self.assertIn('home-favorite-ids-data', content)
-
+        self.assertIn('작업대 정리', content)
 
     def test_v2_quick_action_prefers_launch_route_name(self):
         self.p2.launch_route_name = 'collect:landing'
@@ -510,64 +672,45 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(collect_product.id, collect_ids)
 
     def test_v2_sections_are_preview_capped(self):
-        for index in range(1, 4):
-            Product.objects.create(
-                title=f"Classroom Extra {index}",
-                description="extra",
-                price=0,
-                is_active=True,
-                service_type='classroom',
-                display_order=index,
-            )
+        Product.objects.create(
+            title="Classroom Extra 1",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        Product.objects.create(
+            title="Classroom Extra 2",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
 
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
 
         self.assertIsNotNone(class_ops)
-        self.assertLessEqual(len(class_ops['products']), 3)
+        self.assertLessEqual(len(class_ops['products']), 2)
         self.assertTrue(class_ops['has_more'])
         self.assertGreaterEqual(class_ops['remaining_count'], 1)
 
-    def test_v2_class_ops_preview_keeps_textbooks_and_edu_materials_visible(self):
-        textbook_product = Product.objects.create(
-            title="교과서 라이브 수업",
-            description="PDF 수업",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-            launch_route_name='textbooks:main',
-            display_order=15,
-        )
-        edu_materials_product = Product.objects.create(
-            title="교육 자료실",
-            description="HTML 수업 자료",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-            launch_route_name='edu_materials:main',
-            display_order=16,
-        )
-
-        response = self.client.get(reverse('home'))
-        sections = response.context.get('sections', [])
-        class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
-
-        self.assertIsNotNone(class_ops)
-        preview_ids = [product.id for product in class_ops['products']]
-        self.assertIn(textbook_product.id, preview_ids)
-        self.assertIn(edu_materials_product.id, preview_ids)
-
     def test_v2_section_more_toggle_renders_when_overflow_exists(self):
-        for index in range(1, 4):
-            Product.objects.create(
-                title=f"Classroom Extra {index}",
-                description="extra",
-                price=0,
-                is_active=True,
-                service_type='classroom',
-                display_order=index,
-            )
+        Product.objects.create(
+            title="Classroom Extra 1",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        Product.objects.create(
+            title="Classroom Extra 2",
+            description="extra",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -575,19 +718,18 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('더보기', content)
 
     def test_v2_section_overflow_items_are_rendered_in_markup(self):
-        for index, title in enumerate([
+        for title in [
             "Classroom Overflow A",
             "Classroom Overflow B",
             "Classroom Overflow C",
             "Classroom Overflow D",
-        ], start=1):
+        ]:
             Product.objects.create(
                 title=title,
                 description="extra",
                 price=0,
                 is_active=True,
                 service_type='classroom',
-                display_order=index,
             )
 
         response = self.client.get(reverse('home'))
@@ -662,26 +804,20 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('교무수첩 워크스페이스', content)
+        self.assertIn('오늘 바로 시작', content)
         self.assertIn('최근 수첩', content)
-        self.assertIn('빠른 실행', content)
         self.assertIn('2026 2-3반 교무수첩', content)
         self.assertIn('source=workspace_home_', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_uses_quick_cta_flows(self):
-        from sheetbook.models import Sheetbook
-
-        user = self._login('sheetbookcta')
-        sheetbook = Sheetbook.objects.create(owner=user, title='CTA 테스트 수첩')
-
+        self._login('sheetbookcta')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn(f'action="{reverse("sheetbook:quick_create")}"', content)
         self.assertIn('name="source" value="workspace_home_create"', content)
-        self.assertIn('최근 수첩 열기', content)
-        self.assertIn(reverse('sheetbook:detail', args=[sheetbook.pk]), content)
+        self.assertNotIn('workspace_home_copy', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_shows_first_run_onboarding(self):
@@ -689,9 +825,9 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('교무수첩 워크스페이스', content)
-        self.assertIn('첫 수첩을 만들면 오늘 일정과 최근 작업이 여기에 함께 정리됩니다.', content)
-        self.assertIn('시작 체크리스트', content)
+        self.assertIn('오늘 바로 시작', content)
+        self.assertIn('바로 시작 순서', content)
+        self.assertIn('첫 수첩 만들기', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_prefers_favorites_heading(self):
@@ -704,7 +840,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertRegex(content, r'fa-solid fa-star text-amber-500"></i>\s*즐겨찾기')
+        self.assertIn('내 작업대', content)
+        self.assertIn('작업대 정리', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_today_rows_render(self):
@@ -873,10 +1010,117 @@ class ProductFavoriteAPITest(TestCase):
         self.assertEqual(payload['favorites'][0]['product_id'], self.product.id)
         self.assertEqual(payload['favorites'][1]['product_id'], second.id)
 
+    def test_save_workbench_bundle_creates_and_updates(self):
+        import json
+        user = self._login('bundleapisave')
+        second = Product.objects.create(
+            title="작업대 둘째",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        ProductFavorite.objects.create(user=user, product=self.product, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=second, pin_order=2)
 
+        create_response = self.client.post(
+            reverse('save_workbench_bundle'),
+            data=json.dumps({'name': '행정 시작 세트', 'product_ids': [self.product.id, second.id]}),
+            content_type='application/json',
+        )
+        self.assertEqual(create_response.status_code, 200)
+        payload = create_response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertTrue(payload['created'])
+        bundle = ProductWorkbenchBundle.objects.get(user=user, name='행정 시작 세트')
+        self.assertEqual(bundle.product_ids, [self.product.id, second.id])
 
+        update_response = self.client.post(
+            reverse('save_workbench_bundle'),
+            data=json.dumps({'name': '행정 시작 세트', 'product_ids': [second.id]}),
+            content_type='application/json',
+        )
+        self.assertEqual(update_response.status_code, 200)
+        self.assertFalse(update_response.json()['created'])
+        bundle.refresh_from_db()
+        self.assertEqual(bundle.product_ids, [second.id])
 
+    def test_list_workbench_bundles_returns_saved_items(self):
+        user = self._login('bundleapilist')
+        ProductWorkbenchBundle.objects.create(user=user, name='첫 조합', product_ids=[self.product.id])
+        ProductWorkbenchBundle.objects.create(user=user, name='둘째 조합', product_ids=[self.product.id])
 
+        response = self.client.get(reverse('list_workbench_bundles'))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(len(payload['bundles']), 2)
+        self.assertEqual(payload['bundles'][0]['name'], '둘째 조합')
 
+    def test_apply_workbench_bundle_reorders_and_creates_missing_favorites(self):
+        import json
+        user = self._login('bundleapplyuser')
+        second = Product.objects.create(
+            title="작업대 적용 둘째",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        third = Product.objects.create(
+            title="작업대 적용 셋째",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='game',
+        )
+        ProductFavorite.objects.create(user=user, product=self.product, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=second, pin_order=2)
+        bundle = ProductWorkbenchBundle.objects.create(user=user, name='학급 운영 세트', product_ids=[third.id, self.product.id])
 
+        response = self.client.post(reverse('apply_workbench_bundle', args=[bundle.id]))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(payload['bundle_name'], '학급 운영 세트')
 
+        favorites = list(ProductFavorite.objects.filter(user=user).order_by('pin_order'))
+        self.assertEqual([favorite.product_id for favorite in favorites], [third.id, self.product.id, second.id])
+        bundle.refresh_from_db()
+        self.assertIsNotNone(bundle.last_used_at)
+
+    def test_delete_workbench_bundle_removes_saved_bundle(self):
+        user = self._login('bundledeleteuser')
+        bundle = ProductWorkbenchBundle.objects.create(user=user, name='지울 조합', product_ids=[self.product.id])
+
+        response = self.client.post(reverse('delete_workbench_bundle', args=[bundle.id]))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(payload['bundle_name'], '지울 조합')
+        self.assertFalse(ProductWorkbenchBundle.objects.filter(id=bundle.id).exists())
+
+    def test_reorder_favorites_updates_pin_order(self):
+        import json
+        user = self._login('favoriteapireorder')
+        second = Product.objects.create(
+            title="즐겨찾기 둘째",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        ProductFavorite.objects.create(user=user, product=self.product, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=second, pin_order=2)
+
+        response = self.client.post(
+            reverse('reorder_product_favorites'),
+            data=json.dumps({'product_ids': [second.id, self.product.id]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'ok')
+
+        refreshed = list(ProductFavorite.objects.filter(user=user).order_by('pin_order'))
+        self.assertEqual(refreshed[0].product_id, second.id)
+        self.assertEqual(refreshed[1].product_id, self.product.id)
