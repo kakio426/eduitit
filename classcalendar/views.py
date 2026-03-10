@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import File
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -36,6 +36,7 @@ from .integrations import (
     sync_user_calendar_integrations,
 )
 from .message_capture import parse_message_capture_draft
+from .message_capture_llm import refine_message_capture_candidates
 from .message_capture_classifier import (
     DEFAULT_ASSIST_THRESHOLD,
     predict_item_type as predict_message_capture_item_type,
@@ -47,6 +48,7 @@ from .models import (
     CalendarIntegrationSetting,
     CalendarMessageCapture,
     CalendarMessageCaptureAttachment,
+    CalendarMessageCaptureCandidate,
     CalendarTask,
     EventPageBlock,
 )
@@ -105,6 +107,7 @@ MESSAGE_CAPTURE_RULE_VERSION = "mvp-v2"
 MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
     getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD", DEFAULT_ASSIST_THRESHOLD)
 )
+MESSAGE_CAPTURE_ARCHIVE_PAGE_SIZE = 20
 
 
 def _display_user_name(user):
@@ -243,7 +246,117 @@ def _serialize_json_safe(value):
 
 
 
+def _candidate_kind_badge_text(kind):
+    normalized_kind = str(kind or "event").strip().lower()
+    if normalized_kind == "deadline":
+        return "마감"
+    if normalized_kind == "prep":
+        return "준비"
+    return "행사"
+
+
+def _candidate_kind_color(kind):
+    normalized_kind = str(kind or "event").strip().lower()
+    if normalized_kind == "deadline":
+        return "rose"
+    if normalized_kind == "prep":
+        return "amber"
+    return "indigo"
+
+
+def _build_message_capture_content_cache_key(normalized_text, attachment_checksums):
+    digest = hashlib.sha256()
+    digest.update((str(normalized_text or "").strip() + "\n").encode("utf-8"))
+    digest.update((MESSAGE_CAPTURE_RULE_VERSION + "\n").encode("utf-8"))
+    for checksum in sorted(str(item or "").strip() for item in attachment_checksums or [] if str(item or "").strip()):
+        digest.update((checksum + "\n").encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _serialize_parsed_candidate(candidate, *, candidate_id="", already_saved=False):
+    evidence_payload = candidate.get("evidence_payload") if isinstance(candidate, dict) else {}
+    return {
+        "candidate_id": str(candidate_id or ""),
+        "kind": str(candidate.get("kind") or "event").strip().lower(),
+        "badge_text": candidate.get("badge_text") or _candidate_kind_badge_text(candidate.get("kind")),
+        "title": str(candidate.get("title") or "").strip()[:200],
+        "summary": str(candidate.get("summary") or "").strip()[:5000],
+        "start_time": _serialize_temporal_value(candidate.get("start_time")),
+        "end_time": _serialize_temporal_value(candidate.get("end_time")),
+        "is_all_day": bool(candidate.get("is_all_day")),
+        "confidence_score": float(candidate.get("confidence_score") or 0),
+        "is_recommended": bool(candidate.get("is_recommended", True)),
+        "already_saved": bool(already_saved),
+        "evidence_text": str(candidate.get("evidence_text") or "").strip()[:1000],
+        "needs_check": bool(candidate.get("needs_check")),
+        "evidence_payload": _serialize_json_safe(evidence_payload or {}),
+        "color": candidate.get("color") or _candidate_kind_color(candidate.get("kind")),
+    }
+
+
+def _serialize_message_capture_candidate(candidate):
+    return {
+        "candidate_id": str(candidate.id),
+        "kind": candidate.candidate_kind,
+        "badge_text": _candidate_kind_badge_text(candidate.candidate_kind),
+        "title": candidate.title or "",
+        "summary": candidate.summary or "",
+        "start_time": _serialize_temporal_value(candidate.start_time),
+        "end_time": _serialize_temporal_value(candidate.end_time),
+        "is_all_day": bool(candidate.is_all_day),
+        "confidence_score": float(candidate.confidence_score or 0),
+        "is_recommended": bool(candidate.is_recommended),
+        "already_saved": bool(candidate.committed_event_id or candidate.commit_status == CalendarMessageCaptureCandidate.CommitStatus.SAVED),
+        "evidence_text": candidate.evidence_text or "",
+        "needs_check": bool(candidate.needs_check),
+        "evidence_payload": _serialize_json_safe(candidate.evidence_payload or {}),
+        "color": _candidate_kind_color(candidate.candidate_kind),
+    }
+
+
+def _legacy_primary_candidate_from_parsed(parsed):
+    candidates = list(parsed.get("candidates") or [])
+    if not candidates:
+        return None
+    recommended = [candidate for candidate in candidates if candidate.get("is_recommended")]
+    return (recommended or candidates)[0]
+
+
+def _build_legacy_candidate_drafts(primary_candidate, parsed):
+    candidate = primary_candidate or {}
+    candidate_kind = str(candidate.get("kind") or "event").strip().lower()
+    task_due_at = parsed.get("task_due_at")
+    task_has_time = bool(parsed.get("task_has_time"))
+    if not task_due_at and candidate_kind in {"deadline", "prep"}:
+        task_due_at = candidate.get("end_time")
+        task_has_time = not bool(candidate.get("is_all_day"))
+    title = (candidate.get("title") or parsed.get("extracted_title") or "메시지에서 만든 일정")[:200]
+    todo_summary = candidate.get("summary") or parsed.get("extracted_todo_summary") or ""
+    evidence = candidate.get("evidence_payload") or parsed.get("evidence") or {}
+    return {
+        "draft_event": {
+            "title": title,
+            "start_time": _serialize_temporal_value(candidate.get("start_time") or parsed.get("extracted_start_time")),
+            "end_time": _serialize_temporal_value(candidate.get("end_time") or parsed.get("extracted_end_time")),
+            "is_all_day": bool(candidate.get("is_all_day", parsed.get("extracted_is_all_day"))),
+            "todo_summary": todo_summary,
+            "priority": parsed.get("extracted_priority") or CalendarMessageCapture.Priority.NORMAL,
+            "parse_evidence": _serialize_json_safe(evidence),
+        },
+        "draft_task": {
+            "title": title,
+            "due_at": _serialize_temporal_value(task_due_at),
+            "has_time": bool(task_has_time),
+            "note": parsed.get("task_note") or todo_summary,
+            "priority": parsed.get("extracted_priority") or CalendarTask.Priority.NORMAL,
+            "parse_evidence": _serialize_json_safe(evidence),
+        },
+    }
+
+
 def _build_message_capture_initial_extract_payload(parsed):
+    primary_candidate = _legacy_primary_candidate_from_parsed(parsed)
+    legacy_drafts = _build_legacy_candidate_drafts(primary_candidate, parsed)
     return {
         "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
         "predicted_item_type": parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN,
@@ -256,25 +369,15 @@ def _build_message_capture_initial_extract_payload(parsed):
         "audience": parsed.get("audience") or "",
         "category": parsed.get("category") or "",
         "recurrence_hint": parsed.get("recurrence_hint") or "",
-        "draft_event": {
-            "title": (parsed.get("extracted_title") or "메시지에서 만든 일정")[:200],
-            "start_time": _serialize_temporal_value(parsed.get("extracted_start_time")),
-            "end_time": _serialize_temporal_value(parsed.get("extracted_end_time")),
-            "is_all_day": bool(parsed.get("extracted_is_all_day")),
-            "todo_summary": parsed.get("extracted_todo_summary") or "",
-            "priority": parsed.get("extracted_priority") or CalendarMessageCapture.Priority.NORMAL,
-            "parse_evidence": parsed.get("evidence") or {},
-        },
-        "draft_task": {
-            "title": (parsed.get("extracted_title") or "메시지에서 만든 할 일")[:200],
-            "due_at": _serialize_temporal_value(parsed.get("task_due_at")),
-            "has_time": bool(parsed.get("task_has_time")),
-            "note": parsed.get("task_note") or parsed.get("extracted_todo_summary") or "",
-            "priority": parsed.get("extracted_priority") or CalendarTask.Priority.NORMAL,
-            "parse_evidence": parsed.get("evidence") or {},
-        },
+        "summary_text": parsed.get("summary_text") or "",
+        "llm_used": bool(parsed.get("llm_used")),
+        "candidates": [
+            _serialize_parsed_candidate(candidate, candidate_id=str(index + 1))
+            for index, candidate in enumerate(parsed.get("candidates") or [])
+        ],
+        "draft_event": legacy_drafts["draft_event"],
+        "draft_task": legacy_drafts["draft_task"],
     }
-
 
 
 def _build_message_capture_final_payload(cleaned_data, *, selected_attachment_ids=None, source_context=None):
@@ -309,7 +412,6 @@ def _build_message_capture_final_payload(cleaned_data, *, selected_attachment_id
         }
     )
     return payload
-
 
 
 def _build_message_capture_edit_diff(capture, final_payload):
@@ -350,12 +452,10 @@ def _build_message_capture_edit_diff(capture, final_payload):
     }
 
 
-
 def _count_message_capture_manual_edits_from_diff(diff_payload):
     if not isinstance(diff_payload, dict):
         return 0
     return len(diff_payload.get("changed_fields") or [])
-
 
 
 def _extract_attachment_extensions(uploaded_files):
@@ -365,7 +465,6 @@ def _extract_attachment_extensions(uploaded_files):
         if extension:
             extensions.append(extension)
     return sorted(set(extensions))
-
 
 
 def _run_message_capture_classifier(*, user, raw_text, normalized_text, source_hint, uploaded_files, parsed):
@@ -387,7 +486,6 @@ def _run_message_capture_classifier(*, user, raw_text, normalized_text, source_h
             getattr(user, "id", None),
         )
         return None
-
 
 
 def _build_message_capture_duplicate_payload(capture):
@@ -413,6 +511,61 @@ def _build_message_capture_duplicate_payload(capture):
     return payload
 
 
+def _build_fallback_message_capture_candidates(capture):
+    initial_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
+    payload_candidates = initial_payload.get("candidates") or []
+    if isinstance(payload_candidates, list) and payload_candidates:
+        fallback = []
+        for index, candidate in enumerate(payload_candidates):
+            if not isinstance(candidate, dict):
+                continue
+            fallback.append(
+                {
+                    "candidate_id": str(candidate.get("candidate_id") or index + 1),
+                    "kind": str(candidate.get("kind") or "event"),
+                    "badge_text": candidate.get("badge_text") or _candidate_kind_badge_text(candidate.get("kind")),
+                    "title": str(candidate.get("title") or "").strip(),
+                    "summary": str(candidate.get("summary") or "").strip(),
+                    "start_time": str(candidate.get("start_time") or ""),
+                    "end_time": str(candidate.get("end_time") or ""),
+                    "is_all_day": bool(candidate.get("is_all_day")),
+                    "confidence_score": float(candidate.get("confidence_score") or capture.confidence_score or 0),
+                    "is_recommended": bool(candidate.get("is_recommended", True)),
+                    "already_saved": bool(capture.committed_event_id),
+                    "evidence_text": str(candidate.get("evidence_text") or "").strip(),
+                    "needs_check": bool(candidate.get("needs_check")),
+                    "evidence_payload": candidate.get("evidence_payload") or {},
+                    "color": candidate.get("color") or _candidate_kind_color(candidate.get("kind")),
+                }
+            )
+        if fallback:
+            return fallback
+
+    draft_event = initial_payload.get("draft_event") or {}
+    if not draft_event:
+        return []
+    inferred_kind = "deadline" if capture.predicted_item_type == CalendarMessageCapture.ItemType.TASK else "event"
+    return [
+        {
+            "candidate_id": "legacy-primary",
+            "kind": inferred_kind,
+            "badge_text": _candidate_kind_badge_text(inferred_kind),
+            "title": draft_event.get("title") or capture.extracted_title or "메시지에서 만든 일정",
+            "summary": draft_event.get("todo_summary") or capture.extracted_todo_summary or "",
+            "start_time": draft_event.get("start_time") or _serialize_temporal_value(capture.extracted_start_time),
+            "end_time": draft_event.get("end_time") or _serialize_temporal_value(capture.extracted_end_time),
+            "is_all_day": bool(draft_event.get("is_all_day", capture.extracted_is_all_day)),
+            "confidence_score": float(capture.confidence_score or 0),
+            "is_recommended": True,
+            "already_saved": bool(capture.committed_event_id),
+            "evidence_text": ((capture.parse_payload or {}).get("evidence") or {}).get("date") or "",
+            "needs_check": capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED,
+            "evidence_payload": ((capture.parse_payload or {}).get("evidence") or {}),
+            "color": _candidate_kind_color(inferred_kind),
+        }
+    ]
+
+
 def _serialize_message_capture_attachment(attachment):
     return {
         "id": str(attachment.id),
@@ -428,35 +581,55 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
     extract_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
     warning_list = warnings if warnings is not None else extract_payload.get("warnings") or parse_payload.get("warnings") or []
     confidence_label = extract_payload.get("confidence_label") or parse_payload.get("confidence_label") or "low"
-    needs_confirmation = (
-        confidence_label == "low"
-        or capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED
+
+    candidate_objects = []
+    try:
+        candidate_objects = list(capture.candidates.all().order_by("sort_order", "id"))
+    except Exception:
+        candidate_objects = []
+    candidates = [
+        _serialize_message_capture_candidate(candidate)
+        for candidate in candidate_objects
+    ] or _build_fallback_message_capture_candidates(capture)
+
+    primary_candidate = None
+    if candidates:
+        recommended = [candidate for candidate in candidates if candidate.get("is_recommended")]
+        primary_candidate = (recommended or candidates)[0]
+    legacy_drafts = _build_legacy_candidate_drafts(
+        {
+            "kind": (primary_candidate or {}).get("kind"),
+            "title": (primary_candidate or {}).get("title"),
+            "summary": (primary_candidate or {}).get("summary"),
+            "start_time": (primary_candidate or {}).get("start_time"),
+            "end_time": (primary_candidate or {}).get("end_time"),
+            "is_all_day": (primary_candidate or {}).get("is_all_day"),
+            "evidence_payload": (primary_candidate or {}).get("evidence_payload") or {},
+        } if primary_candidate else None,
+        {
+            "extracted_title": capture.extracted_title,
+            "extracted_start_time": capture.extracted_start_time,
+            "extracted_end_time": capture.extracted_end_time,
+            "extracted_is_all_day": capture.extracted_is_all_day,
+            "extracted_todo_summary": capture.extracted_todo_summary,
+            "extracted_priority": capture.extracted_priority,
+            "task_due_at": capture.extracted_end_time,
+            "task_has_time": False,
+            "task_note": capture.extracted_todo_summary,
+            "evidence": parse_payload.get("evidence") or {},
+        },
     )
+    draft_event = extract_payload.get("draft_event") or legacy_drafts["draft_event"]
+    draft_task = extract_payload.get("draft_task") or legacy_drafts["draft_task"]
+    draft_event["needs_confirmation"] = bool(capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED or confidence_label == "low")
+    draft_task["needs_confirmation"] = bool(capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED or confidence_label == "low")
 
-    draft_event = extract_payload.get("draft_event") or {
-        "title": capture.extracted_title or "메시지에서 만든 일정",
-        "start_time": capture.extracted_start_time.isoformat() if capture.extracted_start_time else "",
-        "end_time": capture.extracted_end_time.isoformat() if capture.extracted_end_time else "",
-        "is_all_day": bool(capture.extracted_is_all_day),
-        "todo_summary": capture.extracted_todo_summary or "",
-        "priority": capture.extracted_priority or "normal",
-        "parse_evidence": parse_payload.get("evidence") or {},
-    }
-    draft_task = extract_payload.get("draft_task") or {
-        "title": capture.extracted_title or "메시지에서 만든 할 일",
-        "due_at": capture.extracted_end_time.isoformat() if capture.extracted_end_time else "",
-        "has_time": False,
-        "note": capture.extracted_todo_summary or "",
-        "priority": capture.extracted_priority or CalendarTask.Priority.NORMAL,
-        "parse_evidence": parse_payload.get("evidence") or {},
-    }
-    draft_event["needs_confirmation"] = bool(draft_event.get("needs_confirmation") or needs_confirmation)
-    draft_task["needs_confirmation"] = bool(draft_task.get("needs_confirmation") or needs_confirmation)
-
+    summary_text = extract_payload.get("summary_text") or parse_payload.get("summary_text") or f"찾은 일정 {len(candidates)}개"
     return {
         "status": "success",
         "capture_id": str(capture.id),
         "parse_status": capture.parse_status,
+        "summary_text": summary_text,
         "confidence_score": float(capture.confidence_score or 0),
         "confidence_label": confidence_label,
         "predicted_item_type": extract_payload.get("predicted_item_type") or capture.predicted_item_type or CalendarMessageCapture.ItemType.UNKNOWN,
@@ -469,7 +642,147 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
         "warnings": warning_list,
         "reused": bool(reused),
         "ml_scores": capture.ml_scores if isinstance(capture.ml_scores, dict) else {},
+        "llm_used": bool(parse_payload.get("llm_used") or extract_payload.get("llm_used") or capture.llm_used),
+        "candidates": candidates,
     }
+
+
+def _build_message_capture_archive_preview(raw_text):
+    lines = [
+        line.strip()
+        for line in str(raw_text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        if line.strip()
+    ]
+    preview = "\n".join(lines[:2]).strip()
+    return preview[:400]
+
+
+def _message_capture_archive_status_code(capture):
+    candidate_count = getattr(capture, "candidate_count", None)
+    if candidate_count is None:
+        candidate_count = capture.candidates.count()
+    saved_count = getattr(capture, "saved_count", None)
+    if saved_count is None:
+        saved_count = capture.candidates.exclude(committed_event__isnull=True).count()
+    candidate_count = int(candidate_count or 0)
+    saved_count = int(saved_count or 0)
+    parse_status = str(getattr(capture, "parse_status", "") or "")
+    if parse_status == CalendarMessageCapture.ParseStatus.FAILED or candidate_count == 0:
+        return "failed"
+    if parse_status == CalendarMessageCapture.ParseStatus.NEEDS_REVIEW:
+        return "needs_review"
+    if candidate_count > 0 and saved_count > 0:
+        return "saved"
+    return "pending"
+
+
+def _message_capture_archive_status_label(status_code):
+    labels = {
+        "saved": "저장 완료",
+        "pending": "미저장",
+        "needs_review": "확인 필요",
+        "failed": "일정 못 찾음",
+    }
+    return labels.get(status_code, "미저장")
+
+
+def _build_message_capture_archive_queryset(user):
+    return CalendarMessageCapture.objects.filter(author=user).annotate(
+        candidate_count=Count("candidates", distinct=True),
+        saved_count=Count("candidates", filter=Q(candidates__committed_event__isnull=False), distinct=True),
+        attachment_count=Count("attachments", distinct=True),
+    )
+
+
+def _apply_message_capture_archive_query(queryset, query_text):
+    query = str(query_text or "").strip()
+    if not query:
+        return queryset
+    return queryset.filter(
+        Q(raw_text__icontains=query)
+        | Q(normalized_text__icontains=query)
+        | Q(candidates__title__icontains=query)
+        | Q(candidates__summary__icontains=query)
+        | Q(attachments__original_name__icontains=query)
+    ).distinct()
+
+
+def _apply_message_capture_archive_filter(queryset, filter_value):
+    normalized_filter = str(filter_value or "all").strip().lower()
+    if normalized_filter == "saved":
+        return queryset.filter(candidates__committed_event__isnull=False).distinct()
+    if normalized_filter == "pending":
+        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.PARSED, candidates__isnull=False).exclude(candidates__committed_event__isnull=False).distinct()
+    if normalized_filter == "needs_review":
+        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).distinct()
+    if normalized_filter == "failed":
+        return queryset.filter(Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED) | Q(candidates__isnull=True)).distinct()
+    return queryset
+
+
+def _build_message_capture_archive_counts(queryset):
+    saved_ids = set(queryset.filter(candidates__committed_event__isnull=False).values_list("id", flat=True))
+    pending_ids = set(
+        queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.PARSED, candidates__isnull=False)
+        .exclude(candidates__committed_event__isnull=False)
+        .values_list("id", flat=True)
+    )
+    needs_review_ids = set(queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).values_list("id", flat=True))
+    failed_ids = set(
+        queryset.filter(Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED) | Q(candidates__isnull=True)).values_list("id", flat=True)
+    )
+    all_ids = set(queryset.values_list("id", flat=True))
+    return {
+        "all": len(all_ids),
+        "saved": len(saved_ids),
+        "pending": len(pending_ids),
+        "needs_review": len(needs_review_ids),
+        "failed": len(failed_ids),
+    }
+
+
+def _serialize_message_capture_archive_item(capture):
+    status_code = _message_capture_archive_status_code(capture)
+    parse_payload = capture.parse_payload if isinstance(capture.parse_payload, dict) else {}
+    initial_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
+    summary_text = initial_payload.get("summary_text") or parse_payload.get("summary_text") or f"찾은 일정 {int(getattr(capture, 'candidate_count', 0) or 0)}개"
+    return {
+        "capture_id": str(capture.id),
+        "created_at": capture.created_at.isoformat() if capture.created_at else "",
+        "preview_text": _build_message_capture_archive_preview(capture.raw_text),
+        "parse_status": capture.parse_status,
+        "archive_status": status_code,
+        "archive_status_label": _message_capture_archive_status_label(status_code),
+        "candidate_count": int(getattr(capture, "candidate_count", 0) or 0),
+        "saved_count": int(getattr(capture, "saved_count", 0) or 0),
+        "attachment_count": int(getattr(capture, "attachment_count", 0) or 0),
+        "summary_text": summary_text,
+    }
+
+
+def _serialize_message_capture_saved_events(capture):
+    event_map = {}
+    for candidate in capture.candidates.all().order_by("sort_order", "id"):
+        if not candidate.committed_event_id:
+            continue
+        event_map[str(candidate.committed_event_id)] = candidate.committed_event
+    return [_serialize_compact_event(event) for event in event_map.values()]
+
+
+def _serialize_message_capture_archive_detail(capture):
+    payload = _serialize_message_capture(capture)
+    status_code = _message_capture_archive_status_code(capture)
+    payload.update(
+        {
+            "raw_text": capture.raw_text or "",
+            "summary_text": payload.get("summary_text") or "",
+            "created_at": capture.created_at.isoformat() if capture.created_at else "",
+            "archive_status": status_code,
+            "archive_status_label": _message_capture_archive_status_label(status_code),
+            "saved_events": _serialize_message_capture_saved_events(capture),
+        }
+    )
+    return payload
 
 
 def _guess_upload_mime_type(uploaded_file):
@@ -525,6 +838,69 @@ def _extract_selected_attachment_ids(payload):
     if not isinstance(selected_ids, list):
         return []
     return [str(value).strip() for value in selected_ids if str(value).strip()]
+
+
+def _extract_selected_candidates(payload):
+    selected_candidates = payload.get("selected_candidates") or []
+    if not isinstance(selected_candidates, list):
+        return []
+    normalized = []
+    for item in selected_candidates:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id") or item.get("work_item_id") or "").strip()
+        if not candidate_id:
+            continue
+        normalized.append(
+            {
+                "candidate_id": candidate_id,
+                "selected": bool(item.get("selected", True)),
+                "title": str(item.get("title") or "").strip()[:200],
+                "start_time": str(item.get("start_time") or "").strip(),
+                "end_time": str(item.get("end_time") or "").strip(),
+                "is_all_day": bool(item.get("is_all_day")),
+                "summary": str(item.get("summary") or "").strip()[:5000],
+            }
+        )
+    return normalized
+
+
+def _parse_candidate_datetime(raw_value):
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
+
+
+def _serialize_compact_event(event):
+    return {
+        "id": str(event.id),
+        "title": event.title,
+        "start_time": event.start_time.isoformat(),
+        "end_time": event.end_time.isoformat(),
+        "is_all_day": bool(event.is_all_day),
+        "color": event.color or "indigo",
+    }
+
+
+def _build_message_capture_commit_message(created_events, reused_events):
+    labels = []
+    for item in list(created_events or []) + list(reused_events or []):
+        title = str((item or {}).get("title") or "").strip()
+        if title:
+            labels.append(title)
+    if not labels:
+        return "선택한 일정을 저장했어요."
+    preview = ", ".join(labels[:3])
+    if len(labels) > 3:
+        preview = f"{preview} 외 {len(labels) - 3}건"
+    return f"{preview}을 저장했어요."
 
 
 def _copy_capture_attachments_to_event(event, capture_attachments, *, uploaded_by):
@@ -1718,7 +2094,7 @@ def api_message_capture_parse(request):
 
     existing_capture = (
         CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-        .prefetch_related("attachments")
+        .prefetch_related("attachments", "candidates")
         .first()
     )
     if existing_capture:
@@ -1734,6 +2110,7 @@ def api_message_capture_parse(request):
         )
         return JsonResponse(_serialize_message_capture(existing_capture, reused=True))
 
+    attachment_checksums = []
     for uploaded_file in uploaded_files:
         file_size = int(getattr(uploaded_file, "size", 0) or 0)
         if file_size > MESSAGE_CAPTURE_MAX_FILE_BYTES:
@@ -1765,11 +2142,13 @@ def api_message_capture_parse(request):
                 },
                 status=400,
             )
+        attachment_checksums.append(_calculate_upload_sha256(uploaded_file))
 
     parsed = parse_message_capture_draft(
         raw_text,
         now=timezone.now(),
         has_files=bool(uploaded_files),
+        llm_refiner=refine_message_capture_candidates,
     )
     item_types_enabled = _is_message_capture_item_types_enabled_for_user(request.user)
     predicted_item_type = parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN
@@ -1786,16 +2165,45 @@ def api_message_capture_parse(request):
     )
     decision_source = CalendarMessageCapture.DecisionSource.RULE
     ml_scores = classifier_result.get("scores") if classifier_result else {}
+    strong_deadline_candidate = any(
+        str(candidate.get("kind") or "") == "deadline" and float(candidate.get("confidence_score") or 0) >= 70
+        for candidate in (parsed.get("candidates") or [])
+        if isinstance(candidate, dict)
+    )
     if (
         item_types_enabled
         and classifier_result
         and _is_message_capture_classifier_assist_enabled_for_user(request.user)
         and float(classifier_result.get("confidence") or 0.0) >= MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD
     ):
-        predicted_item_type = classifier_result.get("label") or predicted_item_type
-        decision_source = CalendarMessageCapture.DecisionSource.RULE_ML
+        classifier_label = classifier_result.get("label") or predicted_item_type
+        if not (strong_deadline_candidate and classifier_label == CalendarMessageCapture.ItemType.EVENT):
+            predicted_item_type = classifier_label
+            decision_source = CalendarMessageCapture.DecisionSource.RULE_ML
 
     parsed["predicted_item_type"] = predicted_item_type
+    content_cache_key = _build_message_capture_content_cache_key(parsed.get("normalized_text") or raw_text, attachment_checksums)
+    cached_capture = (
+        CalendarMessageCapture.objects.filter(
+            author=request.user,
+            content_cache_key=content_cache_key,
+            rule_version=MESSAGE_CAPTURE_RULE_VERSION,
+        )
+        .prefetch_related("attachments", "candidates")
+        .first()
+    )
+    if cached_capture:
+        parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
+        logger.info(
+            "[ClassCalendar][MessageCapture] parse_cache_hit user_id=%s capture_id=%s parse_status=%s candidates=%s elapsed_ms=%s",
+            request.user.id,
+            cached_capture.id,
+            cached_capture.parse_status,
+            cached_capture.candidates.count(),
+            parse_elapsed_ms,
+        )
+        return JsonResponse(_serialize_message_capture(cached_capture, reused=True))
+
     initial_extract_payload = _build_message_capture_initial_extract_payload(parsed)
     parse_payload = {
         "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
@@ -1804,6 +2212,10 @@ def api_message_capture_parse(request):
         "evidence": parsed["evidence"],
         "predicted_item_type": predicted_item_type,
         "classifier": classifier_result or {},
+        "summary_text": parsed.get("summary_text") or "",
+        "candidate_count": len(parsed.get("candidates") or []),
+        "content_cache_key": content_cache_key,
+        "llm_used": bool(parsed.get("llm_used")),
     }
 
     with transaction.atomic():
@@ -1827,20 +2239,21 @@ def api_message_capture_parse(request):
                 initial_extract_payload=initial_extract_payload,
                 rule_version=MESSAGE_CAPTURE_RULE_VERSION,
                 ml_scores=ml_scores or {},
+                llm_used=bool(parsed.get("llm_used")),
                 idempotency_key=idempotency_key,
+                content_cache_key=content_cache_key,
             )
         except IntegrityError:
             capture = (
                 CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-                .prefetch_related("attachments")
+                .prefetch_related("attachments", "candidates")
                 .first()
             )
             if capture:
                 return JsonResponse(_serialize_message_capture(capture, reused=True))
             raise
 
-        for uploaded_file in uploaded_files:
-            checksum = _calculate_upload_sha256(uploaded_file)
+        for uploaded_file, checksum in zip(uploaded_files, attachment_checksums):
             CalendarMessageCaptureAttachment.objects.create(
                 capture=capture,
                 uploaded_by=request.user,
@@ -1852,20 +2265,102 @@ def api_message_capture_parse(request):
                 is_selected=True,
             )
 
-    capture = CalendarMessageCapture.objects.prefetch_related("attachments").get(id=capture.id)
+        for index, candidate in enumerate(parsed.get("candidates") or []):
+            candidate_kind = str(candidate.get("kind") or CalendarMessageCaptureCandidate.CandidateKind.EVENT).strip().lower()
+            if candidate_kind not in {
+                CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+                CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
+                CalendarMessageCaptureCandidate.CandidateKind.PREP,
+            }:
+                candidate_kind = CalendarMessageCaptureCandidate.CandidateKind.EVENT
+            CalendarMessageCaptureCandidate.objects.create(
+                capture=capture,
+                sort_order=index,
+                candidate_kind=candidate_kind,
+                title=(candidate.get("title") or "")[:200],
+                summary=candidate.get("summary") or "",
+                start_time=candidate.get("start_time"),
+                end_time=candidate.get("end_time"),
+                is_all_day=bool(candidate.get("is_all_day")),
+                confidence_score=candidate.get("confidence_score") or 0,
+                is_recommended=bool(candidate.get("is_recommended", True)),
+                needs_check=bool(candidate.get("needs_check")),
+                evidence_text=(candidate.get("evidence_text") or "")[:1000],
+                evidence_payload=candidate.get("evidence_payload") or {},
+                commit_status=CalendarMessageCaptureCandidate.CommitStatus.PENDING,
+            )
+
+    capture = CalendarMessageCapture.objects.prefetch_related("attachments", "candidates").get(id=capture.id)
     parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
     logger.info(
-        "[ClassCalendar][MessageCapture] parse_result user_id=%s capture_id=%s parse_status=%s confidence=%.2f predicted_item_type=%s files=%s warnings=%s elapsed_ms=%s",
+        "[ClassCalendar][MessageCapture] parse_result user_id=%s capture_id=%s parse_status=%s confidence=%.2f predicted_item_type=%s files=%s candidates=%s warnings=%s elapsed_ms=%s",
         request.user.id,
         capture.id,
         capture.parse_status,
         float(capture.confidence_score or 0),
         capture.predicted_item_type,
         capture.attachments.count(),
+        capture.candidates.count(),
         len((capture.parse_payload or {}).get("warnings") or []),
         parse_elapsed_ms,
     )
     return JsonResponse(_serialize_message_capture(capture), status=201)
+
+
+@login_required
+@require_GET
+def api_message_capture_archive(request):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
+
+    query = (request.GET.get("query") or "").strip()
+    filter_value = (request.GET.get("filter") or "all").strip().lower() or "all"
+    try:
+        page = max(1, int(request.GET.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    base_queryset = _apply_message_capture_archive_query(
+        _build_message_capture_archive_queryset(request.user),
+        query,
+    )
+    counts = _build_message_capture_archive_counts(base_queryset)
+    filtered_queryset = _apply_message_capture_archive_filter(base_queryset, filter_value).order_by("-created_at", "id")
+
+    page_size = MESSAGE_CAPTURE_ARCHIVE_PAGE_SIZE
+    start = (page - 1) * page_size
+    end = start + page_size + 1
+    page_items = list(filtered_queryset[start:end])
+    has_next = len(page_items) > page_size
+    items = page_items[:page_size]
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "items": [_serialize_message_capture_archive_item(item) for item in items],
+            "counts": counts,
+            "page": page,
+            "next_cursor_or_page": page + 1 if has_next else None,
+            "next_page": page + 1 if has_next else None,
+            "has_next": has_next,
+            "query": query,
+            "filter": filter_value,
+        }
+    )
+
+
+@login_required
+@require_GET
+def api_message_capture_archive_detail(request, capture_id):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
+
+    capture = get_object_or_404(
+        CalendarMessageCapture.objects.filter(author=request.user)
+        .prefetch_related("attachments", "candidates", "candidates__committed_event"),
+        id=capture_id,
+    )
+    return JsonResponse(_serialize_message_capture_archive_detail(capture))
 
 
 @login_required
@@ -1876,6 +2371,233 @@ def api_message_capture_commit(request, capture_id):
     commit_started_at = timezone.now()
 
     payload = _extract_request_payload(request)
+    selected_candidates = _extract_selected_candidates(payload)
+
+    capture = get_object_or_404(
+        CalendarMessageCapture.objects.select_related("author", "committed_event", "committed_task").prefetch_related("attachments", "candidates", "candidates__committed_event"),
+        id=capture_id,
+        author=request.user,
+    )
+
+    if selected_candidates:
+        selected_attachment_ids = set(_extract_selected_attachment_ids(payload))
+        capture_attachments = list(capture.attachments.all().order_by("created_at", "id"))
+        if selected_attachment_ids:
+            capture_attachments = [
+                attachment
+                for attachment in capture_attachments
+                if str(attachment.id) in selected_attachment_ids
+            ]
+
+        changed_attachments = []
+        for attachment in capture.attachments.all():
+            is_selected = (not selected_attachment_ids) or (str(attachment.id) in selected_attachment_ids)
+            if attachment.is_selected != is_selected:
+                attachment.is_selected = is_selected
+                changed_attachments.append(attachment)
+        for attachment in changed_attachments:
+            attachment.save(update_fields=["is_selected"])
+
+        if not any(item.get("selected", True) for item in selected_candidates):
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "code": "validation_error",
+                    "message": "저장할 일정을 하나 이상 선택해 주세요.",
+                },
+                status=400,
+            )
+
+        source_context = _resolve_sheetbook_context(
+            request.user,
+            payload.get("source_sheetbook_id"),
+            payload.get("source_tab_id"),
+        )
+        classroom = _get_active_classroom_for_user(request)
+        _, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
+
+        created_events = []
+        reused_events = []
+        attachment_warnings = []
+        skipped_count = 0
+        updated_count = 0
+        saved_count = 0
+        selected_snapshot = []
+
+        with transaction.atomic():
+            capture_for_update = CalendarMessageCapture.objects.select_for_update().get(id=capture.id, author=request.user)
+            candidate_map = {
+                str(candidate.id): candidate
+                for candidate in CalendarMessageCaptureCandidate.objects.select_for_update().select_related("committed_event").filter(capture=capture_for_update)
+            }
+            for item in selected_candidates:
+                candidate_id = item.get("candidate_id")
+                candidate = candidate_map.get(candidate_id)
+                if not candidate:
+                    skipped_count += 1
+                    continue
+
+                if not item.get("selected", True):
+                    if candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SAVED:
+                        candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SKIPPED
+                        candidate.save(update_fields=["commit_status", "updated_at"])
+                    skipped_count += 1
+                    continue
+
+                title = item.get("title") or candidate.title or "메시지에서 만든 일정"
+                summary = item.get("summary") or candidate.summary or ""
+                start_time = _parse_candidate_datetime(item.get("start_time")) or candidate.start_time
+                end_time = _parse_candidate_datetime(item.get("end_time")) or candidate.end_time
+                is_all_day = bool(item.get("is_all_day"))
+
+                if not start_time or not end_time:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "code": "validation_error",
+                            "message": f"{title} 일정의 날짜를 확인해 주세요.",
+                        },
+                        status=400,
+                    )
+                if end_time < start_time:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "code": "validation_error",
+                            "message": f"{title} 일정의 종료 시간이 시작 시간보다 빠를 수 없습니다.",
+                        },
+                        status=400,
+                    )
+
+                selected_snapshot.append(
+                    {
+                        "candidate_id": candidate_id,
+                        "title": title,
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
+                        "is_all_day": is_all_day,
+                        "summary": summary,
+                    }
+                )
+
+                if candidate.committed_event_id:
+                    reused_events.append(_serialize_compact_event(candidate.committed_event))
+                    if candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SAVED:
+                        candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SAVED
+                        candidate.save(update_fields=["commit_status", "updated_at"])
+                    continue
+
+                badge = _candidate_kind_badge_text(candidate.candidate_kind)
+                prefixed_title = title if title.startswith(f"[{badge}]") else f"[{badge}] {title}"
+                create_kwargs = {
+                    "title": prefixed_title,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "is_all_day": is_all_day,
+                    "color": _candidate_kind_color(candidate.candidate_kind),
+                    "visibility": CalendarEvent.VISIBILITY_TEACHER,
+                    "author": request.user,
+                    "classroom": classroom,
+                    "source": CalendarEvent.SOURCE_LOCAL,
+                }
+                if source_context:
+                    create_kwargs["integration_source"] = "sheetbook_message_capture"
+                    create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{candidate.id}"
+                event = CalendarEvent.objects.create(**create_kwargs)
+                _persist_primary_note(event, summary)
+                copied, warnings = _copy_capture_attachments_to_event(
+                    event,
+                    capture_attachments,
+                    uploaded_by=request.user,
+                )
+                if copied:
+                    updated_count += 1
+                attachment_warnings.extend(warnings)
+                created_events.append(_serialize_compact_event(event))
+                saved_count += 1
+
+                candidate.title = title[:200]
+                candidate.summary = summary
+                candidate.start_time = start_time
+                candidate.end_time = end_time
+                candidate.is_all_day = is_all_day
+                candidate.committed_event = event
+                candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SAVED
+                candidate.save(
+                    update_fields=[
+                        "title",
+                        "summary",
+                        "start_time",
+                        "end_time",
+                        "is_all_day",
+                        "committed_event",
+                        "commit_status",
+                        "updated_at",
+                    ]
+                )
+
+            first_event_id = ""
+            if created_events:
+                first_event_id = created_events[0]["id"]
+            elif reused_events:
+                first_event_id = reused_events[0]["id"]
+
+            capture_for_update.committed_event_id = first_event_id or None
+            capture_for_update.committed_task = None
+            capture_for_update.committed_at = timezone.now()
+            capture_for_update.confirmed_item_type = CalendarMessageCapture.ConfirmedItemType.EVENT
+            capture_for_update.decision_source = CalendarMessageCapture.DecisionSource.MANUAL
+            capture_for_update.final_commit_payload = {
+                "item_type": "event_multi",
+                "selected_candidates": selected_snapshot,
+                "selected_attachment_ids": [str(attachment.id) for attachment in capture_attachments],
+                "source_sheetbook_id": source_context.get("sheetbook_id") if source_context else None,
+                "source_tab_id": source_context.get("tab_id") if source_context else None,
+            }
+            capture_for_update.parse_status = CalendarMessageCapture.ParseStatus.PARSED
+            capture_for_update.save(
+                update_fields=[
+                    "committed_event",
+                    "committed_task",
+                    "committed_at",
+                    "confirmed_item_type",
+                    "decision_source",
+                    "final_commit_payload",
+                    "parse_status",
+                    "updated_at",
+                ]
+            )
+
+        commit_elapsed_ms = int((timezone.now() - commit_started_at).total_seconds() * 1000)
+        logger.info(
+            "[ClassCalendar][MessageCapture] multi_commit_result user_id=%s capture_id=%s created=%s reused=%s skipped=%s elapsed_ms=%s",
+            request.user.id,
+            capture.id,
+            len(created_events),
+            len(reused_events),
+            skipped_count,
+            commit_elapsed_ms,
+        )
+        return JsonResponse(
+            {
+                "status": "success",
+                "item_type": CalendarMessageCapture.ItemType.EVENT,
+                "saved_count": len(created_events) + len(reused_events),
+                "updated_count": updated_count,
+                "skipped_count": skipped_count,
+                "created_events": created_events,
+                "reused_events": reused_events,
+                "attachments": [],
+                "warnings": list(dict.fromkeys(attachment_warnings)),
+                "message": _build_message_capture_commit_message(created_events, reused_events),
+                "sheetbook_sync": {
+                    "status": "pending",
+                    "enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+                },
+            },
+            status=201,
+        )
+
     form = MessageCaptureCommitForm(payload)
     if not form.is_valid():
         logger.warning(
@@ -1892,12 +2614,6 @@ def api_message_capture_commit(request, capture_id):
             },
             status=400,
         )
-
-    capture = get_object_or_404(
-        CalendarMessageCapture.objects.select_related("author", "committed_event", "committed_task").prefetch_related("attachments"),
-        id=capture_id,
-        author=request.user,
-    )
 
     if capture.committed_event_id or capture.committed_task_id:
         logger.warning(

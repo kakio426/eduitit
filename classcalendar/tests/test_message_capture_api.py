@@ -1,12 +1,19 @@
 import json
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
-from classcalendar.models import CalendarEvent, CalendarEventAttachment, CalendarMessageCapture, CalendarTask
+from classcalendar.models import (
+    CalendarEvent,
+    CalendarEventAttachment,
+    CalendarMessageCapture,
+    CalendarMessageCaptureCandidate,
+)
 from core.models import UserProfile
 from sheetbook.models import SheetTab, Sheetbook
 
@@ -32,6 +39,7 @@ class MessageCaptureApiTests(TestCase):
         profile.role = "school"
         profile.save(update_fields=["nickname", "role"])
         self.parse_url = reverse("classcalendar:api_message_capture_parse")
+        self.archive_url = reverse("classcalendar:api_message_capture_archive")
 
     def _commit(self, capture_id, payload):
         return self.client.post(
@@ -40,356 +48,264 @@ class MessageCaptureApiTests(TestCase):
             content_type="application/json",
         )
 
-    def test_parse_creates_capture_and_supports_idempotency_reuse(self):
-        upload = SimpleUploadedFile("notice.txt", b"message capture test", content_type="text/plain")
+    def _archive_list(self, *, query="", filter_value="all", page=1):
+        params = {"page": page}
+        if query:
+            params["query"] = query
+        if filter_value:
+            params["filter"] = filter_value
+        return self.client.get(self.archive_url, data=params)
+
+    def _archive_detail(self, capture_id):
+        return self.client.get(
+            reverse("classcalendar:api_message_capture_archive_detail", kwargs={"capture_id": str(capture_id)})
+        )
+
+    def _build_selected_candidates(self, parse_payload):
+        selected = []
+        for candidate in parse_payload.get("candidates", []):
+            selected.append(
+                {
+                    "candidate_id": candidate["candidate_id"],
+                    "selected": not candidate.get("already_saved", False),
+                    "title": candidate.get("title") or "",
+                    "start_time": candidate.get("start_time") or "",
+                    "end_time": candidate.get("end_time") or "",
+                    "is_all_day": bool(candidate.get("is_all_day")),
+                    "summary": candidate.get("summary") or "",
+                }
+            )
+        return selected
+
+    def _create_archive_capture(
+        self,
+        *,
+        user=None,
+        raw_text,
+        parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+        summary_text="",
+        with_candidate=False,
+        saved=False,
+        candidate_title="테스트 일정",
+    ):
+        owner = user or self.user
+        capture_index = CalendarMessageCapture.objects.count() + 1
+        capture = CalendarMessageCapture.objects.create(
+            author=owner,
+            raw_text=raw_text,
+            normalized_text=raw_text,
+            parse_status=parse_status,
+            idempotency_key=f"archive-capture-{capture_index}",
+            content_cache_key=f"archive-cache-{capture_index}",
+            parse_payload={"summary_text": summary_text} if summary_text else {},
+        )
+        if with_candidate:
+            start_time = timezone.now().replace(second=0, microsecond=0)
+            end_time = start_time + timedelta(hours=1)
+            committed_event = None
+            commit_status = CalendarMessageCaptureCandidate.CommitStatus.PENDING
+            if saved:
+                committed_event = CalendarEvent.objects.create(
+                    author=owner,
+                    title=candidate_title,
+                    start_time=start_time,
+                    end_time=end_time,
+                    is_all_day=False,
+                    color="indigo",
+                )
+                commit_status = CalendarMessageCaptureCandidate.CommitStatus.SAVED
+            CalendarMessageCaptureCandidate.objects.create(
+                capture=capture,
+                sort_order=0,
+                candidate_kind=CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+                title=candidate_title,
+                summary="일정 요약",
+                start_time=start_time,
+                end_time=end_time,
+                is_all_day=False,
+                committed_event=committed_event,
+                commit_status=commit_status,
+            )
+        return capture
+
+    def test_parse_returns_candidates_and_reuses_same_content_cache(self):
         first_response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "3월 15일 오후 2시 과학 실험실 수업",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
                 "source_hint": "kakao",
-                "idempotency_key": "capture-test-key-1",
-                "files": upload,
+                "idempotency_key": "capture-multi-1",
             },
         )
         self.assertEqual(first_response.status_code, 201)
         first_payload = first_response.json()
-        capture_id = first_payload.get("capture_id")
-        self.assertTrue(capture_id)
-        capture = CalendarMessageCapture.objects.get(id=capture_id)
-        self.assertEqual(capture.attachments.count(), 1)
+        self.assertEqual(first_payload.get("summary_text"), "찾은 일정 2개")
+        self.assertEqual(len(first_payload.get("candidates") or []), 2)
+        self.assertEqual(first_payload["candidates"][0]["kind"], "deadline")
+        self.assertEqual(first_payload["candidates"][1]["kind"], "event")
 
         second_response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "같은 요청 재전송",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
                 "source_hint": "kakao",
-                "idempotency_key": "capture-test-key-1",
+                "idempotency_key": "capture-multi-2",
             },
         )
         self.assertEqual(second_response.status_code, 200)
         second_payload = second_response.json()
-        self.assertEqual(second_payload.get("capture_id"), capture_id)
         self.assertTrue(second_payload.get("reused"))
+        self.assertEqual(second_payload.get("capture_id"), first_payload.get("capture_id"))
 
-    def test_parse_returns_parsed_status_and_item_type_mapping(self):
+    def test_parse_uses_idempotency_key_reuse(self):
+        first_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시",
+                "idempotency_key": "capture-multi-idempotent",
+            },
+        )
+        self.assertEqual(first_response.status_code, 201)
+
+        second_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "다른 텍스트",
+                "idempotency_key": "capture-multi-idempotent",
+            },
+        )
+        self.assertEqual(second_response.status_code, 200)
+        self.assertTrue(second_response.json().get("reused"))
+        self.assertEqual(second_response.json().get("capture_id"), first_response.json().get("capture_id"))
+
+    def test_parse_stores_candidates_and_filters_greeting_title(self):
         response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "과학 실험 안내\n2026-03-15 14:00-15:20 과학실 수업\n준비물: 실험 노트",
-                "idempotency_key": "capture-test-key-mapping",
+                "raw_text": "선생님 안녕하세요.\n3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-greeting",
             },
         )
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload.get("parse_status"), "parsed")
-        self.assertEqual(payload.get("confidence_label"), "high")
-        self.assertEqual(payload.get("predicted_item_type"), "event")
-        draft = payload.get("draft_event") or {}
-        self.assertEqual(draft.get("title"), "과학 실험 안내")
-        self.assertFalse(draft.get("needs_confirmation"))
-        self.assertEqual(draft.get("priority"), "normal")
-        self.assertIn("start_time", draft)
-        self.assertIn("end_time", draft)
-        self.assertIn("parse_evidence", draft)
+        titles = [candidate.get("title") for candidate in payload.get("candidates", [])]
+        self.assertEqual(len(titles), 2)
+        self.assertTrue(all("선생님 안녕하세요" not in title for title in titles))
+        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
+        self.assertEqual(capture.candidates.count(), 2)
 
-    def test_parse_stores_initial_snapshot_for_task(self):
-        response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-15까지 실험 노트 제출",
-                "idempotency_key": "capture-test-key-task-snapshot",
+    @patch("classcalendar.views.refine_message_capture_candidates")
+    def test_parse_can_apply_deepseek_refinement_when_candidates_are_multiple(self, mock_refine):
+        mock_refine.return_value = [
+            {
+                "kind": "deadline",
+                "title": "연수물 수정 마감",
+                "summary": "학부모총회 전에 연수물을 수정해 주세요.",
+                "is_recommended": True,
+                "evidence_text": "12일(목)까지 연수물 수정 부탁드립니다.",
             },
-        )
-        self.assertEqual(response.status_code, 201)
-        capture = CalendarMessageCapture.objects.get(id=response.json()["capture_id"])
-        self.assertEqual(capture.predicted_item_type, CalendarMessageCapture.ItemType.TASK)
-        self.assertEqual(capture.initial_extract_payload.get("predicted_item_type"), "task")
-        self.assertTrue(capture.initial_extract_payload.get("draft_task", {}).get("due_at"))
-
-    def test_parse_returns_needs_review_for_ambiguous_datetime(self):
+            {
+                "kind": "event",
+                "title": "학부모총회",
+                "summary": "학부모총회가 실시됩니다.",
+                "is_recommended": True,
+                "evidence_text": "3월 19일 학부모총회 실시",
+            },
+        ]
         response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "학부모 상담\n내일 3시 상담실 방문",
-                "idempotency_key": "capture-test-key-ambiguous",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-llm",
             },
         )
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload.get("parse_status"), "needs_review")
-        draft = payload.get("draft_event") or {}
-        self.assertTrue(draft.get("needs_confirmation"))
-        self.assertTrue(any("확인" in warning for warning in payload.get("warnings", [])))
+        self.assertTrue(payload.get("llm_used"))
+        self.assertEqual(payload["candidates"][0]["title"], "연수물 수정 마감")
+        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
+        self.assertTrue(capture.llm_used)
 
-    def test_parse_returns_validation_error_when_input_missing(self):
-        response = self.client.post(
-            self.parse_url,
-            data={"idempotency_key": "capture-test-key-empty"},
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json().get("code"), "validation_error")
-
-    def test_parse_rejects_unsupported_file_extension(self):
-        upload = SimpleUploadedFile("run.exe", b"MZ...", content_type="application/octet-stream")
-        response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-20 09:00 학급회의",
-                "idempotency_key": "capture-test-key-invalid-ext",
-                "files": upload,
-            },
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json().get("code"), "validation_error")
-
-    def test_parse_rejects_too_large_file(self):
-        upload = SimpleUploadedFile("notice.txt", b"0123456789ABCDEF", content_type="text/plain")
-        with patch("classcalendar.views.MESSAGE_CAPTURE_MAX_FILE_BYTES", 8):
-            response = self.client.post(
-                self.parse_url,
-                data={
-                    "raw_text": "2026-03-20 09:00 학급회의",
-                    "idempotency_key": "capture-test-key-large-file",
-                    "files": upload,
-                },
-            )
-        self.assertEqual(response.status_code, 413)
-        self.assertEqual(response.json().get("code"), "file_too_large")
-
-    def test_low_confidence_capture_requires_confirmation_before_commit(self):
-        parse_response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "준비물 공지\n실험 노트 챙기기",
-                "idempotency_key": "capture-test-key-2",
-            },
-        )
-        self.assertEqual(parse_response.status_code, 201)
-        capture_id = parse_response.json()["capture_id"]
-
-        base_payload = {
-            "confirmed_item_type": "event",
-            "title": "실험 노트 준비",
-            "todo_summary": "실험 노트 챙기기",
-            "start_time": "2026-03-05T09:00",
-            "end_time": "2026-03-05T10:00",
-            "is_all_day": False,
-            "color": "indigo",
-            "selected_attachment_ids": [],
+    @override_settings(FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST=True)
+    @patch("classcalendar.views.predict_message_capture_item_type")
+    def test_classifier_assist_does_not_override_strong_deadline_candidate(self, mock_predict):
+        mock_predict.return_value = {
+            "label": "event",
+            "scores": {"event": 0.95, "task": 0.04, "ignore": 0.01},
+            "confidence": 0.95,
         }
-
-        blocked_response = self._commit(
-            capture_id,
-            {
-                **base_payload,
-                "confirm_low_confidence": False,
-            },
-        )
-        self.assertEqual(blocked_response.status_code, 422)
-        self.assertEqual(blocked_response.json().get("code"), "needs_confirmation")
-
-        commit_response = self._commit(
-            capture_id,
-            {
-                **base_payload,
-                "confirm_low_confidence": True,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        payload = commit_response.json()
-        event_id = payload["event"]["id"]
-        self.assertTrue(CalendarEvent.objects.filter(id=event_id).exists())
-
-        capture = CalendarMessageCapture.objects.get(id=capture_id)
-        self.assertEqual(str(capture.committed_event_id), event_id)
-        self.assertIsNone(capture.committed_task_id)
-        self.assertIsNotNone(capture.committed_at)
-
-    def test_task_commit_creates_task_and_preserves_original_extracted_values(self):
-        parse_response = self.client.post(
+        response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "2026-03-15까지 실험 노트 제출",
-                "idempotency_key": "capture-test-key-task-commit",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-classifier",
             },
         )
-        self.assertEqual(parse_response.status_code, 201)
-        capture_id = parse_response.json()["capture_id"]
-        capture_before = CalendarMessageCapture.objects.get(id=capture_id)
-        original_extracted_title = capture_before.extracted_title
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload.get("predicted_item_type"), "task")
+        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
+        self.assertEqual(capture.decision_source, CalendarMessageCapture.DecisionSource.RULE)
 
-        commit_response = self._commit(
-            capture_id,
-            {
-                "confirmed_item_type": "task",
-                "title": "실험 노트 제출 마감",
-                "note": "1교시 시작 전까지 제출",
-                "due_at": "2026-03-15T23:59",
-                "has_time": False,
-                "priority": "high",
-                "selected_attachment_ids": [],
-                "confirm_low_confidence": True,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        payload = commit_response.json()
-        self.assertEqual(payload.get("item_type"), "task")
-        task_id = payload["task"]["id"]
-        self.assertTrue(CalendarTask.objects.filter(id=task_id).exists())
-
-        capture = CalendarMessageCapture.objects.get(id=capture_id)
-        self.assertEqual(str(capture.committed_task_id), task_id)
-        self.assertIsNone(capture.committed_event_id)
-        self.assertEqual(capture.extracted_title, original_extracted_title)
-        self.assertEqual(capture.final_commit_payload.get("item_type"), "task")
-        self.assertIn("item_type", capture.edit_diff_payload.get("field_changes", {}))
-        self.assertFalse(capture.edit_diff_payload["field_changes"]["item_type"]["changed"])
-        self.assertEqual(capture.edit_diff_payload["field_changes"]["item_type"]["final"], "task")
-        self.assertEqual(capture.confirmed_item_type, CalendarMessageCapture.ConfirmedItemType.TASK)
-
-    def test_task_commit_with_attachments_returns_warning(self):
+    def test_commit_saves_multiple_candidates_and_copies_attachments(self):
         upload = SimpleUploadedFile("memo.txt", b"memo file", content_type="text/plain")
         parse_response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "2026-03-15까지 준비물 확인",
-                "idempotency_key": "capture-test-key-task-attachment",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-commit",
                 "files": upload,
             },
         )
         self.assertEqual(parse_response.status_code, 201)
         parse_payload = parse_response.json()
         capture_id = parse_payload["capture_id"]
-        selected_attachment_ids = [item["id"] for item in parse_payload.get("attachments", [])]
 
         commit_response = self._commit(
             capture_id,
             {
-                "confirmed_item_type": "task",
-                "title": "준비물 확인",
-                "note": "첨부는 참고만",
-                "due_at": "2026-03-15T23:59",
-                "has_time": False,
-                "priority": "normal",
-                "selected_attachment_ids": selected_attachment_ids,
-                "confirm_low_confidence": True,
+                "selected_candidates": self._build_selected_candidates(parse_payload),
+                "selected_attachment_ids": [item["id"] for item in parse_payload.get("attachments", [])],
             },
         )
         self.assertEqual(commit_response.status_code, 201)
         payload = commit_response.json()
-        self.assertEqual(payload.get("attachments"), [])
-        self.assertTrue(any("첨부파일" in warning for warning in payload.get("warnings", [])))
+        self.assertEqual(len(payload.get("created_events") or []), 2)
+        self.assertEqual(payload.get("saved_count"), 2)
+        self.assertIn("저장했어요", payload.get("message") or "")
 
-    def test_commit_returns_duplicate_request_after_first_success(self):
-        upload = SimpleUploadedFile("memo.txt", b"memo file", content_type="text/plain")
+        capture = CalendarMessageCapture.objects.get(id=capture_id)
+        candidates = list(capture.candidates.order_by("sort_order"))
+        self.assertEqual(len(candidates), 2)
+        self.assertTrue(all(candidate.commit_status == CalendarMessageCaptureCandidate.CommitStatus.SAVED for candidate in candidates))
+        self.assertTrue(all(candidate.committed_event_id for candidate in candidates))
+        for candidate in candidates:
+            self.assertEqual(CalendarEventAttachment.objects.filter(event_id=candidate.committed_event_id).count(), 1)
+
+    def test_commit_reuses_already_saved_candidates_without_duplication(self):
         parse_response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "2026-03-12 10:00-11:00 학부모 상담",
-                "idempotency_key": "capture-test-key-3",
-                "files": upload,
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-recommit",
             },
         )
         self.assertEqual(parse_response.status_code, 201)
         parse_payload = parse_response.json()
         capture_id = parse_payload["capture_id"]
-        selected_attachment_ids = [item["id"] for item in parse_payload.get("attachments", [])]
+        commit_payload = {"selected_candidates": self._build_selected_candidates(parse_payload)}
 
-        commit_payload = {
-            "confirmed_item_type": "event",
-            "title": "학부모 상담",
-            "todo_summary": "상담실 준비",
-            "start_time": "2026-03-12T10:00",
-            "end_time": "2026-03-12T11:00",
-            "is_all_day": False,
-            "color": "indigo",
-            "selected_attachment_ids": selected_attachment_ids,
-            "confirm_low_confidence": True,
-        }
         first_commit = self._commit(capture_id, commit_payload)
         self.assertEqual(first_commit.status_code, 201)
-        created_event_id = first_commit.json()["event"]["id"]
-        self.assertEqual(CalendarEventAttachment.objects.filter(event_id=created_event_id).count(), 1)
+        event_count_after_first = CalendarEvent.objects.count()
 
         second_commit = self._commit(capture_id, commit_payload)
-        self.assertEqual(second_commit.status_code, 409)
-        self.assertEqual(second_commit.json().get("code"), "duplicate_request")
+        self.assertEqual(second_commit.status_code, 201)
+        self.assertEqual(CalendarEvent.objects.count(), event_count_after_first)
+        self.assertEqual(len(second_commit.json().get("created_events") or []), 0)
+        self.assertEqual(len(second_commit.json().get("reused_events") or []), 2)
 
-    def test_api_events_includes_message_capture_attachment_metadata(self):
-        upload = SimpleUploadedFile("memo.txt", b"memo file", content_type="text/plain")
-        parse_response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-12 10:00-11:00 학부모 상담",
-                "idempotency_key": "capture-test-key-attachments-api",
-                "files": upload,
-            },
-        )
-        self.assertEqual(parse_response.status_code, 201)
-        parse_payload = parse_response.json()
-        capture_id = parse_payload["capture_id"]
-        selected_attachment_ids = [item["id"] for item in parse_payload.get("attachments", [])]
-
-        commit_response = self._commit(
-            capture_id,
-            {
-                "confirmed_item_type": "event",
-                "title": "학부모 상담",
-                "todo_summary": "상담실 준비",
-                "start_time": "2026-03-12T10:00",
-                "end_time": "2026-03-12T11:00",
-                "is_all_day": False,
-                "color": "indigo",
-                "selected_attachment_ids": selected_attachment_ids,
-                "confirm_low_confidence": True,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        event_id = commit_response.json()["event"]["id"]
-
-        events_response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(events_response.status_code, 200)
-        events = events_response.json().get("events", [])
-        event_payload = next(item for item in events if item.get("id") == event_id)
-        attachments = event_payload.get("attachments") or []
-        self.assertEqual(len(attachments), 1)
-        self.assertEqual(attachments[0].get("original_name"), "memo.txt")
-        self.assertTrue(attachments[0].get("url"))
-
-    def test_api_events_returns_tasks_array(self):
-        parse_response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-19까지 가정통신문 확인",
-                "idempotency_key": "capture-test-key-task-events",
-            },
-        )
-        self.assertEqual(parse_response.status_code, 201)
-        capture_id = parse_response.json()["capture_id"]
-        commit_response = self._commit(
-            capture_id,
-            {
-                "confirmed_item_type": "task",
-                "title": "가정통신문 확인",
-                "note": "학생 전달 여부 체크",
-                "due_at": "2026-03-19T23:59",
-                "has_time": False,
-                "priority": "normal",
-                "selected_attachment_ids": [],
-                "confirm_low_confidence": True,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        task_id = commit_response.json()["task"]["id"]
-
-        response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(response.status_code, 200)
-        tasks = response.json().get("tasks", [])
-        task_payload = next(item for item in tasks if item.get("id") == task_id)
-        self.assertEqual(task_payload.get("title"), "가정통신문 확인")
-        self.assertEqual(task_payload.get("item_type"), "task")
-
-    def test_api_events_expose_sheetbook_source_metadata_for_message_capture_commit(self):
+    def test_commit_can_link_saved_events_back_to_sheetbook_context(self):
         sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")
         calendar_tab = SheetTab.objects.create(
             sheetbook=sheetbook,
@@ -400,113 +316,208 @@ class MessageCaptureApiTests(TestCase):
         parse_response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "2026-03-18 09:00-10:00 학급 회의",
-                "idempotency_key": "capture-test-key-source-meta",
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-source-meta",
             },
         )
         self.assertEqual(parse_response.status_code, 201)
-        capture_id = parse_response.json()["capture_id"]
+        parse_payload = parse_response.json()
 
         commit_response = self._commit(
-            capture_id,
+            parse_payload["capture_id"],
             {
-                "confirmed_item_type": "event",
-                "title": "학급 회의",
-                "todo_summary": "회의 준비",
-                "start_time": "2026-03-18T09:00",
-                "end_time": "2026-03-18T10:00",
-                "is_all_day": False,
-                "color": "indigo",
-                "selected_attachment_ids": [],
-                "confirm_low_confidence": True,
+                "selected_candidates": self._build_selected_candidates(parse_payload),
                 "source_sheetbook_id": sheetbook.id,
                 "source_tab_id": calendar_tab.id,
             },
         )
         self.assertEqual(commit_response.status_code, 201)
-        event_id = commit_response.json()["event"]["id"]
+        created_event_ids = [item["id"] for item in commit_response.json().get("created_events", [])]
 
         events_response = self.client.get(reverse("classcalendar:api_events"))
         self.assertEqual(events_response.status_code, 200)
         events = events_response.json().get("events", [])
-        event_payload = next(item for item in events if item.get("id") == event_id)
-        self.assertEqual(event_payload.get("source_sheetbook_id"), sheetbook.id)
-        self.assertEqual(event_payload.get("source_sheetbook_title"), sheetbook.title)
-        self.assertEqual(event_payload.get("source_tab_id"), calendar_tab.id)
-        self.assertEqual(event_payload.get("source_tab_name"), calendar_tab.name)
-        self.assertIn(reverse("sheetbook:detail", kwargs={"pk": sheetbook.pk}), event_payload.get("source_detail_url") or "")
+        saved_events = [item for item in events if item.get("id") in created_event_ids]
+        self.assertEqual(len(saved_events), 2)
+        self.assertTrue(all(item.get("source_sheetbook_id") == sheetbook.id for item in saved_events))
+        self.assertTrue(all(item.get("source_tab_id") == calendar_tab.id for item in saved_events))
 
-    @override_settings(FEATURE_MESSAGE_CAPTURE_CLASSIFIER_SHADOW=True)
-    @patch("classcalendar.views.predict_message_capture_item_type")
-    def test_classifier_shadow_scores_saved_without_overriding_rule_prediction(self, mock_predict):
-        mock_predict.return_value = {
-            "label": "task",
-            "scores": {"event": 0.1, "task": 0.85, "ignore": 0.05},
-            "confidence": 0.85,
-        }
-        response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-20 09:00 학년 회의",
-                "idempotency_key": "capture-test-key-shadow",
-            },
-        )
-        self.assertEqual(response.status_code, 201)
-        payload = response.json()
-        self.assertEqual(payload.get("predicted_item_type"), "event")
-        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
-        self.assertEqual(capture.decision_source, CalendarMessageCapture.DecisionSource.RULE)
-        self.assertIn("task", capture.ml_scores)
-
-    @override_settings(FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST=True)
-    @patch("classcalendar.views.predict_message_capture_item_type")
-    def test_classifier_assist_can_adjust_predicted_item_type(self, mock_predict):
-        mock_predict.return_value = {
-            "label": "task",
-            "scores": {"event": 0.1, "task": 0.9, "ignore": 0.0},
-            "confidence": 0.9,
-        }
-        response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "2026-03-20 09:00 학년 회의",
-                "idempotency_key": "capture-test-key-assist",
-            },
-        )
-        self.assertEqual(response.status_code, 201)
-        payload = response.json()
-        self.assertEqual(payload.get("predicted_item_type"), "task")
-        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
-        self.assertEqual(capture.decision_source, CalendarMessageCapture.DecisionSource.RULE_ML)
+    def test_parse_rejects_too_large_file(self):
+        upload = SimpleUploadedFile("notice.txt", b"0123456789ABCDEF", content_type="text/plain")
+        with patch("classcalendar.views.MESSAGE_CAPTURE_MAX_FILE_BYTES", 8):
+            response = self.client.post(
+                self.parse_url,
+                data={
+                    "raw_text": "3월 19일 학부모총회 실시",
+                    "idempotency_key": "capture-multi-large-file",
+                    "files": upload,
+                },
+            )
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(response.json().get("code"), "file_too_large")
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)
     def test_parse_returns_feature_disabled_when_flag_off(self):
         response = self.client.post(
             self.parse_url,
-            data={"raw_text": "2026-03-20 09:00 학급회의"},
+            data={"raw_text": "3월 19일 학부모총회 실시"},
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json().get("code"), "feature_disabled")
 
-    def test_legacy_main_redirects_and_main_shows_message_capture_entry_for_allowlist_user(self):
+    def test_archive_list_reuses_same_capture_for_same_message_content(self):
+        first_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
+                "source_hint": "kakao",
+                "idempotency_key": "archive-reuse-1",
+            },
+        )
+        self.assertEqual(first_response.status_code, 201)
+        first_payload = first_response.json()
+
+        second_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
+                "source_hint": "kakao",
+                "idempotency_key": "archive-reuse-2",
+            },
+        )
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response.json().get("capture_id"), first_payload.get("capture_id"))
+
+        archive_response = self._archive_list()
+        self.assertEqual(archive_response.status_code, 200)
+        archive_payload = archive_response.json()
+        self.assertEqual(archive_payload.get("counts", {}).get("all"), 1)
+        self.assertEqual(len(archive_payload.get("items") or []), 1)
+        self.assertEqual(archive_payload["items"][0]["capture_id"], first_payload["capture_id"])
+
+    def test_archive_detail_shows_candidates_and_saved_events_for_committed_capture(self):
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "archive-detail-commit",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+
+        commit_response = self._commit(
+            parse_payload["capture_id"],
+            {"selected_candidates": self._build_selected_candidates(parse_payload)},
+        )
+        self.assertEqual(commit_response.status_code, 201)
+
+        detail_response = self._archive_detail(parse_payload["capture_id"])
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.json()
+        self.assertEqual(len(detail_payload.get("candidates") or []), 2)
+        self.assertEqual(len(detail_payload.get("saved_events") or []), 2)
+        self.assertTrue(all(candidate.get("already_saved") for candidate in detail_payload.get("candidates") or []))
+        self.assertTrue(detail_payload.get("created_at"))
+
+    def test_archive_list_and_detail_show_failed_message_without_candidates(self):
+        capture = self._create_archive_capture(
+            raw_text="안내만 전달드립니다. 자세한 일정은 추후 공지합니다.",
+            parse_status=CalendarMessageCapture.ParseStatus.FAILED,
+            summary_text="일정을 찾지 못했어요",
+            with_candidate=False,
+        )
+
+        archive_response = self._archive_list(filter_value="failed")
+        self.assertEqual(archive_response.status_code, 200)
+        items = archive_response.json().get("items") or []
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["capture_id"], str(capture.id))
+        self.assertEqual(items[0]["archive_status"], "failed")
+
+        detail_response = self._archive_detail(capture.id)
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.json()
+        self.assertEqual(detail_payload.get("parse_status"), CalendarMessageCapture.ParseStatus.FAILED)
+        self.assertEqual(detail_payload.get("candidates"), [])
+        self.assertEqual(detail_payload.get("saved_events"), [])
+
+    def test_archive_filters_saved_pending_review_and_failed(self):
+        saved_capture = self._create_archive_capture(
+            raw_text="3월 12일 저장된 일정",
+            summary_text="저장된 일정",
+            with_candidate=True,
+            saved=True,
+            candidate_title="저장 완료 일정",
+        )
+        pending_capture = self._create_archive_capture(
+            raw_text="3월 13일 아직 저장하지 않은 일정",
+            summary_text="미저장 일정",
+            with_candidate=True,
+            saved=False,
+            candidate_title="미저장 일정",
+        )
+        review_capture = self._create_archive_capture(
+            raw_text="3월 중 일정 확인 부탁",
+            parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
+            summary_text="확인 필요 일정",
+            with_candidate=True,
+            saved=False,
+            candidate_title="확인 필요 일정",
+        )
+        failed_capture = self._create_archive_capture(
+            raw_text="참고만 부탁드립니다.",
+            parse_status=CalendarMessageCapture.ParseStatus.FAILED,
+            summary_text="일정 못 찾음",
+            with_candidate=False,
+        )
+
+        all_response = self._archive_list()
+        self.assertEqual(all_response.status_code, 200)
+        counts = all_response.json().get("counts") or {}
+        self.assertEqual(counts.get("all"), 4)
+        self.assertEqual(counts.get("saved"), 1)
+        self.assertEqual(counts.get("pending"), 1)
+        self.assertEqual(counts.get("needs_review"), 1)
+        self.assertEqual(counts.get("failed"), 1)
+
+        saved_ids = {item["capture_id"] for item in (self._archive_list(filter_value="saved").json().get("items") or [])}
+        pending_ids = {item["capture_id"] for item in (self._archive_list(filter_value="pending").json().get("items") or [])}
+        review_ids = {item["capture_id"] for item in (self._archive_list(filter_value="needs_review").json().get("items") or [])}
+        failed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="failed").json().get("items") or [])}
+
+        self.assertEqual(saved_ids, {str(saved_capture.id)})
+        self.assertEqual(pending_ids, {str(pending_capture.id)})
+        self.assertEqual(review_ids, {str(review_capture.id)})
+        self.assertEqual(failed_ids, {str(failed_capture.id)})
+
+    def test_archive_is_private_to_current_user(self):
+        other_user = User.objects.create_user(
+            username="another_teacher",
+            password="pw12345",
+            email="another_teacher@example.com",
+        )
+        self._create_archive_capture(
+            user=other_user,
+            raw_text="3월 25일 다른 사용자 일정",
+            summary_text="다른 사용자 메시지",
+            with_candidate=True,
+            saved=False,
+            candidate_title="다른 사용자 일정",
+        )
+
+        list_response = self._archive_list()
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(list_response.json().get("counts", {}).get("all"), 0)
+        self.assertEqual(list_response.json().get("items"), [])
+
+        foreign_capture = CalendarMessageCapture.objects.filter(author=other_user).first()
+        detail_response = self._archive_detail(foreign_capture.id)
+        self.assertEqual(detail_response.status_code, 404)
+
+    def test_main_shows_message_capture_entry_for_allowlist_user(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertRedirects(response, reverse("classcalendar:main"))
         self.assertContains(response, '@click.prevent="openMessageCaptureModal($event)"')
         self.assertContains(response, "메시지 바로 등록")
-
-    def test_legacy_main_redirects_and_main_hides_message_capture_entry_for_non_allowlist_user(self):
-        non_allowlist_user = User.objects.create_user(
-            username="non_allowlist_teacher",
-            password="pw12345",
-            email="non_allowlist_teacher@example.com",
-        )
-        profile, _ = UserProfile.objects.get_or_create(user=non_allowlist_user)
-        profile.nickname = "비허용교사"
-        profile.role = "school"
-        profile.save(update_fields=["nickname", "role"])
-
-        client = Client()
-        client.force_login(non_allowlist_user)
-        response = client.get(reverse("classcalendar:legacy_main"), follow=True)
-        self.assertRedirects(response, reverse("classcalendar:main"))
-        self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
+        self.assertContains(response, "메시지 보관함")

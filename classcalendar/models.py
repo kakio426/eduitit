@@ -271,6 +271,7 @@ class CalendarMessageCapture(models.Model):
     ml_scores = models.JSONField(default=dict, blank=True)
     llm_used = models.BooleanField(default=False)
     idempotency_key = models.CharField(max_length=64, default=_default_idempotency_key)
+    content_cache_key = models.CharField(max_length=64, blank=True, default="")
     committed_event = models.ForeignKey(
         CalendarEvent,
         null=True,
@@ -295,6 +296,7 @@ class CalendarMessageCapture(models.Model):
             models.Index(fields=["author", "created_at"]),
             models.Index(fields=["author", "parse_status", "created_at"]),
             models.Index(fields=["author", "predicted_item_type", "created_at"]),
+            models.Index(fields=["author", "content_cache_key"]),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -337,6 +339,71 @@ class CalendarMessageCaptureAttachment(models.Model):
 
     def __str__(self):
         return f"{self.capture_id}:{self.original_name or self.id}"
+
+
+class CalendarMessageCaptureCandidate(models.Model):
+    class CandidateKind(models.TextChoices):
+        EVENT = "event", "Event"
+        DEADLINE = "deadline", "Deadline"
+        PREP = "prep", "Prep"
+
+    class CommitStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SAVED = "saved", "Saved"
+        SKIPPED = "skipped", "Skipped"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    capture = models.ForeignKey(
+        CalendarMessageCapture,
+        on_delete=models.CASCADE,
+        related_name="candidates",
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    candidate_kind = models.CharField(
+        max_length=20,
+        choices=CandidateKind.choices,
+        default=CandidateKind.EVENT,
+    )
+    title = models.CharField(max_length=200, blank=True, default="")
+    summary = models.TextField(blank=True, default="")
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    is_all_day = models.BooleanField(default=False)
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    is_recommended = models.BooleanField(default=True)
+    needs_check = models.BooleanField(default=False)
+    evidence_text = models.TextField(blank=True, default="")
+    evidence_payload = models.JSONField(default=dict, blank=True)
+    committed_event = models.ForeignKey(
+        CalendarEvent,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="message_capture_candidates",
+    )
+    commit_status = models.CharField(
+        max_length=20,
+        choices=CommitStatus.choices,
+        default=CommitStatus.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        indexes = [
+            models.Index(fields=["capture", "sort_order"]),
+            models.Index(fields=["capture", "commit_status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["capture", "sort_order"],
+                name="calendar_message_capture_candidate_unique_sort_order",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.capture_id}:{self.sort_order}:{self.title or self.id}"
 
 
 class CalendarEventAttachment(models.Model):

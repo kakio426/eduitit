@@ -7,67 +7,77 @@ from classcalendar.message_capture import parse_message_capture_draft
 
 
 class MessageCaptureParserTests(SimpleTestCase):
-    def test_parse_with_absolute_date_and_range_time(self):
-        now = timezone.make_aware(datetime(2026, 3, 4, 9, 0))
+    def test_parse_date_only_event_as_all_day_candidate(self):
+        now = timezone.make_aware(datetime(2026, 3, 10, 9, 0))
         result = parse_message_capture_draft(
-            "과학 실험 안내\n2026-03-15 14:00-15:20 과학실 수업\n준비물: 실험 노트",
+            "3월 19일 학부모총회 실시",
             now=now,
             has_files=False,
         )
 
         self.assertEqual(result["parse_status"], "parsed")
-        self.assertEqual(result["confidence_label"], "high")
-        self.assertEqual(result["predicted_item_type"], "event")
-        self.assertEqual(result["extracted_title"], "과학 실험 안내")
-        self.assertEqual(result["extracted_start_time"].date().isoformat(), "2026-03-15")
-        self.assertEqual(result["extracted_start_time"].hour, 14)
-        self.assertEqual(result["extracted_end_time"].hour, 15)
+        self.assertEqual(len(result["candidates"]), 1)
+        candidate = result["candidates"][0]
+        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["title"], "학부모총회")
+        self.assertTrue(candidate["is_all_day"])
+        self.assertEqual(candidate["start_time"].date().isoformat(), "2026-03-19")
+        self.assertFalse(any("시간" in warning for warning in result["warnings"]))
+
+    def test_parse_mixed_message_returns_deadline_and_event_candidates(self):
+        now = timezone.make_aware(datetime(2026, 3, 10, 9, 0))
+        result = parse_message_capture_draft(
+            "선생님 안녕하세요.\n"
+            "3월 19일(목)에 학부모총회가 실시됩니다.\n"
+            "이에 학부모를 대상으로 하는 연수물을 작성하여 이알리미로 안내하고자 합니다.\n"
+            "작년 연수물 파일에 담당자를 지정해두었으니 수정해주시면 됩니다.\n"
+            "12일(목)까지 부탁드릴게요.",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(result["parse_status"], "parsed")
+        self.assertEqual(result["predicted_item_type"], "task")
+        self.assertEqual(len(result["candidates"]), 2)
+        self.assertEqual(result["candidates"][0]["kind"], "deadline")
+        self.assertEqual(result["candidates"][0]["start_time"].date().isoformat(), "2026-03-12")
+        self.assertEqual(result["candidates"][1]["kind"], "event")
+        self.assertEqual(result["candidates"][1]["title"], "학부모총회")
+        self.assertNotIn("선생님 안녕하세요", result["candidates"][0]["title"])
+        self.assertNotIn("선생님 안녕하세요", result["candidates"][1]["title"])
+
+    def test_parse_reads_day_only_date_using_previous_month_context(self):
+        now = timezone.make_aware(datetime(2026, 3, 10, 9, 0))
+        result = parse_message_capture_draft(
+            "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(len(result["candidates"]), 2)
+        self.assertEqual(result["candidates"][0]["start_time"].date().isoformat(), "2026-03-12")
+        self.assertEqual(result["candidates"][1]["start_time"].date().isoformat(), "2026-03-19")
+
+    def test_parse_with_absolute_date_and_time_keeps_location_and_materials(self):
+        now = timezone.make_aware(datetime(2026, 3, 4, 9, 0))
+        result = parse_message_capture_draft(
+            "2026-03-15 14:00-15:20 학부모총회\n준비물: 실험 노트\n과학실 수업",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(result["parse_status"], "parsed")
         self.assertEqual(result["location"], "과학실")
         self.assertEqual(result["materials"], "실험 노트")
-        self.assertEqual(result["category"], "class")
+        candidate = result["candidates"][0]
+        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["start_time"].hour, 14)
+        self.assertEqual(candidate["end_time"].hour, 15)
+        self.assertFalse(candidate["is_all_day"])
 
-    def test_parse_marks_task_for_deadline_message(self):
-        now = timezone.make_aware(datetime(2026, 3, 4, 9, 0))
-        result = parse_message_capture_draft(
-            "2026-03-14까지 보고서 제출\n확인 후 출력본 제출",
-            now=now,
-            has_files=False,
-        )
-
-        self.assertEqual(result["predicted_item_type"], "task")
-        self.assertTrue(result["deadline_only"])
-        self.assertEqual(result["parse_status"], "parsed")
-        self.assertIsNotNone(result["task_due_at"])
-        self.assertEqual(result["task_due_at"].date().isoformat(), "2026-03-14")
-
-    def test_parse_marks_ignore_for_notice_message(self):
-        now = timezone.make_aware(datetime(2026, 3, 4, 9, 0))
-        result = parse_message_capture_draft(
-            "학급 안내\n급식 시간은 추후 공지 예정입니다.",
-            now=now,
-            has_files=False,
-        )
-
-        self.assertEqual(result["predicted_item_type"], "ignore")
-        self.assertEqual(result["parse_status"], "needs_review")
-        self.assertTrue(any("안내성" in warning for warning in result["warnings"]))
-
-    def test_parse_relative_date_and_single_time(self):
-        now = timezone.make_aware(datetime(2026, 3, 4, 9, 0))
-        result = parse_message_capture_draft(
-            "학부모 상담\n내일 오후 3시 상담실 방문",
-            now=now,
-            has_files=False,
-        )
-
-        self.assertEqual(result["parse_status"], "needs_review")
-        self.assertEqual(result["predicted_item_type"], "event")
-        self.assertEqual(result["extracted_start_time"].date().isoformat(), "2026-03-05")
-        self.assertEqual(result["extracted_start_time"].hour, 15)
-        self.assertEqual(result["location"], "상담실")
-
-    def test_parse_failed_when_text_and_files_are_empty(self):
-        result = parse_message_capture_draft("", has_files=False)
+    def test_parse_failed_when_no_date_is_present(self):
+        result = parse_message_capture_draft("학급 안내\n추후 다시 알려드리겠습니다.", has_files=False)
 
         self.assertEqual(result["parse_status"], "failed")
         self.assertEqual(result["confidence_label"], "low")
+        self.assertEqual(result["candidates"], [])
