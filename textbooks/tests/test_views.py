@@ -50,6 +50,7 @@ class TextbookViewTests(TestCase):
                 "grade": "5학년 1학기",
                 "unit_title": "지층과 화석",
                 "title": "지층과 화석 PDF",
+                "source_type": "pdf",
                 "content": "교사용 메모",
                 "pdf_file": upload,
             },
@@ -57,12 +58,68 @@ class TextbookViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         return TextbookMaterial.objects.get(title="지층과 화석 PDF")
 
+    def _create_html_material(self):
+        response = self.client.post(
+            reverse("textbooks:create"),
+            {
+                "subject": "SCIENCE",
+                "grade": "5학년 1학기",
+                "unit_title": "태양계 탐험",
+                "title": "태양계 HTML 자료",
+                "source_type": "html",
+                "content": "<!doctype html><html><body><button>시작</button></body></html>",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        return TextbookMaterial.objects.get(title="태양계 HTML 자료")
+
+    def _create_markdown_material(self):
+        response = self.client.post(
+            reverse("textbooks:create"),
+            {
+                "subject": "KOREAN",
+                "grade": "4학년 2학기",
+                "unit_title": "이야기 읽기",
+                "title": "국어 텍스트 자료",
+                "source_type": "markdown",
+                "content": "첫째 문단\n둘째 문단",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        return TextbookMaterial.objects.get(title="국어 텍스트 자료")
+
     def test_create_pdf_material_stores_metadata(self):
         material = self._create_pdf_material()
         self.assertEqual(material.source_type, TextbookMaterial.SOURCE_PDF)
         self.assertEqual(material.page_count, 2)
         self.assertTrue(material.pdf_sha256)
         self.assertEqual(material.original_filename, "science.pdf")
+
+    def test_create_html_material_persists_source_type_and_content(self):
+        material = self._create_html_material()
+        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_HTML)
+        self.assertIn("<button>시작</button>", material.content)
+        self.assertEqual(material.page_count, 0)
+
+    def test_create_html_material_requires_content(self):
+        response = self.client.post(
+            reverse("textbooks:create"),
+            {
+                "subject": "SCIENCE",
+                "grade": "5학년 1학기",
+                "unit_title": "태양계 탐험",
+                "title": "빈 HTML 자료",
+                "source_type": "html",
+                "content": "   ",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(TextbookMaterial.objects.filter(title="빈 HTML 자료").exists())
+
+    def test_create_markdown_material_is_still_supported(self):
+        material = self._create_markdown_material()
+        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_MARKDOWN)
+        self.assertEqual(material.page_count, 0)
 
     def test_non_pdf_upload_is_rejected(self):
         upload = SimpleUploadedFile("lesson.html", b"<html></html>", content_type="text/html")
@@ -73,29 +130,54 @@ class TextbookViewTests(TestCase):
                 "grade": "5학년 1학기",
                 "unit_title": "지층과 화석",
                 "title": "잘못된 업로드",
+                "source_type": "pdf",
                 "pdf_file": upload,
             },
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(TextbookMaterial.objects.filter(title="잘못된 업로드").exists())
 
-    def test_main_view_hides_non_pdf_legacy_material(self):
-        TextbookMaterial.objects.create(
-            teacher=self.user,
-            subject="SCIENCE",
-            grade="5학년 1학기",
-            unit_title="텍스트 수업",
-            title="숨겨져야 할 텍스트 자료",
-            source_type=TextbookMaterial.SOURCE_MARKDOWN,
-            content="# markdown",
-        )
-        material = self._create_pdf_material()
+    def test_main_view_lists_html_pdf_and_markdown_materials(self):
+        html_material = self._create_html_material()
+        pdf_material = self._create_pdf_material()
+        markdown_material = self._create_markdown_material()
 
         response = self.client.get(reverse("textbooks:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, material.title)
-        self.assertNotContains(response, "숨겨져야 할 텍스트 자료")
+        self.assertContains(response, html_material.title)
+        self.assertContains(response, pdf_material.title)
+        self.assertContains(response, markdown_material.title)
+        self.assertContains(response, "Sandbox Preview")
+
+    def test_html_detail_view_uses_preview_shell(self):
+        material = self._create_html_material()
+
+        response = self.client.get(reverse("textbooks:detail", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sandbox Preview")
+        self.assertContains(response, "textbooks-preview-html-json")
+        self.assertContains(response, "allow-scripts allow-forms allow-downloads")
+
+    def test_html_preview_window_is_teacher_only(self):
+        material = self._create_html_material()
+        other = User.objects.create_user(username="other", email="other@example.com", password="pw123456")
+        other_client = Client()
+        other_client.force_login(other)
+
+        response = other_client.get(reverse("textbooks:html_preview_window", args=[material.id]))
+
+        self.assertIn(response.status_code, [302, 404])
+
+    def test_html_preview_window_renders_saved_material(self):
+        material = self._create_html_material()
+
+        response = self.client.get(reverse("textbooks:html_preview_window", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "새 창 미리보기")
+        self.assertContains(response, "textbooks-preview-window-json")
 
     def test_start_live_session_uses_active_classroom_and_publishes_material(self):
         material = self._create_pdf_material()
@@ -149,7 +231,7 @@ class TextbookViewTests(TestCase):
         allowed = self.client.get(reverse("textbooks:material_pdf", args=[material.id]) + f"?session={session.id}")
         self.assertEqual(allowed.status_code, 200)
 
-    def test_detail_view_renders_embedded_join_qr(self):
+    def test_detail_view_renders_embedded_join_qr_for_pdf(self):
         material = self._create_pdf_material()
         session = TextbookLiveSession.objects.create(
             material=material,

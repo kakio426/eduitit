@@ -1,21 +1,30 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}교과서 라이브 수업{% endblock %}
+{% block title %}교육 자료실{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'textbooks/html_preview.css' %}">
 <style>
     .textbooks-shell {
-        background: linear-gradient(180deg, #eef6ff 0%, #f8fbff 50%, #eef2ff 100%);
+        background:
+            radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 24rem),
+            linear-gradient(180deg, #eef6ff 0%, #f8fbff 52%, #eef2ff 100%);
     }
     .textbooks-panel {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.92);
         border: 1px solid rgba(148, 163, 184, 0.18);
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(14px);
     }
+    .textbooks-pill {
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.7);
+        color: #475569;
+    }
     .textbooks-pill.is-active {
         background: #0f172a;
+        border-color: #0f172a;
         color: #fff;
     }
     .textbooks-input {
@@ -30,14 +39,14 @@
 
 {% block content %}
 <section class="textbooks-shell min-h-screen pt-28 pb-20 px-4">
-    <div class="max-w-7xl mx-auto space-y-8">
+    <div class="max-w-[1500px] mx-auto space-y-8">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="text-sm font-bold uppercase tracking-[0.32em] text-sky-600">교과서 라이브</p>
-                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">수업 자료를 저장하고 바로 수업에 씁니다</h1>
-                <p class="text-slate-600 mt-4 max-w-3xl text-lg">PDF나 텍스트 자료를 저장해 두고, 필요한 순간 바로 열어 씁니다.</p>
+                <p class="text-sm font-black uppercase tracking-[0.32em] text-sky-600">교육 자료실</p>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">Gemini 화면과 PDF 자료를 한곳에서 점검합니다</h1>
+                <p class="text-slate-600 mt-4 max-w-4xl text-lg">HTML 자료는 sandbox preview로 비율과 버튼 위치를 바로 확인하고, PDF와 텍스트 자료는 같은 자료실에서 함께 관리합니다.</p>
             </div>
-            <div class="space-y-2 text-sm text-slate-500">
+            <div class="space-y-2 text-sm text-slate-500 max-w-md">
                 <div class="rounded-full bg-white/80 border border-slate-200 px-4 py-2 text-right">
                     현재 학급: {% if active_classroom %}<strong class="text-slate-800">{{ active_classroom.name }}</strong>{% else %}선택 안 됨{% endif %}
                 </div>
@@ -46,27 +55,28 @@
                         <span>학생 참여 안내</span>
                         <span class="text-xs text-slate-400">보기</span>
                     </summary>
-                    <p class="mt-2 text-left text-slate-500">학생은 QR이나 입장코드로 들어옵니다. 자료를 저장한 뒤 상세 화면에서 바로 수업을 시작하면 됩니다.</p>
+                    <p class="mt-2 text-left text-slate-500">HTML 자료는 이번 단계에서 교사 저장과 미리보기까지만 다룹니다. PDF 자료는 저장 후 상세 화면에서 기존 라이브 수업 흐름을 바로 이어서 사용할 수 있습니다.</p>
                 </details>
             </div>
         </div>
 
-        <div class="grid gap-8 lg:grid-cols-[380px_1fr]">
-            <div class="textbooks-panel rounded-[32px] p-6 md:p-8" x-data="textbooksCreateForm()">
-                <div class="flex items-center justify-between mb-6">
+        <div class="grid gap-8 xl:grid-cols-[430px_minmax(0,1fr)]">
+            <div class="textbooks-panel rounded-[32px] p-6 md:p-8" data-textbooks-create-root data-initial-mode="html">
+                <div class="flex items-center justify-between mb-6 gap-4">
                     <div>
                         <h2 class="text-2xl font-black text-slate-900">새 자료 추가</h2>
-                        <p class="text-sm text-slate-500 mt-1">수업 자료를 한곳에 저장합니다.</p>
+                        <p class="text-sm text-slate-500 mt-1">오늘 바로 쓸 자료부터 저장합니다.</p>
                     </div>
-                    <div class="inline-flex gap-2 rounded-full bg-slate-100 p-1">
-                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" :class="mode === 'pdf' ? 'is-active' : 'text-slate-600'" @click="mode = 'pdf'">PDF 자료</button>
-                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" :class="mode === 'markdown' ? 'is-active' : 'text-slate-600'" @click="mode = 'markdown'">텍스트 자료</button>
+                    <div class="inline-flex gap-2 rounded-full bg-slate-100 p-1 flex-wrap justify-end">
+                        <button type="button" class="textbooks-pill is-active px-4 py-2 rounded-full text-sm font-bold transition" data-create-mode="html">HTML 자료</button>
+                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" data-create-mode="pdf">PDF 자료</button>
+                        <button type="button" class="textbooks-pill px-4 py-2 rounded-full text-sm font-bold transition" data-create-mode="markdown">텍스트 자료</button>
                     </div>
                 </div>
 
                 <form action="{% url 'textbooks:create' %}" method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
-                    <input type="hidden" name="source_type" :value="mode">
+                    <input type="hidden" name="source_type" value="html" data-create-source-type>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
                         <select name="subject" class="textbooks-input" required>
@@ -90,66 +100,68 @@
                         <label class="block text-sm font-bold text-slate-700 mb-2">제목</label>
                         <input name="title" class="textbooks-input" placeholder="수업 화면에 표시될 제목">
                     </div>
-                    <div x-show="mode === 'pdf'" x-cloak>
+                    <div class="hidden" data-create-pdf-panel>
                         <label class="block text-sm font-bold text-slate-700 mb-2">PDF 파일</label>
-                        <input type="file" name="pdf_file" accept="application/pdf,.pdf" class="textbooks-input" :required="mode === 'pdf'">
+                        <input type="file" name="pdf_file" accept="application/pdf,.pdf" class="textbooks-input" data-create-pdf-input>
                         <p class="text-xs text-slate-500 mt-2">비밀번호 없는 PDF만 지원합니다.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2" x-text="mode === 'pdf' ? '메모 (선택)' : '내용'"></label>
-                        <textarea name="content" class="textbooks-input min-h-[180px]" placeholder="수업에 필요한 메모나 자료 내용을 적어 주세요."></textarea>
+                        <label class="block text-sm font-bold text-slate-700 mb-2" data-create-content-label>Gemini 코드 붙여넣기</label>
+                        <textarea id="textbooks-content-input" name="content" class="textbooks-input min-h-[18rem] font-mono text-sm leading-6" placeholder="<!doctype html>부터 전체 코드를 붙여넣어 주세요." required data-create-content-input></textarea>
+                        <p class="text-xs text-slate-500 mt-2 leading-6" data-create-content-help>제미나이에서 만든 전체 HTML 코드를 붙여넣으면 오른쪽 sandbox preview에 바로 반영됩니다.</p>
                     </div>
                     <button type="submit" class="w-full rounded-2xl bg-slate-900 py-4 text-white text-lg font-black shadow-lg shadow-slate-900/15 hover:-translate-y-0.5 transition">저장하기</button>
                 </form>
             </div>
 
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900">저장한 자료</h2>
-                        <p class="text-sm text-slate-500 mt-1">최근 수정한 자료부터 보여 줍니다.</p>
-                    </div>
-                    <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
-                        총 {{ materials|length }}개
-                    </div>
+            <div class="space-y-6 min-w-0">
+                <div data-create-preview-root>
+                    {% include 'textbooks/partials/html_preview_shell.html' with preview_source_input_id='textbooks-content-input' preview_sample_script_id='textbooks-html-sample-json' preview_title='붙여넣은 화면 점검' preview_subtitle='데스크탑과 모바일 기준으로 비율, 스크롤, 하단 버튼 노출을 바로 확인합니다.' preview_show_refresh='1' preview_show_sample='1' preview_use_popup='1' preview_footer_note='학생 배포용 HTML 실행은 다음 단계에서 연결합니다.' %}
                 </div>
 
-                {% if materials %}
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {% for material in materials %}
-                    <a href="{% url 'textbooks:detail' material.id %}" class="textbooks-panel rounded-[28px] p-5 group hover:-translate-y-1 transition block">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <div class="text-xs font-bold uppercase tracking-[0.28em] text-sky-600">{{ material.get_subject_display }}</div>
-                                <h3 class="text-xl font-black text-slate-900 mt-2 group-hover:text-sky-700 transition">{{ material.title }}</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900">저장한 자료</h2>
+                            <p class="text-sm text-slate-500 mt-1">최근 수정한 자료부터 보여 줍니다.</p>
+                        </div>
+                        <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">총 {{ materials|length }}개</div>
+                    </div>
+
+                    {% if materials %}
+                    <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                        {% for material in materials %}
+                        <a href="{% url 'textbooks:detail' material.id %}" class="textbooks-panel rounded-[28px] p-5 group hover:-translate-y-1 transition block">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-black uppercase tracking-[0.28em] text-sky-600">{{ material.get_subject_display }}</div>
+                                    <h3 class="text-xl font-black text-slate-900 mt-2 group-hover:text-sky-700 transition">{{ material.title }}</h3>
+                                </div>
+                                <span class="rounded-full px-3 py-1 text-xs font-bold {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% elif material.source_type == 'html' %}bg-sky-100 text-sky-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">{{ material.get_source_type_display }}</span>
                             </div>
-                            <span class="rounded-full px-3 py-1 text-xs font-bold {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">{{ material.get_source_type_display }}</span>
-                        </div>
-                        <p class="text-slate-500 mt-3 line-clamp-2 min-h-[3rem]">{{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
-                        <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
-                            <span>{% if material.is_published %}학생 공개 중{% else %}비공개{% endif %}</span>
-                            <span>{% if material.page_count %}{{ material.page_count }}쪽{% else %}텍스트{% endif %}</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+                            <p class="text-slate-500 mt-3 line-clamp-2 min-h-[3rem]">{{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span>{% if material.source_type == 'pdf' and material.is_published %}학생 공개 중{% elif material.source_type == 'pdf' %}비공개{% else %}교사 미리보기용{% endif %}</span>
+                                <span>{% if material.source_type == 'pdf' %}{{ material.page_count }}쪽{% elif material.source_type == 'html' %}HTML{% else %}텍스트{% endif %}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="textbooks-panel rounded-[28px] p-10 text-center text-slate-500">
+                        <div class="text-5xl mb-3">📚</div>
+                        <p class="text-lg font-bold text-slate-700">아직 저장한 자료가 없습니다.</p>
+                        <p class="mt-2">왼쪽에서 첫 HTML 자료를 붙여넣고 바로 미리보기로 점검해 보세요.</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="textbooks-panel rounded-[28px] p-10 text-center text-slate-500">
-                    <div class="text-5xl mb-3">📘</div>
-                    <p class="text-lg font-bold text-slate-700">아직 저장한 자료가 없습니다.</p>
-                    <p class="mt-2">왼쪽 패널에서 첫 PDF 자료나 텍스트 자료를 만들어 보세요.</p>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 </section>
+{{ html_preview_sample|json_script:'textbooks-html-sample-json' }}
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function textbooksCreateForm() {
-    return { mode: 'pdf' };
-}
-</script>
+<script src="{% static 'textbooks/html_preview.js' %}"></script>
 {% endblock %}

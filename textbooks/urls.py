@@ -9,6 +9,7 @@ urlpatterns = [
     path("", views.main_view, name="main"),
     path("create/", views.create_material, name="create"),
     path("<uuid:pk>/", views.material_detail, name="detail"),
+    path("<uuid:pk>/html-preview/", views.html_preview_window, name="html_preview_window"),
     path("<uuid:material_id>/publish/", views.toggle_material_publish, name="toggle_publish"),
     path("<uuid:material_id>/pdf/", views.material_pdf, name="material_pdf"),
     path("<uuid:material_id>/live/start/", views.start_live_session, name="start_live"),

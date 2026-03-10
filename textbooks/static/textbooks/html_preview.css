@@ -1,0 +1,133 @@
+.textbooks-preview-shell {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 28px 64px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(16px);
+}
+
+.textbooks-preview-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.textbooks-preview-toggle,
+.textbooks-preview-action {
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: rgba(255, 255, 255, 0.9);
+    color: #334155;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 0.7rem 1rem;
+    transition: all 0.18s ease;
+}
+
+.textbooks-preview-toggle:hover,
+.textbooks-preview-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.textbooks-preview-toggle.is-active {
+    background: #0f172a;
+    color: white;
+    border-color: #0f172a;
+}
+
+.textbooks-preview-stage {
+    position: relative;
+    min-height: clamp(34rem, 70vh, 58rem);
+    height: clamp(34rem, 70vh, 58rem);
+    border-radius: 2rem;
+    padding: 1rem;
+    background:
+        linear-gradient(180deg, rgba(226, 232, 240, 0.85), rgba(241, 245, 249, 0.92)),
+        radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 32rem);
+    overflow: hidden;
+}
+
+.textbooks-preview-device {
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    border-radius: 1.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 22px 60px rgba(15, 23, 42, 0.16);
+    transition: width 0.2s ease, max-width 0.2s ease;
+}
+
+.textbooks-preview-shell[data-preview-viewport="mobile"] .textbooks-preview-device {
+    width: 390px;
+    max-width: 100%;
+}
+
+.textbooks-preview-shell[data-preview-viewport="desktop"] .textbooks-preview-device {
+    width: 100%;
+    max-width: none;
+}
+
+.textbooks-preview-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: white;
+}
+
+.textbooks-preview-empty {
+    position: absolute;
+    inset: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    color: #475569;
+    border-radius: 1.75rem;
+    border: 1px dashed rgba(148, 163, 184, 0.55);
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.textbooks-preview-shell[data-preview-has-content="true"] .textbooks-preview-empty {
+    display: none;
+}
+
+.textbooks-preview-shell[data-preview-disabled="true"] .textbooks-preview-frame,
+.textbooks-preview-shell[data-preview-disabled="true"] .textbooks-preview-device {
+    opacity: 0.42;
+}
+
+.textbooks-preview-shell[data-preview-disabled="true"] .textbooks-preview-empty {
+    display: flex;
+}
+
+.textbooks-preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.textbooks-preview-status {
+    color: #475569;
+    line-height: 1.6;
+}
+
+@media (max-width: 767px) {
+    .textbooks-preview-stage {
+        min-height: 30rem;
+        height: 30rem;
+        border-radius: 1.5rem;
+        padding: 0.75rem;
+    }
+
+    .textbooks-preview-device {
+        border-radius: 1.2rem;
+    }
+}
+

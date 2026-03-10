@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ material.title }} 새 창 미리보기{% endblock %}
+{% block footer_class %}hidden{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'textbooks/html_preview.css' %}">
+<style>
+    .preview-window-shell {
+        background:
+            radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 28rem),
+            linear-gradient(180deg, #eef6ff 0%, #f8fbff 56%, #eef2ff 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="preview-window-shell min-h-screen pt-24 pb-10 px-4">
+    <div class="max-w-[1500px] mx-auto space-y-6">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+                <a href="{% url 'textbooks:detail' material.id %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 자료 상세로 돌아가기</a>
+                <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
+                <p class="text-slate-600 mt-2">새 창에서 HTML 화면만 크게 확인합니다.</p>
+            </div>
+            <div class="rounded-full bg-white/80 border border-slate-200 px-4 py-2 text-sm font-black text-sky-700">교사 전용 preview window</div>
+        </div>
+
+        {% include 'textbooks/partials/html_preview_shell.html' with preview_initial_script_id='textbooks-preview-window-json' preview_title='새 창 미리보기' preview_subtitle='수업 화면만 크게 띄워 전체 비율과 스크롤을 확인합니다.' preview_footer_note='학생 공개용 링크는 아직 연결하지 않았습니다.' %}
+    </div>
+</section>
+{{ material.content|json_script:'textbooks-preview-window-json' }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'textbooks/html_preview.js' %}"></script>
+{% endblock %}
