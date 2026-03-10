@@ -184,13 +184,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
-    def test_v2_authenticated_has_greeting(self):
-        """V2 로그인 홈에 인사말 존재"""
+    def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
+        """V2 로그인 홈은 큰 인사말 대신 압축된 상단 행을 사용"""
         self._login('greetuser', nickname='홍길동')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('홍길동', content)
-        self.assertIn('선생님, 안녕하세요', content)
+        self.assertNotIn('선생님, 안녕하세요', content)
+        self.assertIn('openSearchModal', content)
 
     def test_v2_authenticated_has_quick_actions(self):
         """V2 로그인 홈에 퀵 액션 존재"""

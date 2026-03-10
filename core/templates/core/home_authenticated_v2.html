@@ -4,12 +4,27 @@
 
 {% block extra_css %}
 <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+    /* 퀵 액션 스크롤 */
     .quick-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     .quick-scroll::-webkit-scrollbar { display: none; }
-    [data-workbench="true"][data-editing="true"] [data-workbench-controls="true"] { display: flex; }
-    [data-workbench="true"][data-editing="true"] [data-workbench-card="true"] { border-color: rgb(165 180 252 / 1); box-shadow: 0 8px 30px rgba(79, 70, 229, 0.12); }
-    [data-workbench-card="true"].dragging { opacity: 0.55; }
-    [data-workbench-card="true"].drop-target { outline: 2px dashed rgb(99 102 241 / 0.8); outline-offset: 4px; }
+
+    .sns-preview-card { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.3s ease; }
+    .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+    .home-calendar-day {
+        min-height: 88px;
+    }
+
+    @media (min-width: 640px) {
+        .home-calendar-day {
+            min-height: 104px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -59,14 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.classList.toggle('border-slate-200', !isFavorite);
         button.classList.toggle('text-slate-300', !isFavorite);
         button.classList.toggle('bg-white', !isFavorite);
-        button.title = isFavorite ? (button.dataset.favoriteOnText || '작업대에 있음') : (button.dataset.favoriteOffText || '작업대에 추가');
-
-        const label = button.querySelector('[data-favorite-label="true"]');
-        if (label) {
-            label.textContent = isFavorite
-                ? (button.dataset.favoriteOnText || '작업대에 있음')
-                : (button.dataset.favoriteOffText || '작업대에 추가');
-        }
+        button.title = isFavorite ? '즐겨찾기 해제' : '즐겨찾기';
     };
 
     const syncFavoriteButtons = () => {
@@ -88,354 +96,17 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = href;
     };
 
-    const bindProductCards = () => {
-        document.querySelectorAll('.product-card').forEach((card) => {
-            card.addEventListener('click', function (e) {
-                if (e.target.closest('.product-info-trigger') || e.target.closest('[data-favorite-toggle="true"]') || e.target.closest('[data-workbench-control]')) return;
-                launchCard(this);
-            });
-            card.addEventListener('keydown', (e) => {
-                if (e.target.closest('[data-workbench-control]')) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    launchCard(card);
-                }
-            });
+    // 카드 클릭: 즉시 서비스 진입
+    document.querySelectorAll('.product-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('.product-info-trigger') || e.target.closest('[data-favorite-toggle="true"]')) return;
+            launchCard(this);
         });
-    };
-
-    const workbench = document.querySelector('[data-workbench="true"]');
-    const workbenchGrid = workbench ? workbench.querySelector('[data-workbench-grid="true"]') : null;
-    const workbenchEditToggle = workbench ? workbench.querySelector('[data-workbench-edit-toggle="true"]') : null;
-    const workbenchSaveToggle = workbench ? workbench.querySelector('[data-workbench-save-toggle="true"]') : null;
-    const workbenchSavePanel = workbench ? workbench.querySelector('[data-workbench-bundle-save-panel="true"]') : null;
-    const workbenchSaveInput = workbench ? workbench.querySelector('[data-workbench-bundle-name="true"]') : null;
-    const workbenchSaveConfirm = workbench ? workbench.querySelector('[data-workbench-bundle-save-confirm="true"]') : null;
-    const workbenchSaveCancel = workbench ? workbench.querySelector('[data-workbench-bundle-save-cancel="true"]') : null;
-    const workbenchLive = workbench ? workbench.querySelector('[data-workbench-live="true"]') : null;
-    let workbenchEditing = false;
-    let draggedCard = null;
-    let workbenchLiveTimer = null;
-
-    const getWorkbenchCards = () => Array.from(document.querySelectorAll('[data-workbench-card="true"]'));
-    const getCurrentWorkbenchProductIds = () => getWorkbenchCards()
-        .map((card) => parseInt(card.dataset.productId || '', 10))
-        .filter((id) => !Number.isNaN(id));
-
-    const announceWorkbench = (message) => {
-        if (!workbenchLive || !message) return;
-        if (workbenchLiveTimer) {
-            window.clearTimeout(workbenchLiveTimer);
-        }
-        workbenchLive.textContent = '';
-        workbenchLiveTimer = window.setTimeout(() => {
-            workbenchLive.textContent = message;
-        }, 40);
-    };
-
-    const getWorkbenchCardTitle = (card) => card?.dataset.workbenchTitle || card?.dataset.trackLabel || '작업 도구';
-
-    const syncWorkbenchState = () => {
-        if (!workbench) return;
-        workbench.dataset.editing = workbenchEditing ? 'true' : 'false';
-        getWorkbenchCards().forEach((card, index) => {
-            const orderBadge = card.querySelector('[data-workbench-order-label="true"]');
-            if (orderBadge) {
-                orderBadge.textContent = String(index + 1).padStart(2, '0');
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                launchCard(card);
             }
-            card.draggable = workbenchEditing;
-            if (workbenchEditing) {
-                card.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
-            } else {
-                card.removeAttribute('aria-keyshortcuts');
-            }
-        });
-        if (workbenchEditToggle) {
-            workbenchEditToggle.textContent = workbenchEditing ? '정리 끝' : '작업대 정리';
-        }
-    };
-
-    const persistWorkbenchOrder = async ({ silentSuccess = false } = {}) => {
-        if (!workbenchGrid) return;
-        const csrfToken = getCsrfToken();
-        if (!csrfToken) {
-            showFeedback('로그인이 만료되었을 수 있습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.', 'error');
-            return;
-        }
-        const productIds = getWorkbenchCards().map((card) => parseInt(card.dataset.productId || '', 10)).filter((id) => !Number.isNaN(id));
-        if (!productIds.length) return;
-
-        try {
-            const response = await fetch('{% url "reorder_product_favorites" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({ product_ids: productIds }),
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload.status !== 'ok') {
-                throw new Error(payload.error || '작업대 순서를 저장하지 못했습니다.');
-            }
-            if (!silentSuccess) {
-                showFeedback('작업대 순서를 저장했습니다.', 'success');
-            }
-        } catch (error) {
-            showFeedback(error.message || '작업대 저장 중 오류가 발생했습니다.', 'error');
-        }
-    };
-
-    const moveWorkbenchCard = async (card, direction) => {
-        if (!workbenchGrid || !card) return;
-        const normalizedDirection = direction && direction.startsWith('left') ? 'left' : 'right';
-        const cards = getWorkbenchCards();
-        const currentIndex = cards.indexOf(card);
-        if (currentIndex === -1) return;
-        const nextIndex = normalizedDirection === 'left' ? currentIndex - 1 : currentIndex + 1;
-        if (nextIndex < 0 || nextIndex >= cards.length) return;
-
-        const target = cards[nextIndex];
-        if (normalizedDirection === 'left') {
-            workbenchGrid.insertBefore(card, target);
-        } else {
-            workbenchGrid.insertBefore(target, card);
-        }
-        syncWorkbenchState();
-        await persistWorkbenchOrder({ silentSuccess: true });
-        card.focus();
-        announceWorkbench(`${getWorkbenchCardTitle(card)} 순서가 ${nextIndex + 1}번째로 바뀌었습니다.`);
-    };
-
-    const setWorkbenchSavePanelOpen = (open) => {
-        if (!workbenchSavePanel) return;
-        workbenchSavePanel.classList.toggle('hidden', !open);
-        if (open && workbenchSaveInput) {
-            workbenchSaveInput.focus();
-            workbenchSaveInput.select();
-        }
-    };
-
-    const saveWorkbenchBundle = async () => {
-        const productIds = getCurrentWorkbenchProductIds();
-        if (!productIds.length) {
-            showFeedback('먼저 작업대에 담을 도구를 고른 뒤 다시 시도해 주세요.', 'error');
-            return;
-        }
-        const bundleName = (workbenchSaveInput?.value || '').trim();
-        if (!bundleName) {
-            showFeedback('조합 이름을 적어 주세요.', 'error');
-            workbenchSaveInput?.focus();
-            return;
-        }
-        const csrfToken = getCsrfToken();
-        if (!csrfToken) {
-            showFeedback('로그인이 만료되었을 수 있습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.', 'error');
-            return;
-        }
-        try {
-            const response = await fetch('{% url "save_workbench_bundle" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({ name: bundleName, product_ids: productIds }),
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload.status !== 'ok') {
-                throw new Error(payload.error || '작업대 조합을 저장하지 못했습니다.');
-            }
-            showFeedback(`"${bundleName}" 조합을 저장했습니다.`, 'success');
-            if (workbenchSaveInput) {
-                workbenchSaveInput.value = '';
-            }
-            setWorkbenchSavePanelOpen(false);
-            window.location.reload();
-        } catch (error) {
-            showFeedback(error.message || '작업대 조합 저장 중 오류가 발생했습니다.', 'error');
-        }
-    };
-
-    const applyWorkbenchBundle = async (bundleId, bundleName) => {
-        const csrfToken = getCsrfToken();
-        if (!csrfToken) {
-            showFeedback('로그인이 만료되었을 수 있습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.', 'error');
-            return;
-        }
-        try {
-            const response = await fetch(`/api/workbench-bundles/${bundleId}/apply/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                },
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload.status !== 'ok') {
-                throw new Error(payload.error || '작업대 조합을 불러오지 못했습니다.');
-            }
-            showFeedback(`"${bundleName}" 조합을 작업대에 불러왔습니다.`, 'success');
-            window.location.reload();
-        } catch (error) {
-            showFeedback(error.message || '작업대 조합 불러오기 중 오류가 발생했습니다.', 'error');
-        }
-    };
-
-    const deleteWorkbenchBundle = async (bundleId, bundleName) => {
-        const csrfToken = getCsrfToken();
-        if (!csrfToken) {
-            showFeedback('로그인이 만료되었을 수 있습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.', 'error');
-            return;
-        }
-        try {
-            const response = await fetch(`/api/workbench-bundles/${bundleId}/delete/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                },
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload.status !== 'ok') {
-                throw new Error(payload.error || '작업대 조합을 지우지 못했습니다.');
-            }
-            showFeedback(`"${bundleName}" 조합을 지웠습니다.`, 'success');
-            window.location.reload();
-        } catch (error) {
-            showFeedback(error.message || '작업대 조합 삭제 중 오류가 발생했습니다.', 'error');
-        }
-    };
-
-    const bindWorkbench = () => {
-        if (!workbench || !workbenchGrid) return;
-
-        if (workbenchEditToggle) {
-            workbenchEditToggle.addEventListener('click', () => {
-                workbenchEditing = !workbenchEditing;
-                syncWorkbenchState();
-                announceWorkbench(
-                    workbenchEditing
-                        ? '작업대 정리 상태입니다. 카드에 포커스를 둔 뒤 왼쪽 또는 오른쪽 버튼으로 순서를 바꿀 수 있습니다.'
-                        : '작업대 정리를 마쳤습니다.'
-                );
-            });
-        }
-        if (workbenchSaveToggle) {
-            workbenchSaveToggle.addEventListener('click', () => {
-                if (workbenchSavePanel?.classList.contains('hidden')) {
-                    setWorkbenchSavePanelOpen(true);
-                } else {
-                    setWorkbenchSavePanelOpen(false);
-                }
-            });
-        }
-        if (workbenchSaveCancel) {
-            workbenchSaveCancel.addEventListener('click', () => {
-                if (workbenchSaveInput) {
-                    workbenchSaveInput.value = '';
-                }
-                setWorkbenchSavePanelOpen(false);
-            });
-        }
-        if (workbenchSaveConfirm) {
-            workbenchSaveConfirm.addEventListener('click', async () => {
-                await saveWorkbenchBundle();
-            });
-        }
-        if (workbenchSaveInput) {
-            workbenchSaveInput.addEventListener('keydown', async (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    await saveWorkbenchBundle();
-                }
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    setWorkbenchSavePanelOpen(false);
-                }
-            });
-        }
-
-        getWorkbenchCards().forEach((card) => {
-            card.addEventListener('dragstart', (event) => {
-                if (!workbenchEditing) {
-                    event.preventDefault();
-                    return;
-                }
-                draggedCard = card;
-                card.classList.add('dragging');
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', card.dataset.productId || '');
-            });
-            card.addEventListener('dragend', async () => {
-                card.classList.remove('dragging');
-                getWorkbenchCards().forEach((item) => item.classList.remove('drop-target'));
-                if (draggedCard) {
-                    syncWorkbenchState();
-                    await persistWorkbenchOrder({ silentSuccess: true });
-                }
-                draggedCard = null;
-            });
-            card.addEventListener('dragover', (event) => {
-                if (!workbenchEditing || !draggedCard || draggedCard === card) return;
-                event.preventDefault();
-                card.classList.add('drop-target');
-            });
-            card.addEventListener('dragleave', () => {
-                card.classList.remove('drop-target');
-            });
-            card.addEventListener('drop', (event) => {
-                if (!workbenchEditing || !draggedCard || draggedCard === card) return;
-                event.preventDefault();
-                card.classList.remove('drop-target');
-                const cards = getWorkbenchCards();
-                const targetIndex = cards.indexOf(card);
-                const draggedIndex = cards.indexOf(draggedCard);
-                if (targetIndex === -1 || draggedIndex === -1) return;
-                if (draggedIndex < targetIndex) {
-                    workbenchGrid.insertBefore(draggedCard, card.nextSibling);
-                } else {
-                    workbenchGrid.insertBefore(draggedCard, card);
-                }
-            });
-            card.addEventListener('keydown', async (event) => {
-                if (!workbenchEditing) return;
-                if (event.target.closest('[data-workbench-control]')) return;
-                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-                event.preventDefault();
-                await moveWorkbenchCard(card, event.key === 'ArrowLeft' ? 'left' : 'right');
-            });
-        });
-
-        document.querySelectorAll('[data-workbench-control]').forEach((button) => {
-            button.addEventListener('click', async (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const card = event.currentTarget.closest('[data-workbench-card="true"]');
-                if (!card) return;
-                await moveWorkbenchCard(card, event.currentTarget.dataset.workbenchControl);
-            });
-        });
-
-        syncWorkbenchState();
-    };
-
-    bindProductCards();
-    bindWorkbench();
-
-    document.querySelectorAll('[data-workbench-bundle-apply="true"]').forEach((button) => {
-        button.addEventListener('click', async (event) => {
-            event.preventDefault();
-            const bundleId = parseInt(button.dataset.bundleId || '', 10);
-            if (Number.isNaN(bundleId)) return;
-            await applyWorkbenchBundle(bundleId, button.dataset.bundleName || '저장한 조합');
-        });
-    });
-
-    document.querySelectorAll('[data-workbench-bundle-delete="true"]').forEach((button) => {
-        button.addEventListener('click', async (event) => {
-            event.preventDefault();
-            const bundleId = parseInt(button.dataset.bundleId || '', 10);
-            if (Number.isNaN(bundleId)) return;
-            await deleteWorkbenchBundle(bundleId, button.dataset.bundleName || '저장한 조합');
         });
     });
 
@@ -449,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const csrfToken = getCsrfToken();
             if (!csrfToken) {
-                showFeedback('로그인이 만료되었을 수 있습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.', 'error');
+                showFeedback('보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.', 'error');
                 return;
             }
 
@@ -465,22 +136,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok || payload.status !== 'ok') {
-                    throw new Error(payload.error || '즐겨찾기를 바꾸지 못했습니다.');
+                    throw new Error(payload.error || '즐겨찾기 처리에 실패했습니다.');
                 }
 
                 if (payload.is_favorite) {
                     favoriteIds.add(pid);
+                    showFeedback('즐겨찾기에 추가했습니다.', 'success');
                 } else {
                     favoriteIds.delete(pid);
+                    showFeedback('즐겨찾기에서 제거했습니다.', 'success');
                 }
                 syncFavoriteButtons();
-                window.location.reload();
             } catch (error) {
-                showFeedback(error.message || '즐겨찾기 변경 중 오류가 발생했습니다.', 'error');
+                showFeedback(error.message || '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
             }
         });
     });
 
+    // 우측 상세 버튼: 모달 열기
     document.querySelectorAll('.product-info-trigger').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -490,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 클릭 계측 + 사용 기록
     document.addEventListener('click', function(e) {
         const el = e.target.closest('[data-track]');
         if (!el) return;
@@ -500,10 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (token) {
                 const sourceMap = {
                     quick_action: 'home_quick',
-                    workbench_card: 'home_workbench',
-                    discovery_card: 'home_discovery',
                     mini_card: 'home_section',
                     game_card: 'home_game',
+                    game_banner: 'home_game',
                     section_more_toggle: 'home_section',
                 };
                 fetch('/api/track-usage/', {
@@ -513,11 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .then((response) => {
                     if (!response.ok) {
-                        showFeedback('사용 기록 저장을 마치지 못했습니다.', 'error');
+                        showFeedback('사용 기록 저장에 실패했습니다.', 'error');
                     }
                 })
                 .catch(function() {
-                    showFeedback('사용 기록 저장 중 오류가 발생했습니다.', 'error');
+                    showFeedback('사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
                 });
             }
         }
@@ -525,81 +198,359 @@ document.addEventListener('DOMContentLoaded', () => {
 
     syncFavoriteButtons();
 });
+
+function homeCalendarWidget() {
+    return {
+        currentDate: new Date(),
+        events: [],
+        createModalOpen: false,
+        dayEventsModalOpen: false,
+        selectedDateKey: '',
+        selectedDateLabel: '',
+        selectedDateEvents: [],
+        isSubmitting: false,
+        createContextDateText: '',
+        refreshTicker: null,
+        createForm: {
+            title: '',
+            note: '',
+            start_time: '',
+            end_time: '',
+            is_all_day: false,
+            color: 'indigo',
+        },
+
+        init() {
+            this.refreshEvents();
+            this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
+            window.addEventListener('focus', () => this.refreshEvents());
+        },
+
+        async refreshEvents() {
+            try {
+                const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
+                this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
+                if (this.dayEventsModalOpen && this.selectedDateKey) {
+                    const selectedDate = this.parseDateKey(this.selectedDateKey);
+                    this.selectedDateEvents = this.getEventsForDate(selectedDate);
+                }
+            } catch (err) {
+                if (window.showToast) {
+                    window.showToast('홈 캘린더를 불러오지 못했습니다.', 'error');
+                }
+            }
+        },
+
+        normalizeEvent(event) {
+            return {
+                ...event,
+                title: event.title || '일정',
+                color: event.color || 'indigo',
+                is_all_day: !!event.is_all_day,
+                start_time: new Date(event.start_time),
+                end_time: new Date(event.end_time),
+            };
+        },
+
+        getCsrfToken() {
+            const field = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (field && field.value) return field.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        },
+
+        async requestJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const err = new Error(payload.message || '요청 처리에 실패했습니다.');
+                err.payload = payload;
+                throw err;
+            }
+            return payload;
+        },
+
+        pad(value) {
+            return String(value).padStart(2, '0');
+        },
+
+        dateKey(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+        },
+
+        parseDateKey(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        },
+
+        toDatetimeLocal(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}T${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        get currentMonthText() {
+            return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`;
+        },
+
+        get todayEventsCount() {
+            return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length;
+        },
+
+        get weekEventsCount() {
+            const now = new Date();
+            const start = new Date(now);
+            const mondayOffset = (now.getDay() + 6) % 7;
+            start.setDate(now.getDate() - mondayOffset);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return this.events.filter((e) => e.start_time >= start && e.start_time < end).length;
+        },
+
+        get calendarDates() {
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            const first = new Date(y, m, 1);
+            const last = new Date(y, m + 1, 0);
+            const start = new Date(first);
+            start.setDate(start.getDate() - start.getDay());
+            const end = new Date(last);
+            if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
+            const dates = [];
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                dates.push(new Date(cursor));
+            }
+            return dates;
+        },
+
+        prevMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+        },
+
+        nextMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+        },
+
+        isCurrentMonth(date) {
+            return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear();
+        },
+
+        isToday(date) {
+            const t = new Date();
+            return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear();
+        },
+
+        getEventsForDate(date) {
+            return this.events
+                .filter((e) => this.dateKey(e.start_time) === this.dateKey(date))
+                .sort((a, b) => a.start_time - b.start_time);
+        },
+
+        getVisibleEventsForDate(date) {
+            return this.getEventsForDate(date).slice(0, 2);
+        },
+
+        getOverflowCountForDate(date) {
+            const total = this.getEventsForDate(date).length;
+            return total > 2 ? total - 2 : 0;
+        },
+
+        formatEventTimeShort(dateValue, isAllDay = false) {
+            if (isAllDay) return '종일';
+            const d = new Date(dateValue);
+            return `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        eventLabel(event) {
+            const title = event.title || '일정';
+            return `${this.formatEventTimeShort(event.start_time, event.is_all_day)} ${title}`;
+        },
+
+        dayTooltip(date) {
+            const dateText = this.formatAgendaDate(this.dateKey(date));
+            const events = this.getEventsForDate(date);
+            if (!events.length) {
+                return `${dateText} 일정 추가`;
+            }
+            return `${dateText} 일정 ${events.length}건 보기`;
+        },
+
+        eventChipClass(event) {
+            const map = {
+                indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+                rose: 'bg-rose-50 border-rose-200 text-rose-700',
+                amber: 'bg-amber-50 border-amber-200 text-amber-700',
+                emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                sky: 'bg-sky-50 border-sky-200 text-sky-700',
+            };
+            return map[event.color] || map.indigo;
+        },
+
+        formatAgendaDate(dateStr) {
+            const date = this.parseDateKey(dateStr);
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+        },
+
+        formatClock(dateValue) {
+            const d = new Date(dateValue);
+            const h = this.pad(d.getHours());
+            const m = this.pad(d.getMinutes());
+            return `${h}:${m}`;
+        },
+
+        formatEventRange(event) {
+            if (!event) return '';
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            if (event.is_all_day) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · 하루 종일`;
+            }
+            if (this.dateKey(start) === this.dateKey(end)) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · ${this.formatClock(start)} - ${this.formatClock(end)}`;
+            }
+            return `${this.formatAgendaDate(this.dateKey(start))} ${this.formatClock(start)} ~ ${this.formatAgendaDate(this.dateKey(end))} ${this.formatClock(end)}`;
+        },
+
+        handleDateClick(date) {
+            const events = this.getEventsForDate(date);
+            if (events.length) {
+                this.openDayEventsModalForDate(date);
+                return;
+            }
+            this.openCreateModalForDate(date);
+        },
+
+        openDayEventsModalForDate(date) {
+            const key = this.dateKey(date);
+            this.selectedDateKey = key;
+            this.selectedDateLabel = this.formatAgendaDate(key);
+            this.selectedDateEvents = this.getEventsForDate(date);
+            this.dayEventsModalOpen = true;
+        },
+
+        closeDayEventsModal() {
+            this.dayEventsModalOpen = false;
+        },
+
+        openCreateModalForSelectedDate() {
+            if (!this.selectedDateKey) {
+                this.openCreateModalForDate(new Date());
+                return;
+            }
+            const date = this.parseDateKey(this.selectedDateKey);
+            this.openCreateModalForDate(date);
+        },
+
+        openCreateModalForDate(date) {
+            this.dayEventsModalOpen = false;
+            const base = new Date(date);
+            const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
+            const end = new Date(start);
+            end.setHours(start.getHours() + 1, 0, 0, 0);
+            this.createContextDateText = this.formatAgendaDate(this.dateKey(start));
+            this.createForm = {
+                title: '',
+                note: '',
+                start_time: this.toDatetimeLocal(start),
+                end_time: this.toDatetimeLocal(end),
+                is_all_day: false,
+                color: 'indigo',
+            };
+            this.createModalOpen = true;
+        },
+
+        async submitCreateEvent() {
+            this.isSubmitting = true;
+            const body = new URLSearchParams();
+            body.set('title', this.createForm.title);
+            body.set('note', this.createForm.note || '');
+            body.set('start_time', this.createForm.start_time);
+            body.set('end_time', this.createForm.end_time);
+            body.set('color', this.createForm.color);
+            if (this.createForm.is_all_day) body.set('is_all_day', 'on');
+            try {
+                await this.requestJson('{% url "classcalendar:api_create_event" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: body.toString(),
+                });
+                this.createModalOpen = false;
+                await this.refreshEvents();
+                if (window.showToast) window.showToast('일정을 저장했습니다.', 'success');
+            } catch (err) {
+                const isValidationError = err.payload && err.payload.code === 'validation_error';
+                const message = isValidationError
+                    ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
+                    : (err.message || '일정 저장에 실패했습니다.');
+                if (window.showToast) window.showToast(message, 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+    };
+}
 </script>
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-[#E0E5EC]">
-    <main class="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-[calc(var(--main-nav-height,88px)+1rem)] pb-20 space-y-6">
+    <div class="flex flex-col xl:flex-row xl:gap-6 max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
 
-        <section class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4">
-            <div class="space-y-4">
-                <div>
-                    <h1 class="text-2xl font-black text-slate-900">{% if request.user.userprofile and request.user.userprofile.nickname %}{{ request.user.userprofile.nickname }}{% else %}{{ request.user.username }}{% endif %} 선생님, 안녕하세요</h1>
-                    <p class="text-sm text-slate-500 mt-1">자주 쓰는 도구와 오늘 할 일을 먼저 정리했습니다.</p>
-                </div>
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                    {% if search_products_json %}
-                    <button onclick="if(window.openSearchModal) openSearchModal()" class="flex w-full lg:flex-1 lg:max-w-xl items-center gap-3 bg-white rounded-2xl px-5 py-3 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm shadow-sm min-h-12" title="Ctrl+K" aria-label="서비스 검색 열기">
-                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
-                        <span class="flex-1 text-left whitespace-nowrap">서비스 검색...</span>
-                        <kbd class="hidden lg:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">Ctrl+K</kbd>
-                    </button>
-                    {% endif %}
-                    <div class="flex flex-wrap gap-2">
-                        <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                            <i class="fa-solid fa-grid-2"></i>
-                            전체 서비스
-                        </a>
-                        <a href="{% url 'service_guide_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
-                            <i class="fa-solid fa-book-open"></i>
-                            이용방법
-                        </a>
-                    </div>
-                </div>
+        <!-- PC 전용 SNS 사이드바 -->
+        <div class="hidden xl:block flex-shrink-0">
+            {% include 'core/partials/sns_widget.html' %}
+        </div>
 
-                {% if quick_actions %}
-                <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <div>
-                            <h2 class="text-lg font-black text-slate-900">추천 빠른 실행</h2>
-                            <p class="text-sm text-slate-500 mt-1">최근 사용과 즐겨찾기 기준으로 바로 여는 도구만 모았습니다.</p>
+        <!-- 메인 콘텐츠 -->
+        <main class="flex-1 min-w-0 p-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10 pt-0 md:pt-0">
+
+            {% if search_products_json %}
+            <div class="mb-4 flex justify-center lg:justify-end">
+                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex w-full max-w-xl lg:w-auto lg:max-w-none lg:flex-shrink-0 items-center justify-center lg:justify-start gap-3 bg-white rounded-2xl lg:rounded-xl px-5 lg:px-3.5 py-3 lg:py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm shadow-sm lg:shadow-none min-h-12 lg:min-h-0" title="Ctrl+K" aria-label="서비스 검색 열기">
+                    <i class="fa-solid fa-magnifying-glass text-sm md:text-xs"></i>
+                    <span class="whitespace-nowrap">서비스 검색...</span>
+                    <kbd class="hidden lg:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">Ctrl+K</kbd>
+                </button>
+            </div>
+            {% endif %}
+
+            {% if sheetbook_workspace.enabled %}
+            <div class="mb-6 space-y-4">
+                <section class="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-book-open text-indigo-500"></i> 교무수첩 워크스페이스
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">
+                                {% if sheetbook_workspace.recent_sheetbooks %}
+                                오늘 일정과 최근 수첩을 한 자리에서 바로 이어서 열 수 있습니다.
+                                {% else %}
+                                첫 수첩을 만들면 오늘 일정과 최근 작업이 여기에 함께 정리됩니다.
+                                {% endif %}
+                            </p>
                         </div>
-                    </div>
-                    <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
-                        {% for qa in quick_actions %}
-                        <a href="{{ qa.href }}" {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group" data-track="quick_action" data-track-label="{{ qa.product.title }}">
-                            <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
-                            <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </section>
-                {% endif %}
-                {% if sheetbook_workspace.enabled %}
-                <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 md:p-6 space-y-5">
-                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                        <div class="max-w-2xl">
-                            <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">Today Workspace</p>
-                            <h2 class="mt-2 text-2xl md:text-3xl font-black text-slate-900">오늘 바로 시작</h2>
-                            <p class="mt-2 text-sm md:text-base text-slate-600">최근 수첩과 오늘 할 일을 바로 열고, 자주 쓰는 흐름은 한 번에 이어서 시작할 수 있게 정리했습니다.</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition">
+                        <div class="flex flex-wrap gap-1.5">
+                            <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 hover:bg-indigo-100 transition">
                                 <i class="fa-solid fa-book-open"></i>
-                                {% if sheetbook_workspace.recent_sheetbooks %}최근 수첩 열기{% else %}수첩 열기{% endif %}
+                                {% if sheetbook_workspace.recent_sheetbooks %}최근 수첩 열기{% else %}수첩 화면 보기{% endif %}
                             </a>
                             {% if sheetbook_workspace.create_action_url %}
                             <form method="post" action="{{ sheetbook_workspace.create_action_url }}" class="inline-flex">
                                 {% csrf_token %}
                                 <input type="hidden" name="source" value="workspace_home_create">
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                                <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
                                     <i class="fa-solid fa-plus"></i>
                                     {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
                                 </button>
                             </form>
                             {% else %}
-                            <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                            <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
                                 <i class="fa-solid fa-plus"></i>
                                 {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
                             </a>
@@ -607,18 +558,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] gap-4">
+                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)] gap-3">
+                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <h4 class="text-sm font-black text-slate-700 flex items-center gap-2">
+                                    <i class="fa-solid fa-calendar-day text-indigo-500"></i> 오늘
+                                </h4>
+                                <span class="text-xs text-slate-400">{{ sheetbook_workspace.today_date_text }}</span>
+                            </div>
+                            {% if sheetbook_workspace.today_rows %}
+                            <div class="space-y-2">
+                                {% for row in sheetbook_workspace.today_rows %}
+                                <a href="{{ row.href }}" class="block rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 hover:bg-indigo-50 transition">
+                                    <p class="text-sm font-bold text-slate-700">{{ row.title }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ row.sheetbook_title }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center">
+                                <p class="text-sm font-bold text-slate-600">오늘 일정이 없습니다.</p>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    {% if sheetbook_workspace.recent_sheetbooks %}
+                                    최근 수첩을 열어 오늘 일정을 추가해 보세요.
+                                    {% else %}
+                                    상단에서 첫 수첩을 만들면 오늘 일정이 여기에 표시됩니다.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+
                         <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
                             <div class="mb-3">
-                                <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+                                <h4 class="text-sm font-black text-slate-700 flex items-center gap-2">
                                     {% if sheetbook_workspace.recent_sheetbooks %}
-                                    <i class="fa-solid fa-book text-indigo-500"></i>
-                                    최근 수첩
+                                    <i class="fa-solid fa-book text-indigo-500"></i> 최근 수첩
                                     {% else %}
-                                    <i class="fa-solid fa-list-check text-indigo-500"></i>
-                                    바로 시작 순서
+                                    <i class="fa-solid fa-list-check text-indigo-500"></i> 시작 체크리스트
                                     {% endif %}
-                                </h3>
+                                </h4>
                             </div>
                             {% if sheetbook_workspace.recent_sheetbooks %}
                             <div class="space-y-2">
@@ -633,525 +612,154 @@ document.addEventListener('DOMContentLoaded', () => {
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <ol class="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 space-y-2">
-                                <li class="flex items-center gap-2 text-xs font-bold text-slate-600"><span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">1</span>첫 수첩 만들기</li>
-                                <li class="flex items-center gap-2 text-xs font-bold text-slate-600"><span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">2</span>일정 탭을 먼저 만듭니다</li>
-                                <li class="flex items-center gap-2 text-xs font-bold text-slate-600"><span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">3</span>오늘 일정 1건 적기</li>
-                            </ol>
-                            {% endif %}
-                        </div>
-
-                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                            <h3 class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3">
-                                <i class="fa-solid fa-bolt text-amber-500"></i>
-                                바로 이어서 하기
-                            </h3>
-                            <div class="space-y-2">
-                                <a href="{% url 'product_list' %}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 transition">
-                                    <span class="text-sm font-bold text-slate-700">전체 서비스 둘러보기</span>
-                                    <i class="fa-solid fa-arrow-right text-slate-300"></i>
-                                </a>
-                                <a href="{% url 'service_guide_list' %}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 transition">
-                                    <span class="text-sm font-bold text-slate-700">이용방법 먼저 보기</span>
-                                    <i class="fa-solid fa-arrow-right text-slate-300"></i>
-                                </a>
-                                <a href="{% url 'classcalendar:main' %}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 transition">
-                                    <span class="text-sm font-bold text-slate-700">달력 열기</span>
-                                    <i class="fa-solid fa-arrow-right text-slate-300"></i>
-                                </a>
+                            <div class="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4">
+                                <ol class="space-y-2">
+                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">1</span>
+                                        첫 수첩 만들기
+                                    </li>
+                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">2</span>
+                                        탭 1개 추가하기
+                                    </li>
+                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">3</span>
+                                        오늘 일정 1건 등록
+                                    </li>
+                                </ol>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </section>
-                {% elif today_items %}
-                <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 md:p-6 space-y-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900">오늘 바로 시작</h2>
-                        <p class="text-sm text-slate-500 mt-1">오늘 바로 처리할 일을 모았습니다.</p>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {% for item in today_items|slice:":4" %}
-                        <a href="{{ item.href }}" class="bg-slate-50 rounded-2xl border border-slate-200 p-4 hover:border-indigo-200 transition-all group">
-                            <div class="flex items-start gap-3">
-                                <span class="text-2xl leading-none">{{ item.emoji }}</span>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center justify-between gap-2 mb-1">
-                                        <p class="text-sm font-black text-slate-800 group-hover:text-indigo-700 transition-colors">{{ item.title }}</p>
-                                        <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">{{ item.count_text }}</span>
-                                    </div>
-                                    <p class="text-xs text-slate-500">{{ item.description }}</p>
-                                </div>
-                            </div>
+
+                {% if favorite_items or sheetbook_workspace.quick_actions %}
+                <section class="bg-white rounded-2xl border border-slate-200 p-4">
+                    <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
+                        {% if favorite_items %}
+                        <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
+                        {% else %}
+                        <i class="fa-solid fa-bolt text-amber-500"></i> 빠른 실행
+                        {% endif %}
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {% if favorite_items %}
+                        {% for item in favorite_items|slice:":4" %}
+                        <a href="{{ item.href }}"
+                            {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                            data-product-id="{{ item.product.id }}"
+                            data-track="quick_action" data-track-label="{{ item.product.title }}"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-amber-300 hover:text-indigo-700 transition">
+                            <span>{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                            <span class="whitespace-nowrap">{{ item.product.title }}</span>
                         </a>
                         {% endfor %}
+                        {% else %}
+                        {% for action in sheetbook_workspace.quick_actions %}
+                        <a href="{{ action.href }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-indigo-200 hover:text-indigo-700 transition">
+                            <i class="{{ action.icon }}"></i>{{ action.title }}
+                        </a>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                 </section>
                 {% endif %}
             </div>
-
-            <aside class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-black uppercase tracking-[0.22em] text-indigo-500">Calendar</p>
-                        <h2 class="mt-1 text-xl font-black text-slate-900">오늘 일정</h2>
-                    </div>
-                    {% if sheetbook_workspace.today_date_text %}
-                    <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ sheetbook_workspace.today_date_text }}</span>
-                    {% endif %}
-                </div>
-
-                {% if sheetbook_workspace.today_rows %}
-                <div class="space-y-2">
-                    {% for row in sheetbook_workspace.today_rows|slice:":3" %}
-                    <a href="{{ row.href }}" class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-200 hover:bg-indigo-50 transition">
-                        <p class="text-sm font-bold text-slate-700">{{ row.title }}</p>
-                        <p class="text-xs text-slate-500 mt-1">{{ row.sheetbook_title }}</p>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% elif today_items %}
-                <div class="space-y-2">
-                    {% for item in today_items|slice:":3" %}
-                    <a href="{{ item.href }}" class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-200 hover:bg-indigo-50 transition">
-                        <div class="flex items-center justify-between gap-2">
-                            <p class="text-sm font-bold text-slate-700">{{ item.title }}</p>
-                            <span class="text-[11px] font-bold text-indigo-600">{{ item.count_text }}</span>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-1">{{ item.description }}</p>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                    <p class="text-sm font-bold text-slate-600">오늘 기록된 일정이 없습니다.</p>
-                    <p class="text-xs text-slate-500 mt-1">달력을 열고 일정 한 건부터 적으면 오늘 할 일이 바로 보입니다.</p>
-                </div>
-                {% endif %}
-
-                <a href="{% url 'classcalendar:main' %}" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-100 transition">
-                    <i class="fa-solid fa-calendar-week"></i>
-                    달력 열기
-                </a>
-            </aside>
-        </section>
-
-        <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5" data-workbench="true" data-editing="false">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
-                    <p class="text-sm text-slate-500 mt-1">매일 여는 도구만 앞으로 꺼내 두었습니다. 자주 쓰는 흐름은 조합으로 저장할 수 있습니다.</p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    {% if favorite_items|length > 1 %}
-                    <button type="button" data-workbench-edit-toggle="true" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                        작업대 정리
-                    </button>
-                    {% endif %}
-                    {% if favorite_items %}
-                    <button type="button" data-workbench-save-toggle="true" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
-                        이 조합 저장
-                    </button>
-                    {% endif %}
-                    <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                        전체 서비스
-                    </a>
-                </div>
-            </div>
-            <p id="workbenchKeyboardHint" class="sr-only">작업대 정리 상태에서는 카드에 포커스를 둔 뒤 왼쪽 또는 오른쪽 버튼으로 순서를 바꿀 수 있습니다.</p>
-            <div class="sr-only" data-workbench-live="true" aria-live="polite" aria-atomic="true"></div>
-
-            <div class="hidden rounded-2xl border border-indigo-200 bg-indigo-50/80 px-4 py-4 mb-4" data-workbench-bundle-save-panel="true">
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                    <div class="min-w-0 flex-1">
-                        <label for="workbenchBundleName" class="text-xs font-black uppercase tracking-[0.18em] text-indigo-600">작업대 조합 이름</label>
-                        <input id="workbenchBundleName" type="text" maxlength="80" placeholder="예: 담임 수첩 + 달력 + 가정통신문" data-workbench-bundle-name="true" class="mt-2 w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-                    </div>
-                    <div class="flex gap-2">
-                        <button type="button" data-workbench-bundle-save-confirm="true" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition">저장</button>
-                        <button type="button" data-workbench-bundle-save-cancel="true" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:border-slate-400 transition">취소</button>
-                    </div>
-                </div>
-            </div>
-
-            {% if workbench_bundles %}
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 space-y-3">
-                <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <h3 class="text-sm font-black text-slate-700">저장한 조합</h3>
-                        <p class="text-xs text-slate-500 mt-1">매번 같이 여는 도구를 이름 그대로 다시 불러옵니다.</p>
-                    </div>
-                    <span class="text-[11px] font-bold text-slate-500">조합을 누르면 작업대 순서가 바뀝니다.</span>
-                </div>
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {% for bundle in workbench_bundles %}
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-black text-slate-800 truncate">{{ bundle.name }}</p>
-                                <p class="mt-1 text-xs text-slate-500 line-clamp-2">{{ bundle.preview_titles|join:" · " }}</p>
-                            </div>
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">{{ bundle.product_count }}개</span>
-                        </div>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <button type="button" data-workbench-bundle-apply="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
-                                이 조합 불러오기
-                            </button>
-                            <button type="button" data-workbench-bundle-delete="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:border-slate-300 hover:text-slate-800 transition">
-                                조합 지우기
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% if weekly_bundle_items %}
-            <div class="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4 space-y-3">
-                <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <h3 class="text-sm font-black text-amber-900">이번 주 많이 쓰는 조합</h3>
-                        <p class="text-xs text-amber-700 mt-1">이번 주에 자주 이어 쓴 흐름만 다시 불러옵니다.</p>
-                    </div>
-                    <span class="text-[11px] font-bold text-amber-700">최근 {{ weekly_bundle_items|length }}개</span>
-                </div>
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {% for bundle in weekly_bundle_items %}
-                    <div class="rounded-2xl border border-amber-200 bg-white px-4 py-4 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">{{ bundle.reason_label }}</span>
-                                    <span class="text-sm font-black text-slate-800 truncate">{{ bundle.name }}</span>
-                                </div>
-                                <p class="mt-2 text-xs text-slate-500 line-clamp-2">{{ bundle.summary_text }}</p>
-                            </div>
-                        </div>
-                        <button type="button" data-workbench-bundle-apply="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="mt-3 inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100 transition">
-                            이 조합 쓰기
-                        </button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% elif workbench_bundles %}
-            <div class="mb-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
-                <p class="text-sm font-black text-slate-700">이번 주 조합은 아직 없습니다.</p>
-                <p class="text-xs text-slate-500 mt-1">조합을 저장한 뒤 다시 쓰면 최근 흐름으로 여기에 보입니다.</p>
-            </div>
-            {% endif %}
             {% endif %}
 
-            {% if favorite_items %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" data-workbench-grid="true">
-                {% for slot in workbench_slots %}
-                    {% if slot.kind == 'item' %}
-                    {% with item=slot.item %}
-                    <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-workbench-card="true" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="workbench_card" data-track-label="{{ item.product.title }}" data-workbench-title="{{ item.product.teacher_first_task_label|default:item.product.title }}" role="button" tabindex="0" aria-describedby="workbenchKeyboardHint">
+            {% if not sheetbook_workspace.enabled and today_items %}
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-day text-indigo-500"></i> 오늘 할 일
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {% for item in today_items %}
+                    <a href="{{ item.href }}" class="bg-white rounded-2xl border border-slate-200 p-4 hover:border-indigo-200 hover:shadow-md transition-all group">
                         <div class="flex items-start gap-3">
-                            <div class="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                            </div>
-                            <div class="min-w-0 flex-1 pr-14">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-600">{{ item.section_title }}</span>
-                                    <span class="hidden text-[11px] font-black text-slate-300" data-workbench-order-label="true">{{ slot.index }}</span>
+                            <span class="text-2xl leading-none">{{ item.emoji }}</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <p class="text-sm font-black text-slate-800 group-hover:text-indigo-700 transition-colors">{{ item.title }}</p>
+                                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">{{ item.count_text }}</span>
                                 </div>
-                                <p class="text-sm font-black text-slate-800 truncate">{{ item.product.teacher_first_task_label|default:item.product.title }}</p>
-                                {% if item.product.teacher_first_service_label %}
-                                <p class="mt-0.5 text-[11px] font-bold text-slate-500 truncate">{{ item.product.teacher_first_service_label }}</p>
-                                {% endif %}
-                                {% if item.product.teacher_first_support_label %}
-                                <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.product.teacher_first_support_label|truncatechars:54 }}</p>
-                                {% endif %}
+                                <p class="text-xs text-slate-500">{{ item.description }}</p>
+                                <p class="text-xs font-bold text-indigo-600 mt-2">{{ item.cta_text }}</p>
                             </div>
                         </div>
-                        <button type="button" class="absolute top-4 right-4 inline-flex w-7 h-7 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-500 hover:bg-amber-100 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" aria-pressed="true" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
-                            <i class="fa-solid fa-star text-[11px]"></i>
-                        </button>
-                        <div class="hidden absolute right-3 bottom-3 items-center gap-1" data-workbench-controls="true">
-                            <button type="button" data-workbench-control="left" class="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition" aria-label="앞으로 이동">
-                                <i class="fa-solid fa-arrow-left text-[10px]"></i>
-                                <span class="text-[11px] font-bold">앞</span>
-                            </button>
-                            <button type="button" data-workbench-control="right" class="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition" aria-label="뒤로 이동">
-                                <span class="text-[11px] font-bold">뒤</span>
-                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endwith %}
-                    {% else %}
-                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-600">빈 자리 {{ slot.index }}</p>
-                                <p class="text-xs text-slate-500 mt-1">원하는 도구를 작업대에 추가하면 바로 채워집니다.</p>
-                            </div>
-                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-500">기본 슬롯</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5">
-                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-black text-slate-700">작업대에 담은 도구가 없습니다.</p>
-                        <p class="text-xs text-slate-500 mt-1">오른쪽 "작업대에 추가" 버튼으로 자주 쓰는 도구를 먼저 모아보세요.</p>
-                    </div>
-                    <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                        전체 서비스에서 찾기
-                    </a>
-                </div>
-                {% if quick_actions %}
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
-                    {% for qa in quick_actions|slice:":4" %}
-                    <a href="{{ qa.href }}" {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} data-product-id="{{ qa.product.id }}" data-track="quick_action" data-track-label="{{ qa.product.title }}" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-200 hover:shadow-sm transition">
-                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
-                        <span class="min-w-0 flex-1">
-                            <span class="block text-sm font-bold text-slate-700 truncate">{{ qa.product.teacher_first_task_label|default:qa.product.title }}</span>
-                            {% if qa.product.teacher_first_service_label %}
-                            <span class="mt-0.5 block text-[11px] font-bold text-slate-500 truncate">{{ qa.product.teacher_first_service_label }}</span>
-                            {% endif %}
-                        </span>
-                        <button type="button" class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-500 hover:border-amber-300 hover:text-amber-500 transition-colors" data-product-id="{{ qa.product.id }}" data-favorite-toggle="true" data-favorite-off-text="작업대에 추가" data-favorite-on-text="작업대에 있음" aria-pressed="false" aria-label="{{ qa.product.title }} 즐겨찾기 토글" title="즐겨찾기">
-                            <i class="fa-solid fa-star text-[11px]"></i>
-                            <span data-favorite-label="true">작업대에 추가</span>
-                        </button>
                     </a>
                     {% endfor %}
                 </div>
-                {% endif %}
             </div>
             {% endif %}
-        </section>
 
-        <section class="space-y-4">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-900">실시간 소통</h2>
-                    <p class="text-sm text-slate-500 mt-1">공지, 학급 소식, 이미지가 붙은 글까지 한 화면에서 확인합니다.</p>
-                </div>
-                <span class="text-[11px] font-bold text-slate-400">공지 탭과 전체 탭을 바로 전환할 수 있습니다.</span>
-            </div>
-
-            <div class="hidden xl:block">
-                {% include 'core/partials/sns_widget.html' with embed_mode='full' %}
-            </div>
-
-            <div x-data="{ snsOpen: false }" class="block xl:hidden">
-                <div class="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <h3 class="text-lg font-black text-slate-900">실시간 소통</h3>
-                            <p class="mt-1 text-xs text-slate-500">최근 글 2개만 먼저 보여 드립니다.</p>
-                        </div>
-                        <button type="button" @click="snsOpen = true" x-show="!snsOpen" class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600">
-                            <span>더보기</span>
-                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                        </button>
-                    </div>
-
-                    <div class="mt-4 space-y-3" x-show="!snsOpen">
-                        {% for post in posts|slice:":2" %}
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
-                                    {% if post.author.userprofile and post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|truncatechars:1 }}{% else %}{{ post.author.username|truncatechars:1 }}{% endif %}
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-black text-slate-800">{% if post.author.userprofile and post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %}</span>
-                                        <span class="text-[11px] text-slate-400">{{ post.created_at|timesince }} 전</span>
-                                    </div>
-                                    <p class="mt-2 text-sm leading-6 text-slate-600 line-clamp-3">{{ post.content|default:post.og_title }}</p>
-                                </div>
-                            </div>
-                            {% if post.image %}
-                            <img src="{{ post.image.url }}" alt="{{ post.content|default:'SNS 이미지' }}" class="mt-3 h-40 w-full rounded-2xl object-cover">
-                            {% elif post.og_image_url %}
-                            <img src="{{ post.og_image_url }}" alt="{{ post.og_title|default:post.content }}" class="mt-3 h-40 w-full rounded-2xl object-cover">
-                            {% endif %}
-                        </div>
-                        {% empty %}
-                        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">아직 게시글이 없습니다. 첫 글을 남겨보세요.</div>
-                        {% endfor %}
-                    </div>
-
-                    <button @click="snsOpen = !snsOpen" class="w-full py-3 mt-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2" :class="snsOpen ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'">
-                        <i class="ph-fill ph-chat-circle-text"></i>
-                        <span x-text="snsOpen ? '소통창 접기' : '소통창 열기'"></span>
-                        <i class="fa-solid fa-chevron-down text-xs transition-transform duration-300" :class="snsOpen && 'rotate-180'"></i>
-                    </button>
-                </div>
-
-                <div x-show="snsOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-4" class="mt-4">
-                    {% include 'core/partials/sns_widget_mobile.html' with hide_header=True expand_all_mobile=True %}
+            <!-- 추천 빠른 실행 -->
+            {% if not sheetbook_workspace.enabled %}
+            {% if favorite_items or quick_actions %}
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    {% if favorite_items %}
+                    <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
+                    {% else %}
+                    <i class="fa-solid fa-bolt text-amber-500"></i> 추천 빠른 실행
+                    {% endif %}
+                </h3>
+                <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
+                    {% if favorite_items %}
+                    {% for item in favorite_items %}
+                    <a href="{{ item.href }}"
+                        {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        data-product-id="{{ item.product.id }}"
+                        data-track="quick_action" data-track-label="{{ item.product.title }}"
+                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
+                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
+                    </a>
+                    {% endfor %}
+                    {% else %}
+                    {% for qa in quick_actions %}
+                    <a href="{{ qa.href }}"
+                        {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
+                        data-track="quick_action" data-track-label="{{ qa.product.title }}">
+                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
+                    </a>
+                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
-        </section>
+            {% endif %}
+            {% endif %}
 
-        {% if recent_items %}
-        <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">최근 이어서</h2>
-                    <p class="text-sm text-slate-500 mt-1">최근에 열었던 도구만 따로 모아 다시 이어서 쓰기 쉽게 두었습니다.</p>
-                </div>
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">자동 정렬</span>
+            <!-- 목적별 섹션 -->
+            <div class="mb-6">
+                {% include 'core/includes/purpose_sections.html' with sections=sections %}
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                {% for item in recent_items %}
-                <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="quick_action" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
-                    <div class="flex items-start gap-3">
-                        <div class="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                            {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                        </div>
-                        <div class="min-w-0 flex-1 pr-8">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">최근 사용</span>
-                            </div>
-                            <p class="text-sm font-black text-slate-800 truncate">{{ item.product.teacher_first_task_label|default:item.product.title }}</p>
-                            {% if item.product.teacher_first_service_label %}
-                            <p class="mt-0.5 text-[11px] font-bold text-slate-500 truncate">{{ item.product.teacher_first_service_label }}</p>
-                            {% endif %}
-                            {% if item.product.teacher_first_support_label %}
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.product.teacher_first_support_label|truncatechars:54 }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
 
+            {% if aux_sections %}
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
+                </h3>
+                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+            </div>
+            {% endif %}
 
-        {% if companion_items %}
-        <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">같이 쓰면 좋은 도구</h2>
-                    <p class="text-sm text-slate-500 mt-1">지금 하는 일과 자주 이어지는 도구만 먼저 보여 줍니다.</p>
-                </div>
-                <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600">흐름 기반 추천</span>
+            <!-- 교실 활동 배너 -->
+            <div class="mb-6">
+                {% include 'core/includes/game_banner.html' with games=games %}
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {% for item in companion_items %}
-                <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="companion_card" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
-                    <div class="flex items-start gap-3">
-                        <div class="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                            {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                        </div>
-                        <div class="min-w-0 flex-1 pr-8">
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-600">{{ item.reason_label }}</span>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{{ item.section_title }}</span>
-                            </div>
-                            <p class="text-sm font-black text-slate-800 truncate">{{ item.product.teacher_first_task_label|default:item.product.title }}</p>
-                            {% if item.product.teacher_first_service_label %}
-                            <p class="mt-0.5 text-[11px] font-bold text-slate-500 truncate">{{ item.product.teacher_first_service_label }}</p>
-                            {% endif %}
-                            {% if item.product.teacher_first_support_label %}
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.product.teacher_first_support_label|truncatechars:54 }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <button type="button" class="absolute top-4 right-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-500 hover:border-amber-300 hover:text-amber-500 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" data-favorite-off-text="{{ item.action_label }}" data-favorite-on-text="작업대에 있음" aria-pressed="false" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
-                        <i class="fa-solid fa-star text-[11px]"></i>
-                        <span data-favorite-label="true">{{ item.action_label }}</span>
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
 
-        {% if discovery_items %}
-        <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">새로 써보기</h2>
-                    <p class="text-sm text-slate-500 mt-1">수업, 교실 활동, 외부 도움까지 한 번에 더 둘러봅니다.</p>
-                </div>
-                <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                    전체 둘러보기
-                </a>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                {% for item in discovery_items %}
-                <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="discovery_card" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
-                    <div class="flex items-start gap-3">
-                        <div class="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                            {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                        </div>
-                        <div class="min-w-0 flex-1 pr-8">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">{{ item.section_title }}</span>
-                            </div>
-                            <p class="text-sm font-black text-slate-800 truncate">{{ item.product.teacher_first_task_label|default:item.product.title }}</p>
-                            {% if item.product.teacher_first_service_label %}
-                            <p class="mt-0.5 text-[11px] font-bold text-slate-500 truncate">{{ item.product.teacher_first_service_label }}</p>
-                            {% endif %}
-                            {% if item.product.teacher_first_support_label %}
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ item.product.teacher_first_support_label|truncatechars:54 }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <button type="button" class="absolute top-4 right-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-500 hover:border-amber-300 hover:text-amber-500 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" data-favorite-off-text="작업대에 추가" data-favorite-on-text="작업대에 있음" aria-pressed="false" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
-                        <i class="fa-solid fa-star text-[11px]"></i>
-                        <span data-favorite-label="true">작업대에 추가</span>
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
+            <!-- 홈 동기화 캘린더 -->
+            {% include 'core/partials/home_calendar_panel.html' %}
 
-        {% if sections %}
-        <section class="space-y-4">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-900">핵심 업무</h2>
-                    <p class="text-sm text-slate-500 mt-1">수합, 문서, 학급 운영, 상담처럼 자주 하는 일부터 찾습니다.</p>
-                </div>
-                <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
-                    전체 서비스
-                </a>
-            </div>
-            {% include 'core/includes/purpose_sections.html' with sections=sections %}
-        </section>
-        {% endif %}
+            <!-- 모바일 전용 SNS 미리보기 -->
+            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-8 px-1' section_id='sns-full-section-auth-v2' %}
 
-        {% if aux_sections or games %}
-        <details class="bg-white rounded-3xl border border-slate-200 shadow-sm">
-            <summary class="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">더 많은 도구</h2>
-                    <p class="text-sm text-slate-500 mt-1">필요한 도구만 더 봅니다.</p>
-                </div>
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">필요할 때만 열기</span>
-            </summary>
-            <div class="px-5 pb-5 space-y-5">
-                {% if aux_sections %}
-                <div>
-                    <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                        <i class="fa-solid fa-layer-group text-cyan-500"></i>
-                        참고 · 외부
-                    </h3>
-                    {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
-                </div>
-                {% endif %}
-
-                {% if games %}
-                <div>
-                    {% include 'core/includes/game_banner.html' with games=games %}
-                </div>
-                {% endif %}
-            </div>
-        </details>
-        {% endif %}
-    </main>
+        </main>
+    </div>
 </div>
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {% endblock %}
+
+
