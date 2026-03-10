@@ -133,6 +133,30 @@ def build_compact_card_copy(task_label, service_label, support_label):
     }
 
 
+def build_workbench_card_copy(task_label, service_label, support_label):
+    service = clean_compact_card_text(service_label)
+    task = clean_compact_card_text(task_label)
+    support = clean_compact_card_text(support_label)
+
+    title = service or task
+    title_key = _normalized_key(title)
+    summary = ""
+
+    for candidate in (task, support):
+        candidate_key = _normalized_key(candidate)
+        if not candidate or candidate_key == title_key:
+            continue
+        if is_compact_card_noise(candidate):
+            continue
+        summary = candidate
+        break
+
+    return {
+        "workbench_title": title,
+        "workbench_summary": summary,
+    }
+
+
 def build_teacher_first_product_meta(product):
     labels = build_teacher_first_product_labels(product)
     card_copy = build_compact_card_copy(
@@ -140,7 +164,13 @@ def build_teacher_first_product_meta(product):
         labels["teacher_first_service_label"],
         labels["teacher_first_support_label"],
     )
+    workbench_copy = build_workbench_card_copy(
+        labels["teacher_first_task_label"],
+        labels["teacher_first_service_label"],
+        labels["teacher_first_support_label"],
+    )
     return {
         **labels,
         **card_copy,
+        **workbench_copy,
     }

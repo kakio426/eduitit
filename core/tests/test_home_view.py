@@ -316,7 +316,7 @@ class HomeV2ViewTest(TestCase):
         self._login('surfaceuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('학급 소식', content)
+        self.assertIn('SNS', content)
         self.assertIn('오늘 일정', content)
         self.assertIn('더 많은 도구', content)
 
@@ -363,14 +363,18 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
 
-    def test_v2_workbench_cards_show_task_first_label_and_service_name(self):
+    def test_v2_workbench_cards_prefer_service_name_as_title(self):
         user = self._login('taskfirsthome')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        favorite_product = response.context['favorite_items'][0]['product']
 
-        self.assertRegex(content, r'(?s)수업을 준비해요.*수업 도구')
+        self.assertEqual(favorite_product.workbench_title, '수업 도구')
+        self.assertEqual(favorite_product.workbench_summary, '수업을 준비해요')
+        self.assertIn('수업 도구', content)
+        self.assertIn('수업을 준비해요', content)
 
     def test_v2_home_strips_leading_emoji_from_teacher_first_labels(self):
         user = self._login('emojiworkbench')
@@ -638,17 +642,44 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('aria-live="polite"', content)
         self.assertIn('aria-describedby="workbenchKeyboardHint"', content)
 
-    def test_v2_authenticated_renders_mobile_friendly_workbench_controls(self):
+    def test_v2_authenticated_renders_responsive_workbench_controls(self):
         user = self._login('workbenchmobilecontrols')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('aria-label="앞으로 이동"', content)
-        self.assertIn('aria-label="뒤로 이동"', content)
-        self.assertIn('>앞</span>', content)
-        self.assertIn('>뒤</span>', content)
+        self.assertIn('data-mobile-label="위로 이동"', content)
+        self.assertIn('data-mobile-label="아래로 이동"', content)
+        self.assertIn('data-desktop-label="왼쪽으로 이동"', content)
+        self.assertIn('data-desktop-label="오른쪽으로 이동"', content)
+        self.assertIn('>위</span>', content)
+        self.assertIn('>아래</span>', content)
+        self.assertIn('>왼쪽</span>', content)
+        self.assertIn('>오른쪽</span>', content)
+
+    def test_v2_home_sns_panel_shows_feed_preview_without_legacy_expand_block(self):
+        self._login('homesnsfeed')
+        author = _create_onboarded_user('homesnsauthor', nickname='담임쌤')
+        Post.objects.create(
+            author=author,
+            content='사진이 있는 SNS 글입니다.',
+            post_type='news_link',
+            approval_status='approved',
+            og_title='학교 공지 미리보기',
+            og_description='사진과 함께 보는 SNS 미리보기입니다.',
+            og_image_url='https://example.com/sample.jpg',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        sns_summary = response.context['home_sns_summary']
+
+        self.assertIn('SNS', content)
+        self.assertNotIn('SNS 더 보기', content)
+        self.assertEqual(sns_summary['latest_posts'][0]['author_display'], '담임쌤')
+        self.assertEqual(sns_summary['latest_posts'][0]['thumbnail'], 'https://example.com/sample.jpg')
+        self.assertIn('사진과 함께 보는 SNS 미리보기입니다.', content)
 
 
     def test_v2_authenticated_renders_favorite_toggle_and_quick_slot(self):

@@ -164,6 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const getWorkbenchCardTitle = (card) => card?.dataset.workbenchTitle || card?.dataset.trackLabel || '작업 도구';
+    const isMobileWorkbenchLayout = () => window.matchMedia('(max-width: 639px)').matches;
+    const getWorkbenchDirectionText = () => isMobileWorkbenchLayout() ? '위 또는 아래' : '왼쪽 또는 오른쪽';
+    const syncWorkbenchControlLabels = () => {
+        const hint = document.getElementById('workbenchKeyboardHint');
+        if (hint) {
+            hint.textContent = `작업대 정리 상태에서는 카드에 포커스를 둔 뒤 ${getWorkbenchDirectionText()} 버튼으로 순서를 바꿀 수 있습니다.`;
+        }
+        document.querySelectorAll('[data-workbench-control]').forEach((button) => {
+            const label = isMobileWorkbenchLayout()
+                ? (button.dataset.mobileLabel || button.dataset.desktopLabel || '순서 이동')
+                : (button.dataset.desktopLabel || button.dataset.mobileLabel || '순서 이동');
+            button.setAttribute('aria-label', label);
+        });
+    };
 
     const syncWorkbenchState = () => {
         if (!workbench) return;
@@ -174,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 orderBadge.textContent = String(index + 1).padStart(2, '0');
             }
             card.draggable = workbenchEditing;
-            if (workbenchEditing) {
+            if (workbenchEditing && !isMobileWorkbenchLayout()) {
                 card.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
             } else {
                 card.removeAttribute('aria-keyshortcuts');
@@ -183,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (workbenchEditToggle) {
             workbenchEditToggle.textContent = workbenchEditing ? '정리 끝' : '작업대 정리';
         }
+        syncWorkbenchControlLabels();
     };
 
     const persistWorkbenchOrder = async ({ silentSuccess = false } = {}) => {
@@ -343,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncWorkbenchState();
                 announceWorkbench(
                     workbenchEditing
-                        ? '작업대 정리 상태입니다. 카드에 포커스를 둔 뒤 왼쪽 또는 오른쪽 버튼으로 순서를 바꿀 수 있습니다.'
+                        ? `작업대 정리 상태입니다. 카드에 포커스를 둔 뒤 ${getWorkbenchDirectionText()} 버튼으로 순서를 바꿀 수 있습니다.`
                         : '작업대 정리를 마쳤습니다.'
                 );
             });
@@ -445,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         syncWorkbenchState();
+        window.addEventListener('resize', syncWorkbenchControlLabels);
     };
 
     bindProductCards();
@@ -590,20 +606,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         </section>
-
-        <details id="home-sns-feed" class="bg-white rounded-3xl border border-slate-200 shadow-sm">
-            <summary class="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">학급 소식 더 보기</h2>
-                    <p class="text-sm text-slate-500 mt-1">필요할 때만 펼쳐서 전체 소식을 확인합니다.</p>
-                </div>
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">필요할 때만 열기</span>
-            </summary>
-            <div class="px-5 pb-5">
-                {% include 'core/partials/sns_widget.html' %}
-            </div>
-        </details>
-
 {% if companion_items %}
         <section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-4">
             <div class="flex items-center justify-between gap-3">

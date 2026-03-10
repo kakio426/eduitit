@@ -32,6 +32,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.html import strip_tags
 from django.utils.text import Truncator
+from django.utils.timesince import timesince
 from PIL import Image
 import logging
 
@@ -513,26 +514,54 @@ def _build_home_calendar_summary(today_context, sheetbook_workspace):
     }
 
 
-def _build_home_sns_summary(page_obj):
-    latest_posts = []
-    post_list = list(getattr(page_obj, "object_list", [])[:2]) if page_obj is not None else []
-    notice_count = 0
+def _build_home_sns_post_preview(post):
+    raw_title = getattr(post, "og_title", "") or getattr(post, "content", "")
+    raw_excerpt = getattr(post, "og_description", "") or getattr(post, "content", "")
+    title = Truncator(strip_tags(raw_title)).chars(48)
+    excerpt = Truncator(strip_tags(raw_excerpt)).chars(88)
+    if excerpt and excerpt == title:
+        excerpt = ""
 
-    for post in post_list:
-        raw_title = getattr(post, "og_title", "") or getattr(post, "content", "")
-        title = Truncator(strip_tags(raw_title)).chars(52)
-        latest_posts.append({
-            "title": title,
-            "post_type": getattr(post, "post_type", "general"),
-        })
-        if getattr(post, "post_type", "") in POST_FEED_NOTICE_TYPES:
-            notice_count += 1
+    author = getattr(post, "author", None)
+    profile = getattr(author, "userprofile", None) if author else None
+    author_display = getattr(profile, "nickname", "") or getattr(author, "username", "") or ""
+    created_value = getattr(post, "created_at", None)
+    created_label = ""
+    if created_value:
+        created_label = f"{timesince(created_value, timezone.now()).split(',')[0]} 전"
+
+    thumbnail = ""
+    image_field = getattr(post, "image", None)
+    if image_field:
+        try:
+            thumbnail = image_field.url
+        except Exception:
+            thumbnail = ""
+    if not thumbnail:
+        thumbnail = getattr(post, "og_image_url", "") or ""
 
     return {
-        "title": "학급 소식",
+        "title": title,
+        "excerpt": excerpt,
+        "thumbnail": thumbnail,
+        "post_type": getattr(post, "post_type", "general"),
+        "author_display": author_display,
+        "created_label": created_label,
+        "post_id": getattr(post, "id", None),
+        "has_more_content": bool(excerpt),
+    }
+
+
+def _build_home_sns_summary(page_obj):
+    post_list = list(getattr(page_obj, "object_list", [])[:2]) if page_obj is not None else []
+    latest_posts = [_build_home_sns_post_preview(post) for post in post_list]
+    notice_count = sum(1 for post in post_list if getattr(post, "post_type", "") in POST_FEED_NOTICE_TYPES)
+
+    return {
+        "title": "SNS",
         "latest_posts": latest_posts,
         "notice_count": notice_count,
-        "href": "#home-sns-feed",
+        "href": reverse("home"),
     }
 
 
@@ -2659,4 +2688,3 @@ def health_check(request):
     except Exception as e:
         logger.exception("Health check DB connection failed: %s", e)
         return JsonResponse({'status': 'error', 'db': 'unavailable'}, status=503)
-
