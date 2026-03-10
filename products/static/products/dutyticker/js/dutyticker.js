@@ -823,7 +823,6 @@ class DutyTickerManager {
                 ? '<span class="dt-role-status-text is-completed inline-flex items-center gap-1"><i class="fa-solid fa-check-circle text-[11px]"></i>완료</span>'
                 : '';
             const assigneeToneClass = isCompleted ? 'is-completed' : 'is-pending';
-            const assigneeLabel = isCompleted ? '완료 담당' : (isSpotlightRole ? '핵심 담당' : '담당');
             return `
                 <div class="dt-role-row border cursor-pointer ${spotlightClass}"
                     role="button"
@@ -840,7 +839,6 @@ class DutyTickerManager {
                             </div>
                         </div>
                         <div class="dt-role-assignee-wrap">
-                            <span class="dt-role-assignee-label">${assigneeLabel}</span>
                             <div class="dt-role-assignee ${assigneeToneClass}" title="${safeAssignee}">${safeAssignee}</div>
                         </div>
                     </div>
@@ -3003,4 +3001,3 @@ class DutyTickerManager {
         else document.exitFullscreen();
     }
 }
-

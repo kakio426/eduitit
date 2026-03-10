@@ -632,7 +632,7 @@
         border-width: 1.5px !important;
         border-radius: 1.2rem !important;
         box-shadow: 0 10px 24px rgba(2, 6, 23, 0.13) !important;
-        padding: 1.08rem 1.12rem !important;
+        padding: 1rem 1.08rem !important;
         position: relative !important;
         overflow: hidden !important;
         transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
@@ -689,10 +689,11 @@
     }
 
     #mainAppContainer #mainRoleList .dt-role-main {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 1rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+        justify-items: start;
+        gap: 0.72rem;
         min-width: 0;
         width: 100%;
     }
@@ -700,12 +701,13 @@
     #mainAppContainer #mainRoleList .dt-role-content {
         min-width: 0;
         flex: 1 1 auto;
+        width: 100%;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.74rem, 1.36rem + 0.95vw, 2.52rem) !important;
-        line-height: 1.08 !important;
+        font-size: clamp(1.54rem, 1.24rem + 0.76vw, 2.12rem) !important;
+        line-height: 1.12 !important;
         letter-spacing: -0.02em;
         font-weight: 900;
         margin: 0;
@@ -763,20 +765,15 @@
     #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
         min-width: 0;
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        justify-content: flex-end;
-        gap: 0.28rem;
-        flex: 0 0 auto;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        width: 100%;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
-        color: var(--dt-role-assignee-label) !important;
-        font-size: 0.7rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        line-height: 1;
+        display: none;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee {
@@ -785,18 +782,23 @@
         border: 1px solid var(--dt-role-assignee-border) !important;
         border-radius: 0.82rem;
         box-shadow: 0 8px 16px rgba(15, 23, 42, 0.26);
-        font-size: clamp(2.12rem, 1.68rem + 1vw, 2.95rem) !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        font-size: clamp(1.5rem, 1.22rem + 0.7vw, 2.04rem) !important;
         font-weight: 900;
-        line-height: 1.02;
+        line-height: 1.08;
         letter-spacing: -0.02em;
-        max-width: min(12ch, 100%);
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
-        padding: 0.12rem 0.44rem 0.2rem;
-        text-align: right;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+        padding: 0.36rem 0.8rem 0.46rem;
+        text-align: left;
         font-family: "Noto Sans KR", "Malgun Gothic", var(--dt-font-ui);
-        transform-origin: center right;
+        transform-origin: center left;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee.is-pending {
@@ -899,7 +901,7 @@
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-name {
-        font-size: clamp(1.92rem, 1.46rem + 1.05vw, 2.78rem) !important;
+        font-size: clamp(1.72rem, 1.38rem + 0.84vw, 2.34rem) !important;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-status-text {
@@ -907,7 +909,7 @@
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee {
-        font-size: clamp(2.5rem, 1.88rem + 1.25vw, 3.5rem) !important;
+        font-size: clamp(1.74rem, 1.4rem + 0.86vw, 2.42rem) !important;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-row {
@@ -1334,27 +1336,29 @@
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
-        gap: clamp(1.25rem, 2.6vh, 2.15rem);
+        gap: clamp(0.98rem, 1.9vh, 1.48rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-clock-shell {
-        width: min(100%, 68rem);
+        width: min(100%, 64rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
-        font-size: clamp(5.55rem, min(23vw, 29.5vh), 16.1rem);
+        font-size: clamp(4.7rem, min(20.5vw, 22.4vh), 13.2rem);
+        line-height: 0.92;
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-mission-stage {
-        width: min(100%, 62rem);
+        width: min(100%, 60rem);
+        padding: clamp(0.92rem, 2vw, 1.38rem) clamp(1rem, 2.25vw, 1.58rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
-        font-size: clamp(2.72rem, 7.45vw, 5.9rem);
+        font-size: clamp(2.36rem, 6.36vw, 5.18rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionDesc {
-        font-size: clamp(1.42rem, 3.9vw, 2.56rem);
+        font-size: clamp(1.18rem, 3.18vw, 2.18rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxs"] #mainMissionTitle {
@@ -1613,7 +1617,7 @@
 
     #mainStudentGrid .dt-student-tile {
         min-height: 0;
-        padding: 0.28rem 0.42rem;
+        padding: 0.34rem 0.48rem;
         border-radius: 0.85rem;
         user-select: none;
         display: flex;
@@ -1645,7 +1649,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        line-height: 1.08;
+        line-height: 1.14;
         font-weight: 900;
         color: var(--dt-student-tile-text) !important;
         letter-spacing: -0.01em;
@@ -1656,15 +1660,15 @@
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.99rem, 0.93rem + 0.22vw, 1.12rem);
+        font-size: clamp(1.08rem, 1rem + 0.24vw, 1.22rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.93rem, 0.87rem + 0.19vw, 1.03rem);
+        font-size: clamp(1.02rem, 0.95rem + 0.2vw, 1.14rem);
     }
 
     #mainStudentGrid .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.86rem, 0.81rem + 0.16vw, 0.96rem);
+        font-size: clamp(0.96rem, 0.9rem + 0.18vw, 1.04rem);
         letter-spacing: -0.01em;
     }
 
@@ -1692,42 +1696,42 @@
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-tile {
         min-height: 0;
-        padding: 0.24rem 0.36rem;
+        padding: 0.3rem 0.44rem;
         border-radius: 0.78rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.95rem, 0.9rem + 0.16vw, 1.04rem);
+        font-size: clamp(1.02rem, 0.96rem + 0.18vw, 1.12rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.9rem, 0.84rem + 0.14vw, 0.98rem);
+        font-size: clamp(0.97rem, 0.91rem + 0.16vw, 1.06rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.84rem, 0.79rem + 0.12vw, 0.9rem);
+        font-size: clamp(0.9rem, 0.85rem + 0.14vw, 0.98rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.98rem, 0.94rem + 0.12vw, 1.06rem);
+        font-size: clamp(1.06rem, 1rem + 0.14vw, 1.16rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.94rem, 0.89rem + 0.12vw, 1.01rem);
+        font-size: clamp(1rem, 0.95rem + 0.12vw, 1.1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.9rem, 0.85rem + 0.1vw, 0.96rem);
+        font-size: clamp(0.98rem, 0.93rem + 0.12vw, 1.06rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.86rem, 0.81rem + 0.1vw, 0.92rem);
+        font-size: clamp(0.94rem, 0.89rem + 0.1vw, 1.02rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-mid .dt-student-name.dt-student-name-long,
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-high .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.8rem, 0.75rem + 0.1vw, 0.86rem);
+        font-size: clamp(0.88rem, 0.83rem + 0.1vw, 0.96rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-spotlight-btn {
@@ -1890,7 +1894,7 @@
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] {
         grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(2.05rem, 1fr);
+        grid-auto-rows: minmax(2.18rem, 1fr);
         gap: 0.34rem !important;
     }
 
@@ -2290,9 +2294,27 @@
         #mainAppContainer #mainRoleList .dt-role-assignee {
             text-align: left;
             max-width: 100%;
-            font-size: clamp(2rem, 1.6rem + 1vw, 2.8rem) !important;
+            font-size: clamp(1.4rem, 1.16rem + 0.68vw, 1.82rem) !important;
         }
 
+    }
+
+    @media (max-height: 980px) {
+        #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
+            gap: clamp(0.72rem, 1.2vh, 0.98rem);
+        }
+
+        #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
+            font-size: clamp(3.92rem, min(16.8vw, 16.9vh), 8.9rem);
+        }
+
+        #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
+            font-size: clamp(1.94rem, 4.55vh, 3.58rem);
+        }
+
+        #mainAppContainer[data-mission-panel="collapsed"] #mainMissionDesc {
+            font-size: clamp(1rem, 2.35vh, 1.56rem);
+        }
     }
 
     @media (max-height: 860px) {
@@ -3085,7 +3107,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260308a"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260310a"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {
