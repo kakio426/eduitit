@@ -1,0 +1,224 @@
+<section class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5" data-workbench="true" data-editing="false">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.22em] text-indigo-500">자주 쓰는 도구</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-900">내 작업대</h2>
+                    <p class="text-sm text-slate-500 mt-1">자주 쓰는 도구를 먼저 두고, 방금 쓰던 흐름은 아래에서 바로 이어갑니다.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {% if favorite_items|length > 1 %}
+                    <button type="button" data-workbench-edit-toggle="true" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                        작업대 정리
+                    </button>
+                    {% endif %}
+                    {% if favorite_items %}
+                    <button type="button" data-workbench-save-toggle="true" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
+                        이 조합 저장
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                        전체 서비스
+                    </a>
+                </div>
+            </div>
+            <p id="workbenchKeyboardHint" class="sr-only">작업대 정리 상태에서는 카드에 포커스를 둔 뒤 왼쪽 또는 오른쪽 버튼으로 순서를 바꿀 수 있습니다.</p>
+            <div class="sr-only" data-workbench-live="true" aria-live="polite" aria-atomic="true"></div>
+
+            <div class="hidden rounded-2xl border border-indigo-200 bg-indigo-50/80 px-4 py-4 mb-4" data-workbench-bundle-save-panel="true">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div class="min-w-0 flex-1">
+                        <label for="workbenchBundleName" class="text-xs font-black uppercase tracking-[0.18em] text-indigo-600">작업대 조합 이름</label>
+                        <input id="workbenchBundleName" type="text" maxlength="80" placeholder="예: 담임 수첩 + 달력 + 가정통신문" data-workbench-bundle-name="true" class="mt-2 w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" data-workbench-bundle-save-confirm="true" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition">저장</button>
+                        <button type="button" data-workbench-bundle-save-cancel="true" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:border-slate-400 transition">취소</button>
+                    </div>
+                </div>
+            </div>
+
+            {% if workbench_bundles %}
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 space-y-3">
+                <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-700">저장한 조합</h3>
+                        <p class="text-xs text-slate-500 mt-1">매번 같이 여는 도구를 이름 그대로 다시 불러옵니다.</p>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-500">조합을 누르면 작업대 순서가 바뀝니다.</span>
+                </div>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {% for bundle in workbench_bundles %}
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-black text-slate-800 truncate">{{ bundle.name }}</p>
+                                <p class="mt-1 text-xs text-slate-500 line-clamp-2">{{ bundle.preview_titles|join:" · " }}</p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">{{ bundle.product_count }}개</span>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" data-workbench-bundle-apply="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
+                                이 조합 불러오기
+                            </button>
+                            <button type="button" data-workbench-bundle-delete="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:border-slate-300 hover:text-slate-800 transition">
+                                조합 지우기
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if weekly_bundle_items %}
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4 space-y-3">
+                <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-amber-900">이번 주 많이 쓰는 조합</h3>
+                        <p class="text-xs text-amber-700 mt-1">이번 주에 자주 이어 쓴 흐름만 다시 불러옵니다.</p>
+                    </div>
+                    <span class="text-[11px] font-bold text-amber-700">최근 {{ weekly_bundle_items|length }}개</span>
+                </div>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {% for bundle in weekly_bundle_items %}
+                    <div class="rounded-2xl border border-amber-200 bg-white px-4 py-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">{{ bundle.reason_label }}</span>
+                                    <span class="text-sm font-black text-slate-800 truncate">{{ bundle.name }}</span>
+                                </div>
+                                <p class="mt-2 text-xs text-slate-500 line-clamp-2">{{ bundle.summary_text }}</p>
+                            </div>
+                        </div>
+                        <button type="button" data-workbench-bundle-apply="true" data-bundle-id="{{ bundle.id }}" data-bundle-name="{{ bundle.name }}" class="mt-3 inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100 transition">
+                            이 조합 쓰기
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif workbench_bundles %}
+            <div class="mb-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
+                <p class="text-sm font-black text-slate-700">이번 주 조합은 아직 없습니다.</p>
+                <p class="text-xs text-slate-500 mt-1">조합을 저장한 뒤 다시 쓰면 최근 흐름으로 여기에 보입니다.</p>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            {% if favorite_items %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" data-workbench-grid="true">
+                {% for slot in workbench_slots %}
+                    {% if slot.kind == 'item' %}
+                    {% with item=slot.item %}
+                    <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-workbench-card="true" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="workbench_card" data-track-label="{{ item.product.title }}" data-workbench-title="{{ item.product.card_title|default:item.product.teacher_first_task_label|default:item.product.title }}" role="button" tabindex="0" aria-describedby="workbenchKeyboardHint">
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                            </div>
+                            <div class="min-w-0 flex-1 pr-14">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-600">{{ item.section_title }}</span>
+                                    <span class="hidden text-[11px] font-black text-slate-300" data-workbench-order-label="true">{{ slot.index }}</span>
+                                </div>
+                                <p class="text-sm font-black text-slate-800 truncate">{{ item.product.card_title|default:item.product.teacher_first_task_label|default:item.product.title }}</p>
+                                {% firstof item.product.card_subtitle item.product.card_summary as item_support %}
+                                {% if item_support %}
+                                <p class="mt-1 text-xs text-slate-500 truncate">{{ item_support|truncatechars:54 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <button type="button" class="absolute top-4 right-4 inline-flex w-7 h-7 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-500 hover:bg-amber-100 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" aria-pressed="true" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
+                            <i class="fa-solid fa-star text-[11px]"></i>
+                        </button>
+                        <div class="hidden absolute right-3 bottom-3 items-center gap-1" data-workbench-controls="true">
+                            <button type="button" data-workbench-control="left" class="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition" aria-label="앞으로 이동">
+                                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                                <span class="text-[11px] font-bold">앞</span>
+                            </button>
+                            <button type="button" data-workbench-control="right" class="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition" aria-label="뒤로 이동">
+                                <span class="text-[11px] font-bold">뒤</span>
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% else %}
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-black text-slate-600">빈 자리 {{ slot.index }}</p>
+                                <p class="text-xs text-slate-500 mt-1">원하는 도구를 작업대에 추가하면 바로 채워집니다.</p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-500">기본 슬롯</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-black text-slate-700">작업대에 담은 도구가 없습니다.</p>
+                        <p class="text-xs text-slate-500 mt-1">오른쪽 "작업대에 추가" 버튼으로 자주 쓰는 도구를 먼저 모아보세요.</p>
+                    </div>
+                    <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                        전체 서비스에서 찾기
+                    </a>
+                </div>
+                {% if quick_actions %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+                    {% for qa in quick_actions|slice:":4" %}
+                    <a href="{{ qa.href }}" {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} data-product-id="{{ qa.product.id }}" data-track="quick_action" data-track-label="{{ qa.product.title }}" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-200 hover:shadow-sm transition">
+                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-bold text-slate-700 truncate">{{ qa.product.card_title|default:qa.product.teacher_first_task_label|default:qa.product.title }}</span>
+                            {% firstof qa.product.card_subtitle qa.product.card_summary as quick_support %}
+                            {% if quick_support %}
+                            <span class="mt-0.5 block text-[11px] font-bold text-slate-500 truncate">{{ quick_support }}</span>
+                            {% endif %}
+                        </span>
+                        <button type="button" class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-500 hover:border-amber-300 hover:text-amber-500 transition-colors" data-product-id="{{ qa.product.id }}" data-favorite-toggle="true" data-favorite-off-text="작업대에 추가" data-favorite-on-text="작업대에 있음" aria-pressed="false" aria-label="{{ qa.product.title }} 즐겨찾기 토글" title="즐겨찾기">
+                            <i class="fa-solid fa-star text-[11px]"></i>
+                            <span data-favorite-label="true">작업대에 추가</span>
+                        </button>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if workbench_recent_items %}
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 space-y-3 mt-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-700">최근 이어서</h3>
+                        <p class="text-xs text-slate-500 mt-1">방금 쓰던 도구만 작게 이어서 둡니다.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-500">자동 정렬</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    {% for item in workbench_recent_items %}
+                    <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all cursor-pointer group product-card" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="recent_workbench_card" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-lg flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-black text-slate-800 line-clamp-2">{{ item.product.card_title|default:item.product.teacher_first_task_label|default:item.product.title }}</p>
+                                {% firstof item.product.card_subtitle item.product.card_summary as recent_support %}
+                                {% if recent_support %}
+                                <p class="mt-1 text-xs text-slate-500 truncate">{{ recent_support }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </section>
+
+
+        

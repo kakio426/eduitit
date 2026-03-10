@@ -23,3 +23,22 @@ class HomeSectionRoutingTests(SimpleTestCase):
 
         self.assertEqual(_resolve_home_section_key(textbook_product), "class_ops")
         self.assertEqual(_resolve_home_section_key(material_product), "class_ops")
+
+    def test_counsel_and_insights_services_keep_their_section_keys(self):
+        refresh_product = Product(
+            title="상담 리프레시",
+            description="desc",
+            price=0,
+            service_type="counsel",
+            launch_route_name="studentmbti:landing",
+        )
+        guide_product = Product(
+            title="가이드 인사이트",
+            description="desc",
+            price=0,
+            service_type="edutech",
+            launch_route_name="insights:list",
+        )
+
+        self.assertEqual(_resolve_home_section_key(refresh_product), "refresh")
+        self.assertEqual(_resolve_home_section_key(guide_product), "guide")

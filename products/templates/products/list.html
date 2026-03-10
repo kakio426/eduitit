@@ -2,6 +2,51 @@
 
 {% block title %}전체 서비스 - Eduitit{% endblock %}
 
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const showFeedback = (message, type = 'info') => {
+        if (window.showToast) {
+            window.showToast(message, type);
+            return;
+        }
+        if (type === 'error') {
+            alert(message);
+        }
+    };
+
+    const copyToClipboard = async (value, successMessage) => {
+        if (!value) return;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(value);
+            } else {
+                const helper = document.createElement('textarea');
+                helper.value = value;
+                helper.setAttribute('readonly', 'readonly');
+                helper.style.position = 'absolute';
+                helper.style.left = '-9999px';
+                document.body.appendChild(helper);
+                helper.select();
+                document.execCommand('copy');
+                document.body.removeChild(helper);
+            }
+            showFeedback(successMessage || '링크를 복사했습니다.', 'success');
+        } catch (error) {
+            showFeedback('링크 복사에 실패했습니다. 다시 시도해 주세요.', 'error');
+        }
+    };
+
+    document.querySelectorAll('[data-student-games-copy="true"]').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            await copyToClipboard(button.dataset.copyText || '', button.dataset.copySuccess || '학생용 링크를 복사했습니다.');
+        });
+    });
+});
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-7xl mx-auto space-y-8">
@@ -17,7 +62,7 @@
                         <i class="fa-solid fa-house"></i>
                         홈으로
                     </a>
-                    <a href="{% url 'service_guide_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
+                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">
                         <i class="fa-solid fa-book-open"></i>
                         이용방법
                     </a>
@@ -49,6 +94,27 @@
                 <h2 class="text-2xl font-black text-slate-900">교실 활동</h2>
                 <p class="text-sm text-slate-500 mt-1">교실에서 바로 열 수 있는 활동만 따로 모았습니다.</p>
             </div>
+            {% if request.user.is_authenticated and student_games_launch_url %}
+            <div class="mb-3 rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 to-amber-50 p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-slate-900">학생용 게임 입장</p>
+                        <p class="mt-1 text-xs text-slate-600">학생은 이 링크로 들어가서 게임만 고를 수 있습니다.</p>
+                        <p class="mt-1 text-[11px] font-bold text-slate-500">유효시간 {{ student_games_expires_hours }}시간</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 transition" data-student-games-copy="true" data-copy-text="{{ student_games_launch_url }}" data-copy-success="학생용 링크를 복사했습니다.">
+                            <i class="fa-solid fa-link"></i>
+                            학생 링크 복사
+                        </button>
+                        <a href="{{ student_games_launch_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-slate-400 transition">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            학생 화면 미리보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {% for game in games %}
                 <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -57,12 +123,10 @@
                             {% if "fa-" in game.icon %}<i class="{{ game.icon }}"></i>{% else %}{{ game.icon }}{% endif %}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h3 class="text-lg font-black text-slate-900 leading-tight">{{ game.teacher_first_task_label|default:game.title }}</h3>
-                            {% if game.teacher_first_service_label %}
-                            <p class="mt-1 text-[11px] font-bold text-slate-500 truncate">{{ game.teacher_first_service_label }}</p>
-                            {% endif %}
-                            {% if game.teacher_first_support_label %}
-                            <p class="mt-1 text-sm text-slate-500 line-clamp-2">{{ game.teacher_first_support_label|truncatechars:72 }}</p>
+                            <h3 class="text-lg font-black text-slate-900 leading-tight">{{ game.card_title|default:game.teacher_first_task_label|default:game.title }}</h3>
+                            {% firstof game.card_subtitle game.card_summary as game_support %}
+                            {% if game_support %}
+                            <p class="mt-1 text-sm text-slate-500 line-clamp-2">{{ game_support|truncatechars:72 }}</p>
                             {% endif %}
                         </div>
                     </div>
@@ -83,8 +147,8 @@
         <details class="rounded-3xl border border-slate-200 bg-white shadow-sm">
             <summary class="cursor-pointer list-none px-6 py-5 flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900">도움말 · 외부 서비스</h2>
-                    <p class="text-sm text-slate-500 mt-1">자주 쓰는 핵심 업무가 아니라면 여기서 찾습니다.</p>
+                    <h2 class="text-xl font-black text-slate-900">외부 서비스</h2>
+                    <p class="text-sm text-slate-500 mt-1">에듀잇잇 밖에서 함께 쓰는 서비스만 따로 모았습니다.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">필요할 때만 열기</span>
             </summary>

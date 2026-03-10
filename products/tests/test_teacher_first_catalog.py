@@ -1,4 +1,6 @@
 from django.test import TestCase
+from django.contrib.auth.models import User
+from core.models import UserProfile
 from django.urls import reverse
 
 from products.models import Product
@@ -34,13 +36,22 @@ class ProductCatalogTeacherFirstTests(TestCase):
             launch_route_name="yut_game",
         )
         Product.objects.create(
-            title="AI 도구 가이드",
+            title="가이드 인사이트",
             description="가이드",
             price=0,
             is_active=True,
             service_type="edutech",
-            solve_text="필요할 때만 참고합니다.",
-            launch_route_name="tool_guide",
+            solve_text="필요한 인사이트를 빠르게 확인합니다.",
+            launch_route_name="insights:list",
+        )
+        Product.objects.create(
+            title="상담 리프레시",
+            description="상담",
+            price=0,
+            is_active=True,
+            service_type="counsel",
+            solve_text="상담 전 성향과 분위기를 먼저 살핍니다.",
+            launch_route_name="studentmbti:landing",
         )
 
     def test_catalog_renders_teacher_first_headers(self):
@@ -50,9 +61,12 @@ class ProductCatalogTeacherFirstTests(TestCase):
 
         self.assertIn("전체 서비스", content)
         self.assertIn("핵심 업무", content)
+        self.assertIn("상담·리프레시", content)
+        self.assertIn("가이드·인사이트", content)
         self.assertIn("교실 활동", content)
-        self.assertIn("도움말 · 외부 서비스", content)
+        self.assertNotIn("도움말 · 외부 서비스", content)
         self.assertIn("이용방법", content)
+        self.assertIn("https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv", content)
 
     def test_catalog_removes_english_showcase_copy(self):
         response = self.client.get(reverse("product_list"))
@@ -78,9 +92,73 @@ class ProductCatalogTeacherFirstTests(TestCase):
         self.assertGreaterEqual(len(response.context["sections"]), 1)
         self.assertGreaterEqual(len(response.context["games"]), 1)
 
-    def test_catalog_cards_use_task_first_labels_with_service_name_as_supporting_text(self):
+    def test_catalog_promotes_refresh_and_guide_into_main_sections(self):
+        response = self.client.get(reverse("product_list"))
+        section_keys = [section["key"] for section in response.context["sections"]]
+        aux_keys = [section["key"] for section in response.context["aux_sections"]]
+
+        self.assertIn("refresh", section_keys)
+        self.assertIn("guide", section_keys)
+        self.assertNotIn("refresh", aux_keys)
+        self.assertNotIn("guide", aux_keys)
+
+    def test_catalog_cards_use_compact_teacher_first_copy(self):
         response = self.client.get(reverse("product_list"))
         content = response.content.decode("utf-8")
 
         self.assertRegex(content, r'(?s)동의서와 서명을 한 곳에서 받습니다\..*전자 동의서')
         self.assertRegex(content, r'(?s)표와 달력을 같은 흐름으로 씁니다\..*교무수첩')
+
+    def test_catalog_context_has_compact_card_fields(self):
+        response = self.client.get(reverse("product_list"))
+        products = [product for section in response.context["sections"] for product in section["products"]]
+        target = next(product for product in products if product.title == "교무수첩")
+
+        self.assertEqual(target.card_title, "표와 달력을 같은 흐름으로 씁니다.")
+        self.assertEqual(target.card_subtitle, "교무수첩")
+
+    def test_catalog_strips_leading_emoji_from_teacher_first_labels(self):
+        Product.objects.create(
+            title="📒 교무수첩",
+            description="학급 운영",
+            price=0,
+            is_active=True,
+            service_type="classroom",
+            icon="📒",
+            solve_text="📒 표와 일정을 한 번에 정리합니다.",
+            launch_route_name="sheetbook:index",
+        )
+
+        response = self.client.get(reverse("product_list"))
+        content = response.content.decode("utf-8")
+        products = [product for section in response.context["sections"] for product in section["products"]]
+        emoji_product = next(product for product in products if product.title == "📒 교무수첩")
+
+        self.assertEqual(emoji_product.teacher_first_task_label, "표와 일정을 한 번에 정리합니다.")
+        self.assertEqual(emoji_product.teacher_first_service_label, "교무수첩")
+        self.assertIn("표와 일정을 한 번에 정리합니다.", content)
+        self.assertNotIn("📒 표와 일정을 한 번에 정리합니다.", content)
+    def test_catalog_shows_student_games_entry_for_authenticated_teacher(self):
+        user = User.objects.create_user(
+            username='catalogteacher',
+            password='pass1234',
+            email='catalogteacher@example.com',
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.nickname = '담임'
+        profile.role = 'school'
+        profile.save(update_fields=['nickname', 'role'])
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("product_list"))
+        content = response.content.decode("utf-8")
+
+        self.assertIn("학생용 게임 입장", content)
+        self.assertIn("학생 링크 복사", content)
+        self.assertIn("학생 화면 미리보기", content)
+
+    def test_catalog_hides_student_games_entry_for_anonymous_user(self):
+        response = self.client.get(reverse("product_list"))
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn("학생용 게임 입장", content)

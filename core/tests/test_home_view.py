@@ -310,13 +310,14 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('openSearchModal', content)
         self.assertIn('전체 서비스', content)
         self.assertIn('이용방법', content)
+        self.assertIn('https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv', content)
 
-    def test_v2_authenticated_hides_sns_and_home_calendar_from_default_surface(self):
+    def test_v2_authenticated_surfaces_sns_and_calendar_summary_cards(self):
         self._login('surfaceuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertNotIn('실시간 소통', content)
-        self.assertNotIn('개인 캘린더', content)
+        self.assertIn('학급 소식', content)
+        self.assertIn('오늘 일정', content)
         self.assertIn('더 많은 도구', content)
 
     def test_v2_authenticated_has_quick_actions(self):
@@ -325,6 +326,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('data-track="quick_action"', content)
         self.assertIn('내 작업대', content)
+        self.assertIn('자주 쓰는 도구', content)
 
     def test_v2_authenticated_has_sections(self):
         self._login('secuser')
@@ -341,6 +343,15 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('새로 써보기', content)
         self.assertIn('오늘 일정', content)
         self.assertIn('달력 열기', content)
+
+    def test_v2_authenticated_surfaces_student_games_entry_in_classroom_games(self):
+        self._login('studentgameshome')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('학생용 게임 입장', content)
+        self.assertIn('학생 링크 복사', content)
+        self.assertIn('학생 화면 미리보기', content)
 
     def test_v2_mini_card_has_data_product_id(self):
         response = self.client.get(reverse('home'))
@@ -360,6 +371,26 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertRegex(content, r'(?s)수업을 준비해요.*수업 도구')
+
+    def test_v2_home_strips_leading_emoji_from_teacher_first_labels(self):
+        user = self._login('emojiworkbench')
+        self.p1.title = '📒 수업 도구'
+        self.p1.solve_text = '📒 수업을 준비해요'
+        self.p1.icon = '📒'
+        self.p1.save(update_fields=['title', 'solve_text', 'icon'])
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        favorite_items = response.context.get('favorite_items', [])
+        favorite_product = next(item['product'] for item in favorite_items if item['product'].id == self.p1.id)
+
+        self.assertEqual(favorite_product.teacher_first_task_label, '수업을 준비해요')
+        self.assertEqual(favorite_product.teacher_first_service_label, '수업 도구')
+        self.assertIn('수업을 준비해요', content)
+        self.assertIn("'즐겨찾기 해제'", content)
+        self.assertNotIn('📒 수업을 준비해요', content)
+        self.assertNotIn('利먭꺼李얘린', content)
 
     def test_v2_cards_use_direct_launch_with_separate_info_trigger(self):
         response = self.client.get(reverse('home'))
@@ -387,6 +418,14 @@ class HomeV2ViewTest(TestCase):
     def test_v2_search_products_json_in_context(self):
         response = self.client.get(reverse('home'))
         self.assertIn('search_products_json', response.context)
+
+    def test_v2_context_contains_home_summary_context(self):
+        self._login('summarycontextuser')
+        response = self.client.get(reverse('home'))
+        self.assertIn('home_calendar_summary', response.context)
+        self.assertIn('home_sns_summary', response.context)
+        self.assertIn('workbench_primary_items', response.context)
+        self.assertIn('workbench_recent_items', response.context)
 
     def test_v2_usage_based_quick_actions(self):
         from core.models import ProductUsageLog
@@ -453,7 +492,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('최근 이어서', content)
-        self.assertIn('자동 정렬', content)
+        self.assertNotIn('<h2 class="text-lg font-black text-slate-900">최근 이어서</h2>', content)
 
     def test_v2_context_contains_companion_items_for_teacher_flow(self):
         user = self._login('companioncontextuser')
@@ -741,20 +780,18 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('오늘 바로 시작', content)
-        self.assertIn('최근 수첩', content)
-        self.assertIn('2026 2-3반 교무수첩', content)
-        self.assertIn('source=workspace_home_', content)
+        self.assertIn('내 작업대', content)
+        self.assertNotIn('오늘 바로 시작', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
-    def test_v2_authenticated_sheetbook_workspace_uses_quick_cta_flows(self):
+    def test_v2_authenticated_sheetbook_workspace_prefers_calendar_summary_over_workspace_cta(self):
         self._login('sheetbookcta')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn(f'action="{reverse("sheetbook:quick_create")}"', content)
-        self.assertIn('name="source" value="workspace_home_create"', content)
-        self.assertNotIn('workspace_home_copy', content)
+        self.assertIn('오늘 일정', content)
+        self.assertIn('달력 열기', content)
+        self.assertNotIn('workspace_home_create', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_shows_first_run_onboarding(self):
@@ -762,9 +799,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('오늘 바로 시작', content)
-        self.assertIn('바로 시작 순서', content)
-        self.assertIn('첫 수첩 만들기', content)
+        self.assertIn('내 작업대', content)
+        self.assertNotIn('바로 시작 순서', content)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_v2_authenticated_sheetbook_workspace_prefers_favorites_heading(self):
@@ -1061,8 +1097,3 @@ class ProductFavoriteAPITest(TestCase):
         refreshed = list(ProductFavorite.objects.filter(user=user).order_by('pin_order'))
         self.assertEqual(refreshed[0].product_id, second.id)
         self.assertEqual(refreshed[1].product_id, self.product.id)
-
-
-
-
-
