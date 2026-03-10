@@ -540,22 +540,44 @@ def _build_home_sns_post_preview(post):
     if not thumbnail:
         thumbnail = getattr(post, "og_image_url", "") or ""
 
+    post_type = getattr(post, "post_type", "general")
+    source_url = getattr(post, "source_url", "") or ""
+    if post_type == "news_link" and source_url:
+        detail_href = source_url
+        detail_external = True
+    else:
+        detail_href = reverse("post_detail_partial", kwargs={"pk": getattr(post, "id", 0)})
+        detail_external = False
+
+    badge_label = ""
+    badge_tone = "neutral"
+    if post_type == "notice":
+        badge_label = "공지"
+        badge_tone = "notice"
+    elif post_type == "news_link":
+        badge_label = "링크"
+        badge_tone = "link"
+
     return {
         "title": title,
         "excerpt": excerpt,
         "thumbnail": thumbnail,
-        "post_type": getattr(post, "post_type", "general"),
+        "post_type": post_type,
         "author_display": author_display,
         "created_label": created_label,
         "post_id": getattr(post, "id", None),
         "has_more_content": bool(excerpt),
+        "detail_href": detail_href,
+        "detail_external": detail_external,
+        "badge_label": badge_label,
+        "badge_tone": badge_tone,
     }
 
 
 def _build_home_sns_summary(page_obj):
     post_list = list(getattr(page_obj, "object_list", [])[:2]) if page_obj is not None else []
     latest_posts = [_build_home_sns_post_preview(post) for post in post_list]
-    notice_count = sum(1 for post in post_list if getattr(post, "post_type", "") in POST_FEED_NOTICE_TYPES)
+    notice_count = sum(1 for post in post_list if getattr(post, "post_type", "") == "notice")
 
     return {
         "title": "SNS",

@@ -109,9 +109,9 @@
         {% for slot in workbench_slots %}
             {% if slot.kind == 'item' %}
             {% with item=slot.item %}
-            <div class="relative min-h-[132px] rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-all cursor-pointer group product-card" data-workbench-card="true" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="workbench_card" data-track-label="{{ item.product.title }}" data-workbench-title="{{ item.product.workbench_title|default:item.product.title }}" role="button" tabindex="0" aria-describedby="workbenchKeyboardHint">
+            <div class="relative min-h-[110px] rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all cursor-pointer group product-card" data-workbench-card="true" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="workbench_card" data-track-label="{{ item.product.title }}" data-workbench-title="{{ item.product.workbench_title|default:item.product.title }}" role="button" tabindex="0" aria-describedby="workbenchKeyboardHint">
                 <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-base flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                    <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-sm flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                         {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                     </div>
                     <div class="min-w-0 flex-1 pr-10">
@@ -122,10 +122,10 @@
                         {% endif %}
                     </div>
                 </div>
-                <button type="button" class="absolute top-3 right-3 inline-flex w-6 h-6 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-500 hover:bg-amber-100 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" aria-pressed="true" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
-                    <i class="fa-solid fa-star text-[10px]"></i>
+                <button type="button" class="absolute top-2 right-2 inline-flex w-5 h-5 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-500 hover:bg-amber-100 transition-colors" data-product-id="{{ item.product.id }}" data-favorite-toggle="true" aria-pressed="true" aria-label="{{ item.product.title }} 즐겨찾기 토글" title="즐겨찾기">
+                    <i class="fa-solid fa-star text-[9px]"></i>
                 </button>
-                <div class="hidden absolute right-3 bottom-3 items-center gap-1" data-workbench-controls="true">
+                <div class="hidden absolute right-2 bottom-2 items-center gap-1" data-workbench-controls="true">
                     <button type="button" data-workbench-control="left" data-desktop-label="왼쪽으로 이동" data-mobile-label="위로 이동" class="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition" aria-label="이전 순서로 이동">
                         <i class="fa-solid fa-arrow-up text-[10px] sm:hidden"></i>
                         <i class="fa-solid fa-arrow-left text-[10px] hidden sm:inline"></i>
@@ -142,7 +142,7 @@
             </div>
             {% endwith %}
             {% else %}
-            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 min-h-[132px]">
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 min-h-[110px]">
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-black text-slate-600">빈 자리 {{ slot.index }}</p>
@@ -168,8 +168,8 @@
         {% if quick_actions %}
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
             {% for qa in quick_actions|slice:":4" %}
-            <a href="{{ qa.href }}" {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} data-product-id="{{ qa.product.id }}" data-track="quick_action" data-track-label="{{ qa.product.title }}" class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 min-h-[108px] hover:border-indigo-200 hover:shadow-sm transition">
-                <span class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-base flex-shrink-0 {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
+            <a href="{{ qa.href }}" {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} data-product-id="{{ qa.product.id }}" data-track="quick_action" data-track-label="{{ qa.product.title }}" class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 min-h-[96px] hover:border-indigo-200 hover:shadow-sm transition">
+                <span class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-sm flex-shrink-0 {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
                 <span class="min-w-0 flex-1 pt-0.5">
                     <span class="block text-sm font-bold text-slate-700 truncate">{{ qa.product.workbench_title|default:qa.product.title }}</span>
                     {% if qa.product.workbench_summary %}
@@ -198,9 +198,9 @@
         </div>
         <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
             {% for item in workbench_recent_items %}
-            <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all cursor-pointer group product-card min-h-[92px]" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="recent_workbench_card" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
+            <div class="relative rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all cursor-pointer group product-card min-h-[84px]" data-product-id="{{ item.product.id }}" data-launch-href="{{ item.href }}" data-launch-external="{{ item.is_external|yesno:'true,false' }}" data-track="recent_workbench_card" data-track-label="{{ item.product.title }}" role="button" tabindex="0">
                 <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-base flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                    <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-sm flex-shrink-0 {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                         {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                     </div>
                     <div class="min-w-0 flex-1 pt-0.5">

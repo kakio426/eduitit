@@ -658,7 +658,22 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('>왼쪽</span>', content)
         self.assertIn('>오른쪽</span>', content)
 
-    def test_v2_home_sns_panel_shows_feed_preview_without_legacy_expand_block(self):
+    def test_v2_workbench_cards_use_compact_height_contract(self):
+        from core.models import ProductUsageLog
+
+        user = self._login('workbenchdensity')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('min-h-[110px]', content)
+        self.assertNotIn('min-h-[132px]', content)
+        self.assertIn('min-h-[84px]', content)
+
+
+    def test_v2_home_sns_panel_restores_feed_preview_and_notice_contract(self):
         self._login('homesnsfeed')
         author = _create_onboarded_user('homesnsauthor', nickname='담임쌤')
         Post.objects.create(
@@ -669,17 +684,34 @@ class HomeV2ViewTest(TestCase):
             og_title='학교 공지 미리보기',
             og_description='사진과 함께 보는 SNS 미리보기입니다.',
             og_image_url='https://example.com/sample.jpg',
+            source_url='https://example.com/news-link',
+        )
+        Post.objects.create(
+            author=author,
+            content='운영 공지입니다.',
+            post_type='notice',
+            approval_status='approved',
         )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         sns_summary = response.context['home_sns_summary']
+        previews = {item['post_type']: item for item in sns_summary['latest_posts']}
 
         self.assertIn('SNS', content)
         self.assertNotIn('SNS 더 보기', content)
-        self.assertEqual(sns_summary['latest_posts'][0]['author_display'], '담임쌤')
-        self.assertEqual(sns_summary['latest_posts'][0]['thumbnail'], 'https://example.com/sample.jpg')
+        self.assertIn('data-sns-preview-link="true"', content)
+        self.assertIn('SNS 전체 보기', content)
+        self.assertEqual(sns_summary['notice_count'], 1)
+        self.assertEqual(previews['news_link']['author_display'], '담임쌤')
+        self.assertEqual(previews['news_link']['thumbnail'], 'https://example.com/sample.jpg')
+        self.assertEqual(previews['news_link']['badge_label'], '링크')
+        self.assertEqual(previews['news_link']['detail_href'], 'https://example.com/news-link')
+        self.assertTrue(previews['news_link']['detail_external'])
+        self.assertEqual(previews['notice']['badge_label'], '공지')
+        self.assertFalse(previews['notice']['detail_external'])
         self.assertIn('사진과 함께 보는 SNS 미리보기입니다.', content)
+        self.assertNotIn('공지 2건', content)
 
 
     def test_v2_authenticated_renders_favorite_toggle_and_quick_slot(self):
