@@ -626,6 +626,12 @@
         color: var(--dt-role-empty-text) !important;
     }
 
+    #mainAppContainer #mainRoleList {
+        scroll-snap-type: y proximity;
+        scroll-padding-block: 0.72rem;
+        scrollbar-gutter: stable;
+    }
+
     #mainAppContainer #mainRoleList .dt-role-row {
         background: var(--dt-role-row-bg) !important;
         border-color: var(--dt-role-row-border) !important;
@@ -635,6 +641,10 @@
         padding: 1rem 1.08rem !important;
         position: relative !important;
         overflow: hidden !important;
+        flex: 0 0 auto;
+        min-height: clamp(6rem, 10.2vh, 7.2rem);
+        scroll-snap-align: start;
+        scroll-margin-block: 0.72rem;
         transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
     }
 
@@ -690,24 +700,25 @@
 
     #mainAppContainer #mainRoleList .dt-role-main {
         display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: start;
-        justify-items: start;
-        gap: 0.72rem;
+        grid-template-columns: minmax(0, 1fr) minmax(10.2rem, 13rem);
+        align-items: center;
+        gap: 0.86rem 1rem;
         min-width: 0;
         width: 100%;
     }
 
     #mainAppContainer #mainRoleList .dt-role-content {
         min-width: 0;
-        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         width: 100%;
     }
 
     #mainAppContainer #mainRoleList .dt-role-name {
         color: var(--dt-role-name) !important;
-        font-size: clamp(1.54rem, 1.24rem + 0.76vw, 2.12rem) !important;
-        line-height: 1.12 !important;
+        font-size: clamp(1.38rem, 1.16rem + 0.58vw, 1.92rem) !important;
+        line-height: 1.14 !important;
         letter-spacing: -0.02em;
         font-weight: 900;
         margin: 0;
@@ -765,11 +776,10 @@
     #mainAppContainer #mainRoleList .dt-role-assignee-wrap {
         min-width: 0;
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
-        justify-content: flex-start;
-        gap: 0.5rem;
+        justify-content: flex-end;
         width: 100%;
+        align-self: stretch;
     }
 
     #mainAppContainer #mainRoleList .dt-role-assignee-label {
@@ -780,23 +790,25 @@
         color: var(--dt-role-assignee-text) !important;
         background: var(--dt-role-assignee-bg) !important;
         border: 1px solid var(--dt-role-assignee-border) !important;
-        border-radius: 0.82rem;
+        border-radius: 1rem;
         box-shadow: 0 8px 16px rgba(15, 23, 42, 0.26);
         display: inline-flex;
         align-items: center;
-        justify-content: flex-start;
-        font-size: clamp(1.5rem, 1.22rem + 0.7vw, 2.04rem) !important;
+        justify-content: center;
+        width: 100%;
+        min-height: clamp(2.68rem, 4.35vh, 3.18rem);
+        font-size: clamp(1.16rem, 1rem + 0.44vw, 1.52rem) !important;
         font-weight: 900;
         line-height: 1.08;
         letter-spacing: -0.02em;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: normal;
-        overflow-wrap: anywhere;
+        white-space: nowrap;
+        overflow-wrap: normal;
         word-break: keep-all;
-        padding: 0.36rem 0.8rem 0.46rem;
-        text-align: left;
+        padding: 0.46rem 0.92rem 0.5rem;
+        text-align: center;
         font-family: "Noto Sans KR", "Malgun Gothic", var(--dt-font-ui);
         transform-origin: center left;
     }
@@ -901,7 +913,7 @@
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-name {
-        font-size: clamp(1.72rem, 1.38rem + 0.84vw, 2.34rem) !important;
+        font-size: clamp(1.5rem, 1.26rem + 0.7vw, 2.12rem) !important;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-status-text {
@@ -909,10 +921,11 @@
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-assignee {
-        font-size: clamp(1.74rem, 1.4rem + 0.86vw, 2.42rem) !important;
+        font-size: clamp(1.28rem, 1.08rem + 0.56vw, 1.72rem) !important;
     }
 
     #mainAppContainer[data-role-view-mode="readable"] #mainRoleList .dt-role-row {
+        min-height: clamp(6.4rem, 10.9vh, 7.6rem);
         padding: 1.24rem 1.2rem !important;
     }
 
@@ -1696,20 +1709,20 @@
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-tile {
         min-height: 0;
-        padding: 0.3rem 0.44rem;
+        padding: 0.34rem 0.5rem;
         border-radius: 0.78rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-short {
-        font-size: clamp(1.02rem, 0.96rem + 0.18vw, 1.12rem);
+        font-size: clamp(1.08rem, 1rem + 0.2vw, 1.18rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.97rem, 0.91rem + 0.16vw, 1.06rem);
+        font-size: clamp(1.02rem, 0.95rem + 0.18vw, 1.1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25 .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.9rem, 0.85rem + 0.14vw, 0.98rem);
+        font-size: clamp(0.94rem, 0.88rem + 0.14vw, 1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25.dt-student-density-low .dt-student-name.dt-student-name-short {
@@ -1816,6 +1829,86 @@
         display: none;
     }
 
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-timer-card {
+        min-height: clamp(15.8rem, 40vh, 22.8rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-timer-card {
+        min-height: clamp(13.8rem, 33vh, 18.6rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-timer-main {
+        gap: clamp(0.72rem, 1.1vh, 0.94rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-timer-main {
+        gap: clamp(0.48rem, 0.82vh, 0.7rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-clock-shell {
+        width: min(100%, 52rem);
+        padding: clamp(0.46rem, 0.82vw, 0.78rem) clamp(0.82rem, 1.45vw, 1.1rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-clock-shell {
+        width: min(100%, 46rem);
+        padding: clamp(0.3rem, 0.58vw, 0.56rem) clamp(0.64rem, 1.06vw, 0.92rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-mission-stage {
+        width: min(100%, 46rem);
+        padding: clamp(0.6rem, 1.15vw, 0.84rem) clamp(0.8rem, 1.55vw, 1.08rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-mission-stage {
+        width: min(100%, 40rem);
+        padding: clamp(0.44rem, 0.78vw, 0.66rem) clamp(0.62rem, 1.08vw, 0.88rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-mission-lane {
+        gap: clamp(0.28rem, 0.62vh, 0.52rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-mission-lane {
+        gap: clamp(0.22rem, 0.48vh, 0.38rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainTimerDisplay {
+        font-size: clamp(3.36rem, min(14.2vw, 13.4vh), 7.8rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainTimerDisplay {
+        font-size: clamp(2.72rem, min(11.2vw, 10.8vh), 5.92rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-mission-kicker {
+        padding: 0.3rem 0.62rem;
+        font-size: clamp(0.62rem, 0.62rem + 0.1vw, 0.74rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-mission-kicker {
+        padding: 0.24rem 0.52rem;
+        font-size: clamp(0.54rem, 0.56rem + 0.06vw, 0.66rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainMissionTitle {
+        font-size: clamp(1.58rem, 3.12vw, 2.6rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainMissionDesc {
+        font-size: clamp(0.92rem, 1.45vw, 1.18rem);
+        line-height: 1.22;
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainMissionTitle {
+        font-size: clamp(1.24rem, 2.42vw, 1.92rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainMissionDesc {
+        font-size: clamp(0.8rem, 1.08vw, 0.98rem);
+        line-height: 1.18;
+    }
+
     #mainAppContainer[data-layout-density="balanced"] #timerControls {
         margin-top: clamp(0.55rem, 1.2vh, 0.95rem);
         row-gap: 0.48rem;
@@ -1894,29 +1987,29 @@
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] {
         grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-        grid-auto-rows: minmax(2.18rem, 1fr);
+        grid-auto-rows: minmax(2.34rem, 1fr);
         gap: 0.34rem !important;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-tile {
-        padding: 0.16rem 0.26rem;
+        padding: 0.22rem 0.32rem;
         border-radius: 0.72rem;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name {
-        line-height: 1.02;
+        line-height: 1.05;
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-short {
-        font-size: clamp(0.82rem, 0.79rem + 0.08vw, 0.88rem);
+        font-size: clamp(0.94rem, 0.9rem + 0.08vw, 1rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-mid {
-        font-size: clamp(0.78rem, 0.74rem + 0.08vw, 0.84rem);
+        font-size: clamp(0.9rem, 0.86rem + 0.08vw, 0.96rem);
     }
 
     #mainStudentGrid.dt-student-grid-fit-25[data-grid-columns="6"] .dt-student-name.dt-student-name-long {
-        font-size: clamp(0.72rem, 0.68rem + 0.08vw, 0.78rem);
+        font-size: clamp(0.84rem, 0.8rem + 0.08vw, 0.9rem);
     }
 
     #headerScheduleStrip {
@@ -2006,6 +2099,82 @@
 
     .dt-header-nowrap {
         white-space: nowrap;
+    }
+
+    .dt-header-meta-shell {
+        transition: padding 180ms ease, gap 180ms ease;
+    }
+
+    .dt-header-date-wrap,
+    .dt-header-time-wrap {
+        min-width: 0;
+    }
+
+    @media (min-width: 768px) {
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-meta-shell,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-meta-shell {
+            display: grid !important;
+            grid-template-columns: minmax(0, auto) minmax(0, auto);
+            align-items: center;
+            justify-content: start;
+            column-gap: 1rem;
+            row-gap: 0.58rem;
+            padding: 0.92rem 1.18rem;
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-meta-shell {
+            column-gap: 0.82rem;
+            row-gap: 0.48rem;
+            padding: 0.82rem 1rem;
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-separator,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-separator {
+            display: none !important;
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #headerScheduleStrip,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #headerScheduleStrip {
+            display: flex !important;
+            grid-column: 1 / -1;
+            max-width: none;
+            gap: 0.55rem;
+            padding: 0;
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-schedule-item {
+            font-size: clamp(0.96rem, 0.92rem + 0.2vw, 1.16rem);
+            padding: 0.48rem 0.88rem;
+            min-height: 2.55rem;
+            max-width: min(100%, 24rem);
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-item {
+            font-size: clamp(0.88rem, 0.84rem + 0.18vw, 1.02rem);
+            padding: 0.42rem 0.78rem;
+            min-height: 2.36rem;
+            max-width: min(100%, 22rem);
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-subject {
+            max-width: min(14rem, 46vw);
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-date,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-clock {
+            font-size: clamp(1rem, 0.96rem + 0.24vw, 1.18rem);
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-date,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-clock {
+            font-size: clamp(0.92rem, 0.88rem + 0.18vw, 1.06rem);
+        }
+
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-schedule-empty,
+        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-empty {
+            font-size: 0.94rem;
+            padding-inline: 0;
+        }
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item,
@@ -2275,7 +2444,7 @@
         }
 
         #mainAppContainer #mainRoleList .dt-role-main {
-            flex-direction: column;
+            grid-template-columns: minmax(0, 1fr);
             align-items: flex-start;
             gap: 0.68rem;
         }
@@ -2285,6 +2454,7 @@
             text-align: left;
             justify-content: flex-start;
             width: 100%;
+            align-self: auto;
         }
 
         #mainAppContainer #mainRoleList .dt-role-assignee-label {
@@ -2292,6 +2462,7 @@
         }
 
         #mainAppContainer #mainRoleList .dt-role-assignee {
+            justify-content: flex-start;
             text-align: left;
             max-width: 100%;
             font-size: clamp(1.4rem, 1.16rem + 0.68vw, 1.82rem) !important;
@@ -2409,7 +2580,7 @@
 
 {% block content %}
 <!-- Main App Container -->
-<div id="mainAppContainer" data-mission-panel="collapsed" data-role-view-mode="compact" data-layout-density="hero"
+<div id="mainAppContainer" data-mission-panel="collapsed" data-role-view-mode="compact" data-layout-density="balanced" data-display-mode="windowed"
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
@@ -2427,19 +2598,19 @@
 
         <div class="flex items-center gap-3">
             <div
-                class="hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-6 py-2.5 rounded-full border border-slate-700/50 shadow-xl">
-                <div class="flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
+                class="dt-header-meta-shell hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-6 py-2.5 rounded-full border border-slate-700/50 shadow-xl">
+                <div class="dt-header-date-wrap flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-calendar text-indigo-400"></i>
                     <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
                 </div>
                 <!-- Schedule Strip -->
-                <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
+                <div class="dt-header-separator dt-header-separator-primary h-4 w-px bg-slate-700 hidden md:block"></div>
                 <div id="headerScheduleStrip"
                     class="hidden md:flex flex-wrap items-center content-center min-w-0 max-w-[520px] lg:max-w-[860px] xl:max-w-[1160px] gap-2">
                     <!-- JS Populated -->
                 </div>
-                <div class="h-4 w-px bg-slate-700"></div>
-                <div class="flex items-center gap-2 text-white font-mono shrink-0 dt-header-nowrap">
+                <div class="dt-header-separator dt-header-separator-secondary h-4 w-px bg-slate-700"></div>
+                <div class="dt-header-time-wrap flex items-center gap-2 text-white font-mono shrink-0 dt-header-nowrap">
                     <i class="fa-regular fa-clock text-indigo-400"></i>
                     <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
                 </div>
@@ -3107,7 +3278,7 @@
         u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
     };
 </script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260310a"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260310b"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {
@@ -3161,3 +3332,5 @@
     }
 </script>
 {% endblock %}
+
+

@@ -26,6 +26,7 @@ class DutyTickerManager {
         this.callModeAutoPlaying = false;
         this.boundGlobalKeydown = null;
         this.boundWindowResize = null;
+        this.boundFullscreenChange = null;
         this.resizeRaf = null;
         this.layoutRaf = null;
         this.layoutObserver = null;
@@ -156,6 +157,11 @@ class DutyTickerManager {
             };
             window.addEventListener('resize', this.boundWindowResize, { passive: true });
         }
+
+        if (!this.boundFullscreenChange) {
+            this.boundFullscreenChange = () => this.requestAdaptiveLayoutRefresh();
+            document.addEventListener('fullscreenchange', this.boundFullscreenChange);
+        }
     }
 
     startHeaderClock() {
@@ -219,28 +225,42 @@ class DutyTickerManager {
         const studentCard = document.getElementById('mainStudentCard');
         if (!app || !leftColumn || !timerCard) return;
 
+        const previousDensity = app.getAttribute('data-layout-density') || '';
+        const previousDisplayMode = app.getAttribute('data-display-mode') || '';
         const leftHeight = leftColumn.getBoundingClientRect().height;
         const timerHeight = timerCard.getBoundingClientRect().height;
         const studentHeight = studentCard ? studentCard.getBoundingClientRect().height : 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
         const isStudentPanelExpanded = !this.missionPanelCollapsed;
+        const isDisplayFullscreen = !!document.fullscreenElement;
+        const displayMode = isDisplayFullscreen ? 'fullscreen' : 'windowed';
 
-        let density = 'hero';
+        let density = isDisplayFullscreen ? 'hero' : 'balanced';
         if (
-            leftHeight < 920
+            viewportHeight < 940
+            || leftHeight < 920
             || timerHeight < 560
             || (isStudentPanelExpanded && studentHeight > 320)
         ) {
             density = 'balanced';
         }
         if (
-            leftHeight < 820
-            || timerHeight < 470
+            viewportHeight < 840
+            || leftHeight < 820
+            || timerHeight < 480
             || (isStudentPanelExpanded && studentHeight > 360)
         ) {
             density = 'compact';
         }
+        if (!isDisplayFullscreen && density === 'hero') {
+            density = 'balanced';
+        }
 
+        app.setAttribute('data-display-mode', displayMode);
         app.setAttribute('data-layout-density', density);
+        if (previousDensity !== density || previousDisplayMode !== displayMode) {
+            this.renderSchedule();
+        }
         this.applyStudentGridLayoutMode();
     }
 
@@ -649,7 +669,12 @@ class DutyTickerManager {
         const candidateSlots = normalizedSlots.filter((slot) => slot.hasTimeRange && (slot.isCurrent || slot.isUpcoming));
 
         if (!candidateSlots.length) {
-            container.innerHTML = '<span class="dt-header-schedule-empty">다음 교시 10분 전부터 표시됩니다</span>';
+            const app = document.getElementById('mainAppContainer');
+            const isWindowedDense = app
+                && app.getAttribute('data-display-mode') === 'windowed'
+                && app.getAttribute('data-layout-density') !== 'hero';
+            const emptyMessage = isWindowedDense ? '다음 교시 대기 중' : '다음 교시 10분 전부터 표시됩니다';
+            container.innerHTML = `<span class="dt-header-schedule-empty">${emptyMessage}</span>`;
             return;
         }
 
@@ -848,7 +873,8 @@ class DutyTickerManager {
 
         this.updateRoleCardSubtitle(spotlightRoleIdSet.size);
         this.ensureRoleTickerRunning();
-        this.paintRoleTickerFocus({ force: true });
+        const activeRow = this.paintRoleTickerFocus({ force: true });
+        if (activeRow) this.scrollRoleRowIntoViewIfNeeded(activeRow);
     }
 
     setupRoleTickerControls() {
