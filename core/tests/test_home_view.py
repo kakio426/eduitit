@@ -4,7 +4,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from products.models import Product
-from core.models import ProductFavorite, ProductUsageLog, UserProfile
+from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -422,6 +422,59 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('hidden xl:block', content)
         self.assertIn('block xl:hidden', content)
 
+    def test_v2_staff_home_restores_sns_controls(self):
+        staff = _create_onboarded_user('staffsns', nickname='운영자')
+        staff.is_staff = True
+        staff.save(update_fields=['is_staff'])
+        self.client.login(username='staffsns', password='pass1234')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('실시간 소통', content)
+        self.assertIn('공지 작성', content)
+        self.assertIn('뉴스 검토', content)
+        self.assertIn('인사이트 노출', content)
+
+    def test_v2_notice_scope_excludes_news_link_cards(self):
+        author = _create_onboarded_user('noticeauthor')
+        Post.objects.create(author=author, content='공지 본문', post_type='notice')
+        Post.objects.create(
+            author=author,
+            content='뉴스 본문',
+            post_type='news_link',
+            source_url='https://example.com/news',
+            og_title='뉴스 제목',
+            og_image_url='https://example.com/news.jpg',
+            publisher='테스트 매체',
+        )
+
+        response = self.client.get(reverse('home'), {'feed_scope': 'notice'})
+        content = response.content.decode('utf-8')
+
+        self.assertIn('공지 본문', content)
+        self.assertNotIn('뉴스 제목', content)
+        self.assertNotIn('원문 보기 (새 탭)', content)
+
+    def test_v2_feed_renders_news_link_preview_image(self):
+        author = _create_onboarded_user('newsauthor')
+        Post.objects.create(
+            author=author,
+            content='뉴스 요약',
+            post_type='news_link',
+            source_url='https://example.com/article',
+            og_title='교실 뉴스',
+            og_description='학급 운영에 도움이 되는 기사입니다.',
+            og_image_url='https://example.com/article.jpg',
+            publisher='테스트 매체',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('교실 뉴스', content)
+        self.assertIn('https://example.com/article.jpg', content)
+        self.assertIn('원문 보기 (새 탭)', content)
     def test_v2_mobile_sns_more_uses_toggle_not_anchor(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')

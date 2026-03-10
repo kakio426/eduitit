@@ -26,6 +26,7 @@ from .active_classroom import (
     clear_active_classroom_session,
     set_default_classroom_for_user,
 )
+from .teacher_first_cards import build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
@@ -49,7 +50,6 @@ POST_FEED_SCOPE_ALLOWED = {
     POST_FEED_SCOPE_NOTICE,
 }
 POST_FEED_NOTICE_TYPES = (
-    'news_link',
     'notice',
 )
 
@@ -541,7 +541,7 @@ def _get_user_workbench_bundles(user, product_list, *, limit=WORKBENCH_BUNDLE_LI
             if pid not in product_map:
                 continue
             normalized_ids.append(pid)
-        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:3]]
+        preview_titles = [build_workbench_card_meta(product_map[pid]).title for pid in normalized_ids[:3]]
         bundles.append({
             'id': bundle.id,
             'name': bundle.name,
@@ -592,7 +592,7 @@ def _get_weekly_workbench_bundle_highlights(user, product_list, *, limit=WORKBEN
             normalized_ids.append(pid)
         if len(normalized_ids) < 2:
             continue
-        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:2]]
+        preview_titles = [build_workbench_card_meta(product_map[pid]).title for pid in normalized_ids[:2]]
         summary_text = ' + '.join(preview_titles)
         if len(normalized_ids) > 2:
             summary_text = f"{summary_text} 외 {len(normalized_ids) - 2}"
@@ -632,10 +632,13 @@ def _build_product_link_items(products, include_section_meta=False):
     items = []
     for product in products:
         href, is_external = _resolve_product_launch_url(product)
+        workbench_meta = build_workbench_card_meta(product)
         item = {
             'product': product,
             'href': href,
             'is_external': is_external,
+            'workbench_title': workbench_meta.title,
+            'workbench_summary': workbench_meta.summary,
         }
         if include_section_meta:
             section_key = _resolve_home_section_key(product)
@@ -1157,11 +1160,15 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
+        today_context = _build_today_context(request)
+        home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
+        home_sections = [*sections, *aux_sections]
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
             'sections': sections,
             'aux_sections': aux_sections,
+            'home_sections': home_sections,
             'games': games,
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
@@ -1172,10 +1179,11 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'discovery_items': discovery_items,
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
+            'home_calendar_summary': home_calendar_summary,
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
-            **_build_today_context(request),
+            **today_context,
             **_build_sheetbook_workspace_context(request),
             **_build_home_student_games_qr_context(request),
         })
