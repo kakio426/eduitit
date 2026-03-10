@@ -20,6 +20,7 @@ from .models import (
     ProductWorkbenchBundle,
     UserModeration,
 )
+from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
 from .active_classroom import (
     set_active_classroom_session,
     clear_active_classroom_session,
@@ -63,6 +64,8 @@ def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
     if not request.user.is_authenticated:
         return
     if not getattr(settings, "SHEETBOOK_ENABLED", False):
+        return
+    if not is_sheetbook_discovery_visible():
         return
     try:
         from sheetbook.models import SheetbookMetricEvent
@@ -972,7 +975,11 @@ def _build_sheetbook_workspace_context(request):
         "quick_actions": [],
     }
 
-    if not request.user.is_authenticated or not getattr(settings, "SHEETBOOK_ENABLED", False):
+    if (
+        not request.user.is_authenticated
+        or not getattr(settings, "SHEETBOOK_ENABLED", False)
+        or not is_sheetbook_discovery_visible()
+    ):
         return {"sheetbook_workspace": workspace}
 
     try:
@@ -1187,7 +1194,9 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
 
 def home(request):
     # Order by display_order first, then by creation date
-    products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    products = filter_discoverable_products(
+        Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    )
     feed_scope = _get_post_feed_scope(request)
 
     # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
@@ -2369,7 +2378,16 @@ def list_product_favorites(request):
 @require_GET
 @login_required
 def list_workbench_bundles(request):
-    bundles = _get_user_workbench_bundles(request.user, _attach_product_launch_meta(list(Product.objects.filter(is_active=True).order_by('display_order', '-created_at'))))
+    bundles = _get_user_workbench_bundles(
+        request.user,
+        _attach_product_launch_meta(
+            list(
+                filter_discoverable_products(
+                    Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+                )
+            )
+        ),
+    )
     return JsonResponse({'status': 'ok', 'bundles': bundles})
 
 

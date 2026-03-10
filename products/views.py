@@ -11,6 +11,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from core.product_visibility import filter_discoverable_products
+
 from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
 from .models import Product
 
@@ -190,7 +192,9 @@ def _should_block_for_large_screen_service(request):
 def product_list(request):
     from core.views import _attach_product_launch_meta, get_purpose_sections
 
-    products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    products = filter_discoverable_products(
+        Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+    )
     product_list = _attach_product_launch_meta(list(products))
     sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=None)
     return render(

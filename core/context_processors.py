@@ -4,6 +4,7 @@ from .active_classroom import (
     get_default_classroom_for_user,
     list_hs_classrooms_for_user,
 )
+from .product_visibility import filter_discoverable_products
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import logging
@@ -99,7 +100,9 @@ def search_products(request):
     import json
 
     try:
-        products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        products = filter_discoverable_products(
+            Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        )
         items = []
         for p in products:
             items.append({

@@ -100,6 +100,53 @@ class ProductViewTests(TestCase):
         self.assertContains(response, "Active Tool 1")
 
 
+class SheetbookDiscoveryVisibilityTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.sheetbook_product = Product.objects.create(
+            title="교무수첩",
+            description="표 작업",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='sheetbook:index',
+        )
+        self.visible_product = Product.objects.create(
+            title="학급 달력",
+            description="일정 관리",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='classcalendar:main',
+        )
+
+    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_catalog_hides_sheetbook_when_discovery_disabled(self):
+        response = self.client.get(reverse('product_list'))
+
+        product_titles = [product.title for product in response.context['products']]
+        expected_count = Product.objects.filter(is_active=True).exclude(launch_route_name='sheetbook:index').count()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('교무수첩', product_titles)
+        self.assertIn('학급 달력', product_titles)
+        self.assertNotContains(response, '교무수첩')
+        self.assertEqual(response.context['total_count'], expected_count)
+
+    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=True)
+    def test_catalog_shows_sheetbook_when_discovery_enabled(self):
+        response = self.client.get(reverse('product_list'))
+
+        product_titles = [product.title for product in response.context['products']]
+        expected_count = Product.objects.filter(is_active=True).count()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('교무수첩', product_titles)
+        self.assertIn('학급 달력', product_titles)
+        self.assertContains(response, '교무수첩')
+        self.assertEqual(response.context['total_count'], expected_count)
+
+
 class ProductDevicePolicyTests(TestCase):
     """Device policy tests for large-screen-only product pages."""
 

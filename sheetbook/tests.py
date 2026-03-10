@@ -200,6 +200,13 @@ class SheetbookFlagTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "교무수첩")
 
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_sheetbook_direct_access_stays_available_when_discovery_hidden(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("sheetbook:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교무수첩")
+
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_requires_login(self):
         response = self.client.get(reverse("sheetbook:index"))

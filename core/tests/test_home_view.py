@@ -1,8 +1,10 @@
+import json
+
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from products.models import Product
-from core.models import UserProfile
+from core.models import ProductFavorite, ProductUsageLog, UserProfile
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -24,6 +26,16 @@ class HomeViewTest(TestCase):
         self.product = Product.objects.create(
             title="테스트 서비스", description="설명", price=0,
             is_active=True, service_type='classroom',
+        )
+
+    def _create_sheetbook_product(self, title='숨김 교무수첩'):
+        return Product.objects.create(
+            title=title,
+            description='표 작업',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='sheetbook:index',
         )
 
     def test_home_anonymous_200(self):
@@ -49,6 +61,26 @@ class HomeViewTest(TestCase):
         """V1 홈에서도 글로벌 검색 컨텍스트를 제공"""
         response = self.client.get(reverse('home'))
         self.assertIn('search_products_json', response.context)
+
+    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_v1_home_hides_sheetbook_product_when_discovery_disabled(self):
+        self._create_sheetbook_product()
+
+        response = self.client.get(reverse('home'))
+        product_titles = [product.title for product in response.context['products']]
+
+        self.assertNotIn('숨김 교무수첩', product_titles)
+        self.assertNotContains(response, '숨김 교무수첩')
+
+    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_v1_search_products_json_hides_sheetbook_when_discovery_disabled(self):
+        self._create_sheetbook_product()
+
+        response = self.client.get(reverse('home'))
+        payload = json.loads(response.context['search_products_json'])
+        titles = [item['title'] for item in payload]
+
+        self.assertNotIn('숨김 교무수첩', titles)
 
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_search_products_json_absent_when_global_search_disabled(self):
@@ -95,6 +127,16 @@ class HomeV2ViewTest(TestCase):
         user = _create_onboarded_user(username, nickname=nickname)
         self.client.login(username=username, password='pass1234')
         return user
+
+    def _create_sheetbook_product(self, title='숨김 교무수첩'):
+        return Product.objects.create(
+            title=title,
+            description='표 작업',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='sheetbook:index',
+        )
 
     def test_v2_anonymous_200(self):
         """V2 비로그인 홈 200 응답"""
@@ -210,6 +252,69 @@ class HomeV2ViewTest(TestCase):
         """V2 홈에 search_products_json 컨텍스트 존재"""
         response = self.client.get(reverse('home'))
         self.assertIn('search_products_json', response.context)
+
+    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_v2_home_hides_sheetbook_from_discovery_surfaces(self):
+        hidden_product = self._create_sheetbook_product()
+        user = self._login('sheetbookhiddenv2')
+        ProductFavorite.objects.create(user=user, product=hidden_product, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=hidden_product, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('숨김 교무수첩', content)
+        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
+        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
+        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('recent_items', [])])
+        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('discovery_items', [])])
+        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('companion_items', [])])
+        section_product_ids = []
+        for section in response.context.get('sections', []):
+            section_product_ids.extend(product.id for product in section.get('products', []))
+            section_product_ids.extend(product.id for product in section.get('overflow_products', []))
+        for section in response.context.get('aux_sections', []):
+            section_product_ids.extend(product.id for product in section.get('products', []))
+            section_product_ids.extend(product.id for product in section.get('overflow_products', []))
+        self.assertNotIn(hidden_product.id, section_product_ids)
+        self.assertNotIn(hidden_product.id, [product.id for product in response.context.get('games', [])])
+        search_payload = json.loads(response.context['search_products_json'])
+        self.assertNotIn('숨김 교무수첩', [item['title'] for item in search_payload])
+
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
+    def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):
+        from sheetbook.models import Sheetbook, SheetbookMetricEvent
+
+        user = self._login('workspacehidden')
+        Sheetbook.objects.create(owner=user, title='비노출 수첩', academic_year=2026)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertFalse(response.context['sheetbook_workspace']['enabled'])
+        self.assertFalse(
+            SheetbookMetricEvent.objects.filter(
+                user=user,
+                event_name='workspace_home_opened',
+            ).exists()
+        )
+
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
+    def test_v2_workspace_context_enabled_when_sheetbook_discovery_visible(self):
+        from sheetbook.models import Sheetbook, SheetbookMetricEvent
+
+        user = self._login('workspacevisible')
+        Sheetbook.objects.create(owner=user, title='노출 수첩', academic_year=2026)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertTrue(response.context['sheetbook_workspace']['enabled'])
+        self.assertGreaterEqual(len(response.context['sheetbook_workspace']['recent_sheetbooks']), 1)
+        self.assertTrue(
+            SheetbookMetricEvent.objects.filter(
+                user=user,
+                event_name='workspace_home_opened',
+            ).exists()
+        )
 
     def test_v2_usage_based_quick_actions(self):
         """V2 사용 기록 기반 퀵 액션 반영"""

@@ -619,12 +619,18 @@ def _rollout_env_csv(name, aliases=None):
 
 
 SHEETBOOK_ENABLED = _rollout_env_bool('SHEETBOOK_ENABLED', default='False', aliases=('sheetbook_enabled',))
+SHEETBOOK_DISCOVERY_VISIBLE = _rollout_env_bool(
+    'SHEETBOOK_DISCOVERY_VISIBLE',
+    default='False',
+    aliases=('sheetbook_discovery_visible',),
+)
 SHEETBOOK_APP_AVAILABLE = find_spec('sheetbook.apps') is not None
 if SHEETBOOK_APP_AVAILABLE:
     INSTALLED_APPS.append('sheetbook.apps.SheetbookConfig')
 elif SHEETBOOK_ENABLED:
     print('[SHEETBOOK] disabled: sheetbook package not available')
     SHEETBOOK_ENABLED = False
+    SHEETBOOK_DISCOVERY_VISIBLE = False
 SHEETBOOK_BETA_USERNAMES = _rollout_env_csv('SHEETBOOK_BETA_USERNAMES', aliases=('sheetbook_beta_usernames',))
 SHEETBOOK_BETA_EMAILS = _rollout_env_csv('SHEETBOOK_BETA_EMAILS', aliases=('sheetbook_beta_emails',))
 SHEETBOOK_BETA_USER_IDS = _rollout_env_csv('SHEETBOOK_BETA_USER_IDS', aliases=('sheetbook_beta_user_ids',))
