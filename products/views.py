@@ -193,21 +193,17 @@ def product_list(request):
     products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
     product_list = _attach_product_launch_meta(list(products))
     sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=None)
-    context = {
-        'products': product_list,
-        'sections': sections,
-        'aux_sections': aux_sections,
-        'games': games,
-        'total_count': len(product_list),
-    }
-    if request.user.is_authenticated:
-        token = _create_student_games_token(request)
-        launch_url = _build_student_games_launch_url(request, token)
-        context.update({
-            'student_games_launch_url': launch_url,
-            'student_games_expires_hours': max(1, _student_games_max_age_seconds() // 3600),
-        })
-    return render(request, 'products/list.html', context)
+    return render(
+        request,
+        'products/list.html',
+        {
+            'products': product_list,
+            'sections': sections,
+            'aux_sections': aux_sections,
+            'games': games,
+            'total_count': len(product_list),
+        },
+    )
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)

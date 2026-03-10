@@ -8,8 +8,6 @@ from django.utils import timezone
 from django.contrib import messages as django_messages
 import logging
 
-from .teacher_first_cards import build_teacher_first_product_meta
-
 logger = logging.getLogger(__name__)
 
 def visitor_counts(request):
@@ -91,7 +89,6 @@ def site_config(request):
         }
 
 
-
 def search_products(request):
     """Ctrl+K 검색 모달용 서비스 목록 JSON 제공."""
     from django.conf import settings as django_settings
@@ -105,12 +102,11 @@ def search_products(request):
         products = Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
         items = []
         for p in products:
-            meta = build_teacher_first_product_meta(p)
             items.append({
                 'id': p.id,
-                'title': meta.get('card_title') or meta.get('teacher_first_task_label') or p.title,
-                'description': meta.get('card_summary') or (p.description or '')[:80],
-                'solve_text': meta.get('card_subtitle') or meta.get('teacher_first_service_label') or '',
+                'title': p.title,
+                'description': (p.description or '')[:80],
+                'solve_text': p.solve_text or '',
                 'icon': p.icon or '',
                 'service_type': p.service_type or '',
             })

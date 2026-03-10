@@ -30,15 +30,8 @@ from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.utils.html import strip_tags
-from django.utils.text import Truncator
-from django.utils.timesince import timesince
 from PIL import Image
 import logging
-
-from .teacher_first_cards import (
-    build_teacher_first_product_meta,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -244,20 +237,6 @@ HOME_MAIN_SECTIONS = [
         "color": "violet",
     },
     {
-        "key": "refresh",
-        "title": "상담·리프레시",
-        "subtitle": "학생 상담과 성향 확인을 바로",
-        "icon": "fa-solid fa-heart",
-        "color": "rose",
-    },
-    {
-        "key": "guide",
-        "title": "가이드·인사이트",
-        "subtitle": "바로 참고하는 안내와 인사이트",
-        "icon": "fa-solid fa-lightbulb",
-        "color": "amber",
-    },
-    {
         "key": "class_activity",
         "title": "교실 활동",
         "subtitle": "바로 시작하는 교실 활동",
@@ -267,6 +246,20 @@ HOME_MAIN_SECTIONS = [
 ]
 
 HOME_AUXILIARY_SECTIONS = [
+    {
+        "key": "refresh",
+        "title": "상담·리프레시",
+        "subtitle": "성향·운세·리프레시",
+        "icon": "fa-solid fa-heart",
+        "color": "violet",
+    },
+    {
+        "key": "guide",
+        "title": "가이드·인사이트",
+        "subtitle": "도구 안내와 인사이트",
+        "icon": "fa-solid fa-lightbulb",
+        "color": "cyan",
+    },
     {
         "key": "external",
         "title": "외부 서비스",
@@ -296,8 +289,7 @@ HOME_SECTION_BY_ROUTE = {
     "seed_quiz:landing": "class_ops",
     "ppobgi:main": "class_ops",
     "artclass:main": "class_ops",
-    "studentmbti:landing": "refresh",
-    "studentmbti:dashboard": "refresh",
+    "studentmbti:start": "refresh",
     "ssambti:main": "refresh",
     "fortune:landing": "refresh",
     "saju:landing": "refresh",
@@ -463,127 +455,31 @@ def _resolve_product_launch_url(product):
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
-def _build_home_calendar_summary(today_context, sheetbook_workspace):
-    default_href = reverse("classcalendar:main")
-    date_text = sheetbook_workspace.get("today_date_text") or today_context.get("today_date_text") or timezone.localdate().strftime("%Y-%m-%d")
-    rows = sheetbook_workspace.get("today_rows") or []
-    if rows:
-        entries = [
-            {
-                "title": row.get("title", ""),
-                "subtitle": row.get("sheetbook_title", ""),
-                "href": row.get("href") or default_href,
-            }
-            for row in rows[:2]
-        ]
-        return {
-            "title": "오늘 일정",
-            "date_text": date_text,
-            "count_text": f"{len(rows)}건",
-            "entries": entries,
-            "href": default_href,
-        }
+def _build_teacher_first_product_labels(product):
+    task_label = str(getattr(product, 'solve_text', '') or '').strip()
+    service_label = str(getattr(product, 'title', '') or '').strip()
+    support_label = ''
 
-    calendar_item = None
-    for item in today_context.get("today_items", []):
-        if item.get("href") == default_href or "학급 일정" in str(item.get("title", "")):
-            calendar_item = item
-            break
-
-    if calendar_item:
-        return {
-            "title": "오늘 일정",
-            "date_text": date_text,
-            "count_text": calendar_item.get("count_text") or "1건",
-            "entries": [
-                {
-                    "title": calendar_item.get("title", ""),
-                    "subtitle": calendar_item.get("description", ""),
-                    "href": calendar_item.get("href") or default_href,
-                }
-            ],
-            "href": default_href,
-        }
-
-    return {
-        "title": "오늘 일정",
-        "date_text": date_text,
-        "count_text": "0건",
-        "entries": [],
-        "href": default_href,
-    }
-
-
-def _build_home_sns_post_preview(post):
-    raw_title = getattr(post, "og_title", "") or getattr(post, "content", "")
-    raw_excerpt = getattr(post, "og_description", "") or getattr(post, "content", "")
-    title = Truncator(strip_tags(raw_title)).chars(48)
-    excerpt = Truncator(strip_tags(raw_excerpt)).chars(88)
-    if excerpt and excerpt == title:
-        excerpt = ""
-
-    author = getattr(post, "author", None)
-    profile = getattr(author, "userprofile", None) if author else None
-    author_display = getattr(profile, "nickname", "") or getattr(author, "username", "") or ""
-    created_value = getattr(post, "created_at", None)
-    created_label = ""
-    if created_value:
-        created_label = f"{timesince(created_value, timezone.now()).split(',')[0]} 전"
-
-    thumbnail = ""
-    image_field = getattr(post, "image", None)
-    if image_field:
-        try:
-            thumbnail = image_field.url
-        except Exception:
-            thumbnail = ""
-    if not thumbnail:
-        thumbnail = getattr(post, "og_image_url", "") or ""
-
-    post_type = getattr(post, "post_type", "general")
-    source_url = getattr(post, "source_url", "") or ""
-    if post_type == "news_link" and source_url:
-        detail_href = source_url
-        detail_external = True
+    if task_label and task_label != service_label:
+        support_label = service_label
     else:
-        detail_href = reverse("post_detail_partial", kwargs={"pk": getattr(post, "id", 0)})
-        detail_external = False
-
-    badge_label = ""
-    badge_tone = "neutral"
-    if post_type == "notice":
-        badge_label = "공지"
-        badge_tone = "notice"
-    elif post_type == "news_link":
-        badge_label = "링크"
-        badge_tone = "link"
-
-    return {
-        "title": title,
-        "excerpt": excerpt,
-        "thumbnail": thumbnail,
-        "post_type": post_type,
-        "author_display": author_display,
-        "created_label": created_label,
-        "post_id": getattr(post, "id", None),
-        "has_more_content": bool(excerpt),
-        "detail_href": detail_href,
-        "detail_external": detail_external,
-        "badge_label": badge_label,
-        "badge_tone": badge_tone,
-    }
-
-
-def _build_home_sns_summary(page_obj):
-    post_list = list(getattr(page_obj, "object_list", [])[:2]) if page_obj is not None else []
-    latest_posts = [_build_home_sns_post_preview(post) for post in post_list]
-    notice_count = sum(1 for post in post_list if getattr(post, "post_type", "") == "notice")
+        task_label = service_label
+        service_label = ''
+        for candidate in (
+            getattr(product, 'result_text', ''),
+            getattr(product, 'lead_text', ''),
+            getattr(product, 'description', ''),
+        ):
+            support_label = str(candidate or '').strip()
+            if support_label and support_label != task_label:
+                break
+        else:
+            support_label = ''
 
     return {
-        "title": "SNS",
-        "latest_posts": latest_posts,
-        "notice_count": notice_count,
-        "href": reverse("home"),
+        'teacher_first_task_label': task_label,
+        'teacher_first_service_label': service_label,
+        'teacher_first_support_label': support_label,
     }
 
 
@@ -594,7 +490,7 @@ def _attach_product_launch_meta(products):
         launch_href, launch_is_external = _resolve_product_launch_url(product)
         product.launch_href = launch_href
         product.launch_is_external = launch_is_external
-        for attr_name, attr_value in build_teacher_first_product_meta(product).items():
+        for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
             setattr(product, attr_name, attr_value)
         prepared.append(product)
     return prepared
@@ -642,7 +538,7 @@ def _get_user_workbench_bundles(user, product_list, *, limit=WORKBENCH_BUNDLE_LI
             if pid not in product_map:
                 continue
             normalized_ids.append(pid)
-        preview_titles = [getattr(product_map[pid], 'card_title', '') or getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:3]]
+        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:3]]
         bundles.append({
             'id': bundle.id,
             'name': bundle.name,
@@ -693,7 +589,7 @@ def _get_weekly_workbench_bundle_highlights(user, product_list, *, limit=WORKBEN
             normalized_ids.append(pid)
         if len(normalized_ids) < 2:
             continue
-        preview_titles = [getattr(product_map[pid], 'card_title', '') or getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:2]]
+        preview_titles = [getattr(product_map[pid], 'teacher_first_task_label', '') or product_map[pid].title for pid in normalized_ids[:2]]
         summary_text = ' + '.join(preview_titles)
         if len(normalized_ids) > 2:
             summary_text = f"{summary_text} 외 {len(normalized_ids) - 2}"
@@ -1254,10 +1150,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
-        today_context = _build_today_context(request)
-        sheetbook_workspace_context = _build_sheetbook_workspace_context(request)
-        home_calendar_summary = _build_home_calendar_summary(today_context, sheetbook_workspace_context.get('sheetbook_workspace', {}))
-        home_sns_summary = _build_home_sns_summary(page_obj)
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
@@ -1266,22 +1158,18 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'games': games,
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
-            'workbench_primary_items': favorite_items,
             'workbench_slots': workbench_slots,
             'favorite_product_ids': [p.id for p in favorite_products],
             'recent_items': recent_items,
-            'workbench_recent_items': recent_items,
             'companion_items': companion_items,
             'discovery_items': discovery_items,
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
-            'home_calendar_summary': home_calendar_summary,
-            'home_sns_summary': home_sns_summary,
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
-            **today_context,
-            **sheetbook_workspace_context,
+            **_build_today_context(request),
+            **_build_sheetbook_workspace_context(request),
             **_build_home_student_games_qr_context(request),
         })
 
@@ -2320,9 +2208,6 @@ def service_guide_list(request):
             'teacher_first_task_label',
             'teacher_first_service_label',
             'teacher_first_support_label',
-            'card_title',
-            'card_subtitle',
-            'card_summary',
         ):
             setattr(manual.product, attr_name, getattr(prepared_product, attr_name, ''))
     manual_count = manuals_qs.count()
@@ -2710,3 +2595,5 @@ def health_check(request):
     except Exception as e:
         logger.exception("Health check DB connection failed: %s", e)
         return JsonResponse({'status': 'error', 'db': 'unavailable'}, status=503)
+
+
