@@ -265,13 +265,14 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('openMessageCaptureModal($event)', content)
 
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
-        self._login('balanceuser')
+        user = self._login('balanceuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn('max-width: 1180px', content)
         self.assertIn('max-width: 1240px', content)
-        self.assertIn('sm:grid-cols-2', content)
+        self.assertIn('data-home-v2-top-favorites-grid="true"', content)
         self.assertIn('grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);', content)
 
     def test_v2_authenticated_has_sections(self):
@@ -458,6 +459,23 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn(hidden_product.id, [product.id for product in response.context.get('games', [])])
         search_payload = json.loads(response.context['service_launcher_json'])
         self.assertNotIn('숨김 교무수첩', [item['title'] for item in search_payload])
+
+    def test_v2_authenticated_top_favorites_use_compact_title_only_cards(self):
+        user = self._login('favoritecompact')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        favorites_index = content.index('data-home-v2-top-favorites="true"')
+        calendar_index = content.index('data-home-v2-top-calendar="true"')
+        favorites_block = content[favorites_index:calendar_index]
+
+        self.assertIn('data-home-v2-top-favorites-grid="true"', favorites_block)
+        self.assertIn('data-home-v2-favorite-card="true"', favorites_block)
+        self.assertNotIn('자주 쓰는 서비스만 가까이에 둡니다.', favorites_block)
+        self.assertNotIn('data-home-v2-favorite-card-body="true"', favorites_block)
+        self.assertNotIn('수업을 준비해요', favorites_block)
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):

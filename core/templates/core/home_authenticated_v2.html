@@ -586,19 +586,18 @@ function homeCalendarWidget() {
                             {% endif %}
                         </article>
 
-                        <article class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" data-home-v2-top-favorites="true">
-                            <div class="mb-4">
+                        <article class="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5" data-home-v2-top-favorites="true">
+                            <div class="mb-3">
                                 <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
                                     즐겨찾기
                                 </h2>
-                                <p class="mt-1 text-xs font-semibold text-slate-400">자주 쓰는 서비스만 가까이에 둡니다.</p>
                             </div>
                             {% if favorite_items %}
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div class="grid grid-cols-2 gap-2.5" data-home-v2-top-favorites-grid="true">
                                 {% for item in favorite_items|slice:":4" %}
-                                {% with favorite_title=item.product.public_service_name|default:item.product.title favorite_body=item.product.home_card_summary|default:item.product.teacher_first_support_label|default:item.product.solve_text|default:item.product.description %}
-                                <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
+                                {% with favorite_title=item.product.public_service_name|default:item.product.title %}
+                                <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
                                     data-home-v2-favorite-card="true"
                                     data-product-id="{{ item.product.id }}"
                                     data-launch-href="{{ item.href }}"
@@ -607,31 +606,26 @@ function homeCalendarWidget() {
                                     data-track-label="{{ item.product.title }}"
                                     role="button"
                                     tabindex="0">
-                                    <div class="space-y-2">
-                                        <div class="flex items-start gap-3" data-home-v2-favorite-card-header="true">
-                                            <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-base shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                    <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
+                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                                             {% if item.product.icon %}
                                                 {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                                             {% else %}
                                                 <i class="fa-solid fa-sparkles"></i>
                                             {% endif %}
-                                            </div>
-                                            <div class="min-w-0 flex-1 pt-0.5">
-                                                <p class="text-[1.05rem] md:text-[1.12rem] font-black leading-6 text-slate-900 line-clamp-2" data-home-v2-favorite-card-title="true">{{ favorite_title }}</p>
-                                            </div>
-                                            <button type="button"
-                                                class="favorite-toggle-btn inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                                                data-product-id="{{ item.product.id }}"
-                                                data-favorite-toggle="true"
-                                                aria-pressed="false"
-                                                aria-label="{{ item.product.public_service_name|default:item.product.title }} 즐겨찾기 토글"
-                                                title="즐겨찾기">
-                                                <i class="fa-solid fa-star text-[10px]"></i>
-                                            </button>
                                         </div>
-                                        {% if favorite_body %}
-                                        <p class="pl-[3.25rem] text-[0.9rem] leading-5 text-slate-500 line-clamp-1" data-home-v2-favorite-card-body="true">{{ favorite_body|truncatechars:66 }}</p>
-                                        {% endif %}
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ favorite_title }}">{{ favorite_title }}</p>
+                                        </div>
+                                        <button type="button"
+                                            class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                            data-product-id="{{ item.product.id }}"
+                                            data-favorite-toggle="true"
+                                            aria-pressed="false"
+                                            aria-label="{{ item.product.public_service_name|default:item.product.title }} 즐겨찾기 토글"
+                                            title="즐겨찾기">
+                                            <i class="fa-solid fa-star text-[10px]"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 {% endwith %}
