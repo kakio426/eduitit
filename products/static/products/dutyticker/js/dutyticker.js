@@ -222,38 +222,37 @@ class DutyTickerManager {
         const app = document.getElementById('mainAppContainer');
         const leftColumn = document.querySelector('.dt-left-column');
         const timerCard = document.querySelector('.dt-timer-card');
-        const studentCard = document.getElementById('mainStudentCard');
         if (!app || !leftColumn || !timerCard) return;
 
         const previousDensity = app.getAttribute('data-layout-density') || '';
         const previousDisplayMode = app.getAttribute('data-display-mode') || '';
         const leftHeight = leftColumn.getBoundingClientRect().height;
         const timerHeight = timerCard.getBoundingClientRect().height;
-        const studentHeight = studentCard ? studentCard.getBoundingClientRect().height : 0;
         const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const availableHeight = Math.min(
+            viewportHeight > 0 ? viewportHeight : Number.POSITIVE_INFINITY,
+            leftHeight > 0 ? leftHeight : Number.POSITIVE_INFINITY
+        );
+        const effectiveAvailableHeight = Number.isFinite(availableHeight)
+            ? availableHeight
+            : Math.max(viewportHeight, leftHeight, 0);
         const isStudentPanelExpanded = !this.missionPanelCollapsed;
         const isDisplayFullscreen = !!document.fullscreenElement;
         const displayMode = isDisplayFullscreen ? 'fullscreen' : 'windowed';
 
-        let density = isDisplayFullscreen ? 'hero' : 'balanced';
-        if (
-            viewportHeight < 940
-            || leftHeight < 920
-            || timerHeight < 560
-            || (isStudentPanelExpanded && studentHeight > 320)
-        ) {
-            density = 'balanced';
-        }
-        if (
-            viewportHeight < 840
-            || leftHeight < 820
-            || timerHeight < 480
-            || (isStudentPanelExpanded && studentHeight > 360)
-        ) {
-            density = 'compact';
-        }
-        if (!isDisplayFullscreen && density === 'hero') {
-            density = 'balanced';
+        let density = isDisplayFullscreen ? 'hero' : 'presentation';
+        if (!isDisplayFullscreen) {
+            const shouldUseCompact = (
+                viewportHeight < 720
+                || timerHeight < 430
+                || (isStudentPanelExpanded && effectiveAvailableHeight < 760)
+            );
+            const shouldUseBalanced = shouldUseCompact || (
+                viewportHeight < 820
+                || timerHeight < 520
+                || (isStudentPanelExpanded && effectiveAvailableHeight < 900)
+            );
+            density = shouldUseCompact ? 'compact' : (shouldUseBalanced ? 'balanced' : 'presentation');
         }
 
         app.setAttribute('data-display-mode', displayMode);
@@ -1036,7 +1035,7 @@ class DutyTickerManager {
         const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         const studentCount = this.students.length;
         const shouldUseComfortFit = isDesktop && studentCount > 0 && studentCount <= 36;
-        const layoutDensity = app ? String(app.getAttribute('data-layout-density') || 'hero') : 'hero';
+        const layoutDensity = app ? String(app.getAttribute('data-layout-density') || 'presentation') : 'presentation';
         const gridWrapHeight = gridWrap ? gridWrap.getBoundingClientRect().height : 0;
         let gridColumns = '5';
 

@@ -56,7 +56,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="missionQuickApplySelectedBtn"')
         self.assertContains(response, 'id="missionQuickDeleteBtn"')
         self.assertContains(response, 'id="missionQuickDeleteAllBtn"')
-        self.assertContains(response, 'data-layout-density="balanced"')
+        self.assertContains(response, 'data-layout-density="presentation"')
         self.assertContains(response, 'data-display-mode="windowed"')
         self.assertContains(response, 'class="dt-student-card-head')
         self.assertContains(response, 'id="randomDrawName"')
@@ -155,4 +155,3 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('grid.dataset.gridColumns', script)
         self.assertIn('showAllMorningSlots = nowMinutes >= (8 * 60) && nowMinutes <= ((8 * 60) + 50);', script)
         self.assertIn('다음 교시 10분 전부터 표시됩니다', script)
-
