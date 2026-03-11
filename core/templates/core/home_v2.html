@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', function(e) {
-            if (e.target.closest('.product-info-trigger')) return;
             launchCard(this);
         });
         card.addEventListener('keydown', (e) => {
@@ -43,15 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 launchCard(card);
             }
-        });
-    });
-
-    document.querySelectorAll('.product-info-trigger').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = this.dataset.productId || this.closest('[data-product-id]')?.dataset.productId;
-            if (id && window.openModal) window.openModal(id);
         });
     });
 
