@@ -178,11 +178,8 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
 
 def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
-    if raw_version in {'v1', 'v2'}:
+    if raw_version in {'v1', 'v2', 'v3'}:
         return raw_version
-    if raw_version == 'v3':
-        # Keep the legacy template on disk, but route the main home back to v2.
-        return 'v2'
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
 
@@ -1793,26 +1790,6 @@ def _build_home_calendar_hub_context(request):
     }
 
 
-def _build_home_v2_compact_top_zone(today_context, favorite_items, calendar_hub):
-    return {
-        "today_items": list(today_context.get("today_items", [])[:3]),
-        "today_date_text": today_context.get("today_date_text", ""),
-        "today_empty_message": "오늘 바로 처리할 항목이 없으면 아래 서비스에서 필요한 도구를 고르면 됩니다.",
-        "favorite_items": list(favorite_items[:4]),
-        "favorites_empty_message": "별표한 서비스가 여기에 모입니다.",
-        "calendar_hub": {
-            "title": calendar_hub.get("title", CALENDAR_HUB_PUBLIC_NAME),
-            "today_count": calendar_hub.get("today_count", 0),
-            "week_count": calendar_hub.get("week_count", 0),
-            "upcoming_items": list(calendar_hub.get("upcoming_items", [])[:2]),
-            "main_url": calendar_hub.get("main_url", ""),
-            "create_api_url": calendar_hub.get("create_api_url", ""),
-            "primary_cta_label": calendar_hub.get("primary_cta_label", f"{CALENDAR_HUB_PUBLIC_NAME} 열기"),
-            "secondary_cta_label": calendar_hub.get("secondary_cta_label", "일정 추가"),
-        },
-    }
-
-
 def _resolve_catalog_scenario_key(product):
     if _is_sheetbook_cross_surface_hidden(product):
         return None
@@ -2140,11 +2117,8 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
-        calendar_hub = _build_home_calendar_hub_context(request)
-        compact_top_zone = _build_home_v2_compact_top_zone(today_context, favorite_items, calendar_hub)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
-        sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
@@ -2162,14 +2136,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
             'home_calendar_summary': home_calendar_summary,
-            'compact_top_zone': compact_top_zone,
-            'calendar_hub': calendar_hub,
-            'community_summary': {
-                'title': '실시간 소통',
-                'description': '필요한 공지와 최근 소통만 짧게 보고, 전체 소통은 별도 화면에서 이어서 확인합니다.',
-                'posts': sns_summary_posts,
-                'full_url': reverse('community_feed'),
-            },
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
