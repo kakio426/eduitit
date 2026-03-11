@@ -12,6 +12,7 @@ urlpatterns = [
     path("<uuid:uuid>/edit/", views.session_edit, name="edit"),
     path("<uuid:uuid>/delete/", views.session_delete, name="delete"),
     path("<uuid:uuid>/print/", views.print_view, name="print"),
+    path("<uuid:uuid>/signature-sort-mode/", views.update_signature_sort_mode, name="update_signature_sort_mode"),
     path("<uuid:uuid>/toggle/", views.toggle_active, name="toggle"),
     path("sign/<uuid:uuid>/", views.sign, name="sign"),
     path("signature/<int:pk>/delete/", views.delete_signature, name="delete_signature"),
@@ -27,11 +28,21 @@ urlpatterns = [
     path("<uuid:uuid>/participants/", views.get_expected_participants, name="get_participants"),
     path("<uuid:uuid>/participants/<int:participant_id>/delete/", views.delete_expected_participant, name="delete_participant"),
     path(
+        "<uuid:uuid>/participants/<int:participant_id>/manual-order/",
+        views.update_expected_participant_manual_order,
+        name="update_participant_manual_order",
+    ),
+    path(
         "<uuid:uuid>/participants/<int:participant_id>/correct-affiliation/",
         views.correct_expected_participant_affiliation,
         name="correct_participant_affiliation",
     ),
     path("<uuid:uuid>/signatures/<int:signature_id>/match/", views.match_signature, name="match_signature"),
+    path(
+        "<uuid:uuid>/signatures/<int:signature_id>/manual-order/",
+        views.update_signature_manual_order,
+        name="update_signature_manual_order",
+    ),
     path(
         "<uuid:uuid>/signatures/<int:signature_id>/correct-affiliation/",
         views.correct_signature_affiliation,

@@ -40,6 +40,7 @@ SHEETBOOK_CALENDAR_ACTION_SOURCE = "sheetbook_action_calendar"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 SHEETBOOK_ENTRY_SOURCE_SESSION_KEY = "sheetbook_entry_source_map"
 SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
+SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
 CONSENT_REVIEW_PREVIEW_LIMIT = 10
 CONSENT_REVIEW_ISSUE_SAMPLE_LIMIT = 5
 CONSENT_REVIEW_ISSUE_LINE_LIMIT = 20
@@ -358,7 +359,7 @@ def _seed_onboarding_sample_sheetbook(sheetbook, actor):
 def _build_unique_sheetbook_title(owner, base_title):
     normalized = str(base_title or "").strip()[:200]
     if not normalized:
-        normalized = f"{timezone.localdate().year} 교무수첩"
+        normalized = f"{timezone.localdate().year} {SHEETBOOK_PUBLIC_NAME}"
     if not Sheetbook.objects.filter(owner=owner, title=normalized).exists():
         return normalized
     for index in range(2, 1000):
@@ -2700,7 +2701,7 @@ def _execute_collect_creation(*, user, sheetbook, tab, rows, columns, cell_map, 
 
     preview_lines = _build_selection_sample(rows, columns, cell_map, max_rows=5)
     range_label = _build_sheet_range_label(bounds)
-    summary_line = f"교무수첩 범위 {range_label}에서 생성됨"
+    summary_line = f"{SHEETBOOK_PUBLIC_NAME} 범위 {range_label}에서 생성됨"
     description_lines = [
         summary_line,
         f"- 수첩: {sheetbook.title}",
@@ -2735,7 +2736,7 @@ def _execute_collect_creation(*, user, sheetbook, tab, rows, columns, cell_map, 
 
 
 def _build_unique_handoff_group_name(user, base_name):
-    normalized = (base_name or "").strip()[:120] or "교무수첩 명단"
+    normalized = (base_name or "").strip()[:120] or f"{SHEETBOOK_PUBLIC_NAME} 명단"
     if not HandoffRosterGroup.objects.filter(owner=user, name=normalized).exists():
         return normalized
     for idx in range(2, 200):
@@ -2782,7 +2783,7 @@ def _execute_handoff_creation(*, user, sheetbook, tab, rows, columns, cell_map, 
     group = HandoffRosterGroup.objects.create(
         owner=user,
         name=group_name,
-        description=f"교무수첩 {sheetbook.title} / {tab.name} ({range_label})",
+        description=f"{SHEETBOOK_PUBLIC_NAME} {sheetbook.title} / {tab.name} ({range_label})",
     )
 
     members = [
@@ -2802,7 +2803,7 @@ def _execute_handoff_creation(*, user, sheetbook, tab, rows, columns, cell_map, 
         roster_group=group,
         roster_group_name=group.name,
         title=f"{tab.name} 배부 체크",
-        note=f"교무수첩 {sheetbook.title}의 {range_label} 칸에서 자동 생성",
+        note=f"{SHEETBOOK_PUBLIC_NAME} {sheetbook.title}의 {range_label} 칸에서 자동 생성",
     )
 
     created_members = list(group.members.filter(is_active=True).order_by("sort_order", "id"))
@@ -3012,7 +3013,7 @@ def quick_create_sheetbook(request):
     _ensure_sheetbook_enabled(request.user)
     entry_source = _sanitize_entry_source(request.POST.get("source") or "workspace_home_create")
     current_year = timezone.localdate().year
-    title = _build_unique_sheetbook_title(request.user, f"{current_year} 교무수첩")
+    title = _build_unique_sheetbook_title(request.user, f"{current_year} {SHEETBOOK_PUBLIC_NAME}")
 
     with transaction.atomic():
         sheetbook = Sheetbook.objects.create(
@@ -3031,7 +3032,7 @@ def quick_create_sheetbook(request):
         entry_source=entry_source,
         quick_flow="workspace_quick_create",
     )
-    messages.success(request, "새 교무수첩을 만들었어요. 바로 입력을 시작해 보세요.")
+    messages.success(request, f"새 {SHEETBOOK_PUBLIC_NAME}를 만들었어요. 바로 입력을 시작해 보세요.")
     detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.pk})
     return redirect(f"{detail_url}?source={entry_source}")
 
@@ -3049,7 +3050,7 @@ def quick_copy_sheetbook(request):
         .first()
     )
     if not source_sheetbook:
-        messages.info(request, "먼저 교무수첩을 만든 뒤 이어쓰기를 사용할 수 있어요.")
+        messages.info(request, f"먼저 {SHEETBOOK_PUBLIC_NAME}를 만든 뒤 이어쓰기를 사용할 수 있어요.")
         index_url = reverse("sheetbook:index")
         return redirect(f"{index_url}?source={entry_source}")
 
@@ -3098,9 +3099,9 @@ def quick_copy_sheetbook(request):
         cloned_cell_count=cloned_cell_count,
     )
     if include_rows:
-        messages.success(request, f"'{source_sheetbook.title}' 내용을 포함해 새 교무수첩을 만들었어요.")
+        messages.success(request, f"'{source_sheetbook.title}' 내용을 포함해 새 {SHEETBOOK_PUBLIC_NAME}를 만들었어요.")
     else:
-        messages.success(request, f"'{source_sheetbook.title}' 구성을 복제해 새 교무수첩을 만들었어요.")
+        messages.success(request, f"'{source_sheetbook.title}' 구성을 복제해 새 {SHEETBOOK_PUBLIC_NAME}를 만들었어요.")
     detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.pk})
     return redirect(f"{detail_url}?source={entry_source}")
 
@@ -3347,7 +3348,7 @@ def create_sheetbook(request):
         has_academic_year=bool(sheetbook.academic_year),
         entry_source=entry_source,
     )
-    messages.success(request, "교무수첩이 생성되었습니다.")
+    messages.success(request, f"{SHEETBOOK_PUBLIC_NAME}가 생성되었습니다.")
     return redirect("sheetbook:detail", pk=sheetbook.pk)
 
 
@@ -3615,7 +3616,7 @@ def consent_seed_review(request, pk, tab_pk):
             sheetbook_id=tab.sheetbook_id,
             tab_id=tab.id,
         )
-        messages.error(request, "동의서 준비 정보를 찾지 못했어요. 교무수첩에서 다시 실행해 주세요.")
+        messages.error(request, f"동의서 준비 정보를 찾지 못했어요. {SHEETBOOK_PUBLIC_NAME}에서 다시 실행해 주세요.")
         return _redirect_sheetbook_tab_detail(tab.sheetbook_id, tab.id)
 
     seed_data = seed.get("data", {}) if isinstance(seed.get("data"), dict) else {}
@@ -5946,12 +5947,12 @@ def metrics_dashboard(request):
     )
     event_label_map = {
         "workspace_home_opened": "로그인 홈 열기",
-        "sheetbook_index_opened": "교무수첩 목록 열기",
-        "sheetbook_created": "새 교무수첩 만들기",
-        "sheetbook_detail_opened": "교무수첩 상세 열기",
-        "sheetbook_archived": "교무수첩 아카이브",
-        "sheetbook_unarchived": "교무수첩 아카이브 해제",
-        "sheetbook_archive_bulk_updated": "교무수첩 다건 아카이브/복구",
+        "sheetbook_index_opened": f"{SHEETBOOK_PUBLIC_NAME} 목록 열기",
+        "sheetbook_created": f"새 {SHEETBOOK_PUBLIC_NAME} 만들기",
+        "sheetbook_detail_opened": f"{SHEETBOOK_PUBLIC_NAME} 상세 열기",
+        "sheetbook_archived": f"{SHEETBOOK_PUBLIC_NAME} 아카이브",
+        "sheetbook_unarchived": f"{SHEETBOOK_PUBLIC_NAME} 아카이브 해제",
+        "sheetbook_archive_bulk_updated": f"{SHEETBOOK_PUBLIC_NAME} 다건 아카이브/복구",
         "sheetbook_mobile_read_mode_opened": "휴대폰 간단 편집 진입",
         "sheetbook_mobile_read_mode_blocked": "휴대폰 제한 편집에서 후속 작업 차단",
         "sheetbook_archive_read_mode_opened": "아카이브 읽기 모드 진입",

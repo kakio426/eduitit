@@ -18,7 +18,7 @@ class SheetbookCreateForm(forms.ModelForm):
             "title": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
-                    "placeholder": "예: 2026 2-3반 교무수첩",
+                    "placeholder": "예: 2026 2-3반 학급 기록 보드",
                     "maxlength": "200",
                 }
             ),

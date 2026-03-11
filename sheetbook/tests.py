@@ -198,14 +198,14 @@ class SheetbookFlagTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("sheetbook:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩")
+        self.assertContains(response, "학급 기록 보드")
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_sheetbook_direct_access_stays_available_when_discovery_hidden(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("sheetbook:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩")
+        self.assertContains(response, "학급 기록 보드")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_requires_login(self):
@@ -217,7 +217,7 @@ class SheetbookFlagTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("sheetbook:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩")
+        self.assertContains(response, "학급 기록 보드")
 
     @override_settings(SHEETBOOK_ENABLED=False, SHEETBOOK_BETA_EMAILS="sheetbook_t1@example.com")
     def test_sheetbook_allows_beta_user_by_email_when_flag_disabled(self):
@@ -3817,7 +3817,7 @@ class SheetbookMetricTests(TestCase):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse("sheetbook:metrics_dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩 사용 지표")
+        self.assertContains(response, "학급 기록 보드 사용 지표")
         self.assertGreaterEqual(response.context["summary"]["event_total"], 1)
 
     @override_settings(SHEETBOOK_ENABLED=True)
@@ -3908,7 +3908,7 @@ class SheetbookMetricTests(TestCase):
         self.assertFalse(summary["workspace_create_to_action_needs_attention"])
         self.assertContains(response, "다건 처리 1회 (보관 3건 / 복구 0건)")
         self.assertContains(response, "다건 제외 0건 · 동일 상태 1건")
-        self.assertContains(response, "교무수첩 다건 아카이브/복구")
+        self.assertContains(response, "학급 기록 보드 다건 아카이브/복구")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_metrics_dashboard_flags_attention_when_funnel_below_threshold(self):

@@ -6,20 +6,21 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 class Command(BaseCommand):
     help = "Ensure sheetbook product and manual exist in database"
 
-    PRODUCT_TITLE = "교무수첩"
+    PRODUCT_TITLE = "학급 기록 보드"
     LAUNCH_ROUTE = "sheetbook:index"
+    LEGACY_TITLES = ("교무수첩", "학급 기록 보드")
 
     def handle(self, *args, **options):
         product = Product.objects.filter(launch_route_name=self.LAUNCH_ROUTE).first()
         if not product:
-            product = Product.objects.filter(title=self.PRODUCT_TITLE).first()
+            product = Product.objects.filter(title__in=self.LEGACY_TITLES).first()
 
         if product is None:
             product = Product.objects.create(
                 title=self.PRODUCT_TITLE,
                 lead_text="복사·붙여넣기 중심으로 학급 운영 기록을 한 곳에 정리하세요.",
                 description=(
-                    "교무수첩은 일정, 명부, 메모를 한 화면에서 관리하고 필요할 때 "
+                    "학급 기록 보드는 일정, 명부, 메모를 한 화면에서 관리하고 필요할 때 "
                     "간편 수합·동의서·안내문으로 바로 연결해 주는 교사 작업공간입니다."
                 ),
                 price=0.00,
@@ -101,14 +102,14 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "교무수첩 사용 가이드",
+                "title": "학급 기록 보드 사용 가이드",
                 "description": "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다.",
                 "is_published": True,
             },
         )
         manual_updates = []
-        if manual.title != "교무수첩 사용 가이드":
-            manual.title = "교무수첩 사용 가이드"
+        if manual.title != "학급 기록 보드 사용 가이드":
+            manual.title = "학급 기록 보드 사용 가이드"
             manual_updates.append("title")
         if manual.description != "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다.":
             manual.description = "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다."
@@ -122,7 +123,7 @@ class Command(BaseCommand):
         section_specs = [
             (
                 "시작하기",
-                "교무수첩에서 새 수첩을 만들고 기본 탭(달력/일정/학생명부/메모)을 바로 사용해 보세요.",
+                "학급 기록 보드에서 새 보드를 만들고 기본 탭(달력/일정/학생명부/메모)을 바로 사용해 보세요.",
                 1,
             ),
             (

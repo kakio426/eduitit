@@ -4,7 +4,8 @@ const { app, BrowserWindow, dialog, screen } = require("electron");
 const PROTOCOL = "eduitit-launcher";
 const MIN_VIDEO_WIDTH = 640;
 const MIN_DASHBOARD_WIDTH = 560;
-const DEFAULT_LEFT_RATIO = 0.54;
+const DEFAULT_LEFT_RATIO = 0.62;
+const TV_MODE_LEFT_RATIO = 0.5;
 const SPLIT_GAP = 0;
 const ALWAYS_ON_TOP_LEVEL = "screen-saver";
 const WATCHDOG_INTERVAL_MS = 1400;
@@ -248,6 +249,10 @@ function executeLauncherAction(action) {
     resetSplitRatio();
     return true;
   }
+  if (action.name === "tv_mode") {
+    enableTvModeSplit();
+    return true;
+  }
   if (action.name === "move_display") {
     cycleSplitDisplay();
     return true;
@@ -336,9 +341,6 @@ function getSplitArea(display) {
 }
 
 function pickLeftRatio(totalWidth) {
-  if (totalWidth <= 1366) return 0.5;
-  if (totalWidth <= 1600) return 0.52;
-  if (totalWidth <= 1920) return 0.53;
   return DEFAULT_LEFT_RATIO;
 }
 
@@ -366,6 +368,11 @@ function resetSplitRatio() {
   relayoutSplitWindows();
 }
 
+function enableTvModeSplit() {
+  splitRatioOverride = clampSplitRatio(TV_MODE_LEFT_RATIO);
+  relayoutSplitWindows();
+}
+
 function createInfoWindow() {
   if (infoWindow && !infoWindow.isDestroyed()) {
     infoWindow.focus();
@@ -389,6 +396,7 @@ function createInfoWindow() {
     "<h2 style='margin-top:0;'>Eduitit Teacher Launcher</h2>",
     "<p style='line-height:1.6;'>브라우저에서 <strong>런처로 수업 시작</strong> 버튼을 누르면",
     " 왼쪽(유튜브) + 오른쪽(대시보드) 분할 창이 자동으로 열립니다.</p>",
+    "<p style='line-height:1.6;color:#94a3b8;'>기본은 영상이 더 넓은 62:38으로 시작하고, 수업 화면의 <strong>TV 모드</strong> 버튼으로 50:50으로 바꿀 수 있습니다.</p>",
     "<p style='line-height:1.6;color:#94a3b8;'>이 창은 대기 화면입니다. 수업 시작 버튼으로 런처를 호출해 주세요.</p>",
     "</body></html>",
   ].join("");

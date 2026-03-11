@@ -1,10 +1,20 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import Max
 
 
 class TrainingSession(models.Model):
     """연수 정보 모델"""
+    SIGNATURE_SORT_SUBMITTED = "submitted"
+    SIGNATURE_SORT_AFFILIATION = "affiliation"
+    SIGNATURE_SORT_MANUAL = "manual"
+    SIGNATURE_SORT_CHOICES = [
+        (SIGNATURE_SORT_SUBMITTED, "사인한 순서"),
+        (SIGNATURE_SORT_AFFILIATION, "학년반/이름 정렬"),
+        (SIGNATURE_SORT_MANUAL, "직접 순서 정하기"),
+    ]
+
     title = models.CharField('연수 제목', max_length=200)
     print_title = models.CharField(
         '인쇄 제목',
@@ -48,6 +58,20 @@ class TrainingSession(models.Model):
         related_name="signature_sessions",
         verbose_name="공유 명단",
         help_text="배부 체크 명단과 연결해 참석자 명단으로 재사용",
+    )
+    signature_sort_mode = models.CharField(
+        "서명 정렬 방식",
+        max_length=20,
+        choices=SIGNATURE_SORT_CHOICES,
+        default=SIGNATURE_SORT_AFFILIATION,
+        help_text="명단 없이 받은 서명을 어떤 순서로 보여주고 출력할지 정합니다.",
+    )
+    participant_sort_mode = models.CharField(
+        "명단 정렬 방식",
+        max_length=20,
+        choices=SIGNATURE_SORT_CHOICES,
+        default=SIGNATURE_SORT_SUBMITTED,
+        help_text="명단이 있는 경우 출석부에 어떤 순서로 보여줄지 정합니다.",
     )
 
     class Meta:
@@ -95,6 +119,7 @@ class Signature(models.Model):
     submission_mode = models.CharField('제출 방식', max_length=20, choices=SUBMISSION_MODE_CHOICES, default=SUBMISSION_MODE_OPEN)
     ip_address = models.GenericIPAddressField('제출 IP', blank=True, null=True)
     user_agent = models.TextField('제출 브라우저', blank=True)
+    manual_sort_order = models.PositiveIntegerField('수동 정렬 순서', default=0, db_index=True)
 
     created_at = models.DateTimeField('서명 일시', auto_now_add=True)
 
@@ -105,6 +130,18 @@ class Signature(models.Model):
 
     def __str__(self):
         return f"{self.participant_name} - {self.training_session.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.manual_sort_order and self.training_session_id:
+            current_max = (
+                Signature.objects.filter(training_session_id=self.training_session_id)
+                .exclude(pk=self.pk)
+                .aggregate(max_order=Max("manual_sort_order"))
+                .get("max_order")
+                or 0
+            )
+            self.manual_sort_order = current_max + 1
+        super().save(*args, **kwargs)
 
     @property
     def display_affiliation(self):
@@ -186,6 +223,7 @@ class ExpectedParticipant(models.Model):
         blank=True,
         help_text='예: 오타 수정 (박영이 → 박영희)'
     )
+    manual_sort_order = models.PositiveIntegerField('수동 정렬 순서', default=0, db_index=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -200,6 +238,18 @@ class ExpectedParticipant(models.Model):
         if display_affiliation:
             return f"{self.name} ({display_affiliation})"
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.manual_sort_order and self.training_session_id:
+            current_max = (
+                ExpectedParticipant.objects.filter(training_session_id=self.training_session_id)
+                .exclude(pk=self.pk)
+                .aggregate(max_order=Max("manual_sort_order"))
+                .get("max_order")
+                or 0
+            )
+            self.manual_sort_order = current_max + 1
+        super().save(*args, **kwargs)
     
     @property
     def has_signed(self):

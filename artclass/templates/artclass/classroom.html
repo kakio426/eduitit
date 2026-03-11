@@ -262,7 +262,7 @@
 {% endblock %}
 
 {% block content %}
-<main id="classroomMain" class="h-[100dvh] pt-16 overflow-hidden">
+<main id="classroomMain" class="h-[100dvh] pt-16 overflow-hidden flex flex-col">
     <!-- Top Minimal Bar -->
     <header id="classroomHeader"
         class="h-16 flex items-center justify-between px-6 glass-dark text-white z-50 fixed top-0 w-full">
@@ -313,11 +313,52 @@
         </div>
     </header>
 
+    <div id="launcherPromptBanner" class="hidden shrink-0 px-4 pt-4 pb-2 md:px-6">
+        <div
+            class="mx-auto max-w-6xl rounded-[1.75rem] border border-emerald-300/70 bg-gradient-to-r from-emerald-50 via-white to-lime-50 px-5 py-5 shadow-2xl">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
+                            <i class="fa-solid fa-rocket"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-black tracking-[0.2em] text-emerald-700 uppercase">Launcher Required</p>
+                            <h2 class="text-xl md:text-2xl font-heavy text-emerald-950">이 수업은 런처 실행이 필요합니다</h2>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-sm md:text-base font-semibold text-emerald-900/85 leading-relaxed">
+                        브라우저가 외부 앱 자동 실행을 막을 수 있습니다. 자동 실행이 안 되면 아래 초록 버튼만 눌러 주세요.
+                    </p>
+                    <p id="launcherPromptStatus" class="mt-2 text-sm font-bold text-emerald-800">
+                        자동 실행이 안 되면 아래 초록 버튼을 눌러 주세요.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 lg:justify-end">
+                    <button id="btnLauncherPromptLaunch"
+                        class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-heavy shadow-lg transition-all">
+                        런처로 수업 시작
+                    </button>
+                    <button id="btnLauncherPromptSplit"
+                        class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-sm font-heavy border border-slate-300 transition-all">
+                        브라우저만으로 계속
+                    </button>
+                    {% if launcher_download_url %}
+                    <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                        class="px-5 py-3 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-sm font-heavy transition-all">
+                        런처 설치
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Split Workspace -->
-    <div id="classroomWorkspace" class="h-full min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
+    <div id="classroomWorkspace" class="flex-1 min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
 
         <!-- Left: YouTube Theater -->
-        <div id="videoPanel" class="lg:w-3/5 xl:w-[65%] bg-slate-950 relative flex min-h-0 flex-col">
+        <div id="videoPanel" class="lg:w-[62%] xl:w-[65%] bg-slate-950 relative flex min-h-0 flex-col">
             <div id="videoStage" class="relative flex-1 min-h-0 group flex items-center justify-center bg-black">
                 <div id="player" class="w-full h-full"></div>
                 <div id="externalVideoOverlay" class="absolute inset-0 hidden items-center justify-center bg-black/70 p-6 z-10">
@@ -393,7 +434,7 @@
         </div>
 
         <!-- Right: Activity Status Panel -->
-        <div id="activityPanel" class="lg:w-2/5 xl:w-[35%] bg-[#E0E5EC] flex flex-col min-h-0 shadow-2xl relative z-10">
+        <div id="activityPanel" class="lg:w-[38%] xl:w-[35%] bg-[#E0E5EC] flex flex-col min-h-0 shadow-2xl relative z-10">
 
             <!-- Current Activity Feature -->
             <div class="flex-grow flex flex-col min-h-0 overflow-hidden">
@@ -529,20 +570,24 @@
                 class="hidden mx-3 mb-3 rounded-xl bg-gray-900/85 text-white p-2 shadow-2xl border border-white/15">
                 <button id="btnToggleTvGuide"
                     class="w-full flex items-center justify-between gap-2 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-2 transition-all">
-                    <span class="text-[10px] uppercase tracking-widest font-black text-emerald-200">TV Class Mode</span>
+                    <span class="text-[10px] uppercase tracking-widest font-black text-emerald-200">TV 수업 도구</span>
                     <span id="tvGuideToggleIcon" class="text-xs font-black text-white/80">+</span>
                 </button>
                 <div id="tvTeacherGuideBody" class="hidden mt-2 px-1 pb-1">
-                    <p class="text-[11px] font-semibold text-white/90">창 잠금 ON · 자동 복구 ON · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
-                    <p class="mt-1 text-[10px] font-semibold text-white/80">비율: <span class="font-black">Ctrl+Alt+→</span> 확대 · <span class="font-black">Ctrl+Alt+←</span> 축소 · <span class="font-black">Ctrl+Alt+0</span> 기본</p>
-                    <div class="mt-2 grid grid-cols-2 gap-1.5">
-                        <a href="eduitit-launcher://action?name=ratio_up"
+                    <p class="text-[11px] font-semibold text-white/90">기본은 영상 넓게 · TV 모드는 설명 더 크게 · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
+                    <p class="mt-1 text-[10px] font-semibold text-white/80">세부 조정: <span class="font-black">Ctrl+Alt+→</span> 영상 더 크게 · <span class="font-black">Ctrl+Alt+←</span> 줄이기 · <span class="font-black">Ctrl+Alt+0</span> 기본</p>
+                    <div class="mt-2 grid grid-cols-3 gap-1.5">
+                        <a href="eduitit-launcher://action?name=tv_mode"
                             class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
-                            영상 더 크게
+                            TV 모드
                         </a>
                         <a href="eduitit-launcher://action?name=ratio_reset"
                             class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
-                            비율 원복
+                            기본 비율
+                        </a>
+                        <a href="eduitit-launcher://action?name=ratio_up"
+                            class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">
+                            영상 더 크게
                         </a>
                         <a href="eduitit-launcher://action?name=move_display"
                             class="px-2 py-1 rounded-lg bg-indigo-400/30 hover:bg-indigo-400/45 text-[10px] font-black text-center transition-all">
@@ -617,6 +662,10 @@
     const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
     const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
     const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
+    const launcherPromptBannerEl = document.getElementById('launcherPromptBanner');
+    const launcherPromptStatusEl = document.getElementById('launcherPromptStatus');
+    const btnLauncherPromptLaunchEl = document.getElementById('btnLauncherPromptLaunch');
+    const btnLauncherPromptSplitEl = document.getElementById('btnLauncherPromptSplit');
     const tvTeacherGuideEl = document.getElementById('tvTeacherGuide');
     const btnToggleTvGuideEl = document.getElementById('btnToggleTvGuide');
     const tvTeacherGuideBodyEl = document.getElementById('tvTeacherGuideBody');
@@ -654,8 +703,12 @@
         .toLowerCase()
         .replace(':', 'x');
     const urlHintVideoProfile = /\/shorts\//i.test(VIDEO_URL) ? '9x16' : '16x9';
+    const BROWSER_SPLIT_LEFT_RATIO = 0.62;
+    const BROWSER_SPLIT_MIN_VIDEO_WIDTH = 540;
+    const BROWSER_SPLIT_MIN_GUIDE_WIDTH = 360;
     let stepImageRequestToken = 0;
     let responsiveTokenTimer = null;
+    let launcherPromptDismissed = false;
 
     function setExternalWindowStatus(status) {
         if (!externalWindowStatusBadgeEl) return;
@@ -687,6 +740,40 @@
         tvTeacherGuideBodyEl.classList.toggle('hidden', !next);
         tvGuideToggleIconEl.textContent = next ? '−' : '+';
         btnToggleTvGuideEl.setAttribute('aria-expanded', next ? 'true' : 'false');
+    }
+
+    function isLauncherPromptEligible(mode = playbackMode) {
+        return mode === 'external_window' && !IS_DASHBOARD_ONLY && RUNTIME_MODE !== 'launcher';
+    }
+
+    function setLauncherPromptStatus(message, tone = 'info') {
+        if (!launcherPromptStatusEl) return;
+        launcherPromptStatusEl.textContent = message || '';
+        launcherPromptStatusEl.classList.remove('hidden', 'text-emerald-800', 'text-amber-900', 'text-rose-900');
+        if (!message) {
+            launcherPromptStatusEl.classList.add('hidden');
+            return;
+        }
+        if (tone === 'error') {
+            launcherPromptStatusEl.classList.add('text-rose-900');
+            return;
+        }
+        if (tone === 'warn') {
+            launcherPromptStatusEl.classList.add('text-amber-900');
+            return;
+        }
+        launcherPromptStatusEl.classList.add('text-emerald-800');
+    }
+
+    function syncLauncherPrompt(mode = playbackMode) {
+        const shouldShowPrompt = isLauncherPromptEligible(mode) && !launcherPromptDismissed;
+        const shouldShowHeaderLaunch = mode === 'external_window' && !shouldShowPrompt && !IS_DASHBOARD_ONLY && RUNTIME_MODE !== 'launcher';
+        if (launcherPromptBannerEl) {
+            launcherPromptBannerEl.classList.toggle('hidden', !shouldShowPrompt);
+        }
+        if (btnLaunchRuntimeEl) {
+            btnLaunchRuntimeEl.classList.toggle('hidden', !shouldShowHeaderLaunch);
+        }
     }
 
     function resolveVideoProfile() {
@@ -798,6 +885,7 @@
         document.body.classList.add('dashboard-reading-mode');
         if (btnLaunchRuntimeEl) btnLaunchRuntimeEl.classList.add('hidden');
         if (btnStartSplitModeEl) btnStartSplitModeEl.classList.add('hidden');
+        if (launcherPromptBannerEl) launcherPromptBannerEl.classList.add('hidden');
         if (externalModeHeaderActionsEl) {
             externalModeHeaderActionsEl.classList.add('hidden');
             externalModeHeaderActionsEl.classList.remove('flex');
@@ -836,12 +924,13 @@
 
     function applyPlaybackLayout(mode) {
         const isExternalWindowMode = mode === 'external_window';
+        const showLauncherPrompt = isLauncherPromptEligible(mode) && !launcherPromptDismissed;
         if (videoPanelEl) {
             videoPanelEl.classList.toggle('hidden', isExternalWindowMode);
         }
         if (activityPanelEl) {
             activityPanelEl.classList.toggle('w-full', isExternalWindowMode);
-            activityPanelEl.classList.toggle('lg:w-2/5', !isExternalWindowMode);
+            activityPanelEl.classList.toggle('lg:w-[38%]', !isExternalWindowMode);
             activityPanelEl.classList.toggle('xl:w-[35%]', !isExternalWindowMode);
             const shouldFillMainAxis = isExternalWindowMode || IS_DASHBOARD_ONLY;
             activityPanelEl.classList.toggle('flex-1', shouldFillMainAxis);
@@ -854,12 +943,12 @@
             btnStartSplitModeEl.classList.toggle('hidden', isExternalWindowMode || IS_DASHBOARD_ONLY);
         }
         if (externalModeHeaderActionsEl) {
-            const showExternalHeaderActions = isExternalWindowMode && !IS_DASHBOARD_ONLY;
+            const showExternalHeaderActions = isExternalWindowMode && !IS_DASHBOARD_ONLY && !showLauncherPrompt;
             externalModeHeaderActionsEl.classList.toggle('hidden', !showExternalHeaderActions);
             externalModeHeaderActionsEl.classList.toggle('flex', showExternalHeaderActions);
         }
         if (externalWindowStatusBadgeEl) {
-            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode || IS_DASHBOARD_ONLY);
+            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode || IS_DASHBOARD_ONLY || showLauncherPrompt);
         }
         if (videoStepMetaDockEl && (isExternalWindowMode || IS_DASHBOARD_ONLY)) {
             videoStepMetaDockEl.classList.add('hidden');
@@ -867,6 +956,7 @@
         if (!isExternalWindowMode) {
             setExternalOverlay(false);
         }
+        syncLauncherPrompt(mode);
         const activeStep = getCurrentStepData();
         if (activeStep && stepTextContainerEl) {
             const parsed = parseStepText(activeStep.text || '');
@@ -879,10 +969,16 @@
     }
 
     function setLaunchButtonBusy(isBusy) {
-        if (!btnLaunchRuntimeEl) return;
-        btnLaunchRuntimeEl.disabled = isBusy;
-        btnLaunchRuntimeEl.classList.toggle('opacity-60', isBusy);
-        btnLaunchRuntimeEl.classList.toggle('cursor-wait', isBusy);
+        if (btnLaunchRuntimeEl) {
+            btnLaunchRuntimeEl.disabled = isBusy;
+            btnLaunchRuntimeEl.classList.toggle('opacity-60', isBusy);
+            btnLaunchRuntimeEl.classList.toggle('cursor-wait', isBusy);
+        }
+        if (btnLauncherPromptLaunchEl) {
+            btnLauncherPromptLaunchEl.disabled = isBusy;
+            btnLauncherPromptLaunchEl.classList.toggle('opacity-60', isBusy);
+            btnLauncherPromptLaunchEl.classList.toggle('cursor-wait', isBusy);
+        }
     }
 
     function isValidPlaybackMode(mode) {
@@ -936,8 +1032,12 @@
         externalVideoOverlayEl.classList.add('hidden');
     }
 
-    function notifyLauncherStatus(message) {
+    function notifyLauncherStatus(message, tone = 'info') {
         if (!message) return;
+        if (launcherPromptBannerEl && !launcherPromptBannerEl.classList.contains('hidden')) {
+            setLauncherPromptStatus(message, tone);
+            return;
+        }
         if (videoPanelEl && !videoPanelEl.classList.contains('hidden')) {
             setExternalOverlay(true, message);
             return;
@@ -989,6 +1089,9 @@
 
     async function startTeacherLauncher() {
         setLaunchButtonBusy(true);
+        if (isLauncherPromptEligible()) {
+            setLauncherPromptStatus('런처 실행을 시도하고 있습니다. 자동으로 안 열리면 아래 초록 버튼을 다시 눌러 주세요.', 'info');
+        }
         try {
             const response = await fetch(LAUNCHER_START_URL, {
                 method: 'POST',
@@ -1008,14 +1111,14 @@
 
             window.location.href = data.launcherUrl;
             setTimeout(() => {
-                notifyLauncherStatus('런처 실행을 시도했습니다. 실행되지 않으면 런처를 설치하거나 화면 분할 시작 버튼을 사용해 주세요.');
+                notifyLauncherStatus('런처 실행을 시도했습니다. 창이 바로 안 열리면 초록 버튼을 한 번 더 눌러 주세요.', 'success');
             }, 1200);
         } catch (err) {
             console.error('Launcher start failed:', err);
             const fallbackMessage = LAUNCHER_DOWNLOAD_URL
-                ? '런처 실행에 실패했습니다. 설치되지 않았다면 상단의 \"런처 설치\" 버튼으로 먼저 설치해 주세요.'
-                : '런처 실행에 실패했습니다. 잠시 후 다시 시도하거나 화면 분할 시작을 사용해 주세요.';
-            notifyLauncherStatus(fallbackMessage);
+                ? '런처 실행에 실패했습니다. 설치되지 않았다면 런처 설치 후 다시 눌러 주세요.'
+                : '런처 실행이 막혔습니다. 아래 버튼으로 다시 시도하거나 브라우저만으로 계속할 수 있습니다.';
+            notifyLauncherStatus(fallbackMessage, 'error');
         } finally {
             setLaunchButtonBusy(false);
         }
@@ -1070,12 +1173,11 @@
         let top;
 
         if (split) {
-            const screenWidth = window.screen.availWidth || window.innerWidth;
-            const screenHeight = window.screen.availHeight || window.innerHeight;
-            width = Math.max(540, Math.floor(screenWidth / 2));
-            height = Math.max(420, screenHeight);
-            left = typeof window.screen.availLeft === 'number' ? window.screen.availLeft : 0;
-            top = typeof window.screen.availTop === 'number' ? window.screen.availTop : 0;
+            const layout = computeBrowserSplitLayout();
+            width = Math.max(420, layout.leftWidth);
+            height = Math.max(420, layout.screenHeight);
+            left = layout.baseLeft;
+            top = layout.baseTop;
         } else {
             const screenWidth = window.screen.availWidth || window.innerWidth;
             const screenHeight = window.screen.availHeight || window.innerHeight;
@@ -1110,16 +1212,33 @@
         return true;
     }
 
-    function tryMoveCurrentWindowToRightHalf() {
+    function computeBrowserSplitLayout() {
         const screenWidth = window.screen.availWidth || window.innerWidth;
         const screenHeight = window.screen.availHeight || window.innerHeight;
-        const halfWidth = Math.max(540, Math.floor(screenWidth / 2));
         const baseLeft = typeof window.screen.availLeft === 'number' ? window.screen.availLeft : 0;
         const baseTop = typeof window.screen.availTop === 'number' ? window.screen.availTop : 0;
+        const totalWidth = Math.max(1, screenWidth);
+
+        let leftWidth = Math.max(BROWSER_SPLIT_MIN_VIDEO_WIDTH, Math.floor(totalWidth * BROWSER_SPLIT_LEFT_RATIO));
+        let rightWidth = totalWidth - leftWidth;
+        if (rightWidth < BROWSER_SPLIT_MIN_GUIDE_WIDTH) {
+            rightWidth = BROWSER_SPLIT_MIN_GUIDE_WIDTH;
+            leftWidth = totalWidth - rightWidth;
+        }
+        if (leftWidth < BROWSER_SPLIT_MIN_VIDEO_WIDTH) {
+            leftWidth = BROWSER_SPLIT_MIN_VIDEO_WIDTH;
+            rightWidth = totalWidth - leftWidth;
+        }
+
+        return { screenHeight, baseLeft, baseTop, leftWidth, rightWidth };
+    }
+
+    function tryMoveCurrentWindowToRightHalf() {
+        const { screenHeight, baseLeft, baseTop, leftWidth, rightWidth } = computeBrowserSplitLayout();
 
         try {
-            window.resizeTo(halfWidth, screenHeight);
-            window.moveTo(baseLeft + halfWidth, baseTop);
+            window.resizeTo(Math.max(320, rightWidth), screenHeight);
+            window.moveTo(baseLeft + Math.max(0, leftWidth), baseTop);
         } catch (_) {
             // Browser may block move/resize for non-popup windows.
         }
@@ -1698,9 +1817,35 @@
         return true;
     }
 
+    async function startBrowserSplitFallback() {
+        const opened = openExternalVideoWindow({ split: true });
+        if (!opened) {
+            notifyLauncherStatus('팝업이 차단되어 브라우저 분할을 시작하지 못했습니다. 팝업 허용 후 다시 눌러 주세요.', 'error');
+            return false;
+        }
+        launcherPromptDismissed = true;
+        tryMoveCurrentWindowToRightHalf();
+        switchToExternalMode('브라우저 분할 모드로 전환했습니다. 왼쪽은 유튜브, 오른쪽은 수업 안내로 사용하세요.', false);
+        await persistPlaybackMode('external_window');
+        syncLauncherPrompt('external_window');
+        return true;
+    }
+
     if (btnLaunchRuntimeEl) {
         btnLaunchRuntimeEl.onclick = async () => {
             await startTeacherLauncher();
+        };
+    }
+
+    if (btnLauncherPromptLaunchEl) {
+        btnLauncherPromptLaunchEl.onclick = async () => {
+            await startTeacherLauncher();
+        };
+    }
+
+    if (btnLauncherPromptSplitEl) {
+        btnLauncherPromptSplitEl.onclick = async () => {
+            await startBrowserSplitFallback();
         };
     }
 
@@ -1754,11 +1899,7 @@
 
     if (btnStartSplitModeEl) {
         btnStartSplitModeEl.onclick = async () => {
-            const opened = openExternalVideoWindow({ split: true });
-            if (!opened) return;
-            tryMoveCurrentWindowToRightHalf();
-            switchToExternalMode('화면 분할 모드로 전환했습니다. 왼쪽 창은 유튜브, 오른쪽 창은 수업 안내로 사용하세요.', false);
-            await persistPlaybackMode('external_window');
+            await startBrowserSplitFallback();
         };
     }
 
@@ -1826,6 +1967,7 @@
     syncStepEditorPermissionUi();
     syncStepRepeatUi();
     setTvTeacherGuideExpanded(false);
+    setLauncherPromptStatus('자동 실행이 안 되면 아래 초록 버튼을 눌러 주세요.', 'info');
     applyDashboardOnlyUi();
     setExternalWindowStatus('closed');
     applyPlaybackLayout(playbackMode);

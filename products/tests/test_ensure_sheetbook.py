@@ -8,13 +8,14 @@ class EnsureSheetbookCommandTests(TestCase):
     def test_command_creates_sheetbook_product_and_manual(self):
         call_command("ensure_sheetbook")
 
-        product = Product.objects.get(title="교무수첩")
+        product = Product.objects.get(title="학급 기록 보드")
         self.assertEqual(product.launch_route_name, "sheetbook:index")
         self.assertEqual(product.service_type, "classroom")
         self.assertGreaterEqual(product.features.count(), 3)
 
         manual = product.manual
         self.assertTrue(manual.is_published)
+        self.assertEqual(manual.title, "학급 기록 보드 사용 가이드")
         self.assertGreaterEqual(manual.sections.count(), 3)
 
     def test_command_preserves_admin_managed_category_fields(self):
@@ -35,6 +36,7 @@ class EnsureSheetbookCommandTests(TestCase):
         call_command("ensure_sheetbook")
 
         product.refresh_from_db()
+        self.assertEqual(product.title, "학급 기록 보드")
         self.assertEqual(product.launch_route_name, "sheetbook:index")
         self.assertTrue(product.is_active)
         self.assertEqual(product.service_type, "edutech")

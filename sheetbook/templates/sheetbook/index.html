@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}교무수첩 - Eduitit{% endblock %}
+{% block title %}학급 기록 보드 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen">
@@ -14,12 +14,12 @@
     {% endif %}
 
     <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">교무수첩</h1>
+      <h1 class="text-3xl font-bold text-gray-800">학급 기록 보드</h1>
       <p class="text-gray-600 mt-2">복사·붙여넣기로 기록하고, 필요할 때 기존 서비스와 바로 연결하세요.</p>
     </div>
 
     <section class="clay-card p-5 mb-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-3">새 교무수첩 만들기</h2>
+      <h2 class="text-xl font-bold text-gray-800 mb-3">새 학급 기록 보드 만들기</h2>
       <form method="post" action="{% url 'sheetbook:create' %}" class="grid grid-cols-1 md:grid-cols-3 gap-3">
         {% csrf_token %}
         <input type="hidden" name="source" value="{{ entry_source|default:'direct' }}">
@@ -43,7 +43,7 @@
     <section class="clay-card p-5">
       <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-3">
         <div>
-          <h2 class="text-xl font-bold text-gray-800">내 교무수첩</h2>
+          <h2 class="text-xl font-bold text-gray-800">내 학급 기록 보드</h2>
           <p class="text-xs text-gray-500 mt-1">제목으로 빠르게 찾을 수 있어요.</p>
           <div class="mt-2 inline-flex overflow-hidden rounded-lg border border-gray-200 bg-white text-xs font-semibold">
             <a
@@ -190,12 +190,12 @@
           </div>
         {% empty %}
           {% if search_query %}
-            <p class="text-gray-500">검색한 제목과 일치하는 교무수첩이 없어요.</p>
+            <p class="text-gray-500">검색한 제목과 일치하는 학급 기록 보드가 없어요.</p>
           {% elif status_filter == "archived" %}
-            <p class="text-gray-500">아카이브된 교무수첩이 아직 없어요.</p>
+            <p class="text-gray-500">아카이브된 학급 기록 보드가 아직 없어요.</p>
           {% else %}
             <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-              <p class="text-sm font-semibold text-indigo-900">아직 교무수첩이 없습니다.</p>
+              <p class="text-sm font-semibold text-indigo-900">아직 학급 기록 보드가 없습니다.</p>
               <p class="mt-1 text-xs text-indigo-800">
                 일정/학생명부/메모가 채워진 샘플 수첩으로 60초 안에 흐름을 먼저 확인해 보세요.
               </p>

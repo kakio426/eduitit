@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from products.models import Product, ProductFeature, ServiceManual, ManualSection
 
 TARGET_ROUTE = "classcalendar:main"
+TARGET_TITLE = "학급 캘린더"
 LEGACY_TITLES = ("교무수첩", "학급 캘린더")
 
 
@@ -16,7 +17,7 @@ class Command(BaseCommand):
             product = Product.objects.filter(title__in=LEGACY_TITLES).order_by("-is_active", "id").first()
         if not product:
             product = Product.objects.create(
-                title='교무수첩',
+                title=TARGET_TITLE,
                 lead_text='학급 일정을 한눈에 관리하세요!',
                 description='학급 운영 일정을 한곳에서 정리하고 공유하는 학급 전용 캘린더입니다.',
                 price=0.00,
@@ -36,6 +37,9 @@ class Command(BaseCommand):
         else:
             # 필수 라우팅/가시성만 보정하고, 마케팅 문구 및 순서는 관리자 수정을 보존한다.
             update_fields = []
+            if product.title in LEGACY_TITLES and product.title != TARGET_TITLE:
+                product.title = TARGET_TITLE
+                update_fields.append("title")
             if product.launch_route_name != TARGET_ROUTE:
                 product.launch_route_name = TARGET_ROUTE
                 update_fields.append("launch_route_name")
