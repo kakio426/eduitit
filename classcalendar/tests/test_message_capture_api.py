@@ -38,6 +38,7 @@ class MessageCaptureApiTests(TestCase):
         profile.nickname = "메시지교사"
         profile.role = "school"
         profile.save(update_fields=["nickname", "role"])
+        self.save_url = reverse("classcalendar:api_message_capture_save")
         self.parse_url = reverse("classcalendar:api_message_capture_parse")
         self.archive_url = reverse("classcalendar:api_message_capture_archive")
 
@@ -87,9 +88,13 @@ class MessageCaptureApiTests(TestCase):
         with_candidate=False,
         saved=False,
         candidate_title="테스트 일정",
+        archive_only=False,
     ):
         owner = user or self.user
         capture_index = CalendarMessageCapture.objects.count() + 1
+        parse_payload = {"summary_text": summary_text} if summary_text else {}
+        if archive_only:
+            parse_payload["archive_only"] = True
         capture = CalendarMessageCapture.objects.create(
             author=owner,
             raw_text=raw_text,
@@ -97,7 +102,7 @@ class MessageCaptureApiTests(TestCase):
             parse_status=parse_status,
             idempotency_key=f"archive-capture-{capture_index}",
             content_cache_key=f"archive-cache-{capture_index}",
-            parse_payload={"summary_text": summary_text} if summary_text else {},
+            parse_payload=parse_payload,
         )
         if with_candidate:
             start_time = timezone.now().replace(second=0, microsecond=0)
@@ -127,6 +132,56 @@ class MessageCaptureApiTests(TestCase):
                 commit_status=commit_status,
             )
         return capture
+
+    def test_save_stores_message_in_archive_without_parsing(self):
+        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
+        response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "다음 주 안내장을 먼저 보관합니다.",
+                "idempotency_key": "archive-save-only",
+                "files": upload,
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload.get("archive_status"), "unparsed")
+        self.assertEqual(payload.get("archive_status_label"), "미분석")
+        self.assertEqual(payload.get("candidates"), [])
+        self.assertEqual(len(payload.get("attachments") or []), 1)
+
+        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
+        self.assertTrue((capture.parse_payload or {}).get("archive_only"))
+        self.assertEqual(capture.attachments.count(), 1)
+        self.assertEqual(capture.candidates.count(), 0)
+
+    def test_parse_saved_reads_archive_message_and_preserves_attachments(self):
+        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
+        save_response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
+                "idempotency_key": "archive-parse-saved",
+                "files": upload,
+            },
+        )
+        self.assertEqual(save_response.status_code, 201)
+        capture_id = save_response.json()["capture_id"]
+
+        parse_saved_response = self.client.post(
+            reverse("classcalendar:api_message_capture_parse_saved", kwargs={"capture_id": capture_id})
+        )
+        self.assertEqual(parse_saved_response.status_code, 200)
+        payload = parse_saved_response.json()
+        self.assertEqual(payload.get("capture_id"), capture_id)
+        self.assertNotEqual(payload.get("archive_status"), "unparsed")
+        self.assertGreater(len(payload.get("candidates") or []), 0)
+        self.assertEqual(len(payload.get("attachments") or []), 1)
+
+        capture = CalendarMessageCapture.objects.get(id=capture_id)
+        self.assertFalse((capture.parse_payload or {}).get("archive_only"))
+        self.assertEqual(capture.attachments.count(), 1)
+        self.assertGreater(capture.candidates.count(), 0)
 
     def test_parse_returns_candidates_and_reuses_same_content_cache(self):
         first_response = self.client.post(
@@ -443,6 +498,13 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(detail_payload.get("saved_events"), [])
 
     def test_archive_filters_saved_pending_review_and_failed(self):
+        unparsed_capture = self._create_archive_capture(
+            raw_text="첨부만 먼저 보관한 메시지",
+            parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
+            summary_text="아직 일정으로 읽지 않은 메시지",
+            with_candidate=False,
+            archive_only=True,
+        )
         saved_capture = self._create_archive_capture(
             raw_text="3월 12일 저장된 일정",
             summary_text="저장된 일정",
@@ -475,17 +537,20 @@ class MessageCaptureApiTests(TestCase):
         all_response = self._archive_list()
         self.assertEqual(all_response.status_code, 200)
         counts = all_response.json().get("counts") or {}
-        self.assertEqual(counts.get("all"), 4)
+        self.assertEqual(counts.get("all"), 5)
+        self.assertEqual(counts.get("unparsed"), 1)
         self.assertEqual(counts.get("saved"), 1)
         self.assertEqual(counts.get("pending"), 1)
         self.assertEqual(counts.get("needs_review"), 1)
         self.assertEqual(counts.get("failed"), 1)
 
+        unparsed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="unparsed").json().get("items") or [])}
         saved_ids = {item["capture_id"] for item in (self._archive_list(filter_value="saved").json().get("items") or [])}
         pending_ids = {item["capture_id"] for item in (self._archive_list(filter_value="pending").json().get("items") or [])}
         review_ids = {item["capture_id"] for item in (self._archive_list(filter_value="needs_review").json().get("items") or [])}
         failed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="failed").json().get("items") or [])}
 
+        self.assertEqual(unparsed_ids, {str(unparsed_capture.id)})
         self.assertEqual(saved_ids, {str(saved_capture.id)})
         self.assertEqual(pending_ids, {str(pending_capture.id)})
         self.assertEqual(review_ids, {str(review_capture.id)})

@@ -232,7 +232,12 @@ def _build_message_capture_urls_payload():
     capture_placeholder = "00000000-0000-0000-0000-000000000000"
     return {
         "parse": reverse("classcalendar:api_message_capture_parse"),
+        "save": reverse("classcalendar:api_message_capture_save"),
         "archive": reverse("classcalendar:api_message_capture_archive"),
+        "parse_saved_template": reverse(
+            "classcalendar:api_message_capture_parse_saved",
+            kwargs={"capture_id": capture_placeholder},
+        ).replace(capture_placeholder, "__capture_id__"),
         "archive_detail_template": reverse(
             "classcalendar:api_message_capture_archive_detail",
             kwargs={"capture_id": capture_placeholder},
@@ -592,6 +597,11 @@ def _build_fallback_message_capture_candidates(capture):
     ]
 
 
+def _is_message_capture_archive_only(capture):
+    parse_payload = capture.parse_payload if isinstance(capture.parse_payload, dict) else {}
+    return bool(parse_payload.get("archive_only"))
+
+
 def _serialize_message_capture_attachment(attachment):
     return {
         "id": str(attachment.id),
@@ -650,7 +660,12 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
     draft_event["needs_confirmation"] = bool(capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED or confidence_label == "low")
     draft_task["needs_confirmation"] = bool(capture.parse_status != CalendarMessageCapture.ParseStatus.PARSED or confidence_label == "low")
 
-    summary_text = extract_payload.get("summary_text") or parse_payload.get("summary_text") or f"찾은 일정 {len(candidates)}개"
+    summary_text = extract_payload.get("summary_text") or parse_payload.get("summary_text")
+    if not summary_text:
+        if _is_message_capture_archive_only(capture):
+            summary_text = "아직 일정으로 읽지 않은 메시지"
+        else:
+            summary_text = f"찾은 일정 {len(candidates)}개"
     return {
         "status": "success",
         "capture_id": str(capture.id),
@@ -693,6 +708,8 @@ def _message_capture_archive_status_code(capture):
     candidate_count = int(candidate_count or 0)
     saved_count = int(saved_count or 0)
     parse_status = str(getattr(capture, "parse_status", "") or "")
+    if _is_message_capture_archive_only(capture):
+        return "unparsed"
     if parse_status == CalendarMessageCapture.ParseStatus.FAILED or candidate_count == 0:
         return "failed"
     if parse_status == CalendarMessageCapture.ParseStatus.NEEDS_REVIEW:
@@ -704,12 +721,13 @@ def _message_capture_archive_status_code(capture):
 
 def _message_capture_archive_status_label(status_code):
     labels = {
+        "unparsed": "미분석",
         "saved": "저장 완료",
         "pending": "미저장",
         "needs_review": "확인 필요",
         "failed": "일정 못 찾음",
     }
-    return labels.get(status_code, "미저장")
+    return labels.get(status_code, "미분석")
 
 
 def _build_message_capture_archive_queryset(user):
@@ -735,31 +753,55 @@ def _apply_message_capture_archive_query(queryset, query_text):
 
 def _apply_message_capture_archive_filter(queryset, filter_value):
     normalized_filter = str(filter_value or "all").strip().lower()
+    non_archive_only = Q(parse_payload__archive_only=False) | Q(parse_payload__archive_only__isnull=True)
+    if normalized_filter == "unparsed":
+        return queryset.filter(parse_payload__archive_only=True).distinct()
     if normalized_filter == "saved":
-        return queryset.filter(candidates__committed_event__isnull=False).distinct()
+        return queryset.filter(saved_count__gt=0).distinct()
     if normalized_filter == "pending":
-        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.PARSED, candidates__isnull=False).exclude(candidates__committed_event__isnull=False).distinct()
+        return queryset.filter(
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            candidate_count__gt=0,
+            saved_count=0,
+        ).filter(non_archive_only).distinct()
     if normalized_filter == "needs_review":
-        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).distinct()
+        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).filter(non_archive_only).distinct()
     if normalized_filter == "failed":
-        return queryset.filter(Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED) | Q(candidates__isnull=True)).distinct()
+        return queryset.filter(
+            Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED)
+            | (Q(candidate_count=0) & non_archive_only)
+        ).distinct()
     return queryset
 
 
 def _build_message_capture_archive_counts(queryset):
-    saved_ids = set(queryset.filter(candidates__committed_event__isnull=False).values_list("id", flat=True))
+    non_archive_only = Q(parse_payload__archive_only=False) | Q(parse_payload__archive_only__isnull=True)
+    unparsed_ids = set(queryset.filter(parse_payload__archive_only=True).values_list("id", flat=True))
+    saved_ids = set(queryset.filter(saved_count__gt=0).values_list("id", flat=True))
     pending_ids = set(
-        queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.PARSED, candidates__isnull=False)
-        .exclude(candidates__committed_event__isnull=False)
+        queryset.filter(
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            candidate_count__gt=0,
+            saved_count=0,
+        )
+        .filter(non_archive_only)
         .values_list("id", flat=True)
     )
-    needs_review_ids = set(queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).values_list("id", flat=True))
+    needs_review_ids = set(
+        queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW)
+        .filter(non_archive_only)
+        .values_list("id", flat=True)
+    )
     failed_ids = set(
-        queryset.filter(Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED) | Q(candidates__isnull=True)).values_list("id", flat=True)
+        queryset.filter(
+            Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED)
+            | (Q(candidate_count=0) & non_archive_only)
+        ).values_list("id", flat=True)
     )
     all_ids = set(queryset.values_list("id", flat=True))
     return {
         "all": len(all_ids),
+        "unparsed": len(unparsed_ids),
         "saved": len(saved_ids),
         "pending": len(pending_ids),
         "needs_review": len(needs_review_ids),
@@ -820,7 +862,12 @@ def _guess_upload_mime_type(uploaded_file):
 
 
 def _extract_upload_extension(uploaded_file):
-    _, extension = os.path.splitext(uploaded_file.name or "")
+    file_name = (
+        getattr(uploaded_file, "name", "")
+        or getattr(uploaded_file, "original_name", "")
+        or getattr(getattr(uploaded_file, "file", None), "name", "")
+    )
+    _, extension = os.path.splitext(file_name or "")
     return extension.lower().lstrip(".")
 
 
@@ -835,6 +882,45 @@ def _is_allowed_message_capture_file(uploaded_file):
     return extension_allowed and mime_allowed
 
 
+def _validate_message_capture_uploads(*, uploaded_files, user_id, operation_label):
+    attachment_checksums = []
+    for uploaded_file in uploaded_files:
+        file_size = int(getattr(uploaded_file, "size", 0) or 0)
+        if file_size > MESSAGE_CAPTURE_MAX_FILE_BYTES:
+            logger.warning(
+                "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=file_too_large file=%s size=%s",
+                operation_label,
+                user_id,
+                uploaded_file.name,
+                file_size,
+            )
+            return None, JsonResponse(
+                {
+                    "status": "error",
+                    "code": "file_too_large",
+                    "message": f"{uploaded_file.name} 파일이 용량 제한({MESSAGE_CAPTURE_MAX_FILE_BYTES // (1024 * 1024)}MB)을 초과했습니다.",
+                },
+                status=413,
+            )
+        if not _is_allowed_message_capture_file(uploaded_file):
+            logger.warning(
+                "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=invalid_file_type file=%s",
+                operation_label,
+                user_id,
+                uploaded_file.name,
+            )
+            return None, JsonResponse(
+                {
+                    "status": "error",
+                    "code": "validation_error",
+                    "message": f"{uploaded_file.name} 파일 형식은 지원하지 않습니다.",
+                },
+                status=400,
+            )
+        attachment_checksums.append(_calculate_upload_sha256(uploaded_file))
+    return attachment_checksums, None
+
+
 def _calculate_upload_sha256(uploaded_file):
     digest = hashlib.sha256()
     for chunk in uploaded_file.chunks():
@@ -842,6 +928,155 @@ def _calculate_upload_sha256(uploaded_file):
     if hasattr(uploaded_file, "seek"):
         uploaded_file.seek(0)
     return digest.hexdigest()
+
+
+def _create_message_capture_attachments(capture, uploaded_files, attachment_checksums, *, uploaded_by):
+    for uploaded_file, checksum in zip(uploaded_files, attachment_checksums):
+        CalendarMessageCaptureAttachment.objects.create(
+            capture=capture,
+            uploaded_by=uploaded_by,
+            file=uploaded_file,
+            original_name=(os.path.basename(uploaded_file.name or "") or "attachment")[:255],
+            mime_type=_guess_upload_mime_type(uploaded_file)[:120],
+            size_bytes=int(getattr(uploaded_file, "size", 0) or 0),
+            checksum_sha256=checksum,
+            is_selected=True,
+        )
+
+
+def _create_message_capture_candidates(capture, parsed_candidates):
+    for index, candidate in enumerate(parsed_candidates or []):
+        candidate_kind = str(candidate.get("kind") or CalendarMessageCaptureCandidate.CandidateKind.EVENT).strip().lower()
+        if candidate_kind not in {
+            CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+            CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
+            CalendarMessageCaptureCandidate.CandidateKind.PREP,
+        }:
+            candidate_kind = CalendarMessageCaptureCandidate.CandidateKind.EVENT
+        CalendarMessageCaptureCandidate.objects.create(
+            capture=capture,
+            sort_order=index,
+            candidate_kind=candidate_kind,
+            title=(candidate.get("title") or "")[:200],
+            summary=candidate.get("summary") or "",
+            start_time=candidate.get("start_time"),
+            end_time=candidate.get("end_time"),
+            is_all_day=bool(candidate.get("is_all_day")),
+            confidence_score=candidate.get("confidence_score") or 0,
+            is_recommended=bool(candidate.get("is_recommended", True)),
+            needs_check=bool(candidate.get("needs_check")),
+            evidence_text=(candidate.get("evidence_text") or "")[:1000],
+            evidence_payload=candidate.get("evidence_payload") or {},
+            commit_status=CalendarMessageCaptureCandidate.CommitStatus.PENDING,
+        )
+
+
+def _build_message_capture_parse_result(*, user, raw_text, source_hint, uploaded_files, attachment_checksums):
+    parsed = parse_message_capture_draft(
+        raw_text,
+        now=timezone.now(),
+        has_files=bool(uploaded_files),
+        llm_refiner=refine_message_capture_candidates,
+    )
+    item_types_enabled = _is_message_capture_item_types_enabled_for_user(user)
+    predicted_item_type = parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN
+    if not item_types_enabled:
+        predicted_item_type = CalendarMessageCapture.ItemType.EVENT
+
+    classifier_result = _run_message_capture_classifier(
+        user=user,
+        raw_text=raw_text,
+        normalized_text=parsed.get("normalized_text") or raw_text,
+        source_hint=source_hint,
+        uploaded_files=uploaded_files,
+        parsed=parsed,
+    )
+    decision_source = CalendarMessageCapture.DecisionSource.RULE
+    ml_scores = classifier_result.get("scores") if classifier_result else {}
+    strong_deadline_candidate = any(
+        str(candidate.get("kind") or "") == "deadline" and float(candidate.get("confidence_score") or 0) >= 70
+        for candidate in (parsed.get("candidates") or [])
+        if isinstance(candidate, dict)
+    )
+    if (
+        item_types_enabled
+        and classifier_result
+        and _is_message_capture_classifier_assist_enabled_for_user(user)
+        and float(classifier_result.get("confidence") or 0.0) >= MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD
+    ):
+        classifier_label = classifier_result.get("label") or predicted_item_type
+        if not (strong_deadline_candidate and classifier_label == CalendarMessageCapture.ItemType.EVENT):
+            predicted_item_type = classifier_label
+            decision_source = CalendarMessageCapture.DecisionSource.RULE_ML
+
+    parsed["predicted_item_type"] = predicted_item_type
+    content_cache_key = _build_message_capture_content_cache_key(
+        parsed.get("normalized_text") or raw_text,
+        attachment_checksums,
+    )
+    initial_extract_payload = _build_message_capture_initial_extract_payload(parsed)
+    parse_payload = {
+        "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
+        "confidence_label": parsed["confidence_label"],
+        "warnings": parsed["warnings"],
+        "evidence": parsed["evidence"],
+        "predicted_item_type": predicted_item_type,
+        "classifier": classifier_result or {},
+        "summary_text": parsed.get("summary_text") or "",
+        "candidate_count": len(parsed.get("candidates") or []),
+        "content_cache_key": content_cache_key,
+        "llm_used": bool(parsed.get("llm_used")),
+    }
+    return {
+        "parsed": parsed,
+        "predicted_item_type": predicted_item_type,
+        "decision_source": decision_source,
+        "ml_scores": ml_scores or {},
+        "content_cache_key": content_cache_key,
+        "initial_extract_payload": initial_extract_payload,
+        "parse_payload": parse_payload,
+    }
+
+
+def _apply_message_capture_parse_result(capture, parse_result):
+    parsed = parse_result["parsed"]
+    capture.normalized_text = parsed["normalized_text"]
+    capture.parse_status = parsed["parse_status"]
+    capture.confidence_score = parsed["confidence_score"]
+    capture.predicted_item_type = parse_result["predicted_item_type"]
+    capture.decision_source = parse_result["decision_source"]
+    capture.extracted_title = (parsed["extracted_title"] or "")[:200]
+    capture.extracted_start_time = parsed["extracted_start_time"]
+    capture.extracted_end_time = parsed["extracted_end_time"]
+    capture.extracted_is_all_day = bool(parsed["extracted_is_all_day"])
+    capture.extracted_priority = parsed["extracted_priority"] or CalendarMessageCapture.Priority.NORMAL
+    capture.extracted_todo_summary = parsed["extracted_todo_summary"] or ""
+    capture.parse_payload = parse_result["parse_payload"]
+    capture.initial_extract_payload = parse_result["initial_extract_payload"]
+    capture.rule_version = MESSAGE_CAPTURE_RULE_VERSION
+    capture.ml_scores = parse_result["ml_scores"]
+    capture.llm_used = bool(parsed.get("llm_used"))
+    capture.content_cache_key = parse_result["content_cache_key"]
+    return [
+        "normalized_text",
+        "parse_status",
+        "confidence_score",
+        "predicted_item_type",
+        "decision_source",
+        "extracted_title",
+        "extracted_start_time",
+        "extracted_end_time",
+        "extracted_is_all_day",
+        "extracted_priority",
+        "extracted_todo_summary",
+        "parse_payload",
+        "initial_extract_payload",
+        "rule_version",
+        "ml_scores",
+        "llm_used",
+        "content_cache_key",
+        "updated_at",
+    ]
 
 
 def _extract_request_payload(request):
@@ -2065,6 +2300,140 @@ def api_delete_event(request, event_id):
 
 @login_required
 @require_POST
+def api_message_capture_save(request):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("메시지 기능이 아직 활성화되지 않았습니다.")
+
+    save_started_at = timezone.now()
+    form = MessageCaptureParseForm(request.POST)
+    if not form.is_valid():
+        logger.warning(
+            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=form_invalid",
+            request.user.id,
+        )
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "errors": form.errors.get_json_data(),
+                "message": "입력값을 확인해 주세요.",
+            },
+            status=400,
+        )
+
+    raw_text = form.cleaned_data.get("raw_text") or ""
+    source_hint = (form.cleaned_data.get("source_hint") or "unknown").strip()[:30] or "unknown"
+    idempotency_key = (form.cleaned_data.get("idempotency_key") or uuid.uuid4().hex).strip()[:64] or uuid.uuid4().hex
+    uploaded_files = request.FILES.getlist("files")
+
+    if not raw_text.strip() and not uploaded_files:
+        logger.warning(
+            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=empty_input",
+            request.user.id,
+        )
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "message": "메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
+            },
+            status=400,
+        )
+
+    if len(uploaded_files) > MESSAGE_CAPTURE_MAX_FILES:
+        logger.warning(
+            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=too_many_files files=%s",
+            request.user.id,
+            len(uploaded_files),
+        )
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "message": f"첨부파일은 최대 {MESSAGE_CAPTURE_MAX_FILES}개까지 업로드할 수 있습니다.",
+            },
+            status=400,
+        )
+
+    existing_capture = (
+        CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
+        .prefetch_related("attachments", "candidates")
+        .first()
+    )
+    if existing_capture:
+        payload = _serialize_message_capture_archive_detail(existing_capture)
+        payload.update({"reused": True, "message": "이미 보관한 메시지예요."})
+        return JsonResponse(payload)
+
+    attachment_checksums, upload_error_response = _validate_message_capture_uploads(
+        uploaded_files=uploaded_files,
+        user_id=request.user.id,
+        operation_label="save",
+    )
+    if upload_error_response:
+        return upload_error_response
+
+    parse_payload = {
+        "archive_only": True,
+        "summary_text": "아직 일정으로 읽지 않은 메시지",
+        "attachment_count": len(uploaded_files),
+    }
+
+    with transaction.atomic():
+        try:
+            capture = CalendarMessageCapture.objects.create(
+                author=request.user,
+                raw_text=raw_text,
+                normalized_text=raw_text.strip(),
+                source_hint=source_hint,
+                parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
+                confidence_score=0,
+                predicted_item_type=CalendarMessageCapture.ItemType.UNKNOWN,
+                decision_source=CalendarMessageCapture.DecisionSource.MANUAL,
+                extracted_priority=CalendarMessageCapture.Priority.NORMAL,
+                parse_payload=parse_payload,
+                initial_extract_payload={},
+                rule_version="archive-only",
+                ml_scores={},
+                llm_used=False,
+                idempotency_key=idempotency_key,
+                content_cache_key="",
+            )
+        except IntegrityError:
+            capture = (
+                CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
+                .prefetch_related("attachments", "candidates")
+                .first()
+            )
+            if capture:
+                payload = _serialize_message_capture_archive_detail(capture)
+                payload.update({"reused": True, "message": "이미 보관한 메시지예요."})
+                return JsonResponse(payload)
+            raise
+
+        _create_message_capture_attachments(
+            capture,
+            uploaded_files,
+            attachment_checksums,
+            uploaded_by=request.user,
+        )
+
+    capture = CalendarMessageCapture.objects.prefetch_related("attachments", "candidates").get(id=capture.id)
+    save_elapsed_ms = int((timezone.now() - save_started_at).total_seconds() * 1000)
+    logger.info(
+        "[ClassCalendar][MessageCapture] save_result user_id=%s capture_id=%s files=%s elapsed_ms=%s",
+        request.user.id,
+        capture.id,
+        capture.attachments.count(),
+        save_elapsed_ms,
+    )
+    payload = _serialize_message_capture_archive_detail(capture)
+    payload.update({"reused": False, "message": "메시지를 보관함에 저장했어요."})
+    return JsonResponse(payload, status=201)
+
+
+@login_required
+@require_POST
 def api_message_capture_parse(request):
     if not _is_message_capture_enabled_for_user(request.user):
         return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
@@ -2138,87 +2507,31 @@ def api_message_capture_parse(request):
         )
         return JsonResponse(_serialize_message_capture(existing_capture, reused=True))
 
-    attachment_checksums = []
-    for uploaded_file in uploaded_files:
-        file_size = int(getattr(uploaded_file, "size", 0) or 0)
-        if file_size > MESSAGE_CAPTURE_MAX_FILE_BYTES:
-            logger.warning(
-                "[ClassCalendar][MessageCapture] parse_failed user_id=%s reason=file_too_large file=%s size=%s",
-                request.user.id,
-                uploaded_file.name,
-                file_size,
-            )
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "code": "file_too_large",
-                    "message": f"{uploaded_file.name} 파일이 용량 제한({MESSAGE_CAPTURE_MAX_FILE_BYTES // (1024 * 1024)}MB)을 초과했습니다.",
-                },
-                status=413,
-            )
-        if not _is_allowed_message_capture_file(uploaded_file):
-            logger.warning(
-                "[ClassCalendar][MessageCapture] parse_failed user_id=%s reason=invalid_file_type file=%s",
-                request.user.id,
-                uploaded_file.name,
-            )
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "code": "validation_error",
-                    "message": f"{uploaded_file.name} 파일 형식은 지원하지 않습니다.",
-                },
-                status=400,
-            )
-        attachment_checksums.append(_calculate_upload_sha256(uploaded_file))
-
-    parsed = parse_message_capture_draft(
-        raw_text,
-        now=timezone.now(),
-        has_files=bool(uploaded_files),
-        llm_refiner=refine_message_capture_candidates,
+    attachment_checksums, upload_error_response = _validate_message_capture_uploads(
+        uploaded_files=uploaded_files,
+        user_id=request.user.id,
+        operation_label="parse",
     )
-    item_types_enabled = _is_message_capture_item_types_enabled_for_user(request.user)
-    predicted_item_type = parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN
-    if not item_types_enabled:
-        predicted_item_type = CalendarMessageCapture.ItemType.EVENT
+    if upload_error_response:
+        return upload_error_response
 
-    classifier_result = _run_message_capture_classifier(
+    parse_result = _build_message_capture_parse_result(
         user=request.user,
         raw_text=raw_text,
-        normalized_text=parsed.get("normalized_text") or raw_text,
         source_hint=source_hint,
         uploaded_files=uploaded_files,
-        parsed=parsed,
+        attachment_checksums=attachment_checksums,
     )
-    decision_source = CalendarMessageCapture.DecisionSource.RULE
-    ml_scores = classifier_result.get("scores") if classifier_result else {}
-    strong_deadline_candidate = any(
-        str(candidate.get("kind") or "") == "deadline" and float(candidate.get("confidence_score") or 0) >= 70
-        for candidate in (parsed.get("candidates") or [])
-        if isinstance(candidate, dict)
-    )
-    if (
-        item_types_enabled
-        and classifier_result
-        and _is_message_capture_classifier_assist_enabled_for_user(request.user)
-        and float(classifier_result.get("confidence") or 0.0) >= MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD
-    ):
-        classifier_label = classifier_result.get("label") or predicted_item_type
-        if not (strong_deadline_candidate and classifier_label == CalendarMessageCapture.ItemType.EVENT):
-            predicted_item_type = classifier_label
-            decision_source = CalendarMessageCapture.DecisionSource.RULE_ML
-
-    parsed["predicted_item_type"] = predicted_item_type
-    content_cache_key = _build_message_capture_content_cache_key(parsed.get("normalized_text") or raw_text, attachment_checksums)
+    parsed = parse_result["parsed"]
+    content_cache_key = parse_result["content_cache_key"]
     cached_capture = (
         CalendarMessageCapture.objects.filter(
             author=request.user,
             content_cache_key=content_cache_key,
             rule_version=MESSAGE_CAPTURE_RULE_VERSION,
-        )
-        .prefetch_related("attachments", "candidates")
-        .first()
+            )
+          .prefetch_related("attachments", "candidates")
+          .first()
     )
     if cached_capture:
         parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
@@ -2232,45 +2545,16 @@ def api_message_capture_parse(request):
         )
         return JsonResponse(_serialize_message_capture(cached_capture, reused=True))
 
-    initial_extract_payload = _build_message_capture_initial_extract_payload(parsed)
-    parse_payload = {
-        "parser_version": MESSAGE_CAPTURE_RULE_VERSION,
-        "confidence_label": parsed["confidence_label"],
-        "warnings": parsed["warnings"],
-        "evidence": parsed["evidence"],
-        "predicted_item_type": predicted_item_type,
-        "classifier": classifier_result or {},
-        "summary_text": parsed.get("summary_text") or "",
-        "candidate_count": len(parsed.get("candidates") or []),
-        "content_cache_key": content_cache_key,
-        "llm_used": bool(parsed.get("llm_used")),
-    }
-
     with transaction.atomic():
         try:
             capture = CalendarMessageCapture.objects.create(
                 author=request.user,
                 raw_text=raw_text,
-                normalized_text=parsed["normalized_text"],
                 source_hint=source_hint,
-                parse_status=parsed["parse_status"],
-                confidence_score=parsed["confidence_score"],
-                predicted_item_type=predicted_item_type,
-                decision_source=decision_source,
-                extracted_title=(parsed["extracted_title"] or "")[:200],
-                extracted_start_time=parsed["extracted_start_time"],
-                extracted_end_time=parsed["extracted_end_time"],
-                extracted_is_all_day=bool(parsed["extracted_is_all_day"]),
-                extracted_priority=parsed["extracted_priority"] or CalendarMessageCapture.Priority.NORMAL,
-                extracted_todo_summary=parsed["extracted_todo_summary"] or "",
-                parse_payload=parse_payload,
-                initial_extract_payload=initial_extract_payload,
-                rule_version=MESSAGE_CAPTURE_RULE_VERSION,
-                ml_scores=ml_scores or {},
-                llm_used=bool(parsed.get("llm_used")),
                 idempotency_key=idempotency_key,
-                content_cache_key=content_cache_key,
             )
+            _apply_message_capture_parse_result(capture, parse_result)
+            capture.save()
         except IntegrityError:
             capture = (
                 CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
@@ -2281,42 +2565,14 @@ def api_message_capture_parse(request):
                 return JsonResponse(_serialize_message_capture(capture, reused=True))
             raise
 
-        for uploaded_file, checksum in zip(uploaded_files, attachment_checksums):
-            CalendarMessageCaptureAttachment.objects.create(
-                capture=capture,
-                uploaded_by=request.user,
-                file=uploaded_file,
-                original_name=(os.path.basename(uploaded_file.name or "") or "attachment")[:255],
-                mime_type=_guess_upload_mime_type(uploaded_file)[:120],
-                size_bytes=int(getattr(uploaded_file, "size", 0) or 0),
-                checksum_sha256=checksum,
-                is_selected=True,
-            )
+        _create_message_capture_attachments(
+            capture,
+            uploaded_files,
+            attachment_checksums,
+            uploaded_by=request.user,
+        )
 
-        for index, candidate in enumerate(parsed.get("candidates") or []):
-            candidate_kind = str(candidate.get("kind") or CalendarMessageCaptureCandidate.CandidateKind.EVENT).strip().lower()
-            if candidate_kind not in {
-                CalendarMessageCaptureCandidate.CandidateKind.EVENT,
-                CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
-                CalendarMessageCaptureCandidate.CandidateKind.PREP,
-            }:
-                candidate_kind = CalendarMessageCaptureCandidate.CandidateKind.EVENT
-            CalendarMessageCaptureCandidate.objects.create(
-                capture=capture,
-                sort_order=index,
-                candidate_kind=candidate_kind,
-                title=(candidate.get("title") or "")[:200],
-                summary=candidate.get("summary") or "",
-                start_time=candidate.get("start_time"),
-                end_time=candidate.get("end_time"),
-                is_all_day=bool(candidate.get("is_all_day")),
-                confidence_score=candidate.get("confidence_score") or 0,
-                is_recommended=bool(candidate.get("is_recommended", True)),
-                needs_check=bool(candidate.get("needs_check")),
-                evidence_text=(candidate.get("evidence_text") or "")[:1000],
-                evidence_payload=candidate.get("evidence_payload") or {},
-                commit_status=CalendarMessageCaptureCandidate.CommitStatus.PENDING,
-            )
+        _create_message_capture_candidates(capture, parsed.get("candidates") or [])
 
     capture = CalendarMessageCapture.objects.prefetch_related("attachments", "candidates").get(id=capture.id)
     parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
@@ -2333,6 +2589,67 @@ def api_message_capture_parse(request):
         parse_elapsed_ms,
     )
     return JsonResponse(_serialize_message_capture(capture), status=201)
+
+
+@login_required
+@require_POST
+def api_message_capture_parse_saved(request, capture_id):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
+    parse_started_at = timezone.now()
+
+    capture = get_object_or_404(
+        CalendarMessageCapture.objects.filter(author=request.user).prefetch_related("attachments", "candidates"),
+        id=capture_id,
+    )
+    if not _is_message_capture_archive_only(capture):
+        payload = _serialize_message_capture_archive_detail(capture)
+        payload.update({"reused": True, "message": "이미 읽어 둔 메시지예요."})
+        return JsonResponse(payload)
+
+    attachments = list(capture.attachments.all().order_by("created_at", "id"))
+    if not (capture.raw_text or "").strip() and not attachments:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "message": "메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
+            },
+            status=400,
+        )
+
+    attachment_checksums = [attachment.checksum_sha256 for attachment in attachments]
+    parse_result = _build_message_capture_parse_result(
+        user=request.user,
+        raw_text=capture.raw_text or "",
+        source_hint=(capture.source_hint or "unknown").strip()[:30] or "unknown",
+        uploaded_files=attachments,
+        attachment_checksums=attachment_checksums,
+    )
+
+    with transaction.atomic():
+        capture_for_update = CalendarMessageCapture.objects.select_for_update().get(id=capture.id, author=request.user)
+        update_fields = _apply_message_capture_parse_result(capture_for_update, parse_result)
+        capture_for_update.save(update_fields=update_fields)
+        capture_for_update.candidates.all().delete()
+        _create_message_capture_candidates(capture_for_update, parse_result["parsed"].get("candidates") or [])
+
+    capture = CalendarMessageCapture.objects.filter(author=request.user).prefetch_related("attachments", "candidates").get(id=capture.id)
+    parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
+    logger.info(
+        "[ClassCalendar][MessageCapture] parse_saved_result user_id=%s capture_id=%s parse_status=%s confidence=%.2f files=%s candidates=%s warnings=%s elapsed_ms=%s",
+        request.user.id,
+        capture.id,
+        capture.parse_status,
+        float(capture.confidence_score or 0),
+        capture.attachments.count(),
+        capture.candidates.count(),
+        len((capture.parse_payload or {}).get("warnings") or []),
+        parse_elapsed_ms,
+    )
+    payload = _serialize_message_capture_archive_detail(capture)
+    payload.update({"reused": False, "message": "보관한 메시지에서 일정을 찾았어요."})
+    return JsonResponse(payload)
 
 
 @login_required
